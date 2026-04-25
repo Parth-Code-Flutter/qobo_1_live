@@ -7,7 +7,8 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 /// Reusable app bar that can render either a Material AppBar
 /// or a custom row-based header.
-class CommonAppBarWidget extends StatelessWidget implements PreferredSizeWidget {
+class CommonAppBarWidget extends StatelessWidget
+    implements PreferredSizeWidget {
   const CommonAppBarWidget({
     super.key,
     required this.title,
@@ -41,15 +42,15 @@ class CommonAppBarWidget extends StatelessWidget implements PreferredSizeWidget 
       elevation: 0,
       centerTitle: true,
       automaticallyImplyLeading: false,
+      leadingWidth: 60,
       leading: showBackButton
-          ? IconButton(
-              onPressed: onBackPressed ?? () => Get.back(),
-              icon: SvgPicture.asset(
-                kIconArrowBack,
-                width: 22,
-                height: 22,
+          ? Padding(
+            padding: const EdgeInsets.only(left: 10),
+            child: IconButton(
+                onPressed: onBackPressed ?? () => Get.back(),
+                icon: SvgPicture.asset(kIconArrowBack),
               ),
-            )
+          )
           : const SizedBox.shrink(),
       title: Text(
         title,
@@ -66,11 +67,7 @@ class CommonAppBarWidget extends StatelessWidget implements PreferredSizeWidget 
     final Widget leading = showBackButton
         ? IconButton(
             onPressed: onBackPressed ?? () => Get.back(),
-            icon: SvgPicture.asset(
-              kIconArrowBack,
-              width: 22,
-              height: 22,
-            ),
+            icon: SvgPicture.asset(kIconArrowBack, width: 22, height: 22),
           )
         : const SizedBox(width: 48);
 

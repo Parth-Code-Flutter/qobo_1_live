@@ -4,6 +4,8 @@ import 'package:get/get.dart';
 
 import '../app/auth/login/bindings/auth_login_binding.dart';
 import '../app/auth/login/views/auth_login_view.dart';
+import '../app/auth/signUp/bindings/auth_sign_up_binding.dart';
+import '../app/auth/signUp/views/auth_sign_up_view.dart';
 import '../app/splash/splash/bindings/splash_binding.dart';
 import '../app/splash/splash/views/splash_view.dart';
 
@@ -24,6 +26,11 @@ class AppPages {
       name: _Paths.AUTH_LOGIN,
       page: () => const AuthLoginView(),
       binding: AuthLoginBinding(),
+    ),
+    GetPage(
+      name: _Paths.AUTH_SIGN_UP,
+      page: () => const AuthSignUpView(),
+      binding: AuthSignUpBinding(),
     ),
   ];
 }

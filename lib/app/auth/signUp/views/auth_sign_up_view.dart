@@ -1,47 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
-import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
-import 'package:get/get.dart';
+import '../controllers/auth_sign_up_controller.dart';
 
-import '../controllers/auth_login_controller.dart';
-
-class AuthLoginView extends GetView<AuthLoginController> {
-  const AuthLoginView({super.key});
+class AuthSignUpView extends GetView<AuthSignUpController> {
+  const AuthSignUpView({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kColorWhite,
-      appBar: CommonAppBarWidget(title: '', showBackButton: false),
+      appBar: CommonAppBarWidget(title: '', showBackButton: true),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            welcomeTextHeader(),
             Spacing.v24,
-            emailPasswordTextFields(),
+            signUpHeader(),
+            Spacing.v24,
+            emailUsernamePasswordTextFields(),
             Spacing.v28,
-            appButton(
-              onPressed: () {},
-              buttonText: LocaleKeys.loginButtonText.tr,
-            ),
+            appButton(onPressed: () {}, buttonText: LocaleKeys.signUp.tr),
             Spacing.v20,
             orLoginWithDividerWidget(),
-            Spacing.v20,
+            Spacing.v16,
             socialMediaLogin(),
             Spacer(),
-            signUpFooterWidget(),
+            signInFooterWidget(),
             Spacing.v28,
           ],
         ),
@@ -49,14 +46,11 @@ class AuthLoginView extends GetView<AuthLoginController> {
     );
   }
 
-  Widget welcomeTextHeader() {
+  Widget signUpHeader() {
     return Column(
       children: [
-        Spacing.v12,
-        Image.asset(kIconApp, width: 86, height: 86, fit: BoxFit.contain),
-        Spacing.v20,
         BoldText(
-          text: LocaleKeys.loginWelcomeTitle.tr,
+          text: LocaleKeys.signUp.tr,
           fontSize: TextStyles.k22FontSize,
           color: kColorText,
         ),
@@ -70,9 +64,28 @@ class AuthLoginView extends GetView<AuthLoginController> {
     );
   }
 
-  Widget emailPasswordTextFields() {
+  Widget emailUsernamePasswordTextFields() {
     return Column(
       children: [
+        AppTextField(
+          controller: controller.usernameController,
+          hintText: LocaleKeys.signUpUsernameHint.tr,
+          borderColor: kColorHint,
+          hintStyle: TextStyles.kRegularPoppins(
+            fontSize: TextStyles.k14FontSize,
+            colors: kColorHint,
+          ),
+          textInputAction: TextInputAction.next,
+          textCapitalization: TextCapitalization.none,
+          prefix: Padding(
+            padding: const EdgeInsets.only(left: 14, right: 12),
+            child: SvgPicture.asset(
+              kIconUser,
+              colorFilter: const ColorFilter.mode(kColorHint, BlendMode.srcIn),
+            ),
+          ),
+        ),
+        Spacing.v10,
         AppTextField(
           controller: controller.emailController,
           hintText: LocaleKeys.loginEmailHint.tr,
@@ -92,6 +105,7 @@ class AuthLoginView extends GetView<AuthLoginController> {
             ),
           ),
         ),
+
         Spacing.v10,
         Obx(
           () => AppTextField(
@@ -110,7 +124,6 @@ class AuthLoginView extends GetView<AuthLoginController> {
               padding: const EdgeInsets.only(left: 14, right: 12),
               child: SvgPicture.asset(
                 kIconPassword,
-
                 colorFilter: const ColorFilter.mode(
                   kColorHint,
                   BlendMode.srcIn,
@@ -130,15 +143,6 @@ class AuthLoginView extends GetView<AuthLoginController> {
                 ),
               ),
             ),
-          ),
-        ),
-        Spacing.v8,
-        Align(
-          alignment: Alignment.centerRight,
-          child: SemiBoldText(
-            text: LocaleKeys.forgotPassword.tr,
-            fontSize: TextStyles.k14FontSize,
-            color: kColorPrimary,
           ),
         ),
       ],
@@ -170,13 +174,13 @@ class AuthLoginView extends GetView<AuthLoginController> {
       children: [
         _socialLoginButton(
           iconPath: kIconFB,
-          title: LocaleKeys.loginWithApple.tr,
+          title: LocaleKeys.signUpWithApple.tr,
           onTap: () {},
         ),
         Spacing.v10,
         _socialLoginButton(
           iconPath: kIconGoogle,
-          title: LocaleKeys.loginWithGoogle.tr,
+          title: LocaleKeys.signUpWithGoogle.tr,
           onTap: () {},
         ),
       ],
@@ -202,7 +206,7 @@ class AuthLoginView extends GetView<AuthLoginController> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             SvgPicture.asset(iconPath, width: 24, height: 24),
-            Spacing.h10,
+            Spacing.h4,
             SemiBoldText(
               text: title,
               fontSize: TextStyles.k14FontSize,
@@ -214,20 +218,20 @@ class AuthLoginView extends GetView<AuthLoginController> {
     );
   }
 
-  Widget signUpFooterWidget() {
+  Widget signInFooterWidget() {
     return GestureDetector(
-      onTap: () => Get.toNamed(Routes.AUTH_SIGN_UP),
+      onTap: Get.back,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           AppText(
-            text: LocaleKeys.dontHaveAccount.tr,
+            text: LocaleKeys.haveAccount.tr,
             fontSize: TextStyles.k14FontSize,
             color: kColorTextGrey,
           ),
           Spacing.h4,
           SemiBoldText(
-            text: LocaleKeys.signUp.tr,
+            text: LocaleKeys.signIn.tr,
             fontSize: TextStyles.k14FontSize,
             color: kColorPrimary,
           ),

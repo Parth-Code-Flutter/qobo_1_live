@@ -8,9 +8,9 @@ const String kImgSplashScreen = '$imgPath/splash_screen_img.png';
 const String kIconApp = '$iconPath/app_icon.png';
 
 /// SVG Icons
-const String kIconArrowBack = '$imgPath/arrow_back_icon.svg';
-
+const String kIconArrowBack = '$iconPath/arrow_back_icon.svg';
 const String kIconFB = '$iconPath/fb_icon.svg';
 const String kIconGoogle = '$iconPath/google_icon.svg';
 const String kIconMail = '$iconPath/mail_icon.svg';
 const String kIconPassword = '$iconPath/password_icon.svg';
+const String kIconUser = '$iconPath/user_icon.svg';

@@ -6,12 +6,17 @@
   "loginTitle": "login",
   "loginSubTitle": "Sign In to your account",
   "loginEmailHint": "Email",
+  "signUpUsernameHint": "Username",
   "loginPasswordHint": "Password",
   "forgotPassword": "Forgot Password?",
   "loginButtonText": "Log in",
   "orLoginWith": "Or login with",
   "loginWithApple": "Log In with Apple",
   "loginWithGoogle": "Log In with Google",
+  "signUpWithApple": "Sign Up with Apple",
+  "signUpWithGoogle": "Sign Up with Google",
   "dontHaveAccount": "Don’t have an account?",
-  "signUp": "Sign Up"
+  "signUp": "Sign Up",
+  "haveAccount": "Have an account?",
+  "signIn": "Sign In"
 }
