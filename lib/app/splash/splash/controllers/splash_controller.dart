@@ -1,23 +1,12 @@
 import 'package:get/get.dart';
+import 'package:qobo_one_live/routes/app_pages.dart';
 
 class SplashController extends GetxController {
-  //TODO: Implement SplashController
-
-  final count = 0.obs;
-  @override
-  void onInit() {
-    super.onInit();
-  }
-
   @override
   void onReady() {
     super.onReady();
+    Future.delayed(const Duration(seconds: 3), () {
+      Get.offNamed(Routes.AUTH_LOGIN);
+    });
   }
-
-  @override
-  void onClose() {
-    super.onClose();
-  }
-
-  void increment() => count.value++;
 }
