@@ -183,7 +183,7 @@ class _AppMultiDropdownState extends State<AppMultiDropdown> {
           onTap: _showBottomSheet,
           child: Container(
             decoration: BoxDecoration(
-              color: widget.isEnabled ? kColorBackground : kColorFAFAFA,
+              color: widget.isEnabled ? kColorBackground : kColorHint,
               borderRadius: AppUIUtils.primaryBorderRadius,
               border: Border.all(
                 color: widget.error ? kColorRed : kColorTextFieldBorder,
@@ -258,14 +258,14 @@ class _AppMultiDropdownState extends State<AppMultiDropdown> {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: kColorGreyDA,
+                                  color: kColorHint,
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: AppText(
                                   text: '+${_selectedItems.length - 4}',
                                   style: TextStyles.kMediumPoppins(
                                     fontSize: 11,
-                                    colors: kColorGrey76,
+                                    colors: kColorHint,
                                   ),
                                 ),
                               ),
@@ -281,12 +281,12 @@ class _AppMultiDropdownState extends State<AppMultiDropdown> {
                                 text: '${_selectedItems.length} selected',
                                 style: TextStyles.kRegularPoppins(
                                   fontSize: 10,
-                                  colors: kColorGrey76,
+                                  colors: kColorHint,
                                 ),
                               ),
                               Icon(
                                 Icons.keyboard_arrow_down,
-                                color: kColorGrey76,
+                                color: kColorHint,
                                 size: 16,
                               ),
                             ],
@@ -309,7 +309,7 @@ class _AppMultiDropdownState extends State<AppMultiDropdown> {
                         ),
                         Icon(
                           Icons.keyboard_arrow_down,
-                          color: kColorGrey76,
+                          color: kColorHint,
                           size: 16,
                         ),
                       ],
@@ -423,7 +423,7 @@ class _MultiDropdownBottomSheetState extends State<_MultiDropdownBottomSheet> {
             padding: const EdgeInsets.all(16),
             decoration: const BoxDecoration(
               border: Border(
-                bottom: BorderSide(color: kColorGreyD9, width: 0.5),
+                bottom: BorderSide(color: kColorHint, width: 0.5),
               ),
             ),
             child: Row(
@@ -442,7 +442,7 @@ class _MultiDropdownBottomSheetState extends State<_MultiDropdownBottomSheet> {
                   onTap: () => Navigator.pop(context),
                   child: const Icon(
                     Icons.close,
-                    color: kColorGrey76,
+                    color: kColorHint,
                     size: 24,
                   ),
                 ),
@@ -476,7 +476,7 @@ class _MultiDropdownBottomSheetState extends State<_MultiDropdownBottomSheet> {
                   prefix: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: SvgPicture.asset(
-                      kIconSearch2,
+                      'kIconSearch2',
                       height: 20,
                       width: 20,
                     ),
@@ -494,7 +494,7 @@ class _MultiDropdownBottomSheetState extends State<_MultiDropdownBottomSheet> {
                             child: Icon(
                               Icons.close,
                               size: 20,
-                              color: kColorGrey76,
+                              color: kColorHint,
                             ),
                           ),
                         )
@@ -581,7 +581,7 @@ class _MultiDropdownBottomSheetState extends State<_MultiDropdownBottomSheet> {
                     color: kColorBackground,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: kColorGreyD9,
+                      color: kColorHint,
                       width: 0.5,
                     ),
                   ),
@@ -639,7 +639,7 @@ class _MultiDropdownBottomSheetState extends State<_MultiDropdownBottomSheet> {
                                     '${item.label.toLowerCase().replaceAll(' ', '')}@roundtechsquare.com',
                                 style: TextStyles.kRegularPoppins(
                                   fontSize: 12,
-                                  colors: kColorGrey76,
+                                  colors: kColorHint,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,

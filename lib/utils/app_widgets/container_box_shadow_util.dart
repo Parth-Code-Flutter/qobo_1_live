@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 List<BoxShadow> containerBoxShadowUtils() {
   return [
     BoxShadow(
-      color: kColorGreyDD,
+      color: kColorHint,
       spreadRadius: 0.2,
       blurRadius: 8,
       offset: const Offset(0, 2),

@@ -193,10 +193,10 @@ class _AppCustomExpandableTileState extends State<AppCustomExpandableTile>
             textColor: widget.textColor ?? kColorBlack,
             collapsedTextColor: widget.collapsedTextColor ?? kColorBlack,
             iconColor: widget.showExpansionIcon
-                ? (widget.iconColor ?? kColorGrey76)
+                ? (widget.iconColor ?? kColorHint)
                 : Colors.transparent,
             collapsedIconColor: widget.showExpansionIcon
-                ? (widget.collapsedIconColor ?? kColorGrey76)
+                ? (widget.collapsedIconColor ?? kColorHint)
                 : Colors.transparent,
             shape: widget.shape ?? RoundedRectangleBorder(
               borderRadius: borderRadius,
@@ -230,8 +230,8 @@ class _AppCustomExpandableTileState extends State<AppCustomExpandableTile>
                             Icon(
                               Icons.expand_more,
                               color: isExpanded
-                                  ? (widget.iconColor ?? kColorGrey76)
-                                  : (widget.collapsedIconColor ?? kColorGrey76),
+                                  ? (widget.iconColor ?? kColorHint)
+                                  : (widget.collapsedIconColor ?? kColorHint),
                             ),
                       ),
                     ],

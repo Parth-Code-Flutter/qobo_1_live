@@ -90,8 +90,8 @@ class AppCustomDialog extends StatelessWidget {
                     onPressed: onSecondaryPressed,
                     buttonText: secondaryButtonText,
                     buttonHeight: 44,
-                    buttonColor: kColorGreyDA,
-                    buttonBorderColor: kColorGreyDA,
+                    buttonColor: kColorHint,
+                    buttonBorderColor: kColorHint,
                     isGradient: false,
                     textStyle: TextStyles.kSemiBoldPoppins(
                       fontSize: TextStyles.k14FontSize,

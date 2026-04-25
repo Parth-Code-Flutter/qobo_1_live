@@ -74,7 +74,7 @@ class AppVerticalDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget divider = VerticalDivider(
-      color: color ?? kColorGreyDA,
+      color: color ?? kColorHint,
       thickness: thickness ?? 1.0,
       width: width ?? 1.0,
       indent: indent ?? 0.0,

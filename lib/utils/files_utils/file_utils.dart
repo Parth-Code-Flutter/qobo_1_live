@@ -73,7 +73,7 @@ abstract final class FileUtils {
   static Future<List<String>> pickFilePaths() async {
     try {
       LoggerUtils.logger.i('FileUtils.pickFilePaths: opening file picker');
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.pickFiles(
         allowMultiple: true,
         type: FileType.any,
       );

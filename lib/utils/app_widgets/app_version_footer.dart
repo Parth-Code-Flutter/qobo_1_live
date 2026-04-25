@@ -23,7 +23,7 @@ class AppVersionFooter extends StatelessWidget {
           AppText(
             text: 'App version: ${ApiConstants.appVersionLabel}',
             fontSize: 12,
-            color: kColorGrey76,
+            color: kColorHint,
           ),
         ],
       ),

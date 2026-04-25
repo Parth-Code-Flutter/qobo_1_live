@@ -78,8 +78,8 @@ class CustomBottomNavBar extends StatelessWidget {
   }) {
     final isActive = currentIndex == index;
     // Coral color for active state
-    final activeColor = kColorCoral;
-    final inactiveColor = kColorGrey76;
+    final activeColor = kColorWhite;
+    final inactiveColor = kColorHint;
 
     return Expanded(
       child: GestureDetector(

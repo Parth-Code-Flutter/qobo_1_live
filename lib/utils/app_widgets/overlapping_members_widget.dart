@@ -66,14 +66,14 @@ class OverlappingMembersWidget extends StatelessWidget {
           width: avatarRadius * 2,
           height: avatarRadius * 2,
           decoration: BoxDecoration(
-            color: kColorGreyDA,
+            color: kColorHint,
             shape: BoxShape.circle,
           ),
           child: Center(
             child: Icon(
               Icons.person_outline,
               size: avatarRadius,
-              color: kColorGrey76,
+              color: kColorHint,
             ),
           ),
         ),
@@ -145,7 +145,7 @@ class OverlappingMembersWidget extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: kColorWhite,
                 border: Border.all(
-                  color: kColorGreyDA,
+                  color: kColorHint,
                   width: 1.0,
                 ),
               ),
@@ -153,10 +153,10 @@ class OverlappingMembersWidget extends StatelessWidget {
                 child: AppText(
                   text: '+${totalMembers - maxVisible}',
                   fontSize: avatarRadius * 0.5, // ~9 for radius 18
-                  color: kColorGrey76,
+                  color: kColorHint,
                   style: TextStyles.kBoldPoppins(
                     fontSize: avatarRadius * 0.5,
-                    colors: kColorGrey76,
+                    colors: kColorHint,
                   ),
                 ),
               ),

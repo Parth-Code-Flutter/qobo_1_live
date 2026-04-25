@@ -252,7 +252,7 @@ class _RichTextEditorWidgetState extends State<RichTextEditorWidget> {
           // Formatting toolbar
           _buildToolbar(),
           // Divider between toolbar and editor
-          Divider(height: 1, thickness: 0.5, color: kColorGreyDA),
+          Divider(height: 1, thickness: 0.5, color: kColorHint),
           // Text editor area
           _buildEditor(),
         ],
@@ -277,7 +277,7 @@ class _RichTextEditorWidgetState extends State<RichTextEditorWidget> {
             isSelected: true,
           ),
           const SizedBox(width: 4),
-          const Text(':', style: TextStyle(color: kColorGrey76)),
+          const Text(':', style: TextStyle(color: kColorHint)),
           const SizedBox(width: 8),
           // Bold button
           _buildToolbarIconButton(
@@ -354,13 +354,13 @@ class _RichTextEditorWidgetState extends State<RichTextEditorWidget> {
         child: Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: isSelected ? kColorGrey187.withValues(alpha: 0.2) : Colors.transparent,
+            color: isSelected ? kColorHint.withValues(alpha: 0.2) : Colors.transparent,
             borderRadius: BorderRadius.circular(4),
           ),
           child: Icon(
             icon,
             size: 20,
-            color: isSelected ? kColorPrimary : kColorGrey76,
+            color: isSelected ? kColorPrimary : kColorHint,
           ),
         ),
       ),
@@ -380,19 +380,19 @@ class _RichTextEditorWidgetState extends State<RichTextEditorWidget> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: isSelected ? kColorGrey187.withValues(alpha: 0.2) : Colors.transparent,
+          color: isSelected ? kColorHint.withValues(alpha: 0.2) : Colors.transparent,
           borderRadius: BorderRadius.circular(4),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: kColorGrey76),
+            Icon(icon, size: 16, color: kColorHint),
             const SizedBox(width: 4),
             Text(
               label,
               style: TextStyles.kRegularPoppins(
                 fontSize: 12,
-                colors: kColorGrey76,
+                colors: kColorHint,
               ),
             ),
           ],
@@ -434,7 +434,7 @@ class _RichTextEditorWidgetState extends State<RichTextEditorWidget> {
               hintText: widget.placeholder ?? 'Start typing...',
               hintStyle: TextStyles.kRegularPoppins(
                 fontSize: 14,
-                colors: kColorGrey76,
+                colors: kColorHint,
               ).copyWith(fontStyle: FontStyle.italic),
               contentPadding: EdgeInsets.zero,
             ),

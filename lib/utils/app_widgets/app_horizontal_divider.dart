@@ -65,7 +65,7 @@ class AppHorizontalDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget divider = Divider(
-      color: color ?? kColorGreyDA,
+      color: color ?? kColorHint,
       thickness: thickness ?? 1.0,
       height: height ?? 1.0,
       indent: indent ?? 0.0,

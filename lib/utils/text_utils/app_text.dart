@@ -28,7 +28,7 @@ class AppText extends StatelessWidget {
       text,
       style: style ??
           TextStyles.kRegularPoppins(
-              fontSize: fontSize ?? 14, colors: color ?? kColorTextColor),
+              fontSize: fontSize ?? 14, colors: color ?? kColorText),
       textAlign: align,
       overflow: overflow,
       maxLines: maxLines,
@@ -63,7 +63,7 @@ class MediumText extends StatelessWidget {
       // style: style ?? Theme.of(context).textTheme.labelMedium,
       style: style ??
           TextStyles.kMediumPoppins(
-              fontSize: fontSize ?? 20, colors: color ?? kColorTextColor),
+              fontSize: fontSize ?? 20, colors: color ?? kColorText),
       textAlign: align,
       overflow: overflow,
       maxLines: maxLines,
@@ -99,7 +99,7 @@ class SemiBoldText extends StatelessWidget {
       style: style ??
           TextStyles.kSemiBoldPoppins(
             fontSize: fontSize ?? 16,
-            colors: color ?? kColorTextColor,
+            colors: color ?? kColorText,
           ),
       textAlign: align,
       overflow: overflow,
@@ -136,7 +136,7 @@ class BoldText extends StatelessWidget {
       style: style ??
           TextStyles.kBoldPoppins(
             fontSize: fontSize ?? 28,
-            colors: color ?? kColorTextColor,
+            colors: color ?? kColorText,
           ),
       textAlign: align,
       overflow: overflow,

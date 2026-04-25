@@ -71,7 +71,7 @@ class AppAlertDialog extends StatelessWidget {
   Widget get _warningIcon {
     return Center(
       child: Image.asset(
-        kIconWarning,
+        'kIconWarning',
         height: 45,
         width: 45,
       ),
@@ -84,7 +84,7 @@ class AppAlertDialog extends StatelessWidget {
       child: AppText(
         text: title,
         fontSize: 14,
-        color: kColorTextGrey,
+        color: kColorHint,
         align: TextAlign.center,
       ),
     );
@@ -121,8 +121,8 @@ class AppAlertDialog extends StatelessWidget {
               buttonHeight: 38,
               onPressed: negativeClick,
               buttonText: negativeButtonText ?? 'No, cancel',
-              buttonBorderColor: kColorGrey187,
-              buttonColor: kColorGrey187,
+              buttonBorderColor: kColorHint,
+              buttonColor: kColorHint,
               // Use a simple solid-color button (no gradient) for the cancel action.
               isGradient: false,
               textStyle: TextStyles.kSemiBoldPoppins(

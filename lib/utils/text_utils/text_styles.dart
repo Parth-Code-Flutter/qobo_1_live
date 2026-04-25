@@ -38,7 +38,7 @@ class TextStyles {
   /// Regular style using Poppins font family.
   static TextStyle kRegularPoppins(
       {double fontSize = k16FontSize,
-      Color colors = kColorTextPrimary,
+      Color colors = kColorText,
       FontWeight fontWeight = FontWeight.w400}) {
     return TextStyle(
       fontSize: fontSize,
@@ -51,7 +51,7 @@ class TextStyles {
   /// Medium style using Poppins font family.
   static TextStyle kMediumPoppins(
       {double fontSize = k16FontSize,
-      Color colors = kColorTextPrimary,
+      Color colors = kColorText,
       FontWeight fontWeight = FontWeight.w500}) {
     return TextStyle(
       fontSize: fontSize,
@@ -64,7 +64,7 @@ class TextStyles {
   /// Semibold style using Poppins font family.
   static TextStyle kSemiBoldPoppins(
       {double fontSize = k16FontSize,
-      Color colors = kColorTextPrimary,
+      Color colors = kColorText,
       FontWeight fontWeight = FontWeight.w600}) {
     return TextStyle(
       fontSize: fontSize,
@@ -77,7 +77,7 @@ class TextStyles {
   /// Bold style using Poppins font family.
   static TextStyle kBoldPoppins(
       {double fontSize = k36FontSize,
-      Color colors = kColorTextPrimary,
+      Color colors = kColorText,
       FontWeight fontWeight = FontWeight.w700}) {
     return TextStyle(
       fontSize: fontSize,

@@ -100,7 +100,7 @@ class ErrorHandlerUtils {
       // Use Get.offAll with direct widget - most reliable method
       // This clears all previous routes and navigates to login
       try {
-        Get.offAll(() => const LoginOptionsView());
+        // Get.offAll(() => const LoginOptionsView());
         LoggerUtils.logger.i('✅ Successfully navigated to login screen using Get.offAll');
         
         // Show snackbar after navigation completes

@@ -151,7 +151,7 @@ class AppDropDown<T> extends StatelessWidget {
             padding: EdgeInsets.zero,
             icon: Icon(
               Icons.keyboard_arrow_down,
-              color: kColorGrey76,
+              color: kColorHint,
               size: 16,
             ),
             color: kColorWhite,

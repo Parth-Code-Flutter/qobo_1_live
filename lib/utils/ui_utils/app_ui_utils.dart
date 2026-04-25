@@ -48,27 +48,27 @@ class AppUIUtils {
       const EdgeInsets.symmetric(horizontal: 20);
 
   /// text styles
-  static TextStyle globalTextStyle = TextStyles.kMediumLato(
+  static TextStyle globalTextStyle = TextStyles.kMediumPoppins(
     fontSize: TextStyles.k14FontSize,
     colors: kColorBlack,
   );
 
-  static TextStyle labelTextFieldTextStyle = TextStyles.kSemiBoldLato(
+  static TextStyle labelTextFieldTextStyle = TextStyles.kSemiBoldPoppins(
     fontSize: TextStyles.k14FontSize,
     colors: kColorBlack,
   );
 
-  static TextStyle hintTextFieldTextStyle = TextStyles.kRegularLato(
+  static TextStyle hintTextFieldTextStyle = TextStyles.kRegularPoppins(
     fontSize: TextStyles.k14FontSize,
-    colors: kColorHintTextGray,
+    colors: kColorHint,
   );
 
-  static TextStyle headerBoldTextStyle = TextStyles.kBoldLato(
+  static TextStyle headerBoldTextStyle = TextStyles.kBoldPoppins(
     fontSize: TextStyles.k18FontSize,
     colors: kColorBlack,
   );
 
-  static TextStyle dropdownHintTextStyleMedium = TextStyles.kSemiBoldLato(
+  static TextStyle dropdownHintTextStyleMedium = TextStyles.kSemiBoldPoppins(
     fontSize: TextStyles.k14FontSize,
     colors: kColorBlack,
   );
