@@ -119,7 +119,7 @@ class ErrorHandlerUtils {
         // Fallback: Try Get.offAllNamed
         try {
           LoggerUtils.logger.w('⚠️ Trying fallback navigation: Get.offAllNamed');
-          Get.offAllNamed(Routes.LOGIN_OPTIONS);
+          // Get.offAllNamed(Routes.LOGIN_OPTIONS);
           LoggerUtils.logger.i('✅ Fallback navigation successful (Get.offAllNamed)');
           
           Future.delayed(const Duration(milliseconds: 1000), () {
@@ -137,7 +137,7 @@ class ErrorHandlerUtils {
           // Last resort: Try Get.offNamed
           try {
             LoggerUtils.logger.w('⚠️ Trying last resort navigation: Get.offNamed');
-            Get.offNamed(Routes.LOGIN_OPTIONS);
+            // Get.offNamed(Routes.LOGIN_OPTIONS);
             LoggerUtils.logger.i('✅ Last resort navigation successful (Get.offNamed)');
           } catch (e3) {
             LoggerUtils.logException('All navigation methods failed', e3);
@@ -213,13 +213,13 @@ class ErrorHandlerUtils {
       }
       
       // Navigate to login options screen
-      Get.offAllNamed(Routes.LOGIN_OPTIONS);
+      // Get.offAllNamed(Routes.LOGIN_OPTIONS);
       
       LoggerUtils.logger.i('✅ User logged out successfully');
     } catch (e) {
       LoggerUtils.logException('logoutUser', e);
       // Fallback navigation
-      Get.offAllNamed(Routes.LOGIN_OPTIONS);
+      // Get.offAllNamed(Routes.LOGIN_OPTIONS);
     }
   }
 }
