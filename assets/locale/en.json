@@ -9,5 +9,9 @@
   "loginPasswordHint": "Password",
   "forgotPassword": "Forgot Password?",
   "loginButtonText": "Log in",
-  "orLoginWith": "Or login with"
+  "orLoginWith": "Or login with",
+  "loginWithApple": "Log In with Apple",
+  "loginWithGoogle": "Log In with Google",
+  "dontHaveAccount": "Don’t have an account?",
+  "signUp": "Sign Up"
 }

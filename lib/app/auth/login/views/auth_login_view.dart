@@ -21,10 +21,12 @@ class AuthLoginView extends GetView<AuthLoginController> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kColorWhite,
-      appBar: CommonAppBarWidget(title: '', showBackButton: false),
+      // appBar: CommonAppBarWidget(title: '', showBackButton: false),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             welcomeTextHeader(),
             Spacing.v24,
@@ -36,6 +38,10 @@ class AuthLoginView extends GetView<AuthLoginController> {
             ),
             Spacing.v20,
             orLoginWithDividerWidget(),
+            Spacing.v20,
+            socialMediaLogin(),
+            Spacing.v28,
+            signUpFooterWidget(),
           ],
         ),
       ),
@@ -47,7 +53,7 @@ class AuthLoginView extends GetView<AuthLoginController> {
       children: [
         Spacing.v12,
         Image.asset(kIconApp, width: 86, height: 86, fit: BoxFit.contain),
-        Spacing.v12,
+        Spacing.v20,
         BoldText(
           text: LocaleKeys.loginWelcomeTitle.tr,
           fontSize: TextStyles.k22FontSize,
@@ -81,10 +87,7 @@ class AuthLoginView extends GetView<AuthLoginController> {
             padding: const EdgeInsets.only(left: 14, right: 12),
             child: SvgPicture.asset(
               kIconMail,
-              colorFilter: const ColorFilter.mode(
-                kColorHint,
-                BlendMode.srcIn,
-              ),
+              colorFilter: const ColorFilter.mode(kColorHint, BlendMode.srcIn),
             ),
           ),
         ),
@@ -145,10 +148,7 @@ class AuthLoginView extends GetView<AuthLoginController> {
     return Row(
       children: [
         const Expanded(
-          child: Divider(
-            thickness: 1,
-            color: kColorTextFieldBorder,
-          ),
+          child: Divider(thickness: 1, color: kColorTextFieldBorder),
         ),
         Spacing.h4,
         AppText(
@@ -158,10 +158,75 @@ class AuthLoginView extends GetView<AuthLoginController> {
         ),
         Spacing.h4,
         const Expanded(
-          child: Divider(
-            thickness: 1,
-            color: kColorTextFieldBorder,
-          ),
+          child: Divider(thickness: 1, color: kColorTextFieldBorder),
+        ),
+      ],
+    );
+  }
+
+  Widget socialMediaLogin() {
+    return Column(
+      children: [
+        _socialLoginButton(
+          iconPath: kIconFB,
+          title: LocaleKeys.loginWithApple.tr,
+          onTap: () {},
+        ),
+        Spacing.v10,
+        _socialLoginButton(
+          iconPath: kIconGoogle,
+          title: LocaleKeys.loginWithGoogle.tr,
+          onTap: () {},
+        ),
+      ],
+    );
+  }
+
+  Widget _socialLoginButton({
+    required String iconPath,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 56,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: kColorWhite,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: kColorTextFieldBorder),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SvgPicture.asset(iconPath, width: 24, height: 24),
+            Spacing.h10,
+            SemiBoldText(
+              text: title,
+              fontSize: TextStyles.k14FontSize,
+              color: kColorText,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget signUpFooterWidget() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        AppText(
+          text: LocaleKeys.dontHaveAccount.tr,
+          fontSize: TextStyles.k14FontSize,
+          color: kColorTextGrey,
+        ),
+        Spacing.h4,
+        SemiBoldText(
+          text: LocaleKeys.signUp.tr,
+          fontSize: TextStyles.k14FontSize,
+          color: kColorPrimary,
         ),
       ],
     );
