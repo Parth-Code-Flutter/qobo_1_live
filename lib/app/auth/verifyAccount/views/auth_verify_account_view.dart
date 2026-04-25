@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:country_code_picker/country_code_picker.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
@@ -17,23 +18,50 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: kColorWhite,
-      appBar: CommonAppBarWidget(title: '', showBackButton: true),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Column(
-          children: [
-            Spacing.v24,
-            verifyAccountHeader(),
-            Spacing.v28,
-            phoneNumberInputWidget(),
-            Spacing.v28,
-            appButton(
-              onPressed: () {},
-              buttonText: LocaleKeys.continueButton.tr,
+    return WillPopScope(
+      onWillPop: () async => controller.handleBackAction(),
+      child: Scaffold(
+        backgroundColor: kColorWhite,
+        appBar: CommonAppBarWidget(
+          title: '',
+          showBackButton: true,
+          onBackPressed: () {
+            if (controller.handleBackAction()) {
+              Get.back();
+            }
+          },
+        ),
+        body: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Obx(
+            () => Column(
+              children: [
+                Spacing.v24,
+                controller.isOtpView.value
+                    ? otpVerificationHeader()
+                    : verifyAccountHeader(),
+                Spacing.v28,
+                controller.isOtpView.value
+                    ? otpVerificationWidget()
+                    : phoneNumberInputWidget(),
+                Spacing.v28,
+                if (controller.isOtpView.value) ...[
+                  SemiBoldText(
+                    text: LocaleKeys.resendCode.tr,
+                    fontSize: TextStyles.k14FontSize,
+                    color: kColorPrimary,
+                  ),
+                  Spacing.v28,
+                ],
+                appButton(
+                  onPressed: controller.isOtpView.value
+                      ? () {}
+                      : controller.showOtpView,
+                  buttonText: LocaleKeys.continueButton.tr,
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -109,6 +137,70 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget otpVerificationHeader() {
+    return Column(
+      children: [
+        BoldText(
+          text: LocaleKeys.otpVerificationTitle.tr,
+          fontSize: TextStyles.k22FontSize,
+          color: kColorText,
+        ),
+        Spacing.v2,
+        AppText(
+          text: LocaleKeys.otpVerificationSubTitle.tr,
+          fontSize: TextStyles.k14FontSize,
+          color: kColorTextGrey,
+          align: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  Widget otpVerificationWidget() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(
+        4,
+        (index) => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          child: SizedBox(
+            width: 42,
+            height: 42,
+            child: TextField(
+              controller: controller.otpControllers[index],
+              focusNode: controller.otpFocusNodes[index],
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.center,
+              style: TextStyles.kSemiBoldPoppins(
+                fontSize: TextStyles.k24FontSize,
+                colors: kColorText,
+              ),
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              maxLength: 1,
+              onChanged: (value) {
+                controller.onOtpChanged(index: index, value: value);
+              },
+              decoration: InputDecoration(
+                counterText: '',
+                contentPadding: EdgeInsets.zero,
+                filled: true,
+                fillColor: kColorWhite,
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: kColorTextFieldBorder),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: kColorPrimary),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

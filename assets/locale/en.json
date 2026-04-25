@@ -22,5 +22,8 @@
   "verifyAccountTitle": "Phone Number",
   "verifyAccountSubTitle": "Please enter your phone number to verify your account",
   "verifyPhoneHint": "9999 888 8888",
-  "continueButton": "Continue"
+  "continueButton": "Continue",
+  "otpVerificationTitle": "Verification Code",
+  "otpVerificationSubTitle": "Enter the verification code that we have sent to your email",
+  "resendCode": "Resend Code"
 }
