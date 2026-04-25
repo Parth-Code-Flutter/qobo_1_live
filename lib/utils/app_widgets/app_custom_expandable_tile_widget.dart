@@ -1,6 +1,6 @@
-import 'package:aligned_rewards/constants/color_constants.dart';
-import 'package:aligned_rewards/utils/app_widgets/container_box_shadow_util.dart';
-import 'package:aligned_rewards/utils/ui_utils/app_ui_utils.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/utils/app_widgets/container_box_shadow_util.dart';
+import 'package:qobo_one_live/utils/ui_utils/app_ui_utils.dart';
 import 'package:flutter/material.dart';
 
 /// Custom expandable tile widget with enhanced customization options

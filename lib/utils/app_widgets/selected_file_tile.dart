@@ -1,9 +1,9 @@
 import 'dart:io';
 
-import 'package:aligned_rewards/constants/color_constants.dart';
-import 'package:aligned_rewards/utils/app_widgets/app_spaces.dart';
-import 'package:aligned_rewards/utils/text_utils/app_text.dart';
-import 'package:aligned_rewards/utils/ui_utils/app_ui_utils.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/text_utils/app_text.dart';
+import 'package:qobo_one_live/utils/ui_utils/app_ui_utils.dart';
 import 'package:flutter/material.dart';
 
 /// A compact square tile used to preview a locally selected file.

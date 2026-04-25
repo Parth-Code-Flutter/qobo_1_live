@@ -1,5 +1,5 @@
-import 'package:aligned_rewards/utils/app_dialogs/app_alert_sheet.dart';
-import 'package:aligned_rewards/utils/ui_utils/app_ui_utils.dart';
+import 'package:qobo_one_live/utils/app_dialogs/app_alert_sheet.dart';
+import 'package:qobo_one_live/utils/ui_utils/app_ui_utils.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 

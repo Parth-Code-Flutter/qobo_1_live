@@ -1,6 +1,6 @@
-import 'package:aligned_rewards/constants/color_constants.dart';
-import 'package:aligned_rewards/utils/text_utils/text_styles.dart';
-import 'package:aligned_rewards/utils/ui_utils/app_ui_utils.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/utils/ui_utils/app_ui_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -53,7 +53,7 @@ Widget appButton({
           Text(
             buttonText,
             style: textStyle ??
-                TextStyles.kBoldLato(
+                TextStyles.kBoldPoppins(
                   fontSize: TextStyles.k18FontSize,
                   colors: textColor ?? kColorWhite,
                 ),

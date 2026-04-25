@@ -1,7 +1,7 @@
-import 'package:aligned_rewards/constants/color_constants.dart';
-import 'package:aligned_rewards/services/api_constants.dart';
-import 'package:aligned_rewards/utils/app_widgets/app_spaces.dart';
-import 'package:aligned_rewards/utils/text_utils/app_text.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/services/api_constants.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:flutter/material.dart';
 
 /// Reusable footer widget to display the current app version.

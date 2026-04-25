@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:aligned_rewards/constants/status_code_constants.dart';
+import 'package:qobo_one_live/constants/status_code_constants.dart';
 import 'package:http/http.dart' as http;
 
 /// Centralized API success validation.

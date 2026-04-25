@@ -1,8 +1,8 @@
-import 'package:aligned_rewards/constants/color_constants.dart';
-import 'package:aligned_rewards/utils/app_widgets/app_spaces.dart';
-import 'package:aligned_rewards/utils/text_utils/app_text.dart';
-import 'package:aligned_rewards/utils/text_utils/text_styles.dart';
-import 'package:aligned_rewards/utils/ui_utils/app_ui_utils.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/text_utils/app_text.dart';
+import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/utils/ui_utils/app_ui_utils.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:flutter/material.dart';
 
@@ -112,14 +112,14 @@ class AppDropDown<T> extends StatelessWidget {
               );
             },
             searchFieldProps: TextFieldProps(
-              style: TextStyles.kSemiBoldLato(
+              style: TextStyles.kSemiBoldPoppins(
                 fontSize: TextStyles.k14FontSize,
                 colors: kColorSecondPrimary,
               ),
               decoration: InputDecoration(
                 hintText: 'Search',
                 constraints: BoxConstraints(minHeight: 40, maxHeight: 42),
-                hintStyle: TextStyles.kBoldLato(
+                hintStyle: TextStyles.kBoldPoppins(
                   fontSize: TextStyles.k18FontSize,
                   colors: kColorSecondPrimary,
                 ),

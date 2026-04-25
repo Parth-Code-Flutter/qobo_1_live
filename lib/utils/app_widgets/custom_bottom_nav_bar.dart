@@ -1,6 +1,6 @@
-import 'package:aligned_rewards/constants/color_constants.dart';
-import 'package:aligned_rewards/utils/text_utils/app_text.dart';
-import 'package:aligned_rewards/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/utils/text_utils/app_text.dart';
+import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:flutter/material.dart';
 
 /// Custom Bottom Navigation Bar Widget
@@ -101,7 +101,7 @@ class CustomBottomNavBar extends StatelessWidget {
               // Label
               AppText(
                 text: label,
-                style: TextStyles.kRegularLato(
+                style: TextStyles.kRegularPoppins(
                   fontSize: 12,
                   colors: isActive ? activeColor : inactiveColor,
                 ),

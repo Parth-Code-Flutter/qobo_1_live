@@ -1,11 +1,11 @@
-import 'package:aligned_rewards/constants/image_constants.dart';
-import 'package:aligned_rewards/utils/app_widgets/app_spaces.dart';
-import 'package:aligned_rewards/utils/app_widgets/app_text_field.dart';
+import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:flutter/material.dart';
-import 'package:aligned_rewards/constants/color_constants.dart';
-import 'package:aligned_rewards/utils/text_utils/app_text.dart';
-import 'package:aligned_rewards/utils/text_utils/text_styles.dart';
-import 'package:aligned_rewards/utils/ui_utils/app_ui_utils.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/utils/text_utils/app_text.dart';
+import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/utils/ui_utils/app_ui_utils.dart';
 import 'package:flutter_svg/svg.dart';
 
 // Simple ValueItem class to avoid import issues
@@ -229,7 +229,7 @@ class _AppMultiDropdownState extends State<AppMultiDropdown> {
                                         text: item.label.isNotEmpty
                                             ? item.label[0].toUpperCase()
                                             : '?',
-                                        style: TextStyles.kBoldLato(
+                                        style: TextStyles.kBoldPoppins(
                                           fontSize: 8,
                                           colors: kColorWhite,
                                         ),
@@ -239,7 +239,7 @@ class _AppMultiDropdownState extends State<AppMultiDropdown> {
                                     Flexible(
                                       child: AppText(
                                         text: item.label,
-                                        style: TextStyles.kMediumLato(
+                                        style: TextStyles.kMediumPoppins(
                                           fontSize: 11,
                                           colors: kColorBlack,
                                         ),
@@ -263,7 +263,7 @@ class _AppMultiDropdownState extends State<AppMultiDropdown> {
                                 ),
                                 child: AppText(
                                   text: '+${_selectedItems.length - 4}',
-                                  style: TextStyles.kMediumLato(
+                                  style: TextStyles.kMediumPoppins(
                                     fontSize: 11,
                                     colors: kColorGrey76,
                                   ),
@@ -279,7 +279,7 @@ class _AppMultiDropdownState extends State<AppMultiDropdown> {
                             children: [
                               AppText(
                                 text: '${_selectedItems.length} selected',
-                                style: TextStyles.kRegularLato(
+                                style: TextStyles.kRegularPoppins(
                                   fontSize: 10,
                                   colors: kColorGrey76,
                                 ),
@@ -432,7 +432,7 @@ class _MultiDropdownBottomSheetState extends State<_MultiDropdownBottomSheet> {
                   child: AppText(
                     text: widget.fieldTitle,
                     align: TextAlign.center,
-                    style: TextStyles.kBoldLato(
+                    style: TextStyles.kBoldPoppins(
                       fontSize: 18,
                       colors: kColorBlack,
                     ),
@@ -458,7 +458,7 @@ class _MultiDropdownBottomSheetState extends State<_MultiDropdownBottomSheet> {
               children: [
                 // AppText(
                 //   text: 'Search',
-                //   style: TextStyles.kBoldLato(
+                //   style: TextStyles.kBoldPoppins(
                 //     fontSize: 14,
                 //     colors: kColorBlack,
                 //   ),
@@ -524,7 +524,7 @@ class _MultiDropdownBottomSheetState extends State<_MultiDropdownBottomSheet> {
                           text: item.label.isNotEmpty
                               ? item.label[0].toUpperCase()
                               : '?',
-                          style: TextStyles.kBoldLato(
+                          style: TextStyles.kBoldPoppins(
                             fontSize: 12,
                             colors: kColorWhite,
                           ),
@@ -555,7 +555,7 @@ class _MultiDropdownBottomSheetState extends State<_MultiDropdownBottomSheet> {
                   ),
                   AppText(
                     text: 'Select All',
-                    style: TextStyles.kMediumLato(
+                    style: TextStyles.kMediumPoppins(
                       fontSize: 14,
                       colors: kColorBlack,
                     ),
@@ -612,7 +612,7 @@ class _MultiDropdownBottomSheetState extends State<_MultiDropdownBottomSheet> {
                             text: item.label.isNotEmpty
                                 ? item.label[0].toUpperCase()
                                 : '?',
-                            style: TextStyles.kBoldLato(
+                            style: TextStyles.kBoldPoppins(
                               fontSize: 12,
                               colors: kColorWhite,
                             ),
@@ -627,7 +627,7 @@ class _MultiDropdownBottomSheetState extends State<_MultiDropdownBottomSheet> {
                             children: [
                               AppText(
                                 text: item.label,
-                                style: TextStyles.kMediumLato(
+                                style: TextStyles.kMediumPoppins(
                                   fontSize: 14,
                                   colors: kColorBlack,
                                 ),
@@ -637,7 +637,7 @@ class _MultiDropdownBottomSheetState extends State<_MultiDropdownBottomSheet> {
                               AppText(
                                 text:
                                     '${item.label.toLowerCase().replaceAll(' ', '')}@roundtechsquare.com',
-                                style: TextStyles.kRegularLato(
+                                style: TextStyles.kRegularPoppins(
                                   fontSize: 12,
                                   colors: kColorGrey76,
                                 ),

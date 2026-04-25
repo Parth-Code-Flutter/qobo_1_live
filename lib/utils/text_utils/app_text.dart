@@ -1,5 +1,5 @@
-import 'package:aligned_rewards/constants/color_constants.dart';
-import 'package:aligned_rewards/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:flutter/material.dart';
 
 class AppText extends StatelessWidget {
@@ -27,7 +27,7 @@ class AppText extends StatelessWidget {
     return Text(
       text,
       style: style ??
-          TextStyles.kRegularLato(
+          TextStyles.kRegularPoppins(
               fontSize: fontSize ?? 14, colors: color ?? kColorTextColor),
       textAlign: align,
       overflow: overflow,
@@ -62,7 +62,7 @@ class MediumText extends StatelessWidget {
       text,
       // style: style ?? Theme.of(context).textTheme.labelMedium,
       style: style ??
-          TextStyles.kMediumLato(
+          TextStyles.kMediumPoppins(
               fontSize: fontSize ?? 20, colors: color ?? kColorTextColor),
       textAlign: align,
       overflow: overflow,
@@ -97,7 +97,7 @@ class SemiBoldText extends StatelessWidget {
       text,
       // style: style ?? Theme.of(context).textTheme.labelMedium,
       style: style ??
-          TextStyles.kSemiBoldLato(
+          TextStyles.kSemiBoldPoppins(
             fontSize: fontSize ?? 16,
             colors: color ?? kColorTextColor,
           ),
@@ -134,7 +134,7 @@ class BoldText extends StatelessWidget {
       text,
       // style: style ?? Theme.of(context).textTheme.labelMedium,
       style: style ??
-          TextStyles.kBoldLato(
+          TextStyles.kBoldPoppins(
             fontSize: fontSize ?? 28,
             colors: color ?? kColorTextColor,
           ),

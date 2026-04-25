@@ -1,9 +1,7 @@
-
-
-import 'package:aligned_rewards/constants/color_constants.dart';
-import 'package:aligned_rewards/utils/logger_utils/logger_utils.dart';
-import 'package:aligned_rewards/utils/text_utils/app_text.dart';
-import 'package:aligned_rewards/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
+import 'package:qobo_one_live/utils/text_utils/app_text.dart';
+import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:another_flushbar/flushbar.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -57,11 +55,11 @@ class AlertMessageUtils {
         message,
         titleText: AppText(
           text: 'Error',
-          style: TextStyles.kRegularLato(colors: kColorBlack),
+          style: TextStyles.kRegularPoppins(colors: kColorBlack),
         ),
         messageText: AppText(
           text: message,
-          style: TextStyles.kRegularLato(colors: kColorBlack),
+          style: TextStyles.kRegularPoppins(colors: kColorBlack),
         ),
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: kColorWhite,
@@ -78,7 +76,7 @@ class AlertMessageUtils {
       message: text,
       messageText: AppText(
         text: text,
-        style: TextStyles.kRegularLato(colors: kColorBlack),
+        style: TextStyles.kRegularPoppins(colors: kColorBlack),
       ),
       margin: const EdgeInsets.all(8),
       borderRadius: BorderRadius.circular(8),

@@ -1,6 +1,6 @@
-import 'package:aligned_rewards/constants/color_constants.dart';
-import 'package:aligned_rewards/utils/text_utils/text_styles.dart';
-import 'package:aligned_rewards/utils/ui_utils/app_ui_utils.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/utils/ui_utils/app_ui_utils.dart';
 import 'package:flutter/material.dart';
 
 /// Rich Text Editor Widget with formatting toolbar
@@ -390,7 +390,7 @@ class _RichTextEditorWidgetState extends State<RichTextEditorWidget> {
             const SizedBox(width: 4),
             Text(
               label,
-              style: TextStyles.kRegularLato(
+              style: TextStyles.kRegularPoppins(
                 fontSize: 12,
                 colors: kColorGrey76,
               ),
@@ -425,14 +425,14 @@ class _RichTextEditorWidgetState extends State<RichTextEditorWidget> {
             maxLines: null,
             expands: true,
             textAlignVertical: TextAlignVertical.top,
-            style: TextStyles.kRegularLato(
+            style: TextStyles.kRegularPoppins(
               fontSize: 14,
               colors: kColorBlack,
             ),
             decoration: InputDecoration(
               border: InputBorder.none,
               hintText: widget.placeholder ?? 'Start typing...',
-              hintStyle: TextStyles.kRegularLato(
+              hintStyle: TextStyles.kRegularPoppins(
                 fontSize: 14,
                 colors: kColorGrey76,
               ).copyWith(fontStyle: FontStyle.italic),

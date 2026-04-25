@@ -1,12 +1,11 @@
-import 'package:aligned_rewards/constants/color_constants.dart';
-import 'package:aligned_rewards/constants/image_constants.dart';
-import 'package:aligned_rewards/generated/locales.g.dart';
-import 'package:aligned_rewards/utils/app_widgets/app_button.dart';
-import 'package:aligned_rewards/utils/app_widgets/app_size_extension.dart';
-import 'package:aligned_rewards/utils/app_widgets/app_spaces.dart';
-import 'package:aligned_rewards/utils/text_utils/app_text.dart';
-import 'package:aligned_rewards/utils/text_utils/text_styles.dart';
-import 'package:aligned_rewards/utils/ui_utils/app_ui_utils.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_size_extension.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/text_utils/app_text.dart';
+import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/utils/ui_utils/app_ui_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
@@ -113,7 +112,7 @@ class AppAlertDialog extends StatelessWidget {
               buttonColor: kColorWhite,
               // Use a simple solid-color button (no gradient) for the primary action.
               isGradient: false,
-              textStyle: TextStyles.kSemiBoldLato( colors: kColorRed,),
+              textStyle: TextStyles.kSemiBoldPoppins( colors: kColorRed,),
             ),
           ),
           Spacing.h16,
@@ -126,7 +125,7 @@ class AppAlertDialog extends StatelessWidget {
               buttonColor: kColorGrey187,
               // Use a simple solid-color button (no gradient) for the cancel action.
               isGradient: false,
-              textStyle: TextStyles.kSemiBoldLato(
+              textStyle: TextStyles.kSemiBoldPoppins(
 
               ),
             ),

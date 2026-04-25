@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:aligned_rewards/routes/app_pages.dart';
-import 'package:aligned_rewards/app/auth/login_options/views/login_options_view.dart';
-import 'package:aligned_rewards/utils/local_storage/controllers/local_storage_controller.dart';
-import 'package:aligned_rewards/utils/alert_message_utils/alert_message_utils.dart';
-import 'package:aligned_rewards/utils/logger_utils/logger_utils.dart';
+import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
+import 'package:qobo_one_live/utils/alert_message_utils/alert_message_utils.dart';
+import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 
 /// Global Error Handler Utility
 /// Handles common API errors and provides centralized logout functionality

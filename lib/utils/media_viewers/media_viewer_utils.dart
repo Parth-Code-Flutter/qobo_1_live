@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:aligned_rewards/utils/media_viewers/fullscreen_image_viewer.dart';
-import 'package:aligned_rewards/utils/media_viewers/fullscreen_video_player.dart';
+import 'package:qobo_one_live/utils/media_viewers/fullscreen_image_viewer.dart';
+import 'package:qobo_one_live/utils/media_viewers/fullscreen_video_player.dart';
 
 /// Media Viewer Utils
 /// Utility class providing convenient methods to show images and videos

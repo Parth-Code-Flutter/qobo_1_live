@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:aligned_rewards/constants/color_constants.dart';
-import 'package:aligned_rewards/utils/text_utils/app_text.dart';
-import 'package:aligned_rewards/utils/text_utils/text_styles.dart';
-import 'package:aligned_rewards/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/utils/text_utils/app_text.dart';
+import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 
 /// Common widget for displaying overlapping member avatars
 /// 
@@ -122,7 +122,7 @@ class OverlappingMembersWidget extends StatelessWidget {
                                 : '?',
                             fontSize: avatarRadius * 0.67, // ~12 for radius 18
                             color: kColorWhite,
-                            style: TextStyles.kBoldLato(
+                            style: TextStyles.kBoldPoppins(
                               fontSize: avatarRadius * 0.67,
                               colors: kColorWhite,
                             ),
@@ -154,7 +154,7 @@ class OverlappingMembersWidget extends StatelessWidget {
                   text: '+${totalMembers - maxVisible}',
                   fontSize: avatarRadius * 0.5, // ~9 for radius 18
                   color: kColorGrey76,
-                  style: TextStyles.kBoldLato(
+                  style: TextStyles.kBoldPoppins(
                     fontSize: avatarRadius * 0.5,
                     colors: kColorGrey76,
                   ),

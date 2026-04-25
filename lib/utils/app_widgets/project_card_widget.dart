@@ -1,15 +1,15 @@
-import 'package:aligned_rewards/utils/app_widgets/app_horizontal_divider.dart';
-import 'package:aligned_rewards/utils/app_widgets/container_box_shadow_util.dart';
-import 'package:aligned_rewards/utils/ui_utils/app_ui_utils.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_horizontal_divider.dart';
+import 'package:qobo_one_live/utils/app_widgets/container_box_shadow_util.dart';
+import 'package:qobo_one_live/utils/ui_utils/app_ui_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:aligned_rewards/constants/color_constants.dart';
-import 'package:aligned_rewards/constants/image_constants.dart';
-import 'package:aligned_rewards/utils/text_utils/app_text.dart';
-import 'package:aligned_rewards/utils/text_utils/text_styles.dart';
-import 'package:aligned_rewards/utils/app_widgets/app_spaces.dart';
-import 'package:aligned_rewards/utils/app_widgets/overlapping_members_widget.dart';
-import 'package:aligned_rewards/utils/app_widgets/common_action_icons_widget.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/utils/text_utils/app_text.dart';
+import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/overlapping_members_widget.dart';
+import 'package:qobo_one_live/utils/app_widgets/common_action_icons_widget.dart';
 import 'package:intl/intl.dart';
 
 /// Modern Project Card Widget
@@ -252,7 +252,7 @@ class ProjectCardWidget extends StatelessWidget {
           ),
           child: AppText(
             text: statusText.toUpperCase(),
-            style: TextStyles.kBoldLato(
+            style: TextStyles.kBoldPoppins(
               fontSize: 8,
               colors: statusColor,
             ),
@@ -307,7 +307,7 @@ class ProjectCardWidget extends StatelessWidget {
           text: '$percentage%',
           fontSize: 12,
           color: progressColor,
-          style: TextStyles.kBoldLato(
+          style: TextStyles.kBoldPoppins(
             fontSize: 12,
             colors: progressColor,
           ),

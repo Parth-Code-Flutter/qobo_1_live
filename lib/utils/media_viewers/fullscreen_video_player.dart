@@ -1,6 +1,6 @@
-import 'package:aligned_rewards/constants/color_constants.dart';
-import 'package:aligned_rewards/utils/text_utils/app_text.dart';
-import 'package:aligned_rewards/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/utils/text_utils/app_text.dart';
+import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
@@ -85,7 +85,7 @@ class _FullscreenVideoPlayerState extends State<FullscreenVideoPlayer> {
                     text: errorMessage,
                     fontSize: 16,
                     color: Colors.white,
-                    style: TextStyles.kRegularLato(fontSize: 16, colors: Colors.white),
+                    style: TextStyles.kRegularPoppins(fontSize: 16, colors: Colors.white),
                     align: TextAlign.center,
                   ),
                 ],
@@ -127,7 +127,7 @@ class _FullscreenVideoPlayerState extends State<FullscreenVideoPlayer> {
                 text: widget.videoTitle!,
                 fontSize: 16,
                 color: Colors.white,
-                style: TextStyles.kSemiBoldLato(fontSize: 16, colors: Colors.white),
+                style: TextStyles.kSemiBoldPoppins(fontSize: 16, colors: Colors.white),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               )
@@ -173,7 +173,7 @@ class _FullscreenVideoPlayerState extends State<FullscreenVideoPlayer> {
               text: _errorMessage ?? 'Failed to load video',
               fontSize: 16,
               color: Colors.white,
-              style: TextStyles.kRegularLato(fontSize: 16, colors: Colors.white),
+              style: TextStyles.kRegularPoppins(fontSize: 16, colors: Colors.white),
               align: TextAlign.center,
             ),
             const SizedBox(height: 24),

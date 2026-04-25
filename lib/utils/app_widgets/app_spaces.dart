@@ -1,4 +1,4 @@
-import 'package:aligned_rewards/utils/app_widgets/app_size_extension.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_size_extension.dart';
 import 'package:flutter/material.dart';
 
 class Spacing {

@@ -1,4 +1,4 @@
-import 'package:aligned_rewards/constants/color_constants.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:flutter/material.dart';
 
 /// Common vertical divider widget with customizable properties

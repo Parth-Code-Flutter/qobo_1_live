@@ -1,8 +1,8 @@
-import 'package:aligned_rewards/constants/color_constants.dart';
-import 'package:aligned_rewards/utils/app_widgets/app_spaces.dart';
-import 'package:aligned_rewards/utils/text_utils/app_text.dart';
-import 'package:aligned_rewards/utils/text_utils/text_styles.dart';
-import 'package:aligned_rewards/utils/ui_utils/app_ui_utils.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/text_utils/app_text.dart';
+import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/utils/ui_utils/app_ui_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -125,7 +125,7 @@ class AppTextField extends StatelessWidget {
         if (forProfile)
           AppText(
             text: value ?? '',
-            style: TextStyles.kRegularLato(),
+            style: TextStyles.kRegularPoppins(),
           )
         else
           TextFormField(
@@ -160,7 +160,7 @@ class AppTextField extends StatelessWidget {
               contentPadding: padding,
               hintText: hintText,
               hintStyle: AppUIUtils.hintTextFieldTextStyle,
-              errorStyle: TextStyles.kMediumLato(
+              errorStyle: TextStyles.kMediumPoppins(
                 colors: kColorRed,
                 fontSize: TextStyles.k12FontSize,
               ),
@@ -226,12 +226,12 @@ class AppTextField extends StatelessWidget {
       children: [
         AppText(
           text: fieldTitle ?? '',
-          style: TextStyles.kRegularLato(),
+          style: TextStyles.kRegularPoppins(),
         ),
         if (isRequired)
           AppText(
             text: ' *',
-            style: TextStyles.kRegularLato(),
+            style: TextStyles.kRegularPoppins(),
           ),
       ],
     );
@@ -240,7 +240,7 @@ class AppTextField extends StatelessWidget {
   Widget _ex(BuildContext context) {
     return AppText(
       text: exText ?? '',
-      style: TextStyles.kRegularLato(),
+      style: TextStyles.kRegularPoppins(),
     );
   }
 

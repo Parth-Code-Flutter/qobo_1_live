@@ -1,5 +1,5 @@
-import 'package:aligned_rewards/utils/alert_message_utils/alert_message_utils.dart';
-import 'package:aligned_rewards/utils/logger_utils/logger_utils.dart';
+import 'package:qobo_one_live/utils/alert_message_utils/alert_message_utils.dart';
+import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';

@@ -1,6 +1,6 @@
-import 'package:aligned_rewards/constants/color_constants.dart';
-import 'package:aligned_rewards/utils/text_utils/app_text.dart';
-import 'package:aligned_rewards/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/utils/text_utils/app_text.dart';
+import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
@@ -37,7 +37,7 @@ class FullscreenImageViewer extends StatelessWidget {
                 text: imageTitle!,
                 fontSize: 16,
                 color: Colors.white,
-                style: TextStyles.kSemiBoldLato(fontSize: 16, colors: Colors.white),
+                style: TextStyles.kSemiBoldPoppins(fontSize: 16, colors: Colors.white),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               )
@@ -72,7 +72,7 @@ class FullscreenImageViewer extends StatelessWidget {
                 text: 'Failed to load image',
                 fontSize: 16,
                 color: Colors.white,
-                style: TextStyles.kRegularLato(fontSize: 16, colors: Colors.white),
+                style: TextStyles.kRegularPoppins(fontSize: 16, colors: Colors.white),
               ),
             ],
           ),
@@ -120,7 +120,7 @@ class FullscreenImageViewer extends StatelessWidget {
                     text: 'Failed to load image',
                     fontSize: 16,
                     color: Colors.white,
-                    style: TextStyles.kRegularLato(fontSize: 16, colors: Colors.white),
+                    style: TextStyles.kRegularPoppins(fontSize: 16, colors: Colors.white),
                   ),
                 ],
               ),

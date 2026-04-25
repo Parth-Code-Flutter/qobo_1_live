@@ -1,5 +1,5 @@
-import 'package:aligned_rewards/constants/color_constants.dart';
-import 'package:aligned_rewards/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:flutter/material.dart';
 
 class AppUIUtils {

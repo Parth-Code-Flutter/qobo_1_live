@@ -1,5 +1,5 @@
-import 'package:aligned_rewards/constants/color_constants.dart';
-import 'package:aligned_rewards/constants/image_constants.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';

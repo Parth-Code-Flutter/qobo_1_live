@@ -1,4 +1,4 @@
-import 'package:aligned_rewards/utils/ui_utils/app_screen_utils.dart';
+import 'package:qobo_one_live/utils/ui_utils/app_screen_utils.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 extension AppSizeExtension on num {

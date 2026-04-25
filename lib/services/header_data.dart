@@ -1,8 +1,6 @@
-import 'package:aligned_rewards/utils/local_storage/controllers/local_storage_controller.dart';
-import 'package:aligned_rewards/utils/logger_utils/logger_utils.dart';
+import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
+import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 import 'package:get/get.dart';
-
-import '../constants/local_storage_constants.dart';
 
 class HeaderData {
   Future<Map<String, String>> headers() async {

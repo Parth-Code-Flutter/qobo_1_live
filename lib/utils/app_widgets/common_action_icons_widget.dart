@@ -1,8 +1,8 @@
-import 'package:aligned_rewards/constants/color_constants.dart';
-import 'package:aligned_rewards/constants/image_constants.dart';
-import 'package:aligned_rewards/routes/app_pages.dart';
-import 'package:aligned_rewards/utils/app_widgets/icon_with_background_widget.dart';
-import 'package:aligned_rewards/utils/ui_utils/app_ui_utils.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/utils/app_widgets/icon_with_background_widget.dart';
+import 'package:qobo_one_live/utils/ui_utils/app_ui_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';

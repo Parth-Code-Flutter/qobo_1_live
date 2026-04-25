@@ -1,9 +1,9 @@
-import 'package:aligned_rewards/constants/color_constants.dart';
-import 'package:aligned_rewards/utils/app_widgets/app_button.dart';
-import 'package:aligned_rewards/utils/app_widgets/app_spaces.dart';
-import 'package:aligned_rewards/utils/text_utils/app_text.dart';
-import 'package:aligned_rewards/utils/text_utils/text_styles.dart';
-import 'package:aligned_rewards/utils/ui_utils/app_ui_utils.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/text_utils/app_text.dart';
+import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/utils/ui_utils/app_ui_utils.dart';
 import 'package:flutter/material.dart';
 
 /// A reusable two‑button dialog that accepts any custom [content] widget.
@@ -63,7 +63,7 @@ class AppCustomDialog extends StatelessWidget {
           children: [
             AppText(
               text: title,
-              style: TextStyles.kSemiBoldLato(
+              style: TextStyles.kSemiBoldPoppins(
                 fontSize: TextStyles.k16FontSize,
                 colors: kColorBlack,
               ),
@@ -93,7 +93,7 @@ class AppCustomDialog extends StatelessWidget {
                     buttonColor: kColorGreyDA,
                     buttonBorderColor: kColorGreyDA,
                     isGradient: false,
-                    textStyle: TextStyles.kSemiBoldLato(
+                    textStyle: TextStyles.kSemiBoldPoppins(
                       fontSize: TextStyles.k14FontSize,
                       colors: kColorBlack,
                     ),

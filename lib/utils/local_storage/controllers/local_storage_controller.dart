@@ -1,7 +1,7 @@
 import 'dart:convert';
-import 'package:aligned_rewards/constants/local_storage_constants.dart';
-import 'package:aligned_rewards/utils/extensions_utils/string_extentions.dart';
-import 'package:aligned_rewards/utils/logger_utils/logger_utils.dart';
+import 'package:qobo_one_live/constants/local_storage_constants.dart';
+import 'package:qobo_one_live/utils/extensions_utils/string_extentions.dart';
+import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get/get.dart';
 
