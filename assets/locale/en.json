@@ -4,5 +4,10 @@
   "splashWorkingMessage": "SplashView is working",
   "loginWelcomeTitle": "Hey! Welcome Back",
   "loginTitle": "login",
-  "loginSubTitle": "Sign In to your account"
+  "loginSubTitle": "Sign In to your account",
+  "loginEmailHint": "Email",
+  "loginPasswordHint": "Password",
+  "forgotPassword": "Forgot Password?",
+  "loginButtonText": "Log in",
+  "orLoginWith": "Or login with"
 }

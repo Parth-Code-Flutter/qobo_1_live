@@ -33,13 +33,13 @@ Widget appButton({
   double? buttonWidth,
   TextStyle? textStyle,
   double? borderRadius,
-  bool? isGradient = true, // Default to gradient for whole project
+  bool? isGradient = false, // Default to gradient for whole project
   List<Color>? gradientColors,
 }) {
   return GestureDetector(
     onTap: onPressed,
     child: Container(
-      height: buttonHeight ?? 50,
+      height: buttonHeight ?? 56,
       width: buttonWidth ?? Get.width,
       decoration: isGradient == true
           ? _gradientDecoration(
@@ -54,7 +54,7 @@ Widget appButton({
             buttonText,
             style: textStyle ??
                 TextStyles.kBoldPoppins(
-                  fontSize: TextStyles.k18FontSize,
+                  fontSize: TextStyles.k14FontSize,
                   colors: textColor ?? kColorWhite,
                 ),
           ),

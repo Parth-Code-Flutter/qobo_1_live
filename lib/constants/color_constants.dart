@@ -14,6 +14,7 @@ const kColorRed = Color(0xFFDA2627);
 
 const kColorHint = Color(0xFF718096);
 const kColorText = Color(0xFF1A202C);
+const kColorTextGrey = Color(0xFF4A5568);
 const kColorTextFieldBorder = Color(0xFFDFDFDF);
 
 

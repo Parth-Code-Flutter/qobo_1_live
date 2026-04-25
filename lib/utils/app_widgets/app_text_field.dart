@@ -26,6 +26,7 @@ class AppTextField extends StatelessWidget {
     this.labelText,
     this.labelStyle,
     this.textStyle,
+    this.hintStyle,
     this.floatingLabelStyle,
     this.readOnly = false,
     this.onTap,
@@ -46,6 +47,7 @@ class AppTextField extends StatelessWidget {
     this.autofillHints,
     this.textInputAction,
     this.textCapitalization,
+    this.borderColor,
   });
 
   final TextEditingController? controller;
@@ -65,6 +67,7 @@ class AppTextField extends StatelessWidget {
   final String? labelText;
   final TextStyle? labelStyle;
   final TextStyle? textStyle;
+  final TextStyle? hintStyle;
   final TextStyle? floatingLabelStyle;
   final bool readOnly;
   final void Function()? onTap;
@@ -85,6 +88,8 @@ class AppTextField extends StatelessWidget {
   final TextInputAction? textInputAction;
   /// Optional text capitalization override (defaults to sentences when null).
   final TextCapitalization? textCapitalization;
+  /// Optional border color override.
+  final Color? borderColor;
 
   @override
   Widget build(BuildContext context) {
@@ -159,7 +164,7 @@ class AppTextField extends StatelessWidget {
               counterText: !showCounter ? '' : null,
               contentPadding: padding,
               hintText: hintText,
-              hintStyle: AppUIUtils.hintTextFieldTextStyle,
+              hintStyle: hintStyle ?? AppUIUtils.hintTextFieldTextStyle,
               errorStyle: TextStyles.kMediumPoppins(
                 colors: kColorRed,
                 fontSize: TextStyles.k12FontSize,
@@ -252,7 +257,7 @@ class AppTextField extends StatelessWidget {
       gapPadding: gapPadding,
       borderRadius: inputBorderRadius ?? AppUIUtils.primaryBorderRadius,
       borderSide: BorderSide(
-        color: error ?? false ? kColorRed : kColorTextFieldBorder,
+        color: error ?? false ? kColorRed : (borderColor ?? kColorTextFieldBorder),
         width: borderWidth,
         // width: error ?? false ? 0.7 : 0.7,
       ),
@@ -264,7 +269,7 @@ class AppTextField extends StatelessWidget {
       gapPadding: gapPadding,
       borderRadius: inputBorderRadius ?? AppUIUtils.primaryBorderRadius,
       borderSide: BorderSide(
-        color: error ?? false ? kColorRed : kColorTextFieldBorder,
+        color: error ?? false ? kColorRed : (borderColor ?? kColorTextFieldBorder),
         width: borderWidth,
         // width: error ?? false ? 0.7 : 0.7,
       ),

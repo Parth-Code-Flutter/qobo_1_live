@@ -10,7 +10,7 @@ const String kIconApp = '$iconPath/app_icon.png';
 /// SVG Icons
 const String kIconArrowBack = '$imgPath/arrow_back_icon.svg';
 
-const String kIconFB = '$imgPath/fb_icon.svg';
-const String kIconGoogle = '$imgPath/google_icon.svg';
-const String kIconMail = '$imgPath/mail_icon.svg';
-const String kIconPassword = '$imgPath/password_icon.svg';
+const String kIconFB = '$iconPath/fb_icon.svg';
+const String kIconGoogle = '$iconPath/google_icon.svg';
+const String kIconMail = '$iconPath/mail_icon.svg';
+const String kIconPassword = '$iconPath/password_icon.svg';
