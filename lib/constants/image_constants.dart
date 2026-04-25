@@ -5,7 +5,7 @@ const String iconPath = 'assets/icons';
 const String kImgSplashScreen = '$imgPath/splash_screen_img.png';
 
 /// PNG Icons
-const String kIconApp = '$imgPath/app_icon.png';
+const String kIconApp = '$iconPath/app_icon.png';
 
 /// SVG Icons
 const String kIconArrowBack = '$imgPath/arrow_back_icon.svg';

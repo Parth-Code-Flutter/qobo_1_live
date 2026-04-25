@@ -1,5 +1,8 @@
 {
   "appTitle": "Qobo One",
   "splashTitle": "Splash",
-  "splashWorkingMessage": "SplashView is working"
+  "splashWorkingMessage": "SplashView is working",
+  "loginWelcomeTitle": "Hey! Welcome Back",
+  "loginTitle": "login",
+  "loginSubTitle": "Sign In to your account"
 }
