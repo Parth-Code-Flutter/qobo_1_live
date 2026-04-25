@@ -32,7 +32,10 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
             Spacing.v24,
             emailUsernamePasswordTextFields(),
             Spacing.v28,
-            appButton(onPressed: () {}, buttonText: LocaleKeys.signUp.tr),
+            appButton(
+              onPressed: () => Get.toNamed(Routes.AUTH_VERIFY_ACCOUNT),
+              buttonText: LocaleKeys.signUp.tr,
+            ),
             Spacing.v20,
             orLoginWithDividerWidget(),
             Spacing.v16,

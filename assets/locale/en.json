@@ -18,5 +18,9 @@
   "dontHaveAccount": "Don’t have an account?",
   "signUp": "Sign Up",
   "haveAccount": "Have an account?",
-  "signIn": "Sign In"
+  "signIn": "Sign In",
+  "verifyAccountTitle": "Phone Number",
+  "verifyAccountSubTitle": "Please enter your phone number to verify your account",
+  "verifyPhoneHint": "9999 888 8888",
+  "continueButton": "Continue"
 }
