@@ -11,6 +11,8 @@
   "forgotPassword": "Forgot Password?",
   "loginButtonText": "Log in",
   "orLoginWith": "Or login with",
+  "loginWithFacebook": "Facebook",
+  "loginWithGoogleShort": "Google",
   "loginWithApple": "Log In with Apple",
   "loginWithGoogle": "Log In with Google",
   "signUpWithApple": "Sign Up with Apple",

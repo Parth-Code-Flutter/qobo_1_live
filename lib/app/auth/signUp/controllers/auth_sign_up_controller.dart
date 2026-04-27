@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class AuthSignUpController extends GetxController {
+  final formKey = GlobalKey<FormState>();
   final emailController = TextEditingController();
   final usernameController = TextEditingController();
   final passwordController = TextEditingController();
@@ -17,5 +18,9 @@ class AuthSignUpController extends GetxController {
 
   void togglePasswordVisibility() {
     isPasswordHidden.value = !isPasswordHidden.value;
+  }
+
+  bool validateForm() {
+    return formKey.currentState?.validate() ?? false;
   }
 }
