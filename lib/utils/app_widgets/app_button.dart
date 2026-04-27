@@ -77,7 +77,7 @@ BoxDecoration _simpleDecoration(buttonColor, borderRadius, buttonBorderColor) {
     color: buttonColor ?? kColorPrimary,
     borderRadius:
         BorderRadius.circular(borderRadius ?? AppUIUtils.primaryRadius),
-    border: Border.all(color: buttonBorderColor ?? kColorPrimary, width: 1),
+    border: Border.all(color: buttonBorderColor ?? kColorPrimary, width: 0.5),
   );
 }
 

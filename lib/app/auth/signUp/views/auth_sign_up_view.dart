@@ -50,7 +50,7 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
               socialMediaLogin(),
               Spacer(),
               signInFooterWidget(),
-              Spacing.v28,
+              Spacing.v24,
             ],
           ),
         ),
@@ -189,7 +189,7 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
 
   Widget socialMediaLogin() {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         _socialIconButton(
           iconPath: kIconGoogle,
@@ -218,13 +218,13 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 50,
-        width: 150,
+        height: 56,
+        width: Get.width*0.42,
         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         decoration: BoxDecoration(
           color: kColorWhite,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: kColorTextFieldBorder,width: 0.5),
+          border: Border.all(color: kColorTextFieldBorder, width: 0.5),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,

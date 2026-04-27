@@ -35,7 +35,7 @@ class AuthLoginView extends GetView<AuthLoginController> {
               welcomeTextHeader(),
               Spacing.v24,
               emailPasswordTextFields(context),
-              Spacing.v28,
+              Spacing.v20,
               appButton(
                 onPressed: () {
                   if (controller.validateForm()) {}
@@ -44,11 +44,13 @@ class AuthLoginView extends GetView<AuthLoginController> {
               ),
               Spacing.v20,
               orLoginWithDividerWidget(),
-              Spacing.v24,
+              Spacing.v20,
               socialMediaLogin(),
+              Spacing.v20,
+              loginWithOtp(),
               Spacer(),
               signUpFooterWidget(),
-              Spacing.v28,
+              Spacing.v24,
             ],
           ),
         ),
@@ -178,7 +180,7 @@ class AuthLoginView extends GetView<AuthLoginController> {
 
   Widget socialMediaLogin() {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         _socialIconButton(
           iconPath: kIconGoogle,
@@ -207,13 +209,13 @@ class AuthLoginView extends GetView<AuthLoginController> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 50,
-        width: 150,
+        height: 56,
+        width: Get.width*0.42,
         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         decoration: BoxDecoration(
           color: kColorWhite,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: kColorTextFieldBorder,width: 0.5),
+          border: Border.all(color: kColorTextFieldBorder, width: 0.5),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -256,6 +258,21 @@ class AuthLoginView extends GetView<AuthLoginController> {
             color: kColorPrimary,
           ),
         ],
+      ),
+    );
+  }
+
+  loginWithOtp() {
+    return appButton(
+      onPressed: () {},
+      buttonText: LocaleKeys.loginWithOtp.tr,
+      buttonColor: kColorWhite,
+      textColor: kColorPrimary,
+      buttonBorderColor: kColorTextFieldBorder,
+      textStyle: TextStyles.kRegularPoppins(
+        colors: kColorText,
+        fontSize: TextStyles.k16FontSize,
+        fontWeight: FontWeight.w400,
       ),
     );
   }
