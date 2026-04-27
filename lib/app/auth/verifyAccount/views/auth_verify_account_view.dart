@@ -222,13 +222,11 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
         ),
         if ((controller.otpError.value ?? '').isNotEmpty) ...[
           Spacing.v8,
-          Align(
-            alignment: Alignment.centerLeft,
-            child: AppText(
-              text: controller.otpError.value ?? '',
-              fontSize: TextStyles.k12FontSize,
-              color: kColorRed,
-            ),
+          AppText(
+            text: controller.otpError.value ?? '',
+            fontSize: TextStyles.k12FontSize,
+            color: kColorRed,
+            align: TextAlign.center,
           ),
         ],
       ],
