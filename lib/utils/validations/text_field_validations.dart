@@ -11,7 +11,7 @@ const String kEmptyPassword = 'Password is required';
 const String kEmptyConfirmPassword = 'Confirm password is required';
 const String kValidConfirmPassword = 'Passwords do not match';
 const String kEmptyOtp = 'OTP is required';
-const String kValidOtp = 'Please enter a valid 6-digit OTP';
+const String kValidOtp = 'Please enter a valid OTP';
 const String kEmptyOrgId = 'Organization ID is required';
 
 class Validate {
@@ -32,6 +32,18 @@ class Validate {
       return kEmptyPhone;
     } else if (!v.isPhoneNumber) {
       return kValidPhone;
+    } else {
+      return null;
+    }
+  }
+
+  /// 10-DIGIT PHONE NUMBER VALIDATION
+  static phone10DigitValidation(BuildContext context, String v) {
+    final phone = v.trim();
+    if (phone.isEmpty) {
+      return kEmptyPhone;
+    } else if (!RegExp(r'^\d{10}$').hasMatch(phone)) {
+      return 'Please enter a valid 10-digit phone number';
     } else {
       return null;
     }
@@ -69,11 +81,11 @@ class Validate {
   }
 
   /// OTP VALIDATION
-  static otpValidation(BuildContext context, String v) {
+  static otpValidation(BuildContext context, String v, {int otpLength = 6}) {
     if (v.trim().isEmpty) {
       return kEmptyOtp;
-    } else if (v.length != 6) {
-      return kValidOtp;
+    } else if (v.length != otpLength) {
+      return 'Please enter a valid $otpLength-digit OTP';
     } else {
       return null;
     }
