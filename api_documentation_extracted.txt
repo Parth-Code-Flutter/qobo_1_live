@@ -1,0 +1,1134 @@
+Qobo1live Backend API Documentation
+Base URL: https://my-backend-api-960q.onrender.com Last Updated: 28-Apr-2026
+Standard Response Format
+Every API response follows this structure:
+{
+"statusCode": 1,
+"message": "Description of the result",
+"data": {}
+}
+Field
+Type
+Description
+statusCode
+number
+1 = Success, 0 = Failure
+message
+string
+Human-readable result message
+data
+object | array | null
+Response payload (null on errors)
+Error Response Example
+{
+"statusCode": 0,
+"message": "Not authorized, no token",
+"data": null
+}
+Authentication Header
+All endpoints marked 🔒 require a JWT Bearer token:
+Authorization: Bearer <jwt_token>
+1. Authentication (/api/auth)
+1.1 Phone Login (Send OTP)
+Method
+POST
+URL
+/api/auth/login-phone
+Auth
+❌ Public
+Request Body:
+{
+"phone": "9876543210",
+"country_code": "91"
+}
+Success Response (200):
+{
+"statusCode": 1,
+"message": "OTP sent",
+"data": {
+"message": "OTP sent successfully",
+"smsResult": { "return": true, "request_id": "..." }
+}
+}
+Error Response (400):
+{
+"statusCode": 0,
+"message": "Failed to send SMS",
+"data": null
+}
+1.2 Verify OTP
+Method
+POST
+URL
+/api/auth/verify-otp
+Auth
+❌ Public
+Request Body:
+{
+"phone": "9876543210",
+"otp": "1234"
+}
+Success Response (200):
+{
+"statusCode": 1,
+"message": "OTP verified successfully",
+"data": {
+"user": {
+"id": "uuid",
+"name": "string",
+"phone": "9876543210",
+"email": null,
+"displayPicture": null,
+"level": 1,
+"vipLevel": 0,
+"role": "USER",
+"isOnline": false,
+"country": null,
+"bio": null,
+"gender": null,
+"dob": null,
+"createdAt": "2026-04-28T00:00:00.000Z"
+},
+"token": "eyJhbGciOiJIUzI1NiIs..."
+}
+}
+1.3 Social Login
+Method
+POST
+URL
+/api/auth/social
+Auth
+❌ Public
+Request Body:
+{
+"name": "John Doe",
+"email": "john@gmail.com",
+"phone": "9876543210",
+"socialId": "google_uid_123",
+"authType": "google",
+"displayPicture": "https://..."
+}
+authType values: "phone" | "google" | "facebook" Fields email, phone, socialId, displayPicture are optional.
+Success Response (200):
+{
+"statusCode": 1,
+"message": "Login successful",
+"data": {
+"user": { "...user object..." },
+"token": "eyJhbGciOiJIUzI1NiIs..."
+}
+}
+1.4 Firebase Phone Login
+Method
+POST
+URL
+/api/auth/firebase-login
+Auth
+❌ Public
+Request Body:
+{
+"idToken": "firebase_id_token_string"
+}
+Success Response (200):
+{
+"statusCode": 1,
+"message": "Firebase login successful",
+"data": {
+"user": { "...user object..." },
+"token": "eyJhbGciOiJIUzI1NiIs..."
+}
+}
+2. User Profile (/api/user)
+2.1 Get Profile
+Method
+GET
+URL
+/api/user/profile
+Auth
+🔒 Bearer Token
+Request: No body required.
+Success Response (200):
+{
+"statusCode": 1,
+"message": "Profile fetched successfully",
+"data": {
+"id": "uuid",
+"name": "John Doe",
+"phone": "9876543210",
+"email": "john@gmail.com",
+"displayPicture": "/uploads/avatars/img.jpg",
+"poster": "/uploads/posters/poster.jpg",
+"level": 5,
+"vipLevel": 2,
+"role": "USER",
+"isOnline": true,
+"country": "IN",
+"bio": "Hello world",
+"gender": "male",
+"dob": "1995-01-15T00:00:00.000Z",
+"createdAt": "2026-01-01T00:00:00.000Z"
+}
+}
+2.2 Update Profile
+Method
+PUT
+URL
+/api/user/update
+Auth
+🔒 Bearer Token
+Request Body: (all fields optional)
+{
+"name": "New Name",
+"bio": "Updated bio",
+"gender": "male",
+"dob": "1995-01-15",
+"country": "IN"
+}
+Success Response (200):
+{
+"statusCode": 1,
+"message": "Profile updated successfully",
+"data": { "...updated user object..." }
+}
+2.3 Upload Poster
+Method
+POST
+URL
+/api/user/poster-upload
+Auth
+🔒 Bearer Token
+Content-Type
+multipart/form-data
+Request Body:
+Field
+Type
+Required
+poster
+file
+✅
+Success Response (200):
+{
+"statusCode": 1,
+"message": "Poster uploaded successfully",
+"data": {
+"posterUrl": "/uploads/posters/filename.jpg"
+}
+}
+2.4 Search Users
+Method
+GET
+URL
+/api/user/search?query=john
+Auth
+🔒 Bearer Token
+Query Params:
+Param
+Type
+Required
+query
+string
+❌
+Success Response (200):
+{
+"statusCode": 1,
+"message": "Search results",
+"data": [
+{ "id": "uuid", "name": "John", "displayPicture": "..." },
+{ "id": "uuid", "name": "Johnny", "displayPicture": "..." }
+]
+}
+2.5 Follow / Unfollow
+Method
+POST
+URL
+/api/user/follow-unfollow
+Auth
+🔒 Bearer Token
+Request Body:
+{
+"target_id": "user_uuid",
+"action": "follow"
+}
+action values: "follow" | "unfollow"
+Success Response (200):
+{
+"statusCode": 1,
+"message": "Successfully followed",
+"data": { "...follow record..." }
+}
+2.6 Get Patti Style
+Method
+GET
+URL
+/api/user/patti-style/:user_id
+Auth
+🔒 Bearer Token
+Success Response (200):
+{
+"statusCode": 1,
+"message": "Patti style fetched",
+"data": { "...patti style object..." }
+}
+3. Economy & Wallet (/api/economy)
+3.1 Get Wallet
+Method
+GET
+URL
+/api/economy/wallet
+Auth
+🔒 Bearer Token
+Success Response (200):
+{
+"statusCode": 1,
+"message": "Wallet fetched",
+"data": {
+"id": "uuid",
+"userId": "uuid",
+"coins": 5000,
+"diamonds": 1200,
+"beans": 300
+}
+}
+3.2 Send Gift
+Method
+POST
+URL
+/api/economy/send-gift
+Auth
+🔒 Bearer Token
+Request Body:
+{
+"receiver_id": "user_uuid",
+"gift_id": "gift_uuid",
+"room_id": "room_uuid"
+}
+Success Response (200):
+{
+"statusCode": 1,
+"message": "Gift sent successfully",
+"data": {
+"success": true,
+"transactionId": "txn_uuid",
+"luckyWin": false,
+"rewardAmount": 0
+}
+}
+3.3 Gift List
+Method
+GET
+URL
+/api/economy/gift-list
+Auth
+🔒 Bearer Token
+Success Response (200):
+{
+"statusCode": 1,
+"message": "Gifts fetched",
+"data": [
+{
+"id": "uuid",
+"name": "Rose",
+"icon": "rose.png",
+"price": 100,
+"type": "normal",
+"animationUrl": "rose_anim.json",
+"soundUrl": null,
+"winRate": null,
+"categoryId": "uuid"
+}
+]
+}
+3.4 Transaction History
+Method
+GET
+URL
+/api/economy/history
+Auth
+🔒 Bearer Token
+Success Response (200):
+{
+"statusCode": 1,
+"message": "History fetched",
+"data": [
+{
+"id": "uuid",
+"senderId": "uuid",
+"receiverId": "uuid",
+"amount": 500,
+"type": "GIFT",
+"status": "COMPLETED",
+"createdAt": "2026-04-28T00:00:00.000Z"
+}
+]
+}
+3.5 Recharge
+Method
+POST
+URL
+/api/economy/recharge
+Auth
+🔒 Bearer Token
+Request Body:
+{
+"amount": 1000,
+"method": "razorpay"
+}
+Success Response (200):
+{
+"statusCode": 1,
+"message": "Recharge via razorpay successful",
+"data": { "...updated wallet..." }
+}
+4. Rooms (/api/room)
+4.1 Create Room
+Method
+POST
+URL
+/api/room/create
+Auth
+🔒 Bearer Token
+Request Body:
+{
+"name": "Chill Zone",
+"type": "AUDIO",
+"country": "IN",
+"maxSeats": 8,
+"isPrivate": false
+}
+Success Response (201):
+{
+"statusCode": 1,
+"message": "Room created successfully",
+"data": {
+"id": "uuid",
+"name": "Chill Zone",
+"type": "AUDIO",
+"hostId": "uuid",
+"country": "IN",
+"maxSeats": 8,
+"isPrivate": false,
+"isLive": true,
+"createdAt": "2026-04-28T00:00:00.000Z"
+}
+}
+4.2 List Rooms
+Method
+GET
+URL
+/api/room/list?type=AUDIO&country=IN
+Auth
+🔒 Bearer Token
+Query Params:
+Param
+Type
+Required
+type
+string
+❌
+country
+string
+❌
+Success Response (200):
+{
+"statusCode": 1,
+"message": "Rooms fetched",
+"data": [ { "...room objects..." } ]
+}
+4.3 Join Room
+Method
+POST
+URL
+/api/room/join
+Auth
+🔒 Bearer Token
+Request Body:
+{
+"room_id": "room_uuid"
+}
+Success Response (200):
+{
+"statusCode": 1,
+"message": "Joined room",
+"data": {
+"room": { "...room object..." },
+"seatId": 1,
+"userId": "uuid"
+}
+}
+4.4 Mic Action
+Method
+POST
+URL
+/api/room/mic-action
+Auth
+🔒 Bearer Token
+Request Body:
+{
+"action": "mute",
+"seat_id": 3
+}
+action values: "lock" | "unlock" | "mute" | "unmute"
+Success Response (200):
+{
+"statusCode": 1,
+"message": "Action mute successful",
+"data": { "...updated mic status..." }
+}
+4.5 Security SOS
+Method
+POST
+URL
+/api/room/security-sos
+Auth
+🔒 Bearer Token
+Request Body:
+{
+"room_id": "room_uuid"
+}
+Success Response (200):
+{
+"statusCode": 1,
+"message": "Security SOS triggered",
+"data": { "...sos record..." }
+}
+4.6 Share Room Link
+Method
+GET
+URL
+/api/room/share?room_id=uuid
+Auth
+🔒 Bearer Token
+Success Response (200):
+{
+"statusCode": 1,
+"message": "Room share link generated",
+"data": {
+"link": "https://qobo1live.com/room/uuid"
+}
+}
+4.7 Translate Text
+Method
+GET
+URL
+/api/room/translate?text=hello&target_lang=hi
+Auth
+🔒 Bearer Token
+Success Response (200):
+{
+"statusCode": 1,
+"message": "Translation successful",
+"data": {
+"originalText": "hello",
+"translatedText": "[Translated to hi] hello"
+}
+}
+5. Agency (/api/agency)
+5.1 Register Agency
+Method
+POST
+URL
+/api/agency/register
+Auth
+🔒 Bearer Token
+Request Body:
+{
+"agency_name": "Star Agency"
+}
+Success Response (201):
+{
+"statusCode": 1,
+"message": "Agency registered successfully",
+"data": {
+"id": "uuid",
+"name": "Star Agency",
+"ownerId": "uuid",
+"code": "A1B2C3",
+"commissionRate": 0.1
+}
+}
+5.2 Generate Recruitment Link
+Method
+GET
+URL
+/api/agency/generate-link?agency_id=uuid
+Auth
+🔒 Bearer Token
+Success Response (200):
+{
+"statusCode": 1,
+"message": "Recruitment link generated",
+"data": {
+"link": "https://qobo1live.com/recruit?agency=uuid"
+}
+}
+5.3 Host Onboarding (Public)
+Method
+POST
+URL
+/api/agency/host-onboarding
+Auth
+❌ Public
+Content-Type
+multipart/form-data
+Request Body:
+Field
+Type
+Required
+agency_code
+string
+✅
+name
+string
+✅
+phone
+string
+✅
+host_real_photo
+file
+✅
+Success Response (201):
+{
+"statusCode": 1,
+"message": "Application submitted successfully",
+"data": { "...application object..." }
+}
+5.4 Verify Host Application Status
+Method
+GET
+URL
+/api/agency/host-verify-status?application_id=uuid
+Auth
+❌ Public
+Success Response (200):
+{
+"statusCode": 1,
+"message": "Current status",
+"data": {
+"status": "PENDING",
+"createdAt": "2026-04-28T00:00:00.000Z"
+}
+}
+5.5 Host List
+Method
+GET
+URL
+/api/agency/host-list?agency_id=uuid
+Auth
+🔒 Bearer Token
+Success Response (200):
+{
+"statusCode": 1,
+"message": "Host list fetched",
+"data": [ { "...host objects..." } ]
+}
+5.6 Revenue Stats
+Method
+GET
+URL
+/api/agency/revenue?month=2026-04
+Auth
+🔒 Bearer Token
+Success Response (200):
+{
+"statusCode": 1,
+"message": "Revenue stats fetched",
+"data": {
+"month": "2026-04",
+"totalRevenue": 50000,
+"totalGifts": 120,
+"totalEarnedCommissions": 5000,
+"pendingCommissionAmount": 1200,
+"pendingCommissionCount": 15,
+"hostsCount": 8,
+"payoutStatus": "Action Required",
+"agencyCode": "A1B2C3",
+"commissionRate": 0.1
+}
+}
+5.7 Payout Commissions
+Method
+POST
+URL
+/api/agency/payout
+Auth
+🔒 Bearer Token
+Request Body: No body required.
+Success Response (200):
+{
+"statusCode": 1,
+"message": "Commissions marked as paid",
+"data": { "count": 15 }
+}
+6. PK Battle & Dating (/api/pk)
+6.1 Search PK Opponents
+Method
+GET
+URL
+/api/pk/search?room_id=uuid
+Auth
+🔒 Bearer Token
+Success Response (200):
+{
+"statusCode": 1,
+"message": "Opponents found",
+"data": [ { "...room objects eligible for PK..." } ]
+}
+6.2 Send PK Request
+Method
+POST
+URL
+/api/pk/send-request
+Auth
+🔒 Bearer Token
+Request Body:
+{
+"target_room_id": "room_uuid"
+}
+Success Response (200):
+{
+"statusCode": 1,
+"message": "PK request sent",
+"data": { "status": "sent" }
+}
+6.3 Accept / Reject PK
+Method
+POST
+URL
+/api/pk/accept-reject
+Auth
+🔒 Bearer Token
+Request Body:
+{
+"request_id": "pk_request_uuid",
+"action": "accept"
+}
+action values: "accept" | "reject"
+Success Response (200) — Accept:
+{
+"statusCode": 1,
+"message": "Battle started",
+"data": { "...pk battle object..." }
+}
+Success Response (200) — Reject:
+{
+"statusCode": 1,
+"message": "Request rejected",
+"data": { "status": "rejected" }
+}
+6.4 PK Status
+Method
+GET
+URL
+/api/pk/status?battle_id=uuid
+Auth
+🔒 Bearer Token
+Success Response (200):
+{
+"statusCode": 1,
+"message": "Current PK status",
+"data": {
+"id": "uuid",
+"room1Id": "uuid",
+"room2Id": "uuid",
+"room1Score": 5000,
+"room2Score": 3200,
+"status": "active",
+"createdAt": "2026-04-28T00:00:00.000Z"
+}
+}
+6.5 Dating — Update Profile
+Method
+POST
+URL
+/api/pk/dating-onboarding
+Auth
+🔒 Bearer Token
+Request Body:
+{
+"interests": ["music", "travel"],
+"lookingFor": "friendship",
+"aboutMe": "Love to travel"
+}
+Success Response (200):
+{
+"statusCode": 1,
+"message": "Profile updated",
+"data": { "...dating profile..." }
+}
+6.6 Dating — Get Matches
+Method
+GET
+URL
+/api/pk/dating-list
+Auth
+🔒 Bearer Token
+Success Response (200):
+{
+"statusCode": 1,
+"message": "Matches fetched",
+"data": [ { "...matched user profiles..." } ]
+}
+6.7 Dating — Swipe Action
+Method
+POST
+URL
+/api/pk/dating-action
+Auth
+🔒 Bearer Token
+Request Body:
+{
+"target_id": "user_uuid",
+"type": "like"
+}
+type values: "like" | "dislike" | "superlike"
+Success Response (200):
+{
+"statusCode": 1,
+"message": "Action recorded",
+"data": { "...swipe result, match status..." }
+}
+7. Admin Panel (/api/admin)
+All admin endpoints (except login) require 🔒 Bearer Token from an admin account.
+7.1 Admin Login
+Method
+POST
+URL
+/api/admin/login
+Auth
+❌ Public
+Request Body:
+{
+"email": "admin@qobo1live.com",
+"password": "password123"
+}
+Success Response (200):
+{
+"statusCode": 1,
+"message": "Login successful",
+"data": {
+"admin": { "id": "uuid", "email": "...", "role": "SUPER_ADMIN" },
+"token": "eyJhbGciOiJIUzI1NiIs..."
+}
+}
+7.2 Dashboard Stats
+Method
+GET
+URL
+/api/admin/stats?country=IN
+Auth
+🔒
+Success Response (200):
+{
+"statusCode": 1,
+"message": "Dashboard statistics fetched",
+"data": { "...stats object..." }
+}
+7.3 Leaderboard
+Method
+GET
+URL
+/api/admin/leaderboard?type=gifters&period=weekly
+Auth
+🔒
+7.4 User Management
+Action
+Method
+URL
+Body
+List Users
+GET
+/api/admin/user-list?search=john
+—
+Create User
+POST
+/api/admin/user-create
+{ "name", "phone", "email", "role" }
+Update User
+PUT
+/api/admin/user/:id
+{ "name", "bio", "level", ... }
+Delete User
+DELETE
+/api/admin/user/:id
+—
+Assign Coins
+POST
+/api/admin/assign-coins
+{ "user_id", "amount", "type" }
+type for assign-coins: "coins" | "diamonds" | "beans"
+7.5 Gift Management
+Action
+Method
+URL
+Content-Type
+Body
+List Gifts
+GET
+/api/admin/gift-list
+—
+—
+Gift Analytics
+GET
+/api/admin/gift-stats
+—
+—
+Manage Gift
+POST
+/api/admin/gift-action?action=add&id=uuid
+multipart/form-data
+name, price, type, icon(file), animation(file), sound(file), categoryId, winRate
+List Packages
+GET
+/api/admin/package-list
+—
+—
+Manage Package
+POST
+/api/admin/package-action?action=add&id=uuid
+application/json
+{ "name", "price", "coins", ... }
+action values: "add" | "update" | "delete"
+7.6 Category Management
+Action
+Method
+URL
+Body
+List Categories
+GET
+/api/admin/category-list
+—
+Manage Category
+POST
+/api/admin/category-action?action=add&id=uuid
+{ "name", "icon" }
+7.7 Agency & Host Management
+Action
+Method
+URL
+Body
+List Agencies
+GET
+/api/admin/agency-list
+—
+List Hosts
+GET
+/api/admin/host-list
+—
+Approve Host
+POST
+/api/admin/host-approve
+{ "application_id", "status" }
+7.8 Financial
+Action
+Method
+URL
+Body
+List Withdrawals
+GET
+/api/admin/withdrawals
+—
+Process Withdrawal
+POST
+/api/admin/withdrawal-process
+{ "id", "status" }
+List Transactions
+GET
+/api/admin/transactions?page=1&limit=50
+—
+7.9 Staff Management
+Action
+Method
+URL
+Body
+List Admins
+GET
+/api/admin/admins
+—
+Manage Admin
+POST
+/api/admin/admin-action?action=add&id=uuid
+{ "email", "password", "role" }
+7.10 Support Tickets
+Action
+Method
+URL
+Body
+List Tickets
+GET
+/api/admin/tickets
+—
+Resolve Ticket
+PUT
+/api/admin/ticket/:id/resolve
+—
+7.11 Ads / Banners
+Action
+Method
+URL
+Body
+List Ads
+GET
+/api/admin/ads-config
+—
+Manage Ads
+POST
+/api/admin/ad-action?action=add&id=uuid
+{ "title", "imageUrl", "link", "isActive" }
+7.12 Games
+Action
+Method
+URL
+Body
+List Games
+GET
+/api/admin/games
+—
+Update Game
+PUT
+/api/admin/game/:id
+{ "...game config fields..." }
+7.13 Dynamic Tasks
+Action
+Method
+URL
+Body
+List Tasks
+GET
+/api/admin/tasks
+—
+Manage Tasks
+POST
+/api/admin/task-action?action=add&id=uuid
+{ "title", "type", "reward", ... }
+7.14 VIP Packages
+Action
+Method
+URL
+Body
+List VIP
+GET
+/api/admin/vip-list
+—
+Manage VIP
+POST
+/api/admin/vip-action?action=add&id=uuid
+{ "name", "price", "duration", "perks" }
+7.15 Moderation (Bad Words)
+Action
+Method
+URL
+Body
+List Words
+GET
+/api/admin/moderation/words
+—
+Manage Word
+POST
+/api/admin/moderation/word-action
+{ "action", "word", "id" }
+7.16 Sellers / Merchants
+Action
+Method
+URL
+Body
+List Sellers
+GET
+/api/admin/sellers
+—
+Create Seller
+POST
+/api/admin/seller-create
+{ "name", "phone", "email" }
+Update Seller
+PUT
+/api/admin/seller/:id
+{ "...seller fields..." }
+Manage Stock
+POST
+/api/admin/seller-stock
+{ "sellerId", "amount", "type" }
+Seller Reports
+GET
+/api/admin/seller-reports/:id
+—
+7.17 Social Simulation (Bots)
+Action
+Method
+URL
+Body
+List Bots
+GET
+/api/admin/simulation/bots
+—
+Manage Bots
+POST
+/api/admin/simulation/bot-action?action=add&id=uuid
+{ "...bot config..." }
+7.18 Room Ambience
+Action
+Method
+URL
+Body
+List Backgrounds
+GET
+/api/admin/ambience/backgrounds
+—
+Manage Backgrounds
+POST
+/api/admin/ambience/action?action=add&id=uuid
+{ "...background config..." }
+7.19 Room Config
+Action
+Method
+URL
+Body
+List Rooms
+GET
+/api/admin/rooms
+—
+Update Config
+PUT
+/api/admin/rooms/config
+{ "...global room settings..." }
+7.20 Notifications
+Action
+Method
+URL
+Body
+List Sent
+GET
+/api/admin/notifications
+—
+Send Broadcast
+POST
+/api/admin/notifications/send
+{ "title", "message", "target" }
+7.21 Settings
+Action
+Method
+URL
+Body
+Get Settings
+GET
+/api/admin/settings
+—
+Update Setting
+PUT
+/api/admin/settings/update
+{ "key": "appVersion", "value": "2.1.0" }
+HTTP Status Codes
+Code
+Meaning
+200
+OK — Request succeeded
+201
+Created — Resource created
+400
+Bad Request — Invalid input
+401
+Unauthorized — Missing/invalid token
+403
+Forbidden — Insufficient permissions
+500
+Server Error — Something went wrong
+Total Endpoints: 60+ Document prepared for mobile developer integration & testing.
