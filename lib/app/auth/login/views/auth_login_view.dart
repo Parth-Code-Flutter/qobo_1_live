@@ -264,7 +264,10 @@ class AuthLoginView extends GetView<AuthLoginController> {
 
   loginWithOtp() {
     return appButton(
-      onPressed: () {},
+      onPressed: () => Get.toNamed(
+        Routes.AUTH_VERIFY_ACCOUNT,
+        arguments: {'isFromLoginWithOtp': true},
+      ),
       buttonText: LocaleKeys.loginWithOtp.tr,
       buttonColor: kColorWhite,
       textColor: kColorPrimary,

@@ -8,6 +8,7 @@ abstract class Routes {
   static const AUTH_LOGIN = _Paths.AUTH_LOGIN;
   static const AUTH_SIGN_UP = _Paths.AUTH_SIGN_UP;
   static const AUTH_VERIFY_ACCOUNT = _Paths.AUTH_VERIFY_ACCOUNT;
+  static const BOTTOM_NAV = _Paths.BOTTOM_NAV;
 }
 
 abstract class _Paths {
@@ -17,4 +18,5 @@ abstract class _Paths {
   static const AUTH_LOGIN = '/login';
   static const AUTH_SIGN_UP = '/sign-up';
   static const AUTH_VERIFY_ACCOUNT = '/verify-account';
+  static const BOTTOM_NAV = '/bottom-nav';
 }

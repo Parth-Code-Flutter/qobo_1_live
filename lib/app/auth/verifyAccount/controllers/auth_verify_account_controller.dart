@@ -10,6 +10,16 @@ class AuthVerifyAccountController extends GetxController {
   final otpError = RxnString();
   final otpControllers = List.generate(4, (_) => TextEditingController());
   final otpFocusNodes = List.generate(4, (_) => FocusNode());
+  bool isFromLoginWithOtp = false;
+
+  @override
+  void onInit() {
+    super.onInit();
+    final args = Get.arguments;
+    if (args is Map && args['isFromLoginWithOtp'] == true) {
+      isFromLoginWithOtp = true;
+    }
+  }
 
   void onCountryCodeChanged(String dialCode) {
     selectedDialCode.value = dialCode;

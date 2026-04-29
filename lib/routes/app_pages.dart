@@ -8,6 +8,8 @@ import '../app/auth/signUp/bindings/auth_sign_up_binding.dart';
 import '../app/auth/signUp/views/auth_sign_up_view.dart';
 import '../app/auth/verifyAccount/bindings/auth_verify_account_binding.dart';
 import '../app/auth/verifyAccount/views/auth_verify_account_view.dart';
+import '../app/bottom_nav/bindings/bottom_nav_binding.dart';
+import '../app/bottom_nav/views/bottom_nav_view.dart';
 import '../app/splash/splash/bindings/splash_binding.dart';
 import '../app/splash/splash/views/splash_view.dart';
 
@@ -38,6 +40,11 @@ class AppPages {
       name: _Paths.AUTH_VERIFY_ACCOUNT,
       page: () => const AuthVerifyAccountView(),
       binding: AuthVerifyAccountBinding(),
+    ),
+    GetPage(
+      name: _Paths.BOTTOM_NAV,
+      page: () => const BottomNavView(),
+      binding: BottomNavBinding(),
     ),
   ];
 }
