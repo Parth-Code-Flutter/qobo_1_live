@@ -10,6 +10,8 @@ import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/repo/auth/auth_repo.dart';
+import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/validations/text_field_validations.dart';
 
 import '../controllers/auth_verify_account_controller.dart';
@@ -58,16 +60,73 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
                     Spacing.v28,
                   ],
                   appButton(
-                    onPressed: () {
+                    onPressed: () async {
+                      if (controller.isContinueLoading.value) return;
                       if (controller.isOtpView.value) {
                         if (controller.validateOtp(context)) {}
                         return;
                       }
+
+                      // Step 1: validate phone number, then request OTP from API.
                       if (controller.validatePhoneForm()) {
-                        controller.showOtpView();
+                        try {
+                          final repo = AuthRepo();
+                          controller.setContinueLoading(true);
+                          final res = await repo.loginWithOtp(
+                            phone: controller.phoneNumberController.text.trim(),
+                            countryCode: controller.selectedDialCode.value,
+                            isShowLoader: false,
+                          );
+                          if (!context.mounted) return;
+
+                          // If we couldn't parse response, show a generic failure toast.
+                          if (res == null) {
+                            AppToast.showError(
+                              context,
+                              'Request failed. Please try again.',
+                            );
+                            return;
+                          }
+
+                          final message = res.message.trim().isNotEmpty
+                              ? res.message.trim()
+                              : 'Something went wrong.';
+
+                          if (res.statusCode == 1) {
+                            AppToast.showSuccess(
+                              context,
+                              message,
+                            );
+                            controller.showOtpView();
+                          } else {
+                            AppToast.showError(
+                              context,
+                              message,
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            AppToast.showError(context, e.toString());
+                          }
+                        } finally {
+                          controller.setContinueLoading(false);
+                        }
                       }
                     },
-                    buttonText: LocaleKeys.continueButton.tr,
+                    buttonText: controller.isContinueLoading.value
+                        ? ''
+                        : LocaleKeys.continueButton.tr,
+                    buttonIcon: controller.isContinueLoading.value
+                        ? SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: const CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(kColorWhite),
+                            ),
+                          )
+                        : null,
                   ),
                 ],
               ),

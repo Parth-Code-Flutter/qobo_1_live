@@ -7,6 +7,7 @@ class AuthVerifyAccountController extends GetxController {
   final phoneNumberController = TextEditingController();
   final selectedDialCode = '+91'.obs;
   final isOtpView = false.obs;
+  final isContinueLoading = false.obs;
   final otpError = RxnString();
   final otpControllers = List.generate(4, (_) => TextEditingController());
   final otpFocusNodes = List.generate(4, (_) => FocusNode());
@@ -67,6 +68,10 @@ class AuthVerifyAccountController extends GetxController {
     );
     otpError.value = validationMessage;
     return validationMessage == null;
+  }
+
+  void setContinueLoading(bool value) {
+    isContinueLoading.value = value;
   }
 
   @override

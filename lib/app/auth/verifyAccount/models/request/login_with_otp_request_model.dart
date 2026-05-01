@@ -13,4 +13,3 @@ class LoginWithOtpRequestModel {
         'country_code': countryCode,
       };
 }
-
