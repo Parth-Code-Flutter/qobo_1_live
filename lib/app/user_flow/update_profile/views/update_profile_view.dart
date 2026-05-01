@@ -17,53 +17,71 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kColorWhite,
+      resizeToAvoidBottomInset: true,
       appBar: CommonAppBarWidget(title: '', showBackButton: true),
-      body: Form(
-        key: controller.formKey,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Spacing.v24,
-              _headerWidget(),
-              Spacing.v28,
-              Center(child: _profileImagePicker()),
-              Spacing.v28,
-              _userNameField(context),
-              Spacing.v12,
-              _birthdateField(context),
-              Spacing.v12,
-              _genderField(),
-              Spacing.v12,
-              _passwordField(context),
-              Spacing.v12,
-              _confirmPasswordField(context),
-              Spacing.v28,
-              Obx(
-                () => appButton(
-                  onPressed: () => controller.onPrimaryActionPressed(context),
-                  buttonText: controller.isSubmitLoading.value
-                      ? ''
-                      : (controller.isComeFromOtpScreen.value
-                          ? 'Next'
-                          : 'Update Profile'),
-                  buttonIcon: controller.isSubmitLoading.value
-                      ? SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: const CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(kColorWhite),
-                          ),
-                        )
-                      : null,
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Form(
+          key: controller.formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.fromLTRB(
+                20,
+                0,
+                20,
+                24 + MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Spacing.v24,
+                    _headerWidget(),
+                    Spacing.v28,
+                    Center(child: _profileImagePicker()),
+                    Spacing.v28,
+                    _userNameField(context),
+                    Spacing.v12,
+                    _birthdateField(context),
+                    Spacing.v12,
+                    _genderField(),
+                    Spacing.v12,
+                    _passwordField(context),
+                    Spacing.v12,
+                    _confirmPasswordField(context),
+                    Spacing.v28,
+                    Obx(
+                      () => appButton(
+                        onPressed: () =>
+                            controller.onPrimaryActionPressed(context),
+                        buttonText: controller.isSubmitLoading.value
+                            ? ''
+                            : (controller.isComeFromOtpScreen.value
+                                ? 'Next'
+                                : 'Update Profile'),
+                        buttonIcon: controller.isSubmitLoading.value
+                            ? SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: const CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    kColorWhite,
+                                  ),
+                                ),
+                              )
+                            : null,
+                      ),
+                    ),
+                    Spacing.v24,
+                  ],
                 ),
               ),
-              Spacing.v24,
-            ],
+            ),
           ),
         ),
       ),
