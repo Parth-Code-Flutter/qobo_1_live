@@ -195,13 +195,18 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
                 child: TextField(
                   controller: controller.otpControllers[index],
                   focusNode: controller.otpFocusNodes[index],
-                  keyboardType: TextInputType.number,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: false,
+                    signed: false,
+                  ),
                   textAlign: TextAlign.center,
                   style: TextStyles.kSemiBoldPoppins(
-                    fontSize: TextStyles.k24FontSize,
+                    fontSize: TextStyles.k18FontSize,
                     colors: kColorText,
                   ),
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                  ],
                   maxLength: 1,
                   onChanged: (value) {
                     controller.onOtpChanged(index: index, value: value);

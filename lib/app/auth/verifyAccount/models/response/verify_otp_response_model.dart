@@ -91,4 +91,22 @@ class VerifyOtpUser {
       createdAt: json['createdAt'] as String?,
     );
   }
+
+  /// Shape aligned with API JSON for local persistence.
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'id': id,
+        'name': name,
+        'phone': phone,
+        'email': email,
+        'displayPicture': displayPicture,
+        'level': level,
+        'vipLevel': vipLevel,
+        'role': role,
+        'isOnline': isOnline,
+        'country': country,
+        'bio': bio,
+        'gender': gender,
+        'dob': dob,
+        'createdAt': createdAt,
+      };
 }

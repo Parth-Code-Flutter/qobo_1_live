@@ -12,6 +12,7 @@ const String kEmptyConfirmPassword = 'Confirm password is required';
 const String kValidConfirmPassword = 'Passwords do not match';
 const String kEmptyOtp = 'OTP is required';
 const String kValidOtp = 'Please enter a valid OTP';
+const String kOtpNumbersOnly = 'OTP must contain numbers only';
 const String kEmptyOrgId = 'Organization ID is required';
 
 class Validate {
@@ -80,14 +81,18 @@ class Validate {
     }
   }
 
-  /// OTP VALIDATION
+  /// OTP VALIDATION (digits only, fixed length).
   static otpValidation(BuildContext context, String v, {int otpLength = 6}) {
-    if (v.trim().isEmpty) {
+    final otp = v.trim();
+    if (otp.isEmpty) {
       return kEmptyOtp;
-    } else if (v.length != otpLength) {
-      return 'Please enter a valid $otpLength-digit OTP';
-    } else {
-      return null;
     }
+    if (!RegExp(r'^\d+$').hasMatch(otp)) {
+      return kOtpNumbersOnly;
+    }
+    if (otp.length != otpLength) {
+      return 'Please enter a valid $otpLength-digit OTP';
+    }
+    return null;
   }
 }

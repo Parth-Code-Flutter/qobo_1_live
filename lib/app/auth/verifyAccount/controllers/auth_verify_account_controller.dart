@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/local_storage_constants.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
+import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/utils/error_handler_utils.dart';
+import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/validations/text_field_validations.dart';
+
+import '../models/response/verify_otp_response_model.dart';
 
 class AuthVerifyAccountController extends GetxController {
   AuthVerifyAccountController({AuthRepo? authRepo})
@@ -81,6 +87,22 @@ class AuthVerifyAccountController extends GetxController {
     isContinueLoading.value = value;
   }
 
+  LocalStorage _resolveLocalStorage() {
+    if (Get.isRegistered<LocalStorage>()) {
+      return Get.find<LocalStorage>();
+    }
+    return Get.put(LocalStorage(), permanent: true);
+  }
+
+  Future<void> _persistVerifiedSession(VerifyOtpData data) async {
+    final storage = _resolveLocalStorage();
+    await storage.writeBoolStorage(kStorageIsLoggedIn, true);
+    if (data.token.isNotEmpty) {
+      await storage.writeStringStorage(kStorageToken, data.token);
+    }
+    await storage.writeJsonStorage(kStorageUserData, data.user.toJson());
+  }
+
   /// Continue CTA: requests OTP on phone step, verifies OTP on OTP step.
   Future<void> onContinuePressed(BuildContext context) async {
     if (isContinueLoading.value) return;
@@ -152,7 +174,17 @@ class AuthVerifyAccountController extends GetxController {
           : 'Something went wrong.';
 
       if (res.statusCode == 1) {
+        final data = res.data;
+        if (data != null) {
+          await _persistVerifiedSession(data);
+        } else {
+          await _resolveLocalStorage()
+              .writeBoolStorage(kStorageIsLoggedIn, true);
+        }
+        ErrorHandlerUtils.resetSessionState();
+        if (!context.mounted) return;
         AppToast.showSuccess(context, message);
+        Get.offAllNamed(Routes.BOTTOM_NAV);
       } else {
         AppToast.showError(context, message);
       }
