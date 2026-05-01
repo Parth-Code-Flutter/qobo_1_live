@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/app/user_flow/live_room/views/live_room_view.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -12,20 +13,37 @@ class BottomNavView extends GetView<BottomNavController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kColorWhite,
-      body: Obx(() => _buildPlaceholderBody()),
+      backgroundColor: kColorBottomNav,
+      body: Obx(_buildTabBody),
       bottomNavigationBar: _buildBottomNavBar(),
     );
   }
 
-  /// Simple placeholder area to visualize active tab selection.
-  Widget _buildPlaceholderBody() {
+  /// Shows dedicated tab screens; placeholders stay until real pages are ready.
+  Widget _buildTabBody() {
+    switch (controller.selectedIndex.value) {
+      case 0:
+        return _buildDefaultTabScreen('Discover');
+      case 1:
+        return const LiveRoomView();
+      case 2:
+        return _buildDefaultTabScreen('Heart');
+      case 3:
+        return _buildDefaultTabScreen('Messages');
+      case 4:
+        return _buildDefaultTabScreen('Profile');
+      default:
+        return _buildDefaultTabScreen('Discover');
+    }
+  }
+
+  Widget _buildDefaultTabScreen(String title) {
     return SafeArea(
       child: Center(
         child: BoldText(
-          text: controller.items[controller.selectedIndex.value].label,
+          text: '$title Page',
           fontSize: TextStyles.k24FontSize,
-          color: kColorText,
+          color: kColorWhite,
         ),
       ),
     );
