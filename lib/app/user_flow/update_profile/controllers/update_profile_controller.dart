@@ -1,8 +1,13 @@
+import 'dart:io';
+
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:qobo_one_live/constants/local_storage_constants.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/utils/app_widgets/common_media_picker.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/validations/text_field_validations.dart';
@@ -24,9 +29,11 @@ class UpdateProfileController extends GetxController {
 
   final selectedGender = ''.obs;
   final selectedBirthdate = Rxn<DateTime>();
+  final selectedProfileMedia = Rxn<File>();
   final isPasswordHidden = true.obs;
   final isConfirmPasswordHidden = true.obs;
   final isSubmitLoading = false.obs;
+  final ImagePicker _imagePicker = ImagePicker();
 
   @override
   void onInit() {
@@ -78,6 +85,7 @@ class UpdateProfileController extends GetxController {
         // Country can be changed once country selection UI is added.
         country: 'IN',
         password: passwordController.text.trim(),
+        displayPicture: selectedProfileMedia.value,
         isShowLoader: false,
       );
       if (!context.mounted) return;
@@ -116,6 +124,41 @@ class UpdateProfileController extends GetxController {
 
   void toggleConfirmPasswordVisibility() {
     isConfirmPasswordHidden.value = !isConfirmPasswordHidden.value;
+  }
+
+  /// Opens common source picker, then stores selected media file for preview/API.
+  Future<void> onProfileMediaTap(BuildContext context) async {
+    try {
+      final source = await CommonMediaPicker.show(context);
+      if (source == null) return;
+
+      final pickedFile = await _imagePicker.pickImage(
+        source: source,
+        imageQuality: 85,
+        maxWidth: 1200,
+      );
+      if (pickedFile == null) return;
+
+      selectedProfileMedia.value = File(pickedFile.path);
+    } on MissingPluginException {
+      if (context.mounted) {
+        AppToast.showError(
+          context,
+          'Media picker is not ready. Please restart the app once.',
+        );
+      }
+    } on PlatformException catch (e) {
+      if (context.mounted) {
+        AppToast.showError(
+          context,
+          e.message ?? 'Unable to access media.',
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        AppToast.showError(context, 'Unable to access media.');
+      }
+    }
   }
 
   String? validateUserName(BuildContext context, String? value) {

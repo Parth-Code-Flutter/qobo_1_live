@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
@@ -42,7 +44,7 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
                     Spacing.v24,
                     _headerWidget(),
                     Spacing.v28,
-                    Center(child: _profileImagePicker()),
+                    Center(child: _profileImagePicker(context)),
                     Spacing.v28,
                     _userNameField(context),
                     Spacing.v12,
@@ -98,25 +100,33 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
     );
   }
 
-  Widget _profileImagePicker() {
-    return GestureDetector(
-      onTap: () {
-        // Image picker action will be wired in the next step.
-      },
-      child: Container(
-        width: 110,
-        height: 110,
-        decoration: const BoxDecoration(
-          color: Color(0xFFF5F5F5),
-          shape: BoxShape.circle,
+  Widget _profileImagePicker(BuildContext context) {
+    return Obx(() {
+      final File? selectedMedia = controller.selectedProfileMedia.value;
+      return GestureDetector(
+        onTap: () => controller.onProfileMediaTap(context),
+        child: Container(
+          width: 110,
+          height: 110,
+          decoration: const BoxDecoration(
+            color: Color(0xFFF5F5F5),
+            shape: BoxShape.circle,
+          ),
+          child: ClipOval(
+            child: selectedMedia == null
+                ? const Icon(
+                    Icons.camera_alt_outlined,
+                    color: kColorTextGrey,
+                    size: 34,
+                  )
+                : Image.file(
+                    selectedMedia,
+                    fit: BoxFit.cover,
+                  ),
+          ),
         ),
-        child: const Icon(
-          Icons.camera_alt_outlined,
-          color: kColorTextGrey,
-          size: 34,
-        ),
-      ),
-    );
+      );
+    });
   }
 
   Widget _userNameField(BuildContext context) {
