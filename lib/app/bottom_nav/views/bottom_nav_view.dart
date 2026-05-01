@@ -95,7 +95,8 @@ class BottomNavView extends GetView<BottomNavController> {
       child: GestureDetector(
         onTap: () => controller.onTabSelected(2),
         behavior: HitTestBehavior.opaque,
-        child: Center(
+        child: Align(
+          alignment: Alignment.bottomCenter,
           child: Container(
             width: 48,
             height: 48,

@@ -94,9 +94,9 @@ class AuthVerifyAccountController extends GetxController {
     return Get.put(LocalStorage(), permanent: true);
   }
 
+  /// Save auth payload from OTP verification for follow-up authenticated calls.
   Future<void> _persistVerifiedSession(VerifyOtpData data) async {
     final storage = _resolveLocalStorage();
-    await storage.writeBoolStorage(kStorageIsLoggedIn, true);
     if (data.token.isNotEmpty) {
       await storage.writeStringStorage(kStorageToken, data.token);
     }
@@ -177,14 +177,16 @@ class AuthVerifyAccountController extends GetxController {
         final data = res.data;
         if (data != null) {
           await _persistVerifiedSession(data);
-        } else {
-          await _resolveLocalStorage()
-              .writeBoolStorage(kStorageIsLoggedIn, true);
         }
         ErrorHandlerUtils.resetSessionState();
         if (!context.mounted) return;
         AppToast.showSuccess(context, message);
-        Get.offAllNamed(Routes.BOTTOM_NAV);
+        Get.offAllNamed(
+          Routes.UPDATE_PROFILE,
+          arguments: <String, dynamic>{
+            'isComeFromOtpScreen': true,
+          },
+        );
       } else {
         AppToast.showError(context, message);
       }

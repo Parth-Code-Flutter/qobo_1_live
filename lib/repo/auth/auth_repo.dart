@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:qobo_one_live/app/auth/verifyAccount/models/request/login_with_otp_request_model.dart';
 import 'package:qobo_one_live/app/auth/verifyAccount/models/response/login_with_otp_response_model.dart';
 import 'package:qobo_one_live/app/auth/verifyAccount/models/request/verify_otp_request_model.dart';
 import 'package:qobo_one_live/app/auth/verifyAccount/models/response/verify_otp_response_model.dart';
+import 'package:qobo_one_live/app/user_flow/update_profile/models/request/update_profile_request_model.dart';
+import 'package:qobo_one_live/app/user_flow/update_profile/models/response/update_profile_response_model.dart';
 import 'package:qobo_one_live/services/api_service.dart';
 import 'package:qobo_one_live/services/api_constants.dart';
 import 'package:qobo_one_live/utils/api_response_utils.dart';
@@ -67,6 +71,47 @@ class AuthRepo {
     if (jsonMap == null) return null;
 
     return VerifyOtpResponseModel.fromJson(jsonMap);
+  }
+
+  /// Calls `PUT /api/user/update` to update profile details.
+  ///
+  /// Uses multipart form-data request for all updates.
+  Future<UpdateProfileResponseModel?> updateProfile({
+    String? name,
+    String? bio,
+    String? gender,
+    String? dob,
+    String? country,
+    String? password,
+    File? displayPicture,
+    bool isShowLoader = false,
+  }) async {
+    final request = UpdateProfileRequestModel(
+      name: name,
+      bio: bio,
+      gender: gender,
+      dob: dob,
+      country: country,
+      password: password,
+      displayPicture: displayPicture,
+    );
+
+    final files = displayPicture == null ? null : <File>[displayPicture];
+    final response = await _apiService.multipartFormRequest(
+      endPoint: AuthEndpoints.updateProfile,
+      fields: request.toFormFields(),
+      files: files,
+      fileFieldName: 'displayPicture',
+      method: 'PUT',
+      isShowLoader: isShowLoader,
+    );
+
+    if (response == null) return null;
+
+    final jsonMap = ApiResponseUtils.tryDecodeMap(response.body);
+    if (jsonMap == null) return null;
+
+    return UpdateProfileResponseModel.fromJson(jsonMap);
   }
 }
 

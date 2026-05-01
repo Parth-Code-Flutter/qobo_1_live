@@ -5,7 +5,10 @@ import 'package:get/get.dart';
 class HeaderData {
   Future<Map<String, String>> headers() async {
     try {
-      var token = await Get.find<LocalStorage>().getToken();
+      final storage = Get.isRegistered<LocalStorage>()
+          ? Get.find<LocalStorage>()
+          : Get.put(LocalStorage(), permanent: true);
+      final token = await storage.getToken();
       
       var headers = {
         'Content-Type': 'application/json',
@@ -13,7 +16,7 @@ class HeaderData {
       
       // Add authorization header only if token exists
       if (token.isNotEmpty) {
-        headers['Authorization'] = token;
+        headers['Authorization'] = 'Bearer $token';
       }
       
       LoggerUtils.logger.i('Headers generated with token: ${token.isNotEmpty ? 'Present' : 'Not present'}');

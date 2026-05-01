@@ -13,7 +13,8 @@ class BottomNavItem {
 }
 
 class BottomNavController extends GetxController {
-  final selectedIndex = 2.obs;
+  // Default to first tab so center action is not opened initially.
+  final selectedIndex = 0.obs;
 
   // Keep tab configuration centralized for cleaner view code.
   final items = const <BottomNavItem>[

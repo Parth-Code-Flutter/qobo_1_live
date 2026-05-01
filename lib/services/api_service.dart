@@ -367,6 +367,8 @@ class ApiService {
       
       // Add authentication headers
       request.headers.addAll(authHeaders);
+      // Let MultipartRequest set boundary/content-type automatically.
+      request.headers.remove('Content-Type');
       
       // Add file to request
       final fileStream = http.ByteStream(file.openRead());
@@ -413,6 +415,7 @@ class ApiService {
     required Map<String, String> fields,
     List<File>? files,
     String fileFieldName = 'image',
+    String method = 'POST',
     bool isShowLoader = true,
   }) async {
     // Check if session is expired
@@ -445,8 +448,8 @@ class ApiService {
       var url = Uri.parse(finalEndpoint);
 
 
-      // Create multipart request
-      var request = http.MultipartRequest('POST', url);
+      // Create multipart request with configurable HTTP method.
+      var request = http.MultipartRequest(method, url);
       
       // Add authentication headers
       request.headers.addAll(authHeaders);
@@ -478,7 +481,7 @@ class ApiService {
         return null;
       }
       
-      _logApiResult('Multipart Form $endPoint', response);
+      _logApiResult('$method Multipart Form $endPoint', response);
       
       return response;
     } catch (e) {

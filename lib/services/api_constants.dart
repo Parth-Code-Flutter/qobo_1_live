@@ -22,4 +22,7 @@ class AuthEndpoints {
 
   /// POST /api/auth/firebase-login
   static const String firebaseLogin = '/api/auth/firebase-login';
+
+  /// PUT /api/user/update
+  static const String updateProfile = '/api/user/update';
 }

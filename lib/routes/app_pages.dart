@@ -11,6 +11,8 @@ import '../app/auth/verifyAccount/views/auth_verify_account_view.dart';
 import '../app/bottom_nav/bindings/bottom_nav_binding.dart';
 import '../app/bottom_nav/views/bottom_nav_view.dart';
 import '../app/splash/splash/bindings/splash_binding.dart';
+import '../app/user_flow/update_profile/bindings/update_profile_binding.dart';
+import '../app/user_flow/update_profile/views/update_profile_view.dart';
 import '../app/splash/splash/views/splash_view.dart';
 
 part 'app_routes.dart';
@@ -45,6 +47,11 @@ class AppPages {
       name: _Paths.BOTTOM_NAV,
       page: () => const BottomNavView(),
       binding: BottomNavBinding(),
+    ),
+    GetPage(
+      name: _Paths.UPDATE_PROFILE,
+      page: () => const UpdateProfileView(),
+      binding: UpdateProfileBinding(),
     ),
   ];
 }
