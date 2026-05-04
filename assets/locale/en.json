@@ -34,5 +34,8 @@
   "continueButton": "Continue",
   "otpVerificationTitle": "Verification Code",
   "otpVerificationSubTitle": "Enter the verification code that we have sent to your email",
-  "resendCode": "Resend Code"
+  "resendCode": "Resend Code",
+  "verifyOtpChoiceTitle": "Where should we send the code?",
+  "sendOtpOnPhone": "Send OTP on Phone No.",
+  "sendOtpOnMail": "Send OTP on mail"
 }

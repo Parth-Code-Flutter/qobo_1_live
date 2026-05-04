@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/local_storage_constants.dart';
+import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/utils/error_handler_utils.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
+import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/validations/text_field_validations.dart';
 
@@ -125,15 +128,69 @@ class AuthVerifyAccountController extends GetxController {
       return;
     }
 
+    if (!validateContactStep(context)) return;
+
+    // Both channels valid: user must pick phone vs email before we hit the API.
+    if (_hasBothPhoneAndEmailFilled(context)) {
+      _showOtpDestinationDialog(context);
+      return;
+    }
+
     await _submitLoginPhoneOtp(context);
   }
 
-  Future<void> _submitLoginPhoneOtp(BuildContext context) async {
+  /// True when the user entered a full 10-digit phone **and** a syntactically valid email.
+  bool _hasBothPhoneAndEmailFilled(BuildContext context) {
+    final p = phoneNumberController.text.trim();
+    final e = emailController.text.trim();
+    final phoneReady = p.length == 10;
+    final emailReady =
+        e.isNotEmpty && Validate.emailValidation(context, e) == null;
+    return phoneReady && emailReady;
+  }
+
+  /// Shown only when both a 10-digit phone and a valid email are present.
+  /// Uses [CommonAppDialog]; closes the route first, then runs the same OTP request as Continue.
+  Future<void> _showOtpDestinationDialog(BuildContext context) {
+    return CommonAppDialog.show(
+      context,
+      title: LocaleKeys.verifyOtpChoiceTitle.tr,
+      actions: [
+        CommonAppDialogAction(
+          label: LocaleKeys.sendOtpOnPhone.tr,
+          onPressed: () =>
+              _scheduleOtpSubmitAfterDialogClosed(context, sendToPhone: true),
+        ),
+        CommonAppDialogAction(
+          label: LocaleKeys.sendOtpOnMail.tr,
+          onPressed: () =>
+              _scheduleOtpSubmitAfterDialogClosed(context, sendToPhone: false),
+        ),
+      ],
+    );
+  }
+
+  /// Runs after the dialog is popped so loading / toasts attach to the verify screen.
+  void _scheduleOtpSubmitAfterDialogClosed(
+    BuildContext context, {
+    required bool sendToPhone,
+  }) {
+    SchedulerBinding.instance.addPostFrameCallback((_) async {
+      if (!context.mounted) return;
+      await _submitLoginPhoneOtp(context, sendOtpToPhone: sendToPhone);
+    });
+  }
+
+  /// Sends OTP via `login-phone`. When [sendOtpToPhone] is null, phone is used if 10 digits exist, otherwise email.
+  Future<void> _submitLoginPhoneOtp(
+    BuildContext context, {
+    bool? sendOtpToPhone,
+  }) async {
     if (!validateContactStep(context)) return;
 
     final p = phoneNumberController.text.trim();
     final e = emailController.text.trim();
-    final usePhone = p.length == 10;
+    final usePhone = sendOtpToPhone ?? (p.length == 10);
 
     try {
       setContinueLoading(true);
