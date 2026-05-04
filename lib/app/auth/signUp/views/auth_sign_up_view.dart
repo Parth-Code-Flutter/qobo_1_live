@@ -257,13 +257,13 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
         children: [
           AppText(
             text: LocaleKeys.haveAccount.tr,
-            fontSize: TextStyles.k14FontSize,
+            fontSize: TextStyles.k12FontSize,
             color: kColorTextGrey,
           ),
           Spacing.h4,
           SemiBoldText(
             text: LocaleKeys.signIn.tr,
-            fontSize: TextStyles.k14FontSize,
+            fontSize: TextStyles.k12FontSize,
             color: kColorPrimary,
           ),
         ],

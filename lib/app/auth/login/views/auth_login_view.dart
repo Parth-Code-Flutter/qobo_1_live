@@ -46,8 +46,6 @@ class AuthLoginView extends GetView<AuthLoginController> {
               orLoginWithDividerWidget(),
               Spacing.v20,
               socialMediaLogin(),
-              Spacing.v20,
-              loginWithOtp(),
               Spacer(),
               signUpFooterWidget(),
               Spacing.v24,
@@ -179,39 +177,53 @@ class AuthLoginView extends GetView<AuthLoginController> {
   }
 
   Widget socialMediaLogin() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _socialIconButton(
-          iconPath: kIconGoogle,
-          onTap: () {},
-          height: 25,
-          width: 25,
-          title: LocaleKeys.loginWithGoogleShort.tr,
-        ),
-        Spacing.h20,
-        _socialIconButton(
+        _socialOutlinedButton(
           iconPath: kIconFB,
           onTap: () {},
-          title: LocaleKeys.loginWithFacebook.tr,
+          iconHeight: 28,
+          iconWidth: 28,
+          title: LocaleKeys.loginWithFacebookFull.tr,
+        ),
+        Spacing.v12,
+        _socialOutlinedButton(
+          iconPath: kIconGoogle,
+          onTap: () {},
+          iconHeight: 25,
+          iconWidth: 25,
+          title: LocaleKeys.loginWithGoogleFull.tr,
+        ),
+        Spacing.v12,
+        _socialOutlinedButton(
+          iconPath: kIconLock,
+          onTap: () => Get.toNamed(
+            Routes.AUTH_VERIFY_ACCOUNT,
+            arguments: {'isFromLoginWithOtp': true},
+          ),
+          iconHeight: 25,
+          iconWidth: 25,
+          tintIcon: true,
+          title: LocaleKeys.loginWithOtp.tr,
         ),
       ],
     );
   }
 
-  Widget _socialIconButton({
+  Widget _socialOutlinedButton({
     required String iconPath,
     required String title,
     required VoidCallback onTap,
-    double height = 30,
-    double width = 30,
+    double iconHeight = 28,
+    double iconWidth = 28,
+    bool tintIcon = false,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         height: 56,
-        width: Get.width*0.42,
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         decoration: BoxDecoration(
           color: kColorWhite,
           borderRadius: BorderRadius.circular(16),
@@ -220,15 +232,13 @@ class AuthLoginView extends GetView<AuthLoginController> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Center(
-              child: SvgPicture.asset(
-                iconPath,
-                fit: BoxFit.fill,
-                height: height,
-                width: width,
-              ),
+            SvgPicture.asset(
+              iconPath,
+              fit: BoxFit.contain,
+              height: iconHeight,
+              width: iconWidth,
             ),
-            Spacing.h6,
+            Spacing.h10,
             SemiBoldText(
               text: title,
               fontSize: TextStyles.k14FontSize,
@@ -248,13 +258,13 @@ class AuthLoginView extends GetView<AuthLoginController> {
         children: [
           AppText(
             text: LocaleKeys.dontHaveAccount.tr,
-            fontSize: TextStyles.k14FontSize,
+            fontSize: TextStyles.k12FontSize,
             color: kColorTextGrey,
           ),
           Spacing.h4,
           SemiBoldText(
             text: LocaleKeys.signUp.tr,
-            fontSize: TextStyles.k14FontSize,
+            fontSize: TextStyles.k12FontSize,
             color: kColorPrimary,
           ),
         ],
@@ -262,21 +272,4 @@ class AuthLoginView extends GetView<AuthLoginController> {
     );
   }
 
-  loginWithOtp() {
-    return appButton(
-      onPressed: () => Get.toNamed(
-        Routes.AUTH_VERIFY_ACCOUNT,
-        arguments: {'isFromLoginWithOtp': true},
-      ),
-      buttonText: LocaleKeys.loginWithOtp.tr,
-      buttonColor: kColorWhite,
-      textColor: kColorPrimary,
-      buttonBorderColor: kColorTextFieldBorder,
-      textStyle: TextStyles.kRegularPoppins(
-        colors: kColorText,
-        fontSize: TextStyles.k16FontSize,
-        fontWeight: FontWeight.w400,
-      ),
-    );
-  }
 }
