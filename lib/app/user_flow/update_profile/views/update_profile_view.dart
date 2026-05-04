@@ -1,8 +1,10 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
@@ -47,13 +49,13 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
                     Center(child: _profileImagePicker(context)),
                     Spacing.v28,
                     _userNameField(context),
-                    Spacing.v12,
+                    Spacing.v10,
                     _birthdateField(context),
-                    Spacing.v12,
+                    Spacing.v10,
                     _genderField(),
-                    Spacing.v12,
+                    Spacing.v10,
                     _passwordField(context),
-                    Spacing.v12,
+                    Spacing.v10,
                     _confirmPasswordField(context),
                     Spacing.v28,
                     Obx(
@@ -132,36 +134,46 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
   Widget _userNameField(BuildContext context) {
     return AppTextField(
       controller: controller.userNameController,
-      labelText: 'User Name',
-      isRequired: true,
       validator: (value) => controller.validateUserName(context, value),
       hintText: 'Enter user name',
-      borderColor: kColorTextFieldBorder,
+      borderColor: kColorHint,
       hintStyle: TextStyles.kRegularPoppins(
         fontSize: TextStyles.k14FontSize,
         colors: kColorHint,
       ),
       textInputAction: TextInputAction.next,
-      textCapitalization: TextCapitalization.words,
+      textCapitalization: TextCapitalization.none,
+      prefix: Padding(
+        padding: const EdgeInsets.only(left: 14, right: 12),
+        child: SvgPicture.asset(
+          kIconUser,
+          colorFilter: const ColorFilter.mode(kColorHint, BlendMode.srcIn),
+        ),
+      ),
     );
   }
 
   Widget _birthdateField(BuildContext context) {
     return AppTextField(
       controller: controller.birthdateController,
-      labelText: 'Enter Birthdate',
       validator: controller.validateBirthdate,
       hintText: 'YYYY-MM-DD',
       readOnly: true,
       onTap: () => controller.pickBirthdate(context),
-      borderColor: kColorTextFieldBorder,
+      borderColor: kColorHint,
       hintStyle: TextStyles.kRegularPoppins(
         fontSize: TextStyles.k14FontSize,
         colors: kColorHint,
       ),
-      suffix: const Padding(
-        padding: EdgeInsets.only(right: 14),
-        child: Icon(Icons.calendar_today_outlined, color: kColorHint, size: 18),
+      textInputAction: TextInputAction.next,
+      textCapitalization: TextCapitalization.none,
+      prefix: const Padding(
+        padding: EdgeInsets.only(left: 14, right: 12),
+        child: Icon(
+          Icons.calendar_today_outlined,
+          color: kColorHint,
+          size: 20,
+        ),
       ),
     );
   }
@@ -215,16 +227,26 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
     return Obx(
       () => AppTextField(
         controller: controller.passwordController,
-        labelText: 'Password',
-        isRequired: true,
         validator: (value) => controller.validatePassword(context, value),
         hintText: 'Enter password',
         obscureText: controller.isPasswordHidden.value,
         textInputType: TextInputType.visiblePassword,
-        borderColor: kColorTextFieldBorder,
+        textInputAction: TextInputAction.next,
+        textCapitalization: TextCapitalization.none,
+        borderColor: kColorHint,
         hintStyle: TextStyles.kRegularPoppins(
           fontSize: TextStyles.k14FontSize,
           colors: kColorHint,
+        ),
+        prefix: Padding(
+          padding: const EdgeInsets.only(left: 14, right: 12),
+          child: SvgPicture.asset(
+            kIconPassword,
+            colorFilter: const ColorFilter.mode(
+              kColorHint,
+              BlendMode.srcIn,
+            ),
+          ),
         ),
         suffix: Padding(
           padding: const EdgeInsets.only(right: 14),
@@ -247,18 +269,27 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
     return Obx(
       () => AppTextField(
         controller: controller.confirmPasswordController,
-        labelText: 'Confirm Password',
-        isRequired: true,
         validator: (value) =>
             controller.validateConfirmPassword(context, value),
         hintText: 'Re-enter password',
         obscureText: controller.isConfirmPasswordHidden.value,
         textInputType: TextInputType.visiblePassword,
         textInputAction: TextInputAction.done,
-        borderColor: kColorTextFieldBorder,
+        textCapitalization: TextCapitalization.none,
+        borderColor: kColorHint,
         hintStyle: TextStyles.kRegularPoppins(
           fontSize: TextStyles.k14FontSize,
           colors: kColorHint,
+        ),
+        prefix: Padding(
+          padding: const EdgeInsets.only(left: 14, right: 12),
+          child: SvgPicture.asset(
+            kIconPassword,
+            colorFilter: const ColorFilter.mode(
+              kColorHint,
+              BlendMode.srcIn,
+            ),
+          ),
         ),
         suffix: Padding(
           padding: const EdgeInsets.only(right: 14),
