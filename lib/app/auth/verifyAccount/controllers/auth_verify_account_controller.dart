@@ -18,6 +18,7 @@ class AuthVerifyAccountController extends GetxController {
 
   final formKey = GlobalKey<FormState>();
   final phoneNumberController = TextEditingController();
+  final emailController = TextEditingController();
   final selectedDialCode = '+91'.obs;
   final isOtpView = false.obs;
   final isContinueLoading = false.obs;
@@ -25,6 +26,9 @@ class AuthVerifyAccountController extends GetxController {
   final otpControllers = List.generate(4, (_) => TextEditingController());
   final otpFocusNodes = List.generate(4, (_) => FocusNode());
   bool isFromLoginWithOtp = false;
+
+  /// Phone or email string last used with `login-phone` (must match `verify-otp`).
+  String _otpRecipient = '';
 
   @override
   void onInit() {
@@ -46,6 +50,7 @@ class AuthVerifyAccountController extends GetxController {
 
   void showPhoneNumberView() {
     isOtpView.value = false;
+    _otpRecipient = '';
   }
 
   bool handleBackAction() {
@@ -68,8 +73,16 @@ class AuthVerifyAccountController extends GetxController {
     }
   }
 
-  bool validatePhoneForm() {
-    return formKey.currentState?.validate() ?? false;
+  bool validateContactStep(BuildContext context) {
+    final state = formKey.currentState;
+    if (state == null) return false;
+    if (!state.validate()) return false;
+    final p = phoneNumberController.text.trim();
+    final e = emailController.text.trim();
+    final phoneOk = p.length == 10;
+    final emailOk =
+        e.isNotEmpty && Validate.emailValidation(context, e) == null;
+    return phoneOk || emailOk;
   }
 
   bool validateOtp(BuildContext context) {
@@ -116,13 +129,17 @@ class AuthVerifyAccountController extends GetxController {
   }
 
   Future<void> _submitLoginPhoneOtp(BuildContext context) async {
-    if (!validatePhoneForm()) return;
+    if (!validateContactStep(context)) return;
+
+    final p = phoneNumberController.text.trim();
+    final e = emailController.text.trim();
+    final usePhone = p.length == 10;
 
     try {
       setContinueLoading(true);
       final res = await _authRepo.loginWithOtp(
-        phone: phoneNumberController.text.trim(),
-        countryCode: selectedDialCode.value,
+        phone: usePhone ? p : e,
+        countryCode: usePhone ? selectedDialCode.value : '',
         isShowLoader: false,
       );
       if (!context.mounted) return;
@@ -137,6 +154,7 @@ class AuthVerifyAccountController extends GetxController {
           : 'Something went wrong.';
 
       if (res.statusCode == 1) {
+        _otpRecipient = usePhone ? p : e;
         AppToast.showSuccess(context, message);
         showOtpView();
       } else {
@@ -158,7 +176,7 @@ class AuthVerifyAccountController extends GetxController {
       setContinueLoading(true);
       final otpDigits = otpControllers.map((c) => c.text).join();
       final res = await _authRepo.verifyOtp(
-        phone: phoneNumberController.text.trim(),
+        phone: _otpRecipient,
         otp: otpDigits,
         isShowLoader: false,
       );
@@ -202,6 +220,7 @@ class AuthVerifyAccountController extends GetxController {
   @override
   void onClose() {
     phoneNumberController.dispose();
+    emailController.dispose();
     for (final otpController in otpControllers) {
       otpController.dispose();
     }
