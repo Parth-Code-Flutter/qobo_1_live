@@ -5,6 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
@@ -107,21 +108,47 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
       final File? selectedMedia = controller.selectedProfileMedia.value;
       return GestureDetector(
         onTap: () => controller.onProfileMediaTap(context),
-        child: Container(
-          width: 110,
-          height: 110,
-          decoration: const BoxDecoration(
-            color: Color(0xFFF5F5F5),
-            shape: BoxShape.circle,
-          ),
-          child: ClipOval(
-            child: selectedMedia == null
-                ? const Icon(
-                    Icons.camera_alt_outlined,
-                    color: kColorTextGrey,
-                    size: 34,
-                  )
-                : Image.file(selectedMedia, fit: BoxFit.cover),
+        child: SizedBox(
+          width: 124,
+          height: 124,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned(
+                top: 0,
+                left: 0,
+                child: Container(
+                  width: 130,
+                  height: 130,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF5F5F5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: ClipOval(
+                    child: selectedMedia == null
+                        ? const Icon(
+                            Icons.camera_alt_outlined,
+                            color: kColorTextGrey,
+                            size: 34,
+                          )
+                        : Image.file(selectedMedia, fit: BoxFit.cover),
+                  ),
+                ),
+              ),
+              // Bottom-right edit affordance as per Figma.
+              Align(
+                alignment: Alignment.bottomRight,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => controller.onProfileMediaTap(context),
+                  child: SizedBox(
+                    width: 34,
+                    height: 34,
+                    child: SvgPicture.asset(kIconEditBG, fit: BoxFit.contain),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -132,7 +159,7 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
     return AppTextField(
       controller: controller.userNameController,
       validator: (value) => controller.validateUserName(context, value),
-      hintText: 'Enter user name',
+      hintText: LocaleKeys.nickNameHint.tr,
       borderColor: kColorHint,
       hintStyle: TextStyles.kRegularPoppins(
         fontSize: TextStyles.k14FontSize,
