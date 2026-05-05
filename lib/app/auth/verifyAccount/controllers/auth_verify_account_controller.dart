@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'dart:async';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/local_storage_constants.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
@@ -25,6 +26,7 @@ class AuthVerifyAccountController extends GetxController {
   final selectedDialCode = '+91'.obs;
   final isOtpView = false.obs;
   final isContinueLoading = false.obs;
+  final isResendLoading = false.obs;
   final otpError = RxnString();
   final otpControllers = List.generate(4, (_) => TextEditingController());
   final otpFocusNodes = List.generate(4, (_) => FocusNode());
@@ -32,6 +34,10 @@ class AuthVerifyAccountController extends GetxController {
 
   /// Phone or email string last used with `login-phone` (must match `verify-otp`).
   String _otpRecipient = '';
+  bool _otpSentToPhone = true;
+  static const int _otpResendSeconds = 120;
+  final otpResendRemainingSeconds = 0.obs;
+  Timer? _otpResendTimer;
 
   @override
   void onInit() {
@@ -49,11 +55,23 @@ class AuthVerifyAccountController extends GetxController {
   void showOtpView() {
     isOtpView.value = true;
     otpError.value = null;
+    _startOtpResendTimer();
   }
 
   void showPhoneNumberView() {
     isOtpView.value = false;
     _otpRecipient = '';
+    _otpSentToPhone = true;
+    _cancelOtpResendTimer();
+  }
+
+  bool get canResendOtp =>
+      otpResendRemainingSeconds.value == 0 && !isResendLoading.value;
+
+  String get otpResendRemainingLabel {
+    final mins = otpResendRemainingSeconds.value ~/ 60;
+    final secs = otpResendRemainingSeconds.value % 60;
+    return '${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
   }
 
   bool handleBackAction() {
@@ -212,6 +230,7 @@ class AuthVerifyAccountController extends GetxController {
 
       if (res.statusCode == 1) {
         _otpRecipient = usePhone ? p : e;
+        _otpSentToPhone = usePhone;
         AppToast.showSuccess(context, message);
         showOtpView();
       } else {
@@ -223,6 +242,80 @@ class AuthVerifyAccountController extends GetxController {
       }
     } finally {
       setContinueLoading(false);
+    }
+  }
+
+  /// Resend OTP from OTP step using the same recipient/channel selected earlier.
+  Future<void> onResendCodePressed(BuildContext context) async {
+    if (!canResendOtp) return;
+    if (_otpRecipient.trim().isEmpty) {
+      AppToast.showError(context, LocaleKeys.resendUnavailableError.tr);
+      return;
+    }
+
+    try {
+      isResendLoading.value = true;
+      final res = await _authRepo.loginWithOtp(
+        phone: _otpRecipient,
+        countryCode: _otpSentToPhone ? selectedDialCode.value : '',
+        isShowLoader: false,
+      );
+      if (!context.mounted) return;
+
+      if (res == null) {
+        AppToast.showError(context, 'Request failed. Please try again.');
+        return;
+      }
+
+      final message = res.message.trim().isNotEmpty
+          ? res.message.trim()
+          : 'Something went wrong.';
+
+      if (res.statusCode == 1) {
+        // New OTP has been issued; restart cooldown and clear old typed digits.
+        _clearOtpFields();
+        _startOtpResendTimer();
+        AppToast.showSuccess(context, message);
+      } else {
+        AppToast.showError(context, message);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        AppToast.showError(context, e.toString());
+      }
+    } finally {
+      isResendLoading.value = false;
+    }
+  }
+
+  /// Starts a fresh 2-minute countdown before resend is enabled.
+  void _startOtpResendTimer() {
+    _cancelOtpResendTimer();
+    otpResendRemainingSeconds.value = _otpResendSeconds;
+    _otpResendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      final next = otpResendRemainingSeconds.value - 1;
+      if (next <= 0) {
+        otpResendRemainingSeconds.value = 0;
+        timer.cancel();
+      } else {
+        otpResendRemainingSeconds.value = next;
+      }
+    });
+  }
+
+  void _cancelOtpResendTimer() {
+    _otpResendTimer?.cancel();
+    _otpResendTimer = null;
+    otpResendRemainingSeconds.value = 0;
+  }
+
+  void _clearOtpFields() {
+    for (final controller in otpControllers) {
+      controller.clear();
+    }
+    otpError.value = null;
+    if (otpFocusNodes.isNotEmpty) {
+      otpFocusNodes.first.requestFocus();
     }
   }
 
@@ -256,7 +349,7 @@ class AuthVerifyAccountController extends GetxController {
         ErrorHandlerUtils.resetSessionState();
         if (!context.mounted) return;
         AppToast.showSuccess(context, message);
-        Get.offAllNamed(
+        Get.toNamed(
           Routes.UPDATE_PROFILE,
           arguments: <String, dynamic>{
             'isComeFromOtpScreen': true,
@@ -276,6 +369,7 @@ class AuthVerifyAccountController extends GetxController {
 
   @override
   void onClose() {
+    _cancelOtpResendTimer();
     phoneNumberController.dispose();
     emailController.dispose();
     for (final otpController in otpControllers) {

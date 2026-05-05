@@ -58,10 +58,19 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
             Spacing.v28,
             otpVerificationWidget(),
             Spacing.v28,
-            SemiBoldText(
-              text: LocaleKeys.resendCode.tr,
-              fontSize: TextStyles.k14FontSize,
-              color: kColorPrimary,
+            Obx(
+              () => GestureDetector(
+                onTap: controller.canResendOtp
+                    ? () => controller.onResendCodePressed(context)
+                    : null,
+                child: SemiBoldText(
+                  text: controller.canResendOtp
+                      ? LocaleKeys.resendCode.tr
+                      : '${LocaleKeys.resendCodeIn.tr} ${controller.otpResendRemainingLabel}',
+                  fontSize: TextStyles.k14FontSize,
+                  color: controller.canResendOtp ? kColorPrimary : kColorHint,
+                ),
+              ),
             ),
             Spacing.v28,
             Obx(

@@ -15,3 +15,6 @@ const String kIconMail = '$iconPath/mail_icon.svg';
 const String kIconPassword = '$iconPath/password_icon.svg';
 const String kIconUser = '$iconPath/user_icon.svg';
 const String kIconLock = '$iconPath/lock_icon.svg';
+const String kIconMale = '$iconPath/male_icon.svg';
+const String kIconFemale = '$iconPath/female_icon.svg';
+const String kIconEditBG = '$iconPath/edit_bg_icon.svg';

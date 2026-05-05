@@ -52,11 +52,11 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
                     Spacing.v10,
                     _birthdateField(context),
                     Spacing.v10,
-                    _genderField(),
-                    Spacing.v10,
                     _passwordField(context),
                     Spacing.v10,
                     _confirmPasswordField(context),
+                    Spacing.v10,
+                    _genderField(),
                     Spacing.v28,
                     Obx(
                       () => appButton(
@@ -65,8 +65,8 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
                         buttonText: controller.isSubmitLoading.value
                             ? ''
                             : (controller.isComeFromOtpScreen.value
-                                ? 'Next'
-                                : 'Update Profile'),
+                                  ? 'Next'
+                                  : 'Update Profile'),
                         buttonIcon: controller.isSubmitLoading.value
                             ? SizedBox(
                                 width: 20,
@@ -121,10 +121,7 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
                     color: kColorTextGrey,
                     size: 34,
                   )
-                : Image.file(
-                    selectedMedia,
-                    fit: BoxFit.cover,
-                  ),
+                : Image.file(selectedMedia, fit: BoxFit.cover),
           ),
         ),
       );
@@ -169,11 +166,7 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
       textCapitalization: TextCapitalization.none,
       prefix: const Padding(
         padding: EdgeInsets.only(left: 14, right: 12),
-        child: Icon(
-          Icons.calendar_today_outlined,
-          color: kColorHint,
-          size: 20,
-        ),
+        child: Icon(Icons.calendar_today_outlined, color: kColorHint, size: 20),
       ),
     );
   }
@@ -183,43 +176,89 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         AppText(
-          text: 'Gender',
+          text: 'Select Gender',
           fontSize: TextStyles.k14FontSize,
           color: kColorText,
         ),
-        Row(
-          children: [
-            Expanded(
-              child: Obx(
-                () => RadioListTile<String>(
-                  value: 'Male',
-                  groupValue: controller.selectedGender.value,
-                  onChanged: (value) =>
-                      controller.selectedGender.value = value ?? '',
-                  title: const Text('Male'),
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  activeColor: kColorPrimary,
-                ),
+        Spacing.v12,
+        Obx(
+          () => Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _genderCircleOption(
+                label: 'Male',
+                value: 'Male',
+                iconAsset: kIconMale,
+                isSelected: controller.selectedGender.value == 'Male',
               ),
-            ),
-            Expanded(
-              child: Obx(
-                () => RadioListTile<String>(
-                  value: 'Female',
-                  groupValue: controller.selectedGender.value,
-                  onChanged: (value) =>
-                      controller.selectedGender.value = value ?? '',
-                  title: const Text('Female'),
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  activeColor: kColorPrimary,
-                ),
+              const SizedBox(width: 16),
+              _genderCircleOption(
+                label: 'Female',
+                value: 'Female',
+                iconAsset: kIconFemale,
+                isSelected: controller.selectedGender.value == 'Female',
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
+    );
+  }
+
+  /// Figma-style circular chip: filled primary when selected, white + grey border when not.
+  Widget _genderCircleOption({
+    required String label,
+    required String value,
+    required String iconAsset,
+    required bool isSelected,
+  }) {
+    const double kGenderCircleSize = 90;
+
+    return GestureDetector(
+      onTap: () => controller.selectedGender.value = value,
+      child: SizedBox(
+        width: kGenderCircleSize,
+        height: kGenderCircleSize,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: isSelected ? kColorPrimary : kColorWhite,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: isSelected ? kColorPrimary : kColorTextFieldBorder,
+              width: 0.5,
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SvgPicture.asset(
+                iconAsset,
+                height: 32,
+                width: 32,
+                fit: BoxFit.contain,
+                colorFilter: ColorFilter.mode(
+                  isSelected ? kColorWhite : kColorHint,
+                  BlendMode.srcIn,
+                ),
+              ),
+              Spacing.v2,
+              if (isSelected)
+                SemiBoldText(
+                  text: label,
+                  fontSize: TextStyles.k14FontSize,
+                  color: kColorWhite,
+                )
+              else
+                AppText(
+                  text: label,
+                  fontSize: TextStyles.k14FontSize,
+                  color: kColorHint,
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -242,10 +281,7 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
           padding: const EdgeInsets.only(left: 14, right: 12),
           child: SvgPicture.asset(
             kIconPassword,
-            colorFilter: const ColorFilter.mode(
-              kColorHint,
-              BlendMode.srcIn,
-            ),
+            colorFilter: const ColorFilter.mode(kColorHint, BlendMode.srcIn),
           ),
         ),
         suffix: Padding(
@@ -285,10 +321,7 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
           padding: const EdgeInsets.only(left: 14, right: 12),
           child: SvgPicture.asset(
             kIconPassword,
-            colorFilter: const ColorFilter.mode(
-              kColorHint,
-              BlendMode.srcIn,
-            ),
+            colorFilter: const ColorFilter.mode(kColorHint, BlendMode.srcIn),
           ),
         ),
         suffix: Padding(

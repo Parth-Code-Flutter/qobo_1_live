@@ -35,7 +35,9 @@
   "otpVerificationTitle": "Verification Code",
   "otpVerificationSubTitle": "Enter the verification code that we have sent to your email",
   "resendCode": "Resend Code",
+  "resendCodeIn": "Resend code in",
   "verifyOtpChoiceTitle": "Where should we send the code?",
   "sendOtpOnPhone": "Send OTP on Phone No.",
-  "sendOtpOnMail": "Send OTP on mail"
+  "sendOtpOnMail": "Send OTP on mail",
+  "resendUnavailableError": "Unable to resend. Please try again."
 }
