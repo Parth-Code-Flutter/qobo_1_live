@@ -54,6 +54,7 @@ dependencies:
   video_player: ^2.10.1
   country_code_picker: ^3.4.1
   image_picker: ^1.2.1
+  animated_bottom_navigation_bar: ^1.4.0
 
 dev_dependencies:
   flutter_test:

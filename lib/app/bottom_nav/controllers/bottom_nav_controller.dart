@@ -1,28 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-/// Represents one tab in the custom bottom navigation bar.
-class BottomNavItem {
-  const BottomNavItem({
-    required this.label,
-    required this.icon,
-  });
-
-  final String label;
-  final IconData icon;
-}
-
+/// Controller for bottom-nav state.
 class BottomNavController extends GetxController {
-  // Default to first tab so center action is not opened initially.
   final selectedIndex = 0.obs;
 
-  // Keep tab configuration centralized for cleaner view code.
-  final items = const <BottomNavItem>[
-    BottomNavItem(label: 'Discover', icon: Icons.explore_outlined),
-    BottomNavItem(label: 'Live Rooms', icon: Icons.sensors_outlined),
-    BottomNavItem(label: 'Heart', icon: Icons.favorite_border),
-    BottomNavItem(label: 'Messages', icon: Icons.chat_bubble_outline),
-    BottomNavItem(label: 'Profile', icon: Icons.person_outline),
+  /// Keep tabs centralized so view stays clean.
+  final items = const <({String label, IconData icon})>[
+    (label: 'Home', icon: Icons.home_outlined),
+    (label: 'Search', icon: Icons.search),
+    (label: 'Live', icon: Icons.videocam_outlined),
+    (label: 'Chat', icon: Icons.chat_bubble_outline),
+    (label: 'Profile', icon: Icons.person_outline),
   ];
 
   void onTabSelected(int index) {
