@@ -6,10 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/constants/local_storage_constants.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/utils/app_dialogs/common_giffy_dialog.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_media_picker.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
@@ -185,6 +187,23 @@ class UpdateProfileController extends GetxController {
             : Get.put(LocalStorage(), permanent: true);
         await storage.writeBoolStorage(kStorageIsLoggedIn, true);
         if (!context.mounted) return;
+
+        // For OTP onboarding flow, show a success dialog before leaving this screen.
+        if (isComeFromOtpScreen.value) {
+          await CommonGiffyDialog.showSuccess(
+            context,
+            title: LocaleKeys.verifySuccessDialogTitle.tr,
+            subtitle: LocaleKeys.verifySuccessDialogSubtitle.tr,
+            buttonText: LocaleKeys.verifySuccessDialogButton.tr,
+            gifAssetPath: kGifCongratulation,
+            onPressed: () {
+              // Dialog closes first in CommonGiffyDialog, then navigation runs.
+              Get.offAllNamed(Routes.BOTTOM_NAV);
+            },
+          );
+          return;
+        }
+
         AppToast.showSuccess(context, message);
         Get.offAllNamed(Routes.BOTTOM_NAV);
       } else {

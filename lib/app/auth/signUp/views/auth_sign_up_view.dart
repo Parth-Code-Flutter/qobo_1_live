@@ -22,36 +22,51 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kColorWhite,
+      resizeToAvoidBottomInset: true,
       appBar: CommonAppBarWidget(title: '', showBackButton: true),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
         child: Form(
           key: controller.formKey,
           autovalidateMode: AutovalidateMode.onUserInteraction,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Spacing.v24,
-              signUpHeader(),
-              Spacing.v24,
-              emailUsernamePasswordTextFields(context),
-              Spacing.v28,
-              appButton(
-                onPressed: () {
-                  if (controller.validateForm()) {
-                    Get.toNamed(Routes.AUTH_VERIFY_ACCOUNT);
-                  }
-                },
-                buttonText: LocaleKeys.signUp.tr,
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.fromLTRB(
+                20,
+                0,
+                20,
+                24 + MediaQuery.of(context).viewInsets.bottom,
               ),
-              Spacing.v20,
-              orLoginWithDividerWidget(),
-              Spacing.v16,
-              socialMediaLogin(),
-              Spacer(),
-              signInFooterWidget(),
-              Spacing.v24,
-            ],
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Spacing.v24,
+                    signUpHeader(),
+                    Spacing.v24,
+                    emailUsernamePasswordTextFields(context),
+                    Spacing.v28,
+                    appButton(
+                      onPressed: () {
+                        if (controller.validateForm()) {
+                          Get.toNamed(Routes.AUTH_VERIFY_ACCOUNT);
+                        }
+                      },
+                      buttonText: LocaleKeys.signUp.tr,
+                    ),
+                    Spacing.v20,
+                    orLoginWithDividerWidget(),
+                    Spacing.v16,
+                    socialMediaLogin(),
+                    const SizedBox(height: 20),
+                    signInFooterWidget(),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ),

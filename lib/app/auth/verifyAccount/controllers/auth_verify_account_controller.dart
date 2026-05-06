@@ -348,7 +348,7 @@ class AuthVerifyAccountController extends GetxController {
         }
         ErrorHandlerUtils.resetSessionState();
         if (!context.mounted) return;
-        AppToast.showSuccess(context, message);
+
         Get.toNamed(
           Routes.UPDATE_PROFILE,
           arguments: <String, dynamic>{

@@ -6,6 +6,7 @@ const String gifPath = 'assets/gif';
 const String kImgSplashScreen = '$imgPath/splash_screen_img.png';
 const String kImgBG = '$imgPath/bg_img.png';
 const String kGifSplashScreen = '$gifPath/splash_screen_gif.gif';
+const String kGifCongratulation = '$gifPath/congratulation_success.gif';
 
 /// PNG Icons
 const String kIconApp = '$iconPath/app_icon.png';

@@ -25,45 +25,62 @@ class AuthLoginView extends GetView<AuthLoginController> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kColorWhite,
+      resizeToAvoidBottomInset: true,
       appBar: CommonAppBarWidget(title: '', showBackButton: false),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
         child: Form(
           key: controller.formKey,
           autovalidateMode: AutovalidateMode.onUserInteraction,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              welcomeTextHeader(),
-              Spacing.v24,
-              emailPasswordTextFields(context),
-              Spacing.v20,
-              Obx(
-                () => appButton(
-                  onPressed: () => controller.onLoginPressed(context),
-                  buttonText: controller.isLoginLoading.value
-                      ? ''
-                      : LocaleKeys.loginButtonText.tr,
-                  buttonIcon: controller.isLoginLoading.value
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(kColorWhite),
-                          ),
-                        )
-                      : null,
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.fromLTRB(
+                20,
+                0,
+                20,
+                24 + MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    welcomeTextHeader(),
+                    Spacing.v24,
+                    emailPasswordTextFields(context),
+                    Spacing.v20,
+                    Obx(
+                      () => appButton(
+                        onPressed: () => controller.onLoginPressed(context),
+                        buttonText: controller.isLoginLoading.value
+                            ? ''
+                            : LocaleKeys.loginButtonText.tr,
+                        buttonIcon: controller.isLoginLoading.value
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    kColorWhite,
+                                  ),
+                                ),
+                              )
+                            : null,
+                      ),
+                    ),
+                    Spacing.v20,
+                    orLoginWithDividerWidget(),
+                    Spacing.v20,
+                    socialMediaLogin(),
+                    const SizedBox(height: 20),
+                    signUpFooterWidget(),
+                  ],
                 ),
               ),
-              Spacing.v20,
-              orLoginWithDividerWidget(),
-              Spacing.v20,
-              socialMediaLogin(),
-              Spacer(),
-              signUpFooterWidget(),
-              Spacing.v24,
-            ],
+            ),
           ),
         ),
       ),

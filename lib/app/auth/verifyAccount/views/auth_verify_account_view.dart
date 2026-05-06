@@ -40,6 +40,7 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
       backgroundColor: kColorWhite,
+      resizeToAvoidBottomInset: true,
       appBar: CommonAppBarWidget(
         title: '',
         showBackButton: true,
@@ -49,50 +50,65 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
           }
         },
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Column(
-          children: [
-            Spacing.v24,
-            otpVerificationHeader(),
-            Spacing.v28,
-            otpVerificationWidget(),
-            Spacing.v28,
-            Obx(
-              () => GestureDetector(
-                onTap: controller.canResendOtp
-                    ? () => controller.onResendCodePressed(context)
-                    : null,
-                child: SemiBoldText(
-                  text: controller.canResendOtp
-                      ? LocaleKeys.resendCode.tr
-                      : '${LocaleKeys.resendCodeIn.tr} ${controller.otpResendRemainingLabel}',
-                  fontSize: TextStyles.k14FontSize,
-                  color: controller.canResendOtp ? kColorPrimary : kColorHint,
-                ),
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.fromLTRB(
+              20,
+              0,
+              20,
+              24 + MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Column(
+                children: [
+                  Spacing.v24,
+                  otpVerificationHeader(),
+                  Spacing.v28,
+                  otpVerificationWidget(),
+                  Spacing.v28,
+                  Obx(
+                    () => GestureDetector(
+                      onTap: controller.canResendOtp
+                          ? () => controller.onResendCodePressed(context)
+                          : null,
+                      child: SemiBoldText(
+                        text: controller.canResendOtp
+                            ? LocaleKeys.resendCode.tr
+                            : '${LocaleKeys.resendCodeIn.tr} ${controller.otpResendRemainingLabel}',
+                        fontSize: TextStyles.k14FontSize,
+                        color: controller.canResendOtp ? kColorPrimary : kColorHint,
+                      ),
+                    ),
+                  ),
+                  Spacing.v28,
+                  Obx(
+                    () => appButton(
+                      onPressed: () => controller.onContinuePressed(context),
+                      buttonText: controller.isContinueLoading.value
+                          ? ''
+                          : LocaleKeys.continueButton.tr,
+                      buttonIcon: controller.isContinueLoading.value
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: const CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(kColorWhite),
+                              ),
+                            )
+                          : null,
+                    ),
+                  ),
+                ],
               ),
             ),
-            Spacing.v28,
-            Obx(
-              () => appButton(
-                onPressed: () => controller.onContinuePressed(context),
-                buttonText: controller.isContinueLoading.value
-                    ? ''
-                    : LocaleKeys.continueButton.tr,
-                buttonIcon: controller.isContinueLoading.value
-                    ? SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: const CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(kColorWhite),
-                        ),
-                      )
-                    : null,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     ),
