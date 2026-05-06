@@ -17,6 +17,7 @@ class BottomNavView extends GetView<BottomNavController> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kColorWhite,
+      extendBody: true,
       body: Obx(
         () {
           if (controller.selectedIndex.value == 1) {
@@ -55,7 +56,7 @@ class BottomNavView extends GetView<BottomNavController> {
           rightCornerRadius: 20,
           elevation: 0,
           height: 66,
-          backgroundColor: kColorBottomNav,
+          backgroundColor: Colors.transparent,
           onTap: controller.onNavBarTabSelected,
           tabBuilder: (index, isActive) {
             final item = controller.items[controller.navTabIndices[index]];
