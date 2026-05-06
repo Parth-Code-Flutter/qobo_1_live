@@ -28,20 +28,16 @@ class BottomNavView extends GetView<BottomNavController> {
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: Obx(
-        () {
-          return FloatingActionButton(
-            onPressed: controller.onCenterHeartSelected,
-            backgroundColor: kColorWhite,
-            elevation: 4,
-            shape: const CircleBorder(),
-            child: SvgPicture.asset(
-              kIconHeart,
-              width: 30,
-              height: 30,
-            ),
-          );
-        },
+      floatingActionButton: FloatingActionButton(
+        onPressed: controller.onCenterHeartSelected,
+        backgroundColor: kColorWhite,
+        elevation: 4,
+        shape: const CircleBorder(),
+        child: SvgPicture.asset(
+          kIconHeart,
+          width: 30,
+          height: 30,
+        ),
       ),
       bottomNavigationBar: Obx(
         () => AnimatedBottomNavigationBar.builder(
