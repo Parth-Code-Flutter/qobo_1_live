@@ -59,7 +59,7 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
                     _confirmPasswordField(context),
                     Spacing.v10,
                     _genderField(),
-                    Spacing.v10,
+                    Spacing.v16,
                     _termsAndPrivacyText(),
                     Spacing.v28,
                     Obx(
@@ -252,7 +252,7 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
                 controller.hasAcceptedTerms.value
                     ? Icons.check_circle
                     : Icons.radio_button_unchecked,
-                size: 14,
+                size: 16,
                 color: controller.hasAcceptedTerms.value
                     ? kColorPrimary
                     : kColorHint,
@@ -280,7 +280,7 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
                         debugPrint('Terms & Conditions clicked');
                       },
                   ),
-                  const TextSpan(text: '\n'),
+                  const TextSpan(text: ' '),
                   TextSpan(text: LocaleKeys.andText.tr),
                   TextSpan(
                     text: LocaleKeys.privacyPolicy.tr,

@@ -67,11 +67,11 @@ class AuthLoginController extends GetxController {
     return null;
   }
 
-  /// API-friendly login username: prepend dial-code when username is phone.
+  /// API-friendly login username.
+  /// Backend expects raw phone digits for phone login (no dial-code prefix).
   String get resolvedLoginUsername {
     final username = emailController.text.trim();
-    if (!isPhoneInput.value) return username;
-    return '${selectedDialCode.value}$username';
+    return username;
   }
 
   Future<void> onLoginPressed(BuildContext context) async {
