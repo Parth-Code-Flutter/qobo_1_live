@@ -76,6 +76,8 @@ class LiveRoomView extends StatelessWidget {
                       ),
                     ),
                     Spacing.v12,
+                    _topBanner(),
+                    Spacing.v12,
                   ],
                 ),
               ),
@@ -106,6 +108,29 @@ class LiveRoomView extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// Promo banner shown above the live-room listing.
+  Widget _topBanner() {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: AspectRatio(
+        aspectRatio: 3.2,
+        child: Image.network(
+          'https://images.unsplash.com/photo-1513151233558-d860c5398176?w=1400',
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Container(
+            color: const Color(0x66351B6C),
+            alignment: Alignment.center,
+            child: SemiBoldText(
+              text: 'Celebration Banner',
+              fontSize: TextStyles.k14FontSize,
+              color: kColorWhite,
+            ),
+          ),
         ),
       ),
     );

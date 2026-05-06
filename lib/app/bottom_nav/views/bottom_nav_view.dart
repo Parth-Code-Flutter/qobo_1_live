@@ -46,39 +46,63 @@ class BottomNavView extends GetView<BottomNavController> {
           height: 30,
         ),
       ),
-      bottomNavigationBar: Obx(
-        () => AnimatedBottomNavigationBar.builder(
-          itemCount: controller.navTabIndices.length,
-          activeIndex: controller.navBarIndexFromSelected(),
-          gapLocation: GapLocation.center,
-          notchSmoothness: NotchSmoothness.verySmoothEdge,
-          leftCornerRadius: 20,
-          rightCornerRadius: 20,
-          elevation: 0,
-          height: 66,
-          backgroundColor: Colors.transparent,
-          onTap: controller.onNavBarTabSelected,
-          tabBuilder: (index, isActive) {
-            final item = controller.items[controller.navTabIndices[index]];
-            final color = isActive ? kColorWhite : kColorHint;
-            return Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SvgPicture.asset(
-                  item.iconPath,
-                  width: 20,
-                  height: 20,
-                  colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
-                ),
-                const SizedBox(height: 3),
-                AppText(
-                  text: item.label,
-                  fontSize: TextStyles.k10FontSize,
-                  color: color,
-                ),
-              ],
-            );
-          },
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: Color(0x26FFFFFF), width: 0.5)),
+          boxShadow: [
+            // Soft top shadow to separate nav from active screen background.
+            BoxShadow(
+              color: Color(0x33000000),
+              offset: Offset(0, -2),
+              blurRadius: 8,
+              spreadRadius: 0,
+            ),
+          ],
+        ),
+        child: Obx(
+          () => AnimatedBottomNavigationBar.builder(
+            itemCount: controller.navTabIndices.length,
+            activeIndex: controller.navBarIndexFromSelected(),
+            gapLocation: GapLocation.center,
+            notchSmoothness: NotchSmoothness.verySmoothEdge,
+            leftCornerRadius: 20,
+            rightCornerRadius: 20,
+            elevation: 0,
+            height: 66,
+            backgroundColor: Colors.transparent,
+            onTap: controller.onNavBarTabSelected,
+            tabBuilder: (index, _) {
+              final tabIndex = controller.navTabIndices[index];
+              final item = controller.items[tabIndex];
+              final isHighlighted = controller.selectedIndex.value == tabIndex;
+              final color = isHighlighted ? kColorWhite : kColorHint;
+              return Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SvgPicture.asset(
+                    item.iconPath,
+                    width: 20,
+                    height: 20,
+                    colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+                  ),
+                  const SizedBox(height: 3),
+                  AppText(
+                    text: item.label,
+                    fontSize: TextStyles.k10FontSize,
+                    style: isHighlighted
+                        ? TextStyles.kSemiBoldPoppins(
+                            fontSize: TextStyles.k10FontSize,
+                            colors: color,
+                          )
+                        : TextStyles.kRegularPoppins(
+                            fontSize: TextStyles.k10FontSize,
+                            colors: color,
+                          ),
+                  ),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
