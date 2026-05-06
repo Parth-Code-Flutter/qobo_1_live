@@ -1,7 +1,9 @@
 import 'package:animated_bottom_navigation_bar/animated_bottom_navigation_bar.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -18,29 +20,53 @@ class BottomNavView extends GetView<BottomNavController> {
         () => Center(
           // Placeholder center content for each tab for now.
           child: BoldText(
-            text: '${controller.items[controller.selectedIndex.value].label} Screen',
+            text:
+                '${(controller.items[controller.selectedIndex.value].label.isEmpty ? 'Heart' : controller.items[controller.selectedIndex.value].label)} Screen',
             fontSize: TextStyles.k22FontSize,
             color: kColorText,
           ),
         ),
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: Obx(
+        () {
+          return FloatingActionButton(
+            onPressed: controller.onCenterHeartSelected,
+            backgroundColor: kColorWhite,
+            elevation: 4,
+            shape: const CircleBorder(),
+            child: SvgPicture.asset(
+              kIconHeart,
+              width: 30,
+              height: 30,
+            ),
+          );
+        },
+      ),
       bottomNavigationBar: Obx(
         () => AnimatedBottomNavigationBar.builder(
-          itemCount: controller.items.length,
-          activeIndex: controller.selectedIndex.value,
-          gapLocation: GapLocation.none,
-          notchSmoothness: NotchSmoothness.sharpEdge,
+          itemCount: controller.navTabIndices.length,
+          activeIndex: controller.navBarIndexFromSelected(),
+          gapLocation: GapLocation.center,
+          notchSmoothness: NotchSmoothness.verySmoothEdge,
+          leftCornerRadius: 20,
+          rightCornerRadius: 20,
           elevation: 0,
           height: 66,
           backgroundColor: kColorBottomNav,
-          onTap: controller.onTabSelected,
+          onTap: controller.onNavBarTabSelected,
           tabBuilder: (index, isActive) {
-            final item = controller.items[index];
+            final item = controller.items[controller.navTabIndices[index]];
             final color = isActive ? kColorWhite : kColorHint;
             return Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(item.icon, color: color, size: 20),
+                SvgPicture.asset(
+                  item.iconPath,
+                  width: 20,
+                  height: 20,
+                  colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+                ),
                 const SizedBox(height: 3),
                 AppText(
                   text: item.label,

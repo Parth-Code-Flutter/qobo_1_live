@@ -7,6 +7,12 @@ const String kImgSplashScreen = '$imgPath/splash_screen_img.png';
 /// PNG Icons
 const String kIconApp = '$iconPath/app_icon.png';
 
+/// SVG Bottom Nav Icons
+const String kIconDiscover = '$iconPath/discover_icon.svg';
+const String kIconChat = '$iconPath/chat_icon.svg';
+const String kIconLiveRoom = '$iconPath/live_room_icon.svg';
+const String kIconHeart = '$iconPath/heart_icon.svg';
+
 /// SVG Icons
 const String kIconArrowBack = '$iconPath/arrow_back_icon.svg';
 const String kIconFB = '$iconPath/fb_icon.svg';
