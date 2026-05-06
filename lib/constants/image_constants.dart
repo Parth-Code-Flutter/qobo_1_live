@@ -18,3 +18,4 @@ const String kIconLock = '$iconPath/lock_icon.svg';
 const String kIconMale = '$iconPath/male_icon.svg';
 const String kIconFemale = '$iconPath/female_icon.svg';
 const String kIconEditBG = '$iconPath/edit_bg_icon.svg';
+const String kIconCalendar = '$iconPath/calendar_icon.svg';

@@ -1,9 +1,12 @@
 import 'dart:io';
 
 import 'package:get/get.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/constants/local_storage_constants.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
@@ -28,8 +31,10 @@ class UpdateProfileController extends GetxController {
   final confirmPasswordController = TextEditingController();
 
   final selectedGender = ''.obs;
+  final selectedAge = RxnInt();
   final selectedBirthdate = Rxn<DateTime>();
   final selectedProfileMedia = Rxn<File>();
+  final hasAcceptedTerms = false.obs;
   final isPasswordHidden = true.obs;
   final isConfirmPasswordHidden = true.obs;
   final isSubmitLoading = false.obs;
@@ -44,25 +49,97 @@ class UpdateProfileController extends GetxController {
     }
   }
 
-  Future<void> pickBirthdate(BuildContext context) async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: selectedBirthdate.value ?? DateTime(now.year - 18),
-      firstDate: DateTime(1900),
-      lastDate: now,
+  /// Opens a bottom-sheet wheel picker for integer age values.
+  /// We still derive/store DOB internally so API contract remains unchanged.
+  Future<void> pickAge(BuildContext context) async {
+    const int minAge = 13;
+    const int maxAge = 100;
+    final ageValues = List<int>.generate(
+      maxAge - minAge + 1,
+      (index) => minAge + index,
     );
-    if (picked == null) return;
+    final initialAge = (selectedAge.value ?? 18).clamp(minAge, maxAge);
+    var temporaryAge = initialAge;
+    final scrollController = FixedExtentScrollController(
+      initialItem: ageValues.indexOf(initialAge),
+    );
 
-    selectedBirthdate.value = picked;
-    final month = picked.month.toString().padLeft(2, '0');
-    final day = picked.day.toString().padLeft(2, '0');
-    birthdateController.text = '${picked.year}-$month-$day';
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: kColorWhite,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: SizedBox(
+            height: 300,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          LocaleKeys.selectAgeTitle.tr,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: kColorText,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          _applySelectedAge(temporaryAge);
+                          Navigator.of(sheetContext).pop();
+                        },
+                        child: Text(LocaleKeys.doneText.tr),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: CupertinoPicker(
+                    scrollController: scrollController,
+                    itemExtent: 42,
+                    useMagnifier: true,
+                    magnification: 1.08,
+                    onSelectedItemChanged: (index) {
+                      temporaryAge = ageValues[index];
+                    },
+                    children: ageValues
+                        .map(
+                          (age) => Center(
+                            child: Text(
+                              '$age',
+                              style: const TextStyle(
+                                fontSize: 20,
+                                color: kColorText,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   String? validateBirthdate(String? value) {
     if ((value ?? '').trim().isEmpty) {
-      return 'Birthdate is required';
+      return LocaleKeys.ageRequiredError.tr;
     }
     return null;
   }
@@ -75,13 +152,17 @@ class UpdateProfileController extends GetxController {
   Future<void> onPrimaryActionPressed(BuildContext context) async {
     if (isSubmitLoading.value) return;
     if (!validateForm(context)) return;
+    if (!hasAcceptedTerms.value) {
+      AppToast.showError(context, LocaleKeys.termsRequiredError.tr);
+      return;
+    }
 
     try {
       isSubmitLoading.value = true;
       final response = await _authRepo.updateProfile(
         name: userNameController.text.trim(),
         gender: selectedGender.value.trim().toLowerCase(),
-        dob: birthdateController.text.trim(),
+        dob: _resolvedDobForApi(),
         // Country can be changed once country selection UI is added.
         country: 'IN',
         password: passwordController.text.trim(),
@@ -124,6 +205,10 @@ class UpdateProfileController extends GetxController {
 
   void toggleConfirmPasswordVisibility() {
     isConfirmPasswordHidden.value = !isConfirmPasswordHidden.value;
+  }
+
+  void toggleTermsAcceptance() {
+    hasAcceptedTerms.value = !hasAcceptedTerms.value;
   }
 
   /// Opens common source picker, then stores selected media file for preview/API.
@@ -175,6 +260,25 @@ class UpdateProfileController extends GetxController {
       value?.trim() ?? '',
       passwordController.text.trim(),
     );
+  }
+
+  void _applySelectedAge(int age) {
+    selectedAge.value = age;
+    birthdateController.text = age.toString();
+    selectedBirthdate.value = _dobFromAge(age);
+  }
+
+  DateTime _dobFromAge(int age) {
+    final now = DateTime.now();
+    return DateTime(now.year - age, now.month, now.day);
+  }
+
+  String _resolvedDobForApi() {
+    final dob = selectedBirthdate.value;
+    if (dob == null) return birthdateController.text.trim();
+    final month = dob.month.toString().padLeft(2, '0');
+    final day = dob.day.toString().padLeft(2, '0');
+    return '${dob.year}-$month-$day';
   }
 
   @override

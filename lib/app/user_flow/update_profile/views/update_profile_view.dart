@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
@@ -51,13 +52,15 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
                     Spacing.v28,
                     _userNameField(context),
                     Spacing.v10,
-                    _birthdateField(context),
+                    _ageField(context),
                     Spacing.v10,
                     _passwordField(context),
                     Spacing.v10,
                     _confirmPasswordField(context),
                     Spacing.v10,
                     _genderField(),
+                    Spacing.v10,
+                    _termsAndPrivacyText(),
                     Spacing.v28,
                     Obx(
                       () => appButton(
@@ -177,13 +180,13 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
     );
   }
 
-  Widget _birthdateField(BuildContext context) {
+  Widget _ageField(BuildContext context) {
     return AppTextField(
       controller: controller.birthdateController,
       validator: controller.validateBirthdate,
-      hintText: 'YYYY-MM-DD',
+      hintText: LocaleKeys.ageHint.tr,
       readOnly: true,
-      onTap: () => controller.pickBirthdate(context),
+      onTap: () => controller.pickAge(context),
       borderColor: kColorHint,
       hintStyle: TextStyles.kRegularPoppins(
         fontSize: TextStyles.k14FontSize,
@@ -191,9 +194,9 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
       ),
       textInputAction: TextInputAction.next,
       textCapitalization: TextCapitalization.none,
-      prefix: const Padding(
+      prefix:  Padding(
         padding: EdgeInsets.only(left: 14, right: 12),
-        child: Icon(Icons.calendar_today_outlined, color: kColorHint, size: 20),
+        child: SvgPicture.asset(kIconCalendar),
       ),
     );
   }
@@ -230,6 +233,72 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
           ),
         ),
       ],
+    );
+  }
+
+  /// Consent copy shown below gender with clickable links.
+  /// For now links only log taps; navigation can be added later.
+  Widget _termsAndPrivacyText() {
+    return Obx(
+      () => Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // User can toggle consent from the circular indicator (tick / untick).
+          GestureDetector(
+            onTap: controller.toggleTermsAcceptance,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Icon(
+                controller.hasAcceptedTerms.value
+                    ? Icons.check_circle
+                    : Icons.radio_button_unchecked,
+                size: 14,
+                color: controller.hasAcceptedTerms.value
+                    ? kColorPrimary
+                    : kColorHint,
+              ),
+            ),
+          ),
+          Spacing.h6,
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: TextStyles.kRegularPoppins(
+                  fontSize: TextStyles.k12FontSize,
+                  colors: kColorText,
+                ),
+                children: [
+                  TextSpan(text: LocaleKeys.agreeToThe.tr),
+                  TextSpan(
+                    text: LocaleKeys.termsAndConditions.tr,
+                    style: TextStyles.kSemiBoldPoppins(
+                      fontSize: TextStyles.k12FontSize,
+                      colors: kColorPrimary,
+                    ),
+                    recognizer: TapGestureRecognizer()
+                      ..onTap = () {
+                        debugPrint('Terms & Conditions clicked');
+                      },
+                  ),
+                  const TextSpan(text: '\n'),
+                  TextSpan(text: LocaleKeys.andText.tr),
+                  TextSpan(
+                    text: LocaleKeys.privacyPolicy.tr,
+                    style: TextStyles.kSemiBoldPoppins(
+                      fontSize: TextStyles.k12FontSize,
+                      colors: kColorPrimary,
+                    ),
+                    recognizer: TapGestureRecognizer()
+                      ..onTap = () {
+                        debugPrint('Privacy Policy clicked');
+                      },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
