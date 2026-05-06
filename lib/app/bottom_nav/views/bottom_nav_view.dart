@@ -2,6 +2,7 @@ import 'package:animated_bottom_navigation_bar/animated_bottom_navigation_bar.da
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/app/user_flow/live_room/views/live_room_view.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -17,15 +18,20 @@ class BottomNavView extends GetView<BottomNavController> {
     return Scaffold(
       backgroundColor: kColorWhite,
       body: Obx(
-        () => Center(
-          // Placeholder center content for each tab for now.
-          child: BoldText(
-            text:
-                '${(controller.items[controller.selectedIndex.value].label.isEmpty ? 'Heart' : controller.items[controller.selectedIndex.value].label)} Screen',
-            fontSize: TextStyles.k22FontSize,
-            color: kColorText,
-          ),
-        ),
+        () {
+          if (controller.selectedIndex.value == 1) {
+            return const LiveRoomView();
+          }
+          return Center(
+            // Placeholder center content for tabs not implemented yet.
+            child: BoldText(
+              text:
+                  '${(controller.items[controller.selectedIndex.value].label.isEmpty ? 'Heart' : controller.items[controller.selectedIndex.value].label)} Screen',
+              fontSize: TextStyles.k22FontSize,
+              color: kColorText,
+            ),
+          );
+        },
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: FloatingActionButton(
