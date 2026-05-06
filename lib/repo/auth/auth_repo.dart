@@ -18,6 +18,43 @@ class AuthRepo {
 
   final ApiService _apiService;
 
+  /// Calls `POST /api/auth/login` with username + password.
+  ///
+  /// Returns decoded JSON map on success, otherwise `null`.
+  Future<Map<String, dynamic>?> login({
+    required String username,
+    required String password,
+    bool isShowLoader = false,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: AuthEndpoints.login,
+      requestModel: <String, dynamic>{
+        'username': username,
+        'password': password,
+      },
+      isShowLoader: isShowLoader,
+      isLoginCall: true,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// Calls `GET /api/user/profile`.
+  ///
+  /// Returns decoded JSON map on success, otherwise `null`.
+  Future<Map<String, dynamic>?> getProfile({
+    bool isShowLoader = false,
+  }) async {
+    final response = await _apiService.getRequest(
+      endPoint: AuthEndpoints.getProfile,
+      isShowLoader: isShowLoader,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
   /// Calls `POST /api/auth/login-phone` to send OTP to the user.
   ///
   /// Returns parsed [LoginWithOtpResponseModel] on success, otherwise `null`.

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:country_code_picker/country_code_picker.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
+import 'package:qobo_one_live/utils/app_widgets/common_country_code_picker.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
@@ -272,34 +272,9 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          height: 56,
-          width: 92,
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          decoration: BoxDecoration(
-            color: kColorWhite,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: _kVerifyInputBorder, width: 0.5),
-          ),
-          child: Center(
-            child: CountryCodePicker(
-              initialSelection: 'IN',
-              favorite: const ['+91', 'IN'],
-              showCountryOnly: false,
-              showOnlyCountryWhenClosed: false,
-              showFlag: false,
-              showDropDownButton: true,
-              alignLeft: false,
-              padding: EdgeInsets.zero,
-              textStyle: TextStyles.kRegularPoppins(
-                fontSize: TextStyles.k14FontSize,
-                colors: kColorText,
-              ),
-              onChanged: (countryCode) {
-                controller.onCountryCodeChanged(countryCode.dialCode ?? '+91');
-              },
-            ),
-          ),
+        CommonCountryCodePicker(
+          borderColor: _kVerifyInputBorder,
+          onChanged: controller.onCountryCodeChanged,
         ),
         Spacing.h8,
         Expanded(

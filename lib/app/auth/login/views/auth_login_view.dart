@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
@@ -6,6 +7,7 @@ import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
+import 'package:qobo_one_live/utils/app_widgets/common_country_code_picker.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -36,11 +38,23 @@ class AuthLoginView extends GetView<AuthLoginController> {
               Spacing.v24,
               emailPasswordTextFields(context),
               Spacing.v20,
-              appButton(
-                onPressed: () {
-                  if (controller.validateForm()) {}
-                },
-                buttonText: LocaleKeys.loginButtonText.tr,
+              Obx(
+                () => appButton(
+                  onPressed: () => controller.onLoginPressed(context),
+                  buttonText: controller.isLoginLoading.value
+                      ? ''
+                      : LocaleKeys.loginButtonText.tr,
+                  buttonIcon: controller.isLoginLoading.value
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(kColorWhite),
+                          ),
+                        )
+                      : null,
+                ),
               ),
               Spacing.v20,
               orLoginWithDividerWidget(),
@@ -80,25 +94,50 @@ class AuthLoginView extends GetView<AuthLoginController> {
   Widget emailPasswordTextFields(BuildContext context) {
     return Column(
       children: [
-        AppTextField(
-          controller: controller.emailController,
-          validator: (value) =>
-              Validate.emailValidation(context, value?.trim() ?? ''),
-          hintText: LocaleKeys.loginEmailHint.tr,
-          borderColor: kColorHint,
-          hintStyle: TextStyles.kRegularPoppins(
-            fontSize: TextStyles.k14FontSize,
-            colors: kColorHint,
-          ),
-          textInputType: TextInputType.emailAddress,
-          textInputAction: TextInputAction.next,
-          textCapitalization: TextCapitalization.none,
-          prefix: Padding(
-            padding: const EdgeInsets.only(left: 14, right: 12),
-            child: SvgPicture.asset(
-              kIconMail,
-              colorFilter: const ColorFilter.mode(kColorHint, BlendMode.srcIn),
-            ),
+        Obx(
+          () => Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (controller.isPhoneInput.value) ...[
+                CommonCountryCodePicker(
+                  borderColor: kColorHint,
+                  onChanged: controller.onCountryCodeChanged,
+                ),
+                Spacing.h8,
+              ],
+              Expanded(
+                child: AppTextField(
+                  controller: controller.emailController,
+                  onChanged: controller.onUsernameChanged,
+                  validator: (value) => controller.validateUsername(context, value),
+                  hintText: LocaleKeys.loginEmailOrPhoneHint.tr,
+                  borderColor: kColorHint,
+                  hintStyle: TextStyles.kRegularPoppins(
+                    fontSize: TextStyles.k14FontSize,
+                    colors: kColorHint,
+                  ),
+                  textInputType: controller.isPhoneInput.value
+                      ? TextInputType.phone
+                      : TextInputType.emailAddress,
+                  inputFormatters: controller.isPhoneInput.value
+                      ? [FilteringTextInputFormatter.digitsOnly]
+                      : null,
+                  maxLength: controller.isPhoneInput.value ? 10 : null,
+                  textInputAction: TextInputAction.next,
+                  textCapitalization: TextCapitalization.none,
+                  prefix: Padding(
+                    padding: const EdgeInsets.only(left: 14, right: 12),
+                    child: SvgPicture.asset(
+                      kIconMail,
+                      colorFilter: const ColorFilter.mode(
+                        kColorHint,
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
         Spacing.v10,

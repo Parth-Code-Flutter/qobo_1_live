@@ -11,6 +11,9 @@ class ApiConstants {
 class AuthEndpoints {
   AuthEndpoints._();
 
+  /// POST /api/auth/login
+  static const String login = '/api/auth/login';
+
   /// POST /api/auth/login-phone
   static const String loginPhone = '/api/auth/login-phone';
 
@@ -25,4 +28,7 @@ class AuthEndpoints {
 
   /// PUT /api/user/update
   static const String updateProfile = '/api/user/update';
+
+  /// GET /api/user/profile
+  static const String getProfile = '/api/user/profile';
 }

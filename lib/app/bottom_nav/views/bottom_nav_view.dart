@@ -5,6 +5,8 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/live_room/views/live_room_view.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/generated/locales.g.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -22,6 +24,31 @@ class BottomNavView extends GetView<BottomNavController> {
         () {
           if (controller.selectedIndex.value == 1) {
             return const LiveRoomView();
+          }
+          if (controller.selectedIndex.value == 4) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    BoldText(
+                      text: 'Profile Screen',
+                      fontSize: TextStyles.k22FontSize,
+                      color: kColorText,
+                    ),
+                    const SizedBox(height: 16),
+                    appButton(
+                      onPressed: controller.onLogoutPressed,
+                      buttonText: LocaleKeys.logoutButtonText.tr,
+                      isGradient: false,
+                      buttonColor: kColorPrimary,
+                      borderRadius: 14,
+                    ),
+                  ],
+                ),
+              ),
+            );
           }
           return Center(
             // Placeholder center content for tabs not implemented yet.

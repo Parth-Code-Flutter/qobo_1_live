@@ -12,8 +12,9 @@ class SplashView extends GetView<SplashController> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SizedBox.expand(
+        // GIF is rendered as an animated image directly from assets.
         child: Image.asset(
-          kImgSplashScreen,
+          kGifSplashScreen,
           fit: BoxFit.cover,
         ),
       ),

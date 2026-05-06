@@ -80,6 +80,7 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+    - assets/gif/
     - assets/locale/
 
   fonts:
