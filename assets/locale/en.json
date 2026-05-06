@@ -49,5 +49,9 @@
   "verifyOtpChoiceTitle": "Where should we send the code?",
   "sendOtpOnPhone": "Send OTP on Phone No.",
   "sendOtpOnMail": "Send OTP on mail",
-  "resendUnavailableError": "Unable to resend. Please try again."
+  "resendUnavailableError": "Unable to resend. Please try again.",
+  "liveRoomTabSab": "Sab",
+  "liveRoomTabShresth": "Shresth",
+  "liveRoomTabNaya": "Naya",
+  "liveRoomTabBangladesh": "Bangladesh"
 }

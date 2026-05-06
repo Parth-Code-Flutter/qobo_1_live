@@ -17,4 +17,10 @@ const kColorText = Color(0xFF1A202C);
 const kColorTextGrey = Color(0xFF4A5568);
 const kColorTextFieldBorder = Color(0xFFDFDFDF);
 
+/// Live-room selected filter chip colors (from design).
+const kColorLiveFilterChipGradientStart = Color(0xFF2D1141);
+const kColorLiveFilterChipGradientMid = Color(0xFF310B38);
+const kColorLiveFilterChipGradientEnd = Color(0xFF5C1364);
+const kColorLiveFilterChipBorder = Color(0xCC672C5C);
+
 

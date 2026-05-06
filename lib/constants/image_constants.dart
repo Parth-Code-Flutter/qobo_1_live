@@ -26,3 +26,5 @@ const String kIconMale = '$iconPath/male_icon.svg';
 const String kIconFemale = '$iconPath/female_icon.svg';
 const String kIconEditBG = '$iconPath/edit_bg_icon.svg';
 const String kIconCalendar = '$iconPath/calendar_icon.svg';
+const String kIconFilter = '$iconPath/filter_icon.svg';
+const String kIconSearch = '$iconPath/search_icon.svg';
