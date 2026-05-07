@@ -28,11 +28,11 @@ class CommonLiveRoomWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFF302A5C), width: 1),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         child: Stack(
           children: [
             Positioned.fill(
@@ -49,16 +49,16 @@ class CommonLiveRoomWidget extends StatelessWidget {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.black.withAlpha(80),
-                      Colors.black.withAlpha(130),
+                      Colors.black.withValues(alpha: 0.04),
+                      Colors.black.withValues(alpha: 0.72),
                     ],
                   ),
                 ),
               ),
             ),
             Positioned(
-              top: 8,
-              right: 8,
+              top: 0,
+              right: 0,
               child: _topBadge(),
             ),
             if (isFavorite)
@@ -81,19 +81,26 @@ class CommonLiveRoomWidget extends StatelessWidget {
 
   Widget _topBadge() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        color: const Color(0xFF541878).withAlpha(220),
-        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFF541878).withValues(alpha: 0.92),
+        borderRadius: const BorderRadius.only(
+          topRight: Radius.circular(16),
+          bottomLeft: Radius.circular(14),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-           SvgPicture.asset(kIconMedal),
+          SvgPicture.asset(
+            kIconMedal,
+            width: 16,
+            height: 16,
+          ),
           const SizedBox(width: 4),
           SemiBoldText(
             text: badgeText,
-            fontSize: TextStyles.k10FontSize,
+            fontSize: TextStyles.k12FontSize,
             color: kColorWhite,
           ),
         ],
@@ -102,33 +109,51 @@ class CommonLiveRoomWidget extends StatelessWidget {
   }
 
   Widget _bottomInfo() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Stack(
+      clipBehavior: Clip.none,
       children: [
-        BoldText(
-          text: userNameAge,
-          fontSize: TextStyles.k14FontSize,
-          color: kColorWhite,
-        ),
-        const SizedBox(height: 4),
-        Row(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.location_on_outlined, color: Color(0xFF00E676), size: 14),
-            const SizedBox(width: 2),
-            AppText(
-              text: locationText,
-              fontSize: TextStyles.k12FontSize,
+            BoldText(
+              text: userNameAge,
+              fontSize: TextStyles.k14FontSize,
               color: kColorWhite,
             ),
-            const Spacer(),
-            const Icon(Icons.wb_sunny_outlined, color: kColorWhite, size: 14),
-            const SizedBox(width: 3),
-            AppText(
-              text: pointsText,
-              fontSize: TextStyles.k12FontSize,
-              color: kColorWhite,
+            const SizedBox(height: 5),
+            Row(
+              children: [
+                const Icon(Icons.location_on_outlined, color: Color(0xFF00E676), size: 14),
+                const SizedBox(width: 2),
+                AppText(
+                  text: locationText,
+                  fontSize: TextStyles.k12FontSize,
+                  color: kColorWhite,
+                ),
+                const Spacer(),
+                const Icon(
+                  Icons.wb_sunny_outlined,
+                  color: kColorWhite,
+                  size: 18,
+                ),
+                const SizedBox(width: 4),
+                AppText(
+                  text: pointsText,
+                  fontSize: TextStyles.k14FontSize,
+                  color: kColorWhite,
+                ),
+              ],
             ),
           ],
+        ),
+        Positioned(
+          right: 0,
+          top: -6,
+          child: SvgPicture.asset(
+            kIconBadge,
+            width: 18,
+            height: 18,
+          ),
         ),
       ],
     );
