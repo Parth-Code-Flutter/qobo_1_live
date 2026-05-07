@@ -7,6 +7,7 @@ import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/utils/ui_utils/app_ui_utils.dart';
 
 import '../controllers/discover_tab_controller.dart';
 
@@ -112,15 +113,15 @@ class DiscoverTabView extends StatelessWidget {
               width: 30,
               height: 30,
               decoration: BoxDecoration(
-                color: kColorLiveBadgeBackground.withValues(alpha: 0.85),
-                borderRadius: BorderRadius.circular(8),
+                color: kColorWhite,
+                borderRadius: BorderRadius.circular(22),
               ),
               child: Center(
                 child: SvgPicture.asset(
                   kIconFilter,
-                  width: 14,
-                  height: 14,
-                  colorFilter: const ColorFilter.mode(kColorWhite, BlendMode.srcIn),
+                  width: 20,
+                  height: 20,
+                  colorFilter: const ColorFilter.mode(kColorPrimary, BlendMode.srcIn),
                 ),
               ),
             ),
@@ -132,11 +133,11 @@ class DiscoverTabView extends StatelessWidget {
 
   Widget _searchBar() {
     return Container(
-      height: 34,
+      height: 38,
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         color: kColorDiscoverSearchBg,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: AppUIUtils.primaryBorderRadius,
       ),
       child: Row(
         children: [

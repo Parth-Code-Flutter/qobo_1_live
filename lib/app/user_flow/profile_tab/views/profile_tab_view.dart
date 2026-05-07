@@ -232,7 +232,7 @@ class ProfileTabView extends StatelessWidget {
         Expanded(
           child: _actionCard(
             title: 'Recharge\nCoins',
-            icon: kIconMoneyBag,
+            icon: kIconRechargeCoins,
             start: kColorProfileActionOrangeStart,
             end: kColorProfileActionOrangeEnd,
             onTap: () {
@@ -247,7 +247,7 @@ class ProfileTabView extends StatelessWidget {
         Expanded(
           child: _actionCard(
             title: 'Live Streamer\nCenter',
-            icon: kIconBroadcastWatched,
+            icon: kIconMike,
             start: kColorProfileActionPinkStart,
             end: kColorProfileActionPinkEnd,
             onTap: () {},
@@ -267,7 +267,7 @@ class ProfileTabView extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
           gradient: LinearGradient(colors: [start, end]),
@@ -277,7 +277,7 @@ class ProfileTabView extends StatelessWidget {
             Expanded(
               child: SemiBoldText(
                 text: title,
-                fontSize: TextStyles.k12FontSize,
+                fontSize: TextStyles.k14FontSize,
                 color: kColorWhite,
               ),
             ),

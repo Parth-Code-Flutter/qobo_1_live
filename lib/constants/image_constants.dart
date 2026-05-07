@@ -63,3 +63,5 @@ const String kIconCoin2 = '$iconPath/coin_2_icon.svg';
 const String kIconCoin3 = '$iconPath/coin_3_icon.svg';
 const String kIconCoin4 = '$iconPath/coin_4_icon.svg';
 const String kIconDiamond = '$iconPath/diamond_icon.svg';
+const String kIconRechargeCoins = '$iconPath/recharge_coins_icon.svg';
+const String kIconMike = '$iconPath/mike_icon.svg';

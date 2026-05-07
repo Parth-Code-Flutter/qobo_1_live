@@ -186,12 +186,12 @@ class WalletView extends StatelessWidget {
               Spacing.h8,
               SemiBoldText(
                 text: title,
-                fontSize: TextStyles.k16FontSize,
+                fontSize: TextStyles.k14FontSize,
                 color: kColorWhite,
               ),
             ],
           ),
-          Spacing.v10,
+          Spacing.v6,
           Row(
             children: [
               if (title == 'Coin')
@@ -205,7 +205,7 @@ class WalletView extends StatelessWidget {
               Spacing.h8,
               SemiBoldText(
                 text: amount,
-                fontSize: TextStyles.k26FontSize,
+                fontSize: TextStyles.k20FontSize,
                 color: kColorWalletAmount,
               ),
             ],
@@ -224,7 +224,7 @@ class WalletView extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 7),
       child: Row(
         children: [
-          SvgPicture.asset(kIconCoin3, width: 22, height: 22),
+          SvgPicture.asset(kIconCoin4, width: 22, height: 22),
           Spacing.h10,
           AppText(
             text: coins,
