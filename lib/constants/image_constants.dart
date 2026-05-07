@@ -23,6 +23,12 @@ const String kIconDiscover = '$iconPath/discover_icon.svg';
 const String kIconChat = '$iconPath/chat_icon.svg';
 const String kIconLiveRoom = '$iconPath/live_room_icon.svg';
 const String kIconHeart = '$iconPath/heart_icon.svg';
+const String kIconUser = '$iconPath/user_icon.svg';
+
+const String kIconDiscoverEnable = '$iconPath/discover_enable_icon.svg';
+const String kIconLiveRoomEnable = '$iconPath/live_room_enable_icon.svg';
+const String kIconChatEnable = '$iconPath/chat_enable_icon.svg';
+const String kIconUserEnable = '$iconPath/user_enable_icon.svg';
 
 /// SVG Icons
 const String kIconArrowBack = '$iconPath/arrow_back_icon.svg';
@@ -30,7 +36,6 @@ const String kIconFB = '$iconPath/fb_icon.svg';
 const String kIconGoogle = '$iconPath/google_icon.svg';
 const String kIconMail = '$iconPath/mail_icon.svg';
 const String kIconPassword = '$iconPath/password_icon.svg';
-const String kIconUser = '$iconPath/user_icon.svg';
 const String kIconLock = '$iconPath/lock_icon.svg';
 const String kIconMale = '$iconPath/male_icon.svg';
 const String kIconFemale = '$iconPath/female_icon.svg';

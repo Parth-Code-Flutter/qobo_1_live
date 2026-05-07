@@ -86,6 +86,8 @@ class BottomNavView extends GetView<BottomNavController> {
                             child: _BottomNavTab(
                               label: controller.items[index].label,
                               iconPath: controller.items[index].iconPath,
+                              selectedIconPath:
+                                  controller.items[index].selectedIconPath,
                               selected: controller.selectedIndex.value == index,
                               iconSize: _iconSize,
                               onTap: () => controller.onNavBarTabSelected(index),
@@ -109,6 +111,7 @@ class _BottomNavTab extends StatelessWidget {
   const _BottomNavTab({
     required this.label,
     required this.iconPath,
+    required this.selectedIconPath,
     required this.selected,
     required this.iconSize,
     required this.onTap,
@@ -116,6 +119,7 @@ class _BottomNavTab extends StatelessWidget {
 
   final String label;
   final String iconPath;
+  final String selectedIconPath;
   final bool selected;
   final double iconSize;
   final VoidCallback onTap;
@@ -123,6 +127,7 @@ class _BottomNavTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isCenterTab = iconPath == kIconHeart;
+    final displayIconPath = selected ? selectedIconPath : iconPath;
     final color = selected ? kColorWhite : Colors.white.withValues(alpha: 0.42);
     final tintIcon = iconPath != kIconHeart;
 
@@ -157,7 +162,7 @@ class _BottomNavTab extends StatelessWidget {
                   ),
                   child: Center(
                     child: SvgPicture.asset(
-                      iconPath,
+                      displayIconPath,
                       width: 28,
                       height: 28,
                       fit: BoxFit.contain,
@@ -169,7 +174,7 @@ class _BottomNavTab extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   SvgPicture.asset(
-                    iconPath,
+                    displayIconPath,
                     width: iconSize,
                     height: iconSize,
                     fit: BoxFit.contain,

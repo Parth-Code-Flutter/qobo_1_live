@@ -18,12 +18,32 @@ class BottomNavController extends GetxController {
   Map<String, dynamic>? profileData;
 
   /// Bottom-nav tabs (Figma-style labels + centered heart action).
-  final items = const <({String label, String iconPath})>[
-    (label: 'Discover', iconPath: kIconDiscover),
-    (label: 'Live Rooms', iconPath: kIconLiveRoom),
-    (label: '', iconPath: kIconHeart),
-    (label: 'Messages', iconPath: kIconChat),
-    (label: 'Profile', iconPath: kIconUser),
+  final items = const <({String label, String iconPath, String selectedIconPath})>[
+    (
+      label: 'Discover',
+      iconPath: kIconDiscover,
+      selectedIconPath: kIconDiscoverEnable,
+    ),
+    (
+      label: 'Live Rooms',
+      iconPath: kIconLiveRoom,
+      selectedIconPath: kIconLiveRoomEnable,
+    ),
+    (
+      label: '',
+      iconPath: kIconHeart,
+      selectedIconPath: kIconHeart,
+    ),
+    (
+      label: 'Messages',
+      iconPath: kIconChat,
+      selectedIconPath: kIconChatEnable,
+    ),
+    (
+      label: 'Profile',
+      iconPath: kIconUser,
+      selectedIconPath: kIconUserEnable,
+    ),
   ];
 
   @override
