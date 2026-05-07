@@ -1,4 +1,5 @@
-import 'package:animated_bottom_navigation_bar/animated_bottom_navigation_bar.dart';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
@@ -16,8 +17,12 @@ import '../controllers/bottom_nav_controller.dart';
 class BottomNavView extends GetView<BottomNavController> {
   const BottomNavView({super.key});
 
+  static const double _iconSize = 22;
+
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
     return Scaffold(
       backgroundColor: kColorWhite,
       extendBody: true,
@@ -40,77 +45,155 @@ class BottomNavView extends GetView<BottomNavController> {
           return const SizedBox.shrink();
         },
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: FloatingActionButton(
-        onPressed: controller.onCenterHeartSelected,
-        backgroundColor: kColorWhite,
-        elevation: 4,
-        shape: const CircleBorder(),
-        child: SvgPicture.asset(
-          kIconHeart,
-          width: 48,
-          height: 48,
-        ),
-      ),
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: Color(0x26FFFFFF), width: 0.5)),
-          boxShadow: [
-            // Soft top shadow to separate nav from active screen background.
-            BoxShadow(
-              color: Color(0x33000000),
-              offset: Offset(0, -2),
-              blurRadius: 8,
-              spreadRadius: 0,
-            ),
-          ],
-        ),
+      bottomNavigationBar: ClipRect(
         child: Obx(
-          () => AnimatedBottomNavigationBar.builder(
-            itemCount: controller.navTabIndices.length,
-            activeIndex: controller.navBarIndexFromSelected(),
-            gapLocation: GapLocation.center,
-            notchSmoothness: NotchSmoothness.verySmoothEdge,
-            leftCornerRadius: 20,
-            rightCornerRadius: 20,
-            elevation: 0,
-            height: 66,
-            backgroundColor: Colors.transparent,
-            onTap: controller.onNavBarTabSelected,
-            tabBuilder: (index, _) {
-              final tabIndex = controller.navTabIndices[index];
-              final item = controller.items[tabIndex];
-              final isHighlighted = controller.selectedIndex.value == tabIndex;
-              final color = isHighlighted ? kColorWhite : kColorHint;
-              return Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SvgPicture.asset(
-                    item.iconPath,
-                    width: 20,
-                    height: 20,
-                    colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+          () => BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    const Color(0xFF181A5A).withValues(alpha: 0.86),
+                    const Color(0xFF121644).withValues(alpha: 0.93),
+                  ],
+                ),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(26),
+                  topRight: Radius.circular(26),
+                ),
+                border: Border(
+                  top: BorderSide(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    width: 0.7,
                   ),
-                  const SizedBox(height: 3),
-                  AppText(
-                    text: item.label,
-                    fontSize: TextStyles.k10FontSize,
-                    style: isHighlighted
-                        ? TextStyles.kSemiBoldPoppins(
-                            fontSize: TextStyles.k10FontSize,
-                            colors: color,
-                          )
-                        : TextStyles.kRegularPoppins(
-                            fontSize: TextStyles.k10FontSize,
-                            colors: color,
+                ),
+              ),
+              child: Padding(
+                padding: EdgeInsets.only(bottom: bottomInset),
+                child: SizedBox(
+                  height: 84,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    alignment: Alignment.topCenter,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: List.generate(
+                          controller.items.length,
+                          (index) => Expanded(
+                            child: _BottomNavTab(
+                              label: controller.items[index].label,
+                              iconPath: controller.items[index].iconPath,
+                              selected: controller.selectedIndex.value == index,
+                              iconSize: _iconSize,
+                              onTap: () => controller.onNavBarTabSelected(index),
+                            ),
                           ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              );
-            },
+                ),
+              ),
+            ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _BottomNavTab extends StatelessWidget {
+  const _BottomNavTab({
+    required this.label,
+    required this.iconPath,
+    required this.selected,
+    required this.iconSize,
+    required this.onTap,
+  });
+
+  final String label;
+  final String iconPath;
+  final bool selected;
+  final double iconSize;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isCenterTab = iconPath == kIconHeart;
+    final color = selected ? kColorWhite : Colors.white.withValues(alpha: 0.42);
+    final tintIcon = iconPath != kIconHeart;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        splashColor: Colors.white.withValues(alpha: 0.08),
+        highlightColor: Colors.transparent,
+        child: isCenterTab
+            ? Center(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
+                  width: selected ? 66 : 62,
+                  height: selected ? 66 : 62,
+                  margin: const EdgeInsets.only(bottom: 10),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFFE6252F),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.22),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFE6252F).withValues(alpha: 0.35),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: SvgPicture.asset(
+                      iconPath,
+                      width: 28,
+                      height: 28,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+              )
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SvgPicture.asset(
+                    iconPath,
+                    width: iconSize,
+                    height: iconSize,
+                    fit: BoxFit.contain,
+                    colorFilter: tintIcon
+                        ? ColorFilter.mode(color, BlendMode.srcIn)
+                        : null,
+                  ),
+                  const SizedBox(height: 6),
+                  AppText(
+                    text: label,
+                    fontSize: TextStyles.k10FontSize,
+                    style: selected
+                        ? TextStyles.kSemiBoldPoppins(
+                            fontSize: TextStyles.k22FontSize - 12,
+                            colors: kColorWhite,
+                          )
+                        : TextStyles.kSemiBoldPoppins(
+                            fontSize: TextStyles.k22FontSize - 12,
+                            colors: Colors.white.withValues(alpha: 0.45),
+                          ),
+                  ),
+                ],
+              ),
+            ),
     );
   }
 }
