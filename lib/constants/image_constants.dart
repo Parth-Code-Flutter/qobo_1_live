@@ -38,3 +38,5 @@ const String kIconEditBG = '$iconPath/edit_bg_icon.svg';
 const String kIconCalendar = '$iconPath/calendar_icon.svg';
 const String kIconFilter = '$iconPath/filter_icon.svg';
 const String kIconSearch = '$iconPath/search_icon.svg';
+const String kIconMedal = '$iconPath/medal_icon.svg';
+const String kIconBadge = '$iconPath/badge_icon.svg';
