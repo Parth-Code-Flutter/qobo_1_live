@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
+import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -11,11 +12,13 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import '../controllers/live_room_controller.dart';
 import '../widgets/common_live_room_widget.dart';
 
-class LiveRoomView extends GetView<LiveRoomController> {
+class LiveRoomView extends StatelessWidget {
   const LiveRoomView({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final liveRoomController = _resolveController();
+    final userSession = _resolveUserSession();
     final rooms = <Map<String, dynamic>>[
       {
         'nameAge': 'Mariana, 25',
@@ -24,7 +27,7 @@ class LiveRoomView extends GetView<LiveRoomController> {
         'points': '2105',
         'favorite': false,
         'image':
-            'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=600',
+            kImgTemp2,
       },
       {
         'nameAge': 'Mariana, 25',
@@ -33,7 +36,7 @@ class LiveRoomView extends GetView<LiveRoomController> {
         'points': '2105',
         'favorite': true,
         'image':
-            'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=600',
+        kImgTemp3,
       },
       {
         'nameAge': 'Mariana, 25',
@@ -42,7 +45,7 @@ class LiveRoomView extends GetView<LiveRoomController> {
         'points': '2105',
         'favorite': false,
         'image':
-            'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600',
+        kImgTemp4,
       },
       {
         'nameAge': 'Mariana, 25',
@@ -51,7 +54,7 @@ class LiveRoomView extends GetView<LiveRoomController> {
         'points': '2105',
         'favorite': false,
         'image':
-            'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=600',
+        kImgTemp5,
       },
     ];
     final categories = <String>[
@@ -62,6 +65,7 @@ class LiveRoomView extends GetView<LiveRoomController> {
     ];
 
     return GetBuilder<LiveRoomController>(
+      init: liveRoomController,
       builder: (_) {
         return Container(
           decoration: const BoxDecoration(
@@ -74,7 +78,7 @@ class LiveRoomView extends GetView<LiveRoomController> {
                   padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
                   child: Column(
                     children: [
-                      _topHeader(),
+                      _topHeader(userSession),
                       Spacing.v12,
                       _filterAndCategoryRow(categories),
                       Spacing.v12,
@@ -123,8 +127,8 @@ class LiveRoomView extends GetView<LiveRoomController> {
       borderRadius: BorderRadius.circular(14),
       child: AspectRatio(
         aspectRatio: 3.2,
-        child: Image.network(
-          'https://images.unsplash.com/photo-1513151233558-d860c5398176?w=1400',
+        child: Image.asset(
+          kImgTemp1,
           fit: BoxFit.cover,
           errorBuilder: (_, __, ___) => Container(
             color: const Color(0x66351B6C),
@@ -140,63 +144,75 @@ class LiveRoomView extends GetView<LiveRoomController> {
     );
   }
 
-  Widget _topHeader() {
-    return Row(
-      children: [
-        Container(
-          width: 44,
-          height: 44,
-          padding: const EdgeInsets.all(2),
-          decoration: BoxDecoration(
-            color: kColorWhite,
-            shape: BoxShape.circle,
-            border: Border.all(color: const Color(0xB3FFFFFF), width: 1),
-          ),
-          child: const CircleAvatar(
-            backgroundImage: NetworkImage(
-              'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200',
-            ),
-          ),
-        ),
-        Spacing.h10,
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AppText(
-                text: LocaleKeys.liveRoomWelcome.tr,
-                fontSize: TextStyles.k14FontSize,
+  Widget _topHeader(UserSessionController userSession) {
+    return GetBuilder<UserSessionController>(
+      init: userSession,
+      builder: (session) {
+        final avatarUrl = session.displayPictureUrl;
+        return Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
                 color: kColorWhite,
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xB3FFFFFF), width: 1),
               ),
-              SemiBoldText(
-                text: LocaleKeys.liveRoomHostName.tr,
-                fontSize: TextStyles.k14FontSize,
-                color: kColorWhite,
+              child: ClipOval(
+                child: avatarUrl == null
+                    ? _initialsAvatar(session.initials)
+                    : Image.network(
+                        avatarUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) =>
+                            _initialsAvatar(session.initials),
+                      ),
               ),
-            ],
-          ),
-        ),
-        Container(
-          width: 30,
-          height: 30,
-          decoration: BoxDecoration(
-            color: kColorWhite,
-            borderRadius: BorderRadius.circular(22),
-          ),
-          child: Center(
-            child: SvgPicture.asset(
-              kIconSearch,
-              width: 18,
-              height: 18,
-              colorFilter: const ColorFilter.mode(kColorPrimary, BlendMode.srcIn),
             ),
-          ),
-        ),
-      ],
+            Spacing.h10,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AppText(
+                    text: LocaleKeys.liveRoomWelcome.tr,
+                    fontSize: TextStyles.k14FontSize,
+                    color: kColorWhite,
+                  ),
+                  SemiBoldText(
+                    text: session.displayName,
+                    fontSize: TextStyles.k14FontSize,
+                    color: kColorWhite,
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: kColorWhite,
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: Center(
+                child: SvgPicture.asset(
+                  kIconSearch,
+                  width: 18,
+                  height: 18,
+                  colorFilter: const ColorFilter.mode(kColorPrimary, BlendMode.srcIn),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
   Widget _filterAndCategoryRow(List<String> categories) {
+    final liveRoomController = _resolveController();
     return Row(
       children: [
         Container(
@@ -228,10 +244,10 @@ class LiveRoomView extends GetView<LiveRoomController> {
                   padding: EdgeInsets.only(right: index == categories.length - 1 ? 0 : 10),
                   child: _categoryChip(
                     label: categories[index],
-                    isSelected: controller.selectedCategoryIndex == index,
+                    isSelected: liveRoomController.selectedCategoryIndex == index,
                     onTap: () {
                       // Keep this UI-only for now; filtering behavior can be added later.
-                      controller.onCategorySelected(index);
+                      liveRoomController.onCategorySelected(index);
                     },
                   ),
                 );
@@ -272,6 +288,34 @@ class LiveRoomView extends GetView<LiveRoomController> {
           text: label,
           fontSize: TextStyles.k14FontSize,
           color: isSelected ? kColorWhite : kColorHint,
+        ),
+      ),
+    );
+  }
+
+  LiveRoomController _resolveController() {
+    if (Get.isRegistered<LiveRoomController>()) {
+      return Get.find<LiveRoomController>();
+    }
+    // Defensive fallback: prevents intermittent null lookup crashes.
+    return Get.put(LiveRoomController());
+  }
+
+  UserSessionController _resolveUserSession() {
+    if (Get.isRegistered<UserSessionController>()) {
+      return Get.find<UserSessionController>();
+    }
+    return Get.put(UserSessionController(), permanent: true);
+  }
+
+  Widget _initialsAvatar(String initials) {
+    return ColoredBox(
+      color: const Color(0xFF2A2A2A),
+      child: Center(
+        child: SemiBoldText(
+          text: initials,
+          fontSize: TextStyles.k14FontSize,
+          color: kColorWhite,
         ),
       ),
     );

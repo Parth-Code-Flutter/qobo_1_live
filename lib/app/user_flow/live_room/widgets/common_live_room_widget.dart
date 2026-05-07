@@ -34,7 +34,7 @@ class CommonLiveRoomWidget extends StatelessWidget {
         child: Stack(
           children: [
             Positioned.fill(
-              child: Image.network(
+              child: Image.asset(
                 imageUrl,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Container(color: const Color(0xFF241D4D)),

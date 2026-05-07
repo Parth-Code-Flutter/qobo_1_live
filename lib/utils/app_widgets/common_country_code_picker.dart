@@ -9,7 +9,7 @@ class CommonCountryCodePicker extends StatelessWidget {
     super.key,
     required this.onChanged,
     this.initialSelection = 'IN',
-    this.height = 56,
+    this.height = 50,
     this.width = 92,
     this.borderColor = kColorTextFieldBorder,
   });

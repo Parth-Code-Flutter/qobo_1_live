@@ -192,7 +192,6 @@ class UpdateProfileController extends GetxController {
         if (isComeFromOtpScreen.value) {
           await CommonGiffyDialog.showSuccess(
             context,
-            title: LocaleKeys.verifySuccessDialogTitle.tr,
             subtitle: LocaleKeys.verifySuccessDialogSubtitle.tr,
             buttonText: LocaleKeys.verifySuccessDialogButton.tr,
             gifAssetPath: kGifCongratulation,

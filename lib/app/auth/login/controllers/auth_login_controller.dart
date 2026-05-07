@@ -17,7 +17,6 @@ class AuthLoginController extends GetxController {
   final passwordController = TextEditingController();
   final isPasswordHidden = true.obs;
   final isLoginLoading = false.obs;
-  final selectedDialCode = '+91'.obs;
   final isPhoneInput = false.obs;
 
   @override
@@ -35,11 +34,7 @@ class AuthLoginController extends GetxController {
     return formKey.currentState?.validate() ?? false;
   }
 
-  void onCountryCodeChanged(String dialCode) {
-    selectedDialCode.value = dialCode;
-  }
-
-  /// Decides whether country-code picker should be visible based on first chars.
+  /// Detect phone vs email mode from first typed character (digits → phone).
   void onUsernameChanged(String value) {
     final trimmed = value.trimLeft();
     if (trimmed.isEmpty) {

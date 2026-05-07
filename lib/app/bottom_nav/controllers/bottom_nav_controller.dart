@@ -1,8 +1,8 @@
 import 'package:get/get.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
-import 'package:qobo_one_live/constants/local_storage_constants.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
+import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 
 /// Controller for bottom-nav state.
@@ -11,6 +11,9 @@ class BottomNavController extends GetxController {
       : _authRepo = authRepo ?? AuthRepo();
 
   final AuthRepo _authRepo;
+  final UserSessionController _userSession = Get.isRegistered<UserSessionController>()
+      ? Get.find<UserSessionController>()
+      : Get.put(UserSessionController(), permanent: true);
   final selectedIndex = 0.obs;
   final _lastNavBarIndex = 0.obs;
   Map<String, dynamic>? profileData;
@@ -30,6 +33,7 @@ class BottomNavController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    _userSession.loadFromStorage();
     _fetchProfileOnInit();
   }
 
@@ -58,6 +62,7 @@ class BottomNavController extends GetxController {
     final storage = Get.isRegistered<LocalStorage>()
         ? Get.find<LocalStorage>()
         : Get.put(LocalStorage(), permanent: true);
+    await _userSession.clearSession();
     await storage.clearAllData();
     Get.offAllNamed(Routes.AUTH_LOGIN);
   }
@@ -74,9 +79,7 @@ class BottomNavController extends GetxController {
     if (data is! Map<String, dynamic>) return;
 
     profileData = data;
-    final storage = Get.isRegistered<LocalStorage>()
-        ? Get.find<LocalStorage>()
-        : Get.put(LocalStorage(), permanent: true);
-    await storage.writeJsonStorage(kStorageUserData, data);
+    await _userSession.saveProfile(data);
+    update();
   }
 }

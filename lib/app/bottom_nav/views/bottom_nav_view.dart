@@ -2,7 +2,9 @@ import 'package:animated_bottom_navigation_bar/animated_bottom_navigation_bar.da
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/app/user_flow/discover/discover_tab/views/discover_tab_view.dart';
 import 'package:qobo_one_live/app/user_flow/live_room/views/live_room_view.dart';
+import 'package:qobo_one_live/app/user_flow/messages/messages_tab/views/messages_tab_view.dart';
 import 'package:qobo_one_live/app/user_flow/profile_tab/views/profile_tab_view.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
@@ -21,23 +23,21 @@ class BottomNavView extends GetView<BottomNavController> {
       extendBody: true,
       body: Obx(
         () {
+          if (controller.selectedIndex.value == 0) {
+            return const DiscoverTabView();
+          }
           if (controller.selectedIndex.value == 1) {
             return const LiveRoomView();
+          }
+          if (controller.selectedIndex.value == 3) {
+            return const MessagesTabView();
           }
           if (controller.selectedIndex.value == 4) {
             return ProfileTabView(
               onLogoutPressed: controller.onLogoutPressed,
             );
           }
-          return Center(
-            // Placeholder center content for tabs not implemented yet.
-            child: BoldText(
-              text:
-                  '${(controller.items[controller.selectedIndex.value].label.isEmpty ? 'Heart' : controller.items[controller.selectedIndex.value].label)} Screen',
-              fontSize: TextStyles.k22FontSize,
-              color: kColorText,
-            ),
-          );
+          return const SizedBox.shrink();
         },
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
@@ -48,8 +48,8 @@ class BottomNavView extends GetView<BottomNavController> {
         shape: const CircleBorder(),
         child: SvgPicture.asset(
           kIconHeart,
-          width: 30,
-          height: 30,
+          width: 48,
+          height: 48,
         ),
       ),
       bottomNavigationBar: Container(

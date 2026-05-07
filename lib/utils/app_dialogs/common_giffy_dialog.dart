@@ -10,7 +10,7 @@ class CommonGiffyDialog {
 
   static Future<void> showSuccess(
     BuildContext context, {
-    required String title,
+    String? title,
     required String subtitle,
     required String buttonText,
     required VoidCallback onPressed,
@@ -31,7 +31,7 @@ class CommonGiffyDialog {
 
   static Future<void> showFailure(
     BuildContext context, {
-    required String title,
+    String? title,
     required String subtitle,
     required String buttonText,
     required VoidCallback onPressed,
@@ -52,7 +52,7 @@ class CommonGiffyDialog {
 
   static Future<void> showCustom(
     BuildContext context, {
-    required String title,
+    String? title,
     required String subtitle,
     required String buttonText,
     required VoidCallback onPressed,
@@ -72,9 +72,23 @@ class CommonGiffyDialog {
     );
   }
 
+  /// Omits title row when [title] is null or only whitespace — matches [GiffyDialog] optional title.
+  static Widget? _titleWidget(String? title) {
+    final t = title?.trim();
+    if (t == null || t.isEmpty) return null;
+    return Text(
+      t,
+      textAlign: TextAlign.center,
+      style: TextStyles.kSemiBoldPoppins(
+        fontSize: TextStyles.k20FontSize,
+        colors: kColorText,
+      ),
+    );
+  }
+
   static Future<void> _show(
     BuildContext context, {
-    required String title,
+    String? title,
     required String subtitle,
     required String buttonText,
     required VoidCallback onPressed,
@@ -96,14 +110,7 @@ class CommonGiffyDialog {
           ),
           entryAnimation: EntryAnimation.bottom,
           scrollable: true,
-          title: Text(
-            title,
-            textAlign: TextAlign.center,
-            style: TextStyles.kSemiBoldPoppins(
-              fontSize: TextStyles.k20FontSize,
-              colors: kColorText,
-            ),
-          ),
+          title: _titleWidget(title),
           content: Text(
             subtitle,
             textAlign: TextAlign.center,
@@ -113,8 +120,7 @@ class CommonGiffyDialog {
             ),
           ),
           actions: [
-            SizedBox(
-              width: 150,
+            Center(
               child: appButton(
                 onPressed: () {
                   Navigator.of(dialogContext).pop();
@@ -125,7 +131,8 @@ class CommonGiffyDialog {
                 isGradient: false,
                 buttonColor: accentColor,
                 buttonBorderColor: kColorPrimary,
-                buttonHeight: 44,
+                buttonHeight: 40,
+                buttonWidth: 140,
                 borderRadius: 12,
               ),
             ),

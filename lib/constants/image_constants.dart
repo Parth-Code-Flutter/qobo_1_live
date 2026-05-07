@@ -3,6 +3,13 @@ const String iconPath = 'assets/icons';
 const String gifPath = 'assets/gif';
 
 /// Img
+const String kImgTemp1 = '$imgPath/temp1.png';
+const String kImgTemp2 = '$imgPath/temp2.png';
+const String kImgTemp3 = '$imgPath/temp3.png';
+const String kImgTemp4 = '$imgPath/temp4.png';
+const String kImgTemp5 = '$imgPath/temp5.png';
+
+
 const String kImgSplashScreen = '$imgPath/splash_screen_img.png';
 const String kImgBG = '$imgPath/bg_img.png';
 const String kGifSplashScreen = '$gifPath/splash_screen_gif.gif';
