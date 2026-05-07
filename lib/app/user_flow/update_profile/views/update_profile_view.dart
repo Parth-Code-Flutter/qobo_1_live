@@ -261,39 +261,45 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
           ),
           Spacing.h6,
           Expanded(
-            child: RichText(
-              text: TextSpan(
-                style: TextStyles.kRegularPoppins(
-                  fontSize: TextStyles.k12FontSize,
-                  colors: kColorText,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: () {
+                debugPrint('Privacy Policy clicked');
+              },
+              child: RichText(
+                text: TextSpan(
+                  style: TextStyles.kRegularPoppins(
+                    fontSize: TextStyles.k12FontSize,
+                    colors: kColorText,
+                  ),
+                  children: [
+                    TextSpan(text: LocaleKeys.agreeToThe.tr),
+                    TextSpan(
+                      text: LocaleKeys.termsAndConditions.tr,
+                      style: TextStyles.kSemiBoldPoppins(
+                        fontSize: TextStyles.k12FontSize,
+                        colors: kColorPrimary,
+                      ),
+                      recognizer: TapGestureRecognizer()
+                        ..onTap = () {
+                          debugPrint('Terms & Conditions clicked');
+                        },
+                    ),
+                    const TextSpan(text: ' '),
+                    TextSpan(text: LocaleKeys.andText.tr),
+                    TextSpan(
+                      text: LocaleKeys.privacyPolicy.tr,
+                      style: TextStyles.kSemiBoldPoppins(
+                        fontSize: TextStyles.k12FontSize,
+                        colors: kColorPrimary,
+                      ),
+                      recognizer: TapGestureRecognizer()
+                        ..onTap = () {
+                          debugPrint('Privacy Policy clicked');
+                        },
+                    ),
+                  ],
                 ),
-                children: [
-                  TextSpan(text: LocaleKeys.agreeToThe.tr),
-                  TextSpan(
-                    text: LocaleKeys.termsAndConditions.tr,
-                    style: TextStyles.kSemiBoldPoppins(
-                      fontSize: TextStyles.k12FontSize,
-                      colors: kColorPrimary,
-                    ),
-                    recognizer: TapGestureRecognizer()
-                      ..onTap = () {
-                        debugPrint('Terms & Conditions clicked');
-                      },
-                  ),
-                  const TextSpan(text: ' '),
-                  TextSpan(text: LocaleKeys.andText.tr),
-                  TextSpan(
-                    text: LocaleKeys.privacyPolicy.tr,
-                    style: TextStyles.kSemiBoldPoppins(
-                      fontSize: TextStyles.k12FontSize,
-                      colors: kColorPrimary,
-                    ),
-                    recognizer: TapGestureRecognizer()
-                      ..onTap = () {
-                        debugPrint('Privacy Policy clicked');
-                      },
-                  ),
-                ],
               ),
             ),
           ),

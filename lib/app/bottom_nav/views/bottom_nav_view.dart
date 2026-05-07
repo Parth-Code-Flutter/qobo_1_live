@@ -9,6 +9,7 @@ import 'package:qobo_one_live/app/user_flow/messages/messages_tab/views/messages
 import 'package:qobo_one_live/app/user_flow/profile_tab/views/profile_tab_view.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -42,7 +43,7 @@ class BottomNavView extends GetView<BottomNavController> {
               onLogoutPressed: controller.onLogoutPressed,
             );
           }
-          return const SizedBox.shrink();
+          return Spacing.shrink;
         },
       ),
       bottomNavigationBar: ClipRect(
@@ -182,7 +183,7 @@ class _BottomNavTab extends StatelessWidget {
                         ? ColorFilter.mode(color, BlendMode.srcIn)
                         : null,
                   ),
-                  const SizedBox(height: 6),
+                  Spacing.v6,
                   AppText(
                     text: label,
                     fontSize: TextStyles.k10FontSize,

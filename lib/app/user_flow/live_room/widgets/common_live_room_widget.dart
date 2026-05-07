@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -97,7 +98,7 @@ class CommonLiveRoomWidget extends StatelessWidget {
             width: 16,
             height: 16,
           ),
-          const SizedBox(width: 4),
+          Spacing.h4,
           SemiBoldText(
             text: badgeText,
             fontSize: TextStyles.k12FontSize,
@@ -120,11 +121,11 @@ class CommonLiveRoomWidget extends StatelessWidget {
               fontSize: TextStyles.k14FontSize,
               color: kColorWhite,
             ),
-            const SizedBox(height: 5),
+        Spacing.v4,
             Row(
               children: [
                 const Icon(Icons.location_on_outlined, color: Color(0xFF00E676), size: 14),
-                const SizedBox(width: 2),
+                Spacing.h2,
                 AppText(
                   text: locationText,
                   fontSize: TextStyles.k12FontSize,
@@ -136,7 +137,7 @@ class CommonLiveRoomWidget extends StatelessWidget {
                   color: kColorWhite,
                   size: 18,
                 ),
-                const SizedBox(width: 4),
+                Spacing.h4,
                 AppText(
                   text: pointsText,
                   fontSize: TextStyles.k14FontSize,

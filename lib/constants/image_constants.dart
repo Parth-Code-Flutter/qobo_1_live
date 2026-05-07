@@ -45,3 +45,17 @@ const String kIconFilter = '$iconPath/filter_icon.svg';
 const String kIconSearch = '$iconPath/search_icon.svg';
 const String kIconMedal = '$iconPath/medal_icon.svg';
 const String kIconBadge = '$iconPath/badge_icon.svg';
+
+const String kIconVisitor = '$iconPath/visitor_icon.svg';
+const String kIconUserLevel = '$iconPath/user_level_icon.svg';
+const String kIconBackpack = '$iconPath/backpack_icon.svg';
+const String kIconFamily = '$iconPath/family_icon.svg';
+const String kIconSVIP = '$iconPath/svip_icon.svg';
+const String kIconActivity = '$iconPath/activity_icon.svg';
+const String kIconAristocracyCenter = '$iconPath/aristocracy_center_icon.svg';
+const String kIconMall = '$iconPath/mall_icon.svg';
+const String kIconPointerCenter = '$iconPath/point_center_icon.svg';
+const String kIconAward = '$iconPath/award_icon.svg';
+const String kIconBroadcastWatched = '$iconPath/broadcast_watched_icon.svg';
+const String kIconCustomerService = '$iconPath/customer_service_icon.svg';
+const String kIconMoneyBag = '$iconPath/money_bag_icon.svg';
