@@ -67,4 +67,11 @@ const kColorWalletCardBgBottom = Color(0xFF33204F);
 const kColorWalletAmount = Color(0xFFFFD83D);
 const kColorWalletExtraBadge = Color(0xFFFF8A48);
 
+/// Discover screen palette.
+const kColorDiscoverCard = Color(0xFF3B2058);
+const kColorDiscoverSearchBg = Color(0xFFF5F5F5);
+const kColorDiscoverModeBorder = Color(0xFF7E4EA8);
+const kColorDiscoverChip = Color(0xFF5D2D84);
+const kColorDiscoverJoinNow = Color(0xFF5C2E82);
+
 
