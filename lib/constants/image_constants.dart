@@ -59,3 +59,5 @@ const String kIconAward = '$iconPath/award_icon.svg';
 const String kIconBroadcastWatched = '$iconPath/broadcast_watched_icon.svg';
 const String kIconCustomerService = '$iconPath/customer_service_icon.svg';
 const String kIconMoneyBag = '$iconPath/money_bag_icon.svg';
+const String kIconCoin2 = '$iconPath/coin_2_icon.svg';
+const String kIconCoin3 = '$iconPath/coin_3_icon.svg';

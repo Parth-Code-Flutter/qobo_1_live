@@ -5,6 +5,8 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
+import 'package:qobo_one_live/app/user_flow/wallet/bindings/wallet_binding.dart';
+import 'package:qobo_one_live/app/user_flow/wallet/views/wallet_view.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -233,6 +235,12 @@ class ProfileTabView extends StatelessWidget {
             icon: kIconMoneyBag,
             start: kColorProfileActionOrangeStart,
             end: kColorProfileActionOrangeEnd,
+            onTap: () {
+              Get.to(
+                () => const WalletView(),
+                binding: WalletBinding(),
+              );
+            },
           ),
         ),
         Spacing.h10,
@@ -242,6 +250,7 @@ class ProfileTabView extends StatelessWidget {
             icon: kIconBroadcastWatched,
             start: kColorProfileActionPinkStart,
             end: kColorProfileActionPinkEnd,
+            onTap: () {},
           ),
         ),
       ],
@@ -253,25 +262,29 @@ class ProfileTabView extends StatelessWidget {
     required String icon,
     required Color start,
     required Color end,
+    required VoidCallback onTap,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        gradient: LinearGradient(colors: [start, end]),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: SemiBoldText(
-              text: title,
-              fontSize: TextStyles.k12FontSize,
-              color: kColorWhite,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          gradient: LinearGradient(colors: [start, end]),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: SemiBoldText(
+                text: title,
+                fontSize: TextStyles.k12FontSize,
+                color: kColorWhite,
+              ),
             ),
-          ),
-          Spacing.h8,
-          SvgPicture.asset(icon, width: 22, height: 22, fit: BoxFit.contain),
-        ],
+            Spacing.h8,
+            SvgPicture.asset(icon, width: 22, height: 22, fit: BoxFit.contain),
+          ],
+        ),
       ),
     );
   }

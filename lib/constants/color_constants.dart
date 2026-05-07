@@ -60,4 +60,11 @@ const kColorProfileFeatureYellow = Color(0xFFF9C748);
 const kColorProfileFeaturePink = Color(0xFFFF43C6);
 const kColorProfileFeatureCyan = Color(0xFF4DD5FF);
 
+/// Wallet screen palette.
+const kColorWalletCardBorder = Color(0xFF5C4A79);
+const kColorWalletCardBgTop = Color(0xFF3F235C);
+const kColorWalletCardBgBottom = Color(0xFF33204F);
+const kColorWalletAmount = Color(0xFFFFD83D);
+const kColorWalletExtraBadge = Color(0xFFFF8A48);
+
 
