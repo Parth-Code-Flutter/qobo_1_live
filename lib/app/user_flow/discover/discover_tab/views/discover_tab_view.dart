@@ -41,8 +41,8 @@ class DiscoverTabView extends StatelessWidget {
             children: [
               _topHeader(userSession),
               Spacing.v16,
-              // _searchBar(),
-              // Spacing.v12,
+              _searchBar(),
+              Spacing.v12,
               _roomModeRow(discoverController),
               Spacing.v16,
               _sectionHeader(title: 'Suggested Users', trailing: 'SEE ALL'),
@@ -227,7 +227,7 @@ class DiscoverTabView extends StatelessWidget {
         const Spacer(),
         SemiBoldText(
           text: trailing,
-          fontSize: TextStyles.k10FontSize,
+          fontSize: TextStyles.k12FontSize,
           color: kColorWhite,
         ),
       ],
@@ -262,8 +262,8 @@ class DiscoverTabView extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 97,
-            height: 97,
+            width: 96,
+            height: 96,
             decoration: const BoxDecoration(shape: BoxShape.circle),
             child: ClipOval(
               child: Image.asset(user.image, fit: BoxFit.cover),
@@ -282,48 +282,64 @@ class DiscoverTabView extends StatelessWidget {
 
   Widget _trendingCard(({String title, String subtitle, String image}) room) {
     return Container(
-      padding: const EdgeInsets.all(10),
+      margin: EdgeInsets.symmetric(horizontal: 8,vertical: 4),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       decoration: BoxDecoration(
-        color: kColorDiscoverCard.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(12),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            kColorDiscoverCard.withValues(alpha: 0.96),
+            kColorBottomNavGradientBottom.withValues(alpha: 0.78),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: kColorWhite.withValues(alpha: 0.08),
+          width: 0.6,
+        ),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            width: 62,
-            height: 62,
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(10)),
+            width: 104,
+            height: 88,
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(14)),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(14),
               child: Image.asset(room.image, fit: BoxFit.cover),
             ),
           ),
-          Spacing.h10,
+          Spacing.h12,
           Expanded(
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SemiBoldText(
                   text: room.title,
-                  fontSize: TextStyles.k24FontSize - 3,
+                  fontSize: TextStyles.k18FontSize,
                   color: kColorWhite,
                 ),
                 Spacing.v2,
                 AppText(
                   text: room.subtitle,
-                  fontSize: TextStyles.k12FontSize,
+                  fontSize: TextStyles.k14FontSize,
                   color: kColorWhite.withValues(alpha: 0.85),
                 ),
                 Spacing.v8,
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  width: 100,
+                  height: 34,
+                  alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: kColorDiscoverJoinNow,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(18),
                   ),
                   child: const SemiBoldText(
                     text: 'Join Room',
-                    fontSize: TextStyles.k10FontSize,
+                    fontSize: TextStyles.k14FontSize,
                     color: kColorWhite,
                   ),
                 ),
