@@ -35,19 +35,14 @@ class AuthLoginView extends GetView<AuthLoginController> {
             builder: (context, constraints) => SingleChildScrollView(
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: EdgeInsets.fromLTRB(
-                20,
-                0,
-                20,
-                24 + MediaQuery.of(context).viewInsets.bottom,
-              ),
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     welcomeTextHeader(),
-                    Spacing.v24,
+                    Spacing.v20,
                     emailPasswordTextFields(context),
                     Spacing.v20,
                     Obx(
@@ -70,11 +65,11 @@ class AuthLoginView extends GetView<AuthLoginController> {
                             : null,
                       ),
                     ),
-                    Spacing.v20,
+                    Spacing.v16,
                     orLoginWithDividerWidget(),
-                    Spacing.v20,
+                    Spacing.v16,
                     socialMediaLogin(),
-                    const SizedBox(height: 20),
+                    Spacing.v20,
                     signUpFooterWidget(),
                   ],
                 ),
@@ -89,15 +84,13 @@ class AuthLoginView extends GetView<AuthLoginController> {
   Widget welcomeTextHeader() {
     return Column(
       children: [
-        Spacing.v12,
-        Image.asset(kIconApp, width: 86, height: 86, fit: BoxFit.contain),
-        Spacing.v20,
+        Image.asset(kIconApp, width: 80, height: 80, fit: BoxFit.contain),
+        Spacing.v16,
         BoldText(
           text: LocaleKeys.loginWelcomeTitle.tr,
-          fontSize: TextStyles.k22FontSize,
+          fontSize: TextStyles.k20FontSize,
           color: kColorText,
         ),
-        Spacing.v2,
         AppText(
           text: LocaleKeys.loginSubTitle.tr,
           fontSize: TextStyles.k14FontSize,
@@ -189,7 +182,7 @@ class AuthLoginView extends GetView<AuthLoginController> {
           alignment: Alignment.centerRight,
           child: SemiBoldText(
             text: LocaleKeys.forgotPassword.tr,
-            fontSize: TextStyles.k14FontSize,
+            fontSize: TextStyles.k12FontSize,
             color: kColorPrimary,
           ),
         ),
@@ -206,7 +199,7 @@ class AuthLoginView extends GetView<AuthLoginController> {
         Spacing.h4,
         AppText(
           text: LocaleKeys.orLoginWith.tr,
-          fontSize: TextStyles.k14FontSize,
+          fontSize: TextStyles.k10FontSize,
           color: kColorTextGrey,
         ),
         Spacing.h4,
@@ -224,27 +217,27 @@ class AuthLoginView extends GetView<AuthLoginController> {
         _socialOutlinedButton(
           iconPath: kIconFB,
           onTap: () {},
-          iconHeight: 28,
-          iconWidth: 28,
+          iconHeight: 24,
+          iconWidth: 24,
           title: LocaleKeys.loginWithFacebookFull.tr,
         ),
-        Spacing.v12,
+        Spacing.v10,
         _socialOutlinedButton(
           iconPath: kIconGoogle,
           onTap: () {},
-          iconHeight: 25,
-          iconWidth: 25,
+          iconHeight: 22,
+          iconWidth: 22,
           title: LocaleKeys.loginWithGoogleFull.tr,
         ),
-        Spacing.v12,
+        Spacing.v10,
         _socialOutlinedButton(
           iconPath: kIconLock,
           onTap: () => Get.toNamed(
             Routes.AUTH_VERIFY_ACCOUNT,
             arguments: {'isFromLoginWithOtp': true},
           ),
-          iconHeight: 25,
-          iconWidth: 25,
+          iconHeight: 22,
+          iconWidth: 22,
           tintIcon: true,
           title: LocaleKeys.loginWithOtp.tr,
         ),
@@ -256,19 +249,19 @@ class AuthLoginView extends GetView<AuthLoginController> {
     required String iconPath,
     required String title,
     required VoidCallback onTap,
-    double iconHeight = 28,
-    double iconWidth = 28,
+    double iconHeight = 24,
+    double iconWidth = 24,
     bool tintIcon = false,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 56,
+        height: 48,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         decoration: BoxDecoration(
           color: kColorWhite,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: kColorTextFieldBorder, width: 0.5),
+          border: Border.all(color: kColorTextFieldBorder, width: 0.7),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -282,7 +275,7 @@ class AuthLoginView extends GetView<AuthLoginController> {
             Spacing.h10,
             SemiBoldText(
               text: title,
-              fontSize: TextStyles.k14FontSize,
+              fontSize: TextStyles.k12FontSize,
               color: kColorText,
             ),
           ],
@@ -312,5 +305,4 @@ class AuthLoginView extends GetView<AuthLoginController> {
       ),
     );
   }
-
 }

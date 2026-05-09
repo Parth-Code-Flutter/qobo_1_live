@@ -33,12 +33,7 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
             builder: (context, constraints) => SingleChildScrollView(
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: EdgeInsets.fromLTRB(
-                20,
-                0,
-                20,
-                24 + MediaQuery.of(context).viewInsets.bottom,
-              ),
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
                 child: Column(
@@ -61,7 +56,7 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
                     orLoginWithDividerWidget(),
                     Spacing.v16,
                     socialMediaLogin(),
-                    const SizedBox(height: 20),
+                    Spacing.v16,
                     signInFooterWidget(),
                   ],
                 ),
@@ -191,7 +186,7 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
         Spacing.h4,
         AppText(
           text: LocaleKeys.orLoginWith.tr,
-          fontSize: TextStyles.k14FontSize,
+          fontSize: TextStyles.k10FontSize,
           color: kColorTextGrey,
         ),
         Spacing.h4,
@@ -203,59 +198,71 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
   }
 
   Widget socialMediaLogin() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _socialIconButton(
-          iconPath: kIconGoogle,
-          onTap: () {},
-          height: 25,
-          width: 25,
-          title: LocaleKeys.loginWithGoogleShort.tr,
-        ),
-        Spacing.h20,
-        _socialIconButton(
+        _socialOutlinedButton(
           iconPath: kIconFB,
           onTap: () {},
-          title: LocaleKeys.loginWithFacebook.tr,
+          iconHeight: 24,
+          iconWidth: 24,
+          title: LocaleKeys.loginWithFacebookFull.tr,
         ),
+        Spacing.v10,
+        _socialOutlinedButton(
+          iconPath: kIconGoogle,
+          onTap: () {},
+          iconHeight: 22,
+          iconWidth: 22,
+          title: LocaleKeys.loginWithGoogleFull.tr,
+        ),
+        // Spacing.v10,
+        // _socialOutlinedButton(
+        //   iconPath: kIconLock,
+        //   onTap: () => Get.toNamed(
+        //     Routes.AUTH_VERIFY_ACCOUNT,
+        //     arguments: {'isFromLoginWithOtp': true},
+        //   ),
+        //   iconHeight: 22,
+        //   iconWidth: 22,
+        //   tintIcon: true,
+        //   title: LocaleKeys.loginWithOtp.tr,
+        // ),
       ],
     );
   }
 
-  Widget _socialIconButton({
+  Widget _socialOutlinedButton({
     required String iconPath,
     required String title,
     required VoidCallback onTap,
-    double height = 30,
-    double width = 30,
+    double iconHeight = 24,
+    double iconWidth = 24,
+    bool tintIcon = false,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 56,
-        width: Get.width*0.42,
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        height: 48,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         decoration: BoxDecoration(
           color: kColorWhite,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: kColorTextFieldBorder, width: 0.5),
+          border: Border.all(color: kColorTextFieldBorder, width: 0.7),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Center(
-              child: SvgPicture.asset(
-                iconPath,
-                fit: BoxFit.fill,
-                height: height,
-                width: width,
-              ),
+            SvgPicture.asset(
+              iconPath,
+              fit: BoxFit.contain,
+              height: iconHeight,
+              width: iconWidth,
             ),
-            Spacing.h6,
+            Spacing.h10,
             SemiBoldText(
               text: title,
-              fontSize: TextStyles.k14FontSize,
+              fontSize: TextStyles.k12FontSize,
               color: kColorText,
             ),
           ],
@@ -263,6 +270,7 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
       ),
     );
   }
+
 
   Widget signInFooterWidget() {
     return GestureDetector(

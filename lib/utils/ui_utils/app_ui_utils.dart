@@ -54,12 +54,12 @@ class AppUIUtils {
   );
 
   static TextStyle labelTextFieldTextStyle = TextStyles.kSemiBoldPoppins(
-    fontSize: TextStyles.k14FontSize,
+    fontSize: TextStyles.k12FontSize,
     colors: kColorBlack,
   );
 
   static TextStyle hintTextFieldTextStyle = TextStyles.kRegularPoppins(
-    fontSize: TextStyles.k14FontSize,
+    fontSize: TextStyles.k12FontSize,
     colors: kColorHint,
   );
 

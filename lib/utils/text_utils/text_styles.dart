@@ -16,6 +16,8 @@ class Font {
 }
 
 class TextStyles {
+  static const double k6FontSize = 6;
+  static const double k8FontSize = 8;
   static const double k10FontSize = 10;
   static const double k12FontSize = 12;
   static const double k14FontSize = 14;

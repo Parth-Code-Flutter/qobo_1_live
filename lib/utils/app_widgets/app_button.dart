@@ -5,10 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 /// Creates a customizable button widget with support for gradient and solid colors.
-/// 
+///
 /// By default, buttons use a gradient effect with primary color variations.
 /// Set `isGradient: false` to use a solid color instead.
-/// 
+///
 /// Parameters:
 /// - [onPressed]: Callback function when button is tapped
 /// - [buttonText]: Text to display on the button
@@ -37,13 +37,20 @@ Widget appButton({
   List<Color>? gradientColors,
 }) {
   return GestureDetector(
-    onTap: onPressed,
+    onTap: () {
+      FocusManager.instance.primaryFocus?.unfocus();
+      onPressed();
+    },
     child: Container(
-      height: buttonHeight ?? 56,
+      height: buttonHeight ?? 52,
       width: buttonWidth ?? Get.width,
       decoration: isGradient == true
           ? _gradientDecoration(
-              gradientColors, buttonColor, borderRadius, buttonBorderColor)
+              gradientColors,
+              buttonColor,
+              borderRadius,
+              buttonBorderColor,
+            )
           : _simpleDecoration(buttonColor, borderRadius, buttonBorderColor),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -52,7 +59,8 @@ Widget appButton({
           buttonIcon ?? const SizedBox(),
           Text(
             buttonText,
-            style: textStyle ??
+            style:
+                textStyle ??
                 TextStyles.kBoldPoppins(
                   fontSize: TextStyles.k14FontSize,
                   colors: textColor ?? kColorWhite,
@@ -65,9 +73,9 @@ Widget appButton({
 }
 
 /// Creates a simple solid color decoration for buttons.
-/// 
+///
 /// Used when `isGradient` is set to `false`.
-/// 
+///
 /// Parameters:
 /// - [buttonColor]: Background color (defaults to primary color)
 /// - [borderRadius]: Border radius (defaults to primary radius)
@@ -75,27 +83,33 @@ Widget appButton({
 BoxDecoration _simpleDecoration(buttonColor, borderRadius, buttonBorderColor) {
   return BoxDecoration(
     color: buttonColor ?? kColorPrimary,
-    borderRadius:
-        BorderRadius.circular(borderRadius ?? AppUIUtils.primaryRadius),
+    borderRadius: BorderRadius.circular(
+      borderRadius ?? AppUIUtils.primaryRadius,
+    ),
     border: Border.all(color: buttonBorderColor ?? kColorPrimary, width: 0.5),
   );
 }
 
 /// Creates a gradient decoration for buttons using primary color variations.
-/// 
+///
 /// By default, creates a horizontal gradient from lighter primary color to darker primary color.
 /// Custom gradient colors can be provided via [gradientColors] parameter.
-/// 
+///
 /// Parameters:
 /// - [gradientColors]: Custom gradient colors (defaults to primary color gradient)
 /// - [buttonColor]: Base color (used for border if provided)
 /// - [borderRadius]: Border radius (defaults to primary radius)
 /// - [buttonBorderColor]: Border color (defaults to primary color)
 BoxDecoration _gradientDecoration(
-    gradientColors, buttonColor, borderRadius, buttonBorderColor) {
+  gradientColors,
+  buttonColor,
+  borderRadius,
+  buttonBorderColor,
+) {
   // Premium gradient: Primary color (left) -> slightly lighter (middle) -> more lighter (right)
   // Creates a premium look with smooth color transition
-  final defaultGradientColors = gradientColors ??
+  final defaultGradientColors =
+      gradientColors ??
       [
         kColorPrimary, // Primary color on the left
         _getLighterPrimaryColor(0.15), // Slightly lighter in the middle
@@ -108,33 +122,33 @@ BoxDecoration _gradientDecoration(
       end: Alignment.centerRight, // End at right (horizontal gradient)
       colors: defaultGradientColors,
     ),
-    borderRadius:
-        BorderRadius.circular(borderRadius ?? AppUIUtils.primaryRadius),
-    border: Border.all(
-        color: buttonBorderColor ?? kColorPrimary,
-        width: 1),
+    borderRadius: BorderRadius.circular(
+      borderRadius ?? AppUIUtils.primaryRadius,
+    ),
+    border: Border.all(color: buttonBorderColor ?? kColorPrimary, width: 1),
   );
 }
 
 /// Generates a lighter shade of the primary color for gradient effects.
-/// 
+///
 /// Creates a lighter version by blending the primary color with white.
 /// The [lightnessFactor] parameter controls how light the color becomes:
 /// - 0.0 = fully white
 /// - 1.0 = fully primary color
-/// 
+///
 /// Parameters:
 /// - [lightnessFactor]: Factor controlling lightness (defaults to 0.2 for subtle effect)
 Color _getLighterPrimaryColor([double lightnessFactor = 0.2]) {
   // Extract primary color
   final primary = kColorPrimary;
-  
+
   // Create a lighter version by blending with white
   // Lower lightnessFactor = lighter color
   // Higher lightnessFactor = closer to primary color
   return Color.lerp(
-    Colors.white,
-    primary,
-    1.0 - lightnessFactor, // Invert to make it lighter
-  ) ?? kColorPrimary;
+        Colors.white,
+        primary,
+        1.0 - lightnessFactor, // Invert to make it lighter
+      ) ??
+      kColorPrimary;
 }

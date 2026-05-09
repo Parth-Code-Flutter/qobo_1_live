@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
+import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/app/user_flow/wallet/bindings/wallet_binding.dart';
 import 'package:qobo_one_live/app/user_flow/wallet/views/wallet_view.dart';
@@ -62,103 +63,115 @@ class ProfileTabView extends StatelessWidget {
       init: userSession,
       builder: (session) {
         final imageUrl = session.displayPictureUrl;
-        return Container(
-          width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
-          child: Column(
-            children: [
-              Row(
+        return LayoutBuilder(
+          builder: (_, constraints) {
+            final isCompact = constraints.maxWidth < 360;
+            final avatarSize = isCompact ? 74.0 : 88.0;
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+              child: Column(
                 children: [
-                  Container(
-                    width: 88,
-                    height: 88,
-                    padding: const EdgeInsets.all(3),
-                    decoration: BoxDecoration(
-                      color: kColorWhite,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: kColorWhite, width: 1.2),
-                    ),
-                    child: ClipOval(
-                      child: imageUrl == null
-                          ? _initialsAvatar(session.initials)
-                          : Image.network(
-                              imageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) =>
-                                  _initialsAvatar(session.initials),
-                            ),
-                    ),
-                  ),
-                  Spacing.h16,
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        BoldText(
-                          text: session.displayName,
-                          fontSize: TextStyles.k20FontSize,
+                  Row(
+                    children: [
+                      Container(
+                        width: avatarSize,
+                        height: avatarSize,
+                        padding: const EdgeInsets.all(3),
+                        decoration: BoxDecoration(
                           color: kColorWhite,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: kColorWhite, width: 1.2),
                         ),
-                        Spacing.v2,
-                        AppText(
-                          text:
-                              'Id : ${session.userId.isNotEmpty ? session.userId : '25656363'}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          fontSize: TextStyles.k14FontSize,
-                          color: kColorWhite,
-                          style: TextStyles.kRegularPoppins(
-                            fontSize: TextStyles.k14FontSize,
-                            colors: kColorWhite,
-                          ),
+                        child: ClipOval(
+                          child: imageUrl == null
+                              ? _initialsAvatar(session.initials)
+                              : Image.network(
+                                  imageUrl,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) =>
+                                      _initialsAvatar(session.initials),
+                                ),
                         ),
-                        Spacing.v10,
-                        Row(
+                      ),
+                      Spacing.h12,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _smallChip(
-                              text: 'LV.0',
-                              start: kColorProfileChipPinkStart,
-                              end: kColorProfileChipPinkEnd,
+                            BoldText(
+                              text: session.displayName,
+                              fontSize: isCompact
+                                  ? TextStyles.k18FontSize
+                                  : TextStyles.k20FontSize,
+                              color: kColorWhite,
                             ),
-                            Spacing.h10,
-                            _smallChip(
-                              text: '00',
-                              start: kColorProfileChipPurpleStart,
-                              end: kColorProfileChipPurpleEnd,
+                            Spacing.v2,
+                            AppText(
+                              text:
+                                  'Id : ${session.userId.isNotEmpty ? session.userId : '25656363'}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              fontSize: TextStyles.k14FontSize,
+                              color: kColorWhite,
+                              style: TextStyles.kRegularPoppins(
+                                fontSize: TextStyles.k14FontSize,
+                                colors: kColorWhite,
+                              ),
                             ),
-                            Spacing.h10,
-                            _smallChip(
-                              text: 'Lorium Ip',
-                              start: kColorProfileChipOrangeStart,
-                              end: kColorProfileChipOrangeEnd,
+                            Spacing.v10,
+                            // Wrap prevents chip row overflow on narrow devices.
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _smallChip(
+                                  text: 'LV.0',
+                                  start: kColorProfileChipPinkStart,
+                                  end: kColorProfileChipPinkEnd,
+                                ),
+                                _smallChip(
+                                  text: '00',
+                                  start: kColorProfileChipPurpleStart,
+                                  end: kColorProfileChipPurpleEnd,
+                                ),
+                                _smallChip(
+                                  text: 'Lorium Ip',
+                                  start: kColorProfileChipOrangeStart,
+                                  end: kColorProfileChipOrangeEnd,
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      ],
-                    ),
+                      ),
+                      GestureDetector(
+                        onTap: () => Get.toNamed(Routes.UPDATE_PROFILE),
+                        child: const Padding(
+                          padding: EdgeInsets.only(right: 4),
+                          child: Icon(
+                            Icons.chevron_right_rounded,
+                            color: kColorWhite,
+                            size: 34,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const Padding(
-                    padding: EdgeInsets.only(right: 4),
-                    child: Icon(
-                      Icons.chevron_right_rounded,
-                      color: kColorWhite,
-                      size: 34,
-                    ),
+                  Spacing.v16,
+                  Row(
+                    children: [
+                      _statBlock('2K', 'Visitors'),
+                      _statDivider(),
+                      _statBlock('1K', 'Following'),
+                      _statDivider(),
+                      _statBlock('10K', 'Followers'),
+                    ],
                   ),
                 ],
               ),
-              Spacing.v16,
-              Row(
-                children: [
-                  _statBlock('2K', 'Visitors'),
-                  _statDivider(),
-                  _statBlock('1K', 'Following'),
-                  _statDivider(),
-                  _statBlock('10K', 'Followers'),
-                ],
-              ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
@@ -267,12 +280,14 @@ class ProfileTabView extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        height: 74,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
           gradient: LinearGradient(colors: [start, end]),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
               child: SemiBoldText(
@@ -282,7 +297,7 @@ class ProfileTabView extends StatelessWidget {
               ),
             ),
             Spacing.h8,
-            SvgPicture.asset(icon, width: 22, height: 22, fit: BoxFit.contain),
+            SvgPicture.asset(icon, width: 20, height: 20, fit: BoxFit.contain),
           ],
         ),
       ),
@@ -322,9 +337,9 @@ class ProfileTabView extends StatelessWidget {
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 3,
-          mainAxisSpacing: 10,
-          crossAxisSpacing: 6,
-          mainAxisExtent: 138,
+          mainAxisSpacing: 16,
+          crossAxisSpacing: 8,
+          mainAxisExtent: 130,
         ),
         itemBuilder: (_, index) => _featureItem(features[index]),
       ),
@@ -336,8 +351,8 @@ class ProfileTabView extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 90,
-          height: 90,
+          width: 84,
+          height: 84,
           decoration: BoxDecoration(
             color: item.bgColor,
             shape: BoxShape.circle,
@@ -345,8 +360,8 @@ class ProfileTabView extends StatelessWidget {
           alignment: Alignment.center,
           child: SvgPicture.asset(
             item.iconPath,
-            width: 35,
-            height: 35,
+            width: 32,
+            height: 32,
             fit: BoxFit.contain,
           ),
         ),

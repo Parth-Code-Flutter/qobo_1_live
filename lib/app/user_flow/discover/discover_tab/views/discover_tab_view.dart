@@ -35,8 +35,8 @@ class DiscoverTabView extends StatelessWidget {
         image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
       ),
       child: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -46,17 +46,27 @@ class DiscoverTabView extends StatelessWidget {
               Spacing.v12,
               _roomModeRow(discoverController),
               Spacing.v16,
-              _sectionHeader(title: 'Suggested Users', trailing: 'SEE ALL'),
-              Spacing.v10,
-              _suggestedUsersGrid(suggestedUsers),
-              Spacing.v16,
-              _sectionHeader(title: 'Trending Rooms', trailing: 'ACTIVE NOW'),
-              Spacing.v8,
-              _trendingCard(trendingRooms[0]),
-              Spacing.v12,
-              _sectionHeader(title: 'Trending Rooms', trailing: 'ACTIVE NOW'),
-              Spacing.v8,
-              _trendingCard(trendingRooms[1]),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _sectionHeader(title: 'Suggested Users', trailing: 'SEE ALL'),
+                      Spacing.v10,
+                      _suggestedUsersGrid(suggestedUsers),
+                      Spacing.v16,
+                      _sectionHeader(title: 'Trending Rooms', trailing: 'ACTIVE NOW'),
+                      Spacing.v8,
+                      _trendingCard(trendingRooms[0]),
+                      Spacing.v12,
+                      _sectionHeader(title: 'Trending Rooms', trailing: 'ACTIVE NOW'),
+                      Spacing.v8,
+                      _trendingCard(trendingRooms[1]),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -237,23 +247,35 @@ class DiscoverTabView extends StatelessWidget {
 
   Widget _suggestedUsersGrid(List<({String name, String image})> users) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8,vertical: 8),
-      child: GridView.builder(
-        itemCount: users.length,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 16,
-          childAspectRatio: 1.2,
-        ),
-        itemBuilder: (_, index) => _userCard(users[index]),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      child: LayoutBuilder(
+        builder: (_, constraints) {
+          // Slightly tighter card height on narrow devices prevents text clipping.
+          final isNarrow = constraints.maxWidth < 360;
+          return GridView.builder(
+            itemCount: users.length,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 16,
+              mainAxisExtent: isNarrow ? 148 : 160,
+            ),
+            itemBuilder: (_, index) => _userCard(
+              users[index],
+              isCompact: isNarrow,
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _userCard(({String name, String image}) user) {
+  Widget _userCard(
+    ({String name, String image}) user, {
+    required bool isCompact,
+  }) {
     return Container(
       decoration: BoxDecoration(
         color: kColorDiscoverCard.withValues(alpha: 0.95),
@@ -263,14 +285,14 @@ class DiscoverTabView extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 96,
-            height: 96,
+            width: isCompact ? 82 : 92,
+            height: isCompact ? 82 : 92,
             decoration: const BoxDecoration(shape: BoxShape.circle),
             child: ClipOval(
               child: Image.asset(user.image, fit: BoxFit.cover),
             ),
           ),
-          Spacing.v10,
+          if (isCompact) Spacing.v8 else Spacing.v10,
           SemiBoldText(
             text: user.name,
             fontSize: TextStyles.k14FontSize,

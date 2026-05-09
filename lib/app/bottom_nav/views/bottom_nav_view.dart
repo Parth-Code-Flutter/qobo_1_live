@@ -18,7 +18,7 @@ import '../controllers/bottom_nav_controller.dart';
 class BottomNavView extends GetView<BottomNavController> {
   const BottomNavView({super.key});
 
-  static const double _iconSize = 22;
+  static const double _iconSize = 18;
 
   @override
   Widget build(BuildContext context) {
@@ -189,11 +189,11 @@ class _BottomNavTab extends StatelessWidget {
                     fontSize: TextStyles.k10FontSize,
                     style: selected
                         ? TextStyles.kSemiBoldPoppins(
-                            fontSize: TextStyles.k22FontSize - 12,
+                            fontSize: TextStyles.k12FontSize,
                             colors: kColorWhite,
                           )
-                        : TextStyles.kSemiBoldPoppins(
-                            fontSize: TextStyles.k22FontSize - 12,
+                        : TextStyles.kRegularPoppins(
+                            fontSize: TextStyles.k10FontSize,
                             colors: Colors.white.withValues(alpha: 0.45),
                           ),
                   ),

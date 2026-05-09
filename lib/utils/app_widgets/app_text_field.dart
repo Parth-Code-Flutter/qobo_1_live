@@ -36,7 +36,7 @@ class AppTextField extends StatelessWidget {
     this.fillColor,
     this.padding = const EdgeInsets.symmetric(
       horizontal: 12,
-      vertical: 14, // 8
+      vertical: 12, // 8
     ),
     this.focusNode,
     this.obscureText = false,
@@ -167,7 +167,7 @@ class AppTextField extends StatelessWidget {
               hintStyle: hintStyle ?? AppUIUtils.hintTextFieldTextStyle,
               errorStyle: TextStyles.kMediumPoppins(
                 colors: kColorRed,
-                fontSize: TextStyles.k12FontSize,
+                fontSize: TextStyles.k10FontSize,
               ),
               // Only show label inside if fieldTitle is used (for backward compatibility)
               // Otherwise label is shown above the field

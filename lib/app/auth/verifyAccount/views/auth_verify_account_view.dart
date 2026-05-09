@@ -39,79 +39,82 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
-      backgroundColor: kColorWhite,
-      resizeToAvoidBottomInset: true,
-      appBar: CommonAppBarWidget(
-        title: '',
-        showBackButton: true,
-        onBackPressed: () {
-          if (controller.handleBackAction()) {
-            Get.back();
-          }
-        },
-      ),
-      body: GestureDetector(
-        onTap: () => FocusScope.of(context).unfocus(),
-        child: LayoutBuilder(
-          builder: (context, constraints) => SingleChildScrollView(
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.fromLTRB(
-              20,
-              0,
-              20,
-              24 + MediaQuery.of(context).viewInsets.bottom,
-            ),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight),
-              child: Column(
-                children: [
-                  Spacing.v24,
-                  otpVerificationHeader(),
-                  Spacing.v28,
-                  otpVerificationWidget(),
-                  Spacing.v28,
-                  Obx(
-                    () => GestureDetector(
-                      onTap: controller.canResendOtp
-                          ? () => controller.onResendCodePressed(context)
-                          : null,
-                      child: SemiBoldText(
-                        text: controller.canResendOtp
-                            ? LocaleKeys.resendCode.tr
-                            : '${LocaleKeys.resendCodeIn.tr} ${controller.otpResendRemainingLabel}',
-                        fontSize: TextStyles.k14FontSize,
-                        color: controller.canResendOtp ? kColorPrimary : kColorHint,
+        backgroundColor: kColorWhite,
+        resizeToAvoidBottomInset: true,
+        appBar: CommonAppBarWidget(
+          title: '',
+          showBackButton: true,
+          onBackPressed: () {
+            if (controller.handleBackAction()) {
+              Get.back();
+            }
+          },
+        ),
+        body: GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.fromLTRB(
+                20,
+                0,
+                20,
+                24 + MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Column(
+                  children: [
+                    Spacing.v24,
+                    otpVerificationHeader(),
+                    Spacing.v28,
+                    otpVerificationWidget(),
+                    Spacing.v28,
+                    Obx(
+                      () => GestureDetector(
+                        onTap: controller.canResendOtp
+                            ? () => controller.onResendCodePressed(context)
+                            : null,
+                        child: SemiBoldText(
+                          text: controller.canResendOtp
+                              ? LocaleKeys.resendCode.tr
+                              : '${LocaleKeys.resendCodeIn.tr} ${controller.otpResendRemainingLabel}',
+                          fontSize: TextStyles.k14FontSize,
+                          color: controller.canResendOtp
+                              ? kColorPrimary
+                              : kColorHint,
+                        ),
                       ),
                     ),
-                  ),
-                  Spacing.v28,
-                  Obx(
-                    () => appButton(
-                      onPressed: () => controller.onContinuePressed(context),
-                      buttonText: controller.isContinueLoading.value
-                          ? ''
-                          : LocaleKeys.continueButton.tr,
-                      buttonIcon: controller.isContinueLoading.value
-                          ? SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: const CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(kColorWhite),
-                              ),
-                            )
-                          : null,
+                    Spacing.v28,
+                    Obx(
+                      () => appButton(
+                        onPressed: () => controller.onContinuePressed(context),
+                        buttonText: controller.isContinueLoading.value
+                            ? ''
+                            : LocaleKeys.continueButton.tr,
+                        buttonIcon: controller.isContinueLoading.value
+                            ? SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: const CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    kColorWhite,
+                                  ),
+                                ),
+                              )
+                            : null,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
         ),
       ),
-    ),
     );
   }
 
@@ -124,77 +127,83 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
       ),
       child: Scaffold(
         backgroundColor: kColorPrimary,
-        resizeToAvoidBottomInset: true,
-        body: SafeArea(
-          bottom: false,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _verifyPhoneEmailPurpleHeader(context),
-              Expanded(
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: kColorWhite,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(30),
-                    ),
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      left: 20,
-                      right: 20,
-                      top: 28,
-                      bottom: 24 + MediaQuery.viewInsetsOf(context).bottom,
-                    ),
-                    child: Form(
-                      key: controller.formKey,
-                      autovalidateMode: AutovalidateMode.onUserInteraction,
-                      child: SingleChildScrollView(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            phoneNumberInputWidget(context),
-                            Spacing.v24,
-                            _orDividerWithLabel(),
-                            Spacing.v24,
-                            emailFieldWidget(context),
-                            Spacing.v32,
-                            Obx(
-                              () => appButton(
-                                onPressed: () =>
-                                    controller.onContinuePressed(context),
-                                buttonText:
-                                    controller.isContinueLoading.value
+        resizeToAvoidBottomInset: false,
+        body: GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: AnimatedPadding(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.viewInsetsOf(context).bottom,
+            ),
+            child: SafeArea(
+              bottom: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _verifyPhoneEmailPurpleHeader(context),
+                  Expanded(
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        color: kColorWhite,
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(30),
+                        ),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
+                        child: Form(
+                          key: controller.formKey,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                          child: SingleChildScrollView(
+                            keyboardDismissBehavior:
+                                ScrollViewKeyboardDismissBehavior.onDrag,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                phoneNumberInputWidget(context),
+                                Spacing.v24,
+                                _orDividerWithLabel(),
+                                Spacing.v24,
+                                emailFieldWidget(context),
+                                Spacing.v32,
+                                Obx(
+                                  () => appButton(
+                                    onPressed: () =>
+                                        controller.onContinuePressed(context),
+                                    buttonText:
+                                        controller.isContinueLoading.value
                                         ? ''
                                         : LocaleKeys.continueButton.tr,
-                                isGradient: false,
-                                buttonColor: kColorPrimary,
-                                buttonIcon:
-                                    controller.isContinueLoading.value
+                                    isGradient: false,
+                                    buttonColor: kColorPrimary,
+                                    buttonIcon:
+                                        controller.isContinueLoading.value
                                         ? const SizedBox(
                                             width: 20,
                                             height: 20,
                                             child: CircularProgressIndicator(
                                               strokeWidth: 2,
                                               valueColor:
-                                                  AlwaysStoppedAnimation<
-                                                      Color>(
-                                                kColorWhite,
-                                              ),
+                                                  AlwaysStoppedAnimation<Color>(
+                                                    kColorWhite,
+                                                  ),
                                             ),
                                           )
                                         : null,
-                              ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -245,11 +254,7 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
         child: const SizedBox(
           width: 40,
           height: 40,
-          child: Icon(
-            Icons.arrow_back_ios_new,
-            size: 16,
-            color: kColorWhite,
-          ),
+          child: Icon(Icons.arrow_back_ios_new, size: 16, color: kColorWhite),
         ),
       ),
     );
@@ -259,11 +264,7 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
     return Row(
       children: [
         const Expanded(
-          child: Divider(
-            thickness: 1,
-            height: 1,
-            color: _kVerifyInputBorder,
-          ),
+          child: Divider(thickness: 1, height: 1, color: _kVerifyInputBorder),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -274,11 +275,7 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
           ),
         ),
         const Expanded(
-          child: Divider(
-            thickness: 1,
-            height: 1,
-            color: _kVerifyInputBorder,
-          ),
+          child: Divider(thickness: 1, height: 1, color: _kVerifyInputBorder),
         ),
       ],
     );
@@ -401,9 +398,7 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
                     fontSize: TextStyles.k18FontSize,
                     colors: kColorText,
                   ),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                  ],
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   maxLength: 1,
                   onChanged: (value) {
                     controller.onOtpChanged(index: index, value: value);
@@ -415,7 +410,9 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
                     fillColor: kColorWhite,
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: kColorTextFieldBorder),
+                      borderSide: const BorderSide(
+                        color: kColorTextFieldBorder,
+                      ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),

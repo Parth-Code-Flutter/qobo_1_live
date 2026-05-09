@@ -11,6 +11,7 @@ import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/constants/local_storage_constants.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_dialogs/common_giffy_dialog.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_media_picker.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
@@ -22,6 +23,9 @@ class UpdateProfileController extends GetxController {
   UpdateProfileController({AuthRepo? authRepo}) : _authRepo = authRepo ?? AuthRepo();
 
   final AuthRepo _authRepo;
+  final UserSessionController _userSession = Get.isRegistered<UserSessionController>()
+      ? Get.find<UserSessionController>()
+      : Get.put(UserSessionController(), permanent: true);
 
   /// `true` when opened right after OTP verification; otherwise `false`.
   final isComeFromOtpScreen = false.obs;
@@ -49,6 +53,56 @@ class UpdateProfileController extends GetxController {
     if (args is Map && args['isComeFromOtpScreen'] == true) {
       isComeFromOtpScreen.value = true;
     }
+    _prefillFromStoredProfile();
+  }
+
+  /// Prefills profile fields for edit flow (skips OTP onboarding flow).
+  Future<void> _prefillFromStoredProfile() async {
+    if (isComeFromOtpScreen.value) return;
+
+    await _userSession.loadFromStorage();
+    final data = _userSession.profileData;
+    if (data == null || data.isEmpty) return;
+
+    final name = (data['name'] ?? '').toString().trim();
+    if (name.isNotEmpty) userNameController.text = name;
+
+    final genderRaw = (data['gender'] ?? '').toString().trim().toLowerCase();
+    if (genderRaw.isNotEmpty) {
+      selectedGender.value = genderRaw == 'female' ? 'Female' : 'Male';
+    }
+
+    _prefillAgeAndDob(data);
+    hasAcceptedTerms.value = true;
+  }
+
+  void _prefillAgeAndDob(Map<String, dynamic> data) {
+    final dobRaw = (data['dob'] ?? '').toString().trim();
+    if (dobRaw.isNotEmpty) {
+      final parsed = DateTime.tryParse(dobRaw);
+      if (parsed != null) {
+        selectedBirthdate.value = parsed;
+        final age = _ageFromDob(parsed);
+        selectedAge.value = age;
+        birthdateController.text = age.toString();
+        return;
+      }
+    }
+
+    final ageRaw = (data['age'] ?? '').toString().trim();
+    final age = int.tryParse(ageRaw);
+    if (age != null && age > 0) {
+      _applySelectedAge(age);
+    }
+  }
+
+  int _ageFromDob(DateTime dob) {
+    final now = DateTime.now();
+    var years = now.year - dob.year;
+    final hadBirthday = (now.month > dob.month) ||
+        (now.month == dob.month && now.day >= dob.day);
+    if (!hadBirthday) years -= 1;
+    return years.clamp(0, 150);
   }
 
   /// Opens a bottom-sheet wheel picker for integer age values.
