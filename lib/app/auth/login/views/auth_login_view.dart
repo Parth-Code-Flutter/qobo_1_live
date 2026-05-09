@@ -32,7 +32,7 @@ class AuthLoginView extends GetView<AuthLoginController> {
           key: controller.formKey,
           autovalidateMode: AutovalidateMode.onUserInteraction,
           child: LayoutBuilder(
-            builder: (context, constraints) => SingleChildScrollView(
+            builder: (_, constraints) => SingleChildScrollView(
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               physics: const AlwaysScrollableScrollPhysics(),
               padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
@@ -68,7 +68,7 @@ class AuthLoginView extends GetView<AuthLoginController> {
                     Spacing.v16,
                     orLoginWithDividerWidget(),
                     Spacing.v16,
-                    socialMediaLogin(),
+                    socialMediaLogin(context),
                     Spacing.v20,
                     signUpFooterWidget(),
                   ],
@@ -210,24 +210,30 @@ class AuthLoginView extends GetView<AuthLoginController> {
     );
   }
 
-  Widget socialMediaLogin() {
+  Widget socialMediaLogin(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _socialOutlinedButton(
-          iconPath: kIconFB,
-          onTap: () {},
-          iconHeight: 24,
-          iconWidth: 24,
-          title: LocaleKeys.loginWithFacebookFull.tr,
+        Obx(
+          () => _socialOutlinedButton(
+            iconPath: kIconFB,
+            onTap: () => controller.onFacebookLoginPressed(context),
+            iconHeight: 24,
+            iconWidth: 24,
+            title: LocaleKeys.loginWithFacebookFull.tr,
+            isLoading: controller.isFacebookLoginLoading.value,
+          ),
         ),
         Spacing.v10,
-        _socialOutlinedButton(
-          iconPath: kIconGoogle,
-          onTap: () {},
-          iconHeight: 22,
-          iconWidth: 22,
-          title: LocaleKeys.loginWithGoogleFull.tr,
+        Obx(
+          () => _socialOutlinedButton(
+            iconPath: kIconGoogle,
+            onTap: () => controller.onGoogleLoginPressed(context),
+            iconHeight: 22,
+            iconWidth: 22,
+            title: LocaleKeys.loginWithGoogleFull.tr,
+            isLoading: controller.isGoogleLoginLoading.value,
+          ),
         ),
         Spacing.v10,
         _socialOutlinedButton(
@@ -252,9 +258,10 @@ class AuthLoginView extends GetView<AuthLoginController> {
     double iconHeight = 24,
     double iconWidth = 24,
     bool tintIcon = false,
+    bool isLoading = false,
   }) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: isLoading ? null : onTap,
       child: Container(
         height: 48,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -266,15 +273,25 @@ class AuthLoginView extends GetView<AuthLoginController> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SvgPicture.asset(
-              iconPath,
-              fit: BoxFit.contain,
-              height: iconHeight,
-              width: iconWidth,
-            ),
+            if (isLoading)
+              SizedBox(
+                width: iconWidth,
+                height: iconHeight,
+                child: const CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(kColorPrimary),
+                ),
+              )
+            else
+              SvgPicture.asset(
+                iconPath,
+                fit: BoxFit.contain,
+                height: iconHeight,
+                width: iconWidth,
+              ),
             Spacing.h10,
             SemiBoldText(
-              text: title,
+              text: isLoading ? '' : title,
               fontSize: TextStyles.k12FontSize,
               color: kColorText,
             ),

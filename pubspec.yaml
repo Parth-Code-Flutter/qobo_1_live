@@ -55,6 +55,8 @@ dependencies:
   country_code_picker: ^3.4.1
   image_picker: ^1.2.1
   giffy_dialog: ^2.3.0
+  google_sign_in: ^7.2.0
+  flutter_facebook_auth: ^7.1.6
 
 dev_dependencies:
   flutter_test:

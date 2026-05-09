@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:qobo_one_live/repo/auth/models/request/social_login_request_model.dart';
 import 'package:qobo_one_live/app/auth/verifyAccount/models/request/login_with_otp_request_model.dart';
 import 'package:qobo_one_live/app/auth/verifyAccount/models/response/login_with_otp_response_model.dart';
 import 'package:qobo_one_live/app/auth/verifyAccount/models/request/verify_otp_request_model.dart';
@@ -12,9 +13,7 @@ import 'package:qobo_one_live/utils/api_response_utils.dart';
 
 /// Auth repository contains API calls for authentication flows.
 class AuthRepo {
-  AuthRepo({
-    ApiService? apiService,
-  }) : _apiService = apiService ?? ApiService();
+  AuthRepo({ApiService? apiService}) : _apiService = apiService ?? ApiService();
 
   final ApiService _apiService;
 
@@ -40,12 +39,28 @@ class AuthRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
+  /// Calls `POST /api/auth/social` with OAuth profile payload (Google, etc.).
+  ///
+  /// Returns decoded JSON map on success, otherwise `null`.
+  Future<Map<String, dynamic>?> socialLogin({
+    required SocialLoginRequestModel request,
+    bool isShowLoader = false,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: AuthEndpoints.socialLogin,
+      requestModel: request.toJson(),
+      isShowLoader: isShowLoader,
+      isLoginCall: true,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
   /// Calls `GET /api/user/profile`.
   ///
   /// Returns decoded JSON map on success, otherwise `null`.
-  Future<Map<String, dynamic>?> getProfile({
-    bool isShowLoader = false,
-  }) async {
+  Future<Map<String, dynamic>?> getProfile({bool isShowLoader = false}) async {
     final response = await _apiService.getRequest(
       endPoint: AuthEndpoints.getProfile,
       isShowLoader: isShowLoader,
@@ -151,4 +166,3 @@ class AuthRepo {
     return UpdateProfileResponseModel.fromJson(jsonMap);
   }
 }
-
