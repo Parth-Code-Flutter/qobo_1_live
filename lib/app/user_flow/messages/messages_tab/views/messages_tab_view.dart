@@ -107,21 +107,35 @@ class MessagesTabView extends StatelessWidget {
   Widget _searchBar() {
     return Container(
       height: 38,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         color: kColorDiscoverSearchBg,
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Row(
-        children: [
-          const Icon(Icons.search_rounded, size: 16, color: kColorHint),
-          Spacing.h8,
-          const AppText(
-            text: 'Search',
+      child: TextField(
+        textInputAction: TextInputAction.search,
+        style: TextStyles.kRegularPoppins(
+          fontSize: TextStyles.k12FontSize,
+          colors: kColorText,
+        ),
+        decoration: InputDecoration(
+          isDense: true,
+          border: InputBorder.none,
+          hintText: 'Search',
+          hintStyle: TextStyles.kRegularPoppins(
             fontSize: TextStyles.k12FontSize,
-            color: kColorHint,
+            colors: kColorHint,
           ),
-        ],
+          prefixIcon: Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: const Icon(
+              Icons.search_rounded,
+              size: 16,
+              color: kColorHint,
+            ),
+          ),
+          prefixIconConstraints: const BoxConstraints(minWidth: 34),
+          contentPadding: const EdgeInsets.only(top: 10, right: 10),
+        ),
       ),
     );
   }
