@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/status_code_constants.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
@@ -8,43 +9,41 @@ import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_cont
 /// Controller for bottom-nav state.
 class BottomNavController extends GetxController {
   BottomNavController({AuthRepo? authRepo})
-      : _authRepo = authRepo ?? AuthRepo();
+    : _authRepo = authRepo ?? AuthRepo();
 
   final AuthRepo _authRepo;
-  final UserSessionController _userSession = Get.isRegistered<UserSessionController>()
+  final UserSessionController _userSession =
+      Get.isRegistered<UserSessionController>()
       ? Get.find<UserSessionController>()
       : Get.put(UserSessionController(), permanent: true);
   final selectedIndex = 0.obs;
   Map<String, dynamic>? profileData;
 
   /// Bottom-nav tabs (Figma-style labels + centered heart action).
-  final items = const <({String label, String iconPath, String selectedIconPath})>[
-    (
-      label: 'Discover',
-      iconPath: kIconDiscover,
-      selectedIconPath: kIconDiscoverEnable,
-    ),
-    (
-      label: 'Live Rooms',
-      iconPath: kIconLiveRoom,
-      selectedIconPath: kIconLiveRoomEnable,
-    ),
-    (
-      label: '',
-      iconPath: kIconHeart,
-      selectedIconPath: kIconHeart,
-    ),
-    (
-      label: 'Messages',
-      iconPath: kIconChat,
-      selectedIconPath: kIconChatEnable,
-    ),
-    (
-      label: 'Profile',
-      iconPath: kIconUser,
-      selectedIconPath: kIconUserEnable,
-    ),
-  ];
+  final items =
+      const <({String label, String iconPath, String selectedIconPath})>[
+        (
+          label: 'Discover',
+          iconPath: kIconDiscover,
+          selectedIconPath: kIconDiscoverEnable,
+        ),
+        (
+          label: 'Live Rooms',
+          iconPath: kIconLiveRoom,
+          selectedIconPath: kIconLiveRoomEnable,
+        ),
+        (label: '', iconPath: kIconHeart, selectedIconPath: kIconHeart),
+        (
+          label: 'Messages',
+          iconPath: kIconChat,
+          selectedIconPath: kIconChatEnable,
+        ),
+        (
+          label: 'Profile',
+          iconPath: kIconUser,
+          selectedIconPath: kIconUserEnable,
+        ),
+      ];
 
   @override
   void onInit() {
@@ -75,11 +74,19 @@ class BottomNavController extends GetxController {
     final response = await _authRepo.getProfile(isShowLoader: false);
     if (response == null) return;
 
-    final statusCode = (response['statusCode'] as num?)?.toInt() ?? 0;
-    if (statusCode != 1) return;
+    final rawCode = response['statusCode'];
+    final statusCode = rawCode is int
+        ? rawCode
+        : int.tryParse(rawCode?.toString() ?? '') ?? 0;
+    if (statusCode != 1 && statusCode != StatusCodeConstants.success) return;
 
-    final data = response['data'];
-    if (data is! Map<String, dynamic>) return;
+    final raw = response['data'];
+    final Map<String, dynamic>? data = raw is Map<String, dynamic>
+        ? raw
+        : raw is Map
+        ? Map<String, dynamic>.from(raw)
+        : null;
+    if (data == null) return;
 
     profileData = data;
     await _userSession.saveProfile(data);

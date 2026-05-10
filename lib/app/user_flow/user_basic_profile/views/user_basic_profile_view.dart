@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
+import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
@@ -64,14 +65,6 @@ class UserBasicProfileView extends GetView<UserBasicProfileController> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Center(
-                                      child: BoldText(
-                                        text: 'Basic profile',
-                                        fontSize: TextStyles.k22FontSize,
-                                        color: kColorText,
-                                      ),
-                                    ),
-                                    Spacing.v24,
                                     Center(child: _profileImagePicker(context)),
                                     Spacing.v28,
                                     _userNameField(context),
@@ -151,54 +144,92 @@ class UserBasicProfileView extends GetView<UserBasicProfileController> {
   }
 
   Widget _profileImagePicker(BuildContext context) {
+    final userSession = _resolveUserSession();
+
     return Obx(() {
       final File? selectedMedia = controller.selectedProfileMedia.value;
-      return GestureDetector(
-        onTap: () => controller.onProfileMediaTap(context),
-        child: SizedBox(
-          width: 124,
-          height: 124,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Positioned(
-                top: 0,
-                left: 0,
-                child: Container(
-                  width: 130,
-                  height: 130,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF5F5F5),
-                    shape: BoxShape.circle,
+
+      return GetBuilder<UserSessionController>(
+        init: userSession,
+        builder: (session) {
+          return GestureDetector(
+            onTap: () => controller.onProfileMediaTap(context),
+            child: SizedBox(
+              width: 124,
+              height: 124,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    child: Container(
+                      width: 130,
+                      height: 130,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF5F5F5),
+                        shape: BoxShape.circle,
+                      ),
+                      child: ClipOval(
+                        child: _avatarInner(selectedMedia, session),
+                      ),
+                    ),
                   ),
-                  child: ClipOval(
-                    child: selectedMedia == null
-                        ? const Icon(
-                            Icons.camera_alt_outlined,
-                            color: kColorTextGrey,
-                            size: 34,
-                          )
-                        : Image.file(selectedMedia, fit: BoxFit.cover),
+                  Align(
+                    alignment: Alignment.bottomRight,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => controller.onProfileMediaTap(context),
+                      child: SizedBox(
+                        width: 34,
+                        height: 34,
+                        child: SvgPicture.asset(kIconEditBG, fit: BoxFit.contain),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-              Align(
-                alignment: Alignment.bottomRight,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => controller.onProfileMediaTap(context),
-                  child: SizedBox(
-                    width: 34,
-                    height: 34,
-                    child: SvgPicture.asset(kIconEditBG, fit: BoxFit.contain),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       );
     });
+  }
+
+  /// Matches Live Room: local pick wins; else network avatar from session; else initials.
+  Widget _avatarInner(File? selectedMedia, UserSessionController session) {
+    if (selectedMedia != null) {
+      return Image.file(selectedMedia, fit: BoxFit.cover);
+    }
+    final avatarUrl = session.displayPictureUrl;
+    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      return Image.network(
+        avatarUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _initialsAvatar(session.initials),
+      );
+    }
+    return _initialsAvatar(session.initials);
+  }
+
+  Widget _initialsAvatar(String initials) {
+    return ColoredBox(
+      color: const Color(0xFF2A2A2A),
+      child: Center(
+        child: SemiBoldText(
+          text: initials,
+          fontSize: TextStyles.k14FontSize,
+          color: kColorWhite,
+        ),
+      ),
+    );
+  }
+
+  UserSessionController _resolveUserSession() {
+    if (Get.isRegistered<UserSessionController>()) {
+      return Get.find<UserSessionController>();
+    }
+    return Get.put(UserSessionController(), permanent: true);
   }
 
   Widget _userNameField(BuildContext context) {

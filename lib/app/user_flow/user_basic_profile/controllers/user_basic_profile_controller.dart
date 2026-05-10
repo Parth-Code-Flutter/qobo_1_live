@@ -6,20 +6,28 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/constants/status_code_constants.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
+import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_media_picker.dart';
+import 'package:qobo_one_live/utils/profile/stored_profile_map.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/validations/text_field_validations.dart';
 
 /// Basic profile capture (photo + core fields). Wire `/api` here when ready.
 class UserBasicProfileController extends GetxController {
-  UserBasicProfileController();
+  UserBasicProfileController({AuthRepo? authRepo})
+    : _authRepo = authRepo ?? AuthRepo();
 
-  UserSessionController? get _userSession =>
-      Get.isRegistered<UserSessionController>()
-      ? Get.find<UserSessionController>()
-      : null;
+  final AuthRepo _authRepo;
+
+  UserSessionController _ensureSession() {
+    if (Get.isRegistered<UserSessionController>()) {
+      return Get.find<UserSessionController>();
+    }
+    return Get.put(UserSessionController(), permanent: true);
+  }
 
   final formKey = GlobalKey<FormState>();
   final userNameController = TextEditingController();
@@ -34,42 +42,93 @@ class UserBasicProfileController extends GetxController {
   final ImagePicker _imagePicker = ImagePicker();
 
   @override
-  void onInit() {
-    super.onInit();
-    _prefillFromSession();
+  void onReady() {
+    super.onReady();
+    fetchProfileAndPopulateForm();
   }
 
-  /// Light prefill when session already has name / gender / age hints.
-  Future<void> _prefillFromSession() async {
-    final session = _userSession;
-    if (session == null) return;
+  /// Primary entry: GET `/api/user/profile`, persist, then bind fields.
+  ///
+  /// Falls back to disk/session snapshot only when the request fails or the
+  /// envelope has no user row.
+  Future<void> fetchProfileAndPopulateForm() async {
+    final session = _ensureSession();
     await session.loadFromStorage();
-    final data = session.profileData;
-    if (data == null || data.isEmpty) return;
 
-    final name = (data['name'] ?? '').toString().trim();
+    Map<String, dynamic>? apiRow;
+    try {
+      final envelope = await _authRepo.getProfile(isShowLoader: true);
+      apiRow = _extractProfileUserMap(envelope);
+      if (apiRow != null) {
+        await session.saveProfile(apiRow);
+      }
+    } catch (_) {
+      // Use cached profile below.
+    }
+
+    final root =
+        apiRow ??
+        (session.profileData != null && session.profileData!.isNotEmpty
+            ? Map<String, dynamic>.from(session.profileData!)
+            : null);
+
+    if (root != null && root.isNotEmpty) {
+      _populateFormFromProfile(coalesceStoredProfileMap(root));
+    }
+    update();
+  }
+
+  /// Accepts legacy body `statusCode: 1` and standard `201`.
+  Map<String, dynamic>? _extractProfileUserMap(Map<String, dynamic>? envelope) {
+    if (envelope == null) return null;
+    final rawCode = envelope['statusCode'];
+    final code = rawCode is int
+        ? rawCode
+        : int.tryParse(rawCode?.toString() ?? '') ?? 0;
+    if (code != 1 && code != StatusCodeConstants.success) return null;
+
+    final raw = envelope['data'];
+    if (raw is Map<String, dynamic>) return raw;
+    if (raw is Map) return Map<String, dynamic>.from(raw);
+    return null;
+  }
+
+  void _populateFormFromProfile(Map<String, dynamic> data) {
+    final nameRaw = firstPresent(data, const [
+      'name',
+      'username',
+      'userName',
+      'fullName',
+    ]);
+    final name = nameRaw?.toString().trim() ?? '';
     if (name.isNotEmpty) userNameController.text = name;
 
-    final genderRaw = (data['gender'] ?? '').toString().trim().toLowerCase();
-    if (genderRaw.isNotEmpty) {
-      selectedGender.value = genderRaw == 'female' ? 'Female' : 'Male';
-    }
+    final genderLabel = genderLabelFromStored(
+      firstPresent(data, const ['gender', 'sex']),
+    );
+    if (genderLabel.isNotEmpty) selectedGender.value = genderLabel;
 
-    final dobRaw = (data['dob'] ?? '').toString().trim();
-    if (dobRaw.isNotEmpty) {
-      final parsed = DateTime.tryParse(dobRaw);
-      if (parsed != null) {
-        selectedBirthdate.value = parsed;
-        final age = _ageFromDob(parsed);
-        selectedAge.value = age;
-        birthdateController.text = age.toString();
-        return;
-      }
+    final dobParsed = parseStoredDob(
+      firstPresent(data, const [
+        'dob',
+        'dateOfBirth',
+        'birthDate',
+        'birthday',
+        'date_of_birth',
+      ]),
+    );
+    if (dobParsed != null) {
+      selectedBirthdate.value = dobParsed;
+      final age = _ageFromDob(dobParsed);
+      selectedAge.value = age;
+      birthdateController.text = age.toString();
+    } else {
+      final agePresent = firstPresent(data, const ['age', 'userAge']);
+      final age = agePresent is int
+          ? agePresent
+          : int.tryParse(agePresent?.toString().trim() ?? '');
+      if (age != null && age > 0) _applySelectedAge(age);
     }
-
-    final ageRaw = (data['age'] ?? '').toString().trim();
-    final age = int.tryParse(ageRaw);
-    if (age != null && age > 0) _applySelectedAge(age);
   }
 
   int _ageFromDob(DateTime dob) {

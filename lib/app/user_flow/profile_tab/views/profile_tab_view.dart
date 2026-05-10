@@ -146,7 +146,7 @@ class ProfileTabView extends StatelessWidget {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () => Get.toNamed(Routes.UPDATE_PROFILE),
+                        onTap: () => Get.toNamed(Routes.USER_BASIC_PROFILE),
                         child: const Padding(
                           padding: EdgeInsets.only(right: 4),
                           child: Icon(

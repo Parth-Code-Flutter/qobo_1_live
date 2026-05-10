@@ -14,6 +14,9 @@ class ApiResponseUtils {
     try {
       final decoded = json.decode(body);
       if (decoded is Map<String, dynamic>) return decoded;
+      if (decoded is Map) {
+        return Map<String, dynamic>.from(decoded);
+      }
       return null;
     } catch (_) {
       return null;
@@ -42,4 +45,3 @@ class ApiResponseUtils {
     return StatusCodeConstants.isApiSuccess(bodyStatusCode);
   }
 }
-

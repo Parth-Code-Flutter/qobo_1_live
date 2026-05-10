@@ -15,15 +15,18 @@ import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_dialogs/common_giffy_dialog.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_media_picker.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
+import 'package:qobo_one_live/utils/profile/stored_profile_map.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/validations/text_field_validations.dart';
 
 /// Controller for update profile flow (wire API + state here).
 class UpdateProfileController extends GetxController {
-  UpdateProfileController({AuthRepo? authRepo}) : _authRepo = authRepo ?? AuthRepo();
+  UpdateProfileController({AuthRepo? authRepo})
+    : _authRepo = authRepo ?? AuthRepo();
 
   final AuthRepo _authRepo;
-  final UserSessionController _userSession = Get.isRegistered<UserSessionController>()
+  final UserSessionController _userSession =
+      Get.isRegistered<UserSessionController>()
       ? Get.find<UserSessionController>()
       : Get.put(UserSessionController(), permanent: true);
 
@@ -61,36 +64,51 @@ class UpdateProfileController extends GetxController {
     if (isComeFromOtpScreen.value) return;
 
     await _userSession.loadFromStorage();
-    final data = _userSession.profileData;
-    if (data == null || data.isEmpty) return;
+    final root = _userSession.profileData;
+    if (root == null || root.isEmpty) return;
 
-    final name = (data['name'] ?? '').toString().trim();
+    final data = coalesceStoredProfileMap(root);
+
+    final nameRaw = firstPresent(data, const [
+      'name',
+      'username',
+      'userName',
+      'fullName',
+    ]);
+    final name = nameRaw?.toString().trim() ?? '';
     if (name.isNotEmpty) userNameController.text = name;
 
-    final genderRaw = (data['gender'] ?? '').toString().trim().toLowerCase();
-    if (genderRaw.isNotEmpty) {
-      selectedGender.value = genderRaw == 'female' ? 'Female' : 'Male';
-    }
+    final genderLabel = genderLabelFromStored(
+      firstPresent(data, const ['gender', 'sex']),
+    );
+    if (genderLabel.isNotEmpty) selectedGender.value = genderLabel;
 
     _prefillAgeAndDob(data);
     hasAcceptedTerms.value = true;
   }
 
   void _prefillAgeAndDob(Map<String, dynamic> data) {
-    final dobRaw = (data['dob'] ?? '').toString().trim();
-    if (dobRaw.isNotEmpty) {
-      final parsed = DateTime.tryParse(dobRaw);
-      if (parsed != null) {
-        selectedBirthdate.value = parsed;
-        final age = _ageFromDob(parsed);
-        selectedAge.value = age;
-        birthdateController.text = age.toString();
-        return;
-      }
+    final dobParsed = parseStoredDob(
+      firstPresent(data, const [
+        'dob',
+        'dateOfBirth',
+        'birthDate',
+        'birthday',
+        'date_of_birth',
+      ]),
+    );
+    if (dobParsed != null) {
+      selectedBirthdate.value = dobParsed;
+      final age = _ageFromDob(dobParsed);
+      selectedAge.value = age;
+      birthdateController.text = age.toString();
+      return;
     }
 
-    final ageRaw = (data['age'] ?? '').toString().trim();
-    final age = int.tryParse(ageRaw);
+    final agePresent = firstPresent(data, const ['age', 'userAge']);
+    final age = agePresent is int
+        ? agePresent
+        : int.tryParse(agePresent?.toString().trim() ?? '');
     if (age != null && age > 0) {
       _applySelectedAge(age);
     }
@@ -99,7 +117,8 @@ class UpdateProfileController extends GetxController {
   int _ageFromDob(DateTime dob) {
     final now = DateTime.now();
     var years = now.year - dob.year;
-    final hadBirthday = (now.month > dob.month) ||
+    final hadBirthday =
+        (now.month > dob.month) ||
         (now.month == dob.month && now.day >= dob.day);
     if (!hadBirthday) years -= 1;
     return years.clamp(0, 150);
@@ -306,10 +325,7 @@ class UpdateProfileController extends GetxController {
       }
     } on PlatformException catch (e) {
       if (context.mounted) {
-        AppToast.showError(
-          context,
-          e.message ?? 'Unable to access media.',
-        );
+        AppToast.showError(context, e.message ?? 'Unable to access media.');
       }
     } catch (_) {
       if (context.mounted) {
