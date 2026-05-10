@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:qobo_one_live/app/user_flow/discover/discover_tab/controllers/discover_tab_controller.dart';
 import 'package:qobo_one_live/constants/status_code_constants.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
@@ -53,11 +54,18 @@ class BottomNavController extends GetxController {
   }
 
   void onNavBarTabSelected(int index) {
-    selectedIndex.value = index;
+    _applyTabSelection(index);
   }
 
   void onTabSelected(int index) {
+    _applyTabSelection(index);
+  }
+
+  void _applyTabSelection(int index) {
     selectedIndex.value = index;
+    if (index == 0 && Get.isRegistered<DiscoverTabController>()) {
+      Get.find<DiscoverTabController>().clearRoomMode();
+    }
   }
 
   Future<void> onLogoutPressed() async {

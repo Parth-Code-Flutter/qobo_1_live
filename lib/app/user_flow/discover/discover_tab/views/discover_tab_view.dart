@@ -10,6 +10,9 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/ui_utils/app_ui_utils.dart';
 
 import '../controllers/discover_tab_controller.dart';
+import '../models/discover_room_selection.dart';
+import '../widgets/discover_audio_room_view.dart';
+import '../widgets/discover_video_room_view.dart';
 
 class DiscoverTabView extends StatelessWidget {
   const DiscoverTabView({super.key});
@@ -26,8 +29,16 @@ class DiscoverTabView extends StatelessWidget {
     ];
 
     const trendingRooms = <({String title, String subtitle, String image})>[
-      (title: 'Techno & Chill', subtitle: '1.2 k Lorium Ipsum', image: kImgTemp2),
-      (title: 'Late Night Jazz Talk', subtitle: '1.2 k Lorium Ipsum', image: kImgTemp3),
+      (
+        title: 'Techno & Chill',
+        subtitle: '1.2 k Lorium Ipsum',
+        image: kImgTemp2,
+      ),
+      (
+        title: 'Late Night Jazz Talk',
+        subtitle: '1.2 k Lorium Ipsum',
+        image: kImgTemp3,
+      ),
     ];
 
     return Container(
@@ -47,25 +58,19 @@ class DiscoverTabView extends StatelessWidget {
               _roomModeRow(discoverController),
               Spacing.v16,
               Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.only(bottom: 14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _sectionHeader(title: 'Suggested Users', trailing: 'SEE ALL'),
-                      Spacing.v10,
-                      _suggestedUsersGrid(suggestedUsers),
-                      Spacing.v16,
-                      _sectionHeader(title: 'Trending Rooms', trailing: 'ACTIVE NOW'),
-                      Spacing.v8,
-                      _trendingCard(trendingRooms[0]),
-                      Spacing.v12,
-                      _sectionHeader(title: 'Trending Rooms', trailing: 'ACTIVE NOW'),
-                      Spacing.v8,
-                      _trendingCard(trendingRooms[1]),
-                    ],
-                  ),
-                ),
+                child: Obx(() {
+                  switch (discoverController.roomSelection.value) {
+                    case DiscoverRoomSelection.video:
+                      return const DiscoverVideoRoomView();
+                    case DiscoverRoomSelection.audio:
+                      return const DiscoverAudioRoomView();
+                    case DiscoverRoomSelection.none:
+                      return _defaultDiscoverFeed(
+                        suggestedUsers: suggestedUsers,
+                        trendingRooms: trendingRooms,
+                      );
+                  }
+                }),
               ),
             ],
           ),
@@ -96,7 +101,8 @@ class DiscoverTabView extends StatelessWidget {
                     : Image.network(
                         avatarUrl,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _initialsAvatar(session.initials),
+                        errorBuilder: (_, __, ___) =>
+                            _initialsAvatar(session.initials),
                       ),
               ),
             ),
@@ -131,7 +137,10 @@ class DiscoverTabView extends StatelessWidget {
                   kIconFilter,
                   width: 20,
                   height: 20,
-                  colorFilter: const ColorFilter.mode(kColorPrimary, BlendMode.srcIn),
+                  colorFilter: const ColorFilter.mode(
+                    kColorPrimary,
+                    BlendMode.srcIn,
+                  ),
                 ),
               ),
             ),
@@ -170,20 +179,48 @@ class DiscoverTabView extends StatelessWidget {
           Expanded(
             child: _modeChip(
               icon: Icons.videocam_outlined,
-              label: 'Video Room',
-              isSelected: controller.isVideoModeSelected.value,
-              onTap: controller.selectVideoMode,
+              label: DiscoverVideoRoomView.roomLabel,
+              isSelected:
+                  controller.roomSelection.value == DiscoverRoomSelection.video,
+              onTap: controller.selectVideoRoom,
             ),
           ),
           Spacing.h12,
           Expanded(
             child: _modeChip(
               icon: Icons.graphic_eq_rounded,
-              label: 'Audio Room',
-              isSelected: !controller.isVideoModeSelected.value,
-              onTap: controller.selectAudioMode,
+              label: DiscoverAudioRoomView.roomLabel,
+              isSelected:
+                  controller.roomSelection.value == DiscoverRoomSelection.audio,
+              onTap: controller.selectAudioRoom,
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _defaultDiscoverFeed({
+    required List<({String name, String image})> suggestedUsers,
+    required List<({String title, String subtitle, String image})>
+    trendingRooms,
+  }) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionHeader(title: 'Suggested Users', trailing: 'SEE ALL'),
+          Spacing.v10,
+          _suggestedUsersGrid(suggestedUsers),
+          Spacing.v16,
+          _sectionHeader(title: 'Trending Rooms', trailing: 'ACTIVE NOW'),
+          Spacing.v8,
+          _trendingCard(trendingRooms[0]),
+          Spacing.v12,
+          _sectionHeader(title: 'Trending Rooms', trailing: 'ACTIVE NOW'),
+          Spacing.v8,
+          _trendingCard(trendingRooms[1]),
         ],
       ),
     );
@@ -262,10 +299,8 @@ class DiscoverTabView extends StatelessWidget {
               mainAxisSpacing: 16,
               mainAxisExtent: isNarrow ? 148 : 160,
             ),
-            itemBuilder: (_, index) => _userCard(
-              users[index],
-              isCompact: isNarrow,
-            ),
+            itemBuilder: (_, index) =>
+                _userCard(users[index], isCompact: isNarrow),
           );
         },
       ),
@@ -288,9 +323,7 @@ class DiscoverTabView extends StatelessWidget {
             width: isCompact ? 82 : 92,
             height: isCompact ? 82 : 92,
             decoration: const BoxDecoration(shape: BoxShape.circle),
-            child: ClipOval(
-              child: Image.asset(user.image, fit: BoxFit.cover),
-            ),
+            child: ClipOval(child: Image.asset(user.image, fit: BoxFit.cover)),
           ),
           if (isCompact) Spacing.v8 else Spacing.v10,
           SemiBoldText(
@@ -305,7 +338,7 @@ class DiscoverTabView extends StatelessWidget {
 
   Widget _trendingCard(({String title, String subtitle, String image}) room) {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 8,vertical: 4),
+      margin: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
