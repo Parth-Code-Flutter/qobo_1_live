@@ -1,0 +1,336 @@
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/generated/locales.g.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
+import 'package:qobo_one_live/utils/text_utils/app_text.dart';
+import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+
+import '../controllers/user_basic_profile_controller.dart';
+
+/// Basic profile on the same full-screen background as Live Room, with
+/// Update Profile–style photo picker, nickname, age wheel, and gender chips.
+class UserBasicProfileView extends GetView<UserBasicProfileController> {
+  const UserBasicProfileView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      resizeToAvoidBottomInset: true,
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
+        ),
+        child: GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _topBar(context),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(28),
+                    ),
+                    child: ColoredBox(
+                      color: kColorWhite,
+                      child: Form(
+                        key: controller.formKey,
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            return SingleChildScrollView(
+                              keyboardDismissBehavior:
+                                  ScrollViewKeyboardDismissBehavior.onDrag,
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: EdgeInsets.fromLTRB(
+                                20,
+                                20,
+                                20,
+                                24 + MediaQuery.of(context).viewInsets.bottom,
+                              ),
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  minHeight: constraints.maxHeight - 40,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Center(
+                                      child: BoldText(
+                                        text: 'Basic profile',
+                                        fontSize: TextStyles.k22FontSize,
+                                        color: kColorText,
+                                      ),
+                                    ),
+                                    Spacing.v24,
+                                    Center(child: _profileImagePicker(context)),
+                                    Spacing.v28,
+                                    _userNameField(context),
+                                    Spacing.v10,
+                                    _ageField(context),
+                                    Spacing.v10,
+                                    _genderField(),
+                                    Spacing.v28,
+                                    Obx(
+                                      () => appButton(
+                                        onPressed: () =>
+                                            controller.onSavePressed(context),
+                                        buttonText:
+                                            controller.isSubmitLoading.value
+                                            ? ''
+                                            : 'Save',
+                                        buttonIcon:
+                                            controller.isSubmitLoading.value
+                                            ? const SizedBox(
+                                                width: 20,
+                                                height: 20,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  valueColor:
+                                                      AlwaysStoppedAnimation<
+                                                        Color
+                                                      >(kColorWhite),
+                                                ),
+                                              )
+                                            : null,
+                                      ),
+                                    ),
+                                    Spacing.v24,
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _topBar(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 4, 14, 12),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: IconButton(
+              onPressed: () => Get.back(),
+              icon: const Icon(
+                Icons.arrow_back_ios_new,
+                color: kColorWhite,
+                size: 18,
+              ),
+            ),
+          ),
+          const BoldText(
+            text: 'Basic profile',
+            fontSize: TextStyles.k20FontSize,
+            color: kColorWhite,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _profileImagePicker(BuildContext context) {
+    return Obx(() {
+      final File? selectedMedia = controller.selectedProfileMedia.value;
+      return GestureDetector(
+        onTap: () => controller.onProfileMediaTap(context),
+        child: SizedBox(
+          width: 124,
+          height: 124,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned(
+                top: 0,
+                left: 0,
+                child: Container(
+                  width: 130,
+                  height: 130,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF5F5F5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: ClipOval(
+                    child: selectedMedia == null
+                        ? const Icon(
+                            Icons.camera_alt_outlined,
+                            color: kColorTextGrey,
+                            size: 34,
+                          )
+                        : Image.file(selectedMedia, fit: BoxFit.cover),
+                  ),
+                ),
+              ),
+              Align(
+                alignment: Alignment.bottomRight,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => controller.onProfileMediaTap(context),
+                  child: SizedBox(
+                    width: 34,
+                    height: 34,
+                    child: SvgPicture.asset(kIconEditBG, fit: BoxFit.contain),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _userNameField(BuildContext context) {
+    return AppTextField(
+      controller: controller.userNameController,
+      validator: (value) => controller.validateUserName(context, value),
+      hintText: LocaleKeys.nickNameHint.tr,
+      borderColor: kColorHint,
+      hintStyle: TextStyles.kRegularPoppins(
+        fontSize: TextStyles.k14FontSize,
+        colors: kColorHint,
+      ),
+      textInputAction: TextInputAction.next,
+      textCapitalization: TextCapitalization.none,
+      prefix: Padding(
+        padding: const EdgeInsets.only(left: 14, right: 12),
+        child: SvgPicture.asset(
+          kIconUser,
+          colorFilter: const ColorFilter.mode(kColorHint, BlendMode.srcIn),
+        ),
+      ),
+    );
+  }
+
+  Widget _ageField(BuildContext context) {
+    return AppTextField(
+      controller: controller.birthdateController,
+      validator: controller.validateBirthdate,
+      hintText: LocaleKeys.ageHint.tr,
+      readOnly: true,
+      onTap: () => controller.pickAge(context),
+      borderColor: kColorHint,
+      hintStyle: TextStyles.kRegularPoppins(
+        fontSize: TextStyles.k14FontSize,
+        colors: kColorHint,
+      ),
+      textInputAction: TextInputAction.next,
+      textCapitalization: TextCapitalization.none,
+      prefix: Padding(
+        padding: const EdgeInsets.only(left: 14, right: 12),
+        child: SvgPicture.asset(kIconCalendar),
+      ),
+    );
+  }
+
+  Widget _genderField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const AppText(
+          text: 'Select Gender',
+          fontSize: TextStyles.k14FontSize,
+          color: kColorText,
+        ),
+        Spacing.v12,
+        Obx(
+          () => Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _genderCircleOption(
+                label: 'Male',
+                value: 'Male',
+                iconAsset: kIconMale,
+                isSelected: controller.selectedGender.value == 'Male',
+              ),
+              const SizedBox(width: 16),
+              _genderCircleOption(
+                label: 'Female',
+                value: 'Female',
+                iconAsset: kIconFemale,
+                isSelected: controller.selectedGender.value == 'Female',
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _genderCircleOption({
+    required String label,
+    required String value,
+    required String iconAsset,
+    required bool isSelected,
+  }) {
+    const double kGenderCircleSize = 90;
+
+    return GestureDetector(
+      onTap: () => controller.selectedGender.value = value,
+      child: SizedBox(
+        width: kGenderCircleSize,
+        height: kGenderCircleSize,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: isSelected ? kColorPrimary : kColorWhite,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: isSelected ? kColorPrimary : kColorTextFieldBorder,
+              width: 0.5,
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SvgPicture.asset(
+                iconAsset,
+                height: 32,
+                width: 32,
+                fit: BoxFit.contain,
+                colorFilter: ColorFilter.mode(
+                  isSelected ? kColorWhite : kColorHint,
+                  BlendMode.srcIn,
+                ),
+              ),
+              Spacing.v2,
+              if (isSelected)
+                SemiBoldText(
+                  text: label,
+                  fontSize: TextStyles.k14FontSize,
+                  color: kColorWhite,
+                )
+              else
+                AppText(
+                  text: label,
+                  fontSize: TextStyles.k14FontSize,
+                  color: kColorHint,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

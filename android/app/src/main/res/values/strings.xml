@@ -11,7 +11,11 @@
     -->
     <string name="default_web_client_id">YOUR_WEB_CLIENT_ID.apps.googleusercontent.com</string>
 
-    <!-- Meta / Facebook Login (flutter_facebook_auth). Replace from developer.facebook.com -->
-    <string name="facebook_app_id">YOUR_FACEBOOK_APP_ID</string>
-    <string name="facebook_client_token">YOUR_FACEBOOK_CLIENT_TOKEN</string>
+    <!--
+      Meta Facebook Login: MUST be numeric App ID from developer.facebook.com (Settings, Basic).
+      Non numeric placeholders break Facebook SDK init so flutter_facebook_auth never registers
+      and Dart shows MissingPluginException. Replace both values with your real app before release.
+    -->
+    <string name="facebook_app_id">123456789012345</string>
+    <string name="facebook_client_token">abcdef0123456789abcdef0123456789</string>
 </resources>

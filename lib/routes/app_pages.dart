@@ -11,6 +11,8 @@ import '../app/bottom_nav/views/bottom_nav_view.dart';
 import '../app/splash/splash/bindings/splash_binding.dart';
 import '../app/user_flow/update_profile/bindings/update_profile_binding.dart';
 import '../app/user_flow/update_profile/views/update_profile_view.dart';
+import '../app/user_flow/user_basic_profile/bindings/user_basic_profile_binding.dart';
+import '../app/user_flow/user_basic_profile/views/user_basic_profile_view.dart';
 import '../app/splash/splash/views/splash_view.dart';
 
 part 'app_routes.dart';
@@ -50,6 +52,11 @@ class AppPages {
       name: _Paths.UPDATE_PROFILE,
       page: () => const UpdateProfileView(),
       binding: UpdateProfileBinding(),
+    ),
+    GetPage(
+      name: _Paths.USER_BASIC_PROFILE,
+      page: () => const UserBasicProfileView(),
+      binding: UserBasicProfileBinding(),
     ),
   ];
 }

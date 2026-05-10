@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 
 import 'social_auth_provider.dart';
@@ -12,6 +13,20 @@ class FacebookSocialAuthProvider implements SocialAuthProvider {
 
   @override
   Future<SocialAuthUser?> signIn() async {
+    try {
+      return await _signInWithFacebookSdk();
+    } on MissingPluginException {
+      throw Exception(
+        'Facebook Login did not load. Usually the Meta SDK rejected '
+        'android/app/src/main/res/values/strings.xml facebook_app_id '
+        '(it must be your numeric App ID). '
+        'Uninstall the app, fix strings.xml, then run flutter clean and flutter run. '
+        'Search Logcat for: Error registering plugin flutter_facebook_auth',
+      );
+    }
+  }
+
+  Future<SocialAuthUser?> _signInWithFacebookSdk() async {
     final LoginResult result = await FacebookAuth.instance.login(
       permissions: const <String>['email', 'public_profile'],
       loginBehavior: LoginBehavior.nativeWithFallback,

@@ -2,15 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/facebook_login_config.dart';
 import 'package:qobo_one_live/constants/google_sign_in_config.dart';
-import 'package:qobo_one_live/constants/local_storage_constants.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/repo/auth/models/request/social_login_request_model.dart';
 import 'package:qobo_one_live/services/social_auth/facebook_social_auth_provider.dart';
 import 'package:qobo_one_live/services/social_auth/google_social_auth_provider.dart';
 import 'package:qobo_one_live/services/social_auth/social_auth_provider.dart';
-import 'package:qobo_one_live/routes/app_pages.dart';
-import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
+import 'package:qobo_one_live/utils/auth/auth_session_helper.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 
 class AuthLoginController extends GetxController {
@@ -96,7 +94,7 @@ class AuthLoginController extends GetxController {
         isShowLoader: false,
       );
       if (!context.mounted) return;
-      await handleAuthResponse(context, response);
+      await AuthSessionHelper.handleAuthApiResponse(context, response);
     } catch (e) {
       if (context.mounted) {
         AppToast.showError(context, e.toString());
@@ -135,7 +133,7 @@ class AuthLoginController extends GetxController {
         isShowLoader: false,
       );
       if (!context.mounted) return;
-      await handleAuthResponse(context, response);
+      await AuthSessionHelper.handleAuthApiResponse(context, response);
     } catch (e) {
       if (context.mounted) {
         AppToast.showError(context, e.toString());
@@ -172,7 +170,7 @@ class AuthLoginController extends GetxController {
         isShowLoader: false,
       );
       if (!context.mounted) return;
-      await handleAuthResponse(context, response);
+      await AuthSessionHelper.handleAuthApiResponse(context, response);
     } catch (e) {
       if (context.mounted) {
         AppToast.showError(context, e.toString());
@@ -180,61 +178,5 @@ class AuthLoginController extends GetxController {
     } finally {
       isFacebookLoginLoading.value = false;
     }
-  }
-
-  /// Shared handler for password login and social login API responses.
-  Future<void> handleAuthResponse(
-    BuildContext context,
-    Map<String, dynamic>? response,
-  ) async {
-    if (!context.mounted) return;
-    if (response == null) {
-      AppToast.showError(context, 'Request failed. Please try again.');
-      return;
-    }
-
-    final statusCode = (response['statusCode'] as num?)?.toInt() ?? 0;
-    final message = (response['message'] as String?)?.trim();
-    final data = response['data'];
-
-    if (statusCode == 1) {
-      final storage = Get.isRegistered<LocalStorage>()
-          ? Get.find<LocalStorage>()
-          : Get.put(LocalStorage(), permanent: true);
-
-      if (data is Map<String, dynamic>) {
-        final token = _extractToken(data);
-        if (token.isNotEmpty) {
-          await storage.writeStringStorage(kStorageToken, token);
-        }
-        await storage.writeJsonStorage(kStorageUserData, data);
-      }
-      await storage.writeBoolStorage(kStorageIsLoggedIn, true);
-
-      if (!context.mounted) return;
-      AppToast.showSuccess(
-        context,
-        message?.isNotEmpty == true ? message! : 'Login successful',
-      );
-      Get.offAllNamed(Routes.BOTTOM_NAV);
-    } else {
-      AppToast.showError(
-        context,
-        message?.isNotEmpty == true ? message! : 'Login failed',
-      );
-    }
-  }
-
-  String _extractToken(Map<String, dynamic> data) {
-    final candidates = <String?>[
-      data['token'] as String?,
-      data['accessToken'] as String?,
-      data['access_token'] as String?,
-      data['jwt'] as String?,
-    ];
-    for (final value in candidates) {
-      if (value != null && value.trim().isNotEmpty) return value.trim();
-    }
-    return '';
   }
 }

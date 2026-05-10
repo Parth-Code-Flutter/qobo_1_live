@@ -7,8 +7,9 @@ plugins {
 
 android {
     namespace = "com.qobo.qobo1live.qobo_one_live"
-    compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    // flutter_facebook_auth (and several plugins) require compileSdk 36+ / NDK 27 for correct native linkage.
+    compileSdk = maxOf(flutter.compileSdkVersion, 36)
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

@@ -30,7 +30,7 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
           key: controller.formKey,
           autovalidateMode: AutovalidateMode.onUserInteraction,
           child: LayoutBuilder(
-            builder: (context, constraints) => SingleChildScrollView(
+            builder: (_, constraints) => SingleChildScrollView(
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               physics: const AlwaysScrollableScrollPhysics(),
               padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
@@ -55,7 +55,7 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
                     Spacing.v20,
                     orLoginWithDividerWidget(),
                     Spacing.v16,
-                    socialMediaLogin(),
+                    socialMediaLogin(context),
                     Spacing.v16,
                     signInFooterWidget(),
                   ],
@@ -197,24 +197,30 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
     );
   }
 
-  Widget socialMediaLogin() {
+  Widget socialMediaLogin(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _socialOutlinedButton(
-          iconPath: kIconFB,
-          onTap: () {},
-          iconHeight: 24,
-          iconWidth: 24,
-          title: LocaleKeys.loginWithFacebookFull.tr,
+        Obx(
+          () => _socialOutlinedButton(
+            iconPath: kIconFB,
+            onTap: () => controller.onFacebookSignUpPressed(context),
+            iconHeight: 24,
+            iconWidth: 24,
+            title: LocaleKeys.loginWithFacebookFull.tr,
+            isLoading: controller.isFacebookLoginLoading.value,
+          ),
         ),
         Spacing.v10,
-        _socialOutlinedButton(
-          iconPath: kIconGoogle,
-          onTap: () {},
-          iconHeight: 22,
-          iconWidth: 22,
-          title: LocaleKeys.loginWithGoogleFull.tr,
+        Obx(
+          () => _socialOutlinedButton(
+            iconPath: kIconGoogle,
+            onTap: () => controller.onGoogleSignUpPressed(context),
+            iconHeight: 22,
+            iconWidth: 22,
+            title: LocaleKeys.loginWithGoogleFull.tr,
+            isLoading: controller.isGoogleLoginLoading.value,
+          ),
         ),
         // Spacing.v10,
         // _socialOutlinedButton(
@@ -238,10 +244,10 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
     required VoidCallback onTap,
     double iconHeight = 24,
     double iconWidth = 24,
-    bool tintIcon = false,
+    bool isLoading = false,
   }) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: isLoading ? null : onTap,
       child: Container(
         height: 48,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -253,15 +259,25 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SvgPicture.asset(
-              iconPath,
-              fit: BoxFit.contain,
-              height: iconHeight,
-              width: iconWidth,
-            ),
+            if (isLoading)
+              SizedBox(
+                width: iconWidth,
+                height: iconHeight,
+                child: const CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(kColorPrimary),
+                ),
+              )
+            else
+              SvgPicture.asset(
+                iconPath,
+                fit: BoxFit.contain,
+                height: iconHeight,
+                width: iconWidth,
+              ),
             Spacing.h10,
             SemiBoldText(
-              text: title,
+              text: isLoading ? '' : title,
               fontSize: TextStyles.k12FontSize,
               color: kColorText,
             ),
@@ -270,7 +286,6 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
       ),
     );
   }
-
 
   Widget signInFooterWidget() {
     return GestureDetector(

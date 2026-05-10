@@ -1,0 +1,45 @@
+---
+description: qobo_one_live — Flutter/GetX conventions; verify compliance before implementing tasks
+alwaysApply: true
+---
+
+# qobo_one_live — Flutter & GetX conventions
+
+**Before starting any task**, confirm the plan matches these rules. If something conflicts, ask or propose an adjustment.
+
+## 1. Common widgets first
+
+- Search **`lib/utils/app_widgets/`**, **`lib/utils/text_utils/`**, **`lib/constants/`**, and similar shared layers for an existing widget or pattern.
+- **Reuse** what exists; only add a new shared widget when nothing fits.
+- Place new reusable UI in the **appropriate existing folder** (typically `lib/utils/app_widgets/` unless the project already groups that type elsewhere).
+
+## 2. GetX structure
+
+- Prefer **`StatelessWidget`** for screens/widgets tied to a controller.
+- Use **`GetView<YourController>`** (or equivalent GetX pattern already used in this repo) for views that need the controller.
+- Use **`Obx`** / **`GetBuilder`** only where reactive updates are required — match existing files (`auth_login_view`, `discover_tab_view`, etc.).
+
+## 3. Method widgets (private helpers)
+
+- Break UI into **`Widget _sectionName(...)`** (or `Widget buildX()`) methods instead of one giant `build` tree.
+- Keeps `build` readable and aligned with current screens in **`lib/app/`**.
+
+## 4. New feature folders (“create folder X with files”)
+
+When asked to create a **named feature folder with files**, mirror existing modules (e.g. **`update_profile`**, **`auth/login`**):
+
+- **`bindings/`** — `*Binding extends Bindings`, `Get.lazyPut` for controllers/services as elsewhere.
+- **`controllers/`** — `*Controller extends GetxController`.
+- **`views/`** — `*View extends GetView<*Controller>` (Stateless style).
+- **`models/`** — request/response (or domain) types when APIs or structured data exist.
+
+Register routes in **`lib/routes/app_pages.dart`** / **`app_routes.dart`** when the feature is a new screen.
+
+## 5. Code quality & comments
+
+- Write **clear, minimal comments** where they aid understanding (non-obvious flow, API quirks, TODO tied to backend).
+- Avoid noisy comments on trivial code; match the tone of nearby files in this repo.
+
+---
+
+*Extend this file anytime — additional bullets can be appended below this line.*

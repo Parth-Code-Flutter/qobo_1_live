@@ -10,6 +10,7 @@ abstract class Routes {
   static const AUTH_VERIFY_ACCOUNT = _Paths.AUTH_VERIFY_ACCOUNT;
   static const BOTTOM_NAV = _Paths.BOTTOM_NAV;
   static const UPDATE_PROFILE = _Paths.UPDATE_PROFILE;
+  static const USER_BASIC_PROFILE = _Paths.USER_BASIC_PROFILE;
 }
 
 abstract class _Paths {
@@ -21,4 +22,5 @@ abstract class _Paths {
   static const AUTH_VERIFY_ACCOUNT = '/verify-account';
   static const BOTTOM_NAV = '/bottom-nav';
   static const UPDATE_PROFILE = '/update-profile';
+  static const USER_BASIC_PROFILE = '/user-basic-profile';
 }
