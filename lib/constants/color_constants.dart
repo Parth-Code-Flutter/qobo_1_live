@@ -74,4 +74,15 @@ const kColorDiscoverModeBorder = Color(0xFF7E4EA8);
 const kColorDiscoverChip = Color(0xFF5D2D84);
 const kColorDiscoverJoinNow = Color(0xFF5C2E82);
 
+/// Discover → Video Room feed (Figma).
+const kColorVideoRoomBgGradientTop = Color(0xFF1E0B36);
+const kColorVideoRoomBgGradientBottom = Color(0xFF050A19);
+const kColorVideoLiveBadgeRed = Color(0xFFE13434);
+const kColorVideoJoinLivePurple = Color(0xFF7A1E63);
+const kColorVideoViewerPillBg = Color(0xB3472869);
+const kColorVideoListTileBg = Color(0xE628173F);
+const kColorVideoTagBg = Color(0xFF2D1B45);
+const kColorVideoSecondaryText = Color(0xFFB0B0B0);
+const kColorVideoThumbActionPurple = Color(0xFF7A1E63);
+
 
