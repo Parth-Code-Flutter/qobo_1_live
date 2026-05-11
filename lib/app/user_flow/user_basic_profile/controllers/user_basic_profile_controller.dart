@@ -43,11 +43,16 @@ class UserBasicProfileController extends GetxController {
   /// True when name, age, gender, or profile image differs from last baseline.
   final isProfileDirty = false.obs;
 
-  /// Selected row in profile extras card (0–5). Default: Languages (Figma).
-  final selectedProfileExtraIndex = 1.obs;
+  /// Profile extras rows — empty until user/API fills them; purple row only when non-empty.
+  final relationshipStatus = ''.obs;
+  final languagesLine = ''.obs;
+  final currentLocationsLine = ''.obs;
+  final interestsLine = ''.obs;
+  final voiceShowLine = ''.obs;
+  final linkAccountsLine = ''.obs;
 
-  /// Chosen value from the Relationship status dialog (not yet wired to API).
-  final relationshipStatus = 'Single'.obs;
+  /// Last extras row the user opened (primary background in the list).
+  final lastSelectedProfileExtraIndex = Rxn<int>();
 
   final ImagePicker _imagePicker = ImagePicker();
 
@@ -55,14 +60,22 @@ class UserBasicProfileController extends GetxController {
   String _baselineAgeText = '';
   String _baselineGender = '';
   String _baselineRelationship = '';
+  String _baselineLanguages = '';
+  String _baselineLocations = '';
+  String _baselineInterests = '';
+  String _baselineVoiceShow = '';
+  String _baselineLinkAccounts = '';
   bool _baselineHadNewImage = false;
 
-  static const int _profileExtraRowCount = 6;
-
-  void selectProfileExtraRow(int index) {
-    if (index < 0 || index >= _profileExtraRowCount) return;
-    selectedProfileExtraIndex.value = index;
-  }
+  /// Read inside [Obx] so all `.obs` fields are tracked for list repaint.
+  List<bool> get profileExtrasRowHighlighted => [
+    relationshipStatus.value.trim().isNotEmpty,
+    languagesLine.value.trim().isNotEmpty,
+    currentLocationsLine.value.trim().isNotEmpty,
+    interestsLine.value.trim().isNotEmpty,
+    voiceShowLine.value.trim().isNotEmpty,
+    linkAccountsLine.value.trim().isNotEmpty,
+  ];
 
   @override
   void onInit() {
@@ -72,6 +85,11 @@ class UserBasicProfileController extends GetxController {
     ever<String>(selectedGender, (_) => _refreshProfileDirty());
     ever<File?>(selectedProfileMedia, (_) => _refreshProfileDirty());
     ever<String>(relationshipStatus, (_) => _refreshProfileDirty());
+    ever<String>(languagesLine, (_) => _refreshProfileDirty());
+    ever<String>(currentLocationsLine, (_) => _refreshProfileDirty());
+    ever<String>(interestsLine, (_) => _refreshProfileDirty());
+    ever<String>(voiceShowLine, (_) => _refreshProfileDirty());
+    ever<String>(linkAccountsLine, (_) => _refreshProfileDirty());
   }
 
   /// Call after loading/saving so “dirty” compares to the latest server snapshot.
@@ -80,6 +98,11 @@ class UserBasicProfileController extends GetxController {
     _baselineAgeText = birthdateController.text.trim();
     _baselineGender = selectedGender.value;
     _baselineRelationship = relationshipStatus.value;
+    _baselineLanguages = languagesLine.value;
+    _baselineLocations = currentLocationsLine.value;
+    _baselineInterests = interestsLine.value;
+    _baselineVoiceShow = voiceShowLine.value;
+    _baselineLinkAccounts = linkAccountsLine.value;
     _baselineHadNewImage = selectedProfileMedia.value != null;
     _refreshProfileDirty();
   }
@@ -91,22 +114,110 @@ class UserBasicProfileController extends GetxController {
         birthdateController.text.trim() != _baselineAgeText ||
         selectedGender.value != _baselineGender ||
         relationshipStatus.value != _baselineRelationship ||
+        languagesLine.value != _baselineLanguages ||
+        currentLocationsLine.value != _baselineLocations ||
+        interestsLine.value != _baselineInterests ||
+        voiceShowLine.value != _baselineVoiceShow ||
+        linkAccountsLine.value != _baselineLinkAccounts ||
         hasNewImage != _baselineHadNewImage;
     isProfileDirty.value = dirty;
   }
 
   /// Opens shared [CommonRadioChoiceDialog] for relationship (tile title = dialog title).
   Future<void> openRelationshipStatusDialog(BuildContext context) async {
-    selectProfileExtraRow(0);
+    lastSelectedProfileExtraIndex.value = 0;
     final result = await CommonRadioChoiceDialog.show(
       context,
       title: 'Relationship status',
       options: const ['Single', 'In Relationship', 'Married', 'Privacy'],
-      initialSelected: relationshipStatus.value,
+      initialSelected: relationshipStatus.value.isEmpty
+          ? null
+          : relationshipStatus.value,
     );
     if (!context.mounted) return;
     if (result != null && result.isNotEmpty) {
       relationshipStatus.value = result;
+    }
+  }
+
+  Future<void> openLanguagesDialog(BuildContext context) async {
+    lastSelectedProfileExtraIndex.value = 1;
+    const options = ['English', 'Hindi'];
+    final cur = languagesLine.value.trim();
+    final result = await CommonRadioChoiceDialog.show(
+      context,
+      title: 'Languages',
+      options: options,
+      initialSelected: cur.isEmpty || !options.contains(cur) ? null : cur,
+    );
+    if (!context.mounted) return;
+    if (result != null && result.isNotEmpty) {
+      languagesLine.value = result;
+    }
+  }
+
+  /// Placeholder: only India until full location picker exists.
+  Future<void> openCurrentLocationDialog(BuildContext context) async {
+    lastSelectedProfileExtraIndex.value = 2;
+    const options = ['India'];
+    final cur = currentLocationsLine.value.trim();
+    final result = await CommonRadioChoiceDialog.show(
+      context,
+      title: 'Current locations',
+      options: options,
+      initialSelected: cur.isEmpty || !options.contains(cur) ? null : cur,
+    );
+    if (!context.mounted) return;
+    if (result != null && result.isNotEmpty) {
+      currentLocationsLine.value = result;
+    }
+  }
+
+  Future<void> openInterestsDialog(BuildContext context) async {
+    lastSelectedProfileExtraIndex.value = 3;
+    const options = ['Travel', 'Music'];
+    final cur = interestsLine.value.trim();
+    final result = await CommonRadioChoiceDialog.show(
+      context,
+      title: 'Interests',
+      options: options,
+      initialSelected: cur.isEmpty || !options.contains(cur) ? null : cur,
+    );
+    if (!context.mounted) return;
+    if (result != null && result.isNotEmpty) {
+      interestsLine.value = result;
+    }
+  }
+
+  Future<void> openVoiceShowDialog(BuildContext context) async {
+    lastSelectedProfileExtraIndex.value = 4;
+    const options = ['Public', 'Private'];
+    final cur = voiceShowLine.value.trim();
+    final result = await CommonRadioChoiceDialog.show(
+      context,
+      title: 'Voice Show',
+      options: options,
+      initialSelected: cur.isEmpty || !options.contains(cur) ? null : cur,
+    );
+    if (!context.mounted) return;
+    if (result != null && result.isNotEmpty) {
+      voiceShowLine.value = result;
+    }
+  }
+
+  Future<void> openLinkAccountsDialog(BuildContext context) async {
+    lastSelectedProfileExtraIndex.value = 5;
+    const options = ['Google', 'Apple'];
+    final cur = linkAccountsLine.value.trim();
+    final result = await CommonRadioChoiceDialog.show(
+      context,
+      title: 'Link Accounts',
+      options: options,
+      initialSelected: cur.isEmpty || !options.contains(cur) ? null : cur,
+    );
+    if (!context.mounted) return;
+    if (result != null && result.isNotEmpty) {
+      linkAccountsLine.value = result;
     }
   }
 
@@ -199,6 +310,43 @@ class UserBasicProfileController extends GetxController {
           : int.tryParse(agePresent?.toString().trim() ?? '');
       if (age != null && age > 0) _applySelectedAge(age);
     }
+
+    _populateProfileExtrasFromMap(data);
+  }
+
+  void _populateProfileExtrasFromMap(Map<String, dynamic> data) {
+    void setIfPresent(List<String> keys, void Function(String v) set) {
+      for (final k in keys) {
+        final raw = data[k];
+        if (raw == null) continue;
+        final s = raw.toString().trim();
+        if (s.isNotEmpty) {
+          set(s);
+          return;
+        }
+      }
+    }
+
+    setIfPresent(
+      ['relationshipStatus', 'relationship', 'relationship_status'],
+      (v) => relationshipStatus.value = v,
+    );
+    setIfPresent(
+      ['languages', 'languagesSpoken', 'language'],
+      (v) => languagesLine.value = v,
+    );
+    setIfPresent(
+      ['currentLocation', 'current_location', 'location', 'address'],
+      (v) => currentLocationsLine.value = v,
+    );
+    setIfPresent(['interests', 'interest'], (v) => interestsLine.value = v);
+    setIfPresent(['voiceShow', 'voice_show', 'voiceBio'], (v) {
+      voiceShowLine.value = v;
+    });
+    setIfPresent(
+      ['linkedAccounts', 'link_accounts', 'linked_accounts'],
+      (v) => linkAccountsLine.value = v,
+    );
   }
 
   int _ageFromDob(DateTime dob) {

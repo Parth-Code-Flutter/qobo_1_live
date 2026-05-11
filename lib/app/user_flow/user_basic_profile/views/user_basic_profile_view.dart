@@ -141,43 +141,83 @@ class UserBasicProfileView extends GetView<UserBasicProfileController> {
     });
   }
 
-  /// Figma list: Relationship status, Languages (selected), locations, etc.
+  /// Extras: [CommonRadioChoiceDialog] per row; purple text when saved value exists;
+  /// primary row background for whichever row was opened last.
   Widget _profileExtrasCard(BuildContext context) {
-    const rows = <({String label, IconData icon, bool accentWhenUnselected})>[
-      (
-        label: 'Relationship status',
-        icon: Icons.favorite_border_rounded,
-        accentWhenUnselected: true,
-      ),
-      (
-        label: 'Languages',
-        icon: Icons.public_rounded,
-        accentWhenUnselected: false,
-      ),
-      (
-        label: 'Current locations',
-        icon: Icons.location_on_outlined,
-        accentWhenUnselected: false,
-      ),
-      (
-        label: 'Interests',
-        icon: Icons.favorite_border_rounded,
-        accentWhenUnselected: false,
-      ),
-      (
-        label: 'Voice Show',
-        icon: Icons.mic_none_rounded,
-        accentWhenUnselected: false,
-      ),
-      (
-        label: 'Link Accounts',
-        icon: Icons.verified_user_outlined,
-        accentWhenUnselected: false,
-      ),
+    const rows = <({String label, IconData icon})>[
+      (label: 'Relationship status', icon: Icons.favorite_border_rounded),
+      (label: 'Languages', icon: Icons.public_rounded),
+      (label: 'Current locations', icon: Icons.location_on_outlined),
+      (label: 'Interests', icon: Icons.favorite_border_rounded),
+      (label: 'Voice Show', icon: Icons.mic_none_rounded),
+      (label: 'Link Accounts', icon: Icons.verified_user_outlined),
     ];
 
+    void openDialogForRow(int i) {
+      switch (i) {
+        case 0:
+          controller.openRelationshipStatusDialog(context);
+          break;
+        case 1:
+          controller.openLanguagesDialog(context);
+          break;
+        case 2:
+          controller.openCurrentLocationDialog(context);
+          break;
+        case 3:
+          controller.openInterestsDialog(context);
+          break;
+        case 4:
+          controller.openVoiceShowDialog(context);
+          break;
+        case 5:
+          controller.openLinkAccountsDialog(context);
+          break;
+        default:
+          break;
+      }
+    }
+
+    Widget rowContent(int i, List<bool> highlights, {required bool selected}) {
+      final filled = highlights[i];
+      final iconColor = selected
+          ? kColorWhite
+          : (filled ? kColorPrimary : kColorText);
+      final textStyle = selected
+          ? TextStyles.kSemiBoldPoppins(
+              fontSize: TextStyles.k14FontSize,
+              colors: kColorWhite,
+            )
+          : filled
+          ? TextStyles.kSemiBoldPoppins(
+              fontSize: TextStyles.k14FontSize,
+              colors: kColorPrimary,
+            )
+          : TextStyles.kRegularPoppins(
+              fontSize: TextStyles.k14FontSize,
+              colors: kColorText,
+            );
+      return AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        width: double.infinity,
+        color: selected ? kColorPrimary : Colors.transparent,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        child: Row(
+          children: [
+            Icon(rows[i].icon, size: 22, color: iconColor),
+            const SizedBox(width: 14),
+            Expanded(
+              child: AppText(text: rows[i].label, style: textStyle),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Obx(() {
-      final selected = controller.selectedProfileExtraIndex.value;
+      final highlights = controller.profileExtrasRowHighlighted;
+      final lastIx = controller.lastSelectedProfileExtraIndex.value;
       return Container(
         decoration: BoxDecoration(
           color: kColorProfileExtrasCardBg,
@@ -204,56 +244,11 @@ class UserBasicProfileView extends GetView<UserBasicProfileController> {
               Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: () {
-                    if (i == 0) {
-                      controller.openRelationshipStatusDialog(context);
-                    } else {
-                      controller.selectProfileExtraRow(i);
-                    }
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    curve: Curves.easeOutCubic,
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 16,
-                    ),
-                    color: selected == i ? kColorPrimary : Colors.transparent,
-                    child: Row(
-                      children: [
-                        Icon(
-                          rows[i].icon,
-                          size: 22,
-                          color: _extrasIconColor(
-                            index: i,
-                            selected: selected,
-                            accentWhenUnselected: rows[i].accentWhenUnselected,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: AppText(
-                            text: rows[i].label,
-                            style: selected == i
-                                ? TextStyles.kSemiBoldPoppins(
-                                    fontSize: TextStyles.k14FontSize,
-                                    colors: kColorWhite,
-                                  )
-                                : (rows[i].accentWhenUnselected &&
-                                      selected != i)
-                                ? TextStyles.kSemiBoldPoppins(
-                                    fontSize: TextStyles.k14FontSize,
-                                    colors: kColorPrimary,
-                                  )
-                                : TextStyles.kRegularPoppins(
-                                    fontSize: TextStyles.k14FontSize,
-                                    colors: kColorText,
-                                  ),
-                          ),
-                        ),
-                      ],
-                    ),
+                  onTap: () => openDialogForRow(i),
+                  child: rowContent(
+                    i,
+                    highlights,
+                    selected: lastIx == i,
                   ),
                 ),
               ),
@@ -262,16 +257,6 @@ class UserBasicProfileView extends GetView<UserBasicProfileController> {
         ),
       );
     });
-  }
-
-  Color _extrasIconColor({
-    required int index,
-    required int selected,
-    required bool accentWhenUnselected,
-  }) {
-    if (selected == index) return kColorWhite;
-    if (accentWhenUnselected) return kColorPrimary;
-    return kColorText;
   }
 
   Widget _topBar(BuildContext context) {
