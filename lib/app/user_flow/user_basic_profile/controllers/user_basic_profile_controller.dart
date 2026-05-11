@@ -10,6 +10,7 @@ import 'package:qobo_one_live/constants/status_code_constants.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
+import 'package:qobo_one_live/utils/app_dialogs/common_radio_choice_dialog.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_media_picker.dart';
 import 'package:qobo_one_live/utils/profile/stored_profile_map.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
@@ -45,11 +46,15 @@ class UserBasicProfileController extends GetxController {
   /// Selected row in profile extras card (0–5). Default: Languages (Figma).
   final selectedProfileExtraIndex = 1.obs;
 
+  /// Chosen value from the Relationship status dialog (not yet wired to API).
+  final relationshipStatus = 'Single'.obs;
+
   final ImagePicker _imagePicker = ImagePicker();
 
   String _baselineName = '';
   String _baselineAgeText = '';
   String _baselineGender = '';
+  String _baselineRelationship = '';
   bool _baselineHadNewImage = false;
 
   static const int _profileExtraRowCount = 6;
@@ -66,6 +71,7 @@ class UserBasicProfileController extends GetxController {
     birthdateController.addListener(_refreshProfileDirty);
     ever<String>(selectedGender, (_) => _refreshProfileDirty());
     ever<File?>(selectedProfileMedia, (_) => _refreshProfileDirty());
+    ever<String>(relationshipStatus, (_) => _refreshProfileDirty());
   }
 
   /// Call after loading/saving so “dirty” compares to the latest server snapshot.
@@ -73,6 +79,7 @@ class UserBasicProfileController extends GetxController {
     _baselineName = userNameController.text.trim();
     _baselineAgeText = birthdateController.text.trim();
     _baselineGender = selectedGender.value;
+    _baselineRelationship = relationshipStatus.value;
     _baselineHadNewImage = selectedProfileMedia.value != null;
     _refreshProfileDirty();
   }
@@ -83,8 +90,24 @@ class UserBasicProfileController extends GetxController {
         userNameController.text.trim() != _baselineName ||
         birthdateController.text.trim() != _baselineAgeText ||
         selectedGender.value != _baselineGender ||
+        relationshipStatus.value != _baselineRelationship ||
         hasNewImage != _baselineHadNewImage;
     isProfileDirty.value = dirty;
+  }
+
+  /// Opens shared [CommonRadioChoiceDialog] for relationship (tile title = dialog title).
+  Future<void> openRelationshipStatusDialog(BuildContext context) async {
+    selectProfileExtraRow(0);
+    final result = await CommonRadioChoiceDialog.show(
+      context,
+      title: 'Relationship status',
+      options: const ['Single', 'In Relationship', 'Married', 'Privacy'],
+      initialSelected: relationshipStatus.value,
+    );
+    if (!context.mounted) return;
+    if (result != null && result.isNotEmpty) {
+      relationshipStatus.value = result;
+    }
   }
 
   @override

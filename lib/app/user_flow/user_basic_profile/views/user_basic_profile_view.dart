@@ -204,7 +204,13 @@ class UserBasicProfileView extends GetView<UserBasicProfileController> {
               Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: () => controller.selectProfileExtraRow(i),
+                  onTap: () {
+                    if (i == 0) {
+                      controller.openRelationshipStatusDialog(context);
+                    } else {
+                      controller.selectProfileExtraRow(i);
+                    }
+                  },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
                     curve: Curves.easeOutCubic,
