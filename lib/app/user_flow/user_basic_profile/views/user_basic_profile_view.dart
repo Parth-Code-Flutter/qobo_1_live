@@ -7,7 +7,6 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
-import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -72,32 +71,9 @@ class UserBasicProfileView extends GetView<UserBasicProfileController> {
                                     _ageField(context),
                                     Spacing.v10,
                                     _genderField(),
-                                    Spacing.v28,
-                                    Obx(
-                                      () => appButton(
-                                        onPressed: () =>
-                                            controller.onSavePressed(context),
-                                        buttonText:
-                                            controller.isSubmitLoading.value
-                                            ? ''
-                                            : 'Save',
-                                        buttonIcon:
-                                            controller.isSubmitLoading.value
-                                            ? const SizedBox(
-                                                width: 20,
-                                                height: 20,
-                                                child: CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                  valueColor:
-                                                      AlwaysStoppedAnimation<
-                                                        Color
-                                                      >(kColorWhite),
-                                                ),
-                                              )
-                                            : null,
-                                      ),
-                                    ),
                                     Spacing.v24,
+                                    _profileExtrasCard(context),
+                                    Spacing.v16,
                                   ],
                                 ),
                               ),
@@ -114,6 +90,182 @@ class UserBasicProfileView extends GetView<UserBasicProfileController> {
         ),
       ),
     );
+  }
+
+  /// Circular confirm control (replaces Save). Grey fill when form has unsaved edits.
+  Widget _confirmProfileIconButton(
+    BuildContext context, {
+    bool forHeader = false,
+  }) {
+    final diameter = forHeader ? 28.0 : 28.0;
+    final iconSize = forHeader ? 12.0 : 12.0;
+    final stroke = forHeader ? 2.0 : 2.5;
+
+    return Obx(() {
+      final dirty = controller.isProfileDirty.value;
+      final loading = controller.isSubmitLoading.value;
+      final bg = dirty
+          ? kColorProfileConfirmIconBgDirty
+          : kColorProfileConfirmIconBgIdle;
+      final iconColor = dirty ? kColorWhite : kColorPrimary;
+
+      return Material(
+        color: bg,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: loading ? null : () => controller.onSavePressed(context),
+          child: SizedBox(
+            width: diameter,
+            height: diameter,
+            child: Center(
+              child: loading
+                  ? SizedBox(
+                      width: iconSize,
+                      height: iconSize,
+                      child: CircularProgressIndicator(
+                        strokeWidth: stroke,
+                        color: iconColor,
+                      ),
+                    )
+                  : SvgPicture.asset(
+                      kIconRight,
+                      width: iconSize,
+                      height: iconSize,
+                      colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
+                    ),
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
+  /// Figma list: Relationship status, Languages (selected), locations, etc.
+  Widget _profileExtrasCard(BuildContext context) {
+    const rows = <({String label, IconData icon, bool accentWhenUnselected})>[
+      (
+        label: 'Relationship status',
+        icon: Icons.favorite_border_rounded,
+        accentWhenUnselected: true,
+      ),
+      (
+        label: 'Languages',
+        icon: Icons.public_rounded,
+        accentWhenUnselected: false,
+      ),
+      (
+        label: 'Current locations',
+        icon: Icons.location_on_outlined,
+        accentWhenUnselected: false,
+      ),
+      (
+        label: 'Interests',
+        icon: Icons.favorite_border_rounded,
+        accentWhenUnselected: false,
+      ),
+      (
+        label: 'Voice Show',
+        icon: Icons.mic_none_rounded,
+        accentWhenUnselected: false,
+      ),
+      (
+        label: 'Link Accounts',
+        icon: Icons.verified_user_outlined,
+        accentWhenUnselected: false,
+      ),
+    ];
+
+    return Obx(() {
+      final selected = controller.selectedProfileExtraIndex.value;
+      return Container(
+        decoration: BoxDecoration(
+          color: kColorProfileExtrasCardBg,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: kColorBlack.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < rows.length; i++) ...[
+              if (i > 0)
+                const Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: kColorProfileExtrasDivider,
+                ),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => controller.selectProfileExtraRow(i),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeOutCubic,
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 16,
+                    ),
+                    color: selected == i ? kColorPrimary : Colors.transparent,
+                    child: Row(
+                      children: [
+                        Icon(
+                          rows[i].icon,
+                          size: 22,
+                          color: _extrasIconColor(
+                            index: i,
+                            selected: selected,
+                            accentWhenUnselected: rows[i].accentWhenUnselected,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: AppText(
+                            text: rows[i].label,
+                            style: selected == i
+                                ? TextStyles.kSemiBoldPoppins(
+                                    fontSize: TextStyles.k14FontSize,
+                                    colors: kColorWhite,
+                                  )
+                                : (rows[i].accentWhenUnselected &&
+                                      selected != i)
+                                ? TextStyles.kSemiBoldPoppins(
+                                    fontSize: TextStyles.k14FontSize,
+                                    colors: kColorPrimary,
+                                  )
+                                : TextStyles.kRegularPoppins(
+                                    fontSize: TextStyles.k14FontSize,
+                                    colors: kColorText,
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    });
+  }
+
+  Color _extrasIconColor({
+    required int index,
+    required int selected,
+    required bool accentWhenUnselected,
+  }) {
+    if (selected == index) return kColorWhite;
+    if (accentWhenUnselected) return kColorPrimary;
+    return kColorText;
   }
 
   Widget _topBar(BuildContext context) {
@@ -137,6 +289,13 @@ class UserBasicProfileView extends GetView<UserBasicProfileController> {
             text: 'Basic profile',
             fontSize: TextStyles.k20FontSize,
             color: kColorWhite,
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 2),
+              child: _confirmProfileIconButton(context, forHeader: true),
+            ),
           ),
         ],
       ),
@@ -183,7 +342,10 @@ class UserBasicProfileView extends GetView<UserBasicProfileController> {
                       child: SizedBox(
                         width: 34,
                         height: 34,
-                        child: SvgPicture.asset(kIconEditBG, fit: BoxFit.contain),
+                        child: SvgPicture.asset(
+                          kIconEditBG,
+                          fit: BoxFit.contain,
+                        ),
                       ),
                     ),
                   ),

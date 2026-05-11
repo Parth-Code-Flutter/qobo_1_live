@@ -69,3 +69,5 @@ const String kIconVideoCamera = '$iconPath/video_camera_icon.svg';
 const String kIconEye = '$iconPath/eye_icon.svg';
 const String kIconUserPlus = '$iconPath/user_plus_icon.svg';
 const String kIconMuteMike = '$iconPath/mute_mike_icon.svg';
+const String kIconRight = '$iconPath/right_icon.svg';
+const String kIconRightClickGrey = '$iconPath/right_click_grey_icon.svg';

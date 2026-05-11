@@ -39,7 +39,53 @@ class UserBasicProfileController extends GetxController {
   final selectedProfileMedia = Rxn<File>();
   final isSubmitLoading = false.obs;
 
+  /// True when name, age, gender, or profile image differs from last baseline.
+  final isProfileDirty = false.obs;
+
+  /// Selected row in profile extras card (0–5). Default: Languages (Figma).
+  final selectedProfileExtraIndex = 1.obs;
+
   final ImagePicker _imagePicker = ImagePicker();
+
+  String _baselineName = '';
+  String _baselineAgeText = '';
+  String _baselineGender = '';
+  bool _baselineHadNewImage = false;
+
+  static const int _profileExtraRowCount = 6;
+
+  void selectProfileExtraRow(int index) {
+    if (index < 0 || index >= _profileExtraRowCount) return;
+    selectedProfileExtraIndex.value = index;
+  }
+
+  @override
+  void onInit() {
+    super.onInit();
+    userNameController.addListener(_refreshProfileDirty);
+    birthdateController.addListener(_refreshProfileDirty);
+    ever<String>(selectedGender, (_) => _refreshProfileDirty());
+    ever<File?>(selectedProfileMedia, (_) => _refreshProfileDirty());
+  }
+
+  /// Call after loading/saving so “dirty” compares to the latest server snapshot.
+  void captureFormBaseline() {
+    _baselineName = userNameController.text.trim();
+    _baselineAgeText = birthdateController.text.trim();
+    _baselineGender = selectedGender.value;
+    _baselineHadNewImage = selectedProfileMedia.value != null;
+    _refreshProfileDirty();
+  }
+
+  void _refreshProfileDirty() {
+    final hasNewImage = selectedProfileMedia.value != null;
+    final dirty =
+        userNameController.text.trim() != _baselineName ||
+        birthdateController.text.trim() != _baselineAgeText ||
+        selectedGender.value != _baselineGender ||
+        hasNewImage != _baselineHadNewImage;
+    isProfileDirty.value = dirty;
+  }
 
   @override
   void onReady() {
@@ -75,6 +121,7 @@ class UserBasicProfileController extends GetxController {
     if (root != null && root.isNotEmpty) {
       _populateFormFromProfile(coalesceStoredProfileMap(root));
     }
+    captureFormBaseline();
     update();
   }
 
@@ -297,6 +344,8 @@ class UserBasicProfileController extends GetxController {
       await Future<void>.delayed(const Duration(milliseconds: 300));
       if (!context.mounted) return;
       AppToast.showSuccess(context, 'Basic profile saved.');
+      selectedProfileMedia.value = null;
+      captureFormBaseline();
     } finally {
       isSubmitLoading.value = false;
     }
@@ -304,6 +353,8 @@ class UserBasicProfileController extends GetxController {
 
   @override
   void onClose() {
+    userNameController.removeListener(_refreshProfileDirty);
+    birthdateController.removeListener(_refreshProfileDirty);
     userNameController.dispose();
     birthdateController.dispose();
     super.onClose();

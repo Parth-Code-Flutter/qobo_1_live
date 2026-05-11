@@ -93,4 +93,12 @@ const kColorAudioAddTileBg = Color(0xFF2C2438);
 const kColorAudioOthersPillBg = Color(0xFF4A2D6B);
 const kColorAudioRoleText = Color(0xFFB8B8C8);
 
+/// Basic profile extras list card (Figma).
+const kColorProfileExtrasCardBg = Color(0xFFF5F5F7);
+const kColorProfileExtrasDivider = Color(0xFFE4E4EA);
+
+/// Basic profile confirm icon button (idle vs dirty / ready to save).
+const kColorProfileConfirmIconBgIdle = Color(0xFFF0F0F2);
+const kColorProfileConfirmIconBgDirty = Color(0xFFC8C8CD);
+
 
