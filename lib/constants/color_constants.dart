@@ -85,4 +85,12 @@ const kColorVideoTagBg = Color(0xFF2D1B45);
 const kColorVideoSecondaryText = Color(0xFFB0B0B0);
 const kColorVideoThumbActionPurple = Color(0xFF7A1E63);
 
+/// Discover → Audio Room participant grid (Figma).
+const kColorAudioSpeakingGreen = Color(0xFF4ADE80);
+const kColorAudioMicBadgeBg = Color(0xFF3D2458);
+const kColorAudioMicBadgeBorder = Color(0xFF1E0B2E);
+const kColorAudioAddTileBg = Color(0xFF2C2438);
+const kColorAudioOthersPillBg = Color(0xFF4A2D6B);
+const kColorAudioRoleText = Color(0xFFB8B8C8);
+
 
