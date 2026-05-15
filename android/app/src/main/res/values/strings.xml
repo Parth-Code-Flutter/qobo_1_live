@@ -1,15 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!--
-      Required for google_sign_in 7.x on Android (Credential Manager).
-
-      Use the OAuth 2.0 Client ID of type "Web application" from Google Cloud Console
-      (same API project as your Android OAuth client). Replace the placeholder below.
-
-      Alternative: omit this string resource and pass GOOGLE_SERVER_CLIENT_ID using the
-      Flutter dart-define flag (see lib/constants/google_sign_in_config.dart).
-    -->
-    <string name="default_web_client_id">YOUR_WEB_CLIENT_ID.apps.googleusercontent.com</string>
+    <!-- Web OAuth client (client_type 3) — must match GoogleSignInConfig.webServerClientId -->
+    <string name="default_web_client_id">152049582917-r07ktr1kgeq70ongu0gpatc4sj1gnd6d.apps.googleusercontent.com</string>
 
     <!--
       Meta Facebook Login: MUST be numeric App ID from developer.facebook.com (Settings, Basic).

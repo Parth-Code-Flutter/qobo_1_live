@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -257,6 +259,27 @@ class UserBasicProfileController extends GetxController {
     }
     captureFormBaseline();
     update();
+    debugPrintFullUserProfile('after fetchProfileAndPopulateForm');
+  }
+
+  /// Debug: full [UserSessionController.profileData] (API + cached). No-op in release.
+  void debugPrintFullUserProfile(String reason) {
+    if (!kDebugMode) return;
+    final session = _ensureSession();
+    final raw = session.profileData;
+    const tag = '[UserBasicProfile]';
+    debugPrint('$tag full user profile — $reason');
+    if (raw == null || raw.isEmpty) {
+      debugPrint('$tag profileData is null or empty');
+      return;
+    }
+    try {
+      debugPrint(const JsonEncoder.withIndent('  ').convert(raw));
+    } catch (e, st) {
+      debugPrint('$tag JSON encode failed: $e');
+      debugPrint('$tag raw toString: $raw');
+      debugPrint('$st');
+    }
   }
 
   /// Accepts legacy body `statusCode: 1` and standard `201`.

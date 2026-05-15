@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'dart:async';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/app/auth/auth_route_arguments.dart';
 import 'package:qobo_one_live/constants/local_storage_constants.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
@@ -30,7 +31,7 @@ class AuthVerifyAccountController extends GetxController {
   final otpError = RxnString();
   final otpControllers = List.generate(4, (_) => TextEditingController());
   final otpFocusNodes = List.generate(4, (_) => FocusNode());
-  bool isFromLoginWithOtp = false;
+  bool isComeFromForgotPassword = false;
 
   /// Phone or email string last used with `login-phone` (must match `verify-otp`).
   String _otpRecipient = '';
@@ -43,8 +44,10 @@ class AuthVerifyAccountController extends GetxController {
   void onInit() {
     super.onInit();
     final args = Get.arguments;
-    if (args is Map && args['isFromLoginWithOtp'] == true) {
-      isFromLoginWithOtp = true;
+    if (args is Map) {
+      if (args[AuthVerifyAccountArgs.isComeFromForgotPassword] == true) {
+        isComeFromForgotPassword = true;
+      }
     }
   }
 
@@ -146,6 +149,12 @@ class AuthVerifyAccountController extends GetxController {
       return;
     }
 
+    if (isComeFromForgotPassword) {
+      if (!_validateForgotPasswordContact(context)) return;
+      await _submitForgotPasswordSend(context);
+      return;
+    }
+
     if (!validateContactStep(context)) return;
 
     // Both channels valid: user must pick phone vs email before we hit the API.
@@ -197,6 +206,51 @@ class AuthVerifyAccountController extends GetxController {
       if (!context.mounted) return;
       await _submitLoginPhoneOtp(context, sendOtpToPhone: sendToPhone);
     });
+  }
+
+  /// Forgot-password flow: API only accepts a 10-digit local [phone] in the body.
+  bool _validateForgotPasswordContact(BuildContext context) {
+    final state = formKey.currentState;
+    if (state == null || !state.validate()) return false;
+    final p = phoneNumberController.text.trim();
+    if (!RegExp(r'^\d{10}$').hasMatch(p)) {
+      AppToast.showError(context, LocaleKeys.forgotPasswordPhoneRequired.tr);
+      return false;
+    }
+    return true;
+  }
+
+  Future<void> _submitForgotPasswordSend(BuildContext context) async {
+    final p = phoneNumberController.text.trim();
+
+    try {
+      setContinueLoading(true);
+      final res = await _authRepo.forgotPasswordSendOtp(
+        phone: p,
+        isShowLoader: false,
+      );
+      if (!context.mounted) return;
+
+      if (res == null) {
+        AppToast.showError(context, 'Request failed. Please try again.');
+        return;
+      }
+
+      if (res.isSuccess) {
+        _otpRecipient = p;
+        _otpSentToPhone = true;
+        AppToast.showSuccess(context, res.message);
+        showOtpView();
+      } else {
+        AppToast.showError(context, res.message);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        AppToast.showError(context, e.toString());
+      }
+    } finally {
+      setContinueLoading(false);
+    }
   }
 
   /// Sends OTP via `login-phone`. When [sendOtpToPhone] is null, phone is used if 10 digits exist, otherwise email.
@@ -255,6 +309,29 @@ class AuthVerifyAccountController extends GetxController {
 
     try {
       isResendLoading.value = true;
+
+      if (isComeFromForgotPassword) {
+        final res = await _authRepo.forgotPasswordSendOtp(
+          phone: _otpRecipient,
+          isShowLoader: false,
+        );
+        if (!context.mounted) return;
+
+        if (res == null) {
+          AppToast.showError(context, 'Request failed. Please try again.');
+          return;
+        }
+
+        if (res.isSuccess) {
+          _clearOtpFields();
+          _startOtpResendTimer();
+          AppToast.showSuccess(context, res.message);
+        } else {
+          AppToast.showError(context, res.message);
+        }
+        return;
+      }
+
       final res = await _authRepo.loginWithOtp(
         phone: _otpRecipient,
         countryCode: _otpSentToPhone ? selectedDialCode.value : '',
@@ -322,9 +399,10 @@ class AuthVerifyAccountController extends GetxController {
   Future<void> _submitVerifyOtp(BuildContext context) async {
     if (!validateOtp(context)) return;
 
+    final otpDigits = otpControllers.map((c) => c.text).join();
+
     try {
       setContinueLoading(true);
-      final otpDigits = otpControllers.map((c) => c.text).join();
       final res = await _authRepo.verifyOtp(
         phone: _otpRecipient,
         otp: otpDigits,
@@ -343,9 +421,27 @@ class AuthVerifyAccountController extends GetxController {
 
       if (res.statusCode == 1) {
         final data = res.data;
-        if (data != null) {
-          await _persistVerifiedSession(data);
+        if (data == null) {
+          AppToast.showError(context, message);
+          return;
         }
+
+        // Forgot password: same `verify-otp` as other flows; do not persist session.
+        // Pass [otpDigits] to the reset screen for `POST /api/auth/reset-password`.
+        if (isComeFromForgotPassword) {
+          if (!context.mounted) return;
+          AppToast.showSuccess(context, message);
+          Get.offNamed(
+            Routes.AUTH_NEW_PASSWORD,
+            arguments: <String, dynamic>{
+              AuthNewPasswordArgs.phone: _otpRecipient,
+              AuthNewPasswordArgs.otp: otpDigits,
+            },
+          );
+          return;
+        }
+
+        await _persistVerifiedSession(data);
         ErrorHandlerUtils.resetSessionState();
         if (!context.mounted) return;
 

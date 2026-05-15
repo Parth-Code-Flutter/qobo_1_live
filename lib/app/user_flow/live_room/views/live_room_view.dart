@@ -4,8 +4,10 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
+import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/safe_network_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -26,8 +28,7 @@ class LiveRoomView extends StatelessWidget {
         'location': 'Roha',
         'points': '2105',
         'favorite': false,
-        'image':
-            kImgTemp2,
+        'image': kImgTemp2,
       },
       {
         'nameAge': 'Mariana, 25',
@@ -35,8 +36,7 @@ class LiveRoomView extends StatelessWidget {
         'location': 'Roha',
         'points': '2105',
         'favorite': true,
-        'image':
-        kImgTemp3,
+        'image': kImgTemp3,
       },
       {
         'nameAge': 'Mariana, 25',
@@ -44,8 +44,7 @@ class LiveRoomView extends StatelessWidget {
         'location': 'Roha',
         'points': '2105',
         'favorite': false,
-        'image':
-        kImgTemp4,
+        'image': kImgTemp4,
       },
       {
         'nameAge': 'Mariana, 25',
@@ -53,8 +52,7 @@ class LiveRoomView extends StatelessWidget {
         'location': 'Roha',
         'points': '2105',
         'favorite': false,
-        'image':
-        kImgTemp5,
+        'image': kImgTemp5,
       },
     ];
     final categories = <String>[
@@ -69,7 +67,10 @@ class LiveRoomView extends StatelessWidget {
       builder: (_) {
         return Container(
           decoration: const BoxDecoration(
-            image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
+            image: DecorationImage(
+              image: AssetImage(kImgBG),
+              fit: BoxFit.cover,
+            ),
           ),
           child: SafeArea(
             child: Column(
@@ -93,12 +94,13 @@ class LiveRoomView extends StatelessWidget {
                     child: GridView.builder(
                       physics: const BouncingScrollPhysics(),
                       itemCount: rooms.length,
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 12,
-                        crossAxisSpacing: 12,
-                        childAspectRatio: 0.8,
-                      ),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 12,
+                            crossAxisSpacing: 12,
+                            childAspectRatio: 0.8,
+                          ),
                       itemBuilder: (context, index) {
                         final room = rooms[index];
                         return CommonLiveRoomWidget(
@@ -161,14 +163,11 @@ class LiveRoomView extends StatelessWidget {
                 border: Border.all(color: const Color(0xB3FFFFFF), width: 1),
               ),
               child: ClipOval(
-                child: avatarUrl == null
-                    ? _initialsAvatar(session.initials)
-                    : Image.network(
-                        avatarUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                            _initialsAvatar(session.initials),
-                      ),
+                child: SafeNetworkAvatar(
+                  url: avatarUrl,
+                  size: 40,
+                  fallback: _initialsAvatar(session.initials),
+                ),
               ),
             ),
             Spacing.h10,
@@ -189,21 +188,50 @@ class LiveRoomView extends StatelessWidget {
                 ],
               ),
             ),
-            Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                color: kColorWhite,
-                borderRadius: BorderRadius.circular(22),
-              ),
-              child: Center(
-                child: SvgPicture.asset(
-                  kIconSearch,
-                  width: 18,
-                  height: 18,
-                  colorFilter: const ColorFilter.mode(kColorPrimary, BlendMode.srcIn),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Material(
+                  color: kColorWhite,
+                  borderRadius: BorderRadius.circular(22),
+                  child: InkWell(
+                    onTap: () {},
+                    borderRadius: BorderRadius.circular(22),
+                    child: SizedBox(
+                      width: 30,
+                      height: 30,
+                      child: Center(
+                        child: SvgPicture.asset(
+                          kIconSearch,
+                          width: 18,
+                          height: 18,
+                          colorFilter: const ColorFilter.mode(
+                            kColorPrimary,
+                            BlendMode.srcIn,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+                Spacing.h8,
+
+                InkWell(
+                  onTap: () => Get.toNamed(Routes.LEADER_BOARD),
+                  borderRadius: BorderRadius.circular(22),
+                  child: SizedBox(
+                    width: 30,
+                    height: 30,
+                    child: Center(
+                      child: SvgPicture.asset(
+                        kIconLeaderboard,
+                        // width: 18,
+                        // height: 18,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         );
@@ -241,10 +269,13 @@ class LiveRoomView extends StatelessWidget {
             child: Row(
               children: List.generate(categories.length, (index) {
                 return Padding(
-                  padding: EdgeInsets.only(right: index == categories.length - 1 ? 0 : 10),
+                  padding: EdgeInsets.only(
+                    right: index == categories.length - 1 ? 0 : 10,
+                  ),
                   child: _categoryChip(
                     label: categories[index],
-                    isSelected: liveRoomController.selectedCategoryIndex == index,
+                    isSelected:
+                        liveRoomController.selectedCategoryIndex == index,
                     onTap: () {
                       // Keep this UI-only for now; filtering behavior can be added later.
                       liveRoomController.onCategorySelected(index);

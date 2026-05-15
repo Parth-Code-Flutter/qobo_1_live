@@ -2,7 +2,10 @@ import 'dart:io';
 
 import 'package:qobo_one_live/repo/auth/models/request/social_login_request_model.dart';
 import 'package:qobo_one_live/app/auth/verifyAccount/models/request/login_with_otp_request_model.dart';
+import 'package:qobo_one_live/app/auth/verifyAccount/models/response/forgot_password_send_result.dart';
 import 'package:qobo_one_live/app/auth/verifyAccount/models/response/login_with_otp_response_model.dart';
+import 'package:qobo_one_live/app/auth/new_password/models/request/reset_password_request_model.dart';
+import 'package:qobo_one_live/app/auth/new_password/models/response/reset_password_response_model.dart';
 import 'package:qobo_one_live/app/auth/verifyAccount/models/request/verify_otp_request_model.dart';
 import 'package:qobo_one_live/app/auth/verifyAccount/models/response/verify_otp_response_model.dart';
 import 'package:qobo_one_live/app/user_flow/update_profile/models/request/update_profile_request_model.dart';
@@ -96,6 +99,56 @@ class AuthRepo {
     if (jsonMap == null) return null;
 
     return LoginWithOtpResponseModel.fromJson(jsonMap);
+  }
+
+  /// Calls `POST /api/auth/forgot-password` to send a reset OTP to [phone]
+  /// (10-digit local number in the JSON body, as required by the backend).
+  ///
+  /// Success follows [ForgotPasswordSendResult.fromResponse] (HTTP 2xx and
+  /// optional JSON `statusCode` 1 / 200 / 201).
+  Future<ForgotPasswordSendResult?> forgotPasswordSendOtp({
+    required String phone,
+    bool isShowLoader = false,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: AuthEndpoints.forgotPassword,
+      requestModel: <String, dynamic>{'phone': phone},
+      isShowLoader: isShowLoader,
+      isLoginCall: true,
+    );
+
+    return ForgotPasswordSendResult.fromResponse(response);
+  }
+
+  /// Calls `POST /api/auth/reset-password` after forgot-password OTP.
+  ///
+  /// Body: `{ "phone", "otp", "password" }` — [phone] is the 10-digit local number.
+  /// Returns parsed JSON (`statusCode`, `message`), or `null` if the request failed.
+  Future<ResetPasswordResponseModel?> resetPassword({
+    required String phone,
+    required String otp,
+    required String password,
+    bool isShowLoader = false,
+  }) async {
+    final request = ResetPasswordRequestModel(
+      phone: phone,
+      otp: otp,
+      password: password,
+    );
+
+    final response = await _apiService.postRequest(
+      endPoint: AuthEndpoints.resetPassword,
+      requestModel: request.toJson(),
+      isShowLoader: isShowLoader,
+      isLoginCall: true,
+    );
+
+    if (response == null) return null;
+
+    final jsonMap = ApiResponseUtils.tryDecodeMap(response.body);
+    if (jsonMap == null) return null;
+
+    return ResetPasswordResponseModel.fromJson(jsonMap);
   }
 
   /// Calls `POST /api/auth/verify-otp` to validate OTP and obtain session token.

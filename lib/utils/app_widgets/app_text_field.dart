@@ -208,9 +208,21 @@ class AppTextField extends StatelessWidget {
               errorBorder: _enabledErrorBorder(context),
               focusedErrorBorder: _focusedErrorBorder(context),
               prefixIcon: prefix,
-              prefixIconConstraints: const BoxConstraints(),
+              // Must bound height/width: `BoxConstraints()` is unbounded and lets
+              // SVG prefix icons expand to fill the viewport (e.g. lock icon).
+              prefixIconConstraints: const BoxConstraints(
+                minWidth: 0,
+                maxWidth: 120,
+                minHeight: 48,
+                maxHeight: 48,
+              ),
               suffixIcon: suffix,
-              suffixIconConstraints: const BoxConstraints(),
+              suffixIconConstraints: const BoxConstraints(
+                minWidth: 0,
+                maxWidth: 120,
+                minHeight: 48,
+                maxHeight: 48,
+              ),
             ),
           ),
         if (exText != null) ...[

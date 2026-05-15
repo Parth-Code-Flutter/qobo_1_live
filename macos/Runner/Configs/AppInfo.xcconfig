@@ -8,7 +8,7 @@
 PRODUCT_NAME = qobo_one_live
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.qobo.qobo1live.qoboOneLive
+PRODUCT_BUNDLE_IDENTIFIER = com.qobo1live.live
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 com.qobo.qobo1live. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 com.qobo1live. All rights reserved.

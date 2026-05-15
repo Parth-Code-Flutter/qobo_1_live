@@ -1,12 +1,13 @@
 plugins {
     id("com.android.application")
     id("kotlin-android")
+    id("com.google.gms.google-services")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
 android {
-    namespace = "com.qobo.qobo1live.qobo_one_live"
+    namespace = "com.qobo1live.live"
     // flutter_facebook_auth (and several plugins) require compileSdk 36+ / NDK 27 for correct native linkage.
     compileSdk = maxOf(flutter.compileSdkVersion, 36)
     ndkVersion = "27.0.12077973"
@@ -22,7 +23,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.qobo.qobo1live.qobo_one_live"
+        applicationId = "com.qobo1live.live"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 24

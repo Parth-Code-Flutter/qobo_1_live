@@ -71,3 +71,5 @@ const String kIconUserPlus = '$iconPath/user_plus_icon.svg';
 const String kIconMuteMike = '$iconPath/mute_mike_icon.svg';
 const String kIconRight = '$iconPath/right_icon.svg';
 const String kIconRightClickGrey = '$iconPath/right_click_grey_icon.svg';
+const String kIconLeaderboard = '$iconPath/leader_board_icon.svg';
+const String kIconGroupOfStars = '$iconPath/group_of_stars.svg';

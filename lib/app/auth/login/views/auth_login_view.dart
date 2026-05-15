@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:qobo_one_live/app/auth/auth_route_arguments.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
@@ -180,10 +181,18 @@ class AuthLoginView extends GetView<AuthLoginController> {
         Spacing.v8,
         Align(
           alignment: Alignment.centerRight,
-          child: SemiBoldText(
-            text: LocaleKeys.forgotPassword.tr,
-            fontSize: TextStyles.k12FontSize,
-            color: kColorPrimary,
+          child: GestureDetector(
+            onTap: () => Get.toNamed(
+              Routes.AUTH_VERIFY_ACCOUNT,
+              arguments: <String, dynamic>{
+                AuthVerifyAccountArgs.isComeFromForgotPassword: true,
+              },
+            ),
+            child: SemiBoldText(
+              text: LocaleKeys.forgotPassword.tr,
+              fontSize: TextStyles.k12FontSize,
+              color: kColorPrimary,
+            ),
           ),
         ),
       ],
@@ -240,7 +249,9 @@ class AuthLoginView extends GetView<AuthLoginController> {
           iconPath: kIconLock,
           onTap: () => Get.toNamed(
             Routes.AUTH_VERIFY_ACCOUNT,
-            arguments: {'isFromLoginWithOtp': true},
+            arguments: <String, dynamic>{
+              AuthVerifyAccountArgs.isFromLoginWithOtp: true,
+            },
           ),
           iconHeight: 22,
           iconWidth: 22,

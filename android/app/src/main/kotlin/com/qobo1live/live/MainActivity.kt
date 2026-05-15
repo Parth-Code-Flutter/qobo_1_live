@@ -1,4 +1,4 @@
-package com.qobo.qobo1live.qobo_one_live
+package com.qobo1live.live
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

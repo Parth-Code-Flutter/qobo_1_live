@@ -1,31 +1,34 @@
-/// Configuration for [GoogleSignIn.instance.initialize].
+/// Google Sign-In OAuth IDs (Google Cloud / Firebase project **qobo1live-914ac**).
 ///
-/// **Android (`google_sign_in` 7.x)** uses the Credential Manager API and requires a
-/// **Web application** OAuth 2.0 client ID (not the Android client ID). Create it in
-/// [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials.
+/// **Android** (`google_sign_in` 7.x): [webServerClientId] must be the **Web application**
+/// OAuth client (client_type 3), never the Android client ID.
 ///
-/// Provide the ID in either of these ways (you only need one):
-/// 1. **Build-time (recommended for CI / no secrets in repo)**
-///    `flutter run --dart-define=GOOGLE_SERVER_CLIENT_ID=xxxx.apps.googleusercontent.com`
-/// 2. **Android resources**
-///    Set `default_web_client_id` in `android/app/src/main/res/values/strings.xml`
+/// Register `com.qobo1live.live` + your debug SHA-1 in Firebase Console → Project settings
+/// → Your apps → Android, or in GCP Credentials for the same project as [webServerClientId].
 abstract final class GoogleSignInConfig {
   GoogleSignInConfig._();
 
-  /// Web OAuth client ID; empty means “let Android read `default_web_client_id` from resources”.
-  static const String serverClientId = String.fromEnvironment(
-    'GOOGLE_SERVER_CLIENT_ID',
-    defaultValue: '',
+  /// Web application OAuth client (client_type 3) — used as Android `serverClientId`.
+  static const String webServerClientId = String.fromEnvironment(
+    'GOOGLE_WEB_CLIENT_ID',
+    defaultValue:
+        '152049582917-r07ktr1kgeq70ongu0gpatc4sj1gnd6d.apps.googleusercontent.com',
   );
 
-  /// When `false` (default), tapping “Login with Google” only opens the **Google account picker**
-  /// and shows a confirmation — **no** `/api/auth/social` call (for client demos / APK handoff).
-  ///
-  /// Enable server login later with:
-  /// `flutter run --dart-define=GOOGLE_SUBMIT_TO_BACKEND=true`
-  /// (and keep [serverClientId] / `strings.xml` configured).
+  /// Legacy alias.
+  static const String serverClientId = webServerClientId;
+
+  /// iOS client ID (create an iOS OAuth client in the same GCP project if needed).
+  static const String iosClientId = String.fromEnvironment(
+    'GOOGLE_IOS_CLIENT_ID',
+    defaultValue: webServerClientId,
+  );
+
+  static const String iosUrlScheme =
+      'com.googleusercontent.apps.152049582917-r07ktr1kgeq70ongu0gpatc4sj1gnd6d';
+
   static const bool submitGoogleLoginToBackend = bool.fromEnvironment(
     'GOOGLE_SUBMIT_TO_BACKEND',
-    defaultValue: false,
+    defaultValue: true,
   );
 }

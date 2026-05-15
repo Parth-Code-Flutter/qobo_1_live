@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/local_storage_constants.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
+import 'package:qobo_one_live/utils/profile/stored_profile_map.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 
 /// Persists token/user after `/api/auth/login` or `/api/auth/social` and navigates home.
@@ -45,11 +46,13 @@ abstract final class AuthSessionHelper {
           : Get.put(LocalStorage(), permanent: true);
 
       if (data is Map<String, dynamic>) {
-        final token = extractToken(data);
+        // Flatten `{ "user": {...}, "token": "..." }` so [UserSessionController] reads top-level keys.
+        final merged = coalesceStoredProfileMap(data);
+        final token = extractToken(merged);
         if (token.isNotEmpty) {
           await storage.writeStringStorage(kStorageToken, token);
         }
-        await storage.writeJsonStorage(kStorageUserData, data);
+        await storage.writeJsonStorage(kStorageUserData, merged);
       }
       await storage.writeBoolStorage(kStorageIsLoggedIn, true);
 

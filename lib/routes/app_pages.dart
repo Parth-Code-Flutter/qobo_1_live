@@ -6,11 +6,15 @@ import '../app/auth/signUp/bindings/auth_sign_up_binding.dart';
 import '../app/auth/signUp/views/auth_sign_up_view.dart';
 import '../app/auth/verifyAccount/bindings/auth_verify_account_binding.dart';
 import '../app/auth/verifyAccount/views/auth_verify_account_view.dart';
+import '../app/auth/new_password/bindings/new_password_binding.dart';
+import '../app/auth/new_password/views/new_password_view.dart';
 import '../app/bottom_nav/bindings/bottom_nav_binding.dart';
 import '../app/bottom_nav/views/bottom_nav_view.dart';
 import '../app/splash/splash/bindings/splash_binding.dart';
 import '../app/user_flow/update_profile/bindings/update_profile_binding.dart';
 import '../app/user_flow/update_profile/views/update_profile_view.dart';
+import '../app/user_flow/leader_board/bindings/leader_board_binding.dart';
+import '../app/user_flow/leader_board/views/leader_board_view.dart';
 import '../app/user_flow/user_basic_profile/bindings/user_basic_profile_binding.dart';
 import '../app/user_flow/user_basic_profile/views/user_basic_profile_view.dart';
 import '../app/splash/splash/views/splash_view.dart';
@@ -44,6 +48,11 @@ class AppPages {
       binding: AuthVerifyAccountBinding(),
     ),
     GetPage(
+      name: _Paths.AUTH_NEW_PASSWORD,
+      page: () => const NewPasswordView(),
+      binding: NewPasswordBinding(),
+    ),
+    GetPage(
       name: _Paths.BOTTOM_NAV,
       page: () => const BottomNavView(),
       binding: BottomNavBinding(),
@@ -57,6 +66,11 @@ class AppPages {
       name: _Paths.USER_BASIC_PROFILE,
       page: () => const UserBasicProfileView(),
       binding: UserBasicProfileBinding(),
+    ),
+    GetPage(
+      name: _Paths.LEADER_BOARD,
+      page: () => const LeaderBoardView(),
+      binding: LeaderBoardBinding(),
     ),
   ];
 }

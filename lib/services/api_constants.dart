@@ -17,6 +17,12 @@ class AuthEndpoints {
   /// POST /api/auth/login-phone
   static const String loginPhone = '/api/auth/login-phone';
 
+  /// POST /api/auth/forgot-password
+  static const String forgotPassword = '/api/auth/forgot-password';
+
+  /// POST /api/auth/reset-password
+  static const String resetPassword = '/api/auth/reset-password';
+
   /// POST /api/auth/verify-otp
   static const String verifyOtp = '/api/auth/verify-otp';
 

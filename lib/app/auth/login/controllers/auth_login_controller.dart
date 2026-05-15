@@ -32,6 +32,24 @@ class AuthLoginController extends GetxController {
   final isFacebookLoginLoading = false.obs;
   final isPhoneInput = false.obs;
 
+  String _friendlyGoogleError(Object error) {
+    final text = error.toString();
+    if (text.contains('clientConfigurationError') ||
+        text.contains('default_web_client_id') ||
+        text.contains('GOOGLE_WEB_CLIENT_ID') ||
+        text.contains('GOOGLE_SERVER_CLIENT_ID') ||
+        text.contains('Web application')) {
+      return 'Google Sign-In is not configured for Android. '
+          'In Google Cloud (qobo1live-496317): verify SHA-1 for package '
+          'com.qobo1live.live, create a **Web application** OAuth client, '
+          'update google-services.json, then run flutter clean && reinstall.';
+    }
+    if (text.startsWith('StateError: ')) {
+      return text.replaceFirst('StateError: ', '');
+    }
+    return text;
+  }
+
   @override
   void onClose() {
     emailController.dispose();
@@ -104,8 +122,8 @@ class AuthLoginController extends GetxController {
     }
   }
 
-  /// Opens the **Google account picker** ([GoogleSocialAuthProvider]); optionally calls
-  /// `/api/auth/social` when [GoogleSignInConfig.submitGoogleLoginToBackend] is enabled.
+  /// Google account picker → **`POST /api/auth/social`** when
+  /// [GoogleSignInConfig.submitGoogleLoginToBackend] is enabled (default: on).
   Future<void> onGoogleLoginPressed(BuildContext context) async {
     if (isLoginLoading.value ||
         isGoogleLoginLoading.value ||
@@ -117,10 +135,18 @@ class AuthLoginController extends GetxController {
       isGoogleLoginLoading.value = true;
       final socialUser = await _googleSocialAuth.signIn();
       if (!context.mounted) return;
-      if (socialUser == null) return;
+      if (socialUser == null) {
+        AppToast.showError(
+          context,
+          'Google sign-in was cancelled or failed before account details were returned.',
+        );
+        return;
+      }
 
-      // Demo / pre-release: only native Google UI — flip flag when backend is ready.
       if (!GoogleSignInConfig.submitGoogleLoginToBackend) {
+        debugPrint(
+          '[AuthLogin] GOOGLE_SUBMIT_TO_BACKEND=false; skipping /api/auth/social',
+        );
         AppToast.showSuccess(
           context,
           'Google account selected: ${socialUser.email}',
@@ -128,6 +154,7 @@ class AuthLoginController extends GetxController {
         return;
       }
 
+      debugPrint('[AuthLogin] Calling POST /api/auth/social for Google login');
       final response = await _authRepo.socialLogin(
         request: SocialLoginRequestModel.fromSocialUser(socialUser),
         isShowLoader: false,
@@ -136,7 +163,7 @@ class AuthLoginController extends GetxController {
       await AuthSessionHelper.handleAuthApiResponse(context, response);
     } catch (e) {
       if (context.mounted) {
-        AppToast.showError(context, e.toString());
+        AppToast.showError(context, _friendlyGoogleError(e));
       }
     } finally {
       isGoogleLoginLoading.value = false;

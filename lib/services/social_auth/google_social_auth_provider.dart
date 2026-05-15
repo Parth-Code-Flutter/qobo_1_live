@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'package:qobo_one_live/constants/google_sign_in_config.dart';
@@ -5,23 +6,10 @@ import 'package:qobo_one_live/constants/google_sign_in_config.dart';
 import 'social_auth_provider.dart';
 import 'social_auth_user.dart';
 
-/// Google Sign-In backed implementation of [SocialAuthProvider].
-///
-/// Platform setup (do once per platform):
-/// - **Android**: Add OAuth client in Google Cloud Console with your app’s SHA-1,
-///   download/use configuration as described in `google_sign_in` README.
-/// - **iOS**: Add URL scheme / client ID per `google_sign_in` iOS setup.
-///
-/// This class uses `google_sign_in` v7+: [GoogleSignIn.instance.initialize] must
-/// complete before [authenticate].
-///
-/// On Android, initialization **must** resolve a non-empty Web client ID (`serverClientId`).
-/// Pass [GoogleSignInConfig.serverClientId] via `--dart-define` or define
-/// `default_web_client_id` in Android `strings.xml` — see [GoogleSignInConfig].
+/// Google Sign-In via `google_sign_in` v7 (Credential Manager on Android).
 class GoogleSocialAuthProvider implements SocialAuthProvider {
   GoogleSocialAuthProvider();
 
-  /// Shared init future so multiple calls await the same initialization.
   static Future<void>? _initFuture;
 
   Future<void> _ensureInitialized() {
@@ -29,11 +17,19 @@ class GoogleSocialAuthProvider implements SocialAuthProvider {
     return _initFuture!;
   }
 
-  /// Ensures Credential Manager has a `serverClientId` (avoids broken native fallback).
   Future<void> _initializeOnce() async {
-    final fromDefine = GoogleSignInConfig.serverClientId.trim();
+    final webId = GoogleSignInConfig.webServerClientId.trim();
+    if (webId.isEmpty) {
+      throw StateError(
+        'Google Sign-In: missing Web OAuth client ID (GOOGLE_WEB_CLIENT_ID).',
+      );
+    }
+
+    final isIos = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
     await GoogleSignIn.instance.initialize(
-      serverClientId: fromDefine.isEmpty ? null : fromDefine,
+      clientId: isIos ? GoogleSignInConfig.iosClientId.trim() : null,
+      serverClientId: webId,
     );
   }
 
@@ -60,12 +56,36 @@ class GoogleSocialAuthProvider implements SocialAuthProvider {
         photoUrl: account.photoUrl,
       );
     } on GoogleSignInException catch (e) {
-      // User dismissed picker / flow cancelled — not an error for UX.
       if (e.code == GoogleSignInExceptionCode.canceled ||
           e.code == GoogleSignInExceptionCode.interrupted) {
         return null;
       }
-      rethrow;
+      throw StateError(_messageForGoogleException(e));
+    } catch (e) {
+      throw StateError('Google sign-in failed: $e');
     }
+  }
+
+  String _messageForGoogleException(GoogleSignInException e) {
+    final detail = (e.description ?? e.toString()).trim();
+    final lower = detail.toLowerCase();
+
+    if (e.code == GoogleSignInExceptionCode.unknownError &&
+        (detail.contains('28444') ||
+            lower.contains('developer console') ||
+            lower.contains('not set up correctly'))) {
+      return 'Google Sign-In setup error (28444). In Firebase project qobo1live-914ac '
+          '(or the same GCP project as your Web client): register Android app '
+          'package com.qobo1live.live with SHA-1 '
+          '01:EC:6E:88:2F:E0:EC:3A:22:08:2B:8A:D0:22:97:C8:0E:EA:B0:C6, '
+          'then flutter clean, uninstall the app, and reinstall.';
+    }
+
+    if (e.code == GoogleSignInExceptionCode.clientConfigurationError) {
+      return 'Google Sign-In is misconfigured. Use a Web application OAuth client ID '
+          'for serverClientId (not the Android client ID). $detail';
+    }
+
+    return 'Google sign-in failed (${e.code}). $detail';
   }
 }

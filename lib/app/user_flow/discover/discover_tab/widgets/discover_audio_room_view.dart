@@ -8,6 +8,27 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 const double _kAudioAvatarSize = 82;
 const double _kAudioMicBadgeSize = 30;
+const int _kAudioGridCrossCount = 3;
+const double _kAudioGridHPadding = 18;
+const double _kAudioGridCrossSpacing = 12;
+
+/// Minimum logical height for avatar + labels so [SliverGrid] never clips.
+double _audioParticipantMinTileHeight(BuildContext context) {
+  final scale = MediaQuery.textScalerOf(context).scale(1.0).clamp(0.85, 1.4);
+  const avatarBlock = _kAudioAvatarSize + 8;
+  const nameLine = TextStyles.k14FontSize * 1.35;
+  const roleLine = TextStyles.k12FontSize * 1.35;
+  return avatarBlock + 8 * scale + nameLine * scale + 2 * scale + roleLine * scale + 8;
+}
+
+double _audioGridChildAspectRatio(double viewportWidth, BuildContext context) {
+  final pad = _kAudioGridHPadding * 2;
+  final gaps = _kAudioGridCrossSpacing * (_kAudioGridCrossCount - 1);
+  final cellW = (viewportWidth - pad - gaps) / _kAudioGridCrossCount;
+  final minH = _audioParticipantMinTileHeight(context);
+  if (cellW <= 0 || minH <= 0) return 0.62;
+  return (cellW / minH).clamp(0.48, 0.82);
+}
 
 /// Mic overlay on participant avatar (Figma).
 enum _AudioMicVisual {
@@ -126,36 +147,49 @@ class DiscoverAudioRoomView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Transparent: uses parent Discover tab scaffold background (kImgBG).
-    return CustomScrollView(
-      physics: const BouncingScrollPhysics(),
-      slivers: [
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(18, 4, 18, 8),
-          sliver: SliverGrid(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              mainAxisSpacing: 18,
-              crossAxisSpacing: 12,
-              childAspectRatio: 0.74,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final aspect = _audioGridChildAspectRatio(
+          constraints.maxWidth,
+          context,
+        );
+        return CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(
+                _kAudioGridHPadding,
+                4,
+                _kAudioGridHPadding,
+                8,
+              ),
+              sliver: SliverGrid(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: _kAudioGridCrossCount,
+                  mainAxisSpacing: 18,
+                  crossAxisSpacing: _kAudioGridCrossSpacing,
+                  childAspectRatio: aspect,
+                ),
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  if (index < _participants.length) {
+                    return _ParticipantTile(participant: _participants[index]);
+                  }
+                  return const _AddParticipantTile();
+                }, childCount: _participants.length + 1),
+              ),
             ),
-            delegate: SliverChildBuilderDelegate((context, index) {
-              if (index < _participants.length) {
-                return _ParticipantTile(participant: _participants[index]);
-              }
-              return const _AddParticipantTile();
-            }, childCount: _participants.length + 1),
-          ),
-        ),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(18, 8, 18, 28),
-            child: _OthersInRoomSection(
-              avatarAssets: _othersAvatarAssets,
-              overflowCount: 52,
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(18, 8, 18, 28),
+                child: _OthersInRoomSection(
+                  avatarAssets: _othersAvatarAssets,
+                  overflowCount: 52,
+                ),
+              ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 }
@@ -174,51 +208,62 @@ class _ParticipantTile extends StatelessWidget {
         ? kColorAudioSpeakingGreen
         : kColorAudioRoleText;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          width: _kAudioAvatarSize + 4,
-          height: _kAudioAvatarSize + 8,
-          child: Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.topCenter,
-            children: [
-              Positioned(
-                top: 0,
-                child: _AvatarRing(
-                  speaking: _isSpeaking,
-                  imageAsset: participant.imageAsset,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: constraints.maxWidth),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: _kAudioAvatarSize + 4,
+                  height: _kAudioAvatarSize + 8,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    alignment: Alignment.topCenter,
+                    children: [
+                      Positioned(
+                        top: 0,
+                        child: _AvatarRing(
+                          speaking: _isSpeaking,
+                          imageAsset: participant.imageAsset,
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        child: Center(child: _MicBadge(visual: participant.mic)),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: Center(child: _MicBadge(visual: participant.mic)),
-              ),
-            ],
+                Spacing.v8,
+                SemiBoldText(
+                  text: participant.name,
+                  fontSize: TextStyles.k14FontSize,
+                  color: nameColor,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  align: TextAlign.center,
+                ),
+                Spacing.v2,
+                AppText(
+                  text: participant.role,
+                  fontSize: TextStyles.k12FontSize,
+                  color: roleColor,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  align: TextAlign.center,
+                ),
+              ],
+            ),
           ),
-        ),
-        Spacing.v8,
-        SemiBoldText(
-          text: participant.name,
-          fontSize: TextStyles.k14FontSize,
-          color: nameColor,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          align: TextAlign.center,
-        ),
-        Spacing.v2,
-        AppText(
-          text: participant.role,
-          fontSize: TextStyles.k12FontSize,
-          color: roleColor,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          align: TextAlign.center,
-        ),
-      ],
+        );
+      },
     );
   }
 }
@@ -301,31 +346,47 @@ class _AddParticipantTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          height: _kAudioAvatarSize + 8,
-          child: Center(
-            child: Material(
-              color: kColorAudioAddTileBg,
-              shape: const CircleBorder(),
-              child: InkWell(
-                customBorder: const CircleBorder(),
-                onTap: () {},
-                child: const SizedBox(
-                  width: _kAudioAvatarSize,
-                  height: _kAudioAvatarSize,
-                  child: Icon(Icons.add_rounded, color: kColorWhite, size: 36),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: constraints.maxWidth),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  height: _kAudioAvatarSize + 8,
+                  child: Center(
+                    child: Material(
+                      color: kColorAudioAddTileBg,
+                      shape: const CircleBorder(),
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: () {},
+                        child: const SizedBox(
+                          width: _kAudioAvatarSize,
+                          height: _kAudioAvatarSize,
+                          child: Icon(
+                            Icons.add_rounded,
+                            color: kColorWhite,
+                            size: 36,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+                Spacing.v8,
+                SizedBox(height: TextStyles.k14FontSize * 1.35),
+                const SizedBox(height: 2),
+                SizedBox(height: TextStyles.k12FontSize * 1.35),
+              ],
             ),
           ),
-        ),
-        Spacing.v8,
-        const SizedBox(height: 18),
-        const SizedBox(height: 14),
-      ],
+        );
+      },
     );
   }
 }

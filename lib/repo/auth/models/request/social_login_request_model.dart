@@ -34,13 +34,18 @@ class SocialLoginRequestModel {
   final String? phone;
   final String? displayPicture;
 
-  Map<String, dynamic> toJson() => <String, dynamic>{
-    'name': name,
-    'email': email,
-    'phone': phone ?? '',
-    'socialId': socialId,
-    'authType': authType,
-    if (displayPicture != null && displayPicture!.isNotEmpty)
-      'displayPicture': displayPicture,
-  };
+  /// `POST /api/auth/social` — optional keys omitted when empty.
+  Map<String, dynamic> toJson() {
+    final map = <String, dynamic>{
+      'name': name,
+      'authType': authType,
+      'socialId': socialId.trim(),
+    };
+    if (email.trim().isNotEmpty) map['email'] = email.trim();
+    final p = phone?.trim();
+    if (p != null && p.isNotEmpty) map['phone'] = p;
+    final pic = displayPicture?.trim();
+    if (pic != null && pic.isNotEmpty) map['displayPicture'] = pic;
+    return map;
+  }
 }

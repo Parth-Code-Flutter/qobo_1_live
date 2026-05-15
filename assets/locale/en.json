@@ -22,6 +22,7 @@
   "termsRequiredError": "Please accept Terms & Conditions and Privacy Policy",
   "loginPasswordHint": "Password",
   "forgotPassword": "Forgot Password?",
+  "forgotPasswordPhoneRequired": "Please enter your 10-digit phone number to reset your password.",
   "loginButtonText": "Log in",
   "orLoginWith": "Or login with",
   "loginWithOtp": "Login with OTP",
@@ -62,5 +63,13 @@
   "liveRoomTabNaya": "Naya",
   "liveRoomTabBangladesh": "Bangladesh",
   "liveRoomWelcome": "Welcome",
-  "liveRoomHostName": "Markeo Lieno"
+  "liveRoomHostName": "Markeo Lieno",
+  "newPasswordTitle": "New Password",
+  "newPasswordSubtitle": "Set New password",
+  "newPasswordFieldHint": "New Password",
+  "retypePasswordHint": "Retype Password",
+  "newPasswordConfirmCta": "Confirm",
+  "newPasswordMinLengthError": "Password must be at least 6 characters",
+  "newPasswordSuccessPlaceholder": "Password updated (connect API next)",
+  "resetPasswordMissingContext": "Something went wrong. Please request a new code and try again."
 }

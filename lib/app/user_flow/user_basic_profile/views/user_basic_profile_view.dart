@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
@@ -16,8 +17,26 @@ import '../controllers/user_basic_profile_controller.dart';
 
 /// Basic profile on the same full-screen background as Live Room, with
 /// Update Profile–style photo picker, nickname, age wheel, and gender chips.
-class UserBasicProfileView extends GetView<UserBasicProfileController> {
+class UserBasicProfileView extends StatefulWidget {
   const UserBasicProfileView({super.key});
+
+  @override
+  State<UserBasicProfileView> createState() => _UserBasicProfileViewState();
+}
+
+class _UserBasicProfileViewState extends State<UserBasicProfileView> {
+  UserBasicProfileController get controller =>
+      Get.find<UserBasicProfileController>();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (kDebugMode) {
+        controller.debugPrintFullUserProfile('UserBasicProfileView entered');
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -31,6 +31,24 @@ class AuthSignUpController extends GetxController {
   final isGoogleLoginLoading = false.obs;
   final isFacebookLoginLoading = false.obs;
 
+  String _friendlyGoogleError(Object error) {
+    final text = error.toString();
+    if (text.contains('clientConfigurationError') ||
+        text.contains('default_web_client_id') ||
+        text.contains('GOOGLE_WEB_CLIENT_ID') ||
+        text.contains('GOOGLE_SERVER_CLIENT_ID') ||
+        text.contains('Web application')) {
+      return 'Google Sign-In is not configured for Android. '
+          'In Google Cloud (qobo1live-496317): verify SHA-1 for package '
+          'com.qobo1live.live, create a **Web application** OAuth client, '
+          'update google-services.json, then run flutter clean && reinstall.';
+    }
+    if (text.startsWith('StateError: ')) {
+      return text.replaceFirst('StateError: ', '');
+    }
+    return text;
+  }
+
   @override
   void onClose() {
     emailController.dispose();
@@ -47,7 +65,7 @@ class AuthSignUpController extends GetxController {
     return formKey.currentState?.validate() ?? false;
   }
 
-  /// Same behavior as login: native picker, optional `/api/auth/social` via flags.
+  /// Same as login: Google picker → **`POST /api/auth/social`** when enabled (default on).
   Future<void> onGoogleSignUpPressed(BuildContext context) async {
     if (isGoogleLoginLoading.value || isFacebookLoginLoading.value) return;
 
@@ -73,14 +91,14 @@ class AuthSignUpController extends GetxController {
       await AuthSessionHelper.handleAuthApiResponse(context, response);
     } catch (e) {
       if (context.mounted) {
-        AppToast.showError(context, e.toString());
+        AppToast.showError(context, _friendlyGoogleError(e));
       }
     } finally {
       isGoogleLoginLoading.value = false;
     }
   }
 
-  /// Same behavior as login: native picker, optional `/api/auth/social` via flags.
+  /// Facebook picker → **`POST /api/auth/social`** when [FacebookLoginConfig] enables it.
   Future<void> onFacebookSignUpPressed(BuildContext context) async {
     if (isGoogleLoginLoading.value || isFacebookLoginLoading.value) return;
 

@@ -89,11 +89,11 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.qobo.qobo1live" "\0"
+            VALUE "CompanyName", "com.qobo1live" "\0"
             VALUE "FileDescription", "qobo_one_live" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "qobo_one_live" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.qobo.qobo1live. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 com.qobo1live. All rights reserved." "\0"
             VALUE "OriginalFilename", "qobo_one_live.exe" "\0"
             VALUE "ProductName", "qobo_one_live" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"

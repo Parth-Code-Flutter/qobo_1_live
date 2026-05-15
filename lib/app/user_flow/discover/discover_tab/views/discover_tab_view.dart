@@ -53,7 +53,7 @@ class DiscoverTabView extends StatelessWidget {
             children: [
               _topHeader(userSession),
               Spacing.v16,
-              _searchBar(),
+              _searchBar(discoverController),
               Spacing.v12,
               _roomModeRow(discoverController),
               Spacing.v16,
@@ -150,10 +150,10 @@ class DiscoverTabView extends StatelessWidget {
     );
   }
 
-  Widget _searchBar() {
+  Widget _searchBar(DiscoverTabController discoverController) {
     return Container(
       height: 38,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
         color: kColorDiscoverSearchBg,
         borderRadius: AppUIUtils.primaryBorderRadius,
@@ -161,11 +161,27 @@ class DiscoverTabView extends StatelessWidget {
       child: Row(
         children: [
           const Icon(Icons.search_rounded, size: 16, color: kColorHint),
-          Spacing.h8,
-          const AppText(
-            text: 'Search',
-            fontSize: TextStyles.k12FontSize,
-            color: kColorHint,
+          Spacing.h6,
+          Expanded(
+            child: TextField(
+              controller: discoverController.searchController,
+              textInputAction: TextInputAction.search,
+              style: TextStyles.kRegularPoppins(
+                fontSize: TextStyles.k12FontSize,
+                colors: kColorText,
+              ),
+              cursorColor: kColorPrimary,
+              decoration: InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                hintText: 'Search',
+                hintStyle: TextStyles.kRegularPoppins(
+                  fontSize: TextStyles.k12FontSize,
+                  colors: kColorHint,
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              ),
+            ),
           ),
         ],
       ),
