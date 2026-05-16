@@ -207,21 +207,20 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
       child: Row(
         children: [
           Expanded(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 40),
-              child: AppTextField(
-                controller: controller.chatTextController,
-                hintText: 'Say something...',
-                fillColor: Colors.black.withValues(alpha: 0.3),
-                inputBorderRadius: BorderRadius.circular(20),
-                textStyle: TextStyles.kRegularPoppins(colors: kColorWhite, fontSize: 14),
-                hintStyle: TextStyles.kRegularPoppins(colors: Colors.white54, fontSize: 12),
-                suffix: IconButton(
-                  icon: const Icon(Icons.send_rounded, color: kColorWhite, size: 18),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  onPressed: controller.sendMessage,
-                ),
+            child: AppTextField(
+              controller: controller.chatTextController,
+              hintText: 'Say something...',
+              fillColor: Colors.black.withValues(alpha: 0.3),
+              inputBorderRadius: BorderRadius.circular(20),
+              borderColor: Colors.transparent, // Disable border to prevent overlap visuals
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              textStyle: TextStyles.kRegularPoppins(colors: kColorWhite, fontSize: 13),
+              hintStyle: TextStyles.kRegularPoppins(colors: Colors.white54, fontSize: 12),
+              suffix: IconButton(
+                icon: const Icon(Icons.send_rounded, color: kColorWhite, size: 18),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                onPressed: controller.sendMessage,
               ),
             ),
           ),
