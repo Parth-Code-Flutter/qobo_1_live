@@ -33,8 +33,8 @@
 | Registered GetX routes | 9 |
 | UI surfaces built (incl. sub-screens) | ~17 |
 | Flows DONE | 8 |
-| Flows PARTIAL | 14 |
-| Flows NOT_STARTED | ~35+ |
+| Flows PARTIAL | 16 |
+| Flows NOT_STARTED | ~33+ |
 | Admin panel (separate web app) | Not in this repo |
 
 **Rough completion:** ~25–30% of user-facing screens; auth/onboarding is the strongest area.
@@ -60,6 +60,8 @@
 | `AGENCY_RECRUIT_LINK` | `/agency-recruit-link` | `lib/app/user_flow/agency_recruit_link/views/agency_recruit_link_view.dart` |
 | `AGENCY_HOST_LIST` | `/agency-host-list` | `lib/app/user_flow/agency_host_list/views/agency_host_list_view.dart` |
 | `AGENCY_REVENUE` | `/agency-revenue` | `lib/app/user_flow/agency_revenue/views/agency_revenue_view.dart` |
+| `LIVE_ACTION` | `/live-action` | `lib/app/user_flow/live_action/views/live_action_view.dart` |
+| `LIVE_ROOM_CREATE` | `/live-room-create` | `lib/app/user_flow/live_room_create/views/live_room_create_view.dart` |
 
 **Not a route (opened via `Get.to`):** `WalletView` → `lib/app/user_flow/wallet/views/wallet_view.dart`
 
@@ -133,11 +135,12 @@
 | Flow ID | Feature | Status | Screen / Route | API | Notes |
 |---------|---------|--------|----------------|-----|-------|
 | LIVE-01 | Live room feed / categories | PARTIAL | `LiveRoomView` (tab 1) | `GET /api/room/list` | Tabs: Sab, Shresth, Naya, Bangladesh — **Req #19 partial** (mock data) |
-| LIVE-02 | Leaderboard | PARTIAL | `LeaderBoardView` / `LEADER_BOARD` | `GET /api/admin/leaderboard` | Static mock in controller |
-| LIVE-03 | Center ❤️ tab (go live / action) | NOT_STARTED | Bottom nav index 2 | — | Currently empty |
-| LIVE-04 | Create room | NOT_STARTED | *(new screen)* | `POST /api/room/create` | name, type AUDIO/VIDEO, country, seats |
-| LIVE-05 | Join room | NOT_STARTED | *(new screen)* | `POST /api/room/join` | |
-| LIVE-06 | In-room broadcast UI | NOT_STARTED | *(new screen)* | mic, gifts, chat | Core live experience |
+| LIVE-01 | Main room container (bottom nav) | PARTIAL | `LiveRoomView` | — | UI skeleton |
+| LIVE-02 | Scrollable list of active rooms | PARTIAL | `LiveRoomView` | `GET /api/room/list` | UI skeleton |
+| LIVE-03 | Center ❤️ tab (go live / action) | PARTIAL | `LiveActionView` (index 2) | — | Navigates to Room Create |
+| LIVE-04 | Create room | PARTIAL | `LiveRoomCreateView` / `LIVE_ROOM_CREATE` | `POST /api/room/create` | name, type AUDIO/VIDEO, country, seats |
+| LIVE-05 | Inside Room (Host/Broadcaster view) | NOT_STARTED | *(reuse/extend `LiveRoomView`)* | `WS /socket` | |
+| LIVE-06 | Inside Room (Audience view) | NOT_STARTED | *(reuse/extend `LiveRoomView`)* | `WS /socket` | |
 | LIVE-07 | Mic mute/lock | NOT_STARTED | in-room | `POST /api/room/mic-action` | |
 | LIVE-08 | Security SOS | NOT_STARTED | in-room | `POST /api/room/security-sos` | **Req #3** calling security |
 | LIVE-09 | Share live / room link | NOT_STARTED | in-room | `GET /api/room/share` | **Req #18** |

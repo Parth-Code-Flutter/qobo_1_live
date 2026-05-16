@@ -29,6 +29,10 @@ import '../app/user_flow/agency_host_list/bindings/agency_host_list_binding.dart
 import '../app/user_flow/agency_host_list/views/agency_host_list_view.dart';
 import '../app/user_flow/agency_revenue/bindings/agency_revenue_binding.dart';
 import '../app/user_flow/agency_revenue/views/agency_revenue_view.dart';
+import '../app/user_flow/live_action/bindings/live_action_binding.dart';
+import '../app/user_flow/live_action/views/live_action_view.dart';
+import '../app/user_flow/live_room_create/bindings/live_room_create_binding.dart';
+import '../app/user_flow/live_room_create/views/live_room_create_view.dart';
 import '../app/splash/splash/views/splash_view.dart';
 
 part 'app_routes.dart';
@@ -113,6 +117,16 @@ class AppPages {
       name: _Paths.AGENCY_REVENUE,
       page: () => const AgencyRevenueView(),
       binding: AgencyRevenueBinding(),
+    ),
+    GetPage(
+      name: _Paths.LIVE_ACTION,
+      page: () => const LiveActionView(),
+      binding: LiveActionBinding(),
+    ),
+    GetPage(
+      name: _Paths.LIVE_ROOM_CREATE,
+      page: () => const LiveRoomCreateView(),
+      binding: LiveRoomCreateBinding(),
     ),
   ];
 }

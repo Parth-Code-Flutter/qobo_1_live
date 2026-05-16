@@ -7,6 +7,7 @@ import 'package:qobo_one_live/app/user_flow/discover/discover_tab/views/discover
 import 'package:qobo_one_live/app/user_flow/live_room/views/live_room_view.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/views/messages_tab_view.dart';
 import 'package:qobo_one_live/app/user_flow/profile_tab/views/profile_tab_view.dart';
+import 'package:qobo_one_live/app/user_flow/live_action/views/live_action_view.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
@@ -34,6 +35,9 @@ class BottomNavView extends GetView<BottomNavController> {
           }
           if (controller.selectedIndex.value == 1) {
             return const LiveRoomView();
+          }
+          if (controller.selectedIndex.value == 2) {
+            return const LiveActionView();
           }
           if (controller.selectedIndex.value == 3) {
             return const MessagesTabView();
