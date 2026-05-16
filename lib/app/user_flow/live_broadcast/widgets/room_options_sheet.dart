@@ -1,0 +1,100 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/text_utils/app_text.dart';
+import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+
+class RoomOptionsSheet extends StatelessWidget {
+  final bool isHost;
+  
+  const RoomOptionsSheet({super.key, required this.isHost});
+
+  @override
+  Widget build(BuildContext context) {
+    final List<Map<String, dynamic>> options = isHost
+        ? [
+            {'icon': Icons.mic_off_rounded, 'label': 'Mute All', 'color': kColorWhite},
+            {'icon': Icons.lock_outline_rounded, 'label': 'Lock Room', 'color': kColorWhite},
+            {'icon': Icons.pan_tool_rounded, 'label': 'Clear Seats', 'color': kColorWhite},
+            {'icon': Icons.share_rounded, 'label': 'Share', 'color': kColorWhite},
+            {'icon': Icons.security_rounded, 'label': 'Security SOS', 'color': Colors.redAccent},
+          ]
+        : [
+            {'icon': Icons.report_problem_outlined, 'label': 'Report', 'color': Colors.redAccent},
+            {'icon': Icons.share_rounded, 'label': 'Share', 'color': kColorWhite},
+            {'icon': Icons.person_add_alt_1_rounded, 'label': 'Follow', 'color': kColorWhite},
+          ];
+
+    return Container(
+      padding: const EdgeInsets.only(bottom: 24),
+      decoration: const BoxDecoration(
+        color: Color(0xFF161622),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Spacing.v12,
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.white24,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Spacing.v20,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Wrap(
+              spacing: 24,
+              runSpacing: 24,
+              children: options.map((opt) {
+                return GestureDetector(
+                  onTap: () {
+                    Get.back(); // close sheet
+                    Get.snackbar(
+                      'Action',
+                      'Triggered ${opt['label']} action',
+                      snackPosition: SnackPosition.TOP,
+                      backgroundColor: Colors.black.withValues(alpha: 0.8),
+                      colorText: kColorWhite,
+                    );
+                  },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: Colors.white10,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          opt['icon'],
+                          color: opt['color'],
+                          size: 24,
+                        ),
+                      ),
+                      Spacing.v8,
+                      AppText(
+                        text: opt['label'],
+                        fontSize: 11,
+                        color: opt['color'],
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

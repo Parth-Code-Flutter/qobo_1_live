@@ -8,6 +8,8 @@ import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 import '../controllers/live_broadcast_controller.dart';
+import '../widgets/gifts_bottom_sheet.dart';
+import '../widgets/room_options_sheet.dart';
 
 class LiveBroadcastView extends GetView<LiveBroadcastController> {
   const LiveBroadcastView({super.key});
@@ -226,9 +228,27 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
           Spacing.h12,
           _bottomActionIcon(Icons.mic_off_rounded, onTap: controller.toggleMic),
           Spacing.h8,
-          _bottomActionIcon(Icons.card_giftcard_rounded, color: Colors.pinkAccent),
+          _bottomActionIcon(
+            Icons.card_giftcard_rounded, 
+            color: Colors.pinkAccent,
+            onTap: () {
+              Get.bottomSheet(
+                const GiftsBottomSheet(),
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+              );
+            },
+          ),
           Spacing.h8,
-          _bottomActionIcon(Icons.more_vert_rounded),
+          _bottomActionIcon(
+            Icons.more_vert_rounded,
+            onTap: () {
+              Get.bottomSheet(
+                RoomOptionsSheet(isHost: controller.isHost.value),
+                backgroundColor: Colors.transparent,
+              );
+            },
+          ),
         ],
       ),
     );

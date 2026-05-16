@@ -3,6 +3,7 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import 'package:get/get.dart';
 
 /// Reusable model for "new match" horizontal list.
 class MessageMatchUser {
@@ -84,10 +85,17 @@ class MessageListTileItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
+    return GestureDetector(
+      onTap: () {
+        Get.toNamed('/chat-detail', arguments: {
+          'name': item.name,
+          'image': item.imagePath,
+        });
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
           ClipOval(
             child: Image.asset(
               item.imagePath,

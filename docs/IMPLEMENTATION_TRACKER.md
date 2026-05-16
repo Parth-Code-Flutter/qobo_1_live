@@ -33,8 +33,8 @@
 | Registered GetX routes | 9 |
 | UI surfaces built (incl. sub-screens) | ~17 |
 | Flows DONE | 8 |
-| Flows PARTIAL | 18 |
-| Flows NOT_STARTED | ~31+ |
+| Flows PARTIAL | 23 |
+| Flows NOT_STARTED | ~26+ |
 | Admin panel (separate web app) | Not in this repo |
 
 **Rough completion:** ~25–30% of user-facing screens; auth/onboarding is the strongest area.
@@ -63,8 +63,12 @@
 | `LIVE_ACTION` | `/live-action` | `lib/app/user_flow/live_action/views/live_action_view.dart` |
 | `LIVE_ROOM_CREATE` | `/live-room-create` | `lib/app/user_flow/live_room_create/views/live_room_create_view.dart` |
 | `LIVE_BROADCAST` | `/live-broadcast` | `lib/app/user_flow/live_broadcast/views/live_broadcast_view.dart` |
+| `CHAT_DETAIL` | `/chat-detail` | `lib/app/user_flow/messages/chat_detail/views/chat_detail_view.dart` |
 
-**Not a route (opened via `Get.to`):** `WalletView` → `lib/app/user_flow/wallet/views/wallet_view.dart`
+**Not a route (opened via `Get.to` or `Get.bottomSheet`):**
+- `WalletView` → `Get.to(WalletView)`
+- `GiftsBottomSheet` → `Get.bottomSheet`
+- `RoomOptionsSheet` → `Get.bottomSheet`
 
 **Routes file:** `lib/routes/app_routes.dart` · `lib/routes/app_pages.dart`
 
@@ -142,11 +146,11 @@
 | LIVE-04 | Create room | PARTIAL | `LiveRoomCreateView` / `LIVE_ROOM_CREATE` | `POST /api/room/create` | name, type AUDIO/VIDEO, country, seats |
 | LIVE-05 | Inside Room (Host/Broadcaster view) | PARTIAL | `LiveBroadcastView` / `LIVE_BROADCAST` | `WS /socket` | Handles host video, chat, controls |
 | LIVE-06 | Inside Room (Audience view) | PARTIAL | `LiveBroadcastView` / `LIVE_BROADCAST` | `WS /socket` | Navigated from Feed directly |
-| LIVE-07 | Mic mute/lock | NOT_STARTED | in-room | `POST /api/room/mic-action` | |
+| LIVE-07 | Mic mute/lock | PARTIAL | `RoomOptionsSheet` | `POST /api/room/mic-action` | UI available |
 | LIVE-08 | Security SOS | NOT_STARTED | in-room | `POST /api/room/security-sos` | **Req #3** calling security |
 | LIVE-09 | Share live / room link | NOT_STARTED | in-room | `GET /api/room/share` | **Req #18** |
-| LIVE-10 | Translate text in room | NOT_STARTED | in-room | `GET /api/room/translate` | **Req #17** |
-| LIVE-11 | Bad comment / moderation | NOT_STARTED | — | Admin moderation API | **Req #2** — admin-side; filter in app TBD |
+| LIVE-10 | Send/receive gifts | PARTIAL | `GiftsBottomSheet` | `POST /api/room/gift` | **Req #1** |
+| LIVE-11 | Ban/Kick user | PARTIAL | `RoomOptionsSheet` | `POST /api/room/kick` | **Req #3** |
 
 ---
 
@@ -163,13 +167,12 @@
 
 ---
 
-# 6. Messages & chat
+# 6. Messages / Chat (MSG)
 
 | Flow ID | Feature | Status | Screen / Route | API | Notes |
 |---------|---------|--------|----------------|-----|-------|
-| CHAT-01 | Messages inbox | PARTIAL | `MessagesTabView` | — | Demo matches + message list |
-| CHAT-02 | Chat conversation thread | NOT_STARTED | *(new screen)* | TBD | **Req #14** — icon exists; no thread UI |
-| CHAT-03 | Real-time messaging | NOT_STARTED | — | WebSocket / API TBD | Not in extracted API doc |
+| MSG-01 | Global message list | PARTIAL | `Bottom nav index 3` / `MessagesTabView`| `GET /api/chat/list` | Notifications, system msgs, DMs |
+| MSG-02 | 1-on-1 Chat | PARTIAL | `ChatDetailView` / `CHAT_DETAIL` | `WS /chat` | Text messages, mocked |
 
 ---
 
