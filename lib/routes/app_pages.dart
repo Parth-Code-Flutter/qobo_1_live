@@ -17,6 +17,14 @@ import '../app/user_flow/leader_board/bindings/leader_board_binding.dart';
 import '../app/user_flow/leader_board/views/leader_board_view.dart';
 import '../app/user_flow/user_basic_profile/bindings/user_basic_profile_binding.dart';
 import '../app/user_flow/user_basic_profile/views/user_basic_profile_view.dart';
+import '../app/user_flow/agency_host_onboarding/bindings/agency_host_onboarding_binding.dart';
+import '../app/user_flow/agency_host_onboarding/views/agency_host_onboarding_view.dart';
+import '../app/user_flow/agency_host_status/bindings/agency_host_status_binding.dart';
+import '../app/user_flow/agency_host_status/views/agency_host_status_view.dart';
+import '../app/user_flow/agency_owner_register/bindings/agency_owner_register_binding.dart';
+import '../app/user_flow/agency_owner_register/views/agency_owner_register_view.dart';
+import '../app/user_flow/agency_recruit_link/bindings/agency_recruit_link_binding.dart';
+import '../app/user_flow/agency_recruit_link/views/agency_recruit_link_view.dart';
 import '../app/splash/splash/views/splash_view.dart';
 
 part 'app_routes.dart';
@@ -71,6 +79,26 @@ class AppPages {
       name: _Paths.LEADER_BOARD,
       page: () => const LeaderBoardView(),
       binding: LeaderBoardBinding(),
+    ),
+    GetPage(
+      name: _Paths.AGENCY_HOST_ONBOARDING,
+      page: () => const AgencyHostOnboardingView(),
+      binding: AgencyHostOnboardingBinding(),
+    ),
+    GetPage(
+      name: _Paths.AGENCY_HOST_STATUS,
+      page: () => const AgencyHostStatusView(),
+      binding: AgencyHostStatusBinding(),
+    ),
+    GetPage(
+      name: _Paths.AGENCY_OWNER_REGISTER,
+      page: () => const AgencyOwnerRegisterView(),
+      binding: AgencyOwnerRegisterBinding(),
+    ),
+    GetPage(
+      name: _Paths.AGENCY_RECRUIT_LINK,
+      page: () => const AgencyRecruitLinkView(),
+      binding: AgencyRecruitLinkBinding(),
     ),
   ];
 }

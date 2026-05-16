@@ -263,7 +263,7 @@ class ProfileTabView extends StatelessWidget {
             icon: kIconMike,
             start: kColorProfileActionPinkStart,
             end: kColorProfileActionPinkEnd,
-            onTap: () {},
+            onTap: () => Get.toNamed(Routes.AGENCY_HOST_ONBOARDING),
           ),
         ),
       ],

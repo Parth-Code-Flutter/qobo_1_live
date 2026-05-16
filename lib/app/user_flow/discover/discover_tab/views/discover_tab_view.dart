@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -226,6 +227,8 @@ class DiscoverTabView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _agencyHostEntryCard(),
+          Spacing.v16,
           _sectionHeader(title: 'Suggested Users', trailing: 'SEE ALL'),
           Spacing.v10,
           _suggestedUsersGrid(suggestedUsers),
@@ -273,6 +276,69 @@ class DiscoverTabView extends StatelessWidget {
               text: label,
               fontSize: TextStyles.k24FontSize - 11,
               color: kColorWhite,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Entry to AGENCY-01 from Discover default feed (UI only; API later).
+  Widget _agencyHostEntryCard() {
+    return GestureDetector(
+      onTap: () => Get.toNamed(Routes.AGENCY_HOST_ONBOARDING),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [
+              kColorProfileActionPinkStart.withValues(alpha: 0.95),
+              kColorProfileActionOrangeEnd.withValues(alpha: 0.9),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: kColorWhite.withValues(alpha: 0.22),
+            width: 0.8,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: kColorWhite.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.mic_rounded, color: kColorWhite, size: 24),
+            ),
+            Spacing.h12,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SemiBoldText(
+                    text: 'Become an Agency Host',
+                    fontSize: TextStyles.k16FontSize,
+                    color: kColorWhite,
+                  ),
+                  Spacing.v4,
+                  const AppText(
+                    text: 'Apply with your details and host photo',
+                    fontSize: TextStyles.k12FontSize,
+                    color: kColorWhite,
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 16,
+              color: kColorWhite.withValues(alpha: 0.9),
             ),
           ],
         ),
