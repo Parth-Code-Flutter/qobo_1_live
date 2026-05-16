@@ -76,7 +76,6 @@ class AgencyRecruitLinkView extends GetView<AgencyRecruitLinkController> {
                   Get.offAllNamed('/bottom-nav'); // Back to main
                 },
                 buttonText: 'Back to Home',
-                isOutlined: true,
               ),
             ],
           ),
