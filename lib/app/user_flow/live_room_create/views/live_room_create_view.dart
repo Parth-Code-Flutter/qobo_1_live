@@ -32,11 +32,11 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
               color: kColorText,
             ),
             Spacing.v8,
-            appTextField(
-              textController: controller.roomNameController,
+            AppTextField(
+              controller: controller.roomNameController,
               hintText: 'Enter an amazing title...',
               fillColor: kColorBackground,
-              borderRadius: 12,
+              inputBorderRadius: BorderRadius.circular(12),
             ),
             Spacing.v24,
             const SemiBoldText(
