@@ -39,6 +39,10 @@ import '../app/user_flow/messages/chat_detail/bindings/chat_detail_binding.dart'
 import '../app/user_flow/messages/chat_detail/views/chat_detail_view.dart';
 import '../app/user_flow/follow_list/bindings/follow_list_binding.dart';
 import '../app/user_flow/follow_list/views/follow_list_view.dart';
+import '../app/user_flow/settings/bindings/settings_binding.dart';
+import '../app/user_flow/settings/views/settings_view.dart';
+import '../app/user_flow/block_list/bindings/block_list_binding.dart';
+import '../app/user_flow/block_list/views/block_list_view.dart';
 import '../app/splash/splash/views/splash_view.dart';
 
 part 'app_routes.dart';
@@ -148,6 +152,16 @@ class AppPages {
       name: _Paths.FOLLOW_LIST,
       page: () => const FollowListView(),
       binding: FollowListBinding(),
+    ),
+    GetPage(
+      name: _Paths.SETTINGS,
+      page: () => const SettingsView(),
+      binding: SettingsBinding(),
+    ),
+    GetPage(
+      name: _Paths.BLOCK_LIST,
+      page: () => const BlockListView(),
+      binding: BlockListBinding(),
     ),
   ];
 }

@@ -38,6 +38,8 @@ class ProfileTabView extends StatelessWidget {
                 Spacing.v12,
                 _profileFeatureGrid(),
                 Spacing.v20,
+                _settingsRow(),
+                Spacing.v12,
                 appButton(
                   onPressed: onLogoutPressed,
                   buttonText: LocaleKeys.logoutButtonText.tr,
@@ -389,6 +391,34 @@ class ProfileTabView extends StatelessWidget {
       return Get.find<UserSessionController>();
     }
     return Get.put(UserSessionController(), permanent: true);
+  }
+
+  Widget _settingsRow() {
+    return GestureDetector(
+      onTap: () => Get.toNamed(Routes.SETTINGS),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          color: kColorWhite.withValues(alpha: 0.12),
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.settings_rounded, color: kColorWhite, size: 22),
+            Spacing.h12,
+            const Expanded(
+              child: SemiBoldText(
+                text: 'Settings',
+                fontSize: TextStyles.k14FontSize,
+                color: kColorWhite,
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: kColorWhite, size: 22),
+          ],
+        ),
+      ),
+    );
   }
 }
 
