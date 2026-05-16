@@ -86,8 +86,13 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
       child: Row(
         children: [
           SafeNetworkAvatar(
-            imageUrl: host.avatarUrl,
+            url: host.avatarUrl,
             size: 56,
+            fallback: CircleAvatar(
+              radius: 28,
+              backgroundColor: kColorHint.withValues(alpha: 0.1),
+              child: const Icon(Icons.person, color: kColorHint),
+            ),
           ),
           Spacing.h16,
           Expanded(
