@@ -33,8 +33,8 @@
 | Registered GetX routes | 9 |
 | UI surfaces built (incl. sub-screens) | ~17 |
 | Flows DONE | 8 |
-| Flows PARTIAL | 16 |
-| Flows NOT_STARTED | ~33+ |
+| Flows PARTIAL | 18 |
+| Flows NOT_STARTED | ~31+ |
 | Admin panel (separate web app) | Not in this repo |
 
 **Rough completion:** ~25–30% of user-facing screens; auth/onboarding is the strongest area.
@@ -62,6 +62,7 @@
 | `AGENCY_REVENUE` | `/agency-revenue` | `lib/app/user_flow/agency_revenue/views/agency_revenue_view.dart` |
 | `LIVE_ACTION` | `/live-action` | `lib/app/user_flow/live_action/views/live_action_view.dart` |
 | `LIVE_ROOM_CREATE` | `/live-room-create` | `lib/app/user_flow/live_room_create/views/live_room_create_view.dart` |
+| `LIVE_BROADCAST` | `/live-broadcast` | `lib/app/user_flow/live_broadcast/views/live_broadcast_view.dart` |
 
 **Not a route (opened via `Get.to`):** `WalletView` → `lib/app/user_flow/wallet/views/wallet_view.dart`
 
@@ -139,8 +140,8 @@
 | LIVE-02 | Scrollable list of active rooms | PARTIAL | `LiveRoomView` | `GET /api/room/list` | UI skeleton |
 | LIVE-03 | Center ❤️ tab (go live / action) | PARTIAL | `LiveActionView` (index 2) | — | Navigates to Room Create |
 | LIVE-04 | Create room | PARTIAL | `LiveRoomCreateView` / `LIVE_ROOM_CREATE` | `POST /api/room/create` | name, type AUDIO/VIDEO, country, seats |
-| LIVE-05 | Inside Room (Host/Broadcaster view) | NOT_STARTED | *(reuse/extend `LiveRoomView`)* | `WS /socket` | |
-| LIVE-06 | Inside Room (Audience view) | NOT_STARTED | *(reuse/extend `LiveRoomView`)* | `WS /socket` | |
+| LIVE-05 | Inside Room (Host/Broadcaster view) | PARTIAL | `LiveBroadcastView` / `LIVE_BROADCAST` | `WS /socket` | Handles host video, chat, controls |
+| LIVE-06 | Inside Room (Audience view) | PARTIAL | `LiveBroadcastView` / `LIVE_BROADCAST` | `WS /socket` | Navigated from Feed directly |
 | LIVE-07 | Mic mute/lock | NOT_STARTED | in-room | `POST /api/room/mic-action` | |
 | LIVE-08 | Security SOS | NOT_STARTED | in-room | `POST /api/room/security-sos` | **Req #3** calling security |
 | LIVE-09 | Share live / room link | NOT_STARTED | in-room | `GET /api/room/share` | **Req #18** |

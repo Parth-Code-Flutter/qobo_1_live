@@ -33,6 +33,8 @@ import '../app/user_flow/live_action/bindings/live_action_binding.dart';
 import '../app/user_flow/live_action/views/live_action_view.dart';
 import '../app/user_flow/live_room_create/bindings/live_room_create_binding.dart';
 import '../app/user_flow/live_room_create/views/live_room_create_view.dart';
+import '../app/user_flow/live_broadcast/bindings/live_broadcast_binding.dart';
+import '../app/user_flow/live_broadcast/views/live_broadcast_view.dart';
 import '../app/splash/splash/views/splash_view.dart';
 
 part 'app_routes.dart';
@@ -127,6 +129,11 @@ class AppPages {
       name: _Paths.LIVE_ROOM_CREATE,
       page: () => const LiveRoomCreateView(),
       binding: LiveRoomCreateBinding(),
+    ),
+    GetPage(
+      name: _Paths.LIVE_BROADCAST,
+      page: () => const LiveBroadcastView(),
+      binding: LiveBroadcastBinding(),
     ),
   ];
 }

@@ -103,13 +103,21 @@ class LiveRoomView extends StatelessWidget {
                           ),
                       itemBuilder: (context, index) {
                         final room = rooms[index];
-                        return CommonLiveRoomWidget(
-                          imageUrl: room['image'] as String,
-                          userNameAge: room['nameAge'] as String,
-                          badgeText: room['badge'] as String,
-                          locationText: room['location'] as String,
-                          pointsText: room['points'] as String,
-                          isFavorite: room['favorite'] as bool,
+                        return GestureDetector(
+                          onTap: () {
+                            Get.toNamed('/live-broadcast', arguments: {
+                              'isHost': false,
+                              'roomType': 'VIDEO'
+                            });
+                          },
+                          child: CommonLiveRoomWidget(
+                            imageUrl: room['image'] as String,
+                            userNameAge: room['nameAge'] as String,
+                            badgeText: room['badge'] as String,
+                            locationText: room['location'] as String,
+                            pointsText: room['points'] as String,
+                            isFavorite: room['favorite'] as bool,
+                          ),
                         );
                       },
                     ),

@@ -21,6 +21,7 @@ abstract class Routes {
   static const AGENCY_REVENUE = _Paths.AGENCY_REVENUE;
   static const LIVE_ACTION = _Paths.LIVE_ACTION;
   static const LIVE_ROOM_CREATE = _Paths.LIVE_ROOM_CREATE;
+  static const LIVE_BROADCAST = _Paths.LIVE_BROADCAST;
 }
 
 abstract class _Paths {
@@ -43,4 +44,5 @@ abstract class _Paths {
   static const AGENCY_REVENUE = '/agency-revenue';
   static const LIVE_ACTION = '/live-action';
   static const LIVE_ROOM_CREATE = '/live-room-create';
+  static const LIVE_BROADCAST = '/live-broadcast';
 }

@@ -34,8 +34,10 @@ class LiveRoomCreateController extends GetxController {
     }
 
     AppToast.showSuccess(context, 'Room created successfully!');
-    // Ideally navigate to inside the room here (LIVE-05)
-    // Get.toNamed('/live-room-active');
+    Get.offNamed('/live-broadcast', arguments: {
+      'isHost': true, 
+      'roomType': roomType.value
+    });
   }
 
   @override
