@@ -15,6 +15,7 @@ import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_dialogs/common_radio_choice_dialog.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_media_picker.dart';
 import 'package:qobo_one_live/utils/profile/stored_profile_map.dart';
+import 'package:qobo_one_live/utils/profile/update_profile_api_helper.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/validations/text_field_validations.dart';
 
@@ -342,9 +343,9 @@ class UserBasicProfileController extends GetxController {
       for (final k in keys) {
         final raw = data[k];
         if (raw == null) continue;
-        final s = raw.toString().trim();
-        if (s.isNotEmpty) {
-          set(s);
+        final line = profileListFieldToLine(raw);
+        if (line.isNotEmpty) {
+          set(line);
           return;
         }
       }
@@ -523,9 +524,10 @@ class UserBasicProfileController extends GetxController {
     }
   }
 
-  /// Validates form + gender; extend with API/repo call later.
+  /// Saves via `PUT /api/user/update` (multipart).
   Future<void> onSavePressed(BuildContext context) async {
     if (isSubmitLoading.value) return;
+    if (!isProfileDirty.value) return;
     if (!(formKey.currentState?.validate() ?? false)) return;
     if (selectedGender.value.trim().isEmpty) {
       AppToast.showError(context, 'Please select gender');
@@ -534,12 +536,53 @@ class UserBasicProfileController extends GetxController {
 
     try {
       isSubmitLoading.value = true;
-      // TODO(user_basic_profile): POST payload via repo when endpoint exists.
-      await Future<void>.delayed(const Duration(milliseconds: 300));
+      final request = UpdateProfileApiHelper.buildRequest(
+        name: userNameController.text.trim(),
+        genderLabel: selectedGender.value,
+        dob: selectedBirthdate.value,
+        displayPicture: selectedProfileMedia.value,
+        relationshipStatus: relationshipStatus.value,
+        languages: languagesLine.value,
+        interests: interestsLine.value,
+        currentLocation: currentLocationsLine.value,
+      );
+      if (!request.hasAnyField) {
+        AppToast.showError(context, 'Nothing to update.');
+        return;
+      }
+
+      final response = await _authRepo.updateProfile(
+        request: request,
+        isShowLoader: false,
+      );
       if (!context.mounted) return;
-      AppToast.showSuccess(context, 'Basic profile saved.');
-      selectedProfileMedia.value = null;
-      captureFormBaseline();
+
+      if (response == null) {
+        AppToast.showError(context, 'Request failed. Please try again.');
+        return;
+      }
+
+      final message = response.message.trim().isNotEmpty
+          ? response.message.trim()
+          : 'Something went wrong.';
+      if (response.statusCode == 1) {
+        await UpdateProfileApiHelper.persistUserToSession(response);
+        final successMessage = message.isNotEmpty
+            ? message
+            : 'Profile updated successfully';
+        Get.back<void>();
+        final overlay = Get.overlayContext;
+        if (overlay != null && overlay.mounted) {
+          AppToast.showSuccess(overlay, successMessage);
+        }
+        return;
+      } else {
+        AppToast.showError(context, message);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        AppToast.showError(context, e.toString());
+      }
     } finally {
       isSubmitLoading.value = false;
     }
