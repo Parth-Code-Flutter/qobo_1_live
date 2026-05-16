@@ -228,6 +228,8 @@ class DiscoverTabView extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _agencyHostEntryCard(),
+          Spacing.v12,
+          _agencyOwnerEntryCard(),
           Spacing.v16,
           _sectionHeader(title: 'Suggested Users', trailing: 'SEE ALL'),
           Spacing.v10,
@@ -329,6 +331,69 @@ class DiscoverTabView extends StatelessWidget {
                   Spacing.v4,
                   const AppText(
                     text: 'Apply with your details and host photo',
+                    fontSize: TextStyles.k12FontSize,
+                    color: kColorWhite,
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 16,
+              color: kColorWhite.withValues(alpha: 0.9),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Entry to AGENCY-03 from Discover default feed (UI only).
+  Widget _agencyOwnerEntryCard() {
+    return GestureDetector(
+      onTap: () => Get.toNamed(Routes.AGENCY_OWNER_REGISTER),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [
+              Colors.orange.withValues(alpha: 0.95),
+              Colors.deepOrange.withValues(alpha: 0.9),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: kColorWhite.withValues(alpha: 0.22),
+            width: 0.8,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: kColorWhite.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.business_center_rounded, color: kColorWhite, size: 24),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SemiBoldText(
+                    text: 'Agency Owner Portal',
+                    fontSize: TextStyles.k16FontSize,
+                    color: kColorWhite,
+                  ),
+                  const SizedBox(height: 4),
+                  const AppText(
+                    text: 'Register your agency and manage hosts',
                     fontSize: TextStyles.k12FontSize,
                     color: kColorWhite,
                   ),
