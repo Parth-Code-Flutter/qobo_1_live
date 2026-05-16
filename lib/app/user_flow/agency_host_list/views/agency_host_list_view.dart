@@ -21,10 +21,14 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
         useMaterialAppBar: true,
         actions: [
           IconButton(
+            onPressed: () => Get.toNamed('/agency-revenue'),
+            icon: const Icon(Icons.account_balance_wallet_rounded, color: kColorText),
+          ),
+          IconButton(
             onPressed: controller.refreshList,
             icon: const Icon(Icons.refresh_rounded, color: kColorText),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
         ],
       ),
       body: Obx(() {

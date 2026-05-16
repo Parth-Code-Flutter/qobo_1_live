@@ -65,9 +65,18 @@ class AgencyRecruitLinkView extends GetView<AgencyRecruitLinkController> {
               const Spacer(),
               appButton(
                 onPressed: () {
+                  Get.toNamed('/agency-host-list'); // Testing nav
+                },
+                buttonText: 'View My Hosts',
+                buttonColor: kColorPrimary,
+              ),
+              Spacing.v12,
+              appButton(
+                onPressed: () {
                   Get.offAllNamed('/bottom-nav'); // Back to main
                 },
                 buttonText: 'Back to Home',
+                isOutlined: true,
               ),
             ],
           ),
