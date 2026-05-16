@@ -33,8 +33,8 @@
 | Registered GetX routes | 9 |
 | UI surfaces built (incl. sub-screens) | ~17 |
 | Flows DONE | 8 |
-| Flows PARTIAL | 12 |
-| Flows NOT_STARTED | ~37+ |
+| Flows PARTIAL | 13 |
+| Flows NOT_STARTED | ~36+ |
 | Admin panel (separate web app) | Not in this repo |
 
 **Rough completion:** ~25–30% of user-facing screens; auth/onboarding is the strongest area.
@@ -58,6 +58,7 @@
 | `AGENCY_HOST_STATUS` | `/agency-host-status` | `lib/app/user_flow/agency_host_status/views/agency_host_status_view.dart` |
 | `AGENCY_OWNER_REGISTER` | `/agency-owner-register` | `lib/app/user_flow/agency_owner_register/views/agency_owner_register_view.dart` |
 | `AGENCY_RECRUIT_LINK` | `/agency-recruit-link` | `lib/app/user_flow/agency_recruit_link/views/agency_recruit_link_view.dart` |
+| `AGENCY_HOST_LIST` | `/agency-host-list` | `lib/app/user_flow/agency_host_list/views/agency_host_list_view.dart` |
 
 **Not a route (opened via `Get.to`):** `WalletView` → `lib/app/user_flow/wallet/views/wallet_view.dart`
 
@@ -110,7 +111,7 @@
 | AGENCY-02 | Check application status | PARTIAL | `AgencyHostStatusView` / `AGENCY_HOST_STATUS` | `GET /api/agency/host-verify-status` | application_id |
 | AGENCY-03 | Register agency (owner) | PARTIAL | `AgencyOwnerRegisterView` / `AGENCY_OWNER_REGISTER` | `POST /api/agency/register` | agency_name |
 | AGENCY-04 | Generate recruit link | PARTIAL | `AgencyRecruitLinkView` / `AGENCY_RECRUIT_LINK` | `GET /api/agency/generate-link` | Req #9 — agency link code |
-| AGENCY-05 | Host list | NOT_STARTED | *(new screen)* | `GET /api/agency/host-list` | |
+| AGENCY-05 | Host list | PARTIAL | `AgencyHostListView` / `AGENCY_HOST_LIST` | `GET /api/agency/host-list` | |
 | AGENCY-06 | Revenue & payout | NOT_STARTED | *(new screen)* | `GET /api/agency/revenue`, `POST /api/agency/payout` | |
 
 ---

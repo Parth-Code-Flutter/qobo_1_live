@@ -88,7 +88,6 @@ class AgencyHostStatusView extends GetView<AgencyHostStatusController> {
                   text: 'Back to Home',
                   fontSize: TextStyles.k14FontSize,
                   color: kColorHint,
-                  decoration: TextDecoration.underline,
                 ),
               ),
             ],

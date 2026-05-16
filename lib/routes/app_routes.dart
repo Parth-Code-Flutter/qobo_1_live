@@ -17,6 +17,7 @@ abstract class Routes {
   static const AGENCY_HOST_STATUS = _Paths.AGENCY_HOST_STATUS;
   static const AGENCY_OWNER_REGISTER = _Paths.AGENCY_OWNER_REGISTER;
   static const AGENCY_RECRUIT_LINK = _Paths.AGENCY_RECRUIT_LINK;
+  static const AGENCY_HOST_LIST = _Paths.AGENCY_HOST_LIST;
 }
 
 abstract class _Paths {
@@ -35,4 +36,5 @@ abstract class _Paths {
   static const AGENCY_HOST_STATUS = '/agency-host-status';
   static const AGENCY_OWNER_REGISTER = '/agency-owner-register';
   static const AGENCY_RECRUIT_LINK = '/agency-recruit-link';
+  static const AGENCY_HOST_LIST = '/agency-host-list';
 }
