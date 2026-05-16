@@ -23,6 +23,7 @@ abstract class Routes {
   static const LIVE_ROOM_CREATE = _Paths.LIVE_ROOM_CREATE;
   static const LIVE_BROADCAST = _Paths.LIVE_BROADCAST;
   static const CHAT_DETAIL = _Paths.CHAT_DETAIL;
+  static const FOLLOW_LIST = _Paths.FOLLOW_LIST;
 }
 
 abstract class _Paths {
@@ -47,4 +48,5 @@ abstract class _Paths {
   static const LIVE_ROOM_CREATE = '/live-room-create';
   static const LIVE_BROADCAST = '/live-broadcast';
   static const CHAT_DETAIL = '/chat-detail';
+  static const FOLLOW_LIST = '/follow-list';
 }

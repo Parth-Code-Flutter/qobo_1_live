@@ -33,8 +33,8 @@
 | Registered GetX routes | 9 |
 | UI surfaces built (incl. sub-screens) | ~17 |
 | Flows DONE | 8 |
-| Flows PARTIAL | 23 |
-| Flows NOT_STARTED | ~26+ |
+| Flows PARTIAL | 24 |
+| Flows NOT_STARTED | ~25+ |
 | Admin panel (separate web app) | Not in this repo |
 
 **Rough completion:** ~25–30% of user-facing screens; auth/onboarding is the strongest area.

@@ -163,9 +163,15 @@ class ProfileTabView extends StatelessWidget {
                     children: [
                       _statBlock('2K', 'Visitors'),
                       _statDivider(),
-                      _statBlock('1K', 'Following'),
+                      GestureDetector(
+                        onTap: () => Get.toNamed('/follow-list', arguments: {'initialTab': 0}),
+                        child: _statBlock('1K', 'Following')
+                      ),
                       _statDivider(),
-                      _statBlock('10K', 'Followers'),
+                      GestureDetector(
+                        onTap: () => Get.toNamed('/follow-list', arguments: {'initialTab': 1}),
+                        child: _statBlock('10K', 'Followers')
+                      ),
                     ],
                   ),
                 ],
