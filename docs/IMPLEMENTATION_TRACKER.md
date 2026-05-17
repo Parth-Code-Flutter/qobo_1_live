@@ -184,7 +184,7 @@
 | PROF-02 | User basic profile edit | DONE | `UserBasicProfileView` | `GET/PUT /api/user/update` | Nickname, age, gender, photo |
 | PROF-03 | Poster photo upload | NOT_STARTED | *(new or extend profile)* | `POST /api/user/poster-upload` | **Req #10** |
 | PROF-04 | User Patti style | NOT_STARTED | *(new)* | `GET /api/user/patti-style/:user_id` | **Req #16** |
-| PROF-05 | Level + level icon history | NOT_STARTED | *(new)* | — | **Req #15**; vipLevel in API models only |
+| PROF-05 | Level + level icon history | PARTIAL | `UserLevelView` | — | **Req #15**; vipLevel in API models only |
 | PROF-06 | Follow / unfollow | NOT_STARTED | *(new)* | `POST /api/user/follow-unfollow` | |
 | PROF-07 | User search (from profile/discover) | NOT_STARTED | — | `GET /api/user/search` | |
 
@@ -192,20 +192,20 @@
 
 Each tile is UI-only (`ProfileTabView` — no navigation).
 
-| Flow ID | Label | Icon constant |
-|---------|-------|---------------|
-| PROF-G01 | Visitors | `kIconVisitor` |
-| PROF-G02 | User Level | `kIconUserLevel` |
-| PROF-G03 | Backpack | `kIconBackpack` |
-| PROF-G04 | Family | `kIconFamily` |
-| PROF-G05 | SVIP | `kIconSVIP` |
-| PROF-G06 | Activity | `kIconActivity` |
-| PROF-G07 | Aristocracy Center | `kIconAristocracyCenter` |
-| PROF-G08 | Mall | `kIconMall` |
-| PROF-G09 | Point Center | `kIconPointerCenter` |
-| PROF-G10 | Award | `kIconAward` |
-| PROF-G11 | Broadcast Watched | `kIconBroadcastWatched` |
-| PROF-G12 | Customer service | `kIconCustomerService` |
+| Flow ID | Label | Icon constant | Status |
+|---------|-------|---------------|--------|
+| PROF-G01 | Visitors | `kIconVisitor` | NOT_STARTED |
+| PROF-G02 | User Level | `kIconUserLevel` | PARTIAL |
+| PROF-G03 | Backpack | `kIconBackpack` | NOT_STARTED |
+| PROF-G04 | Family | `kIconFamily` | NOT_STARTED |
+| PROF-G05 | SVIP | `kIconSVIP` | NOT_STARTED |
+| PROF-G06 | Activity | `kIconActivity` | NOT_STARTED |
+| PROF-G07 | Aristocracy Center | `kIconAristocracyCenter` | NOT_STARTED |
+| PROF-G08 | Mall | `kIconMall` | NOT_STARTED |
+| PROF-G09 | Point Center | `kIconPointerCenter` | NOT_STARTED |
+| PROF-G10 | Award | `kIconAward` | NOT_STARTED |
+| PROF-G11 | Broadcast Watched | `kIconBroadcastWatched` | NOT_STARTED |
+| PROF-G12 | Customer service | `kIconCustomerService` | NOT_STARTED |
 
 ### Profile action cards
 

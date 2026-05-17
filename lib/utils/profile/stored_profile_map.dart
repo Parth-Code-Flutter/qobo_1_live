@@ -52,7 +52,20 @@ String genderLabelFromStored(dynamic raw) {
   if (s == 'male' || s == 'm' || s == '1' || s == 'man') {
     return 'Male';
   }
+  if (s == 'other') return 'Other';
   return '';
+}
+
+/// Normalizes list or string profile fields to a single display line.
+String profileListFieldToLine(dynamic raw) {
+  if (raw == null) return '';
+  if (raw is List) {
+    return raw
+        .map((e) => e.toString().trim())
+        .where((e) => e.isNotEmpty)
+        .join(', ');
+  }
+  return raw.toString().trim();
 }
 
 DateTime? parseStoredDob(dynamic raw) {

@@ -180,28 +180,16 @@ class AuthRepo {
 
   /// Calls `PUT /api/user/update` to update profile details.
   ///
-  /// Uses multipart form-data request for all updates.
+  /// Uses multipart/form-data (`displayPicture` file + optional text fields).
   Future<UpdateProfileResponseModel?> updateProfile({
-    String? name,
-    String? bio,
-    String? gender,
-    String? dob,
-    String? country,
-    String? password,
-    File? displayPicture,
+    required UpdateProfileRequestModel request,
     bool isShowLoader = false,
   }) async {
-    final request = UpdateProfileRequestModel(
-      name: name,
-      bio: bio,
-      gender: gender,
-      dob: dob,
-      country: country,
-      password: password,
-      displayPicture: displayPicture,
-    );
+    if (!request.hasAnyField) return null;
 
-    final files = displayPicture == null ? null : <File>[displayPicture];
+    final files = request.displayPicture == null
+        ? null
+        : <File>[request.displayPicture!];
     final response = await _apiService.multipartFormRequest(
       endPoint: AuthEndpoints.updateProfile,
       fields: request.toFormFields(),

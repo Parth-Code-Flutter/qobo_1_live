@@ -16,6 +16,7 @@ import 'package:qobo_one_live/utils/app_dialogs/common_giffy_dialog.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_media_picker.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 import 'package:qobo_one_live/utils/profile/stored_profile_map.dart';
+import 'package:qobo_one_live/utils/profile/update_profile_api_helper.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/validations/text_field_validations.dart';
 
@@ -231,17 +232,21 @@ class UpdateProfileController extends GetxController {
       AppToast.showError(context, LocaleKeys.termsRequiredError.tr);
       return;
     }
+    if (selectedGender.value.trim().isEmpty) {
+      AppToast.showError(context, 'Please select gender');
+      return;
+    }
 
     try {
       isSubmitLoading.value = true;
-      final response = await _authRepo.updateProfile(
+      final request = UpdateProfileApiHelper.buildRequest(
         name: userNameController.text.trim(),
-        gender: selectedGender.value.trim().toLowerCase(),
-        dob: _resolvedDobForApi(),
-        // Country can be changed once country selection UI is added.
-        country: 'IN',
-        password: passwordController.text.trim(),
+        genderLabel: selectedGender.value,
+        dob: selectedBirthdate.value,
         displayPicture: selectedProfileMedia.value,
+      );
+      final response = await _authRepo.updateProfile(
+        request: request,
         isShowLoader: false,
       );
       if (!context.mounted) return;
@@ -255,6 +260,7 @@ class UpdateProfileController extends GetxController {
           ? response.message.trim()
           : 'Something went wrong.';
       if (response.statusCode == 1) {
+        await UpdateProfileApiHelper.persistUserToSession(response);
         final storage = Get.isRegistered<LocalStorage>()
             ? Get.find<LocalStorage>()
             : Get.put(LocalStorage(), permanent: true);
@@ -339,13 +345,19 @@ class UpdateProfileController extends GetxController {
   }
 
   String? validatePassword(BuildContext context, String? value) {
-    return Validate.passwordValidation(context, value?.trim() ?? '');
+    final trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) return null;
+    return Validate.passwordValidation(context, trimmed);
   }
 
   String? validateConfirmPassword(BuildContext context, String? value) {
+    final trimmed = value?.trim() ?? '';
+    if (passwordController.text.trim().isEmpty && trimmed.isEmpty) {
+      return null;
+    }
     return Validate.confirmPasswordValidation(
       context,
-      value?.trim() ?? '',
+      trimmed,
       passwordController.text.trim(),
     );
   }
@@ -359,14 +371,6 @@ class UpdateProfileController extends GetxController {
   DateTime _dobFromAge(int age) {
     final now = DateTime.now();
     return DateTime(now.year - age, now.month, now.day);
-  }
-
-  String _resolvedDobForApi() {
-    final dob = selectedBirthdate.value;
-    if (dob == null) return birthdateController.text.trim();
-    final month = dob.month.toString().padLeft(2, '0');
-    final day = dob.day.toString().padLeft(2, '0');
-    return '${dob.year}-$month-$day';
   }
 
   @override

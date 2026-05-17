@@ -26,6 +26,7 @@ abstract class Routes {
   static const FOLLOW_LIST = _Paths.FOLLOW_LIST;
   static const SETTINGS = _Paths.SETTINGS;
   static const BLOCK_LIST = _Paths.BLOCK_LIST;
+  static const USER_LEVEL = _Paths.USER_LEVEL;
 }
 
 abstract class _Paths {
@@ -53,4 +54,5 @@ abstract class _Paths {
   static const FOLLOW_LIST = '/follow-list';
   static const SETTINGS = '/settings';
   static const BLOCK_LIST = '/block-list';
+  static const USER_LEVEL = '/user-level';
 }

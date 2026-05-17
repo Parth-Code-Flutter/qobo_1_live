@@ -38,6 +38,10 @@ class UpdateProfileUser {
     this.gender,
     this.dob,
     this.createdAt,
+    this.relationshipStatus,
+    this.languages,
+    this.interests,
+    this.currentLocation,
   });
 
   final String id;
@@ -54,6 +58,10 @@ class UpdateProfileUser {
   final String? gender;
   final String? dob;
   final String? createdAt;
+  final String? relationshipStatus;
+  final String? languages;
+  final String? interests;
+  final String? currentLocation;
 
   factory UpdateProfileUser.fromJson(Map<String, dynamic> json) {
     return UpdateProfileUser(
@@ -71,6 +79,47 @@ class UpdateProfileUser {
       gender: json['gender'] as String?,
       dob: json['dob'] as String?,
       createdAt: json['createdAt'] as String?,
+      relationshipStatus: json['relationshipStatus'] as String?,
+      languages: _stringOrJoinedList(json['languages']),
+      interests: _stringOrJoinedList(json['interests']),
+      currentLocation: json['currentLocation'] as String?,
     );
+  }
+
+  Map<String, dynamic> toProfileMap() {
+    return <String, dynamic>{
+      'id': id,
+      'name': name,
+      'phone': phone,
+      if (email != null) 'email': email,
+      if (displayPicture != null) 'displayPicture': displayPicture,
+      'level': level,
+      'vipLevel': vipLevel,
+      'role': role,
+      'isOnline': isOnline,
+      if (country != null) 'country': country,
+      if (bio != null) 'bio': bio,
+      if (gender != null) 'gender': gender,
+      if (dob != null) 'dob': dob,
+      if (createdAt != null) 'createdAt': createdAt,
+      if (relationshipStatus != null) 'relationshipStatus': relationshipStatus,
+      if (languages != null) 'languages': languages,
+      if (interests != null) 'interests': interests,
+      if (currentLocation != null) 'currentLocation': currentLocation,
+    };
+  }
+
+  static String? _stringOrJoinedList(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is List) {
+      final parts = raw
+          .map((e) => e.toString().trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+      if (parts.isEmpty) return null;
+      return parts.join(', ');
+    }
+    final s = raw.toString().trim();
+    return s.isEmpty ? null : s;
   }
 }

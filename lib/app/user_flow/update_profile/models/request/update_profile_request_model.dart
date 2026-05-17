@@ -1,43 +1,53 @@
 import 'dart:io';
 
-/// Request model for `PUT /api/user/update`.
+/// Request model for `PUT /api/user/update` (multipart/form-data).
 ///
-/// All fields are optional as per API contract.
+/// All fields are optional per API contract.
 class UpdateProfileRequestModel {
   const UpdateProfileRequestModel({
     this.name,
-    this.bio,
     this.gender,
     this.dob,
-    this.country,
-    this.password,
     this.displayPicture,
+    this.relationshipStatus,
+    this.languages,
+    this.interests,
+    this.currentLocation,
   });
 
   final String? name;
-  final String? bio;
   final String? gender;
+  /// `YYYY-MM-DD`
   final String? dob;
-  final String? country;
-  final String? password;
   final File? displayPicture;
+  final String? relationshipStatus;
+  /// CSV or JSON array string — we send CSV (e.g. `English, Hindi`).
+  final String? languages;
+  final String? interests;
+  final String? currentLocation;
 
-  /// JSON payload for non-file update requests.
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{
       'name': name?.trim(),
-      'bio': bio?.trim(),
       'gender': gender?.trim(),
       'dob': dob?.trim(),
-      'country': country?.trim(),
-      'password': password?.trim(),
+      'relationshipStatus': relationshipStatus?.trim(),
+      'languages': languages?.trim(),
+      'interests': interests?.trim(),
+      'currentLocation': currentLocation?.trim(),
     };
-    json.removeWhere((key, value) => value == null || (value is String && value.isEmpty));
+    json.removeWhere(
+      (key, value) => value == null || (value is String && value.isEmpty),
+    );
     return json;
   }
 
-  /// Multipart form fields when `displayPicture` is sent.
+  /// Multipart text fields (file sent separately as `displayPicture`).
   Map<String, String> toFormFields() {
     return toJson().map((key, value) => MapEntry(key, value.toString()));
   }
+
+  bool get hasFile => displayPicture != null;
+
+  bool get hasAnyField => toFormFields().isNotEmpty || hasFile;
 }

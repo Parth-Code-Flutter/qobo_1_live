@@ -165,14 +165,22 @@ class ProfileTabView extends StatelessWidget {
                     children: [
                       _statBlock('2K', 'Visitors'),
                       _statDivider(),
-                      GestureDetector(
-                        onTap: () => Get.toNamed('/follow-list', arguments: {'initialTab': 0}),
-                        child: _statBlock('1K', 'Following')
+                      _statBlock(
+                        '1K',
+                        'Following',
+                        onTap: () => Get.toNamed(
+                          '/follow-list',
+                          arguments: const {'initialTab': 0},
+                        ),
                       ),
                       _statDivider(),
-                      GestureDetector(
-                        onTap: () => Get.toNamed('/follow-list', arguments: {'initialTab': 1}),
-                        child: _statBlock('10K', 'Followers')
+                      _statBlock(
+                        '10K',
+                        'Followers',
+                        onTap: () => Get.toNamed(
+                          '/follow-list',
+                          arguments: const {'initialTab': 1},
+                        ),
                       ),
                     ],
                   ),
@@ -204,23 +212,31 @@ class ProfileTabView extends StatelessWidget {
     );
   }
 
-  Widget _statBlock(String value, String label) {
+  Widget _statBlock(String value, String label, {VoidCallback? onTap}) {
+    final content = Column(
+      children: [
+        BoldText(
+          text: value,
+          fontSize: TextStyles.k20FontSize,
+          color: kColorWhite,
+        ),
+        Spacing.v6,
+        AppText(
+          text: label,
+          fontSize: TextStyles.k12FontSize,
+          color: kColorWhite,
+        ),
+      ],
+    );
+
     return Expanded(
-      child: Column(
-        children: [
-          BoldText(
-            text: value,
-            fontSize: TextStyles.k20FontSize,
-            color: kColorWhite,
-          ),
-          Spacing.v6,
-          AppText(
-            text: label,
-            fontSize: TextStyles.k12FontSize,
-            color: kColorWhite,
-          ),
-        ],
-      ),
+      child: onTap == null
+          ? content
+          : GestureDetector(
+              onTap: onTap,
+              behavior: HitTestBehavior.opaque,
+              child: content,
+            ),
     );
   }
 
@@ -312,11 +328,10 @@ class ProfileTabView extends StatelessWidget {
     );
   }
 
-  /// Profile feature section (4x3) with circular icon chips.
   Widget _profileFeatureGrid() {
     final features = <_ProfileFeatureItem>[
       _ProfileFeatureItem('Visitors', kIconVisitor, kColorProfileFeatureGreen),
-      _ProfileFeatureItem('User Level', kIconUserLevel, kColorProfileFeaturePurple),
+      _ProfileFeatureItem('User Level', kIconUserLevel, kColorProfileFeaturePurple, onTapRoute: Routes.USER_LEVEL),
       _ProfileFeatureItem('Backpack', kIconBackpack, kColorProfileFeatureOrange),
       _ProfileFeatureItem('Family', kIconFamily, kColorProfileFeaturePeach),
       _ProfileFeatureItem('SVIP', kIconSVIP, kColorProfileFeatureBlue),
@@ -355,34 +370,41 @@ class ProfileTabView extends StatelessWidget {
   }
 
   Widget _featureItem(_ProfileFeatureItem item) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 84,
-          height: 84,
-          decoration: BoxDecoration(
-            color: item.bgColor,
-            shape: BoxShape.circle,
+    return GestureDetector(
+      onTap: () {
+        if (item.onTapRoute != null) {
+          Get.toNamed(item.onTapRoute!);
+        }
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 84,
+            height: 84,
+            decoration: BoxDecoration(
+              color: item.bgColor,
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: SvgPicture.asset(
+              item.iconPath,
+              width: 32,
+              height: 32,
+              fit: BoxFit.contain,
+            ),
           ),
-          alignment: Alignment.center,
-          child: SvgPicture.asset(
-            item.iconPath,
-            width: 32,
-            height: 32,
-            fit: BoxFit.contain,
+          Spacing.v6,
+          Center(
+            child: AppText(
+              text: item.label,
+              fontSize: TextStyles.k12FontSize,
+              color: kColorWhite,
+              align: TextAlign.center,
+            ),
           ),
-        ),
-        Spacing.v6,
-        Center(
-          child: AppText(
-            text: item.label,
-            fontSize: TextStyles.k12FontSize,
-            color: kColorWhite,
-            align: TextAlign.center,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -423,9 +445,10 @@ class ProfileTabView extends StatelessWidget {
 }
 
 class _ProfileFeatureItem {
-  const _ProfileFeatureItem(this.label, this.iconPath, this.bgColor);
+  const _ProfileFeatureItem(this.label, this.iconPath, this.bgColor, {this.onTapRoute});
 
   final String label;
   final String iconPath;
   final Color bgColor;
+  final String? onTapRoute;
 }

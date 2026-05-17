@@ -43,6 +43,8 @@ import '../app/user_flow/settings/bindings/settings_binding.dart';
 import '../app/user_flow/settings/views/settings_view.dart';
 import '../app/user_flow/block_list/bindings/block_list_binding.dart';
 import '../app/user_flow/block_list/views/block_list_view.dart';
+import '../app/user_flow/user_level/bindings/user_level_binding.dart';
+import '../app/user_flow/user_level/views/user_level_view.dart';
 import '../app/splash/splash/views/splash_view.dart';
 
 part 'app_routes.dart';
@@ -162,6 +164,11 @@ class AppPages {
       name: _Paths.BLOCK_LIST,
       page: () => const BlockListView(),
       binding: BlockListBinding(),
+    ),
+    GetPage(
+      name: _Paths.USER_LEVEL,
+      page: () => const UserLevelView(),
+      binding: UserLevelBinding(),
     ),
   ];
 }
