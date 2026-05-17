@@ -49,6 +49,10 @@ import '../app/user_flow/backpack/bindings/backpack_binding.dart';
 import '../app/user_flow/backpack/views/backpack_view.dart';
 import '../app/user_flow/mall/bindings/mall_binding.dart';
 import '../app/user_flow/mall/views/mall_view.dart';
+import '../app/user_flow/svip/bindings/svip_binding.dart';
+import '../app/user_flow/svip/views/svip_view.dart';
+import '../app/user_flow/family/bindings/family_binding.dart';
+import '../app/user_flow/family/views/family_view.dart';
 import '../app/splash/splash/views/splash_view.dart';
 
 part 'app_routes.dart';
@@ -183,6 +187,16 @@ class AppPages {
       name: _Paths.MALL,
       page: () => const MallView(),
       binding: MallBinding(),
+    ),
+    GetPage(
+      name: _Paths.SVIP,
+      page: () => const SvipView(),
+      binding: SvipBinding(),
+    ),
+    GetPage(
+      name: _Paths.FAMILY,
+      page: () => const FamilyView(),
+      binding: FamilyBinding(),
     ),
   ];
 }

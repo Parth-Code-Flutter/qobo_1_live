@@ -29,6 +29,8 @@ abstract class Routes {
   static const USER_LEVEL = _Paths.USER_LEVEL;
   static const BACKPACK = _Paths.BACKPACK;
   static const MALL = _Paths.MALL;
+  static const SVIP = _Paths.SVIP;
+  static const FAMILY = _Paths.FAMILY;
 }
 
 abstract class _Paths {
@@ -59,4 +61,6 @@ abstract class _Paths {
   static const USER_LEVEL = '/user-level';
   static const BACKPACK = '/backpack';
   static const MALL = '/mall';
+  static const SVIP = '/svip';
+  static const FAMILY = '/family';
 }
