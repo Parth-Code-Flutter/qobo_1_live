@@ -196,12 +196,12 @@ Each tile is UI-only (`ProfileTabView` — no navigation).
 |---------|-------|---------------|--------|
 | PROF-G01 | Visitors | `kIconVisitor` | NOT_STARTED |
 | PROF-G02 | User Level | `kIconUserLevel` | PARTIAL |
-| PROF-G03 | Backpack | `kIconBackpack` | NOT_STARTED |
+| PROF-G03 | Backpack | `kIconBackpack` | PARTIAL |
 | PROF-G04 | Family | `kIconFamily` | NOT_STARTED |
 | PROF-G05 | SVIP | `kIconSVIP` | NOT_STARTED |
 | PROF-G06 | Activity | `kIconActivity` | NOT_STARTED |
 | PROF-G07 | Aristocracy Center | `kIconAristocracyCenter` | NOT_STARTED |
-| PROF-G08 | Mall | `kIconMall` | NOT_STARTED |
+| PROF-G08 | Mall | `kIconMall` | PARTIAL |
 | PROF-G09 | Point Center | `kIconPointerCenter` | NOT_STARTED |
 | PROF-G10 | Award | `kIconAward` | NOT_STARTED |
 | PROF-G11 | Broadcast Watched | `kIconBroadcastWatched` | NOT_STARTED |

@@ -27,6 +27,8 @@ abstract class Routes {
   static const SETTINGS = _Paths.SETTINGS;
   static const BLOCK_LIST = _Paths.BLOCK_LIST;
   static const USER_LEVEL = _Paths.USER_LEVEL;
+  static const BACKPACK = _Paths.BACKPACK;
+  static const MALL = _Paths.MALL;
 }
 
 abstract class _Paths {
@@ -55,4 +57,6 @@ abstract class _Paths {
   static const SETTINGS = '/settings';
   static const BLOCK_LIST = '/block-list';
   static const USER_LEVEL = '/user-level';
+  static const BACKPACK = '/backpack';
+  static const MALL = '/mall';
 }

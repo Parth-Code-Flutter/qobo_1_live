@@ -45,6 +45,10 @@ import '../app/user_flow/block_list/bindings/block_list_binding.dart';
 import '../app/user_flow/block_list/views/block_list_view.dart';
 import '../app/user_flow/user_level/bindings/user_level_binding.dart';
 import '../app/user_flow/user_level/views/user_level_view.dart';
+import '../app/user_flow/backpack/bindings/backpack_binding.dart';
+import '../app/user_flow/backpack/views/backpack_view.dart';
+import '../app/user_flow/mall/bindings/mall_binding.dart';
+import '../app/user_flow/mall/views/mall_view.dart';
 import '../app/splash/splash/views/splash_view.dart';
 
 part 'app_routes.dart';
@@ -169,6 +173,16 @@ class AppPages {
       name: _Paths.USER_LEVEL,
       page: () => const UserLevelView(),
       binding: UserLevelBinding(),
+    ),
+    GetPage(
+      name: _Paths.BACKPACK,
+      page: () => const BackpackView(),
+      binding: BackpackBinding(),
+    ),
+    GetPage(
+      name: _Paths.MALL,
+      page: () => const MallView(),
+      binding: MallBinding(),
     ),
   ];
 }
