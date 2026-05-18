@@ -74,6 +74,8 @@ import '../app/user_flow/entrance_patti/bindings/entrance_patti_binding.dart';
 import '../app/user_flow/entrance_patti/views/entrance_patti_view.dart';
 import '../app/user_flow/live_moderation/bindings/live_moderation_binding.dart';
 import '../app/user_flow/live_moderation/views/live_moderation_view.dart';
+import '../app/user_flow/customer_service/bindings/customer_service_binding.dart';
+import '../app/user_flow/customer_service/views/customer_service_view.dart';
 
 part 'app_routes.dart';
 
@@ -267,6 +269,11 @@ class AppPages {
       name: _Paths.LIVE_MODERATION,
       page: () => const LiveModerationView(),
       binding: LiveModerationBinding(),
+    ),
+    GetPage(
+      name: _Paths.CUSTOMER_SERVICE,
+      page: () => const CustomerServiceView(),
+      binding: CustomerServiceBinding(),
     ),
   ];
 }

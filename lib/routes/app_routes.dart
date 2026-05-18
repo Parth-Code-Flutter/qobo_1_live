@@ -41,6 +41,7 @@ abstract class Routes {
   static const VIP_STORE = _Paths.VIP_STORE;
   static const ENTRANCE_PATTI = _Paths.ENTRANCE_PATTI;
   static const LIVE_MODERATION = _Paths.LIVE_MODERATION;
+  static const CUSTOMER_SERVICE = _Paths.CUSTOMER_SERVICE;
 }
 
 abstract class _Paths {
@@ -83,4 +84,5 @@ abstract class _Paths {
   static const VIP_STORE = '/vip-store';
   static const ENTRANCE_PATTI = '/entrance-patti';
   static const LIVE_MODERATION = '/live-moderation';
+  static const CUSTOMER_SERVICE = '/customer-service';
 }

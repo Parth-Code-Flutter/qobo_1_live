@@ -345,7 +345,7 @@ class ProfileTabView extends StatelessWidget {
       _ProfileFeatureItem('Point Center', kIconPointerCenter, kColorProfileFeaturePink, onTapRoute: Routes.POINT_CENTER),
       _ProfileFeatureItem('Award', kIconAward, kColorProfileFeaturePeach, onTapRoute: Routes.AWARD),
       _ProfileFeatureItem('Broadcast\nWatched', kIconBroadcastWatched, kColorProfileFeatureGreen, onTapRoute: Routes.BROADCAST_WATCHED),
-      _ProfileFeatureItem('Customer\nservice', kIconCustomerService, kColorProfileFeatureYellow),
+      _ProfileFeatureItem('Customer\nservice', kIconCustomerService, kColorProfileFeatureYellow, onTapRoute: Routes.CUSTOMER_SERVICE),
     ];
 
     return Container(
@@ -378,12 +378,6 @@ class ProfileTabView extends StatelessWidget {
       onTap: () {
         if (item.onTapRoute != null) {
           Get.toNamed(item.onTapRoute!);
-        } else if (item.label.toLowerCase().contains('customer')) {
-          Get.snackbar(
-            'Customer Service',
-            'Connecting with a support agent soon...',
-            snackPosition: SnackPosition.BOTTOM,
-          );
         }
       },
       child: Column(
