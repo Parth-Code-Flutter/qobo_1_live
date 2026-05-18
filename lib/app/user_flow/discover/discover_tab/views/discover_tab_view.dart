@@ -56,10 +56,23 @@ class DiscoverTabView extends StatelessWidget {
               Spacing.v16,
               _searchBar(discoverController),
               Spacing.v12,
-              _roomModeRow(discoverController),
-              Spacing.v16,
+              Obx(() {
+                if (discoverController.searchQuery.value.isNotEmpty) {
+                  return const SizedBox.shrink();
+                }
+                return Column(
+                  children: [
+                    _roomModeRow(discoverController),
+                    Spacing.v16,
+                  ],
+                );
+              }),
               Expanded(
                 child: Obx(() {
+                  if (discoverController.searchQuery.value.isNotEmpty) {
+                    return _searchResultsList(context, discoverController);
+                  }
+
                   switch (discoverController.roomSelection.value) {
                     case DiscoverRoomSelection.video:
                       return const DiscoverVideoRoomView();
@@ -578,6 +591,122 @@ class DiscoverTabView extends StatelessWidget {
           color: kColorWhite,
         ),
       ),
+    );
+  }
+
+  Widget _searchResultsList(BuildContext context, DiscoverTabController controller) {
+    if (controller.isSearchLoading.value) {
+      return const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(kColorPrimary),
+        ),
+      );
+    }
+
+    if (controller.searchResults.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off_rounded, color: kColorWhite.withValues(alpha: 0.5), size: 48),
+            Spacing.v12,
+            AppText(
+              text: 'No users found matching "${controller.searchQuery.value}"',
+              fontSize: TextStyles.k14FontSize,
+              color: kColorWhite.withValues(alpha: 0.7),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.only(bottom: 24, top: 8),
+      itemCount: controller.searchResults.length,
+      separatorBuilder: (_, __) => const Divider(color: kColorDiscoverSearchBg, height: 1),
+      itemBuilder: (context, index) {
+        final user = controller.searchResults[index];
+        final String name = user['name']?.toString() ?? 'User';
+        final String? avatar = user['displayPicture']?.toString();
+        final String id = user['id']?.toString() ?? '';
+
+        final isFollowing = controller.followingUserIds.contains(id);
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: kColorWhite.withValues(alpha: 0.15), width: 1),
+                ),
+                child: ClipOval(
+                  child: avatar == null || avatar.isEmpty
+                      ? _initialsAvatar(name.isNotEmpty ? name[0].toUpperCase() : 'U')
+                      : Image.network(
+                          avatar.startsWith('http')
+                              ? avatar
+                              : 'https://my-backend-api-960q.onrender.com$avatar',
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _initialsAvatar(
+                            name.isNotEmpty ? name[0].toUpperCase() : 'U',
+                          ),
+                        ),
+                ),
+              ),
+              Spacing.h12,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SemiBoldText(
+                      text: name,
+                      fontSize: TextStyles.k16FontSize,
+                      color: kColorWhite,
+                    ),
+                    Spacing.v2,
+                    AppText(
+                      text: 'ID: ${id.length > 8 ? id.substring(0, 8) : id}',
+                      fontSize: TextStyles.k12FontSize,
+                      color: kColorWhite.withValues(alpha: 0.6),
+                    ),
+                  ],
+                ),
+              ),
+              GestureDetector(
+                onTap: () => controller.toggleFollow(context, id),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  decoration: BoxDecoration(
+                    gradient: isFollowing
+                        ? null
+                        : LinearGradient(
+                            colors: [
+                              kColorProfileActionPinkStart,
+                              kColorProfileActionOrangeEnd,
+                            ],
+                          ),
+                    color: isFollowing ? Colors.transparent : null,
+                    borderRadius: BorderRadius.circular(20),
+                    border: isFollowing
+                        ? Border.all(color: kColorWhite.withValues(alpha: 0.5), width: 1)
+                        : null,
+                  ),
+                  child: SemiBoldText(
+                    text: isFollowing ? 'Following' : 'Follow',
+                    fontSize: TextStyles.k12FontSize,
+                    color: kColorWhite,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

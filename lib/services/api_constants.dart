@@ -40,6 +40,12 @@ class AuthEndpoints {
 
   /// POST /api/user/poster-upload
   static const String posterUpload = '/api/user/poster-upload';
+
+  /// GET /api/user/search
+  static const String searchUsers = '/api/user/search';
+
+  /// POST /api/user/follow-unfollow
+  static const String followUnfollow = '/api/user/follow-unfollow';
 }
 
 /// Central place for room related API endpoints.

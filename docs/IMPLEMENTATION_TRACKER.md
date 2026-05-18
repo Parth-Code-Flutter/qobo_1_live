@@ -185,8 +185,8 @@
 | PROF-03 | Poster photo upload | DONE | `UserBasicProfileView` | `POST /api/user/poster-upload` | **Req #10** |
 | PROF-04 | User Patti style | DONE | `EntrancePattiView` | `GET /api/user/patti-style/:user_id` | **Req #16** entry ribbon store |
 | PROF-05 | Level + level icon history | DONE | `UserLevelView` | — | **Req #15**; vipLevel in API milestones |
-| PROF-06 | Follow / unfollow | NOT_STARTED | *(new)* | `POST /api/user/follow-unfollow` | |
-| PROF-07 | User search (from profile/discover) | NOT_STARTED | — | `GET /api/user/search` | |
+| PROF-06 | Follow / unfollow | DONE | `DiscoverTabView` | `POST /api/user/follow-unfollow` | |
+| PROF-07 | User search (from profile/discover) | DONE | `DiscoverTabView` | `GET /api/user/search` | Debounced reactive overlays |
 
 ### Profile feature grid (Profile tab — all NOT_STARTED)
 

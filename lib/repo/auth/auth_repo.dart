@@ -228,4 +228,37 @@ class AuthRepo {
 
     return jsonMap;
   }
+
+  /// Calls `GET /api/user/search?query=...` to search active users.
+  Future<Map<String, dynamic>?> searchUsers({
+    required String query,
+    bool isShowLoader = false,
+  }) async {
+    final response = await _apiService.getRequest(
+      endPoint: '${AuthEndpoints.searchUsers}?query=${Uri.encodeComponent(query)}',
+      isShowLoader: isShowLoader,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// Calls `POST /api/user/follow-unfollow` to follow or unfollow a user.
+  Future<Map<String, dynamic>?> followUnfollow({
+    required String targetId,
+    required String action,
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: AuthEndpoints.followUnfollow,
+      requestModel: {
+        'target_id': targetId,
+        'action': action,
+      },
+      isShowLoader: isShowLoader,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
 }
