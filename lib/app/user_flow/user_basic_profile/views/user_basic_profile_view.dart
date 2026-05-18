@@ -91,6 +91,8 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
                                     Spacing.v10,
                                     _genderField(),
                                     Spacing.v24,
+                                    _buildPosterBackgroundPicker(context),
+                                    Spacing.v24,
                                     _profileExtrasCard(context),
                                     Spacing.v16,
                                   ],
@@ -534,6 +536,76 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
           ),
         ),
       ),
+    );
+  Widget _buildPosterBackgroundPicker(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const AppText(
+          text: 'Profile Background Poster Banner',
+          fontSize: TextStyles.k14FontSize,
+          color: kColorText,
+        ),
+        Spacing.v12,
+        Obx(() {
+          final File? localPoster = controller.selectedPosterMedia.value;
+          final String netPoster = controller.posterUrl.value;
+          final bool isUploading = controller.isPosterUploading.value;
+
+          return GestureDetector(
+            onTap: isUploading ? null : () => controller.pickPosterMedia(context),
+            child: Container(
+              height: 150,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: kColorProfileExtrasCardBg,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: kColorTextFieldBorder, width: 0.5),
+                image: localPoster != null
+                    ? DecorationImage(image: FileImage(localPoster), fit: BoxFit.cover)
+                    : (netPoster.isNotEmpty
+                        ? DecorationImage(image: NetworkImage(netPoster), fit: BoxFit.cover)
+                        : null),
+              ),
+              child: Stack(
+                children: [
+                  if (localPoster == null && netPoster.isEmpty)
+                    Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add_photo_alternate_rounded, color: Colors.grey.shade400, size: 36),
+                          Spacing.v8,
+                          AppText(text: 'Upload Custom Poster Background', fontSize: 12, color: kColorHint),
+                        ],
+                      ),
+                    )
+                  else
+                    Positioned(
+                      right: 12,
+                      bottom: 12,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: kColorPrimary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.camera_enhance_rounded, color: kColorWhite, size: 16),
+                      ),
+                    ),
+                  if (isUploading)
+                    Container(
+                      color: kColorBlack.withOpacity(0.3),
+                      child: const Center(
+                        child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(kColorPrimary)),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          );
+        }),
+      ],
     );
   }
 }

@@ -206,4 +206,26 @@ class AuthRepo {
 
     return UpdateProfileResponseModel.fromJson(jsonMap);
   }
+
+  /// Calls `POST /api/user/poster-upload` to upload custom public poster.
+  Future<Map<String, dynamic>?> uploadPoster({
+    required File posterFile,
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.multipartFormRequest(
+      endPoint: AuthEndpoints.posterUpload,
+      fields: const {},
+      files: [posterFile],
+      fileFieldName: 'poster',
+      method: 'POST',
+      isShowLoader: isShowLoader,
+    );
+
+    if (response == null) return null;
+
+    final jsonMap = ApiResponseUtils.tryDecodeMap(response.body);
+    if (jsonMap == null) return null;
+
+    return jsonMap;
+  }
 }

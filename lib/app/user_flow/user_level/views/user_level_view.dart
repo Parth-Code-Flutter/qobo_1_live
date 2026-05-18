@@ -84,7 +84,7 @@ class UserLevelView extends GetView<UserLevelController> {
                   ),
                   child: SemiBoldText(
                     text: 'My Perks',
-                    fontSize: TextStyles.k13FontSize,
+                    fontSize: TextStyles.k14FontSize,
                     color: controller.selectedSubTab.value == 0 ? kColorWhite : kColorText.withOpacity(0.7),
                   ),
                 ),
@@ -104,7 +104,7 @@ class UserLevelView extends GetView<UserLevelController> {
                   ),
                   child: SemiBoldText(
                     text: 'Badge Milestones',
-                    fontSize: TextStyles.k13FontSize,
+                    fontSize: TextStyles.k14FontSize,
                     color: controller.selectedSubTab.value == 1 ? kColorWhite : kColorText.withOpacity(0.7),
                   ),
                 ),

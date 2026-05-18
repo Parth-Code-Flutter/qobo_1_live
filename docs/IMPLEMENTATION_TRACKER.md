@@ -182,7 +182,7 @@
 |---------|---------|--------|----------------|-----|-------|
 | PROF-01 | Profile tab | PARTIAL | `ProfileTabView` | `GET /api/user/profile` | Hero from session; grid not wired |
 | PROF-02 | User basic profile edit | DONE | `UserBasicProfileView` | `GET/PUT /api/user/update` | Nickname, age, gender, photo |
-| PROF-03 | Poster photo upload | NOT_STARTED | *(new or extend profile)* | `POST /api/user/poster-upload` | **Req #10** |
+| PROF-03 | Poster photo upload | DONE | `UserBasicProfileView` | `POST /api/user/poster-upload` | **Req #10** |
 | PROF-04 | User Patti style | DONE | `EntrancePattiView` | `GET /api/user/patti-style/:user_id` | **Req #16** entry ribbon store |
 | PROF-05 | Level + level icon history | DONE | `UserLevelView` | — | **Req #15**; vipLevel in API milestones |
 | PROF-06 | Follow / unfollow | NOT_STARTED | *(new)* | `POST /api/user/follow-unfollow` | |
@@ -249,7 +249,7 @@ Each tile is UI-only (`ProfileTabView` — no navigation).
 | 7 | PayPal activate | ECON-05 | NOT_STARTED |
 | 8 | Razorpay account | ECON-03 | NOT_STARTED |
 | 9 | Agency link create code | AGENCY-04 | NOT_STARTED |
-| 10 | Profile poster photo upload | PROF-03 | NOT_STARTED |
+| 10 | Profile poster photo upload | PROF-03 | DONE |
 | 11 | Admin phone + Gmail login | ADMIN-* | Out of mobile app |
 | 12 | VIP Store | ECON-08 | DONE |
 | 13 | Admin dashboard by country | ADMIN-* | Out of mobile app |

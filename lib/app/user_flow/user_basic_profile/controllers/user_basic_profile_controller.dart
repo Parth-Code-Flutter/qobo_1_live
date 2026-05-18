@@ -41,6 +41,9 @@ class UserBasicProfileController extends GetxController {
   final selectedAge = Rxn<int>();
   final selectedBirthdate = Rxn<DateTime>();
   final selectedProfileMedia = Rxn<File>();
+  final selectedPosterMedia = Rxn<File>();
+  final posterUrl = ''.obs;
+  final isPosterUploading = false.obs;
   final isSubmitLoading = false.obs;
 
   /// True when name, age, gender, or profile image differs from last baseline.
@@ -307,6 +310,8 @@ class UserBasicProfileController extends GetxController {
     ]);
     final name = nameRaw?.toString().trim() ?? '';
     if (name.isNotEmpty) userNameController.text = name;
+
+    posterUrl.value = data['poster']?.toString() ?? '';
 
     final genderLabel = genderLabelFromStored(
       firstPresent(data, const ['gender', 'sex']),
@@ -585,6 +590,55 @@ class UserBasicProfileController extends GetxController {
       }
     } finally {
       isSubmitLoading.value = false;
+    }
+  }
+
+  /// Opens gallery/camera to upload poster background
+  Future<void> pickPosterMedia(BuildContext context) async {
+    try {
+      final source = await CommonMediaPicker.show(context);
+      if (source == null) return;
+
+      final pickedFile = await _imagePicker.pickImage(
+        source: source,
+        imageQuality: 85,
+        maxWidth: 1200,
+      );
+      if (pickedFile == null) return;
+
+      final file = File(pickedFile.path);
+      selectedPosterMedia.value = file;
+      
+      // Upload poster instantly
+      isPosterUploading.value = true;
+      final response = await _authRepo.uploadPoster(posterFile: file);
+      if (response != null && response['statusCode'] == 1) {
+        final newUrl = response['data']['posterUrl']?.toString() ?? '';
+        if (newUrl.isNotEmpty) {
+          posterUrl.value = newUrl;
+          final session = _ensureSession();
+          final updatedData = Map<String, dynamic>.from(session.profileData ?? {});
+          updatedData['poster'] = newUrl;
+          await session.saveProfile(updatedData);
+          if (context.mounted) {
+            AppToast.showSuccess(context, 'Poster background uploaded successfully!');
+          }
+        }
+      } else {
+        if (context.mounted) {
+          AppToast.showError(context, 'Failed to upload poster background.');
+        }
+      }
+    } on MissingPluginException {
+      if (context.mounted) {
+        AppToast.showError(context, 'Media picker is not ready.');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        AppToast.showError(context, 'Error uploading poster: $e');
+      }
+    } finally {
+      isPosterUploading.value = false;
     }
   }
 

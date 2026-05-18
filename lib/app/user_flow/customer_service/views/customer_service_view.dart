@@ -88,7 +88,7 @@ class CustomerServiceView extends GetView<CustomerServiceController> {
         ),
         child: SemiBoldText(
           text: text,
-          fontSize: TextStyles.k13FontSize,
+          fontSize: TextStyles.k14FontSize,
           color: isSelected ? kColorWhite : kColorText.withOpacity(0.7),
         ),
       ),
@@ -263,7 +263,7 @@ class CustomerServiceView extends GetView<CustomerServiceController> {
                       Spacing.v12,
                       SemiBoldText(
                         text: tkt['subject'] ?? '',
-                        fontSize: TextStyles.k15FontSize,
+                        fontSize: TextStyles.k14FontSize,
                         color: kColorText,
                       ),
                       Spacing.v4,
