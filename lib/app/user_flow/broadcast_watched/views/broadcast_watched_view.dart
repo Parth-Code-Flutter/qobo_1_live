@@ -198,22 +198,14 @@ class BroadcastWatchedView extends GetView<BroadcastWatchedController> {
                       children: [
                         Icon(Icons.timer_outlined, color: Colors.grey.shade400, size: 12),
                         Spacing.h4,
-                        AppText(
-                          text: broadcast['watchDuration'] ?? '',
-                          fontSize: 11,
-                          color: kColorHint,
-                        ),
-                        Spacing.h8,
-                        Container(
-                          width: 3,
-                          height: 3,
-                          decoration: BoxDecoration(color: Colors.grey.shade400, shape: BoxShape.circle),
-                        ),
-                        Spacing.h8,
-                        AppText(
-                          text: broadcast['lastWatched'] ?? '',
-                          fontSize: 11,
-                          color: kColorHint,
+                        Expanded(
+                          child: AppText(
+                            text: '${broadcast['watchDuration'] ?? ''}  •  ${broadcast['lastWatched'] ?? ''}',
+                            fontSize: 11,
+                            color: kColorHint,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ),
