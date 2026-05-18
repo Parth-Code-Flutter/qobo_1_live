@@ -28,6 +28,7 @@ class VisitorsView extends GetView<VisitorsController> {
           title: 'Profile Visitors',
           useMaterialAppBar: true,
           backgroundColor: Colors.transparent,
+          titleColor: kColorWhite,
         ),
         body: Obx(() {
           if (controller.isLoading.value) {

@@ -28,6 +28,7 @@ class ActivityView extends GetView<ActivityController> {
           title: 'Hot Activities',
           useMaterialAppBar: true,
           backgroundColor: Colors.transparent,
+          titleColor: kColorWhite,
         ),
         body: Obx(() {
           if (controller.isLoading.value) {

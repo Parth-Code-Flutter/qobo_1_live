@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:qobo_one_live/services/api_service.dart';
 import 'package:qobo_one_live/services/api_constants.dart';
 import 'package:qobo_one_live/utils/api_response_utils.dart';
-import 'package:dio/dio.dart';
 
 /// Agency repository contains API calls for agency and host management.
 class AgencyRepo {

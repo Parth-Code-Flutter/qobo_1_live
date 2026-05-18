@@ -18,6 +18,8 @@ class CommonAppBarWidget extends StatelessWidget
     this.rowAction,
     this.onBackPressed,
     this.backgroundColor = kColorWhite,
+    this.titleColor = kColorText,
+    this.bottom,
   });
 
   final String title;
@@ -27,9 +29,13 @@ class CommonAppBarWidget extends StatelessWidget
   final Widget? rowAction;
   final VoidCallback? onBackPressed;
   final Color backgroundColor;
+  final Color titleColor;
+  final PreferredSizeWidget? bottom;
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => Size.fromHeight(
+        kToolbarHeight + (bottom?.preferredSize.height ?? 0),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -56,10 +62,11 @@ class CommonAppBarWidget extends StatelessWidget
         title,
         style: TextStyles.kBoldPoppins(
           fontSize: TextStyles.k24FontSize,
-          colors: kColorText,
+          colors: titleColor,
         ),
       ),
       actions: actions,
+      bottom: bottom,
     );
   }
 
@@ -75,29 +82,35 @@ class CommonAppBarWidget extends StatelessWidget
 
     return SafeArea(
       bottom: false,
-      child: Container(
-        height: kToolbarHeight,
-        color: backgroundColor,
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        child: Row(
-          children: [
-            leading,
-            Expanded(
-              child: Center(
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyles.kBoldPoppins(
-                    fontSize: TextStyles.k24FontSize,
-                    colors: kColorText,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            height: kToolbarHeight,
+            color: backgroundColor,
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Row(
+              children: [
+                leading,
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyles.kBoldPoppins(
+                        fontSize: TextStyles.k24FontSize,
+                        colors: titleColor,
+                      ),
+                    ),
                   ),
                 ),
-              ),
+                trailing,
+              ],
             ),
-            trailing,
-          ],
-        ),
+          ),
+          if (bottom != null) bottom!,
+        ],
       ),
     );
   }

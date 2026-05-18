@@ -17,10 +17,7 @@ class AristocracyCenterView extends GetView<AristocracyCenterController> {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        image: DecorationImage(
-          image: AssetImage(kImgBG),
-          fit: BoxFit.cover,
-        ),
+        image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
       ),
       child: Scaffold(
         backgroundColor: Colors.transparent,
@@ -28,14 +25,13 @@ class AristocracyCenterView extends GetView<AristocracyCenterController> {
           title: 'Aristocracy Center',
           useMaterialAppBar: true,
           backgroundColor: Colors.transparent,
+          titleColor: kColorWhite,
         ),
         body: Column(
           children: [
             Spacing.v12,
             _buildRankSelector(),
-            Expanded(
-              child: _buildDetailsPanel(),
-            ),
+            Expanded(child: _buildDetailsPanel()),
           ],
         ),
         bottomNavigationBar: _buildPurchaseBar(),
@@ -64,9 +60,7 @@ class AristocracyCenterView extends GetView<AristocracyCenterController> {
                 width: 90,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: gradients
-                        .map((hex) => Color(hex))
-                        .toList(),
+                    colors: gradients.map((hex) => Color(hex)).toList(),
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -88,7 +82,9 @@ class AristocracyCenterView extends GetView<AristocracyCenterController> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      index >= 2 ? Icons.military_tech_rounded : Icons.shield_rounded,
+                      index >= 2
+                          ? Icons.military_tech_rounded
+                          : Icons.shield_rounded,
                       color: kColorWhite,
                       size: 36,
                     ),
@@ -120,21 +116,14 @@ class AristocracyCenterView extends GetView<AristocracyCenterController> {
         decoration: BoxDecoration(
           color: kColorWhite.withOpacity(0.08),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: kColorWhite.withOpacity(0.12),
-            width: 1,
-          ),
+          border: Border.all(color: kColorWhite.withOpacity(0.12), width: 1),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.stars_rounded,
-                  color: Color(gradients[0]),
-                  size: 28,
-                ),
+                Icon(Icons.stars_rounded, color: Color(gradients[0]), size: 28),
                 Spacing.h10,
                 BoldText(
                   text: '${rank['name']} Privileges',
@@ -225,9 +214,8 @@ class AristocracyCenterView extends GetView<AristocracyCenterController> {
                   onPressed: () => controller.purchaseNobleRank(rank['name']),
                   buttonText: 'Subscribe',
                   isGradient: true,
-                  gradient: LinearGradient(
-                    colors: gradients.map((hex) => Color(hex)).toList(),
-                  ),
+                  gradientColors: gradients.map((hex) => Color(hex)).toList(),
+
                   borderRadius: 24,
                   textStyle: TextStyles.kSemiBoldPoppins(
                     fontSize: TextStyles.k14FontSize,

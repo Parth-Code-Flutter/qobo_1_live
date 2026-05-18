@@ -31,6 +31,7 @@ class PointCenterView extends GetView<PointCenterController> {
             title: 'Point Center',
             useMaterialAppBar: true,
             backgroundColor: Colors.transparent,
+            titleColor: kColorWhite,
             bottom: TabBar(
               tabs: [
                 Tab(text: 'Daily Tasks'),
@@ -169,7 +170,7 @@ class PointCenterView extends GetView<PointCenterController> {
                   height: 32,
                   width: 80,
                   child: appButton(
-                    onPressed: isCompleted && !isClaimed ? () => controller.claimPoints(index) : null,
+                    onPressed: isCompleted && !isClaimed ? () => controller.claimPoints(index) : (){},
                     buttonText: isClaimed
                         ? 'Claimed'
                         : isCompleted
