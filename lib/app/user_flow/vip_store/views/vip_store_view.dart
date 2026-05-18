@@ -137,7 +137,7 @@ class VipStoreView extends GetView<VipStoreController> {
               ),
               child: SemiBoldText(
                 text: categories[index],
-                fontSize: TextStyles.k13FontSize,
+                fontSize: TextStyles.k14FontSize,
                 color: isSelected ? kColorWhite : kColorPrimary,
               ),
             ),
@@ -290,15 +290,15 @@ class VipStoreView extends GetView<VipStoreController> {
   IconData _getItemIcon(String name) {
     switch (name) {
       case 'sports_car_rounded':
-        return Icons.sports_car_rounded;
+        return Icons.directions_car_rounded;
       case 'wb_sunny_rounded':
         return Icons.wb_sunny_rounded;
       case 'electric_bolt_rounded':
-        return Icons.electric_bolt_rounded;
+        return Icons.bolt_rounded;
       case 'brightness_high_rounded':
         return Icons.brightness_high_rounded;
       case 'change_circle_rounded':
-        return Icons.change_circle_rounded;
+        return Icons.autorenew_rounded;
       case 'filter_vintage_rounded':
         return Icons.filter_vintage_rounded;
       case 'chat_bubble_rounded':

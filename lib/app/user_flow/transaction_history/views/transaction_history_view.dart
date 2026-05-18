@@ -186,7 +186,7 @@ class TransactionHistoryView extends GetView<TransactionHistoryController> {
                   children: [
                     SemiBoldText(
                       text: tx['title'] ?? 'Transaction',
-                      fontSize: TextStyles.k15FontSize,
+                      fontSize: TextStyles.k14FontSize,
                       color: kColorText,
                     ),
                     Spacing.v2,
