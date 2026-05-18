@@ -15,22 +15,13 @@ class ActivityView extends GetView<ActivityController> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        image: DecorationImage(
-          image: AssetImage(kImgBG),
-          fit: BoxFit.cover,
-        ),
+    return Scaffold(
+      backgroundColor: kColorBackground,
+      appBar: const CommonAppBarWidget(
+        title: 'Hot Activities',
+        useMaterialAppBar: true,
       ),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: const CommonAppBarWidget(
-          title: 'Hot Activities',
-          useMaterialAppBar: true,
-          backgroundColor: Colors.transparent,
-          titleColor: kColorWhite,
-        ),
-        body: Obx(() {
+      body: Obx(() {
           if (controller.isLoading.value) {
             return const Center(
               child: CircularProgressIndicator(

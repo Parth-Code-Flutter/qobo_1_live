@@ -16,47 +16,37 @@ class PointCenterView extends GetView<PointCenterController> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        image: DecorationImage(
-          image: AssetImage(kImgBG),
-          fit: BoxFit.cover,
-        ),
-      ),
-      child: DefaultTabController(
-        length: 2,
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-          appBar: const CommonAppBarWidget(
-            title: 'Point Center',
-            useMaterialAppBar: true,
-            backgroundColor: Colors.transparent,
-            titleColor: kColorWhite,
-            bottom: TabBar(
-              tabs: [
-                Tab(text: 'Daily Tasks'),
-                Tab(text: 'Point Store'),
-              ],
-              labelColor: kColorWhite,
-              unselectedLabelColor: Colors.white60,
-              indicatorColor: kColorPrimary,
-              indicatorWeight: 3,
-            ),
-          ),
-          body: Column(
-            children: [
-              Spacing.v16,
-              _buildPointsCard(),
-              Expanded(
-                child: TabBarView(
-                  children: [
-                    _buildTasksTab(),
-                    _buildStoreTab(),
-                  ],
-                ),
-              ),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: kColorBackground,
+        appBar: const CommonAppBarWidget(
+          title: 'Point Center',
+          useMaterialAppBar: true,
+          bottom: TabBar(
+            tabs: [
+              Tab(text: 'Daily Tasks'),
+              Tab(text: 'Point Store'),
             ],
+            labelColor: kColorPrimary,
+            unselectedLabelColor: kColorHint,
+            indicatorColor: kColorPrimary,
+            indicatorWeight: 3,
           ),
+        ),
+        body: Column(
+          children: [
+            Spacing.v16,
+            _buildPointsCard(),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  _buildTasksTab(),
+                  _buildStoreTab(),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -132,12 +122,15 @@ class PointCenterView extends GetView<PointCenterController> {
           return Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: kColorWhite.withOpacity(0.08),
+              color: kColorWhite,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: kColorWhite.withOpacity(0.12),
-                width: 1,
-              ),
+              boxShadow: [
+                BoxShadow(
+                  color: kColorBlack.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Row(
               children: [
@@ -148,7 +141,7 @@ class PointCenterView extends GetView<PointCenterController> {
                       SemiBoldText(
                         text: task['title'],
                         fontSize: TextStyles.k14FontSize,
-                        color: kColorWhite,
+                        color: kColorText,
                       ),
                       Spacing.v6,
                       Row(
@@ -177,21 +170,17 @@ class PointCenterView extends GetView<PointCenterController> {
                             ? 'Claim'
                             : 'Go',
                     buttonColor: isClaimed
-                        ? Colors.white12
+                        ? kColorBackground
                         : isCompleted
                             ? kColorPrimary
-                            : Colors.transparent,
+                            : kColorWhite,
                     buttonBorderColor: !isCompleted ? kColorPrimary : Colors.transparent,
-                    textColor: isClaimed
-                        ? Colors.white38
-                        : isCompleted
-                            ? kColorWhite
-                            : kColorPrimary,
                     borderRadius: 16,
+                    buttonWidth: 80,
                     textStyle: TextStyles.kSemiBoldPoppins(
                       fontSize: TextStyles.k12FontSize,
                       colors: isClaimed
-                          ? Colors.white38
+                          ? kColorHint
                           : isCompleted
                               ? kColorWhite
                               : kColorPrimary,
@@ -223,12 +212,15 @@ class PointCenterView extends GetView<PointCenterController> {
           return Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: kColorWhite.withOpacity(0.08),
+              color: kColorWhite,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: kColorWhite.withOpacity(0.12),
-                width: 1,
-              ),
+              boxShadow: [
+                BoxShadow(
+                  color: kColorBlack.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -242,7 +234,7 @@ class PointCenterView extends GetView<PointCenterController> {
                       fit: BoxFit.contain,
                       placeholderBuilder: (_) => const Icon(
                         Icons.card_giftcard_rounded,
-                        color: kColorWhite,
+                        color: kColorPrimary,
                         size: 40,
                       ),
                     ),
@@ -252,7 +244,7 @@ class PointCenterView extends GetView<PointCenterController> {
                 SemiBoldText(
                   text: item['name'],
                   fontSize: TextStyles.k14FontSize,
-                  color: kColorWhite,
+                  color: kColorText,
                   align: TextAlign.center,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -261,7 +253,7 @@ class PointCenterView extends GetView<PointCenterController> {
                 AppText(
                   text: item['duration'],
                   fontSize: TextStyles.k12FontSize,
-                  color: kColorWhite.withOpacity(0.5),
+                  color: kColorHint,
                 ),
                 Spacing.v12,
                 SizedBox(

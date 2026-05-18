@@ -15,37 +15,27 @@ class VisitorsView extends GetView<VisitorsController> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        image: DecorationImage(
-          image: AssetImage(kImgBG),
-          fit: BoxFit.cover,
-        ),
+    return Scaffold(
+      backgroundColor: kColorBackground,
+      appBar: const CommonAppBarWidget(
+        title: 'Profile Visitors',
+        useMaterialAppBar: true,
       ),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: const CommonAppBarWidget(
-          title: 'Profile Visitors',
-          useMaterialAppBar: true,
-          backgroundColor: Colors.transparent,
-          titleColor: kColorWhite,
-        ),
-        body: Obx(() {
-          if (controller.isLoading.value) {
-            return const Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(kColorPrimary),
-              ),
-            );
-          }
+      body: Obx(() {
+        if (controller.isLoading.value) {
+          return const Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(kColorPrimary),
+            ),
+          );
+        }
 
-          if (controller.visitors.isEmpty) {
-            return _buildEmptyState();
-          }
+        if (controller.visitors.isEmpty) {
+          return _buildEmptyState();
+        }
 
-          return _buildVisitorsList();
-        }),
-      ),
+        return _buildVisitorsList();
+      }),
     );
   }
 
@@ -57,12 +47,12 @@ class VisitorsView extends GetView<VisitorsController> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: kColorWhite.withOpacity(0.08),
+              color: kColorPrimary.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(
               Icons.visibility_off_rounded,
-              color: kColorWhite,
+              color: kColorPrimary,
               size: 64,
             ),
           ),
@@ -70,13 +60,13 @@ class VisitorsView extends GetView<VisitorsController> {
           const SemiBoldText(
             text: 'No Visitors Yet',
             fontSize: TextStyles.k18FontSize,
-            color: kColorWhite,
+            color: kColorText,
           ),
           Spacing.v8,
-          AppText(
+          const AppText(
             text: 'Share your profile to attract more fans!',
             fontSize: TextStyles.k14FontSize,
-            color: kColorWhite.withOpacity(0.6),
+            color: kColorHint,
             align: TextAlign.center,
           ),
         ],
@@ -98,12 +88,15 @@ class VisitorsView extends GetView<VisitorsController> {
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: kColorWhite.withOpacity(0.08),
+            color: kColorWhite,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: kColorWhite.withOpacity(0.12),
-              width: 1,
-            ),
+            boxShadow: [
+              BoxShadow(
+                color: kColorBlack.withOpacity(0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Row(
             children: [
@@ -141,7 +134,7 @@ class VisitorsView extends GetView<VisitorsController> {
                           child: SemiBoldText(
                             text: visitor['name'] ?? 'Unknown User',
                             fontSize: TextStyles.k16FontSize,
-                            color: kColorWhite,
+                            color: kColorText,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -178,7 +171,7 @@ class VisitorsView extends GetView<VisitorsController> {
                         AppText(
                           text: visitor['time'] ?? 'Just now',
                           fontSize: TextStyles.k12FontSize,
-                          color: kColorWhite.withOpacity(0.5),
+                          color: kColorHint,
                         ),
                       ],
                     ),
@@ -193,13 +186,13 @@ class VisitorsView extends GetView<VisitorsController> {
                 child: appButton(
                   onPressed: () => controller.toggleFollow(index),
                   buttonText: isFollowing ? 'Message' : 'Follow',
-                  buttonColor: isFollowing ? Colors.transparent : kColorPrimary,
+                  buttonColor: isFollowing ? kColorBackground : kColorPrimary,
                   buttonBorderColor: isFollowing ? kColorPrimary : Colors.transparent,
                   borderRadius: 16,
                   buttonWidth: 90,
                   textStyle: TextStyles.kSemiBoldPoppins(
                     fontSize: TextStyles.k12FontSize,
-                    colors: kColorWhite,
+                    colors: isFollowing ? kColorPrimary : kColorWhite,
                   ),
                 ),
               ),
@@ -231,9 +224,9 @@ class VisitorsView extends GetView<VisitorsController> {
   Color _getVipColor(String vip) {
     switch (vip) {
       case 'SVIP':
-        return const Color(0xFFFFD700); // Gold
+        return const Color(0xFFD4AF37); // Gold
       case 'VIP':
-        return const Color(0xFFC0C0C0); // Silver
+        return const Color(0xFF9E9E9E); // Silver
       default:
         return Colors.transparent;
     }

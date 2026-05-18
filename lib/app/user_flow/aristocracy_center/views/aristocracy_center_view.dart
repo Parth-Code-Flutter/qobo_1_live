@@ -15,27 +15,20 @@ class AristocracyCenterView extends GetView<AristocracyCenterController> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
+    return Scaffold(
+      backgroundColor: kColorBackground,
+      appBar: const CommonAppBarWidget(
+        title: 'Aristocracy Center',
+        useMaterialAppBar: true,
       ),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: const CommonAppBarWidget(
-          title: 'Aristocracy Center',
-          useMaterialAppBar: true,
-          backgroundColor: Colors.transparent,
-          titleColor: kColorWhite,
-        ),
-        body: Column(
-          children: [
-            Spacing.v12,
-            _buildRankSelector(),
-            Expanded(child: _buildDetailsPanel()),
-          ],
-        ),
-        bottomNavigationBar: _buildPurchaseBar(),
+      body: Column(
+        children: [
+          Spacing.v12,
+          _buildRankSelector(),
+          Expanded(child: _buildDetailsPanel()),
+        ],
       ),
+      bottomNavigationBar: _buildPurchaseBar(),
     );
   }
 
@@ -114,9 +107,15 @@ class AristocracyCenterView extends GetView<AristocracyCenterController> {
         margin: const EdgeInsets.fromLTRB(16, 24, 16, 16),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: kColorWhite.withOpacity(0.08),
+          color: kColorWhite,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: kColorWhite.withOpacity(0.12), width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: kColorBlack.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -128,7 +127,7 @@ class AristocracyCenterView extends GetView<AristocracyCenterController> {
                 BoldText(
                   text: '${rank['name']} Privileges',
                   fontSize: TextStyles.k18FontSize,
-                  color: kColorWhite,
+                  color: kColorText,
                 ),
               ],
             ),
@@ -155,7 +154,7 @@ class AristocracyCenterView extends GetView<AristocracyCenterController> {
                         child: AppText(
                           text: privileges[index],
                           fontSize: TextStyles.k14FontSize,
-                          color: kColorWhite.withOpacity(0.85),
+                          color: kColorText.withOpacity(0.8),
                         ),
                       ),
                     ],
@@ -177,8 +176,14 @@ class AristocracyCenterView extends GetView<AristocracyCenterController> {
       return Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: kColorWhite.withOpacity(0.06),
-          border: Border.all(color: kColorWhite.withOpacity(0.08)),
+          color: kColorWhite,
+          boxShadow: [
+            BoxShadow(
+              color: kColorBlack.withOpacity(0.06),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(24),
             topRight: Radius.circular(24),
@@ -192,16 +197,16 @@ class AristocracyCenterView extends GetView<AristocracyCenterController> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    AppText(
+                    const AppText(
                       text: 'Subscription Fee',
                       fontSize: TextStyles.k12FontSize,
-                      color: kColorWhite.withOpacity(0.6),
+                      color: kColorHint,
                     ),
                     Spacing.v4,
                     SemiBoldText(
                       text: rank['price'],
                       fontSize: TextStyles.k16FontSize,
-                      color: kColorWhite,
+                      color: kColorPrimary,
                     ),
                   ],
                 ),
@@ -215,7 +220,6 @@ class AristocracyCenterView extends GetView<AristocracyCenterController> {
                   buttonText: 'Subscribe',
                   isGradient: true,
                   gradientColors: gradients.map((hex) => Color(hex)).toList(),
-
                   borderRadius: 24,
                   textStyle: TextStyles.kSemiBoldPoppins(
                     fontSize: TextStyles.k14FontSize,
