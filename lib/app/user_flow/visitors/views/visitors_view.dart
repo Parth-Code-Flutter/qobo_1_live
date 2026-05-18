@@ -189,12 +189,14 @@ class VisitorsView extends GetView<VisitorsController> {
               // Follow Button
               SizedBox(
                 height: 32,
+                width: 90,
                 child: appButton(
                   onPressed: () => controller.toggleFollow(index),
                   buttonText: isFollowing ? 'Message' : 'Follow',
                   buttonColor: isFollowing ? Colors.transparent : kColorPrimary,
                   buttonBorderColor: isFollowing ? kColorPrimary : Colors.transparent,
                   borderRadius: 16,
+                  buttonWidth: 90,
                   textStyle: TextStyles.kSemiBoldPoppins(
                     fontSize: TextStyles.k12FontSize,
                     colors: kColorWhite,
