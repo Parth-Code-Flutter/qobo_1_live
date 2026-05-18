@@ -70,6 +70,10 @@ import '../app/user_flow/transaction_history/bindings/transaction_history_bindin
 import '../app/user_flow/transaction_history/views/transaction_history_view.dart';
 import '../app/user_flow/vip_store/bindings/vip_store_binding.dart';
 import '../app/user_flow/vip_store/views/vip_store_view.dart';
+import '../app/user_flow/entrance_patti/bindings/entrance_patti_binding.dart';
+import '../app/user_flow/entrance_patti/views/entrance_patti_view.dart';
+import '../app/user_flow/live_moderation/bindings/live_moderation_binding.dart';
+import '../app/user_flow/live_moderation/views/live_moderation_view.dart';
 
 part 'app_routes.dart';
 
@@ -253,6 +257,16 @@ class AppPages {
       name: _Paths.VIP_STORE,
       page: () => const VipStoreView(),
       binding: VipStoreBinding(),
+    ),
+    GetPage(
+      name: _Paths.ENTRANCE_PATTI,
+      page: () => const EntrancePattiView(),
+      binding: EntrancePattiBinding(),
+    ),
+    GetPage(
+      name: _Paths.LIVE_MODERATION,
+      page: () => const LiveModerationView(),
+      binding: LiveModerationBinding(),
     ),
   ];
 }

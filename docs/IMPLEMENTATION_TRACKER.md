@@ -147,7 +147,7 @@
 | LIVE-05 | Inside Room (Host/Broadcaster view) | PARTIAL | `LiveBroadcastView` / `LIVE_BROADCAST` | `WS /socket` | Handles host video, chat, controls |
 | LIVE-06 | Inside Room (Audience view) | PARTIAL | `LiveBroadcastView` / `LIVE_BROADCAST` | `WS /socket` | Navigated from Feed directly |
 | LIVE-07 | Mic mute/lock | PARTIAL | `RoomOptionsSheet` | `POST /api/room/mic-action` | UI available |
-| LIVE-08 | Security SOS | NOT_STARTED | in-room | `POST /api/room/security-sos` | **Req #3** calling security |
+| LIVE-08 | Security SOS | DONE | `LiveModerationView` | `POST /api/room/security-sos` | **Req #3** moderator control room |
 | LIVE-09 | Share live / room link | NOT_STARTED | in-room | `GET /api/room/share` | **Req #18** |
 | LIVE-10 | Send/receive gifts | PARTIAL | `GiftsBottomSheet` | `POST /api/room/gift` | **Req #1** |
 | LIVE-11 | Ban/Kick user | PARTIAL | `RoomOptionsSheet` | `POST /api/room/kick` | **Req #3** |
@@ -183,7 +183,7 @@
 | PROF-01 | Profile tab | PARTIAL | `ProfileTabView` | `GET /api/user/profile` | Hero from session; grid not wired |
 | PROF-02 | User basic profile edit | DONE | `UserBasicProfileView` | `GET/PUT /api/user/update` | Nickname, age, gender, photo |
 | PROF-03 | Poster photo upload | NOT_STARTED | *(new or extend profile)* | `POST /api/user/poster-upload` | **Req #10** |
-| PROF-04 | User Patti style | NOT_STARTED | *(new)* | `GET /api/user/patti-style/:user_id` | **Req #16** |
+| PROF-04 | User Patti style | DONE | `EntrancePattiView` | `GET /api/user/patti-style/:user_id` | **Req #16** entry ribbon store |
 | PROF-05 | Level + level icon history | PARTIAL | `UserLevelView` | — | **Req #15**; vipLevel in API models only |
 | PROF-06 | Follow / unfollow | NOT_STARTED | *(new)* | `POST /api/user/follow-unfollow` | |
 | PROF-07 | User search (from profile/discover) | NOT_STARTED | — | `GET /api/user/search` | |
@@ -242,7 +242,7 @@ Each tile is UI-only (`ProfileTabView` — no navigation).
 |---|-------------|------------|--------|
 | 1 | Coin seller dashboard | ECON-09 | NOT_STARTED |
 | 2 | Bad comment moderation | LIVE-11 | NOT_STARTED |
-| 3 | Calling security option | LIVE-08 | NOT_STARTED |
+| 3 | Calling security option | LIVE-08 | DONE |
 | 4 | AdMob account | ECON-10 | NOT_STARTED |
 | 5 | Facebook ads | ECON-11 | NOT_STARTED |
 | 6 | Google payment | ECON-04 | NOT_STARTED |
@@ -255,7 +255,7 @@ Each tile is UI-only (`ProfileTabView` — no navigation).
 | 13 | Admin dashboard by country | ADMIN-* | Out of mobile app |
 | 14 | Chat icon | CHAT-01, CHAT-02 | PARTIAL |
 | 15 | Level icon history | PROF-05 | NOT_STARTED |
-| 16 | User Patti | PROF-04 | NOT_STARTED |
+| 16 | User Patti | PROF-04 | DONE |
 | 17 | Language translate | LIVE-10 | NOT_STARTED |
 | 18 | Live sharing | LIVE-09 | NOT_STARTED |
 | 19 | Popular / new / old users | LIVE-01 | PARTIAL |
