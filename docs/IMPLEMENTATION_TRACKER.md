@@ -203,9 +203,9 @@ Each tile is UI-only (`ProfileTabView` — no navigation).
 | PROF-G07 | Aristocracy Center | `kIconAristocracyCenter` | PARTIAL |
 | PROF-G08 | Mall | `kIconMall` | PARTIAL |
 | PROF-G09 | Point Center | `kIconPointerCenter` | PARTIAL |
-| PROF-G10 | Award | `kIconAward` | NOT_STARTED |
-| PROF-G11 | Broadcast Watched | `kIconBroadcastWatched` | NOT_STARTED |
-| PROF-G12 | Customer service | `kIconCustomerService` | NOT_STARTED |
+| PROF-G10 | Award | `kIconAward` | DONE | `AwardView` |
+| PROF-G11 | Broadcast Watched | `kIconBroadcastWatched` | DONE | `BroadcastWatchedView` |
+| PROF-G12 | Customer service | `kIconCustomerService` | PARTIAL | Integrated quick support dialog |
 
 ### Profile action cards
 
