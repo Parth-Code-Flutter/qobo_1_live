@@ -537,6 +537,8 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
         ),
       ),
     );
+  }
+
   Widget _buildPosterBackgroundPicker(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
