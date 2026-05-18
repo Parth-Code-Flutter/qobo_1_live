@@ -62,6 +62,10 @@ import '../app/user_flow/activity/views/activity_view.dart';
 import '../app/user_flow/point_center/bindings/point_center_binding.dart';
 import '../app/user_flow/point_center/views/point_center_view.dart';
 import '../app/splash/splash/views/splash_view.dart';
+import '../app/user_flow/award/bindings/award_binding.dart';
+import '../app/user_flow/award/views/award_view.dart';
+import '../app/user_flow/broadcast_watched/bindings/broadcast_watched_binding.dart';
+import '../app/user_flow/broadcast_watched/views/broadcast_watched_view.dart';
 
 part 'app_routes.dart';
 
@@ -225,6 +229,16 @@ class AppPages {
       name: _Paths.POINT_CENTER,
       page: () => const PointCenterView(),
       binding: PointCenterBinding(),
+    ),
+    GetPage(
+      name: _Paths.AWARD,
+      page: () => const AwardView(),
+      binding: AwardBinding(),
+    ),
+    GetPage(
+      name: _Paths.BROADCAST_WATCHED,
+      page: () => const BroadcastWatchedView(),
+      binding: BroadcastWatchedBinding(),
     ),
   ];
 }

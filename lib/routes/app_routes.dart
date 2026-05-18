@@ -35,6 +35,8 @@ abstract class Routes {
   static const ARISTOCRACY_CENTER = _Paths.ARISTOCRACY_CENTER;
   static const ACTIVITY = _Paths.ACTIVITY;
   static const POINT_CENTER = _Paths.POINT_CENTER;
+  static const AWARD = _Paths.AWARD;
+  static const BROADCAST_WATCHED = _Paths.BROADCAST_WATCHED;
 }
 
 abstract class _Paths {
@@ -71,4 +73,6 @@ abstract class _Paths {
   static const ARISTOCRACY_CENTER = '/aristocracy-center';
   static const ACTIVITY = '/activity';
   static const POINT_CENTER = '/point-center';
+  static const AWARD = '/award';
+  static const BROADCAST_WATCHED = '/broadcast-watched';
 }
