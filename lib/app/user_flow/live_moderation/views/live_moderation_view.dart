@@ -75,7 +75,7 @@ class LiveModerationView extends GetView<LiveModerationController> {
                 children: [
                   const SemiBoldText(
                     text: 'Moderator Center',
-                    fontSize: TextStyles.k15FontSize,
+                    fontSize: TextStyles.k14FontSize,
                     color: kColorText,
                   ),
                   Spacing.v2,
@@ -161,7 +161,7 @@ class LiveModerationView extends GetView<LiveModerationController> {
                       children: [
                         SemiBoldText(
                           text: viewer['username'] ?? '',
-                          fontSize: TextStyles.k15FontSize,
+                          fontSize: TextStyles.k14FontSize,
                           color: kColorText,
                         ),
                         Spacing.v2,

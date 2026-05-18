@@ -67,10 +67,10 @@ class EntrancePattiView extends GetView<EntrancePattiController> {
         children: [
           const SemiBoldText(
             text: 'Live Entrance Preview',
-            fontSize: TextStyles.k15FontSize,
+            fontSize: TextStyles.k14FontSize,
             color: kColorText,
           ),
-          Spacing.v14,
+          Spacing.v12,
           // Mock Live Streaming Chat Entrance Ribbon
           Container(
             width: double.infinity,
@@ -192,7 +192,7 @@ class EntrancePattiView extends GetView<EntrancePattiController> {
                         Flexible(
                           child: SemiBoldText(
                             text: item['title'] ?? '',
-                            fontSize: TextStyles.k15FontSize,
+                            fontSize: TextStyles.k14FontSize,
                             color: kColorText,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -228,9 +228,9 @@ class EntrancePattiView extends GetView<EntrancePattiController> {
                 height: 32,
                 width: 84,
                 child: appButton(
-                  onPressed: isUnlocked
-                      ? (isEquipped ? null : () => controller.equipPatti(item['id']))
-                      : null,
+                  onPressed: isUnlocked && !isEquipped
+                      ? () => controller.equipPatti(item['id'])
+                      : () {},
                   buttonText: isEquipped
                       ? 'Active'
                       : (isUnlocked ? 'Equip' : 'Locked'),
