@@ -228,8 +228,8 @@ Each tile is UI-only (`ProfileTabView` — no navigation).
 | ECON-04 | Google Pay | NOT_STARTED | — | — | **Req #6** |
 | ECON-05 | PayPal | NOT_STARTED | — | — | **Req #7** |
 | ECON-06 | Gift list + send gift | NOT_STARTED | in-room sheet | `GET gift-list`, `POST send-gift` | |
-| ECON-07 | Transaction history | NOT_STARTED | *(new)* | `GET /api/economy/history` | |
-| ECON-08 | VIP Store | NOT_STARTED | *(new)* | Admin VIP packages | **Req #12** |
+| ECON-07 | Transaction history | DONE | `TransactionHistoryView` | `GET /api/economy/history` | Integrated in Wallet header |
+| ECON-08 | VIP Store | DONE | `VipStoreView` | Admin VIP packages | **Req #12** — promo banner in Wallet |
 | ECON-09 | Coin seller dashboard | NOT_STARTED | *(new or web)* | Admin sellers APIs | **Req #1** |
 | ECON-10 | AdMob ads | NOT_STARTED | — | — | **Req #4** |
 | ECON-11 | Facebook ads | NOT_STARTED | — | — | **Req #5** |
@@ -251,7 +251,7 @@ Each tile is UI-only (`ProfileTabView` — no navigation).
 | 9 | Agency link create code | AGENCY-04 | NOT_STARTED |
 | 10 | Profile poster photo upload | PROF-03 | NOT_STARTED |
 | 11 | Admin phone + Gmail login | ADMIN-* | Out of mobile app |
-| 12 | VIP Store | ECON-08 | NOT_STARTED |
+| 12 | VIP Store | ECON-08 | DONE |
 | 13 | Admin dashboard by country | ADMIN-* | Out of mobile app |
 | 14 | Chat icon | CHAT-01, CHAT-02 | PARTIAL |
 | 15 | Level icon history | PROF-05 | NOT_STARTED |
