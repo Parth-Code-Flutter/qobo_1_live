@@ -53,6 +53,14 @@ import '../app/user_flow/svip/bindings/svip_binding.dart';
 import '../app/user_flow/svip/views/svip_view.dart';
 import '../app/user_flow/family/bindings/family_binding.dart';
 import '../app/user_flow/family/views/family_view.dart';
+import '../app/user_flow/visitors/bindings/visitors_binding.dart';
+import '../app/user_flow/visitors/views/visitors_view.dart';
+import '../app/user_flow/aristocracy_center/bindings/aristocracy_center_binding.dart';
+import '../app/user_flow/aristocracy_center/views/aristocracy_center_view.dart';
+import '../app/user_flow/activity/bindings/activity_binding.dart';
+import '../app/user_flow/activity/views/activity_view.dart';
+import '../app/user_flow/point_center/bindings/point_center_binding.dart';
+import '../app/user_flow/point_center/views/point_center_view.dart';
 import '../app/splash/splash/views/splash_view.dart';
 
 part 'app_routes.dart';
@@ -197,6 +205,26 @@ class AppPages {
       name: _Paths.FAMILY,
       page: () => const FamilyView(),
       binding: FamilyBinding(),
+    ),
+    GetPage(
+      name: _Paths.VISITORS,
+      page: () => const VisitorsView(),
+      binding: VisitorsBinding(),
+    ),
+    GetPage(
+      name: _Paths.ARISTOCRACY_CENTER,
+      page: () => const AristocracyCenterView(),
+      binding: AristocracyCenterBinding(),
+    ),
+    GetPage(
+      name: _Paths.ACTIVITY,
+      page: () => const ActivityView(),
+      binding: ActivityBinding(),
+    ),
+    GetPage(
+      name: _Paths.POINT_CENTER,
+      page: () => const PointCenterView(),
+      binding: PointCenterBinding(),
     ),
   ];
 }

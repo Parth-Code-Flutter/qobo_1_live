@@ -38,3 +38,19 @@ class AuthEndpoints {
   /// GET /api/user/profile
   static const String getProfile = '/api/user/profile';
 }
+
+/// Central place for room related API endpoints.
+class RoomEndpoints {
+  RoomEndpoints._();
+
+  /// POST /api/room/create
+  static const String create = '/api/room/create';
+}
+
+/// Central place for agency related API endpoints.
+class AgencyEndpoints {
+  AgencyEndpoints._();
+
+  /// POST /api/agency/host-onboarding
+  static const String hostOnboarding = '/api/agency/host-onboarding';
+}

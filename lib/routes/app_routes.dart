@@ -31,6 +31,10 @@ abstract class Routes {
   static const MALL = _Paths.MALL;
   static const SVIP = _Paths.SVIP;
   static const FAMILY = _Paths.FAMILY;
+  static const VISITORS = _Paths.VISITORS;
+  static const ARISTOCRACY_CENTER = _Paths.ARISTOCRACY_CENTER;
+  static const ACTIVITY = _Paths.ACTIVITY;
+  static const POINT_CENTER = _Paths.POINT_CENTER;
 }
 
 abstract class _Paths {
@@ -63,4 +67,8 @@ abstract class _Paths {
   static const MALL = '/mall';
   static const SVIP = '/svip';
   static const FAMILY = '/family';
+  static const VISITORS = '/visitors';
+  static const ARISTOCRACY_CENTER = '/aristocracy-center';
+  static const ACTIVITY = '/activity';
+  static const POINT_CENTER = '/point-center';
 }

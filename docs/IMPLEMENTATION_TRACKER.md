@@ -82,7 +82,7 @@
 | 0b | (sub) Audio room | `DiscoverAudioRoomView` | PARTIAL |
 | 0c | (sub) Video room | `DiscoverVideoRoomView` | PARTIAL |
 | 1 | Live Rooms | `LiveRoomView` | PARTIAL |
-| 2 | Center ❤️ | *(empty — `Spacing.shrink`)* | NOT_STARTED |
+| 2 | Center ❤️ | `LiveActionView` | DONE — Renders Explore screen Figma UI |
 | 3 | Messages | `MessagesTabView` | PARTIAL |
 | 4 | Profile | `ProfileTabView` | PARTIAL |
 
@@ -142,7 +142,7 @@
 | LIVE-01 | Live room feed / categories | PARTIAL | `LiveRoomView` (tab 1) | `GET /api/room/list` | Tabs: Sab, Shresth, Naya, Bangladesh — **Req #19 partial** (mock data) |
 | LIVE-01 | Main room container (bottom nav) | PARTIAL | `LiveRoomView` | — | UI skeleton |
 | LIVE-02 | Scrollable list of active rooms | PARTIAL | `LiveRoomView` | `GET /api/room/list` | UI skeleton |
-| LIVE-03 | Center ❤️ tab (go live / action) | PARTIAL | `LiveActionView` (index 2) | — | Navigates to Room Create |
+| LIVE-03 | Center ❤️ tab (go live / action) | DONE | `LiveActionView` (index 2) | — | Displays Explore screen Figma UI |
 | LIVE-04 | Create room | PARTIAL | `LiveRoomCreateView` / `LIVE_ROOM_CREATE` | `POST /api/room/create` | name, type AUDIO/VIDEO, country, seats |
 | LIVE-05 | Inside Room (Host/Broadcaster view) | PARTIAL | `LiveBroadcastView` / `LIVE_BROADCAST` | `WS /socket` | Handles host video, chat, controls |
 | LIVE-06 | Inside Room (Audience view) | PARTIAL | `LiveBroadcastView` / `LIVE_BROADCAST` | `WS /socket` | Navigated from Feed directly |
@@ -194,15 +194,15 @@ Each tile is UI-only (`ProfileTabView` — no navigation).
 
 | Flow ID | Label | Icon constant | Status |
 |---------|-------|---------------|--------|
-| PROF-G01 | Visitors | `kIconVisitor` | NOT_STARTED |
+| PROF-G01 | Visitors | `kIconVisitor` | PARTIAL |
 | PROF-G02 | User Level | `kIconUserLevel` | PARTIAL |
 | PROF-G03 | Backpack | `kIconBackpack` | PARTIAL |
 | PROF-G04 | Family | `kIconFamily` | PARTIAL |
 | PROF-G05 | SVIP | `kIconSVIP` | PARTIAL |
-| PROF-G06 | Activity | `kIconActivity` | NOT_STARTED |
-| PROF-G07 | Aristocracy Center | `kIconAristocracyCenter` | NOT_STARTED |
+| PROF-G06 | Activity | `kIconActivity` | PARTIAL |
+| PROF-G07 | Aristocracy Center | `kIconAristocracyCenter` | PARTIAL |
 | PROF-G08 | Mall | `kIconMall` | PARTIAL |
-| PROF-G09 | Point Center | `kIconPointerCenter` | NOT_STARTED |
+| PROF-G09 | Point Center | `kIconPointerCenter` | PARTIAL |
 | PROF-G10 | Award | `kIconAward` | NOT_STARTED |
 | PROF-G11 | Broadcast Watched | `kIconBroadcastWatched` | NOT_STARTED |
 | PROF-G12 | Customer service | `kIconCustomerService` | NOT_STARTED |

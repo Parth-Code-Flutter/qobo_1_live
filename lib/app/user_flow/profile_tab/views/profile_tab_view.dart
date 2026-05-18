@@ -163,7 +163,11 @@ class ProfileTabView extends StatelessWidget {
                   Spacing.v16,
                   Row(
                     children: [
-                      _statBlock('2K', 'Visitors'),
+                      _statBlock(
+                        '2K',
+                        'Visitors',
+                        onTap: () => Get.toNamed(Routes.VISITORS),
+                      ),
                       _statDivider(),
                       _statBlock(
                         '1K',
@@ -330,15 +334,15 @@ class ProfileTabView extends StatelessWidget {
 
   Widget _profileFeatureGrid() {
     final features = <_ProfileFeatureItem>[
-      _ProfileFeatureItem('Visitors', kIconVisitor, kColorProfileFeatureGreen),
+      _ProfileFeatureItem('Visitors', kIconVisitor, kColorProfileFeatureGreen, onTapRoute: Routes.VISITORS),
       _ProfileFeatureItem('User Level', kIconUserLevel, kColorProfileFeaturePurple, onTapRoute: Routes.USER_LEVEL),
       _ProfileFeatureItem('Backpack', kIconBackpack, kColorProfileFeatureOrange, onTapRoute: Routes.BACKPACK),
       _ProfileFeatureItem('Family', kIconFamily, kColorProfileFeaturePeach, onTapRoute: Routes.FAMILY),
       _ProfileFeatureItem('SVIP', kIconSVIP, kColorProfileFeatureBlue, onTapRoute: Routes.SVIP),
-      _ProfileFeatureItem('Activity', kIconActivity, kColorProfileFeatureYellow),
-      _ProfileFeatureItem('Aristocracy\nCenter', kIconAristocracyCenter, kColorProfileFeaturePink),
+      _ProfileFeatureItem('Activity', kIconActivity, kColorProfileFeatureYellow, onTapRoute: Routes.ACTIVITY),
+      _ProfileFeatureItem('Aristocracy\nCenter', kIconAristocracyCenter, kColorProfileFeaturePink, onTapRoute: Routes.ARISTOCRACY_CENTER),
       _ProfileFeatureItem('Mall', kIconMall, kColorProfileFeatureCyan, onTapRoute: Routes.MALL),
-      _ProfileFeatureItem('Point Center', kIconPointerCenter, kColorProfileFeaturePink),
+      _ProfileFeatureItem('Point Center', kIconPointerCenter, kColorProfileFeaturePink, onTapRoute: Routes.POINT_CENTER),
       _ProfileFeatureItem('Award', kIconAward, kColorProfileFeaturePeach),
       _ProfileFeatureItem('Broadcast\nWatched', kIconBroadcastWatched, kColorProfileFeatureGreen),
       _ProfileFeatureItem('Customer\nservice', kIconCustomerService, kColorProfileFeatureYellow),
