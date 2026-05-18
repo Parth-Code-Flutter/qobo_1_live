@@ -8,6 +8,8 @@ import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
+import 'package:qobo_one_live/routes/app_pages.dart';
+
 class WalletView extends StatelessWidget {
   const WalletView({super.key});
 
@@ -53,6 +55,49 @@ class WalletView extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+                Spacing.v12,
+                // VIP Store Promo Banner
+                GestureDetector(
+                  onTap: () => Get.toNamed(Routes.VIP_STORE),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF8E2DE2), Color(0xFF4A00E0)],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white.withOpacity(0.15)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.storefront_rounded, color: kColorWhite, size: 24),
+                        Spacing.h12,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SemiBoldText(
+                                text: 'VIP Decoration Store',
+                                fontSize: TextStyles.k14FontSize,
+                                color: kColorWhite,
+                              ),
+                              Spacing.v2,
+                              AppText(
+                                text: 'Get elite entrances, avatars, & chat bubbles!',
+                                fontSize: 11,
+                                color: kColorWhite.withOpacity(0.8),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right_rounded, color: kColorWhite, size: 22),
+                      ],
+                    ),
+                  ),
                 ),
                 Spacing.v20,
                 const Align(
@@ -123,11 +168,22 @@ class WalletView extends StatelessWidget {
             ),
           ),
         ),
-        // Keeps title centered by mirroring leading widget width.
-        Opacity(
-          opacity: 0,
-          child: IgnorePointer(
-            child: _headerBackButton(onTap: () {}),
+        // Navigate to Transaction History
+        GestureDetector(
+          onTap: () => Get.toNamed(Routes.TRANSACTION_HISTORY),
+          child: Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: kColorWalletCardBgTop.withValues(alpha: 0.9),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            alignment: Alignment.center,
+            child: const Icon(
+              Icons.receipt_long_rounded,
+              size: 16,
+              color: kColorWhite,
+            ),
           ),
         ),
       ],
