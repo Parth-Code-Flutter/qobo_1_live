@@ -184,7 +184,7 @@
 | PROF-02 | User basic profile edit | DONE | `UserBasicProfileView` | `GET/PUT /api/user/update` | Nickname, age, gender, photo |
 | PROF-03 | Poster photo upload | NOT_STARTED | *(new or extend profile)* | `POST /api/user/poster-upload` | **Req #10** |
 | PROF-04 | User Patti style | DONE | `EntrancePattiView` | `GET /api/user/patti-style/:user_id` | **Req #16** entry ribbon store |
-| PROF-05 | Level + level icon history | PARTIAL | `UserLevelView` | — | **Req #15**; vipLevel in API models only |
+| PROF-05 | Level + level icon history | DONE | `UserLevelView` | — | **Req #15**; vipLevel in API milestones |
 | PROF-06 | Follow / unfollow | NOT_STARTED | *(new)* | `POST /api/user/follow-unfollow` | |
 | PROF-07 | User search (from profile/discover) | NOT_STARTED | — | `GET /api/user/search` | |
 
@@ -254,7 +254,7 @@ Each tile is UI-only (`ProfileTabView` — no navigation).
 | 12 | VIP Store | ECON-08 | DONE |
 | 13 | Admin dashboard by country | ADMIN-* | Out of mobile app |
 | 14 | Chat icon | CHAT-01, CHAT-02 | PARTIAL |
-| 15 | Level icon history | PROF-05 | NOT_STARTED |
+| 15 | Level icon history | PROF-05 | DONE |
 | 16 | User Patti | PROF-04 | DONE |
 | 17 | Language translate | LIVE-10 | NOT_STARTED |
 | 18 | Live sharing | LIVE-09 | NOT_STARTED |
