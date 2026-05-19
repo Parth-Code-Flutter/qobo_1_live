@@ -57,6 +57,23 @@
 				<string>com.googleusercontent.apps.152049582917-r07ktr1kgeq70ongu0gpatc4sj1gnd6d</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>fb1001720392415003</string>
+			</array>
+		</dict>
+	</array>
+	<key>FacebookAppID</key>
+	<string>1001720392415003</string>
+	<key>FacebookClientToken</key>
+	<string>cd0bacb6a9dc071fc904a04bdbfd7d3e</string>
+	<key>FacebookDisplayName</key>
+	<string>Qobo One Live</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>fbapi</string>
+		<string>fb-messenger-share-api</string>
 	</array>
 </dict>
 </plist>

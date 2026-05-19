@@ -8,6 +8,6 @@
       Non numeric placeholders break Facebook SDK init so flutter_facebook_auth never registers
       and Dart shows MissingPluginException. Replace both values with your real app before release.
     -->
-    <string name="facebook_app_id">123456789012345</string>
-    <string name="facebook_client_token">abcdef0123456789abcdef0123456789</string>
+    <string name="facebook_app_id">1001720392415003</string>
+    <string name="facebook_client_token">cd0bacb6a9dc071fc904a04bdbfd7d3e</string>
 </resources>
