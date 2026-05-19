@@ -197,7 +197,7 @@ Each tile is UI-only (`ProfileTabView` — no navigation).
 | PROF-G01 | Visitors | `kIconVisitor` | PARTIAL |
 | PROF-G02 | User Level | `kIconUserLevel` | PARTIAL |
 | PROF-G03 | Backpack | `kIconBackpack` | PARTIAL |
-| PROF-G04 | Family | `kIconFamily` | PARTIAL |
+| PROF-G04 | Family | `kIconFamily` | DONE | `FamilyView` with search and dashboards |
 | PROF-G05 | SVIP | `kIconSVIP` | PARTIAL |
 | PROF-G06 | Activity | `kIconActivity` | PARTIAL |
 | PROF-G07 | Aristocracy Center | `kIconAristocracyCenter` | PARTIAL |
