@@ -1,0 +1,224 @@
+# Qobo One Live — Client Navigation Roadmap & Interaction Matrix
+
+This document acts as the definitive roadmap and navigation hierarchy of the **Qobo One Live** mobile client application. It maps out all developed UI screens, explains what happens on key interactions (`onClick` events), and details how the screens link together.
+
+---
+
+## 📊 Project Progress Dashboard (Mobile App)
+
+*   **Total Developed UI Screens & Sub-views:** 19 Surfaces
+*   **Fully Integrated & Wired Screens:** 10 Screens (Splash, Login, Phone Login, OTP Verify, New Password, Onboarding, Profile Edit, User Search, Room Creation, Discover Search/Follow)
+*   **Fully Designed Premium Mock Screens:** 9 Screens (Discover Swipers, Live Broadcast view, Messaging, Wallet, Transaction Log, Aristocracy, Mall, Onboarding Status, Revenue)
+
+---
+
+## 🗺️ Application Navigation Flow Chart
+
+```mermaid
+graph TD
+    SplashView["Splash Screen (Check Token)"]
+    AuthLoginView["Login Screen (/login)"]
+    AuthSignUpView["Sign Up Screen (/sign-up)"]
+    AuthVerifyAccountView["OTP Verification (/verify-account)"]
+    NewPasswordView["New Password (/new-password)"]
+    UpdateProfileView["Onboarding Profile (/update-profile)"]
+    BottomNavView["Bottom Navigation Hub (/bottom-nav)"]
+    
+    %% Tab Screens
+    DiscoverTabView["Tab 0: Discover Home"]
+    LiveRoomView["Tab 1: Live Rooms Feed"]
+    LiveActionView["Tab 2: Go Live Center ❤️"]
+    MessagesTabView["Tab 3: Messages Tab"]
+    ProfileTabView["Tab 4: Profile Tab"]
+    
+    %% Navigation Links
+    SplashView -->|No Token| AuthLoginView
+    SplashView -->|Token Exists| BottomNavView
+    
+    AuthLoginView -->|Click 'Sign Up'| AuthSignUpView
+    AuthLoginView -->|Click 'Forgot Password'| AuthVerifyAccountView
+    AuthLoginView -->|Click 'OTP Login'| AuthVerifyAccountView
+    AuthLoginView -->|Credentials Success| BottomNavView
+    
+    AuthSignUpView -->|Submit Form| AuthVerifyAccountView
+    AuthSignUpView -->|Click 'Sign In'| AuthLoginView
+    
+    AuthVerifyAccountView -->|OTP Success (Forgot Pass)| NewPasswordView
+    AuthVerifyAccountView -->|OTP Success (Signup)| UpdateProfileView
+    AuthVerifyAccountView -->|OTP Success (OTP Login)| BottomNavView
+    
+    NewPasswordView -->|Reset Success| AuthLoginView
+    UpdateProfileView -->|Save Success| BottomNavView
+    
+    BottomNavView --> DiscoverTabView
+    BottomNavView --> LiveRoomView
+    BottomNavView --> LiveActionView
+    BottomNavView --> MessagesTabView
+    BottomNavView --> ProfileTabView
+    
+    %% Inner views & sub-routines
+    DiscoverTabView -->|Click 'Agency Banner'| AgencyHostOnboardingView["Agency Host Onboarding Form"]
+    AgencyHostOnboardingView -->|Submit Form| AgencyHostStatusView["Agency Host Status View"]
+    
+    LiveActionView -->|Click 'Audio/Video Live'| LiveRoomCreateView["Live Room Create View"]
+    LiveRoomCreateView -->|Click 'Go Live'| LiveBroadcastView["Live Broadcast Screen"]
+    
+    MessagesTabView -->|Click Conversation| ChatDetailView["1-to-1 Chat Detail Screen"]
+    
+    ProfileTabView -->|Click 'Edit Icon'| UserBasicProfileView["User Basic Profile Edit"]
+    ProfileTabView -->|Click 'Wallet Card'| WalletView["Wallet & Balances"]
+    WalletView -->|Click 'Transaction Logs'| TransactionHistoryView["Transaction History Log"]
+    WalletView -->|Click 'VIP Store'| VipStoreView["VIP Store View"]
+```
+
+---
+
+## 📱 Detailed Screen Interaction Matrix
+
+Here is the exact mapping of what happens when a client clicks on buttons inside each developed screen.
+
+### 1. Splash Screen (`SplashView` · `/splash`)
+*   **Visual State:** Rendered on cold boot with the official branding logo and standard loading indicator.
+*   **Interactions (`onClick` / Auto-Triggers):**
+    *   **Auto-Trigger (On Load):** Checks local secure storage for an existing session JWT token.
+        *   *If token exists and is valid:* Automatically routes to **Bottom Navigation Hub** (`BOTTOM_NAV`).
+        *   *If no token / expired session:* Automatically routes to **Login Screen** (`AUTH_LOGIN`).
+
+### 2. Login Screen (`AuthLoginView` · `/login`)
+*   **Visual State:** Beautiful dual-entry input card (Username/Password), social sign-in buttons, and quick routing footers.
+*   **Interactions (`onClick`):**
+    *   **Click "Forgot Password?" text link:** Redirects to **OTP Verification Screen** (`AUTH_VERIFY_ACCOUNT`) in *Forgot Password* mode.
+    *   **Click "Sign Up" footer link:** Routes directly to **Register Screen** (`AUTH_SIGN_UP`).
+    *   **Click "Login with Phone / OTP" text link:** Redirects to **OTP Verification Screen** (`AUTH_VERIFY_ACCOUNT`) in *Phone OTP Login* mode.
+    *   **Click "Google / Facebook" OAuth buttons:** Opens secure native social picker sheets. Toggles API to `/social`. On success, automatically logs the user in and routes to **Bottom Navigation Hub** (`BOTTOM_NAV`).
+    *   **Click "Login" button:**
+        *   *If fields are invalid:* Shows localized inline validation errors.
+        *   *If valid credentials:* Triggers API `POST /api/auth/login`. On success, saves credentials and opens **Bottom Navigation Hub** (`BOTTOM_NAV`).
+
+### 3. Register Screen (`AuthSignUpView` · `/sign-up`)
+*   **Visual State:** Standard sign-up header with username, email, and password form capture widgets.
+*   **Interactions (`onClick`):**
+    *   **Click "Sign In" footer link:** Pops screen and returns to **Login Screen** (`AUTH_LOGIN`).
+    *   **Click "Google / Facebook" sign-up buttons:** Registers new profile silenty using social credentials and enters the **Bottom Navigation Hub** (`BOTTOM_NAV`).
+    *   **Click "Sign Up" button:**
+        *   *If email/pass forms are valid:* Routes to **OTP Verification Screen** (`AUTH_VERIFY_ACCOUNT`) to confirm phone attachment.
+
+### 4. OTP Verification Screen (`AuthVerifyAccountView` · `/verify-account`)
+*   **Visual State:** Centered phone number text capture widget and a 4-digit security code input grid.
+*   **Interactions (`onClick`):**
+    *   **Click Country Code Selector:** Opens country flag picker scroll sheet.
+    *   **Click "Send Verification Code" button:** Fires `POST /api/auth/login-phone` (or `forgot-password`). Renders native success toasts.
+    *   **Click "Verify OTP" button:**
+        *   Validates OTP input code. If correct:
+            *   *Scenario A (Onboarding Sign Up):* Routes to **Onboarding Profile Screen** (`UPDATE_PROFILE`).
+            *   *Scenario B (Forgot Password flow):* Routes to **New Password Screen** (`AUTH_NEW_PASSWORD`).
+            *   *Scenario C (Direct OTP Login):* Sets session and opens **Bottom Navigation Hub** (`BOTTOM_NAV`).
+
+### 5. New Password Screen (`NewPasswordView` · `/new-password`)
+*   **Visual State:** Double-secure password validation inputs (New Password & Confirm Password).
+*   **Interactions (`onClick`):**
+    *   **Click "Submit" button:** Validates fields. Calls API `POST /api/auth/reset-password`. On success, pops back to **Login Screen** (`AUTH_LOGIN`) with a success message.
+
+### 6. Onboarding Profile Screen (`UpdateProfileView` · `/update-profile`)
+*   **Visual State:** Interactive profile setup step (Avatar upload circle, Nickname, Age Picker, Gender switches).
+*   **Interactions (`onClick`):**
+    *   **Click Avatar placeholder circle:** Launches system camera or photo gallery picker.
+    *   **Click Age selection input:** Slides open a custom Cupertino wheel selector allowing the user to select an age from 13 to 100.
+    *   **Click "Next" button:** Encapsulates updates inside `PUT /api/user/update` (Multipart) and uploads to the server. On success, launches **Bottom Navigation Hub** (`BOTTOM_NAV`).
+
+---
+
+### 7. Bottom Navigation Hub (`BottomNavView` · `/bottom-nav`)
+Consists of a persistent premium bottom navigator bar that controls and paints 5 core sub-views:
+
+#### Tab 0: Discover Home Screen (`DiscoverTabView`)
+*   **Visual State:** Banner ads slider, horizontal Category selection pill buttons, and trending user grids.
+*   **Interactions (`onClick`):**
+    *   **Click "Explore Search" input bar:** Opens debounced search layer.
+        *   *Type query:* Matches usernames dynamically via API `GET /api/user/search`.
+        *   *Click "Follow" button next to search items:* Instantly follows/unfollows the user via `POST /api/user/follow-unfollow`.
+    *   **Click "Agency Host Onboarding" promotional banner:** Routes to **Agency Host Onboarding Form** (`AGENCY_HOST_ONBOARDING`).
+    *   **Click Tab Buttons (Popular, New, Bangladesh, Sab, Shresth):** Dynamically filters discover listings (currently mocks custom grids).
+    *   **Click "Audio Room" grid card:** Opens premium **Discover Audio Room mockup** view.
+    *   **Click "Video Room" card:** Opens dating card **Dating Swiper mockup** view.
+
+#### Tab 1: Live Rooms Feed (`LiveRoomView`)
+*   **Visual State:** Dynamic categorization tabs (Sab, Shresth, Naya) and a grid layout displaying active streaming rooms.
+*   **Interactions (`onClick`):**
+    *   **Click Category Tabs:** Filters the listing feed grid.
+    *   **Click any active Room grid item:** Enters the designated stream directly by launching the **Live Broadcast Screen** (`LIVE_BROADCAST`) in *Audience mode*.
+
+#### Tab 2: Go Live Center Button ❤️ (`LiveActionView`)
+*   **Visual State:** Explore screen designed exactly to Figma specs (vibrant gold gradients, live statistics, dynamic entry triggers).
+*   **Interactions (`onClick`):**
+    *   **Click "Audio Live" / "Video Live" cards:** Routes directly to **Live Room Create Screen** (`LIVE_ROOM_CREATE`).
+
+#### Tab 3: Messages Hub (`MessagesTabView`)
+*   **Visual State:** Combined inbox containing Direct Messages (DMs), official system notifications, and dating match records.
+*   **Interactions (`onClick`):**
+    *   **Click any chat conversation block:** Launches **1-to-1 Chat Detail Screen** (`CHAT_DETAIL`).
+
+#### Tab 4: Profile Tab Screen (`ProfileTabView`)
+*   **Visual State:** Hero card showing user's level badge, ID, avatar, and background poster, followed by an operational feature grid.
+*   **Interactions (`onClick`):**
+    *   **Click Edit Badge (top-right overlay):** Routes to **User Basic Profile Screen** (`USER_BASIC_PROFILE`).
+    *   **Click "Wallet" action row:** Routes directly to the **Wallet Screen** (`WalletView`).
+    *   **Click Grid Tiles (Backpack, Family, SVIP, Mall, Aristocracy Center, Point Center, User Level):** Launches their respective designed premium mock screens.
+
+---
+
+### 8. User Basic Profile Screen (`UserBasicProfileView` · `/user-basic-profile`)
+*   **Visual State:** Full profile details edit form, with direct controls to customize user backgrounds.
+*   **Interactions (`onClick`):**
+    *   **Click "Upload Poster Background" button:** Launches the native gallery picker. Instantly uploads the photo via API `POST /api/user/poster-upload`. On success, updates the background instantly and caches the new URL.
+    *   **Click Profile Avatar Circle:** Gallery picker to update avatar photo.
+    *   **Click Form Row items (Relationship Status, Languages, Locations, Interests, Voice Show, Link Accounts):** Launches a custom selection modal (`CommonRadioChoiceDialog`). When an option is clicked (e.g. Single, married, English, Hindi, Travel, Music, India), it updates the local state and highlights the row in purple.
+    *   **Click "Save Profile" button:** Submits all changed/dirty attributes via PUT API and pops back to profile.
+
+### 9. Live Room Create Screen (`LiveRoomCreateView` · `/live-room-create`)
+*   **Visual State:** Stream preparation room (Title input field, Audio/Video switcher, Seat count bubble selectors).
+*   **Interactions (`onClick`):**
+    *   **Click "AUDIO" or "VIDEO" switch buttons:** Switches room type.
+    *   **Click Seat count buttons (4, 8, etc.):** Sets maximum guest limits.
+    *   **Click "Go Live" button:** Triggers API `POST /api/room/create`. On successful creation, launches **Live Broadcast Screen** (`LIVE_BROADCAST`) in *Host Mode*.
+
+### 10. Live Broadcast / Streaming View (`LiveBroadcastView` · `/live-broadcast`)
+*   **Visual State:** Real-time streaming interface showing co-host grid panels, active audience counters, and chat logs overlay.
+*   **Interactions (`onClick`):**
+    *   **Click Gift Icon (bottom navigation bar):** Opens **Gifts Bottom Sheet** (`GiftsBottomSheet`).
+        *   *Click on gift selection (Rose, Heart, Diamond):* Triggers mock transaction log, sends SVGA gift animation overlay.
+    *   **Click Settings/Options gear Icon:** Opens **Room Options Sheet** (`RoomOptionsSheet`).
+        *   *Click mic mute, kick user, lock seat rules:* Initiates moderator control methods.
+    *   **Click Shield Shield Icon (top-right corner):** Opens **Live Moderation Control Room** (`LiveModerationView`) for managing SOS alerts.
+
+### 11. Wallet & Balances Screen (`WalletView`)
+*   **Visual State:** Displays user balances (Coins, Diamonds, Beans) alongside recharge packages.
+*   **Interactions (`onClick`):**
+    *   **Click PK R Plan Recharge Cards:** Triggers standard Pakistani Rupee payment workflows (Razopay/Google Pay simulated overlay).
+    *   **Click "Transaction History" link:** Routes to **Transaction History Screen** (`TransactionHistoryView`).
+    *   **Click "VIP Store" promotional banner:** Routes to **VIP Store Screen** (`VipStoreView`).
+
+### 12. Transaction History Screen (`TransactionHistoryView` · `/transaction-history`)
+*   **Visual State:** Two-tab log list (Coins History vs Diamonds History).
+*   **Interactions (`onClick`):**
+    *   **Click "Coins" or "Diamonds" header tabs:** Toggles and loads the respective log lists.
+
+### 13. Agency Host Onboarding Form (`AgencyHostOnboardingView` · `/agency-host-onboarding`)
+*   **Visual State:** Application form captures legal details, WhatsApp number, and verification real photos.
+*   **Interactions (`onClick`):**
+    *   **Click Category select field:** Launches bottom select modal for categories (Solo, PK, Chat, Music).
+    *   **Click "Upload verification photo" box:** Gallery image picker.
+    *   **Click "Submit Application" button:** Validates fields. Displays a premium celebration success dialog (`CommonGiffyDialog`).
+        *   **Click "Check Status" button inside dialog:** Redirects to **Agency Host Status Screen** (`AGENCY_HOST_STATUS`).
+
+### 14. Agency Host Status Screen (`AgencyHostStatusView` · `/agency-host-status`)
+*   **Visual State:** Displays a progress checklist indicating if the submitted application is PENDING, APPROVED, or REJECTED by agency administrators.
+
+---
+
+## 📝 Maintenance Rules (Keep this up to date)
+
+When a developer implements a new screen or links a mock button click to open a new route:
+1.  Add the new screen to the **Progress Dashboard** statistics.
+2.  Update the **Mermaid Flow Chart** by drawing an arrow (`-->`) from the parent screen to the new screen node.
+3.  Add a new section under **Screen-by-Screen Navigation Matrix** detailing its visual state, interactive `onClick` buttons, and where they navigate.
