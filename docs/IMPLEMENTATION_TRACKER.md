@@ -192,20 +192,20 @@
 
 Each tile is UI-only (`ProfileTabView` — no navigation).
 
-| Flow ID | Label | Icon constant | Status |
-|---------|-------|---------------|--------|
-| PROF-G01 | Visitors | `kIconVisitor` | PARTIAL |
-| PROF-G02 | User Level | `kIconUserLevel` | PARTIAL |
-| PROF-G03 | Backpack | `kIconBackpack` | PARTIAL |
-| PROF-G04 | Family | `kIconFamily` | DONE | `FamilyView` with search and dashboards |
-| PROF-G05 | SVIP | `kIconSVIP` | PARTIAL |
-| PROF-G06 | Activity | `kIconActivity` | PARTIAL |
-| PROF-G07 | Aristocracy Center | `kIconAristocracyCenter` | PARTIAL |
-| PROF-G08 | Mall | `kIconMall` | PARTIAL |
-| PROF-G09 | Point Center | `kIconPointerCenter` | PARTIAL |
-| PROF-G10 | Award | `kIconAward` | DONE | `AwardView` |
-| PROF-G11 | Broadcast Watched | `kIconBroadcastWatched` | DONE | `BroadcastWatchedView` |
-| PROF-G12 | Customer service | `kIconCustomerService` | DONE | `CustomerServiceView` |
+| Flow ID | Label | Icon constant | Status | Notes |
+|---------|-------|---------------|--------|-------|
+| PROF-G01 | Visitors | `kIconVisitor` | DONE | `VisitorsView` showing user visits history |
+| PROF-G02 | User Level | `kIconUserLevel` | DONE | `UserLevelView` showing levels progress & unlock milestones |
+| PROF-G03 | Backpack | `kIconBackpack` | DONE | `BackpackView` listing owned decorations with active equips |
+| PROF-G04 | Family | `kIconFamily` | DONE | `FamilyView` with search and active dashboard panels |
+| PROF-G05 | SVIP | `kIconSVIP` | DONE | `SvipView` displaying membership benefits & purchases |
+| PROF-G06 | Activity | `kIconActivity` | DONE | `ActivityView` displaying active & upcoming live events |
+| PROF-G07 | Aristocracy Center | `kIconAristocracyCenter` | DONE | `AristocracyCenterView` rank selector & subscription panels |
+| PROF-G08 | Mall | `kIconMall` | DONE | `MallView` virtual items store with interactive live previews |
+| PROF-G09 | Point Center | `kIconPointerCenter` | DONE | `PointCenterView` daily missions & point items store |
+| PROF-G10 | Award | `kIconAward` | DONE | `AwardView` achievements tracking |
+| PROF-G11 | Broadcast Watched | `kIconBroadcastWatched` | DONE | `BroadcastWatchedView` viewing history |
+| PROF-G12 | Customer service | `kIconCustomerService` | DONE | `CustomerServiceView` tickets & live support chat bubbles |
 
 ### Profile action cards
 

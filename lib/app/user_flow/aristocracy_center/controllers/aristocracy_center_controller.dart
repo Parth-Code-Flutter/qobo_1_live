@@ -1,12 +1,18 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class AristocracyCenterController extends GetxController {
   final selectedRankIndex = 0.obs;
+  final coinsBalance = 12450.obs;
   
+  // Track currently active rank
+  final activeRankName = RxnString();
+
   final ranks = <Map<String, dynamic>>[
     {
       'name': 'Knight',
       'icon': 'assets/icons/badge_icon.svg',
+      'priceVal': 1000,
       'price': '1,000 Coins / Month',
       'privileges': [
         'Exclusive Knight entry effect',
@@ -19,6 +25,7 @@ class AristocracyCenterController extends GetxController {
     {
       'name': 'Viscount',
       'icon': 'assets/icons/badge_icon.svg',
+      'priceVal': 5000,
       'price': '5,000 Coins / Month',
       'privileges': [
         'Premium entry car animation',
@@ -32,6 +39,7 @@ class AristocracyCenterController extends GetxController {
     {
       'name': 'Duke',
       'icon': 'assets/icons/medal_icon.svg',
+      'priceVal': 20000,
       'price': '20,000 Coins / Month',
       'privileges': [
         'Royal Dragon entry animation',
@@ -46,6 +54,7 @@ class AristocracyCenterController extends GetxController {
     {
       'name': 'King',
       'icon': 'assets/icons/medal_icon.svg',
+      'priceVal': 100000,
       'price': '100,000 Coins / Month',
       'privileges': [
         'Golden Phoenix full screen entry animation',
@@ -65,10 +74,57 @@ class AristocracyCenterController extends GetxController {
   }
 
   void purchaseNobleRank(String rankName) {
-    Get.snackbar(
-      'Purchase Initiated',
-      'Processing subscription for the $rankName tier...',
-      snackPosition: SnackPosition.BOTTOM,
-    );
+    final rank = ranks.firstWhere((r) => r['name'] == rankName);
+    final price = rank['priceVal'] as int;
+
+    if (coinsBalance.value >= price) {
+      coinsBalance.value -= price;
+      activeRankName.value = rankName;
+      Get.dialog(
+        AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.shield_rounded, color: Colors.amber),
+              const SizedBox(width: 8),
+              Text('$rankName Unlocked!'),
+            ],
+          ),
+          content: Text('Welcome to the nobility! You have successfully subscribed to the "$rankName" rank.\nEnjoy your premium privileges immediately.'),
+          actions: [
+            TextButton(
+              onPressed: () => Get.back(),
+              child: const Text('Confirm'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      Get.dialog(
+        AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.orange),
+              SizedBox(width: 8),
+              Text('Insufficient Coins'),
+            ],
+          ),
+          content: Text('You need ${price - coinsBalance.value} more Coins to purchase the "$rankName" subscription. Would you like to recharge?'),
+          actions: [
+            TextButton(
+              onPressed: () => Get.back(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF761B65)),
+              onPressed: () {
+                Get.back();
+                Get.snackbar('Redirecting', 'Opening recharge panel...');
+              },
+              child: const Text('Recharge Now', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+    }
   }
 }

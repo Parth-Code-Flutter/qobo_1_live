@@ -544,7 +544,7 @@ class FamilyView extends GetView<FamilyController> {
                 colorText: kColorPrimary,
               );
             },
-            child: const Row(
+            child:  Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.mic, color: kColorPrimary, size: 20),
@@ -652,11 +652,11 @@ class FamilyView extends GetView<FamilyController> {
                               color: kColorPrimary.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: AppText(
+                            child: BoldText(
                               text: 'Lv.${member['level'] ?? 1}',
                               fontSize: 9,
                               color: kColorPrimary,
-                              weight: FontWeight.bold,
+
                             ),
                           ),
                         ],
@@ -750,7 +750,7 @@ class FamilyView extends GetView<FamilyController> {
                           ),
                           child: Text(
                             q['reward'] as String,
-                            style: const TextStyle(fontSize: 10, color: Colors.amberScaleDown, fontWeight: FontWeight.bold),
+                            style:  TextStyle(fontSize: 10, color: Colors.amberAccent, fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],

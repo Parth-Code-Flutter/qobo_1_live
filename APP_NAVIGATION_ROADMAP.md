@@ -6,9 +6,9 @@ This document acts as the definitive roadmap and navigation hierarchy of the **Q
 
 ## 📊 Project Progress Dashboard (Mobile App)
 
-*   **Total Developed UI Screens & Sub-views:** 19 Surfaces
-*   **Fully Integrated & Wired Screens:** 10 Screens (Splash, Login, Phone Login, OTP Verify, New Password, Onboarding, Profile Edit, User Search, Room Creation, Discover Search/Follow)
-*   **Fully Designed Premium Mock Screens:** 9 Screens (Discover Swipers, Live Broadcast view, Messaging, Wallet, Transaction Log, Aristocracy, Mall, Onboarding Status, Revenue)
+*   **Total Developed UI Screens & Sub-views:** 31 Surfaces
+*   **Fully Integrated & Wired Screens:** 22 Screens (Splash, Login, Phone Login, OTP Verify, New Password, Onboarding, Profile Edit, User Search, Room Creation, Discover Search/Follow, Family Hub, Visitors List, Level Progress, Backpack, SVIP Center, Aristocracy Center, Mall Store, Point Center, Medals List, Broadcast History, Customer Support Support)
+*   **Fully Designed Premium Mock Screens:** 9 Screens (Discover Swipers, Live Broadcast view, Messaging, Wallet, Transaction Log, Onboarding Status, Revenue)
 
 ---
 
@@ -69,6 +69,20 @@ graph TD
     ProfileTabView -->|Click 'Wallet Card'| WalletView["Wallet & Balances"]
     WalletView -->|Click 'Transaction Logs'| TransactionHistoryView["Transaction History Log"]
     WalletView -->|Click 'VIP Store'| VipStoreView["VIP Store View"]
+    
+    %% Profile Grid items
+    ProfileTabView -->|Click 'Visitors'| VisitorsView["Visitors List"]
+    ProfileTabView -->|Click 'User Level'| UserLevelView["User Level & Badges"]
+    ProfileTabView -->|Click 'Backpack'| BackpackView["My Backpack"]
+    ProfileTabView -->|Click 'Family'| FamilyView["Family Dashboard / Browse"]
+    ProfileTabView -->|Click 'SVIP'| SvipView["SVIP Center"]
+    ProfileTabView -->|Click 'Activity'| ActivityView["Hot Activities"]
+    ProfileTabView -->|Click 'Aristocracy Center'| AristocracyCenterView["Aristocracy Center"]
+    ProfileTabView -->|Click 'Mall'| MallView["Virtual Mall Store"]
+    ProfileTabView -->|Click 'Point Center'| PointCenterView["Point Center"]
+    ProfileTabView -->|Click 'Award'| AwardView["Medals & Awards"]
+    ProfileTabView -->|Click 'Broadcast Watched'| BroadcastWatchedView["Broadcast History"]
+    ProfileTabView -->|Click 'Customer Service'| CustomerServiceView["Customer Support Hub"]
 ```
 
 ---
@@ -213,6 +227,72 @@ Consists of a persistent premium bottom navigator bar that controls and paints 5
 
 ### 14. Agency Host Status Screen (`AgencyHostStatusView` · `/agency-host-status`)
 *   **Visual State:** Displays a progress checklist indicating if the submitted application is PENDING, APPROVED, or REJECTED by agency administrators.
+
+### 15. Family Screen (`FamilyView` · `/family`)
+*   **Visual State:** Dual-state: Browse state allows searching for trending families. Dashboard state shows Family bulletins, Quest lists, level details, and active online member rosters.
+*   **Interactions (`onClick`):**
+    *   **Click "Apply to Join" or "Search":** Instantly queries family lists and simulates membership join requests.
+    *   **Click "Quests":** Displays rewards claiming interface.
+
+### 16. Visitors Screen (`VisitorsView` · `/visitors`)
+*   **Visual State:** Lists users who viewed your profile, showing timestamp, level, and VIP status.
+*   **Interactions (`onClick`):**
+    *   **Click "Follow":** Instantly toggles follow/unfollow status.
+    *   **Click "Message":** Redirects to direct chat.
+
+### 17. User Level Screen (`UserLevelView` · `/user-level`)
+*   **Visual State:** Shows current level, EXP progress indicator, unlocked perks, and lock/unlock milestones.
+*   **Interactions (`onClick`):**
+    *   **Click "My Perks" or "Badge Milestones" sub-tabs:** Toggles views.
+
+### 18. Backpack Screen (`BackpackView` · `/backpack`)
+*   **Visual State:** Vault grid displaying gifts, frames, chat bubbles, and entry animations.
+*   **Interactions (`onClick`):**
+    *   **Click "Equip / Unequip":** Activates/deactivates the item on the user's active profile configuration.
+    *   **Click "Visit Mall":** Deep links directly to the Mall view to buy decorations.
+
+### 19. SVIP Center Screen (`SvipView` · `/svip`)
+*   **Visual State:** Premium dark obsidian gold dashboard presenting six VIP privileges and subscription tiers.
+*   **Interactions (`onClick`):**
+    *   **Click "Open SVIP Now":** Validates coin balance, deducts price, and activates membership.
+
+### 20. Activity Screen (`ActivityView` · `/activity`)
+*   **Visual State:** Vertical card layout of ongoing/upcoming platform events.
+*   **Interactions (`onClick`):**
+    *   **Click "Join Now" or "Notify Me":** Triggers event join protocols or registers push notifications.
+
+### 21. Aristocracy Center Screen (`AristocracyCenterView` · `/aristocracy-center`)
+*   **Visual State:** Horizontal rank selector (Knight, Viscount, Duke, King) with rank-colored details list and custom action buttons.
+*   **Interactions (`onClick`):**
+    *   **Click "Subscribe":** Deducts coins and updates active noble title.
+
+### 22. Virtual Mall Screen (`MallView` · `/mall`)
+*   **Visual State:** Item store showing category tabs and an interactive preview simulator box.
+*   **Interactions (`onClick`):**
+    *   **Click store card:** Displays a live rendering of the item (e.g. avatar frame border, entry chat box) in the simulator.
+    *   **Click price button:** Buys item and transfers it directly to user's Backpack.
+
+### 23. Point Center Screen (`PointCenterView` · `/point-center`)
+*   **Visual State:** Points summary and dual tabs (Daily Tasks vs Point items store).
+*   **Interactions (`onClick`):**
+    *   **Click "Claim":** Collects daily points from completed tasks.
+    *   **Click "Redeem":** Spends points to buy items from the store.
+
+### 24. Medals & Awards Screen (`AwardView` · `/award`)
+*   **Visual State:** Achievement badges list, level progression bar, and points accumulated indicator.
+*   **Interactions (`onClick`):**
+    *   **Click Medal Card:** Shows milestones detail.
+
+### 25. Broadcast History Screen (`BroadcastWatchedView` · `/broadcast-watched`)
+*   **Visual State:** Lists recently visited rooms and active streams.
+*   **Interactions (`onClick`):**
+    *   **Click "Watch":** Instantly enters the live room.
+
+### 26. Customer Support Hub (`CustomerServiceView` · `/customer-service`)
+*   **Visual State:** Support console with FAQs, support ticket listings, and live chat message bubble interface.
+*   **Interactions (`onClick`):**
+    *   **Click "Submit Ticket":** Launches bottom sheet form to submit support tickets.
+    *   **Click "Send":** Submits live chat messages to help center agents.
 
 ---
 
