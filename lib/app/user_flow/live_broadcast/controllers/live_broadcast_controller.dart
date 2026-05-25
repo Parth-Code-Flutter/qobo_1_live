@@ -8,6 +8,7 @@ import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 class LiveBroadcastController extends GetxController {
   final isHost = false.obs;
   final roomType = 'VIDEO'.obs;
+  final roomId = 'test_room'.obs;
   
   final chatMessages = <Map<String, dynamic>>[].obs;
   final chatTextController = TextEditingController();
@@ -24,6 +25,10 @@ class LiveBroadcastController extends GetxController {
     if (args != null && args is Map) {
       if (args.containsKey('isHost')) isHost.value = args['isHost'];
       if (args.containsKey('roomType')) roomType.value = args['roomType'];
+      if (args.containsKey('roomData') && args['roomData'] != null) {
+        final roomData = args['roomData'];
+        roomId.value = (roomData['room_id'] ?? roomData['id'] ?? 'test_room').toString();
+      }
     }
     
     // Simulate initial chat load with some translatable phrases

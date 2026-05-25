@@ -395,8 +395,8 @@ class LiveActionView extends GetView<LiveActionController> {
   Widget _orbitSeatTile(_OrbitSeat seat) {
     return SizedBox(
       width: 52,
-      height: 78,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
           SizedBox(

@@ -258,30 +258,30 @@ class AuthLoginView extends GetView<AuthLoginController> {
           tintIcon: true,
           title: LocaleKeys.loginWithOtp.tr,
         ),
-        Spacing.v10,
-        Obx(
-          () => _socialOutlinedButton(
-            iconPath: kIconLock,
-            onTap: () => controller.onAppleLoginPressed(context),
-            iconHeight: 22,
-            iconWidth: 22,
-            tintIcon: true,
-            title: 'Sign In with Apple',
-            isLoading: controller.isAppleLoginLoading.value,
-          ),
-        ),
-        Spacing.v10,
-        Obx(
-          () => _socialOutlinedButton(
-            iconPath: kIconLock,
-            onTap: () => controller.onFirebasePhoneLoginPressed(context),
-            iconHeight: 22,
-            iconWidth: 22,
-            tintIcon: true,
-            title: 'Login with Firebase SMS',
-            isLoading: controller.isFirebaseLoginLoading.value,
-          ),
-        ),
+        // Spacing.v10,
+        // Obx(
+        //   () => _socialOutlinedButton(
+        //     iconPath: kIconLock,
+        //     onTap: () => controller.onAppleLoginPressed(context),
+        //     iconHeight: 22,
+        //     iconWidth: 22,
+        //     tintIcon: true,
+        //     title: 'Sign In with Apple',
+        //     isLoading: controller.isAppleLoginLoading.value,
+        //   ),
+        // ),
+        // Spacing.v10,
+        // Obx(
+        //   () => _socialOutlinedButton(
+        //     iconPath: kIconLock,
+        //     onTap: () => controller.onFirebasePhoneLoginPressed(context),
+        //     iconHeight: 22,
+        //     iconWidth: 22,
+        //     tintIcon: true,
+        //     title: 'Login with Firebase SMS',
+        //     isLoading: controller.isFirebaseLoginLoading.value,
+        //   ),
+        // ),
       ],
     );
   }

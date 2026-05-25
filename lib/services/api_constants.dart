@@ -75,6 +75,21 @@ class RoomEndpoints {
 
   /// GET /api/room/translate
   static const String translateText = '/api/room/translate';
+
+  /// GET /api/room/video-swiper
+  static const String videoSwiper = '/api/room/video-swiper';
+
+  /// GET /api/room/agora-token
+  static const String agoraToken = '/api/room/agora-token';
+
+  /// POST /api/room/kick
+  static const String kick = '/api/room/kick';
+
+  /// GET /api/room/watch-history
+  static const String watchHistory = '/api/room/watch-history';
+
+  /// POST /api/room/watch-history/record
+  static const String recordWatchHistory = '/api/room/watch-history/record';
 }
 
 /// Central place for agency related API endpoints.
@@ -118,6 +133,27 @@ class EconomyEndpoints {
 
   /// POST /api/economy/send-gift
   static const String sendGift = '/api/economy/send-gift';
+
+  /// POST /api/economy/seller/transfer
+  static const String sellerTransfer = '/api/economy/seller/transfer';
+
+  /// GET /api/economy/vip-packages
+  static const String vipPackages = '/api/economy/vip-packages';
+
+  /// POST /api/economy/buy-vip
+  static const String buyVip = '/api/economy/buy-vip';
+
+  /// GET /api/economy/mall
+  static const String mallList = '/api/economy/mall';
+
+  /// POST /api/economy/mall/buy
+  static const String mallBuy = '/api/economy/mall/buy';
+
+  /// GET /api/economy/aristocracy/packages
+  static const String aristocracyPackages = '/api/economy/aristocracy/packages';
+
+  /// POST /api/economy/aristocracy/buy
+  static const String buyAristocracy = '/api/economy/aristocracy/buy';
 }
 
 /// Central place for PK and Call related API endpoints.
@@ -136,3 +172,86 @@ class PkEndpoints {
   /// GET /api/pk/dating-list
   static const String callList = '/api/pk/dating-list';
 }
+
+/// Central place for chat related API endpoints.
+class ChatEndpoints {
+  ChatEndpoints._();
+
+  /// GET /api/chat/list
+  static const String list = '/api/chat/list';
+
+  /// GET /api/chat/detail
+  static const String detail = '/api/chat/detail';
+}
+
+/// Central place for user, social, and backpack related API endpoints.
+class UserEndpoints {
+  UserEndpoints._();
+
+  /// GET /api/user/follow-list
+  static const String followList = '/api/user/follow-list';
+
+  /// POST /api/user/block
+  static const String block = '/api/user/block';
+
+  /// POST /api/user/unblock
+  static const String unblock = '/api/user/unblock';
+
+  /// GET /api/user/block-list
+  static const String blockList = '/api/user/block-list';
+
+  /// GET /api/user/backpack
+  static const String backpack = '/api/user/backpack';
+
+  /// POST /api/user/backpack/equip
+  static const String equipBackpack = '/api/user/backpack/equip';
+
+  /// GET /api/user/tasks
+  static const String tasks = '/api/user/tasks';
+
+  /// POST /api/user/tasks/claim
+  static const String claimTask = '/api/user/tasks/claim';
+
+  /// GET /api/user/achievements
+  static const String achievements = '/api/user/achievements';
+
+  /// GET /api/user/visitors
+  static const String visitors = '/api/user/visitors';
+}
+
+/// Central place for family related API endpoints.
+class FamilyEndpoints {
+  FamilyEndpoints._();
+
+  /// POST /api/family/create
+  static const String create = '/api/family/create';
+
+  /// GET /api/family/list
+  static const String list = '/api/family/list';
+
+  /// POST /api/family/join
+  static const String join = '/api/family/join';
+
+  /// GET /api/family/detail/:id
+  static const String detail = '/api/family/detail';
+}
+
+/// Central place for activity and event related API endpoints.
+class ActivityEndpoints {
+  ActivityEndpoints._();
+
+  /// GET /api/activity/list
+  static const String list = '/api/activity/list';
+}
+
+/// Central place for support related API endpoints.
+class SupportEndpoints {
+  SupportEndpoints._();
+
+  /// POST /api/support/ticket
+  static const String ticket = '/api/support/ticket';
+
+  /// GET /api/support/tickets
+  static const String tickets = '/api/support/tickets';
+}
+

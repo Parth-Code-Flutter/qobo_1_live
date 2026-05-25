@@ -6,6 +6,10 @@ import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import 'package:zego_uikit_prebuilt_live_streaming/zego_uikit_prebuilt_live_streaming.dart';
+import 'package:zego_uikit_signaling_plugin/zego_uikit_signaling_plugin.dart';
+import 'package:qobo_one_live/constants/zego_config.dart';
+import 'package:qobo_one_live/services/user_session_controller.dart';
 
 import '../controllers/live_broadcast_controller.dart';
 import '../widgets/gifts_bottom_sheet.dart';
@@ -27,7 +31,8 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
               children: [
                 _buildTopHeader(),
                 const Spacer(),
-                if (controller.roomType.value == 'AUDIO') _buildSeatsLayer(),
+                // ZEGOCLOUD Prebuilt UIKit automatically handles the interactive audio seats/grids
+                // in the viewport background. Hence, we do not double-render our simulated seat layout.
                 _buildChatList(),
                 _buildBottomControls(),
               ],
@@ -39,25 +44,54 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
   }
 
   Widget _buildMainVideoBackground() {
+    final userSession = Get.find<UserSessionController>();
+    final rawUserId = userSession.userId.isNotEmpty ? userSession.userId : 'user_${userSession.hashCode}';
+    // ZEGOCLOUD limits userID to 32 characters/bytes. Remove hyphens and truncate if needed.
+    var currentUserId = rawUserId.replaceAll('-', '');
+    if (currentUserId.length > 32) {
+      currentUserId = currentUserId.substring(0, 32);
+    }
+    final currentUserName = userSession.displayName;
+
     return Obx(() {
+      final config = controller.isHost.value
+          ? ZegoUIKitPrebuiltLiveStreamingConfig.host(
+              plugins: [ZegoUIKitSignalingPlugin()],
+            )
+          : ZegoUIKitPrebuiltLiveStreamingConfig.audience(
+              plugins: [ZegoUIKitSignalingPlugin()],
+            );
+
+      // Customize Zego controls so they do not conflict with our custom styled overlays
+      config.bottomMenuBar = ZegoLiveStreamingBottomMenuBarConfig(
+        hostButtons: [],
+        audienceButtons: [],
+      );
+      config.inRoomMessage = ZegoInRoomMessageConfig(
+        visible: false,
+      );
+
+      // Configure for Audio rooms (turn off camera, show avatars and soundwaves)
       if (controller.roomType.value == 'AUDIO') {
-        return Container(
-          decoration: const BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage(kImgBG), // Standard space background
-              fit: BoxFit.cover,
-            ),
-          ),
-        );
+        config.turnOnCameraWhenJoining = false;
+        config.audioVideoView.showAvatarInAudioMode = true;
+        config.audioVideoView.showSoundWavesInAudioMode = true;
       }
 
-      // Simulated host video feed
       return Positioned.fill(
-        child: Image.asset(
-          kImgTemp3, // Temp image acting as live video
-          fit: BoxFit.cover,
-          color: Colors.black.withValues(alpha: 0.2), // Slight overlay for readability
-          colorBlendMode: BlendMode.darken,
+        child: ZegoUIKitPrebuiltLiveStreaming(
+          appID: ZegoConfig.appId,
+          appSign: ZegoConfig.appSign,
+          userID: currentUserId,
+          userName: currentUserName,
+          liveID: controller.roomId.value,
+          config: config,
+          events: ZegoUIKitPrebuiltLiveStreamingEvents(
+            onEnded: (event, defaultAction) {
+              controller.leaveRoom();
+              defaultAction.call();
+            },
+          ),
         ),
       );
     });
