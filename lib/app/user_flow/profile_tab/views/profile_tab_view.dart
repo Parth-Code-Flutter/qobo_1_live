@@ -48,7 +48,11 @@ class ProfileTabView extends StatelessWidget {
                   borderRadius: 14,
                   buttonIcon: Padding(
                     padding: const EdgeInsets.only(right: 12),
-                    child: const Icon(Icons.logout, color: kColorWhite, size: 18),
+                    child: const Icon(
+                      Icons.logout,
+                      color: kColorWhite,
+                      size: 18,
+                    ),
                   ),
                 ),
                 Spacing.v20,
@@ -277,10 +281,7 @@ class ProfileTabView extends StatelessWidget {
             start: kColorProfileActionOrangeStart,
             end: kColorProfileActionOrangeEnd,
             onTap: () {
-              Get.to(
-                () => const WalletView(),
-                binding: WalletBinding(),
-              );
+              Get.to(() => const WalletView(), binding: WalletBinding());
             },
           ),
         ),
@@ -327,10 +328,21 @@ class ProfileTabView extends StatelessWidget {
                             color: kColorPrimary.withValues(alpha: 0.15),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.video_call_rounded, color: kColorPrimary),
+                          child: const Icon(
+                            Icons.video_call_rounded,
+                            color: kColorPrimary,
+                          ),
                         ),
-                        title: const SemiBoldText(text: 'Join an Agency (Host)', fontSize: 13, color: kColorWhite),
-                        subtitle: const AppText(text: 'Register as a streamer to start broadcasting.', fontSize: 11, color: Colors.white54),
+                        title: const SemiBoldText(
+                          text: 'Join an Agency (Host)',
+                          fontSize: 13,
+                          color: kColorWhite,
+                        ),
+                        subtitle: const AppText(
+                          text: 'Register as a streamer to start broadcasting.',
+                          fontSize: 11,
+                          color: Colors.white54,
+                        ),
                         onTap: () {
                           Get.back();
                           Get.toNamed(Routes.AGENCY_HOST_ONBOARDING);
@@ -344,10 +356,22 @@ class ProfileTabView extends StatelessWidget {
                             color: Colors.purple.withValues(alpha: 0.15),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.business_rounded, color: Colors.purpleAccent),
+                          child: const Icon(
+                            Icons.business_rounded,
+                            color: Colors.purpleAccent,
+                          ),
                         ),
-                        title: const SemiBoldText(text: 'Agency Owner Dashboard', fontSize: 13, color: kColorWhite),
-                        subtitle: const AppText(text: 'Manage your agency, invite codes, & host earnings.', fontSize: 11, color: Colors.white54),
+                        title: const SemiBoldText(
+                          text: 'Agency Owner Dashboard',
+                          fontSize: 13,
+                          color: kColorWhite,
+                        ),
+                        subtitle: const AppText(
+                          text:
+                              'Manage your agency, invite codes, & host earnings.',
+                          fontSize: 11,
+                          color: Colors.white54,
+                        ),
                         onTap: () {
                           Get.back();
                           Get.toNamed(Routes.AGENCY_OWNER);
@@ -400,19 +424,64 @@ class ProfileTabView extends StatelessWidget {
 
   Widget _profileFeatureGrid() {
     final features = <_ProfileFeatureItem>[
-      _ProfileFeatureItem('Visitors', kIconVisitor, kColorProfileFeatureGreen, onTapRoute: Routes.VISITORS),
-      _ProfileFeatureItem('User Level', kIconUserLevel, kColorProfileFeaturePurple, onTapRoute: Routes.USER_LEVEL),
-      _ProfileFeatureItem('Backpack', kIconBackpack, kColorProfileFeatureOrange, onTapRoute: Routes.BACKPACK),
-      _ProfileFeatureItem('Family', kIconFamily, kColorProfileFeaturePeach, onTapRoute: Routes.FAMILY),
-      _ProfileFeatureItem('SVIP', kIconSVIP, kColorProfileFeatureBlue, onTapRoute: Routes.SVIP),
-      _ProfileFeatureItem('Activity', kIconActivity, kColorProfileFeatureYellow, onTapRoute: Routes.ACTIVITY),
-      _ProfileFeatureItem('Aristocracy\nCenter', kIconAristocracyCenter, kColorProfileFeaturePink, onTapRoute: Routes.ARISTOCRACY_CENTER),
-      _ProfileFeatureItem('Mall', kIconMall, kColorProfileFeatureCyan, onTapRoute: Routes.MALL),
-      _ProfileFeatureItem('Point Center', kIconPointerCenter, kColorProfileFeaturePink, onTapRoute: Routes.POINT_CENTER),
-      _ProfileFeatureItem('Award', kIconAward, kColorProfileFeaturePeach, onTapRoute: Routes.AWARD),
-      _ProfileFeatureItem('Broadcast\nWatched', kIconBroadcastWatched, kColorProfileFeatureGreen, onTapRoute: Routes.BROADCAST_WATCHED),
-      _ProfileFeatureItem('Call', kIconAward, kColorProfileFeaturePink, onTapRoute: Routes.CALL),
-      _ProfileFeatureItem('Customer\nservice', kIconCustomerService, kColorProfileFeatureYellow, onTapRoute: Routes.CUSTOMER_SERVICE),
+      _ProfileFeatureItem('Visitors', kIconVisitor, const [
+        Color(0xFF1F74F2),
+        Color(0xFF22B8F2),
+      ], onTapRoute: Routes.VISITORS),
+      _ProfileFeatureItem('User Level', kIconUserLevel, const [
+        Color(0xFF8F37F2),
+        Color(0xFFD23CF6),
+      ], onTapRoute: Routes.USER_LEVEL),
+      _ProfileFeatureItem('Backpack', kIconBackpack, const [
+        Color(0xFFFF36B6),
+        Color(0xFFFF5C9B),
+      ], onTapRoute: Routes.BACKPACK),
+      _ProfileFeatureItem('Family', kIconFamily, const [
+        Color(0xFFFF8A1D),
+        Color(0xFFFFD21E),
+      ], onTapRoute: Routes.FAMILY),
+      _ProfileFeatureItem('SVIP', kIconSVIP, const [
+        Color(0xFF15BDE6),
+        Color(0xFF17D7C4),
+      ], onTapRoute: Routes.SVIP),
+      _ProfileFeatureItem('Activity', kIconActivity, const [
+        Color(0xFF43D40A),
+        Color(0xFF80F20A),
+      ], onTapRoute: Routes.ACTIVITY),
+      _ProfileFeatureItem(
+        'Aristocracy\nCenter',
+        kIconAristocracyCenter,
+        const [Color(0xFFFF2525), Color(0xFFFF8C2D)],
+        onTapRoute: Routes.ARISTOCRACY_CENTER,
+      ),
+      _ProfileFeatureItem('Mall', kIconMall, const [
+        Color(0xFFE5009E),
+        Color(0xFFFF54C8),
+      ], onTapRoute: Routes.MALL),
+      _ProfileFeatureItem('Point Center', kIconPointerCenter, const [
+        Color(0xFF00A8B8),
+        Color(0xFF08D6C7),
+      ], onTapRoute: Routes.POINT_CENTER),
+      _ProfileFeatureItem('Award', kIconAward, const [
+        Color(0xFFFF145C),
+        Color(0xFFFFD83D),
+      ], onTapRoute: Routes.AWARD),
+      _ProfileFeatureItem(
+        'Broadcast\nWatched',
+        kIconBroadcastWatched,
+        const [Color(0xFF20E06B), Color(0xFF50F0A8)],
+        onTapRoute: Routes.BROADCAST_WATCHED,
+      ),
+      _ProfileFeatureItem('Call', kIconAward, const [
+        Color(0xFFE5009E),
+        Color(0xFFFF54C8),
+      ], onTapRoute: Routes.CALL),
+      _ProfileFeatureItem(
+        'Customer\nservice',
+        kIconCustomerService,
+        const [Color(0xFFFFC51D), Color(0xFFFFFF35)],
+        onTapRoute: Routes.CUSTOMER_SERVICE,
+      ),
     ];
 
     return Container(
@@ -431,9 +500,9 @@ class ProfileTabView extends StatelessWidget {
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 3,
-          mainAxisSpacing: 16,
+          mainAxisSpacing: 18,
           crossAxisSpacing: 8,
-          mainAxisExtent: 130,
+          mainAxisExtent: 104,
         ),
         itemBuilder: (_, index) => _featureItem(features[index]),
       ),
@@ -451,21 +520,33 @@ class ProfileTabView extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 84,
-            height: 84,
+            width: 54,
+            height: 54,
             decoration: BoxDecoration(
-              color: item.bgColor,
-              shape: BoxShape.circle,
+              borderRadius: BorderRadius.circular(13),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: item.gradientColors,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: item.gradientColors.first.withValues(alpha: 0.24),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
+              ],
             ),
             alignment: Alignment.center,
             child: SvgPicture.asset(
               item.iconPath,
-              width: 32,
-              height: 32,
+              width: 29,
+              height: 29,
               fit: BoxFit.contain,
+              colorFilter: const ColorFilter.mode(kColorWhite, BlendMode.srcIn),
             ),
           ),
-          Spacing.v6,
+          Spacing.v8,
           Center(
             child: AppText(
               text: item.label,
@@ -507,7 +588,11 @@ class ProfileTabView extends StatelessWidget {
                 color: kColorWhite,
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: kColorWhite, size: 22),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: kColorWhite,
+              size: 22,
+            ),
           ],
         ),
       ),
@@ -516,10 +601,15 @@ class ProfileTabView extends StatelessWidget {
 }
 
 class _ProfileFeatureItem {
-  const _ProfileFeatureItem(this.label, this.iconPath, this.bgColor, {this.onTapRoute});
+  const _ProfileFeatureItem(
+    this.label,
+    this.iconPath,
+    this.gradientColors, {
+    this.onTapRoute,
+  });
 
   final String label;
   final String iconPath;
-  final Color bgColor;
+  final List<Color> gradientColors;
   final String? onTapRoute;
 }
