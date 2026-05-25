@@ -1,4 +1,5 @@
 class ZegoConfig {
-  static const int appId = 745933697;
-  static const String appSign = 'c807799eeaed5b3d82e1cf0a8c9c3ee5aa9bab456181db67fe12f1076cc8344a';
+  static const int appId = 1538269104;
+  static const String appSign =
+      '72022e423995fb9f3bc6d7ef3b084f2eaf421b49477b78048a75dca27ee7d101';
 }

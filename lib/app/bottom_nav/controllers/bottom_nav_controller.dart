@@ -61,6 +61,13 @@ class BottomNavController extends GetxController {
     _applyTabSelection(index);
   }
 
+  void onGoLivePressed() {
+    Get.toNamed(
+      Routes.LIVE_ROOM_CREATE,
+      arguments: {'type': 'VIDEO', 'isHost': true},
+    );
+  }
+
   void _applyTabSelection(int index) {
     selectedIndex.value = index;
     if (index == 0 && Get.isRegistered<DiscoverTabController>()) {

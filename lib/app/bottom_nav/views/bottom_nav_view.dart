@@ -28,28 +28,42 @@ class BottomNavView extends GetView<BottomNavController> {
     return Scaffold(
       backgroundColor: kColorWhite,
       extendBody: true,
-      body: Obx(
-        () {
-          if (controller.selectedIndex.value == 0) {
-            return const DiscoverTabView();
-          }
-          if (controller.selectedIndex.value == 1) {
-            return const LiveRoomView();
-          }
-          if (controller.selectedIndex.value == 2) {
-            return const LiveActionView();
-          }
-          if (controller.selectedIndex.value == 3) {
-            return const MessagesTabView();
-          }
-          if (controller.selectedIndex.value == 4) {
-            return ProfileTabView(
-              onLogoutPressed: controller.onLogoutPressed,
-            );
-          }
-          return Spacing.shrink;
-        },
+      body: Obx(() {
+        if (controller.selectedIndex.value == 0) {
+          return const DiscoverTabView();
+        }
+        if (controller.selectedIndex.value == 1) {
+          return const LiveRoomView();
+        }
+        if (controller.selectedIndex.value == 2) {
+          return const LiveActionView();
+        }
+        if (controller.selectedIndex.value == 3) {
+          return const MessagesTabView();
+        }
+        if (controller.selectedIndex.value == 4) {
+          return ProfileTabView(onLogoutPressed: controller.onLogoutPressed);
+        }
+        return Spacing.shrink;
+      }),
+      floatingActionButton: Obx(
+        () => controller.selectedIndex.value == 2
+            ? FloatingActionButton.extended(
+                heroTag: 'bottom-nav-go-live',
+                onPressed: controller.onGoLivePressed,
+                backgroundColor: kColorBottomNavHeart,
+                foregroundColor: kColorWhite,
+                elevation: 10,
+                icon: const Icon(Icons.videocam_rounded, size: 22),
+                label: const SemiBoldText(
+                  text: 'Go Live',
+                  fontSize: TextStyles.k14FontSize,
+                  color: kColorWhite,
+                ),
+              )
+            : Spacing.shrink,
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: ClipRect(
         child: Obx(
           () => BackdropFilter(
@@ -95,7 +109,8 @@ class BottomNavView extends GetView<BottomNavController> {
                                   controller.items[index].selectedIconPath,
                               selected: controller.selectedIndex.value == index,
                               iconSize: _iconSize,
-                              onTap: () => controller.onNavBarTabSelected(index),
+                              onTap: () =>
+                                  controller.onNavBarTabSelected(index),
                             ),
                           ),
                         ),
@@ -203,7 +218,7 @@ class _BottomNavTab extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
+      ),
     );
   }
 }

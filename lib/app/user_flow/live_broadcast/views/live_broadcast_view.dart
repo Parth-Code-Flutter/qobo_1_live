@@ -45,7 +45,9 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
 
   Widget _buildMainVideoBackground() {
     final userSession = Get.find<UserSessionController>();
-    final rawUserId = userSession.userId.isNotEmpty ? userSession.userId : 'user_${userSession.hashCode}';
+    final rawUserId = userSession.userId.isNotEmpty
+        ? userSession.userId
+        : 'user_${userSession.hashCode}';
     // ZEGOCLOUD limits userID to 32 characters/bytes. Remove hyphens and truncate if needed.
     var currentUserId = rawUserId.replaceAll('-', '');
     if (currentUserId.length > 32) {
@@ -67,7 +69,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
         hostButtons: [],
         audienceButtons: [],
       );
-      config.inRoomMessage = ZegoInRoomMessageConfig(
+      config.inRoomMessage = ZegoLiveStreamingInRoomMessageConfig(
         visible: false,
       );
 
@@ -126,7 +128,11 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                     ),
                     Row(
                       children: [
-                        const Icon(Icons.favorite, color: Colors.pink, size: 10),
+                        const Icon(
+                          Icons.favorite,
+                          color: Colors.pink,
+                          size: 10,
+                        ),
                         Spacing.h4,
                         const AppText(
                           text: '1.2k',
@@ -139,7 +145,10 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                 ),
                 Spacing.h8,
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: kColorPrimary,
                     borderRadius: BorderRadius.circular(12),
@@ -174,34 +183,6 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
     );
   }
 
-  Widget _buildSeatsLayer() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: 8,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 4,
-          mainAxisSpacing: 16,
-          crossAxisSpacing: 16,
-        ),
-        itemBuilder: (_, index) {
-          if (index == 0) {
-            return const CircleAvatar(backgroundImage: AssetImage(kImgTemp2));
-          }
-          if (index == 1) {
-            return const CircleAvatar(backgroundImage: AssetImage(kImgTemp4));
-          }
-          return CircleAvatar(
-            backgroundColor: Colors.black.withValues(alpha: 0.3),
-            child: const Icon(Icons.chair_rounded, color: Colors.white54, size: 20),
-          );
-        },
-      ),
-    );
-  }
-
   Widget _buildChatList() {
     return Container(
       height: 200,
@@ -221,7 +202,9 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
             final isTranslated = msg['isTranslated'] ?? false;
             final translation = msg['translation'] ?? '';
 
-            final displayMessage = isTranslated && translation.isNotEmpty ? translation : text;
+            final displayMessage = isTranslated && translation.isNotEmpty
+                ? translation
+                : text;
 
             return Align(
               alignment: Alignment.centerLeft,
@@ -232,14 +215,21 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                   }
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
-                    color: isSystem 
+                    color: isSystem
                         ? Colors.deepPurpleAccent.withValues(alpha: 0.25)
                         : Colors.black.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(16),
-                    border: isSystem 
-                        ? Border.all(color: Colors.deepPurpleAccent.withValues(alpha: 0.4))
+                    border: isSystem
+                        ? Border.all(
+                            color: Colors.deepPurpleAccent.withValues(
+                              alpha: 0.4,
+                            ),
+                          )
                         : null,
                   ),
                   child: Row(
@@ -253,14 +243,18 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                                 text: isSystem ? '' : '$sender: ',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: sender == 'You' ? kColorPrimary : Colors.pinkAccent.shade100,
+                                  color: sender == 'You'
+                                      ? kColorPrimary
+                                      : Colors.pinkAccent.shade100,
                                   fontSize: 12,
                                 ),
                               ),
                               TextSpan(
                                 text: displayMessage,
                                 style: TextStyle(
-                                  color: isSystem ? Colors.amberAccent : kColorWhite,
+                                  color: isSystem
+                                      ? Colors.amberAccent
+                                      : kColorWhite,
                                   fontSize: 12,
                                 ),
                               ),
@@ -298,12 +292,23 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
               hintText: 'Say something...',
               fillColor: Colors.black.withValues(alpha: 0.3),
               inputBorderRadius: BorderRadius.circular(20),
-              borderColor: Colors.transparent, // Disable border to prevent overlap visuals
+              borderColor: Colors
+                  .transparent, // Disable border to prevent overlap visuals
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              textStyle: TextStyles.kRegularPoppins(colors: kColorWhite, fontSize: 13),
-              hintStyle: TextStyles.kRegularPoppins(colors: Colors.white54, fontSize: 12),
+              textStyle: TextStyles.kRegularPoppins(
+                colors: kColorWhite,
+                fontSize: 13,
+              ),
+              hintStyle: TextStyles.kRegularPoppins(
+                colors: Colors.white54,
+                fontSize: 12,
+              ),
               suffix: IconButton(
-                icon: const Icon(Icons.send_rounded, color: kColorWhite, size: 18),
+                icon: const Icon(
+                  Icons.send_rounded,
+                  color: kColorWhite,
+                  size: 18,
+                ),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
                 onPressed: controller.sendMessage,
@@ -314,7 +319,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
           _bottomActionIcon(Icons.mic_off_rounded, onTap: controller.toggleMic),
           Spacing.h8,
           _bottomActionIcon(
-            Icons.card_giftcard_rounded, 
+            Icons.card_giftcard_rounded,
             color: Colors.pinkAccent,
             onTap: () {
               Get.bottomSheet(
