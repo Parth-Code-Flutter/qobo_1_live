@@ -19,7 +19,11 @@ To run the application locally, make sure you have Flutter SDK installed.
 
 ## 📘 API & Client Navigation Roadmap Status
 
-We maintain two central tracking documents to streamline backend integrations and report progress directly to the client:
+We maintain central tracking documents to streamline backend integrations and report progress directly to the client:
+
+👉 **[SCREEN_API_INTEGRATION_ROADMAP.md (Screen API Status Matrix)](file:///Users/onlymac/Documents/Projects/qobo_one_live/SCREEN_API_INTEGRATION_ROADMAP.md)**
+*   Provides a structured table of **all developed UI screens** (12 Done, 12 Needs Integration, 15 Needs Backend API).
+*   Lists exactly what endpoints exist and what is needed from the backend team.
 
 👉 **[APP_NAVIGATION_ROADMAP.md (Client UI/UX Roadmap)](file:///Users/onlymac/Documents/Projects/qobo_one_live/APP_NAVIGATION_ROADMAP.md)**
 *   Provides a high-level **visual navigation flow chart** (using Mermaid).

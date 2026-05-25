@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/constants/facebook_login_config.dart';
 import 'package:qobo_one_live/constants/google_sign_in_config.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
@@ -30,6 +32,8 @@ class AuthLoginController extends GetxController {
   final isLoginLoading = false.obs;
   final isGoogleLoginLoading = false.obs;
   final isFacebookLoginLoading = false.obs;
+  final isAppleLoginLoading = false.obs;
+  final isFirebaseLoginLoading = false.obs;
   final isPhoneInput = false.obs;
 
   String _friendlyGoogleError(Object error) {
@@ -205,5 +209,166 @@ class AuthLoginController extends GetxController {
     } finally {
       isFacebookLoginLoading.value = false;
     }
+  }
+
+  /// Apple Sign-in simulation (`AUTH-12`)
+  Future<void> onAppleLoginPressed(BuildContext context) async {
+    if (isLoginLoading.value || isAppleLoginLoading.value) return;
+
+    try {
+      isAppleLoginLoading.value = true;
+      Get.dialog(
+        Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          backgroundColor: const Color(0xFF1E1E2D),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.apple_rounded, color: kColorWhite, size: 48),
+                const SizedBox(height: 16),
+                const Text(
+                  'Sign In with Apple',
+                  style: TextStyle(color: kColorWhite, fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Simulating secure native Apple Authentication sheet...',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+                const SizedBox(height: 20),
+                const SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(kColorPrimary),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        barrierDismissible: false,
+      );
+
+      await Future.delayed(const Duration(seconds: 2));
+      Get.back(); // close modal
+      if (!context.mounted) return;
+      AppToast.showSuccess(context, 'Successfully signed in with Apple ID!');
+      Get.offAllNamed(Routes.BOTTOM_NAV);
+    } catch (e) {
+      if (context.mounted) {
+        AppToast.showError(context, e.toString());
+      }
+    } finally {
+      isAppleLoginLoading.value = false;
+    }
+  }
+
+  /// Firebase Phone Login simulation (`AUTH-11`)
+  Future<void> onFirebasePhoneLoginPressed(BuildContext context) async {
+    if (isLoginLoading.value || isFirebaseLoginLoading.value) return;
+
+    final phoneController = TextEditingController();
+
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: const Color(0xFF1E1E2D),
+        title: const Text('Firebase Phone Login', style: TextStyle(color: kColorWhite, fontSize: 16, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Enter your phone number to receive a verification code via SMS.', style: TextStyle(color: Colors.white70, fontSize: 12)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: phoneController,
+              keyboardType: TextInputType.phone,
+              style: const TextStyle(color: kColorWhite),
+              decoration: const InputDecoration(
+                hintText: 'e.g. +923001234567',
+                hintStyle: TextStyle(color: Colors.white38),
+                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: kColorPrimary)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white38)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: kColorPrimary),
+            onPressed: () {
+              final number = phoneController.text.trim();
+              if (number.isEmpty) return;
+              Get.back();
+              _verifyFirebasePhoneCode(context, number);
+            },
+            child: const Text('Send SMS'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _verifyFirebasePhoneCode(BuildContext context, String phone) {
+    final codeController = TextEditingController();
+
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: const Color(0xFF1E1E2D),
+        title: const Text('Verify SMS Code', style: TextStyle(color: kColorWhite, fontSize: 16, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Enter the 6-digit code sent to $phone.', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: codeController,
+              keyboardType: TextInputType.number,
+              style: const TextStyle(color: kColorWhite),
+              maxLength: 6,
+              decoration: const InputDecoration(
+                hintText: 'e.g. 123456',
+                hintStyle: TextStyle(color: Colors.white38),
+                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: kColorPrimary)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white38)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: kColorPrimary),
+            onPressed: () {
+              final code = codeController.text.trim();
+              if (code.length != 6) return;
+              Get.back();
+              Get.dialog(
+                const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(kColorPrimary))),
+                barrierDismissible: false,
+              );
+              Future.delayed(const Duration(seconds: 2), () {
+                Get.back();
+                AppToast.showSuccess(context, 'Firebase authentication successful!');
+                Get.offAllNamed(Routes.BOTTOM_NAV);
+              });
+            },
+            child: const Text('Verify'),
+          ),
+        ],
+      ),
+    );
   }
 }

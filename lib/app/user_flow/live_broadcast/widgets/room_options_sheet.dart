@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/app/user_flow/live_broadcast/controllers/live_broadcast_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
-import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 class RoomOptionsSheet extends StatelessWidget {
   final bool isHost;
@@ -18,6 +19,7 @@ class RoomOptionsSheet extends StatelessWidget {
             {'icon': Icons.lock_outline_rounded, 'label': 'Lock Room', 'color': kColorWhite},
             {'icon': Icons.pan_tool_rounded, 'label': 'Clear Seats', 'color': kColorWhite},
             {'icon': Icons.share_rounded, 'label': 'Share', 'color': kColorWhite},
+            {'icon': Icons.bolt_rounded, 'label': 'PK Battle', 'color': Colors.amber},
             {'icon': Icons.security_rounded, 'label': 'Security SOS', 'color': Colors.redAccent},
           ]
         : [
@@ -57,13 +59,21 @@ class RoomOptionsSheet extends StatelessWidget {
                 return GestureDetector(
                   onTap: () {
                     Get.back(); // close sheet
-                    Get.snackbar(
-                      'Action',
-                      'Triggered ${opt['label']} action',
-                      snackPosition: SnackPosition.TOP,
-                      backgroundColor: Colors.black.withValues(alpha: 0.8),
-                      colorText: kColorWhite,
-                    );
+                    if (opt['label'] == 'PK Battle') {
+                      Get.toNamed(Routes.PK_BATTLE);
+                    } else if (opt['label'] == 'Share') {
+                      if (Get.isRegistered<LiveBroadcastController>()) {
+                        Get.find<LiveBroadcastController>().shareRoom();
+                      }
+                    } else {
+                      Get.snackbar(
+                        'Action',
+                        'Triggered ${opt['label']} action',
+                        snackPosition: SnackPosition.TOP,
+                        backgroundColor: Colors.black.withValues(alpha: 0.8),
+                        colorText: kColorWhite,
+                      );
+                    }
                   },
                   child: Column(
                     mainAxisSize: MainAxisSize.min,

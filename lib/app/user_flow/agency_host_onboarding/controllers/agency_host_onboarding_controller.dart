@@ -10,12 +10,13 @@ import 'package:qobo_one_live/utils/app_widgets/common_media_picker.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/validations/text_field_validations.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/repo/agency/agency_repo.dart';
 
 import '../models/agency_host_category.dart';
 
-/// Agency host onboarding — UI only; API wiring in a later pass.
 class AgencyHostOnboardingController extends GetxController {
   final formKey = GlobalKey<FormState>();
+  final AgencyRepo _agencyRepo = AgencyRepo();
 
   final hostNameController = TextEditingController();
   final birthdayController = TextEditingController();
@@ -157,21 +158,38 @@ class AgencyHostOnboardingController extends GetxController {
     }
 
     isSubmitLoading.value = true;
-    await Future<void>.delayed(const Duration(milliseconds: 400));
+    final phoneNum = whatsAppController.text.trim();
+    final response = await _agencyRepo.hostOnboarding(
+      agencyCode: agencyCodeController.text.trim(),
+      name: hostNameController.text.trim(),
+      phone: phoneNum,
+      hostRealPhoto: hostPhoto.value!,
+      isShowLoader: false,
+    );
     isSubmitLoading.value = false;
 
     if (!context.mounted) return;
-    await CommonGiffyDialog.showSuccess(
-      context,
-      title: 'Application Submitted',
-      subtitle:
-          'Your host application has been saved locally.\nAPI integration coming next.',
-      buttonText: 'Check Status',
-      gifAssetPath: kGifCongratulation,
-      onPressed: () {
-        Get.back<void>(); // Dismiss dialog
-        Get.offNamed(Routes.AGENCY_HOST_STATUS, arguments: {'application_id': 'APP-90210'});
-      },
-    );
+
+    if (response != null && (response['statusCode'] == 1 || response['statusCode'] == 200 || response['statusCode'] == 201)) {
+      final appData = response['data'];
+      final appId = appData != null && appData is Map ? (appData['_id'] ?? appData['id'] ?? 'APP-90210') : 'APP-90210';
+      await CommonGiffyDialog.showSuccess(
+        context,
+        title: 'Application Submitted',
+        subtitle: response['message'] ?? 'Your host application has been submitted successfully!',
+        buttonText: 'Check Status',
+        gifAssetPath: kGifCongratulation,
+        onPressed: () {
+          Get.back<void>(); // Dismiss dialog
+          Get.offNamed(Routes.AGENCY_HOST_STATUS, arguments: {
+            'application_id': appId.toString(),
+            'phone': phoneNum,
+          });
+        },
+      );
+    } else {
+      final msg = response?['message'] ?? 'Failed to submit host onboarding application';
+      AppToast.showError(context, msg.toString());
+    }
   }
 }

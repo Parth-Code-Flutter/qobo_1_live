@@ -21,40 +21,6 @@ class LiveRoomView extends StatelessWidget {
   Widget build(BuildContext context) {
     final liveRoomController = _resolveController();
     final userSession = _resolveUserSession();
-    final rooms = <Map<String, dynamic>>[
-      {
-        'nameAge': 'Mariana, 25',
-        'badge': 'Premier',
-        'location': 'Roha',
-        'points': '2105',
-        'favorite': false,
-        'image': kImgTemp2,
-      },
-      {
-        'nameAge': 'Mariana, 25',
-        'badge': 'Premier',
-        'location': 'Roha',
-        'points': '2105',
-        'favorite': true,
-        'image': kImgTemp3,
-      },
-      {
-        'nameAge': 'Mariana, 25',
-        'badge': 'Hourly',
-        'location': 'Roha',
-        'points': '2105',
-        'favorite': false,
-        'image': kImgTemp4,
-      },
-      {
-        'nameAge': 'Mariana, 25',
-        'badge': 'Supreme',
-        'location': 'Roha',
-        'points': '2105',
-        'favorite': false,
-        'image': kImgTemp5,
-      },
-    ];
     final categories = <String>[
       LocaleKeys.liveRoomTabSab.tr,
       LocaleKeys.liveRoomTabShresth.tr,
@@ -64,7 +30,7 @@ class LiveRoomView extends StatelessWidget {
 
     return GetBuilder<LiveRoomController>(
       init: liveRoomController,
-      builder: (_) {
+      builder: (controller) {
         return Container(
           decoration: const BoxDecoration(
             image: DecorationImage(
@@ -91,36 +57,54 @@ class LiveRoomView extends StatelessWidget {
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(14, 0, 14, 40),
-                    child: GridView.builder(
-                      physics: const BouncingScrollPhysics(),
-                      itemCount: rooms.length,
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            mainAxisSpacing: 12,
-                            crossAxisSpacing: 12,
-                            childAspectRatio: 0.8,
-                          ),
-                      itemBuilder: (context, index) {
-                        final room = rooms[index];
-                        return GestureDetector(
-                          onTap: () {
-                            Get.toNamed('/live-broadcast', arguments: {
-                              'isHost': false,
-                              'roomType': 'VIDEO'
-                            });
-                          },
-                          child: CommonLiveRoomWidget(
-                            imageUrl: room['image'] as String,
-                            userNameAge: room['nameAge'] as String,
-                            badgeText: room['badge'] as String,
-                            locationText: room['location'] as String,
-                            pointsText: room['points'] as String,
-                            isFavorite: room['favorite'] as bool,
+                    child: Obx(() {
+                      if (controller.isLoading.value) {
+                        return const Center(
+                          child: CircularProgressIndicator(
+                            color: kColorPrimary,
                           ),
                         );
-                      },
-                    ),
+                      }
+                      if (controller.rooms.isEmpty) {
+                        return const Center(
+                          child: AppText(
+                            text: 'No active rooms found',
+                            color: kColorWhite,
+                            fontSize: 16,
+                          ),
+                        );
+                      }
+                      return GridView.builder(
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: controller.rooms.length,
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              mainAxisSpacing: 12,
+                              crossAxisSpacing: 12,
+                              childAspectRatio: 0.8,
+                            ),
+                        itemBuilder: (context, index) {
+                          final room = controller.rooms[index];
+                          return GestureDetector(
+                            onTap: () {
+                              Get.toNamed('/live-broadcast', arguments: {
+                                'isHost': false,
+                                'roomType': room['badge'] == 'AUDIO' ? 'AUDIO' : 'VIDEO',
+                              });
+                            },
+                            child: CommonLiveRoomWidget(
+                              imageUrl: room['image'] as String,
+                              userNameAge: room['nameAge'] as String,
+                              badgeText: room['badge'] as String,
+                              locationText: room['location'] as String,
+                              pointsText: room['points'] as String,
+                              isFavorite: room['favorite'] as bool,
+                            ),
+                          );
+                        },
+                      );
+                    }),
                   ),
                 ),
               ],

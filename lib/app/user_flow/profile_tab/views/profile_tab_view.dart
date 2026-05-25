@@ -291,7 +291,73 @@ class ProfileTabView extends StatelessWidget {
             icon: kIconMike,
             start: kColorProfileActionPinkStart,
             end: kColorProfileActionPinkEnd,
-            onTap: () => Get.toNamed(Routes.AGENCY_HOST_ONBOARDING),
+            onTap: () {
+              Get.bottomSheet(
+                Container(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF161622),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(24),
+                      topRight: Radius.circular(24),
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.white24,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      Spacing.v20,
+                      const SemiBoldText(
+                        text: 'Streamer & Agency Center',
+                        fontSize: 16,
+                        color: kColorWhite,
+                      ),
+                      Spacing.v20,
+                      ListTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: kColorPrimary.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.video_call_rounded, color: kColorPrimary),
+                        ),
+                        title: const SemiBoldText(text: 'Join an Agency (Host)', fontSize: 13, color: kColorWhite),
+                        subtitle: const AppText(text: 'Register as a streamer to start broadcasting.', fontSize: 11, color: Colors.white54),
+                        onTap: () {
+                          Get.back();
+                          Get.toNamed(Routes.AGENCY_HOST_ONBOARDING);
+                        },
+                      ),
+                      const Divider(color: Colors.white10),
+                      ListTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.purple.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.business_rounded, color: Colors.purpleAccent),
+                        ),
+                        title: const SemiBoldText(text: 'Agency Owner Dashboard', fontSize: 13, color: kColorWhite),
+                        subtitle: const AppText(text: 'Manage your agency, invite codes, & host earnings.', fontSize: 11, color: Colors.white54),
+                        onTap: () {
+                          Get.back();
+                          Get.toNamed(Routes.AGENCY_OWNER);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ],
@@ -345,6 +411,7 @@ class ProfileTabView extends StatelessWidget {
       _ProfileFeatureItem('Point Center', kIconPointerCenter, kColorProfileFeaturePink, onTapRoute: Routes.POINT_CENTER),
       _ProfileFeatureItem('Award', kIconAward, kColorProfileFeaturePeach, onTapRoute: Routes.AWARD),
       _ProfileFeatureItem('Broadcast\nWatched', kIconBroadcastWatched, kColorProfileFeatureGreen, onTapRoute: Routes.BROADCAST_WATCHED),
+      _ProfileFeatureItem('Call', kIconAward, kColorProfileFeaturePink, onTapRoute: Routes.CALL),
       _ProfileFeatureItem('Customer\nservice', kIconCustomerService, kColorProfileFeatureYellow, onTapRoute: Routes.CUSTOMER_SERVICE),
     ];
 

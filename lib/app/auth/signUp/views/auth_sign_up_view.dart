@@ -44,13 +44,25 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
                     Spacing.v24,
                     emailUsernamePasswordTextFields(context),
                     Spacing.v28,
-                    appButton(
-                      onPressed: () {
-                        if (controller.validateForm()) {
-                          Get.toNamed(Routes.AUTH_VERIFY_ACCOUNT);
-                        }
-                      },
-                      buttonText: LocaleKeys.signUp.tr,
+                    Obx(
+                      () => appButton(
+                        onPressed: () => controller.onSignUpPressed(context),
+                        buttonText: controller.isSignUpLoading.value
+                            ? ''
+                            : LocaleKeys.signUp.tr,
+                        buttonIcon: controller.isSignUpLoading.value
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    kColorWhite,
+                                  ),
+                                ),
+                              )
+                            : null,
+                      ),
                     ),
                     Spacing.v20,
                     orLoginWithDividerWidget(),

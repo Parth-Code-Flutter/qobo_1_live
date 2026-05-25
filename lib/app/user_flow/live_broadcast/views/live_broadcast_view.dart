@@ -179,19 +179,71 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
           separatorBuilder: (_, __) => Spacing.v6,
           itemBuilder: (_, index) {
             // Because list is reversed, we access elements from end
-            final msg = controller.chatMessages[controller.chatMessages.length - 1 - index];
+            final actualIndex = controller.chatMessages.length - 1 - index;
+            final msg = controller.chatMessages[actualIndex];
+            final sender = msg['sender'] ?? '';
+            final text = msg['message'] ?? '';
+            final isSystem = msg['isSystem'] ?? false;
+            final isTranslated = msg['isTranslated'] ?? false;
+            final translation = msg['translation'] ?? '';
+
+            final displayMessage = isTranslated && translation.isNotEmpty ? translation : text;
+
             return Align(
               alignment: Alignment.centerLeft,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: AppText(
-                  text: msg,
-                  fontSize: TextStyles.k12FontSize,
-                  color: kColorWhite,
+              child: GestureDetector(
+                onTap: () {
+                  if (!isSystem) {
+                    controller.translateMessage(actualIndex);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isSystem 
+                        ? Colors.deepPurpleAccent.withValues(alpha: 0.25)
+                        : Colors.black.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(16),
+                    border: isSystem 
+                        ? Border.all(color: Colors.deepPurpleAccent.withValues(alpha: 0.4))
+                        : null,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: RichText(
+                          text: TextSpan(
+                            children: [
+                              TextSpan(
+                                text: isSystem ? '' : '$sender: ',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: sender == 'You' ? kColorPrimary : Colors.pinkAccent.shade100,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              TextSpan(
+                                text: displayMessage,
+                                style: TextStyle(
+                                  color: isSystem ? Colors.amberAccent : kColorWhite,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (!isSystem && translation.isNotEmpty) ...[
+                        Spacing.h6,
+                        Icon(
+                          Icons.translate_rounded,
+                          size: 12,
+                          color: isTranslated ? kColorPrimary : Colors.white38,
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
             );

@@ -42,6 +42,10 @@ abstract class Routes {
   static const ENTRANCE_PATTI = _Paths.ENTRANCE_PATTI;
   static const LIVE_MODERATION = _Paths.LIVE_MODERATION;
   static const CUSTOMER_SERVICE = _Paths.CUSTOMER_SERVICE;
+  static const PK_BATTLE = _Paths.PK_BATTLE;
+  static const CALL = _Paths.CALL;
+  static const COIN_SELLER = _Paths.COIN_SELLER;
+  static const AGENCY_OWNER = _Paths.AGENCY_OWNER;
 }
 
 abstract class _Paths {
@@ -85,4 +89,8 @@ abstract class _Paths {
   static const ENTRANCE_PATTI = '/entrance-patti';
   static const LIVE_MODERATION = '/live-moderation';
   static const CUSTOMER_SERVICE = '/customer-service';
+  static const PK_BATTLE = '/pk-battle';
+  static const CALL = '/call';
+  static const COIN_SELLER = '/coin-seller';
+  static const AGENCY_OWNER = '/agency-owner';
 }

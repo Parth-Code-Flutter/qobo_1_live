@@ -6,9 +6,9 @@ This document acts as the definitive roadmap and navigation hierarchy of the **Q
 
 ## 📊 Project Progress Dashboard (Mobile App)
 
-*   **Total Developed UI Screens & Sub-views:** 31 Surfaces
-*   **Fully Integrated & Wired Screens:** 22 Screens (Splash, Login, Phone Login, OTP Verify, New Password, Onboarding, Profile Edit, User Search, Room Creation, Discover Search/Follow, Family Hub, Visitors List, Level Progress, Backpack, SVIP Center, Aristocracy Center, Mall Store, Point Center, Medals List, Broadcast History, Customer Support Support)
-*   **Fully Designed Premium Mock Screens:** 9 Screens (Discover Swipers, Live Broadcast view, Messaging, Wallet, Transaction Log, Onboarding Status, Revenue)
+*   **Total Developed UI Screens & Sub-views:** 39 Surfaces
+*   **Fully Integrated & Wired Screens:** 12 Screens (Splash, Login, Phone Login, OTP Verify, New Password, Onboarding, Profile Edit, User Search, Room Creation, Discover Search/Follow, Entrance Patti Store, User Level)
+*   **Fully Designed Premium Mock Screens:** 27 Screens (Discover Swipers, Live Broadcast view, Messaging, Wallet, Transaction Log, Onboarding Status, Revenue, Agency Owner Hub, Agency Recruitment, Agency Hosts List, Coin Seller Dashboard, Block List, Settings, Followers List, Family Hub, Visitors List, Backpack, SVIP Center, Aristocracy Center, Mall Store, Point Center, Medals List, Broadcast History, Customer Support Support, PK Battles Matching, Call Cards Deck, Live Moderation Console)
 
 ---
 
@@ -58,7 +58,14 @@ graph TD
     
     %% Inner views & sub-routines
     DiscoverTabView -->|Click 'Agency Banner'| AgencyHostOnboardingView["Agency Host Onboarding Form"]
+    DiscoverTabView -->|Click 'Agency Owner Register'| AgencyOwnerRegisterView["Agency Owner Register Form"]
+    
     AgencyHostOnboardingView -->|Submit Form| AgencyHostStatusView["Agency Host Status View"]
+    
+    AgencyOwnerRegisterView -->|Submit Form| AgencyOwnerView["Agency Owner dashboard"]
+    AgencyOwnerView -->|Click 'Recruit Link'| AgencyRecruitLinkView["Recruit Link View"]
+    AgencyOwnerView -->|Click 'Host List'| AgencyHostListView["Hosts List View"]
+    AgencyOwnerView -->|Click 'Revenue Reports'| AgencyRevenueView["Revenue Reports View"]
     
     LiveActionView -->|Click 'Audio/Video Live'| LiveRoomCreateView["Live Room Create View"]
     LiveRoomCreateView -->|Click 'Go Live'| LiveBroadcastView["Live Broadcast Screen"]
@@ -67,8 +74,14 @@ graph TD
     
     ProfileTabView -->|Click 'Edit Icon'| UserBasicProfileView["User Basic Profile Edit"]
     ProfileTabView -->|Click 'Wallet Card'| WalletView["Wallet & Balances"]
+    ProfileTabView -->|Click 'Settings'| SettingsView["Settings View"]
+    ProfileTabView -->|Click 'Follow/Fans'| FollowListView["Followers List View"]
+    
     WalletView -->|Click 'Transaction Logs'| TransactionHistoryView["Transaction History Log"]
     WalletView -->|Click 'VIP Store'| VipStoreView["VIP Store View"]
+    WalletView -->|Click 'Coin Sellers'| CoinSellerView["Coin Seller Panel"]
+    
+    SettingsView -->|Click 'Block List'| BlockListView["Blocked Users View"]
     
     %% Profile Grid items
     ProfileTabView -->|Click 'Visitors'| VisitorsView["Visitors List"]
@@ -152,12 +165,13 @@ Consists of a persistent premium bottom navigator bar that controls and paints 5
         *   *Type query:* Matches usernames dynamically via API `GET /api/user/search`.
         *   *Click "Follow" button next to search items:* Instantly follows/unfollows the user via `POST /api/user/follow-unfollow`.
     *   **Click "Agency Host Onboarding" promotional banner:** Routes to **Agency Host Onboarding Form** (`AGENCY_HOST_ONBOARDING`).
+    *   **Click "Agency Owner Register" button:** Routes to **Agency Owner Register Screen** (`AGENCY_OWNER_REGISTER`).
     *   **Click Tab Buttons (Popular, New, Bangladesh, Sab, Shresth):** Dynamically filters discover listings (currently mocks custom grids).
     *   **Click "Audio Room" grid card:** Opens premium **Discover Audio Room mockup** view.
-    *   **Click "Video Room" card:** Opens dating card **Dating Swiper mockup** view.
+    *   **Click "Video Room" card:** Opens dating card **Call Swiper mockup** view.
 
 #### Tab 1: Live Rooms Feed (`LiveRoomView`)
-*   **Visual State:** Dynamic categorization tabs (Sab, Shresth, Naya) and a grid layout displaying active streaming rooms.
+*   **Visual State:** Dynamic categorization tabs (Sab, Shresth, Naya, Bangladesh) and a grid layout displaying active streaming rooms.
 *   **Interactions (`onClick`):**
     *   **Click Category Tabs:** Filters the listing feed grid.
     *   **Click any active Room grid item:** Enters the designated stream directly by launching the **Live Broadcast Screen** (`LIVE_BROADCAST`) in *Audience mode*.
@@ -168,7 +182,7 @@ Consists of a persistent premium bottom navigator bar that controls and paints 5
     *   **Click "Audio Live" / "Video Live" cards:** Routes directly to **Live Room Create Screen** (`LIVE_ROOM_CREATE`).
 
 #### Tab 3: Messages Hub (`MessagesTabView`)
-*   **Visual State:** Combined inbox containing Direct Messages (DMs), official system notifications, and dating match records.
+*   **Visual State:** Combined inbox containing Direct Messages (DMs), official system notifications, and call match records.
 *   **Interactions (`onClick`):**
     *   **Click any chat conversation block:** Launches **1-to-1 Chat Detail Screen** (`CHAT_DETAIL`).
 
@@ -176,8 +190,10 @@ Consists of a persistent premium bottom navigator bar that controls and paints 5
 *   **Visual State:** Hero card showing user's level badge, ID, avatar, and background poster, followed by an operational feature grid.
 *   **Interactions (`onClick`):**
     *   **Click Edit Badge (top-right overlay):** Routes to **User Basic Profile Screen** (`USER_BASIC_PROFILE`).
-    *   **Click "Wallet" action row:** Routes directly to the **Wallet Screen** (`WalletView`).
-    *   **Click Grid Tiles (Backpack, Family, SVIP, Mall, Aristocracy Center, Point Center, User Level):** Launches their respective designed premium mock screens.
+    *   **Click "Wallet" action card:** Routes directly to the **Wallet Screen** (`WalletView`).
+    *   **Click "Follow" or "Fans" statistics:** Routes to **Follow List Screen** (`FOLLOW_LIST`).
+    *   **Click Settings gear icon:** Routes to **Settings Screen** (`SETTINGS`).
+    *   **Click Grid Tiles (Backpack, Family, SVIP, Mall, Aristocracy Center, Point Center, User Level, Award, Broadcast Watched, Customer Service, Visitors):** Launches their respective screens.
 
 ---
 
@@ -211,6 +227,7 @@ Consists of a persistent premium bottom navigator bar that controls and paints 5
     *   **Click PK R Plan Recharge Cards:** Triggers standard Pakistani Rupee payment workflows (Razopay/Google Pay simulated overlay).
     *   **Click "Transaction History" link:** Routes to **Transaction History Screen** (`TransactionHistoryView`).
     *   **Click "VIP Store" promotional banner:** Routes to **VIP Store Screen** (`VipStoreView`).
+    *   **Click "Official Sellers" transfer link:** Routes to **Coin Seller Panel** (`COIN_SELLER`).
 
 ### 12. Transaction History Screen (`TransactionHistoryView` · `/transaction-history`)
 *   **Visual State:** Two-tab log list (Coins History vs Diamonds History).
@@ -293,6 +310,80 @@ Consists of a persistent premium bottom navigator bar that controls and paints 5
 *   **Interactions (`onClick`):**
     *   **Click "Submit Ticket":** Launches bottom sheet form to submit support tickets.
     *   **Click "Send":** Submits live chat messages to help center agents.
+
+---
+
+### 📥 27. Agency Owner Register Screen (`AgencyOwnerRegisterView` · `/agency-owner-register`)
+*   **Visual State:** Custom registration form with text inputs for Agency Name, Contact Email, Contact Number, and Agency Bio.
+*   **Interactions (`onClick`):**
+    *   **Click "Register Agency" button:** Validates details and logs agency registration. Automatically navigates to the **Agency Owner Dashboard** (`AGENCY_OWNER`).
+
+### 📥 28. Agency Owner Dashboard (`AgencyOwnerView` · `/agency-owner`)
+*   **Visual State:** High-fidelity dashboard for agency owners. Displays daily agent statistics, active stream hours, monthly revenue estimates, and host analytics lists.
+*   **Interactions (`onClick`):**
+    *   **Click "Recruit Host Link":** Routes to **Recruit Link Creator** (`AGENCY_RECRUIT_LINK`).
+    *   **Click "My Hosts List":** Routes to **Agency Hosts List** (`AGENCY_HOST_LIST`).
+    *   **Click "Commission & Revenue Reports":** Routes to **Agency Revenue Reports** (`AGENCY_REVENUE`).
+
+### 📥 29. Recruit Link View (`AgencyRecruitLinkView` · `/agency-recruit-link`)
+*   **Visual State:** Displays active host recruitment cards with a copyable custom invitation URL and code.
+*   **Interactions (`onClick`):**
+    *   **Click "Copy Invite Code" or "Copy Invite Link":** Copies invitation details to clipboard with a success toast.
+
+### 📥 30. Agency Hosts List View (`AgencyHostListView` · `/agency-host-list`)
+*   **Visual State:** Searchable list of hosts associated with the owner's agency, displaying active status, hourly streaming counters, and diamonds accumulated.
+*   **Interactions (`onClick`):**
+    *   **Click user item:** Deep-links to host analytics stats.
+
+### 📥 31. Agency Revenue View (`AgencyRevenueView` · `/agency-revenue`)
+*   **Visual State:** Commission tables, monthly ledgers, and payout status indicators (Pending/Transferred).
+*   **Interactions (`onClick`):**
+    *   **Click payout requests:** Triggers withdrawal simulations.
+
+### 📥 32. Coin Seller Panel (`CoinSellerView` · `/coin-seller`)
+*   **Visual State:** Dashboard panel for official coin sellers, displaying available coin reserves and buyer transfer logs.
+*   **Interactions (`onClick`):**
+    *   **Click "Transfer Coins" button:** Launches a modal to input Buyer UID and Coins Amount.
+    *   **Click "Confirm Transfer":** Simulates deduction and writes log to the records sheet.
+
+### 📥 33. Follow List Screen (`FollowListView` · `/follow-list`)
+*   **Visual State:** Two-tab list (Followings list vs Followers list) displaying user badges.
+*   **Interactions (`onClick`):**
+    *   **Click list item:** Redirects directly to the user profile.
+    *   **Click "Unfollow" button:** Instantly toggles following state.
+
+### 📥 34. Settings Screen (`SettingsView` · `/settings`)
+*   **Visual State:** Standard gear menu list covering Account Security, Block List, Clear Cache, and Logout.
+*   **Interactions (`onClick`):**
+    *   **Click "Block List" option:** Routes to **Blocked Users View** (`BLOCK_LIST`).
+    *   **Click "Log Out":** Clears tokens and returns to **Login Screen** (`AUTH_LOGIN`).
+
+### 📥 35. Block List Screen (`BlockListView` · `/block-list`)
+*   **Visual State:** List of blocked user accounts showing timestamps.
+*   **Interactions (`onClick`):**
+    *   **Click "Unblock":** Instantly removes from list and updates status.
+
+### 📥 36. Entrance Patti Store (`EntrancePattiView` · `/entrance-patti`)
+*   **Visual State:** Showcases custom chat ribbon banners, title entry styles, and premium text color ribbons.
+*   **Interactions (`onClick`):**
+    *   **Click preview:** Renders a demo preview of how the user's name card enters a live room.
+
+### 📥 37. Live Moderation Console (`LiveModerationView` · `/live-moderation`)
+*   **Visual State:** Dashboard panel listing recent safety flags, bad comments flagged, and security SOS calls.
+*   **Interactions (`onClick`):**
+    *   **Click SOS items:** Triggers moderator room entry or alarm logs.
+
+### 📥 38. PK Battle Screen (`PKBattleView` · `/pk-battle`)
+*   **Visual State:** Matchmaking page with split layout, challenge radar animation, matching criteria, and target invitation lists.
+*   **Interactions (`onClick`):**
+    *   **Click "Quick Match":** Starts challengers radar simulation.
+    *   **Click "Send PK Request" next to candidate host:** Launches outgoing invitation.
+
+### 📥 39. Call View (`CallView` · `/call`)
+*   **Visual State:** Tinder-style card deck layout displaying local matching profiles with bio keywords, swiping buttons (Like/Pass), match popups, and quick-access matched conversation list.
+*   **Interactions (`onClick`):**
+    *   **Click Like (Heart) / Pass (Cross):** Swipes card in/out of screen.
+    *   **Click Match Inbox conversation:** Redirects straight to DMs.
 
 ---
 

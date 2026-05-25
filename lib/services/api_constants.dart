@@ -14,6 +14,9 @@ class AuthEndpoints {
   /// POST /api/auth/login
   static const String login = '/api/auth/login';
 
+  /// POST /api/auth/register
+  static const String register = '/api/auth/register';
+
   /// POST /api/auth/login-phone
   static const String loginPhone = '/api/auth/login-phone';
 
@@ -66,6 +69,12 @@ class RoomEndpoints {
 
   /// POST /api/room/security-sos
   static const String securitySos = '/api/room/security-sos';
+
+  /// GET /api/room/share
+  static const String shareRoom = '/api/room/share';
+
+  /// GET /api/room/translate
+  static const String translateText = '/api/room/translate';
 }
 
 /// Central place for agency related API endpoints.
@@ -111,7 +120,7 @@ class EconomyEndpoints {
   static const String sendGift = '/api/economy/send-gift';
 }
 
-/// Central place for PK and Dating related API endpoints.
+/// Central place for PK and Call related API endpoints.
 class PkEndpoints {
   PkEndpoints._();
 
@@ -122,8 +131,8 @@ class PkEndpoints {
   static const String sendRequest = '/api/pk/send-request';
 
   /// POST /api/pk/dating-onboarding
-  static const String datingOnboarding = '/api/pk/dating-onboarding';
+  static const String callOnboarding = '/api/pk/dating-onboarding';
 
   /// GET /api/pk/dating-list
-  static const String datingList = '/api/pk/dating-list';
+  static const String callList = '/api/pk/dating-list';
 }

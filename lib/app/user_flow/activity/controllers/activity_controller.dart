@@ -12,8 +12,8 @@ class ActivityController extends GetxController {
       'gradient': [0xFFE65C00, 0xFFF9D423], // Orange/Gold
     },
     {
-      'title': 'Dating King Festival',
-      'desc': 'Unlock dating matches, send virtual roses, and climb the Love Leaderboard.',
+      'title': 'Call King Festival',
+      'desc': 'Unlock call matches, send virtual roses, and climb the Love Leaderboard.',
       'status': 'Active',
       'timeLeft': '5 days left',
       'gradient': [0xFFFF42C3, 0xFFFF5EA7], // Pink/Rose

@@ -659,7 +659,7 @@ Success Response (200):
 "message": "Commissions marked as paid",
 "data": { "count": 15 }
 }
-6. PK Battle & Dating (/api/pk)
+6. PK Battle & Call (/api/pk)
 6.1 Search PK Opponents
 Method
 GET
@@ -736,7 +736,7 @@ Success Response (200):
 "createdAt": "2026-04-28T00:00:00.000Z"
 }
 }
-6.5 Dating — Update Profile
+6.5 Call — Update Profile
 Method
 POST
 URL
@@ -753,9 +753,9 @@ Success Response (200):
 {
 "statusCode": 1,
 "message": "Profile updated",
-"data": { "...dating profile..." }
+"data": { "...call profile..." }
 }
-6.6 Dating — Get Matches
+6.6 Call — Get Matches
 Method
 GET
 URL
@@ -768,7 +768,7 @@ Success Response (200):
 "message": "Matches fetched",
 "data": [ { "...matched user profiles..." } ]
 }
-6.7 Dating — Swipe Action
+6.7 Call — Swipe Action
 Method
 POST
 URL

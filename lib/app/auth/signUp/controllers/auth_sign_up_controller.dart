@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/constants/facebook_login_config.dart';
 import 'package:qobo_one_live/constants/google_sign_in_config.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
@@ -30,6 +32,35 @@ class AuthSignUpController extends GetxController {
   final isPasswordHidden = true.obs;
   final isGoogleLoginLoading = false.obs;
   final isFacebookLoginLoading = false.obs;
+  final isSignUpLoading = false.obs;
+
+  Future<void> onSignUpPressed(BuildContext context) async {
+    if (isSignUpLoading.value) return;
+    if (!validateForm()) return;
+
+    try {
+      isSignUpLoading.value = true;
+      final response = await _authRepo.register(
+        email: emailController.text.trim(),
+        username: usernameController.text.trim(),
+        password: passwordController.text.trim(),
+        isShowLoader: false,
+      );
+      if (!context.mounted) return;
+      if (response != null) {
+        AppToast.showSuccess(context, 'Registration successful!');
+        Get.toNamed(Routes.AUTH_VERIFY_ACCOUNT);
+      } else {
+        AppToast.showError(context, 'Registration failed. Please try again.');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        AppToast.showError(context, e.toString());
+      }
+    } finally {
+      isSignUpLoading.value = false;
+    }
+  }
 
   String _friendlyGoogleError(Object error) {
     final text = error.toString();

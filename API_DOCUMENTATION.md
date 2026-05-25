@@ -603,7 +603,7 @@ These backend endpoints exist inside the system's core specifications (`api_docu
     *   **Request:** `{ "receiver_id": "uuid", "gift_id": "uuid", "room_id": "uuid" }`
     *   **Purpose:** Decelerates coins from sender, adds diamonds to receiver, sends real-time alert.
 
-### 3.4 PK Battle & Dating
+### 3.4 PK Battle & Call Matching
 *   **GET `/api/pk/search?room_id=uuid`**
     *   **Purpose:** Finds eligible rooms looking for a PK challenge.
 *   **POST `/api/pk/send-request`**
@@ -611,9 +611,9 @@ These backend endpoints exist inside the system's core specifications (`api_docu
     *   **Purpose:** Initiates a live streaming duel.
 *   **POST `/api/pk/dating-onboarding`**
     *   **Request:** `{ "interests": [], "lookingFor": "", "aboutMe": "" }`
-    *   **Purpose:** Sets dating card filter profile tags.
+    *   **Purpose:** Sets call card filter profile tags.
 *   **GET `/api/pk/dating-list`**
-    *   **Purpose:** Pulls nearby/matching daters list.
+    *   **Purpose:** Pulls nearby/matching callers list.
 
 ### 3.5 Agency Management
 *   **POST `/api/agency/register`**

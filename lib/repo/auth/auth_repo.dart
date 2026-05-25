@@ -42,6 +42,28 @@ class AuthRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
+  /// Calls `POST /api/auth/register` with email, username, and password.
+  Future<Map<String, dynamic>?> register({
+    required String email,
+    required String username,
+    required String password,
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: AuthEndpoints.register,
+      requestModel: <String, dynamic>{
+        'email': email,
+        'username': username,
+        'password': password,
+      },
+      isShowLoader: isShowLoader,
+      isLoginCall: true,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
   /// Calls `POST /api/auth/social` with OAuth profile payload (Google, etc.).
   ///
   /// Returns decoded JSON map on success, otherwise `null`.

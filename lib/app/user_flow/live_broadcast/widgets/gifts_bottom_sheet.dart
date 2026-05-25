@@ -5,6 +5,7 @@ import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import '../controllers/live_broadcast_controller.dart';
 
 class GiftsBottomSheet extends StatefulWidget {
   const GiftsBottomSheet({super.key});
@@ -153,6 +154,7 @@ class _GiftsBottomSheetState extends State<GiftsBottomSheet> {
   }
 
   Widget _buildBottomBar() {
+    final controller = Get.find<LiveBroadcastController>();
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       decoration: const BoxDecoration(
@@ -165,11 +167,11 @@ class _GiftsBottomSheetState extends State<GiftsBottomSheet> {
             children: [
               const Icon(Icons.diamond_outlined, color: Colors.orange, size: 16),
               Spacing.h6,
-              const SemiBoldText(
-                text: '1,200',
-                fontSize: TextStyles.k14FontSize,
-                color: kColorWhite,
-              ),
+              Obx(() => SemiBoldText(
+                    text: controller.coinsBalance.value.toString(),
+                    fontSize: TextStyles.k14FontSize,
+                    color: kColorWhite,
+                  )),
               const Icon(Icons.chevron_right_rounded, color: kColorHint, size: 16),
             ],
           ),
@@ -180,14 +182,7 @@ class _GiftsBottomSheetState extends State<GiftsBottomSheet> {
             child: appButton(
               onPressed: () {
                 if (_selectedGiftIndex == -1) return;
-                Get.back(); // Close sheet
-                Get.snackbar(
-                  'Gift Sent!',
-                  'You sent a ${_gifts[_selectedGiftIndex]['name']}!',
-                  snackPosition: SnackPosition.TOP,
-                  backgroundColor: Colors.pinkAccent.withValues(alpha: 0.8),
-                  colorText: kColorWhite,
-                );
+                controller.sendGift(_gifts[_selectedGiftIndex]);
               },
               buttonText: 'Send',
               buttonColor: _selectedGiftIndex != -1 ? Colors.pinkAccent : kColorHint,

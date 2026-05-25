@@ -76,6 +76,12 @@ import '../app/user_flow/live_moderation/bindings/live_moderation_binding.dart';
 import '../app/user_flow/live_moderation/views/live_moderation_view.dart';
 import '../app/user_flow/customer_service/bindings/customer_service_binding.dart';
 import '../app/user_flow/customer_service/views/customer_service_view.dart';
+import '../app/user_flow/pk_battle/bindings/pk_battle_binding.dart';
+import '../app/user_flow/pk_battle/views/pk_battle_view.dart';
+import '../app/user_flow/call/bindings/call_binding.dart';
+import '../app/user_flow/call/views/call_view.dart';
+import '../app/user_flow/coin_seller/views/coin_seller_view.dart';
+import '../app/user_flow/agency_host_onboarding/views/agency_owner_view.dart';
 
 part 'app_routes.dart';
 
@@ -274,6 +280,24 @@ class AppPages {
       name: _Paths.CUSTOMER_SERVICE,
       page: () => const CustomerServiceView(),
       binding: CustomerServiceBinding(),
+    ),
+    GetPage(
+      name: _Paths.PK_BATTLE,
+      page: () => const PKBattleView(),
+      binding: PKBattleBinding(),
+    ),
+    GetPage(
+      name: _Paths.CALL,
+      page: () => const CallView(),
+      binding: CallBinding(),
+    ),
+    GetPage(
+      name: _Paths.COIN_SELLER,
+      page: () => const CoinSellerView(),
+    ),
+    GetPage(
+      name: _Paths.AGENCY_OWNER,
+      page: () => const AgencyOwnerView(),
     ),
   ];
 }

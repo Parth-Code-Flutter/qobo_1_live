@@ -43,7 +43,7 @@ class DiscoverVideoRoomView extends StatefulWidget {
     (
       collapsedTitle: 'Late Night Talks',
       hostName: 'Riya Sharma',
-      streamSubtitle: 'Dating & Chill',
+      streamSubtitle: 'Call & Chill',
       watchingLabel: '215 watching',
       viewerCountShort: '8.2K',
       image: kImgTemp3,
@@ -51,7 +51,7 @@ class DiscoverVideoRoomView extends StatefulWidget {
       tags: ['#Secret', '#Fun', '#Talk'],
     ),
     (
-      collapsedTitle: 'Dating Advice',
+      collapsedTitle: 'Call Advice',
       hostName: 'Riya Sharma',
       streamSubtitle: 'Ask me anything',
       watchingLabel: '189 watching',

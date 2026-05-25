@@ -9,6 +9,7 @@ import 'package:qobo_one_live/constants/live_action_colors.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_mock_ad_widget.dart';
 
 import '../controllers/live_action_controller.dart';
 
@@ -75,6 +76,8 @@ class LiveActionView extends GetView<LiveActionController> {
             Expanded(child: _stageArea(context)),
             _activityFeed(),
             Spacing.v8,
+            const AppMockAdBannerWidget(provider: AdProvider.adMob),
+            Spacing.v4,
             _bottomChatBar(context),
             SizedBox(height: MediaQuery.paddingOf(context).bottom + 88),
           ],

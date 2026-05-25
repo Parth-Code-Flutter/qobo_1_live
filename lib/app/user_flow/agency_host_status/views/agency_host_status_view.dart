@@ -75,10 +75,12 @@ class AgencyHostStatusView extends GetView<AgencyHostStatusController> {
                 ),
               ),
               const Spacer(),
-              appButton(
-                onPressed: controller.refreshStatus,
-                buttonText: 'Refresh Status',
-              ),
+              Obx(() => controller.isLoading.value
+                  ? const Center(child: CircularProgressIndicator(color: kColorPrimary))
+                  : appButton(
+                      onPressed: controller.refreshStatus,
+                      buttonText: 'Refresh Status',
+                    )),
               Spacing.v20,
               TextButton(
                 onPressed: () {

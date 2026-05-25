@@ -37,11 +37,17 @@ class CommonLiveRoomWidget extends StatelessWidget {
         child: Stack(
           children: [
             Positioned.fill(
-              child: Image.asset(
-                imageUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(color: const Color(0xFF241D4D)),
-              ),
+              child: imageUrl.startsWith('http')
+                  ? Image.network(
+                      imageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(color: const Color(0xFF241D4D)),
+                    )
+                  : Image.asset(
+                      imageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(color: const Color(0xFF241D4D)),
+                    ),
             ),
             Positioned.fill(
               child: DecoratedBox(
