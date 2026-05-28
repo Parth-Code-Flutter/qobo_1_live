@@ -175,6 +175,11 @@ class ProfileTabView extends StatelessWidget {
                       _statDivider(),
                       _statBlock(
                         '1K',
+                        'Friends',
+                      ),
+                      _statDivider(),
+                      _statBlock(
+                        '1K',
                         'Following',
                         onTap: () => Get.toNamed(
                           '/follow-list',
