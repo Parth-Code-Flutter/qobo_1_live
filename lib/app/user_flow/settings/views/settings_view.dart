@@ -33,12 +33,6 @@ class SettingsView extends GetView<SettingsController> {
                   trailingText: 'English',
                   onTap: controller.onLanguageTap,
                 ),
-                const Divider(height: 1, color: Colors.white12),
-                _buildListTile(
-                  icon: Icons.block_rounded,
-                  title: 'Block List',
-                  onTap: controller.onBlockListTap,
-                ),
               ],
             ),
             Spacing.v24,
