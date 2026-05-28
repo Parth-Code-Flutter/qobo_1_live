@@ -42,17 +42,25 @@ class PkRepo {
   /// Calls `POST /api/pk/dating-onboarding` to save call preferences.
   Future<Map<String, dynamic>?> callOnboarding({
     required List<String> interests,
-    required String lookingFor,
-    required String aboutMe,
+    required String preferredGender,
+    required int minAge,
+    required int maxAge,
+    String? location,
     bool isShowLoader = true,
   }) async {
+    // Keep payload aligned with backend profile fields.
+    final payload = <String, dynamic>{
+      'interests': interests,
+      'preferredGender': preferredGender,
+      'minAge': minAge,
+      'maxAge': maxAge,
+      if (location != null && location.trim().isNotEmpty)
+        'location': location.trim(),
+    };
+
     final response = await _apiService.postRequest(
       endPoint: PkEndpoints.callOnboarding,
-      requestModel: <String, dynamic>{
-        'interests': interests,
-        'lookingFor': lookingFor,
-        'aboutMe': aboutMe,
-      },
+      requestModel: payload,
       isShowLoader: isShowLoader,
     );
 

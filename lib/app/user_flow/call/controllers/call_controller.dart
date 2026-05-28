@@ -141,25 +141,58 @@ class CallController extends GetxController {
       return;
     }
 
-    final response = await _pkRepo.callOnboarding(
-      interests: interestedIn.toList(),
-      lookingFor: seekingGender.value,
-      aboutMe: 'Seeking matches aged ${minAge.value} to ${maxAge.value}.',
-      isShowLoader: true,
-    );
+    try {
+      final response = await _pkRepo.callOnboarding(
+        interests: interestedIn.toList(),
+        preferredGender: seekingGender.value,
+        minAge: minAge.value,
+        maxAge: maxAge.value,
+        // Keep optional until a dedicated location picker is added.
+        location: null,
+        isShowLoader: true,
+      );
 
-    isOnboardingDone.value = true;
-    currentTab.value = 1; // Open Swipe Deck
+      final statusCode = response?['statusCode'];
+      final isSuccess = statusCode == 1 || statusCode == 200 || statusCode == 201;
+      final message =
+          (response?['message']?.toString().trim().isNotEmpty ?? false)
+          ? response!['message'].toString().trim()
+          : (isSuccess
+                ? 'Discovering matches matching your criteria...'
+                : 'Unable to save call preferences. Please try again.');
 
-    await loadCallProfiles();
+      if (!isSuccess) {
+        Get.snackbar(
+          'Call Preferences',
+          message,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.redAccent,
+          colorText: kColorWhite,
+        );
+        return;
+      }
 
-    Get.snackbar(
-      'Call Preferences Saved',
-      response?['message'] ?? 'Discovering matches matching your criteria...',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.green,
-      colorText: kColorWhite,
-    );
+      // Only move to swipe deck after successful onboarding save.
+      isOnboardingDone.value = true;
+      currentTab.value = 1;
+      await loadCallProfiles();
+
+      Get.snackbar(
+        'Call Preferences Saved',
+        message,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green,
+        colorText: kColorWhite,
+      );
+    } catch (_) {
+      Get.snackbar(
+        'Call Preferences',
+        'Unable to save call preferences. Please try again.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: kColorWhite,
+      );
+    }
   }
 
   // Action: Reset preferences to re-edit onboarding
