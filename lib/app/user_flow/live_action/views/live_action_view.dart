@@ -9,7 +9,6 @@ import 'package:qobo_one_live/constants/live_action_colors.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
-import 'package:qobo_one_live/utils/app_widgets/app_mock_ad_widget.dart';
 
 import '../controllers/live_action_controller.dart';
 
@@ -20,8 +19,7 @@ class LiveActionView extends GetView<LiveActionController> {
   static const _roomName = 'White Room';
   static const _roomId = '25363';
   static const _viewerCount = '125';
-  static const _announcement =
-      'Announcement Enjaye the Talk and be respect';
+  static const _announcement = 'Announcement Enjaye the Talk and be respect';
 
   /// Figma: 1 center + 3 inner ring + 4 outer ring (8 listeners).
   static const _orbitParticipants = <_OrbitSeat>[
@@ -37,14 +35,14 @@ class LiveActionView extends GetView<LiveActionController> {
 
   /// Alignment positions on the orbit stack (Figma concentric layout).
   static const _orbitSeatAlignments = <Alignment>[
-    Alignment(0, 0.08),
-    Alignment(-0.40, 0.30),
-    Alignment(0, 0.40),
-    Alignment(0.40, 0.30),
-    Alignment(-0.72, 0.56),
-    Alignment(-0.24, 0.72),
-    Alignment(0.24, 0.72),
-    Alignment(0.72, 0.56),
+    Alignment(0, -0.24),
+    Alignment(-0.50, 0.02),
+    Alignment(0, 0.22),
+    Alignment(0.50, 0.02),
+    Alignment(-0.78, 0.44),
+    Alignment(-0.30, 0.62),
+    Alignment(0.30, 0.62),
+    Alignment(0.78, 0.44),
   ];
 
   static const _activityLines = <_ActivityLine>[
@@ -68,18 +66,17 @@ class LiveActionView extends GetView<LiveActionController> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _header(context),
-            Spacing.v8,
+            Spacing.v6,
             _announcementBar(),
-            Spacing.v10,
+            Spacing.v8,
             _roomActionPills(),
-            Spacing.v4,
             Expanded(child: _stageArea(context)),
             _activityFeed(),
-            Spacing.v8,
-            const AppMockAdBannerWidget(provider: AdProvider.adMob),
-            Spacing.v4,
+            Spacing.v6,
+            _compactAdBanner(),
+            Spacing.v6,
             _bottomChatBar(context),
-            SizedBox(height: MediaQuery.paddingOf(context).bottom + 88),
+            SizedBox(height: MediaQuery.paddingOf(context).bottom + 76),
           ],
         ),
       ),
@@ -265,7 +262,7 @@ class LiveActionView extends GetView<LiveActionController> {
         return Column(
           children: [
             Padding(
-              padding: const EdgeInsets.only(top: 2),
+              padding: const EdgeInsets.only(top: 8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -278,16 +275,14 @@ class LiveActionView extends GetView<LiveActionController> {
                 ],
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 2),
             Expanded(
               child: Stack(
                 fit: StackFit.expand,
                 clipBehavior: Clip.none,
                 children: [
                   const Positioned.fill(
-                    child: CustomPaint(
-                      painter: _OrbitRingsPainter(),
-                    ),
+                    child: CustomPaint(painter: _OrbitRingsPainter()),
                   ),
                   for (var i = 0; i < _orbitSeatAlignments.length; i++)
                     Align(
@@ -322,8 +317,8 @@ class LiveActionView extends GetView<LiveActionController> {
                 ),
               ),
               Container(
-                width: 62,
-                height: 62,
+                width: 58,
+                height: 58,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(color: kColorWhite, width: 2),
@@ -345,7 +340,10 @@ class LiveActionView extends GetView<LiveActionController> {
             decoration: BoxDecoration(
               color: LiveActionColors.pillFill,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: LiveActionColors.pillBorder, width: 0.6),
+              border: Border.all(
+                color: LiveActionColors.pillBorder,
+                width: 0.6,
+              ),
             ),
             child: const SemiBoldText(
               text: 'Host',
@@ -360,12 +358,12 @@ class LiveActionView extends GetView<LiveActionController> {
 
   Widget _openSeat() {
     return SizedBox(
-      width: 64,
+      width: 62,
       child: Column(
         children: [
           Container(
-            width: 56,
-            height: 56,
+            width: 52,
+            height: 52,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: LiveActionColors.openSeatFill,
@@ -394,20 +392,20 @@ class LiveActionView extends GetView<LiveActionController> {
 
   Widget _orbitSeatTile(_OrbitSeat seat) {
     return SizedBox(
-      width: 52,
+      width: 58,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
           SizedBox(
-            width: 40,
-            height: 40,
+            width: 36,
+            height: 36,
             child: Stack(
               clipBehavior: Clip.none,
               children: [
                 Container(
-                  width: 40,
-                  height: 40,
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
@@ -430,7 +428,7 @@ class LiveActionView extends GetView<LiveActionController> {
           const SizedBox(height: 3),
           SemiBoldText(
             text: seat.name,
-            fontSize: 9,
+            fontSize: 8,
             color: kColorWhite,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -438,7 +436,7 @@ class LiveActionView extends GetView<LiveActionController> {
           ),
           AppText(
             text: seat.idLabel,
-            fontSize: 8,
+            fontSize: 7,
             color: kColorWhite.withValues(alpha: 0.75),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -452,7 +450,7 @@ class LiveActionView extends GetView<LiveActionController> {
               SvgPicture.asset(
                 kIconDiamond,
                 width: 9,
-                height: 9,
+                height: 8,
                 colorFilter: const ColorFilter.mode(
                   LiveActionColors.diamondGold,
                   BlendMode.srcIn,
@@ -461,7 +459,7 @@ class LiveActionView extends GetView<LiveActionController> {
               const SizedBox(width: 2),
               SemiBoldText(
                 text: seat.diamonds,
-                fontSize: 8,
+                fontSize: 7,
                 color: LiveActionColors.diamondGold,
               ),
             ],
@@ -545,6 +543,73 @@ class LiveActionView extends GetView<LiveActionController> {
     );
   }
 
+  Widget _compactAdBanner() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: Container(
+        height: 52,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: LiveActionColors.inputFill,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.14)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+              decoration: BoxDecoration(
+                color: kColorPrimary,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const SemiBoldText(
+                text: 'Ad',
+                fontSize: 10,
+                color: kColorWhite,
+              ),
+            ),
+            Spacing.h10,
+            const Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SemiBoldText(
+                    text: 'Learn Flutter 3.3',
+                    fontSize: 11,
+                    color: kColorWhite,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  AppText(
+                    text: 'Master cross-platform development',
+                    fontSize: 9,
+                    color: kColorVideoSecondaryText,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            Spacing.h10,
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: kColorPrimary,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const SemiBoldText(
+                text: 'Enroll',
+                fontSize: TextStyles.k10FontSize,
+                color: kColorWhite,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _bottomChatBar(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 0, 14, 4),
@@ -597,10 +662,7 @@ class LiveActionView extends GetView<LiveActionController> {
     );
   }
 
-  Widget _giftButton({
-    required List<Color> gradient,
-    required IconData icon,
-  }) {
+  Widget _giftButton({required List<Color> gradient, required IconData icon}) {
     return Container(
       width: 44,
       height: 44,
@@ -656,11 +718,11 @@ class _OrbitRingsPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height * 0.38);
+    final center = Offset(size.width / 2, size.height * 0.35);
     final radii = <double>[
-      size.width * 0.11,
-      size.width * 0.27,
-      size.width * 0.43,
+      size.width * 0.12,
+      size.width * 0.30,
+      size.width * 0.46,
     ];
 
     final paint = Paint()

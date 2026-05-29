@@ -13,24 +13,16 @@ import '../controllers/call_controller.dart';
 class CallView extends GetView<CallController> {
   const CallView({super.key});
 
-  static const Color _bgTop = Color(0xFF160820);
-  static const Color _bgMid = Color(0xFF0B1022);
-  static const Color _bgBottom = Color(0xFF080914);
-  static const Color _surface = Color(0xCC171625);
-  static const Color _surfaceSoft = Color(0x991C1B2C);
-  static const Color _accentPink = Color(0xFFFF3FA4);
-  static const Color _accentPurple = Color(0xFF8A1B7A);
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bgBottom,
+      backgroundColor: kColorAppBackground,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [_bgTop, _bgMid, _bgBottom],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [kColorWhite, kColorAppBackground],
           ),
         ),
         child: SafeArea(
@@ -78,7 +70,7 @@ class CallView extends GetView<CallController> {
               child: BoldText(
                 text: 'Qobo Call',
                 fontSize: TextStyles.k22FontSize,
-                color: kColorWhite,
+                color: kColorText,
               ),
             ),
           ),
@@ -103,11 +95,18 @@ class CallView extends GetView<CallController> {
         width: 46,
         height: 46,
         decoration: BoxDecoration(
-          color: kColorWhite.withValues(alpha: 0.08),
+          color: kColorWhite,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
+          border: Border.all(color: kColorTextFieldBorder),
+          boxShadow: [
+            BoxShadow(
+              color: kColorBlack.withValues(alpha: 0.05),
+              blurRadius: 14,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
-        child: Icon(icon, color: kColorWhite, size: 20),
+        child: Icon(icon, color: kColorText, size: 20),
       ),
     );
   }
@@ -116,9 +115,9 @@ class CallView extends GetView<CallController> {
     return Container(
       padding: const EdgeInsets.all(5),
       decoration: BoxDecoration(
-        color: kColorWhite.withValues(alpha: 0.06),
+        color: kColorWhite,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
+        border: Border.all(color: kColorTextFieldBorder),
       ),
       child: Row(
         children: [
@@ -156,24 +155,20 @@ class CallView extends GetView<CallController> {
         height: 44,
         decoration: BoxDecoration(
           color: isActive
-              ? kColorWhite.withValues(alpha: 0.12)
-              : Colors.transparent,
+              ? kColorPrimary.withValues(alpha: 0.10)
+              : kColorWhite.withValues(alpha: 0),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              color: isActive ? _accentPink : Colors.white38,
-              size: 18,
-            ),
+            Icon(icon, color: isActive ? kColorPrimary : kColorHint, size: 18),
             Spacing.h6,
             AppText(
               text: label,
               style: TextStyles.kSemiBoldPoppins(
                 fontSize: 12,
-                colors: isActive ? kColorWhite : Colors.white54,
+                colors: isActive ? kColorPrimary : kColorTextGrey,
               ),
             ),
           ],
@@ -232,17 +227,13 @@ class CallView extends GetView<CallController> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF2A1237), Color(0xFF121B35)],
-        ),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
+        color: kColorWhite,
+        border: Border.all(color: kColorPrimary.withValues(alpha: 0.12)),
         boxShadow: [
           BoxShadow(
-            color: _accentPink.withValues(alpha: 0.14),
-            blurRadius: 28,
-            offset: const Offset(0, 16),
+            color: kColorPrimary.withValues(alpha: 0.10),
+            blurRadius: 24,
+            offset: const Offset(0, 14),
           ),
         ],
       ),
@@ -256,7 +247,7 @@ class CallView extends GetView<CallController> {
               height: 112,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: _accentPink.withValues(alpha: 0.16),
+                color: kColorPrimary.withValues(alpha: 0.08),
               ),
             ),
           ),
@@ -268,9 +259,7 @@ class CallView extends GetView<CallController> {
                 height: 54,
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [_accentPink, _accentPurple],
-                  ),
+                  color: kColorPrimary,
                 ),
                 child: const Icon(Icons.video_call_rounded, color: kColorWhite),
               ),
@@ -278,14 +267,14 @@ class CallView extends GetView<CallController> {
               const BoldText(
                 text: 'Find Your Perfect Match',
                 fontSize: TextStyles.k22FontSize,
-                color: kColorWhite,
+                color: kColorText,
               ),
               Spacing.v8,
               AppText(
                 text:
                     'Tune your discovery preferences and start meeting people who match your vibe.',
                 fontSize: TextStyles.k14FontSize,
-                color: kColorWhite.withValues(alpha: 0.68),
+                color: kColorTextGrey,
                 maxLines: 3,
               ),
               Spacing.v16,
@@ -307,19 +296,15 @@ class CallView extends GetView<CallController> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: kColorWhite.withValues(alpha: 0.08),
+        color: kColorPrimary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SemiBoldText(text: value, fontSize: 13, color: kColorWhite),
+          SemiBoldText(text: value, fontSize: 13, color: kColorPrimary),
           Spacing.h6,
-          AppText(
-            text: label,
-            fontSize: 10,
-            color: kColorWhite.withValues(alpha: 0.58),
-          ),
+          AppText(text: label, fontSize: 10, color: kColorTextGrey),
         ],
       ),
     );
@@ -328,12 +313,12 @@ class CallView extends GetView<CallController> {
   Widget _sectionLabel(String text, IconData icon) {
     return Row(
       children: [
-        Icon(icon, color: _accentPink, size: 18),
+        Icon(icon, color: kColorPrimary, size: 18),
         Spacing.h8,
         SemiBoldText(
           text: text,
           fontSize: TextStyles.k16FontSize,
-          color: kColorWhite,
+          color: kColorText,
         ),
       ],
     );
@@ -343,9 +328,9 @@ class CallView extends GetView<CallController> {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
       decoration: BoxDecoration(
-        color: _surface,
+        color: kColorWhite,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
+        border: Border.all(color: kColorTextFieldBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -355,7 +340,7 @@ class CallView extends GetView<CallController> {
               const SemiBoldText(
                 text: 'Age Range Filter',
                 fontSize: TextStyles.k14FontSize,
-                color: kColorWhite,
+                color: kColorText,
               ),
               const Spacer(),
               Obx(
@@ -365,14 +350,14 @@ class CallView extends GetView<CallController> {
                     vertical: 7,
                   ),
                   decoration: BoxDecoration(
-                    color: _accentPink.withValues(alpha: 0.12),
+                    color: kColorPrimary.withValues(alpha: 0.10),
                     borderRadius: BorderRadius.circular(18),
                   ),
                   child: SemiBoldText(
                     text:
                         '${controller.minAge.value} - ${controller.maxAge.value} years',
                     fontSize: 12,
-                    color: _accentPink,
+                    color: kColorPrimary,
                   ),
                 ),
               ),
@@ -387,8 +372,8 @@ class CallView extends GetView<CallController> {
               ),
               min: 18,
               max: 60,
-              activeColor: _accentPink,
-              inactiveColor: kColorWhite.withValues(alpha: 0.10),
+              activeColor: kColorPrimary,
+              inactiveColor: kColorTextFieldBorder,
               onChanged: (RangeValues vals) {
                 controller.minAge.value = vals.start.round();
                 controller.maxAge.value = vals.end.round();
@@ -412,12 +397,10 @@ class CallView extends GetView<CallController> {
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: isSelected
-                  ? _accentPink.withValues(alpha: 0.14)
-                  : _surface,
+                  ? kColorPrimary.withValues(alpha: 0.10)
+                  : kColorWhite,
               border: Border.all(
-                color: isSelected
-                    ? _accentPink
-                    : kColorWhite.withValues(alpha: 0.06),
+                color: isSelected ? kColorPrimary : kColorTextFieldBorder,
                 width: 1.2,
               ),
               borderRadius: BorderRadius.circular(22),
@@ -425,12 +408,12 @@ class CallView extends GetView<CallController> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, color: isSelected ? _accentPink : Colors.white54),
+                Icon(icon, color: isSelected ? kColorPrimary : kColorHint),
                 Spacing.v8,
                 SemiBoldText(
                   text: gender,
                   fontSize: TextStyles.k12FontSize,
-                  color: isSelected ? kColorWhite : Colors.white60,
+                  color: isSelected ? kColorPrimary : kColorTextGrey,
                 ),
               ],
             ),
@@ -450,13 +433,11 @@ class CallView extends GetView<CallController> {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             color: isSelected
-                ? _accentPink.withValues(alpha: 0.16)
-                : _surfaceSoft,
+                ? kColorPrimary.withValues(alpha: 0.10)
+                : kColorWhite,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: isSelected
-                  ? _accentPink
-                  : kColorWhite.withValues(alpha: 0.05),
+              color: isSelected ? kColorPrimary : kColorTextFieldBorder,
             ),
           ),
           child: Row(
@@ -464,14 +445,14 @@ class CallView extends GetView<CallController> {
             children: [
               Icon(
                 icon,
-                color: isSelected ? _accentPink : Colors.white54,
+                color: isSelected ? kColorPrimary : kColorHint,
                 size: 17,
               ),
               Spacing.h8,
               SemiBoldText(
                 text: label,
                 fontSize: TextStyles.k12FontSize,
-                color: isSelected ? kColorWhite : Colors.white60,
+                color: isSelected ? kColorPrimary : kColorTextGrey,
               ),
             ],
           ),
@@ -488,10 +469,10 @@ class CallView extends GetView<CallController> {
         width: double.infinity,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(22),
-          gradient: const LinearGradient(colors: [_accentPink, _accentPurple]),
+          color: kColorPrimary,
           boxShadow: [
             BoxShadow(
-              color: _accentPink.withValues(alpha: 0.28),
+              color: kColorPrimary.withValues(alpha: 0.24),
               blurRadius: 24,
               offset: const Offset(0, 14),
             ),
@@ -523,13 +504,13 @@ class CallView extends GetView<CallController> {
           children: [
             const Icon(
               Icons.wifi_protected_setup_rounded,
-              color: Colors.white10,
+              color: kColorTextFieldBorder,
               size: 72,
             ),
             Spacing.v16,
             const Text(
               'You\'ve swiped through everyone today!',
-              style: TextStyle(color: Colors.white38, fontSize: 14),
+              style: TextStyle(color: kColorTextGrey, fontSize: 14),
             ),
             Spacing.v24,
             appButton(
@@ -558,7 +539,7 @@ class CallView extends GetView<CallController> {
                 borderRadius: BorderRadius.circular(24),
               ),
               clipBehavior: Clip.antiAliasWithSaveLayer,
-              color: const Color(0xFF161622),
+              color: kColorWhite,
               elevation: 4,
               child: Stack(
                 children: [
@@ -582,8 +563,8 @@ class CallView extends GetView<CallController> {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            Colors.transparent,
-                            Colors.black.withValues(alpha: 0.9),
+                            kColorBlack.withValues(alpha: 0),
+                            kColorBlack.withValues(alpha: 0.64),
                           ],
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
@@ -615,19 +596,19 @@ class CallView extends GetView<CallController> {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.greenAccent.withValues(
+                                color: kColorAudioSpeakingGreen.withValues(
                                   alpha: 0.2,
                                 ),
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
-                                  color: Colors.greenAccent,
+                                  color: kColorAudioSpeakingGreen,
                                   width: 0.5,
                                 ),
                               ),
                               child: Text(
                                 '${prof['matchPercentage']}% Match',
                                 style: const TextStyle(
-                                  color: Colors.greenAccent,
+                                  color: kColorAudioSpeakingGreen,
                                   fontSize: 9,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -641,14 +622,14 @@ class CallView extends GetView<CallController> {
                           children: [
                             const Icon(
                               Icons.location_on,
-                              color: Colors.pinkAccent,
+                              color: kColorPrimary,
                               size: 14,
                             ),
                             Spacing.h4,
                             Text(
                               prof['location'],
                               style: const TextStyle(
-                                color: Colors.white70,
+                                color: kColorWhite,
                                 fontSize: 12,
                               ),
                             ),
@@ -661,7 +642,7 @@ class CallView extends GetView<CallController> {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            color: Colors.white54,
+                            color: kColorWhite,
                             fontSize: 12,
                           ),
                         ),
@@ -678,13 +659,13 @@ class CallView extends GetView<CallController> {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.08),
+                                color: kColorWhite.withValues(alpha: 0.08),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
                                 interest,
                                 style: const TextStyle(
-                                  color: Colors.white70,
+                                  color: kColorWhite,
                                   fontSize: 10,
                                 ),
                               ),
@@ -712,14 +693,10 @@ class CallView extends GetView<CallController> {
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.redAccent.withValues(alpha: 0.15),
-                    border: Border.all(color: Colors.redAccent, width: 1.5),
+                    color: kColorRed.withValues(alpha: 0.10),
+                    border: Border.all(color: kColorRed, width: 1.5),
                   ),
-                  child: const Icon(
-                    Icons.close,
-                    color: Colors.redAccent,
-                    size: 28,
-                  ),
+                  child: const Icon(Icons.close, color: kColorRed, size: 28),
                 ),
               ),
               Spacing.h32,
@@ -730,8 +707,8 @@ class CallView extends GetView<CallController> {
                     'Super Like!',
                     'You sent a Super Like to ${prof['name']}!',
                     snackPosition: SnackPosition.BOTTOM,
-                    backgroundColor: Colors.amber,
-                    colorText: Colors.black,
+                    backgroundColor: kColorWalletAmount,
+                    colorText: kColorBlack,
                   );
                   controller.swipeRight();
                 },
@@ -739,10 +716,14 @@ class CallView extends GetView<CallController> {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.amber.withValues(alpha: 0.15),
-                    border: Border.all(color: Colors.amber, width: 1.5),
+                    color: kColorWalletAmount.withValues(alpha: 0.18),
+                    border: Border.all(color: kColorWalletAmount, width: 1.5),
                   ),
-                  child: const Icon(Icons.star, color: Colors.amber, size: 20),
+                  child: const Icon(
+                    Icons.star,
+                    color: kColorWalletAmount,
+                    size: 20,
+                  ),
                 ),
               ),
               Spacing.h32,
@@ -753,12 +734,15 @@ class CallView extends GetView<CallController> {
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.greenAccent.withValues(alpha: 0.15),
-                    border: Border.all(color: Colors.greenAccent, width: 1.5),
+                    color: kColorAudioSpeakingGreen.withValues(alpha: 0.12),
+                    border: Border.all(
+                      color: kColorAudioSpeakingGreen,
+                      width: 1.5,
+                    ),
                   ),
                   child: const Icon(
                     Icons.favorite,
-                    color: Colors.greenAccent,
+                    color: kColorAudioSpeakingGreen,
                     size: 28,
                   ),
                 ),
@@ -780,18 +764,18 @@ class CallView extends GetView<CallController> {
           children: [
             const Icon(
               Icons.heart_broken_rounded,
-              color: Colors.white10,
+              color: kColorTextFieldBorder,
               size: 72,
             ),
             Spacing.v16,
             const Text(
               'No matches found yet.',
-              style: TextStyle(color: Colors.white38, fontSize: 13),
+              style: TextStyle(color: kColorTextGrey, fontSize: 13),
             ),
             Spacing.v6,
             const Text(
               'Keep swiping on cards to get matching!',
-              style: TextStyle(color: Colors.white24, fontSize: 11),
+              style: TextStyle(color: kColorHint, fontSize: 11),
             ),
           ],
         ),
@@ -808,14 +792,15 @@ class CallView extends GetView<CallController> {
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFF161622),
+            color: kColorWhite,
             borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: kColorTextFieldBorder),
           ),
           child: Row(
             children: [
               CircleAvatar(
                 radius: 28,
-                backgroundColor: Colors.white10,
+                backgroundColor: kColorAppBackground,
                 child: ClipOval(
                   child: match['avatar'].toString().startsWith('http')
                       ? SafeNetworkAvatar(
@@ -846,13 +831,13 @@ class CallView extends GetView<CallController> {
                         SemiBoldText(
                           text: '${match['name']}, ${match['age']}',
                           fontSize: TextStyles.k14FontSize,
-                          color: kColorWhite,
+                          color: kColorText,
                         ),
                         Text(
                           match['matchedTime'],
                           style: const TextStyle(
                             fontSize: 10,
-                            color: Colors.white38,
+                            color: kColorHint,
                           ),
                         ),
                       ],
@@ -864,7 +849,7 @@ class CallView extends GetView<CallController> {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 12,
-                        color: Colors.white54,
+                        color: kColorTextGrey,
                       ),
                     ),
                   ],

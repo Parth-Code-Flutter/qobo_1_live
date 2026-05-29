@@ -47,7 +47,7 @@ class BottomNavView extends GetView<BottomNavController> {
         return Spacing.shrink;
       }),
       floatingActionButton: Obx(
-        () => controller.selectedIndex.value == 2
+        () => controller.selectedIndex.value == 1
             ? FloatingActionButton.extended(
                 heroTag: 'bottom-nav-go-live',
                 onPressed: controller.onGoLivePressed,
