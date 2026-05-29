@@ -18,6 +18,11 @@ import '../widgets/room_options_sheet.dart';
 class LiveBroadcastView extends GetView<LiveBroadcastController> {
   const LiveBroadcastView({super.key});
 
+  static const Color _surface = Color(0xE6121720);
+  static const Color _surfaceSoft = Color(0xB3121720);
+  static const Color _accent = Color(0xFFFF3F7F);
+  static const Color _accentPurple = Color(0xFF8E1B85);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -25,6 +30,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
       body: Stack(
         children: [
           _buildMainVideoBackground(),
+          const Positioned.fill(child: _LiveOverlayScrim()),
           SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -69,6 +75,14 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
         hostButtons: [],
         audienceButtons: [],
       );
+      config.topMenuBar = ZegoLiveStreamingTopMenuBarConfig(
+        showCloseButton: false,
+        height: 0,
+        hostAvatarBuilder: (_) => const SizedBox.shrink(),
+      );
+      config.memberButton = ZegoLiveStreamingMemberButtonConfig(
+        builder: (_) => const SizedBox.shrink(),
+      );
       config.inRoomMessage = ZegoLiveStreamingInRoomMessageConfig(
         visible: false,
       );
@@ -101,69 +115,140 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
 
   Widget _buildTopHeader() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.4),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+          Expanded(child: _hostSummaryCard()),
+          Spacing.h10,
+          _topActions(),
+        ],
+      ),
+    );
+  }
+
+  Widget _hostSummaryCard() {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 238),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: _surface,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Stack(
               children: [
-                CircleAvatar(
-                  radius: 14,
-                  backgroundImage: const AssetImage(kImgTemp2),
+                const CircleAvatar(
+                  radius: 24,
+                  backgroundImage: AssetImage(kImgTemp2),
                 ),
-                Spacing.h8,
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SemiBoldText(
-                      text: 'Star Host',
-                      fontSize: TextStyles.k12FontSize,
-                      color: kColorWhite,
+                Positioned(
+                  right: 0,
+                  bottom: 1,
+                  child: Container(
+                    width: 11,
+                    height: 11,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF35F27A),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: _surface, width: 2),
                     ),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.favorite,
-                          color: Colors.pink,
-                          size: 10,
-                        ),
-                        Spacing.h4,
-                        const AppText(
-                          text: '1.2k',
-                          fontSize: 9,
-                          color: kColorWhite,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                Spacing.h8,
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: kColorPrimary,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Center(
-                    child: Icon(Icons.add, color: kColorWhite, size: 12),
                   ),
                 ),
               ],
             ),
+            Spacing.h10,
+            Flexible(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SemiBoldText(
+                    text: 'Star Host',
+                    fontSize: TextStyles.k16FontSize,
+                    color: kColorWhite,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Spacing.v2,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.favorite, color: _accent, size: 14),
+                      Spacing.h4,
+                      AppText(
+                        text: '1.2k  •  ${controller.roomType.value}',
+                        fontSize: TextStyles.k10FontSize,
+                        color: kColorWhite.withValues(alpha: 0.72),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Spacing.h8,
+            _followButton(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _followButton() {
+    return Container(
+      width: 38,
+      height: 38,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFE12BC5), _accentPurple],
+        ),
+      ),
+      child: const Icon(Icons.add_rounded, color: kColorWhite, size: 22),
+    );
+  }
+
+  Widget _topActions() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _viewerCountPill(),
+        Spacing.h8,
+        _topIconButton(Icons.ios_share_rounded, onTap: controller.shareRoom),
+        Spacing.h8,
+        _topIconButton(Icons.close_rounded, onTap: controller.leaveRoom),
+      ],
+    );
+  }
+
+  Widget _viewerCountPill() {
+    return Container(
+      height: 42,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xCC1A2233),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.person_rounded, color: kColorWhite, size: 20),
+          SizedBox(width: 5),
+          SemiBoldText(
+            text: '1',
+            fontSize: TextStyles.k14FontSize,
+            color: kColorWhite,
           ),
-          const Spacer(),
-          _topIconButton(Icons.person_add_alt_rounded),
-          Spacing.h8,
-          _topIconButton(Icons.close_rounded, onTap: controller.leaveRoom),
         ],
       ),
     );
@@ -173,109 +258,110 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(8),
+        width: 42,
+        height: 42,
         decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.4),
+          color: _surface,
           shape: BoxShape.circle,
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
         ),
-        child: Icon(icon, color: kColorWhite, size: 18),
+        child: Icon(icon, color: kColorWhite, size: 22),
       ),
     );
   }
 
   Widget _buildChatList() {
-    return Container(
-      height: 200,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Obx(
-        () => ListView.separated(
-          reverse: true, // Auto-scroll to bottom behavior
-          itemCount: controller.chatMessages.length,
-          separatorBuilder: (_, __) => Spacing.v6,
-          itemBuilder: (_, index) {
-            // Because list is reversed, we access elements from end
-            final actualIndex = controller.chatMessages.length - 1 - index;
-            final msg = controller.chatMessages[actualIndex];
-            final sender = msg['sender'] ?? '';
-            final text = msg['message'] ?? '';
-            final isSystem = msg['isSystem'] ?? false;
-            final isTranslated = msg['isTranslated'] ?? false;
-            final translation = msg['translation'] ?? '';
+    return SizedBox(
+      height: 170,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Obx(
+          () => ListView.separated(
+            reverse: true, // Auto-scroll to bottom behavior
+            padding: const EdgeInsets.only(top: 12),
+            itemCount: controller.chatMessages.length,
+            separatorBuilder: (_, __) => Spacing.v6,
+            itemBuilder: (_, index) {
+              // Because list is reversed, we access elements from end
+              final actualIndex = controller.chatMessages.length - 1 - index;
+              final msg = controller.chatMessages[actualIndex];
+              final sender = msg['sender'] ?? '';
+              final text = msg['message'] ?? '';
+              final isSystem = msg['isSystem'] ?? false;
+              final isTranslated = msg['isTranslated'] ?? false;
+              final translation = msg['translation'] ?? '';
 
-            final displayMessage = isTranslated && translation.isNotEmpty
-                ? translation
-                : text;
+              final displayMessage = isTranslated && translation.isNotEmpty
+                  ? translation
+                  : text;
 
-            return Align(
-              alignment: Alignment.centerLeft,
-              child: GestureDetector(
-                onTap: () {
-                  if (!isSystem) {
-                    controller.translateMessage(actualIndex);
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isSystem
-                        ? Colors.deepPurpleAccent.withValues(alpha: 0.25)
-                        : Colors.black.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(16),
-                    border: isSystem
-                        ? Border.all(
-                            color: Colors.deepPurpleAccent.withValues(
-                              alpha: 0.4,
+              return Align(
+                alignment: Alignment.centerLeft,
+                child: GestureDetector(
+                  onTap: () {
+                    if (!isSystem) {
+                      controller.translateMessage(actualIndex);
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSystem ? const Color(0xCC4E2E90) : _surfaceSoft,
+                      borderRadius: BorderRadius.circular(18),
+                      border: isSystem
+                          ? Border.all(color: const Color(0xFF7D5BFF), width: 1)
+                          : null,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: isSystem ? '' : '$sender: ',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: sender == 'You'
+                                        ? const Color(0xFFFF8AC0)
+                                        : const Color(0xFFFF79B4),
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: displayMessage,
+                                  style: TextStyle(
+                                    color: isSystem
+                                        ? Colors.amberAccent
+                                        : kColorWhite,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
                             ),
-                          )
-                        : null,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Flexible(
-                        child: RichText(
-                          text: TextSpan(
-                            children: [
-                              TextSpan(
-                                text: isSystem ? '' : '$sender: ',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: sender == 'You'
-                                      ? kColorPrimary
-                                      : Colors.pinkAccent.shade100,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              TextSpan(
-                                text: displayMessage,
-                                style: TextStyle(
-                                  color: isSystem
-                                      ? Colors.amberAccent
-                                      : kColorWhite,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
                           ),
                         ),
-                      ),
-                      if (!isSystem && translation.isNotEmpty) ...[
-                        Spacing.h6,
-                        Icon(
-                          Icons.translate_rounded,
-                          size: 12,
-                          color: isTranslated ? kColorPrimary : Colors.white38,
-                        ),
+                        if (!isSystem && translation.isNotEmpty) ...[
+                          Spacing.h6,
+                          Icon(
+                            Icons.translate_rounded,
+                            size: 12,
+                            color: isTranslated
+                                ? kColorPrimary
+                                : Colors.white38,
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );
@@ -283,77 +369,140 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
 
   Widget _buildBottomControls() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: AppTextField(
-              controller: controller.chatTextController,
-              hintText: 'Say something...',
-              fillColor: Colors.black.withValues(alpha: 0.3),
-              inputBorderRadius: BorderRadius.circular(20),
-              borderColor: Colors
-                  .transparent, // Disable border to prevent overlap visuals
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              textStyle: TextStyles.kRegularPoppins(
-                colors: kColorWhite,
-                fontSize: 13,
-              ),
-              hintStyle: TextStyles.kRegularPoppins(
-                colors: Colors.white54,
-                fontSize: 12,
-              ),
-              suffix: IconButton(
-                icon: const Icon(
-                  Icons.send_rounded,
-                  color: kColorWhite,
-                  size: 18,
+          Row(
+            children: [
+              Expanded(
+                child: AppTextField(
+                  controller: controller.chatTextController,
+                  hintText: 'Say something...',
+                  fillColor: _surface,
+                  inputBorderRadius: BorderRadius.circular(24),
+                  borderColor: kColorWhite.withValues(alpha: 0.06),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 12,
+                  ),
+                  textStyle: TextStyles.kRegularPoppins(
+                    colors: kColorWhite,
+                    fontSize: 14,
+                  ),
+                  hintStyle: TextStyles.kRegularPoppins(
+                    colors: Colors.white54,
+                    fontSize: 14,
+                  ),
+                  suffix: _sendButton(),
                 ),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                onPressed: controller.sendMessage,
               ),
-            ),
+              Spacing.h10,
+              Obx(
+                () => _bottomActionIcon(
+                  controller.isMicMuted.value
+                      ? Icons.mic_off_rounded
+                      : Icons.mic_rounded,
+                  active: !controller.isMicMuted.value,
+                  onTap: controller.toggleMic,
+                ),
+              ),
+              Spacing.h8,
+              _bottomActionIcon(
+                Icons.card_giftcard_rounded,
+                color: _accent,
+                onTap: () {
+                  Get.bottomSheet(
+                    const GiftsBottomSheet(),
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                  );
+                },
+              ),
+              Spacing.h8,
+              _bottomActionIcon(
+                Icons.more_horiz_rounded,
+                onTap: () {
+                  Get.bottomSheet(
+                    RoomOptionsSheet(isHost: controller.isHost.value),
+                    backgroundColor: Colors.transparent,
+                  );
+                },
+              ),
+            ],
           ),
-          Spacing.h12,
-          _bottomActionIcon(Icons.mic_off_rounded, onTap: controller.toggleMic),
-          Spacing.h8,
-          _bottomActionIcon(
-            Icons.card_giftcard_rounded,
-            color: Colors.pinkAccent,
-            onTap: () {
-              Get.bottomSheet(
-                const GiftsBottomSheet(),
-                isScrollControlled: true,
-                backgroundColor: Colors.transparent,
-              );
-            },
-          ),
-          Spacing.h8,
-          _bottomActionIcon(
-            Icons.more_vert_rounded,
-            onTap: () {
-              Get.bottomSheet(
-                RoomOptionsSheet(isHost: controller.isHost.value),
-                backgroundColor: Colors.transparent,
-              );
-            },
-          ),
+          Spacing.v10,
+          Align(alignment: Alignment.centerLeft, child: _chatShortcut()),
         ],
       ),
     );
   }
 
-  Widget _bottomActionIcon(IconData icon, {Color? color, VoidCallback? onTap}) {
+  Widget _sendButton() {
+    return IconButton(
+      icon: const Icon(Icons.send_rounded, color: kColorWhite, size: 22),
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+      onPressed: controller.sendMessage,
+    );
+  }
+
+  Widget _chatShortcut() {
+    return Container(
+      width: 52,
+      height: 52,
+      decoration: BoxDecoration(
+        color: const Color(0xCC1D2740),
+        shape: BoxShape.circle,
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
+      ),
+      child: const Icon(Icons.chat_bubble_outline_rounded, color: kColorWhite),
+    );
+  }
+
+  Widget _bottomActionIcon(
+    IconData icon, {
+    Color? color,
+    bool active = true,
+    VoidCallback? onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(10),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        width: 54,
+        height: 54,
         decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.3),
-          shape: BoxShape.circle,
+          color: active ? _surface : const Color(0xCC351D2B),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.06)),
         ),
-        child: Icon(icon, color: color ?? kColorWhite, size: 20),
+        child: Icon(icon, color: color ?? kColorWhite, size: 24),
+      ),
+    );
+  }
+}
+
+class _LiveOverlayScrim extends StatelessWidget {
+  const _LiveOverlayScrim();
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.black.withValues(alpha: 0.42),
+              Colors.transparent,
+              Colors.transparent,
+              Colors.black.withValues(alpha: 0.58),
+            ],
+            stops: const [0, 0.22, 0.56, 1],
+          ),
+        ),
       ),
     );
   }
