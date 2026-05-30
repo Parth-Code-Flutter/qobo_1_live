@@ -37,49 +37,6 @@ class DiscoverVideoRoomView extends StatefulWidget {
     BlendMode.srcIn,
   );
 
-  static const List<_VideoRoomTileData> _tiles = [
-    (
-      collapsedTitle: 'Late Night Talks',
-      hostName: 'Sarah Jenkins',
-      streamSubtitle: 'Late Night Vibes',
-      watchingLabel: '215 watching',
-      viewerCountShort: '12.5K',
-      image: kImgTemp2,
-      avatar: kImgTemp3,
-      tags: ['#Secret', '#Fun', '#Talk'],
-    ),
-    (
-      collapsedTitle: 'Late Night Talks',
-      hostName: 'Riya Sharma',
-      streamSubtitle: 'Call & Chill',
-      watchingLabel: '215 watching',
-      viewerCountShort: '8.2K',
-      image: kImgTemp3,
-      avatar: kImgTemp4,
-      tags: ['#Secret', '#Fun', '#Talk'],
-    ),
-    (
-      collapsedTitle: 'Call Advice',
-      hostName: 'Riya Sharma',
-      streamSubtitle: 'Ask me anything',
-      watchingLabel: '189 watching',
-      viewerCountShort: '5.1K',
-      image: kImgTemp4,
-      avatar: kImgTemp5,
-      tags: ['#Secret', '#Fun', '#Talk'],
-    ),
-    (
-      collapsedTitle: 'Late Night Talks',
-      hostName: 'Alex Kim',
-      streamSubtitle: 'Music & vibes',
-      watchingLabel: '320 watching',
-      viewerCountShort: '15K',
-      image: kImgTemp5,
-      avatar: kImgTemp2,
-      tags: ['#Secret', '#Fun', '#Talk'],
-    ),
-  ];
-
   @override
   State<DiscoverVideoRoomView> createState() => _DiscoverVideoRoomViewState();
 }
@@ -101,12 +58,10 @@ class _DiscoverVideoRoomViewState extends State<DiscoverVideoRoomView> {
 
   @override
   Widget build(BuildContext context) {
-    final tiles = widget.rooms.isNotEmpty
-        ? List<_VideoRoomTileData>.generate(
-            widget.rooms.length,
-            (index) => _tileFromRoom(widget.rooms[index], index),
-          )
-        : DiscoverVideoRoomView._tiles;
+    final tiles = List<_VideoRoomTileData>.generate(
+      widget.rooms.length,
+      (index) => _tileFromRoom(widget.rooms[index], index),
+    );
 
     return Container(
       width: double.infinity,
@@ -127,6 +82,8 @@ class _DiscoverVideoRoomViewState extends State<DiscoverVideoRoomView> {
                 strokeWidth: 2,
               ),
             )
+          : tiles.isEmpty
+          ? const _VideoRoomsEmptyState()
           : ListView.separated(
               padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
               physics: const BouncingScrollPhysics(),
@@ -209,6 +166,51 @@ class _DiscoverVideoRoomViewState extends State<DiscoverVideoRoomView> {
     final text = value?.toString().trim();
     if (text == null || text.isEmpty || text == 'null') return null;
     return text;
+  }
+}
+
+class _VideoRoomsEmptyState extends StatelessWidget {
+  const _VideoRoomsEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(
+                color: kColorWhite.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.videocam_off_outlined,
+                color: kColorWhite,
+                size: 28,
+              ),
+            ),
+            const SizedBox(height: 14),
+            const SemiBoldText(
+              text: 'No data found',
+              fontSize: TextStyles.k16FontSize,
+              color: kColorWhite,
+              align: TextAlign.center,
+            ),
+            Spacing.v6,
+            AppText(
+              text: 'Video rooms will appear here when available.',
+              fontSize: TextStyles.k12FontSize,
+              color: kColorWhite.withValues(alpha: 0.72),
+              align: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

@@ -49,11 +49,20 @@ class LeaderBoardView extends GetView<LeaderBoardController> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _podiumSection(context),
-                      Spacing.v24,
-                      _runningUpHeader(),
-                      Spacing.v12,
-                      ...LeaderBoardController.runningUp.map(_runningRow),
+                      if (LeaderBoardController.podium.isEmpty &&
+                          LeaderBoardController.runningUp.isEmpty)
+                        const _LeaderBoardEmptyState()
+                      else ...[
+                        if (LeaderBoardController.podium.length >= 3)
+                          _podiumSection(context),
+                        Spacing.v24,
+                        _runningUpHeader(),
+                        Spacing.v12,
+                        if (LeaderBoardController.runningUp.isEmpty)
+                          const _LeaderBoardEmptyState()
+                        else
+                          ...LeaderBoardController.runningUp.map(_runningRow),
+                      ],
                     ],
                   ),
                 ),
@@ -140,9 +149,7 @@ class LeaderBoardView extends GetView<LeaderBoardController> {
           ),
           Expanded(
             flex: 2,
-            child: _podiumCenterColumn(
-              user: LeaderBoardController.podium[1],
-            ),
+            child: _podiumCenterColumn(user: LeaderBoardController.podium[1]),
           ),
           Expanded(
             child: _podiumColumn(
@@ -294,15 +301,18 @@ class LeaderBoardView extends GetView<LeaderBoardController> {
     final bg = e.highlighted
         ? LeaderBoardColors.listRowHighlightBg
         : LeaderBoardColors.listCardBg;
-    final rankColor =
-        e.highlighted ? LeaderBoardColors.listRowHighlightText : kColorWhite;
-    final nameColor =
-        e.highlighted ? LeaderBoardColors.listRowHighlightText : kColorWhite;
+    final rankColor = e.highlighted
+        ? LeaderBoardColors.listRowHighlightText
+        : kColorWhite;
+    final nameColor = e.highlighted
+        ? LeaderBoardColors.listRowHighlightText
+        : kColorWhite;
     final subColor = e.highlighted
         ? LeaderBoardColors.listRowHighlightSub
         : kColorWhite.withValues(alpha: 0.72);
-    final pointsColor =
-        e.highlighted ? LeaderBoardColors.listRowHighlightText : kColorWhite;
+    final pointsColor = e.highlighted
+        ? LeaderBoardColors.listRowHighlightText
+        : kColorWhite;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -378,6 +388,47 @@ class LeaderBoardView extends GetView<LeaderBoardController> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _LeaderBoardEmptyState extends StatelessWidget {
+  const _LeaderBoardEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 80),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 28),
+      decoration: BoxDecoration(
+        color: LeaderBoardColors.listCardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.emoji_events_outlined,
+            color: kColorWhite.withValues(alpha: 0.74),
+            size: 56,
+          ),
+          Spacing.v12,
+          const SemiBoldText(
+            text: 'No data found',
+            fontSize: TextStyles.k16FontSize,
+            color: kColorWhite,
+            align: TextAlign.center,
+          ),
+          Spacing.v6,
+          AppText(
+            text: 'Leaderboard rankings will appear here when available.',
+            fontSize: TextStyles.k12FontSize,
+            color: kColorWhite.withValues(alpha: 0.72),
+            align: TextAlign.center,
+          ),
+        ],
       ),
     );
   }

@@ -8,53 +8,17 @@ class AgencyOwnerController extends GetxController {
   final hasAgency = false.obs;
   final agencyName = ''.obs;
   final agencyCode = ''.obs;
-  
+
   // Stats
-  final totalHosts = 12.obs;
-  final monthlyEarningsPkr = 85200.obs;
-  final pendingCommissionPkr = 12780.obs;
+  final totalHosts = 0.obs;
+  final monthlyEarningsPkr = 0.obs;
+  final pendingCommissionPkr = 0.obs;
 
   // Form Controllers
   final nameController = TextEditingController();
   final descController = TextEditingController();
 
-  // Mock Hosts list
   final hosts = <Map<String, dynamic>>[].obs;
-
-  @override
-  void onInit() {
-    super.onInit();
-    loadMockHosts();
-  }
-
-  void loadMockHosts() {
-    hosts.assignAll([
-      {
-        'id': 'HST_9921',
-        'name': 'Aria Sen',
-        'avatar': 'assets/images/temp_img_2.png',
-        'earningsPkr': 24000,
-        'commissionPkr': 3600,
-        'status': 'ACTIVE',
-      },
-      {
-        'id': 'HST_3829',
-        'name': 'Riya Sharma',
-        'avatar': 'assets/images/temp_img_4.png',
-        'earningsPkr': 41000,
-        'commissionPkr': 6150,
-        'status': 'ACTIVE',
-      },
-      {
-        'id': 'HST_0821',
-        'name': 'Neha Khan',
-        'avatar': 'assets/images/temp_img_2.png',
-        'earningsPkr': 20200,
-        'commissionPkr': 3030,
-        'status': 'ACTIVE',
-      },
-    ]);
-  }
 
   void createAgency() {
     final name = nameController.text.trim();
@@ -70,7 +34,8 @@ class AgencyOwnerController extends GetxController {
     }
 
     agencyName.value = name;
-    agencyCode.value = 'QOBO_AG_${name.replaceAll(' ', '_').toUpperCase()}_${hashCode.toString().substring(0, 3)}';
+    agencyCode.value =
+        'QOBO_AG_${name.replaceAll(' ', '_').toUpperCase()}_${hashCode.toString().substring(0, 3)}';
     hasAgency.value = true;
 
     Get.snackbar(

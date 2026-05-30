@@ -9,7 +9,7 @@ class LiveBroadcastController extends GetxController {
   final isHost = false.obs;
   final roomType = 'VIDEO'.obs;
   final roomId = 'test_room'.obs;
-  
+
   final chatMessages = <Map<String, dynamic>>[].obs;
   final chatTextController = TextEditingController();
 
@@ -27,34 +27,11 @@ class LiveBroadcastController extends GetxController {
       if (args.containsKey('roomType')) roomType.value = args['roomType'];
       if (args.containsKey('roomData') && args['roomData'] != null) {
         final roomData = args['roomData'];
-        roomId.value = (roomData['room_id'] ?? roomData['id'] ?? 'test_room').toString();
+        roomId.value = (roomData['room_id'] ?? roomData['id'] ?? 'test_room')
+            .toString();
       }
     }
-    
-    // Simulate initial chat load with some translatable phrases
-    chatMessages.assignAll([
-      {
-        'sender': 'System',
-        'message': 'Welcome to the live room! Please be respectful.',
-        'translation': 'Welcome to the live room! Please be respectful.',
-        'isTranslated': false,
-        'isSystem': true
-      },
-      {
-        'sender': 'User123',
-        'message': 'Hola amigo! ¿Qué tal la transmisión?',
-        'translation': 'Hello friend! How is the stream going?',
-        'isTranslated': false,
-        'isSystem': false
-      },
-      {
-        'sender': 'Guest007',
-        'message': 'Main kal stream join karunga.',
-        'translation': 'I will join the stream tomorrow.',
-        'isTranslated': false,
-        'isSystem': false
-      },
-    ]);
+    chatMessages.clear();
   }
 
   void sendMessage() {
@@ -65,14 +42,14 @@ class LiveBroadcastController extends GetxController {
     final badWords = ['bad', 'scam', 'spam', 'abuse', 'hate', 'cheat', 'fraud'];
     String moderatedText = text;
     bool containsBadWord = false;
-    
+
     for (final word in badWords) {
       if (moderatedText.toLowerCase().contains(word)) {
         containsBadWord = true;
         final replacement = '*' * word.length;
         moderatedText = moderatedText.replaceAll(
-          RegExp(word, caseSensitive: false), 
-          replacement
+          RegExp(word, caseSensitive: false),
+          replacement,
         );
       }
     }
@@ -80,9 +57,11 @@ class LiveBroadcastController extends GetxController {
     chatMessages.add({
       'sender': 'You',
       'message': moderatedText,
-      'translation': text != moderatedText ? 'Original message contained flagged words.' : '',
+      'translation': text != moderatedText
+          ? 'Original message contained flagged words.'
+          : '',
       'isTranslated': false,
-      'isSystem': false
+      'isSystem': false,
     });
 
     if (containsBadWord) {
@@ -95,19 +74,17 @@ class LiveBroadcastController extends GetxController {
         duration: const Duration(seconds: 3),
       );
     }
-    
+
     chatTextController.clear();
   }
 
   void translateMessage(int index) {
     if (index >= 0 && index < chatMessages.length) {
       final msg = chatMessages[index];
-      if (msg['translation'] != null && msg['translation'].toString().isNotEmpty) {
+      if (msg['translation'] != null &&
+          msg['translation'].toString().isNotEmpty) {
         final currentVal = msg['isTranslated'] ?? false;
-        chatMessages[index] = {
-          ...msg,
-          'isTranslated': !currentVal,
-        };
+        chatMessages[index] = {...msg, 'isTranslated': !currentVal};
       } else {
         Get.snackbar(
           'Translation',
@@ -124,17 +101,17 @@ class LiveBroadcastController extends GetxController {
     final int price = int.tryParse(gift['price'] ?? '0') ?? 0;
     if (coinsBalance.value >= price) {
       coinsBalance.value -= price;
-      
+
       chatMessages.add({
         'sender': 'You',
         'message': 'sent a ${gift['name']} ${gift['icon']}',
         'translation': '',
         'isTranslated': false,
-        'isSystem': false
+        'isSystem': false,
       });
-      
+
       Get.back(); // close the bottom sheet
-      
+
       Get.snackbar(
         '🎁 Gift Sent! 🎁',
         'You sent ${gift['name']} ${gift['icon']} to the Host!',
@@ -159,8 +136,9 @@ class LiveBroadcastController extends GetxController {
   }
 
   void shareRoom() {
-    final String roomUrl = 'https://qobo.live/room/${roomType.value.toLowerCase()}_${hashCode.toString().substring(0, 4)}';
-    
+    final String roomUrl =
+        'https://qobo.live/room/${roomType.value.toLowerCase()}_${hashCode.toString().substring(0, 4)}';
+
     Get.bottomSheet(
       Container(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
@@ -197,18 +175,45 @@ class LiveBroadcastController extends GetxController {
                     colorText: kColorWhite,
                   );
                 }),
-                _shareOption(Icons.wechat_rounded, 'WhatsApp', Colors.green, () {
-                  Get.back();
-                  Get.snackbar('Shared', 'Room shared successfully to WhatsApp!', snackPosition: SnackPosition.BOTTOM);
-                }),
-                _shareOption(Icons.facebook_rounded, 'Facebook', Colors.indigo, () {
-                  Get.back();
-                  Get.snackbar('Shared', 'Room shared successfully to Facebook!', snackPosition: SnackPosition.BOTTOM);
-                }),
-                _shareOption(Icons.message_rounded, 'Messages', Colors.orange, () {
-                  Get.back();
-                  Get.snackbar('Shared', 'Room shared successfully via SMS!', snackPosition: SnackPosition.BOTTOM);
-                }),
+                _shareOption(
+                  Icons.wechat_rounded,
+                  'WhatsApp',
+                  Colors.green,
+                  () {
+                    Get.back();
+                    Get.snackbar(
+                      'Shared',
+                      'Room shared successfully to WhatsApp!',
+                      snackPosition: SnackPosition.BOTTOM,
+                    );
+                  },
+                ),
+                _shareOption(
+                  Icons.facebook_rounded,
+                  'Facebook',
+                  Colors.indigo,
+                  () {
+                    Get.back();
+                    Get.snackbar(
+                      'Shared',
+                      'Room shared successfully to Facebook!',
+                      snackPosition: SnackPosition.BOTTOM,
+                    );
+                  },
+                ),
+                _shareOption(
+                  Icons.message_rounded,
+                  'Messages',
+                  Colors.orange,
+                  () {
+                    Get.back();
+                    Get.snackbar(
+                      'Shared',
+                      'Room shared successfully via SMS!',
+                      snackPosition: SnackPosition.BOTTOM,
+                    );
+                  },
+                ),
               ],
             ),
           ],
@@ -218,7 +223,12 @@ class LiveBroadcastController extends GetxController {
     );
   }
 
-  Widget _shareOption(IconData icon, String label, Color color, VoidCallback onTap) {
+  Widget _shareOption(
+    IconData icon,
+    String label,
+    Color color,
+    VoidCallback onTap,
+  ) {
     return GestureDetector(
       onTap: onTap,
       child: Column(

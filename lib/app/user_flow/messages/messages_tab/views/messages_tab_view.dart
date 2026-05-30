@@ -15,8 +15,8 @@ class MessagesTabView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final userSession = _resolveUserSession();
-    final matches = _demoMatches;
-    final messages = _demoMessages;
+    const matches = <MessageMatchUser>[];
+    const messages = <MessageListItemModel>[];
 
     return Container(
       decoration: const BoxDecoration(
@@ -38,13 +38,18 @@ class MessagesTabView extends StatelessWidget {
               Spacing.v12,
               SizedBox(
                 height: 86,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: matches.length,
-                  separatorBuilder: (_, __) => Spacing.h10,
-                  itemBuilder: (_, index) =>
-                      MessageMatchAvatarItem(user: matches[index]),
-                ),
+                child: matches.isEmpty
+                    ? const _InlineEmptyState(
+                        icon: Icons.favorite_border_rounded,
+                        text: 'No data found',
+                      )
+                    : ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: matches.length,
+                        separatorBuilder: (_, __) => Spacing.h10,
+                        itemBuilder: (_, index) =>
+                            MessageMatchAvatarItem(user: matches[index]),
+                      ),
               ),
               Spacing.v20,
               const SemiBoldText(
@@ -54,12 +59,14 @@ class MessagesTabView extends StatelessWidget {
               ),
               Spacing.v8,
               Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  itemCount: messages.length,
-                  itemBuilder: (_, index) =>
-                      MessageListTileItem(item: messages[index]),
-                ),
+                child: messages.isEmpty
+                    ? const _MessagesEmptyState()
+                    : ListView.builder(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        itemCount: messages.length,
+                        itemBuilder: (_, index) =>
+                            MessageListTileItem(item: messages[index]),
+                      ),
               ),
             ],
           ),
@@ -161,65 +168,68 @@ class MessagesTabView extends StatelessWidget {
   }
 }
 
-/// Static mock list for Figma-matching "new match" avatars.
-const List<MessageMatchUser> _demoMatches = [
-  MessageMatchUser(name: 'You', imagePath: kImgTemp2, hasStoryRing: true),
-  MessageMatchUser(name: 'Emma', imagePath: kImgTemp3, hasStoryRing: true),
-  MessageMatchUser(name: 'Ava', imagePath: kImgTemp4),
-  MessageMatchUser(name: 'Sophia', imagePath: kImgTemp5),
-  MessageMatchUser(name: 'Amelia', imagePath: kImgTemp1, hasStoryRing: true),
-];
+class _InlineEmptyState extends StatelessWidget {
+  const _InlineEmptyState({required this.icon, required this.text});
 
-/// Static mock list for message preview rows.
-const List<MessageListItemModel> _demoMessages = [
-  MessageListItemModel(
-    name: 'Afrin Sabila',
-    message: 'Life is beautiful 👌',
-    time: '23 min',
-    imagePath: kImgTemp1,
-    unreadCount: 1,
-  ),
-  MessageListItemModel(
-    name: 'Adil Adnan',
-    message: 'Be your own hero 💪',
-    time: '27 min',
-    imagePath: kImgTemp2,
-    unreadCount: 2,
-  ),
-  MessageListItemModel(
-    name: 'Bristy Haque',
-    message: 'Keep working 💪',
-    time: '50 min',
-    imagePath: kImgTemp3,
-  ),
-  MessageListItemModel(
-    name: 'John Borino',
-    message: 'Make yourself proud 😍',
-    time: '33 min',
-    imagePath: kImgTemp4,
-  ),
-  MessageListItemModel(
-    name: 'Borsha Akther',
-    message: 'Flowers are beautiful 🌸',
-    time: '33 min',
-    imagePath: kImgTemp5,
-  ),
-  MessageListItemModel(
-    name: 'sheik Sadi',
-    message: 'Life is beautiful 👌',
-    time: '33 min',
-    imagePath: kImgTemp1,
-  ),
-  MessageListItemModel(
-    name: 'Bristy Haque',
-    message: 'Keep working 💪',
-    time: '33 min',
-    imagePath: kImgTemp3,
-  ),
-  MessageListItemModel(
-    name: 'John Borino',
-    message: 'Make yourself proud 😍',
-    time: '33 min',
-    imagePath: kImgTemp4,
-  ),
-];
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: kColorWhite.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: kColorWhite.withValues(alpha: 0.74), size: 18),
+          Spacing.h8,
+          SemiBoldText(
+            text: text,
+            fontSize: TextStyles.k12FontSize,
+            color: kColorWhite,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MessagesEmptyState extends StatelessWidget {
+  const _MessagesEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.chat_bubble_outline_rounded,
+            color: kColorWhite.withValues(alpha: 0.7),
+            size: 54,
+          ),
+          Spacing.v12,
+          const SemiBoldText(
+            text: 'No data found',
+            fontSize: TextStyles.k16FontSize,
+            color: kColorWhite,
+            align: TextAlign.center,
+          ),
+          Spacing.v6,
+          AppText(
+            text: 'Messages will appear here when available.',
+            fontSize: TextStyles.k12FontSize,
+            color: kColorWhite.withValues(alpha: 0.72),
+            align: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}

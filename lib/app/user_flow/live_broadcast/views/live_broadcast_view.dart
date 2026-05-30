@@ -276,92 +276,118 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Obx(
-          () => ListView.separated(
-            reverse: true, // Auto-scroll to bottom behavior
-            padding: const EdgeInsets.only(top: 12),
-            itemCount: controller.chatMessages.length,
-            separatorBuilder: (_, __) => Spacing.v6,
-            itemBuilder: (_, index) {
-              // Because list is reversed, we access elements from end
-              final actualIndex = controller.chatMessages.length - 1 - index;
-              final msg = controller.chatMessages[actualIndex];
-              final sender = msg['sender'] ?? '';
-              final text = msg['message'] ?? '';
-              final isSystem = msg['isSystem'] ?? false;
-              final isTranslated = msg['isTranslated'] ?? false;
-              final translation = msg['translation'] ?? '';
-
-              final displayMessage = isTranslated && translation.isNotEmpty
-                  ? translation
-                  : text;
-
-              return Align(
-                alignment: Alignment.centerLeft,
-                child: GestureDetector(
-                  onTap: () {
-                    if (!isSystem) {
-                      controller.translateMessage(actualIndex);
-                    }
-                  },
+          () => controller.chatMessages.isEmpty
+              ? Align(
+                  alignment: Alignment.bottomLeft,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 14,
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: isSystem ? const Color(0xCC4E2E90) : _surfaceSoft,
+                      color: _surfaceSoft,
                       borderRadius: BorderRadius.circular(18),
-                      border: isSystem
-                          ? Border.all(color: const Color(0xFF7D5BFF), width: 1)
-                          : null,
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Flexible(
-                          child: RichText(
-                            text: TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: isSystem ? '' : '$sender: ',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: sender == 'You'
-                                        ? const Color(0xFFFF8AC0)
-                                        : const Color(0xFFFF79B4),
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: displayMessage,
-                                  style: TextStyle(
-                                    color: isSystem
-                                        ? Colors.amberAccent
-                                        : kColorWhite,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        if (!isSystem && translation.isNotEmpty) ...[
-                          Spacing.h6,
-                          Icon(
-                            Icons.translate_rounded,
-                            size: 12,
-                            color: isTranslated
-                                ? kColorPrimary
-                                : Colors.white38,
-                          ),
-                        ],
-                      ],
+                    child: const AppText(
+                      text: 'No data found',
+                      fontSize: TextStyles.k12FontSize,
+                      color: kColorWhite,
                     ),
                   ),
+                )
+              : ListView.separated(
+                  reverse: true, // Auto-scroll to bottom behavior
+                  padding: const EdgeInsets.only(top: 12),
+                  itemCount: controller.chatMessages.length,
+                  separatorBuilder: (_, __) => Spacing.v6,
+                  itemBuilder: (_, index) {
+                    // Because list is reversed, we access elements from end
+                    final actualIndex =
+                        controller.chatMessages.length - 1 - index;
+                    final msg = controller.chatMessages[actualIndex];
+                    final sender = msg['sender'] ?? '';
+                    final text = msg['message'] ?? '';
+                    final isSystem = msg['isSystem'] ?? false;
+                    final isTranslated = msg['isTranslated'] ?? false;
+                    final translation = msg['translation'] ?? '';
+
+                    final displayMessage =
+                        isTranslated && translation.isNotEmpty
+                        ? translation
+                        : text;
+
+                    return Align(
+                      alignment: Alignment.centerLeft,
+                      child: GestureDetector(
+                        onTap: () {
+                          if (!isSystem) {
+                            controller.translateMessage(actualIndex);
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isSystem
+                                ? const Color(0xCC4E2E90)
+                                : _surfaceSoft,
+                            borderRadius: BorderRadius.circular(18),
+                            border: isSystem
+                                ? Border.all(
+                                    color: const Color(0xFF7D5BFF),
+                                    width: 1,
+                                  )
+                                : null,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: RichText(
+                                  text: TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: isSystem ? '' : '$sender: ',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: sender == 'You'
+                                              ? const Color(0xFFFF8AC0)
+                                              : const Color(0xFFFF79B4),
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                      TextSpan(
+                                        text: displayMessage,
+                                        style: TextStyle(
+                                          color: isSystem
+                                              ? Colors.amberAccent
+                                              : kColorWhite,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              if (!isSystem && translation.isNotEmpty) ...[
+                                Spacing.h6,
+                                Icon(
+                                  Icons.translate_rounded,
+                                  size: 12,
+                                  color: isTranslated
+                                      ? kColorPrimary
+                                      : Colors.white38,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
         ),
       ),
     );

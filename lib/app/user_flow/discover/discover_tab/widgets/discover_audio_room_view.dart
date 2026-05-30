@@ -80,100 +80,21 @@ class DiscoverAudioRoomView extends StatelessWidget {
     BlendMode.srcIn,
   );
 
-  static const List<_AudioParticipant> _participants = [
-    _AudioParticipant(
-      name: 'Sarah',
-      role: 'Host',
-      imageAsset: kImgTemp2,
-      mic: _AudioMicVisual.muted,
-    ),
-    _AudioParticipant(
-      name: 'Merry',
-      role: 'Speaking',
-      imageAsset: kImgTemp3,
-      mic: _AudioMicVisual.speaking,
-    ),
-    _AudioParticipant(
-      name: 'Alex',
-      role: 'Member Listener',
-      imageAsset: kImgTemp4,
-      mic: _AudioMicVisual.muted,
-    ),
-    _AudioParticipant(
-      name: 'Jordan',
-      role: 'Member Listener',
-      imageAsset: kImgTemp5,
-      mic: _AudioMicVisual.unmuted,
-    ),
-    _AudioParticipant(
-      name: 'Sam',
-      role: 'Member Listener',
-      imageAsset: kImgTemp2,
-      mic: _AudioMicVisual.muted,
-    ),
-    _AudioParticipant(
-      name: 'Riya',
-      role: 'Member Listener',
-      imageAsset: kImgTemp3,
-      mic: _AudioMicVisual.muted,
-    ),
-    _AudioParticipant(
-      name: 'Chris',
-      role: 'Anaynamouse',
-      imageAsset: kImgTemp4,
-      mic: _AudioMicVisual.unmuted,
-    ),
-    _AudioParticipant(
-      name: 'Pat',
-      role: 'Member Listener',
-      imageAsset: kImgTemp5,
-      mic: _AudioMicVisual.muted,
-    ),
-    _AudioParticipant(
-      name: 'Jamie',
-      role: 'Member Listener',
-      imageAsset: kImgTemp2,
-      mic: _AudioMicVisual.muted,
-    ),
-    _AudioParticipant(
-      name: 'Taylor',
-      role: 'Member Listener',
-      imageAsset: kImgTemp3,
-      mic: _AudioMicVisual.unmuted,
-    ),
-    _AudioParticipant(
-      name: 'Casey',
-      role: 'Member Listener',
-      imageAsset: kImgTemp4,
-      mic: _AudioMicVisual.muted,
-    ),
-  ];
-
-  static const List<String> _othersAvatarAssets = [
-    kImgTemp2,
-    kImgTemp3,
-    kImgTemp4,
-    kImgTemp5,
-    kImgTemp2,
-  ];
-
   @override
   Widget build(BuildContext context) {
-    final participants = rooms.isNotEmpty
-        ? _participantsFromRooms(rooms)
-        : _participants;
-    final othersAvatarAssets = rooms.isNotEmpty
-        ? _othersFromRooms(rooms)
-        : _othersAvatarAssets;
-    final overflowCount = rooms.isNotEmpty
-        ? _overflowCountFromRooms(rooms)
-        : 52;
-
     if (isLoading) {
       return const Center(
         child: CircularProgressIndicator(color: kColorWhite, strokeWidth: 2),
       );
     }
+
+    if (rooms.isEmpty) {
+      return const _AudioRoomsEmptyState();
+    }
+
+    final participants = _participantsFromRooms(rooms);
+    final othersAvatarAssets = _othersFromRooms(rooms);
+    final overflowCount = _overflowCountFromRooms(rooms);
 
     // Transparent: uses parent Discover tab scaffold background (kImgBG).
     return LayoutBuilder(
@@ -314,7 +235,7 @@ class DiscoverAudioRoomView extends StatelessWidget {
         }
       }
     }
-    return avatars.isEmpty ? _othersAvatarAssets : avatars.take(5).toList();
+    return avatars.take(5).toList();
   }
 
   int _overflowCountFromRooms(List<Map<String, dynamic>> rooms) {
@@ -323,6 +244,51 @@ class DiscoverAudioRoomView extends StatelessWidget {
           '${first['listenerCount'] ?? first['audienceCount'] ?? first['viewerCount'] ?? rooms.length}',
         ) ??
         rooms.length;
+  }
+}
+
+class _AudioRoomsEmptyState extends StatelessWidget {
+  const _AudioRoomsEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(
+                color: kColorWhite.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.graphic_eq_rounded,
+                color: kColorWhite,
+                size: 28,
+              ),
+            ),
+            const SizedBox(height: 14),
+            const SemiBoldText(
+              text: 'No data found',
+              fontSize: TextStyles.k16FontSize,
+              color: kColorWhite,
+              align: TextAlign.center,
+            ),
+            Spacing.v6,
+            AppText(
+              text: 'Audio rooms will appear here when available.',
+              fontSize: TextStyles.k12FontSize,
+              color: kColorWhite.withValues(alpha: 0.72),
+              align: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -583,68 +549,80 @@ class _OthersInRoomSection extends StatelessWidget {
           ],
         ),
         Spacing.v12,
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: smallAvatar + (avatarAssets.length - 1) * overlap,
-              height: smallAvatar,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  for (var i = 0; i < avatarAssets.length; i++)
-                    Positioned(
-                      left: i * overlap,
-                      child: Container(
-                        width: smallAvatar,
-                        height: smallAvatar,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: kColorVideoRoomBgGradientBottom,
-                            width: 2,
+        if (avatarAssets.isEmpty)
+          AppText(
+            text: 'No other listeners found.',
+            fontSize: TextStyles.k12FontSize,
+            color: kColorWhite.withValues(alpha: 0.72),
+          )
+        else
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: smallAvatar + (avatarAssets.length - 1) * overlap,
+                height: smallAvatar,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    for (var i = 0; i < avatarAssets.length; i++)
+                      Positioned(
+                        left: i * overlap,
+                        child: Container(
+                          width: smallAvatar,
+                          height: smallAvatar,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: kColorVideoRoomBgGradientBottom,
+                              width: 2,
+                            ),
+                          ),
+                          child: ClipOval(
+                            child: avatarAssets[i].startsWith('http')
+                                ? Image.network(
+                                    avatarAssets[i],
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) =>
+                                        const ColoredBox(
+                                          color: kColorAudioMicBadgeBg,
+                                        ),
+                                  )
+                                : Image.asset(
+                                    avatarAssets[i],
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) =>
+                                        const ColoredBox(
+                                          color: kColorAudioMicBadgeBg,
+                                        ),
+                                  ),
                           ),
                         ),
-                        child: ClipOval(
-                          child: avatarAssets[i].startsWith('http')
-                              ? Image.network(
-                                  avatarAssets[i],
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) =>
-                                      const ColoredBox(
-                                        color: kColorAudioMicBadgeBg,
-                                      ),
-                                )
-                              : Image.asset(
-                                  avatarAssets[i],
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) =>
-                                      const ColoredBox(
-                                        color: kColorAudioMicBadgeBg,
-                                      ),
-                                ),
-                        ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            Spacing.h10,
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: kColorAudioOthersPillBg,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
+              Spacing.h10,
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: kColorAudioOthersPillBg,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: kColorWhite.withValues(alpha: 0.12),
+                  ),
+                ),
+                child: SemiBoldText(
+                  text: '+$overflowCount',
+                  fontSize: TextStyles.k12FontSize,
+                  color: kColorWhite,
+                ),
               ),
-              child: SemiBoldText(
-                text: '+$overflowCount',
-                fontSize: TextStyles.k12FontSize,
-                color: kColorWhite,
-              ),
-            ),
-          ],
-        ),
+            ],
+          ),
       ],
     );
   }

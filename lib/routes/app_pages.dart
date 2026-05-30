@@ -17,6 +17,8 @@ import '../app/user_flow/leader_board/bindings/leader_board_binding.dart';
 import '../app/user_flow/leader_board/views/leader_board_view.dart';
 import '../app/user_flow/user_basic_profile/bindings/user_basic_profile_binding.dart';
 import '../app/user_flow/user_basic_profile/views/user_basic_profile_view.dart';
+import '../app/user_flow/agency_access/bindings/agency_access_binding.dart';
+import '../app/user_flow/agency_access/views/agency_access_view.dart';
 import '../app/user_flow/agency_host_onboarding/bindings/agency_host_onboarding_binding.dart';
 import '../app/user_flow/agency_host_onboarding/views/agency_host_onboarding_view.dart';
 import '../app/user_flow/agency_host_status/bindings/agency_host_status_binding.dart';
@@ -135,6 +137,11 @@ class AppPages {
       name: _Paths.LEADER_BOARD,
       page: () => const LeaderBoardView(),
       binding: LeaderBoardBinding(),
+    ),
+    GetPage(
+      name: _Paths.AGENCY_ACCESS,
+      page: () => const AgencyAccessView(),
+      binding: AgencyAccessBinding(),
     ),
     GetPage(
       name: _Paths.AGENCY_HOST_ONBOARDING,
@@ -291,13 +298,7 @@ class AppPages {
       page: () => const CallView(),
       binding: CallBinding(),
     ),
-    GetPage(
-      name: _Paths.COIN_SELLER,
-      page: () => const CoinSellerView(),
-    ),
-    GetPage(
-      name: _Paths.AGENCY_OWNER,
-      page: () => const AgencyOwnerView(),
-    ),
+    GetPage(name: _Paths.COIN_SELLER, page: () => const CoinSellerView()),
+    GetPage(name: _Paths.AGENCY_OWNER, page: () => const AgencyOwnerView()),
   ];
 }

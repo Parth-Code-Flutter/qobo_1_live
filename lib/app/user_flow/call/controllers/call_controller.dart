@@ -9,7 +9,8 @@ import 'package:qobo_one_live/utils/app_widgets/safe_network_avatar.dart';
 
 class CallController extends GetxController {
   // Navigation / Tab state
-  final currentTab = 0.obs; // 0: Preferences Onboarding, 1: Swipe Deck, 2: Matches List
+  final currentTab =
+      0.obs; // 0: Preferences Onboarding, 1: Swipe Deck, 2: Matches List
 
   // Onboarding Preference Form States
   final seekingGender = 'Female'.obs; // Female, Male, Everyone
@@ -31,13 +32,14 @@ class CallController extends GetxController {
   void onInit() {
     super.onInit();
     loadCallProfiles();
-    loadMockMatches();
   }
 
   Future<void> loadCallProfiles() async {
     try {
       final response = await _pkRepo.getCallList(isShowLoader: false);
-      if (response != null && response['statusCode'] == 1 && response['data'] != null) {
+      if (response != null &&
+          response['statusCode'] == 1 &&
+          response['data'] != null) {
         final list = response['data'];
         if (list is List) {
           final mapped = list.map((e) {
@@ -47,85 +49,25 @@ class CallController extends GetxController {
               'age': map['age'] ?? 22,
               'location': map['location'] ?? 'Dhaka, Bangladesh',
               'bio': map['bio'] ?? 'Hello!',
-              'avatar': map['displayPicture'] != null && map['displayPicture'].toString().isNotEmpty
+              'avatar':
+                  map['displayPicture'] != null &&
+                      map['displayPicture'].toString().isNotEmpty
                   ? (map['displayPicture'].toString().startsWith('http')
-                      ? map['displayPicture'].toString()
-                      : 'https://my-backend-api-960q.onrender.com${map['displayPicture']}')
+                        ? map['displayPicture'].toString()
+                        : 'https://my-backend-api-960q.onrender.com${map['displayPicture']}')
                   : 'assets/images/temp_img_2.png',
               'matchPercentage': map['matchPercentage'] ?? 90,
               'interests': List<String>.from(map['interests'] ?? []),
             };
           }).toList();
-          if (mapped.isNotEmpty) {
-            profiles.assignAll(mapped);
-            return;
-          }
+          profiles.assignAll(mapped);
+          currentProfileIndex.value = 0;
+          return;
         }
       }
     } catch (_) {}
-    loadMockProfiles();
-  }
-
-  void loadMockProfiles() {
-    profiles.assignAll([
-      {
-        'name': 'Aria Sen',
-        'age': 22,
-        'location': 'Dhaka, Bangladesh',
-        'bio': 'Love listening to music, watching live streams, and making new friends!',
-        'avatar': 'assets/images/temp_img_2.png',
-        'matchPercentage': 94,
-        'interests': ['Music', 'Gaming', 'Coffee'],
-      },
-      {
-        'name': 'Riya Sharma',
-        'age': 24,
-        'location': 'Mumbai, India',
-        'bio': 'Foodie, traveler, and looking for someone to talk to on video calls.',
-        'avatar': 'assets/images/temp_img_4.png',
-        'matchPercentage': 88,
-        'interests': ['Travel', 'Food', 'Movies'],
-      },
-      {
-        'name': 'Neha Khan',
-        'age': 21,
-        'location': 'Sylhet, Bangladesh',
-        'bio': 'Solo broadcaster. Swipe right to join my live streams!',
-        'avatar': 'assets/images/temp_img_2.png',
-        'matchPercentage': 91,
-        'interests': ['Broadcasting', 'Chatting', 'Pop'],
-      },
-      {
-        'name': 'Aisha Ahmed',
-        'age': 26,
-        'location': 'Lahore, Pakistan',
-        'bio': 'Looking for genuine conversations and long-term friendship.',
-        'avatar': 'assets/images/temp_img_4.png',
-        'matchPercentage': 85,
-        'interests': ['Reading', 'Art', 'Nature'],
-      },
-    ]);
-  }
-
-  void loadMockMatches() {
-    matches.assignAll([
-      {
-        'name': 'Zara Qureshi',
-        'age': 23,
-        'location': 'Dhaka',
-        'avatar': 'assets/images/temp_img_2.png',
-        'matchedTime': '2 hours ago',
-        'lastMsg': 'Hey! How are you doing today?',
-      },
-      {
-        'name': 'Elena Roy',
-        'age': 25,
-        'location': 'Kolkata',
-        'avatar': 'assets/images/temp_img_4.png',
-        'matchedTime': 'Yesterday',
-        'lastMsg': 'Would love to join your stream sometime!',
-      },
-    ]);
+    profiles.clear();
+    currentProfileIndex.value = 0;
   }
 
   // Action: Complete Onboarding & go to Swipe Deck
@@ -153,7 +95,8 @@ class CallController extends GetxController {
       );
 
       final statusCode = response?['statusCode'];
-      final isSuccess = statusCode == 1 || statusCode == 200 || statusCode == 201;
+      final isSuccess =
+          statusCode == 1 || statusCode == 200 || statusCode == 201;
       final message =
           (response?['message']?.toString().trim().isNotEmpty ?? false)
           ? response!['message'].toString().trim()
@@ -261,7 +204,7 @@ class CallController extends GetxController {
   // Reset Swiper deck to retry
   void resetSwiper() {
     currentProfileIndex.value = 0;
-    loadMockProfiles();
+    loadCallProfiles();
   }
 
   // Match celebration dialog
@@ -301,7 +244,9 @@ class CallController extends GetxController {
                 children: [
                   const CircleAvatar(
                     radius: 36,
-                    backgroundImage: AssetImage('assets/images/temp_img_2.png'), // Me
+                    backgroundImage: AssetImage(
+                      'assets/images/temp_img_2.png',
+                    ), // Me
                   ),
                   Spacing.h12,
                   const Icon(Icons.favorite, color: Colors.white, size: 28),
@@ -314,7 +259,10 @@ class CallController extends GetxController {
                           ? SafeNetworkAvatar(
                               url: profile['avatar'],
                               size: 72,
-                              fallback: Image.asset('assets/images/temp_img_2.png', fit: BoxFit.cover),
+                              fallback: Image.asset(
+                                'assets/images/temp_img_2.png',
+                                fit: BoxFit.cover,
+                              ),
                               fit: BoxFit.cover,
                             )
                           : Image.asset(
@@ -341,11 +289,16 @@ class CallController extends GetxController {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white10,
                         foregroundColor: kColorWhite,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                       onPressed: () => Get.back(),
-                      child: const Text('Keep Swiping', style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: const Text(
+                        'Keep Swiping',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
                   Spacing.h12,
@@ -354,14 +307,19 @@ class CallController extends GetxController {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: const Color(0xFFE91E63),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                       onPressed: () {
                         Get.back();
                         Get.toNamed(Routes.CHAT_DETAIL);
                       },
-                      child: const Text('Say Hello', style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: const Text(
+                        'Say Hello',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
                 ],

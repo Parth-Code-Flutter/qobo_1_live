@@ -13,6 +13,7 @@ abstract class Routes {
   static const UPDATE_PROFILE = _Paths.UPDATE_PROFILE;
   static const USER_BASIC_PROFILE = _Paths.USER_BASIC_PROFILE;
   static const LEADER_BOARD = _Paths.LEADER_BOARD;
+  static const AGENCY_ACCESS = _Paths.AGENCY_ACCESS;
   static const AGENCY_HOST_ONBOARDING = _Paths.AGENCY_HOST_ONBOARDING;
   static const AGENCY_HOST_STATUS = _Paths.AGENCY_HOST_STATUS;
   static const AGENCY_OWNER_REGISTER = _Paths.AGENCY_OWNER_REGISTER;
@@ -60,6 +61,7 @@ abstract class _Paths {
   static const UPDATE_PROFILE = '/update-profile';
   static const USER_BASIC_PROFILE = '/user-basic-profile';
   static const LEADER_BOARD = '/leader-board';
+  static const AGENCY_ACCESS = '/agency-access';
   static const AGENCY_HOST_ONBOARDING = '/agency-host-onboarding';
   static const AGENCY_HOST_STATUS = '/agency-host-status';
   static const AGENCY_OWNER_REGISTER = '/agency-owner-register';

@@ -173,10 +173,7 @@ class ProfileTabView extends StatelessWidget {
                         onTap: () => Get.toNamed(Routes.VISITORS),
                       ),
                       _statDivider(),
-                      _statBlock(
-                        '1K',
-                        'Friends',
-                      ),
+                      _statBlock('1K', 'Friends'),
                       _statDivider(),
                       _statBlock(
                         '1K',
@@ -350,7 +347,10 @@ class ProfileTabView extends StatelessWidget {
                         ),
                         onTap: () {
                           Get.back();
-                          Get.toNamed(Routes.AGENCY_HOST_ONBOARDING);
+                          Get.toNamed(
+                            Routes.AGENCY_ACCESS,
+                            arguments: {'mode': 'host'},
+                          );
                         },
                       ),
                       const Divider(color: Colors.white10),
@@ -379,7 +379,10 @@ class ProfileTabView extends StatelessWidget {
                         ),
                         onTap: () {
                           Get.back();
-                          Get.toNamed(Routes.AGENCY_OWNER);
+                          Get.toNamed(
+                            Routes.AGENCY_ACCESS,
+                            arguments: {'mode': 'owner'},
+                          );
                         },
                       ),
                     ],

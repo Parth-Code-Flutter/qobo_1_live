@@ -3,7 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 
-enum PKState { idle, searching, incomingRequest, outgoingRequest, inBattle, completed }
+enum PKState {
+  idle,
+  searching,
+  incomingRequest,
+  outgoingRequest,
+  inBattle,
+  completed,
+}
 
 class PKBattleController extends GetxController {
   final pkState = PKState.idle.obs;
@@ -30,8 +37,12 @@ class PKBattleController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    loadMockOpponents();
-    debounce(searchQuery, (_) => filterOpponentsList(), time: const Duration(milliseconds: 300));
+    loadOpponents();
+    debounce(
+      searchQuery,
+      (_) => filterOpponentsList(),
+      time: const Duration(milliseconds: 300),
+    );
   }
 
   @override
@@ -41,49 +52,8 @@ class PKBattleController extends GetxController {
     super.onClose();
   }
 
-  void loadMockOpponents() {
-    mockOpponents.assignAll([
-      {
-        'name': 'Ruby Live',
-        'avatar': 'assets/images/temp_img_2.png',
-        'level': 24,
-        'vip': 'SVIP',
-        'isOnline': true,
-        'followers': '12.4k',
-      },
-      {
-        'name': 'Call_Queen',
-        'avatar': 'assets/images/temp_img_4.png',
-        'level': 18,
-        'vip': 'VIP',
-        'isOnline': true,
-        'followers': '8.2k',
-      },
-      {
-        'name': 'Zack Storm',
-        'avatar': 'assets/images/temp_img_3.png',
-        'level': 32,
-        'vip': 'SVIP',
-        'isOnline': true,
-        'followers': '45.1k',
-      },
-      {
-        'name': 'Angle_Pixie',
-        'avatar': 'assets/images/temp_img_2.png',
-        'level': 15,
-        'vip': '',
-        'isOnline': false,
-        'followers': '3.9k',
-      },
-      {
-        'name': 'Shadow Host',
-        'avatar': 'assets/images/temp_img_4.png',
-        'level': 41,
-        'vip': 'SVIP',
-        'isOnline': true,
-        'followers': '90k',
-      },
-    ]);
+  void loadOpponents() {
+    mockOpponents.clear();
     filteredOpponents.assignAll(mockOpponents);
   }
 
@@ -93,10 +63,11 @@ class PKBattleController extends GetxController {
     } else {
       filteredOpponents.assignAll(
         mockOpponents
-            .where((o) => o['name']
-                .toString()
-                .toLowerCase()
-                .contains(searchQuery.value.toLowerCase()))
+            .where(
+              (o) => o['name'].toString().toLowerCase().contains(
+                searchQuery.value.toLowerCase(),
+              ),
+            )
             .toList(),
       );
     }
@@ -106,10 +77,12 @@ class PKBattleController extends GetxController {
   void startMatchmaking() {
     pkState.value = PKState.searching;
     isLoadingOpponents.value = true;
-    
+
     // Simulate auto-matching after 4 seconds
     _matchTimer = Timer(const Duration(seconds: 4), () {
-      final onlineOpponents = mockOpponents.where((o) => o['isOnline'] == true).toList();
+      final onlineOpponents = mockOpponents
+          .where((o) => o['isOnline'] == true)
+          .toList();
       if (onlineOpponents.isNotEmpty) {
         // Match with a random online opponent
         onlineOpponents.shuffle();
@@ -126,7 +99,8 @@ class PKBattleController extends GetxController {
 
   void setupOpponent(Map<String, dynamic> opponent) {
     currentOpponentName.value = opponent['name'] ?? '';
-    currentOpponentAvatar.value = opponent['avatar'] ?? 'assets/images/temp_img_2.png';
+    currentOpponentAvatar.value =
+        opponent['avatar'] ?? 'assets/images/temp_img_2.png';
     currentOpponentLevel.value = opponent['level'] ?? 1;
     currentOpponentVip.value = opponent['vip'] ?? '';
   }
@@ -202,7 +176,7 @@ class PKBattleController extends GetxController {
   // Complete battle
   void endBattle() {
     pkState.value = PKState.completed;
-    
+
     final bool won = myPoints.value > opponentPoints.value;
     final bool draw = myPoints.value == opponentPoints.value;
 
@@ -216,7 +190,9 @@ class PKBattleController extends GetxController {
             color: const Color(0xFF1E1E2C),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: won ? Colors.amber : (draw ? Colors.grey : Colors.redAccent),
+              color: won
+                  ? Colors.amber
+                  : (draw ? Colors.grey : Colors.redAccent),
               width: 2,
             ),
           ),
@@ -228,7 +204,9 @@ class PKBattleController extends GetxController {
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: won ? Colors.amber : (draw ? Colors.white : Colors.redAccent),
+                  color: won
+                      ? Colors.amber
+                      : (draw ? Colors.white : Colors.redAccent),
                 ),
               ),
               const SizedBox(height: 16),
@@ -247,17 +225,37 @@ class PKBattleController extends GetxController {
                 children: [
                   Column(
                     children: [
-                      const Text('My Points', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                      const Text(
+                        'My Points',
+                        style: TextStyle(color: Colors.white54, fontSize: 11),
+                      ),
                       const SizedBox(height: 4),
-                      Text('${myPoints.value}', style: const TextStyle(color: Colors.blueAccent, fontSize: 20, fontWeight: FontWeight.bold)),
+                      Text(
+                        '${myPoints.value}',
+                        style: const TextStyle(
+                          color: Colors.blueAccent,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                   Container(width: 1, height: 40, color: Colors.white24),
                   Column(
                     children: [
-                      const Text('Opponent', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                      const Text(
+                        'Opponent',
+                        style: TextStyle(color: Colors.white54, fontSize: 11),
+                      ),
                       const SizedBox(height: 4),
-                      Text('${opponentPoints.value}', style: const TextStyle(color: Colors.redAccent, fontSize: 20, fontWeight: FontWeight.bold)),
+                      Text(
+                        '${opponentPoints.value}',
+                        style: const TextStyle(
+                          color: Colors.redAccent,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -268,14 +266,22 @@ class PKBattleController extends GetxController {
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: kColorPrimary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   onPressed: () {
                     Get.back();
                     pkState.value = PKState.idle;
                   },
-                  child: const Text('Back to Lobby', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                  child: const Text(
+                    'Back to Lobby',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
             ],

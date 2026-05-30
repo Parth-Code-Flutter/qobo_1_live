@@ -61,11 +61,11 @@ class LiveRoomController extends GetxController {
       String? category;
 
       if (selectedCategoryIndex == 0) {
-        category = 'Sab';
+        category = 'sab';
       } else if (selectedCategoryIndex == 1) {
-        category = 'Shresth';
+        category = 'shresth';
       } else if (selectedCategoryIndex == 2) {
-        category = 'Naya';
+        category = 'naya';
       } else if (selectedCategoryIndex == 3) {
         country = 'BD';
       }

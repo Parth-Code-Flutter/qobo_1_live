@@ -55,18 +55,34 @@ class AgencyRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
-  /// Calls `GET /api/agency/host-verify-status?application_id=...`
-  /// or `?phone=...` to verify host onboarding status.
+  /// Calls `GET /api/agency/host-verify-status` with one lookup key.
   Future<Map<String, dynamic>?> hostVerifyStatus({
     String? applicationId,
+    String? hostId,
+    String? agencyId,
     String? phone,
     bool isShowLoader = true,
   }) async {
-    final id = applicationId?.trim() ?? '';
-    final phoneValue = phone?.trim() ?? '';
-    final path = id.isNotEmpty
-        ? '${AgencyEndpoints.hostVerifyStatus}?application_id=${Uri.encodeComponent(id)}'
-        : '${AgencyEndpoints.hostVerifyStatus}?phone=${Uri.encodeComponent(phoneValue)}';
+    final params = <String, String>{};
+    final id = applicationId?.trim();
+    final host = hostId?.trim();
+    final agency = agencyId?.trim();
+    final phoneValue = phone?.trim();
+
+    if (id != null && id.isNotEmpty) {
+      params['application_id'] = id;
+    } else if (host != null && host.isNotEmpty) {
+      params['host_id'] = host;
+    } else if (agency != null && agency.isNotEmpty) {
+      params['agency_id'] = agency;
+    } else if (phoneValue != null && phoneValue.isNotEmpty) {
+      params['phone'] = phoneValue;
+    }
+
+    var path = AgencyEndpoints.hostVerifyStatus;
+    if (params.isNotEmpty) {
+      path += '?${Uri(queryParameters: params).query}';
+    }
 
     final response = await _apiService.getRequest(
       endPoint: path,

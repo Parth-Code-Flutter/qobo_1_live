@@ -56,7 +56,11 @@ class AgencyOwnerView extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
               ),
               alignment: Alignment.center,
-              child: const Icon(Icons.arrow_back_ios_new_rounded, color: kColorWhite, size: 16),
+              child: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: kColorWhite,
+                size: 16,
+              ),
             ),
           ),
           const Expanded(
@@ -80,10 +84,15 @@ class AgencyOwnerView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const BoldText(text: 'Register Your Agency', fontSize: 22, color: kColorWhite),
+          const BoldText(
+            text: 'Register Your Agency',
+            fontSize: 22,
+            color: kColorWhite,
+          ),
           Spacing.v6,
           const AppText(
-            text: 'Create a new agency to onboard hosts, track performance, and earn host commissions.',
+            text:
+                'Create a new agency to onboard hosts, track performance, and earn host commissions.',
             fontSize: 12,
             color: Colors.white70,
           ),
@@ -95,7 +104,10 @@ class AgencyOwnerView extends StatelessWidget {
             hintText: 'e.g. Star Agency Pakistan',
             fillColor: Colors.white10,
             borderColor: Colors.white12,
-            textStyle: TextStyles.kRegularPoppins(colors: kColorWhite, fontSize: 13),
+            textStyle: TextStyles.kRegularPoppins(
+              colors: kColorWhite,
+              fontSize: 13,
+            ),
           ),
           Spacing.v16,
           const AppText(text: 'Description', fontSize: 13, color: kColorWhite),
@@ -106,7 +118,10 @@ class AgencyOwnerView extends StatelessWidget {
             maxLines: 4,
             fillColor: Colors.white10,
             borderColor: Colors.white12,
-            textStyle: TextStyles.kRegularPoppins(colors: kColorWhite, fontSize: 13),
+            textStyle: TextStyles.kRegularPoppins(
+              colors: kColorWhite,
+              fontSize: 13,
+            ),
           ),
           Spacing.v32,
           SizedBox(
@@ -146,16 +161,38 @@ class AgencyOwnerView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Obx(() => BoldText(text: controller.agencyName.value, fontSize: 20, color: kColorWhite)),
+                Obx(
+                  () => BoldText(
+                    text: controller.agencyName.value,
+                    fontSize: 20,
+                    color: kColorWhite,
+                  ),
+                ),
                 Spacing.v4,
-                const AppText(text: 'Creator Commission: 15%', fontSize: 11, color: Colors.white70),
+                const AppText(
+                  text: 'Creator Commission: 15%',
+                  fontSize: 11,
+                  color: Colors.white70,
+                ),
                 Spacing.v16,
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _dashboardTile('Monthly Rev', 'PKR ${controller.monthlyEarningsPkr.value}', Colors.white),
-                    _dashboardTile('Payout due', 'PKR ${controller.pendingCommissionPkr.value}', Colors.amberAccent),
-                    _dashboardTile('Total Hosts', '${controller.totalHosts.value}', Colors.white),
+                    _dashboardTile(
+                      'Monthly Rev',
+                      'PKR ${controller.monthlyEarningsPkr.value}',
+                      Colors.white,
+                    ),
+                    _dashboardTile(
+                      'Payout due',
+                      'PKR ${controller.pendingCommissionPkr.value}',
+                      Colors.amberAccent,
+                    ),
+                    _dashboardTile(
+                      'Total Hosts',
+                      '${controller.totalHosts.value}',
+                      Colors.white,
+                    ),
                   ],
                 ),
               ],
@@ -164,7 +201,11 @@ class AgencyOwnerView extends StatelessWidget {
           Spacing.v20,
 
           // Share and invite code section (AGENCY-04)
-          const SemiBoldText(text: 'Recruitment & Invite Links', fontSize: 14, color: kColorWhite),
+          const SemiBoldText(
+            text: 'Recruitment & Invite Links',
+            fontSize: 14,
+            color: kColorWhite,
+          ),
           Spacing.v10,
           Container(
             padding: const EdgeInsets.all(14),
@@ -182,14 +223,28 @@ class AgencyOwnerView extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const AppText(text: 'Agency Code', fontSize: 10, color: Colors.white38),
+                          const AppText(
+                            text: 'Agency Code',
+                            fontSize: 10,
+                            color: Colors.white38,
+                          ),
                           Spacing.v4,
-                          Obx(() => SemiBoldText(text: controller.agencyCode.value, fontSize: 13, color: Colors.amber)),
+                          Obx(
+                            () => SemiBoldText(
+                              text: controller.agencyCode.value,
+                              fontSize: 13,
+                              color: Colors.amber,
+                            ),
+                          ),
                         ],
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.copy_rounded, color: Colors.amber, size: 18),
+                      icon: const Icon(
+                        Icons.copy_rounded,
+                        color: Colors.amber,
+                        size: 18,
+                      ),
                       onPressed: controller.copyInviteCode,
                     ),
                   ],
@@ -202,14 +257,26 @@ class AgencyOwnerView extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const AppText(text: 'Agency Recruitment Link', fontSize: 10, color: Colors.white38),
+                          const AppText(
+                            text: 'Agency Recruitment Link',
+                            fontSize: 10,
+                            color: Colors.white38,
+                          ),
                           Spacing.v4,
-                          const AppText(text: 'https://qobo.live/agency/join...', fontSize: 12, color: Colors.white70),
+                          const AppText(
+                            text: 'https://qobo.live/agency/join...',
+                            fontSize: 12,
+                            color: Colors.white70,
+                          ),
                         ],
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.share_rounded, color: kColorWhite, size: 18),
+                      icon: const Icon(
+                        Icons.share_rounded,
+                        color: kColorWhite,
+                        size: 18,
+                      ),
                       onPressed: controller.copyInviteLink,
                     ),
                   ],
@@ -223,55 +290,113 @@ class AgencyOwnerView extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const SemiBoldText(text: 'My Hosts', fontSize: 14, color: kColorWhite),
-              AppText(text: 'Total: ${controller.hosts.length}', fontSize: 11, color: Colors.white38),
+              const SemiBoldText(
+                text: 'My Hosts',
+                fontSize: 14,
+                color: kColorWhite,
+              ),
+              AppText(
+                text: 'Total: ${controller.hosts.length}',
+                fontSize: 11,
+                color: Colors.white38,
+              ),
             ],
           ),
           Spacing.v10,
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: controller.hosts.length,
-            separatorBuilder: (_, __) => Spacing.v10,
-            itemBuilder: (_, index) {
-              final host = controller.hosts[index];
-              return Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.black26,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white12),
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 20,
-                      backgroundImage: AssetImage(host['avatar']),
-                    ),
-                    Spacing.h12,
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+          if (controller.hosts.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 22),
+              decoration: BoxDecoration(
+                color: Colors.black26,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white12),
+              ),
+              child: const Column(
+                children: [
+                  Icon(
+                    Icons.groups_2_outlined,
+                    color: Colors.white54,
+                    size: 32,
+                  ),
+                  SizedBox(height: 8),
+                  SemiBoldText(
+                    text: 'No data found',
+                    fontSize: 13,
+                    color: kColorWhite,
+                    align: TextAlign.center,
+                  ),
+                  SizedBox(height: 4),
+                  AppText(
+                    text: 'Agency hosts will appear here when available.',
+                    fontSize: 11,
+                    color: Colors.white54,
+                    align: TextAlign.center,
+                  ),
+                ],
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: controller.hosts.length,
+              separatorBuilder: (_, __) => Spacing.v10,
+              itemBuilder: (_, index) {
+                final host = controller.hosts[index];
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.black26,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white12),
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundImage: AssetImage(host['avatar']),
+                      ),
+                      Spacing.h12,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SemiBoldText(
+                              text: host['name'],
+                              fontSize: 13,
+                              color: kColorWhite,
+                            ),
+                            Spacing.v2,
+                            AppText(
+                              text: 'Host ID: ${host['id']}',
+                              fontSize: 10,
+                              color: Colors.white54,
+                            ),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          SemiBoldText(text: host['name'], fontSize: 13, color: kColorWhite),
+                          SemiBoldText(
+                            text: 'PKR ${host['earningsPkr']}',
+                            fontSize: 13,
+                            color: Colors.green,
+                          ),
                           Spacing.v2,
-                          AppText(text: 'Host ID: ${host['id']}', fontSize: 10, color: Colors.white54),
+                          AppText(
+                            text: 'Commission: PKR ${host['commissionPkr']}',
+                            fontSize: 9,
+                            color: Colors.amber,
+                          ),
                         ],
                       ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        SemiBoldText(text: 'PKR ${host['earningsPkr']}', fontSize: 13, color: Colors.green),
-                        Spacing.v2,
-                        AppText(text: 'Commission: PKR ${host['commissionPkr']}', fontSize: 9, color: Colors.amber),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
+                    ],
+                  ),
+                );
+              },
+            ),
         ],
       ),
     );

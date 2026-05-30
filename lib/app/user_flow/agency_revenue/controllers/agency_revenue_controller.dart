@@ -11,9 +11,9 @@ class RevenueHistoryModel {
 }
 
 class AgencyRevenueController extends GetxController {
-  final totalRevenue = '1,500,000'.obs;
-  final availableForPayout = '45,000'.obs;
-  
+  final totalRevenue = '0'.obs;
+  final availableForPayout = '0'.obs;
+
   final historyList = <RevenueHistoryModel>[].obs;
 
   @override
@@ -23,15 +23,11 @@ class AgencyRevenueController extends GetxController {
   }
 
   void _loadHistory() {
-    historyList.addAll([
-      RevenueHistoryModel('15 May 2026', '12,000', 'Completed'),
-      RevenueHistoryModel('01 May 2026', '25,000', 'Completed'),
-      RevenueHistoryModel('15 Apr 2026', '18,500', 'Completed'),
-    ]);
+    historyList.clear();
   }
 
   void requestPayout(BuildContext context) {
-    AppToast.showSuccess(context, 'Payout of \$45,000 requested successfully!');
+    AppToast.showSuccess(context, 'No payout amount is available yet.');
     availableForPayout.value = '0';
   }
 }

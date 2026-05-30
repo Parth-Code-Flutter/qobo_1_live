@@ -23,18 +23,6 @@ class DiscoverTabView extends StatelessWidget {
   Widget build(BuildContext context) {
     final discoverController = _resolveController();
     final userSession = _resolveUserSession();
-    const trendingRooms = <({String title, String subtitle, String image})>[
-      (
-        title: 'Techno & Chill',
-        subtitle: '1.2 k Lorium Ipsum',
-        image: kImgTemp2,
-      ),
-      (
-        title: 'Late Night Jazz Talk',
-        subtitle: '1.2 k Lorium Ipsum',
-        image: kImgTemp3,
-      ),
-    ];
 
     return Container(
       decoration: const BoxDecoration(
@@ -78,7 +66,6 @@ class DiscoverTabView extends StatelessWidget {
                     case DiscoverRoomSelection.none:
                       return _defaultDiscoverFeed(
                         controller: discoverController,
-                        trendingRooms: trendingRooms,
                       );
                   }
                 }),
@@ -227,11 +214,7 @@ class DiscoverTabView extends StatelessWidget {
     );
   }
 
-  Widget _defaultDiscoverFeed({
-    required DiscoverTabController controller,
-    required List<({String title, String subtitle, String image})>
-    trendingRooms,
-  }) {
+  Widget _defaultDiscoverFeed({required DiscoverTabController controller}) {
     return SingleChildScrollView(
       padding: const EdgeInsets.only(bottom: 14),
       child: Column(
@@ -247,11 +230,11 @@ class DiscoverTabView extends StatelessWidget {
           Spacing.v16,
           _sectionHeader(title: 'Trending Rooms', trailing: 'ACTIVE NOW'),
           Spacing.v8,
-          _trendingCard(trendingRooms[0]),
-          Spacing.v12,
-          _sectionHeader(title: 'Trending Rooms', trailing: 'ACTIVE NOW'),
-          Spacing.v8,
-          _trendingCard(trendingRooms[1]),
+          _emptyDataCard(
+            icon: Icons.live_tv_rounded,
+            title: 'No data found',
+            message: 'Trending rooms will appear here when available.',
+          ),
         ],
       ),
     );
@@ -298,7 +281,8 @@ class DiscoverTabView extends StatelessWidget {
   /// Entry to AGENCY-01 from Discover default feed (UI only; API later).
   Widget _agencyHostEntryCard() {
     return GestureDetector(
-      onTap: () => Get.toNamed(Routes.AGENCY_HOST_ONBOARDING),
+      onTap: () =>
+          Get.toNamed(Routes.AGENCY_ACCESS, arguments: {'mode': 'host'}),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
@@ -365,7 +349,8 @@ class DiscoverTabView extends StatelessWidget {
   /// Entry to AGENCY-03 from Discover default feed (UI only).
   Widget _agencyOwnerEntryCard() {
     return GestureDetector(
-      onTap: () => Get.toNamed(Routes.AGENCY_OWNER_REGISTER),
+      onTap: () =>
+          Get.toNamed(Routes.AGENCY_ACCESS, arguments: {'mode': 'owner'}),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
@@ -457,14 +442,15 @@ class DiscoverTabView extends StatelessWidget {
       );
     }
 
-    final users = controller.suggestedUsers.isNotEmpty
-        ? controller.suggestedUsers
-        : <Map<String, dynamic>>[
-            {'name': 'Jessica', 'displayPicture': kImgTemp2},
-            {'name': 'Parth', 'displayPicture': kImgTemp3},
-            {'name': 'Jessica', 'displayPicture': kImgTemp4},
-            {'name': 'Parth', 'displayPicture': kImgTemp5},
-          ];
+    if (controller.suggestedUsers.isEmpty) {
+      return _emptyDataCard(
+        icon: Icons.people_outline_rounded,
+        title: 'No data found',
+        message: 'Suggested users will appear here when available.',
+      );
+    }
+
+    final users = controller.suggestedUsers;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -545,10 +531,15 @@ class DiscoverTabView extends StatelessWidget {
     );
   }
 
-  Widget _trendingCard(({String title, String subtitle, String image}) room) {
+  Widget _emptyDataCard({
+    required IconData icon,
+    required String title,
+    required String message,
+  }) {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 22),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -564,52 +555,31 @@ class DiscoverTabView extends StatelessWidget {
           width: 0.6,
         ),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 104,
-            height: 88,
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(14)),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: Image.asset(room.image, fit: BoxFit.cover),
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: kColorWhite.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
             ),
+            child: Icon(icon, color: kColorWhite, size: 22),
           ),
-          Spacing.h12,
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SemiBoldText(
-                  text: room.title,
-                  fontSize: TextStyles.k18FontSize,
-                  color: kColorWhite,
-                ),
-                Spacing.v2,
-                AppText(
-                  text: room.subtitle,
-                  fontSize: TextStyles.k14FontSize,
-                  color: kColorWhite.withValues(alpha: 0.85),
-                ),
-                Spacing.v8,
-                Container(
-                  width: 100,
-                  height: 34,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: kColorDiscoverJoinNow,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: const SemiBoldText(
-                    text: 'Join Room',
-                    fontSize: TextStyles.k14FontSize,
-                    color: kColorWhite,
-                  ),
-                ),
-              ],
-            ),
+          Spacing.v10,
+          SemiBoldText(
+            text: title,
+            fontSize: TextStyles.k14FontSize,
+            color: kColorWhite,
+            align: TextAlign.center,
+          ),
+          Spacing.v4,
+          AppText(
+            text: message,
+            fontSize: TextStyles.k12FontSize,
+            color: kColorWhite.withValues(alpha: 0.72),
+            align: TextAlign.center,
           ),
         ],
       ),

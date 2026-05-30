@@ -509,13 +509,19 @@ class CallView extends GetView<CallController> {
             ),
             Spacing.v16,
             const Text(
-              'You\'ve swiped through everyone today!',
+              'No data found',
               style: TextStyle(color: kColorTextGrey, fontSize: 14),
+            ),
+            Spacing.v6,
+            const Text(
+              'Matching profiles will appear here when available.',
+              style: TextStyle(color: kColorHint, fontSize: 11),
+              textAlign: TextAlign.center,
             ),
             Spacing.v24,
             appButton(
               onPressed: controller.resetSwiper,
-              buttonText: 'Reset Cards Deck',
+              buttonText: 'Refresh',
               buttonColor: kColorPrimary,
               borderRadius: 20,
               buttonHeight: 44,
