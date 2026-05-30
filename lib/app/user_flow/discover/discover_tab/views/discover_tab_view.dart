@@ -22,13 +22,6 @@ class DiscoverTabView extends StatelessWidget {
   Widget build(BuildContext context) {
     final discoverController = _resolveController();
     final userSession = _resolveUserSession();
-    const suggestedUsers = <({String name, String image})>[
-      (name: 'Jessica', image: kImgTemp2),
-      (name: 'Parth', image: kImgTemp3),
-      (name: 'Jessica', image: kImgTemp4),
-      (name: 'Parth', image: kImgTemp5),
-    ];
-
     const trendingRooms = <({String title, String subtitle, String image})>[
       (
         title: 'Techno & Chill',
@@ -61,10 +54,7 @@ class DiscoverTabView extends StatelessWidget {
                   return const SizedBox.shrink();
                 }
                 return Column(
-                  children: [
-                    _roomModeRow(discoverController),
-                    Spacing.v16,
-                  ],
+                  children: [_roomModeRow(discoverController), Spacing.v16],
                 );
               }),
               Expanded(
@@ -75,12 +65,18 @@ class DiscoverTabView extends StatelessWidget {
 
                   switch (discoverController.roomSelection.value) {
                     case DiscoverRoomSelection.video:
-                      return const DiscoverVideoRoomView();
+                      return DiscoverVideoRoomView(
+                        rooms: discoverController.videoRooms,
+                        isLoading: discoverController.isVideoRoomsLoading.value,
+                      );
                     case DiscoverRoomSelection.audio:
-                      return const DiscoverAudioRoomView();
+                      return DiscoverAudioRoomView(
+                        rooms: discoverController.audioRooms,
+                        isLoading: discoverController.isAudioRoomsLoading.value,
+                      );
                     case DiscoverRoomSelection.none:
                       return _defaultDiscoverFeed(
-                        suggestedUsers: suggestedUsers,
+                        controller: discoverController,
                         trendingRooms: trendingRooms,
                       );
                   }
@@ -231,7 +227,7 @@ class DiscoverTabView extends StatelessWidget {
   }
 
   Widget _defaultDiscoverFeed({
-    required List<({String name, String image})> suggestedUsers,
+    required DiscoverTabController controller,
     required List<({String title, String subtitle, String image})>
     trendingRooms,
   }) {
@@ -246,7 +242,7 @@ class DiscoverTabView extends StatelessWidget {
           Spacing.v16,
           _sectionHeader(title: 'Suggested Users', trailing: 'SEE ALL'),
           Spacing.v10,
-          _suggestedUsersGrid(suggestedUsers),
+          Obx(() => _suggestedUsersGrid(controller)),
           Spacing.v16,
           _sectionHeader(title: 'Trending Rooms', trailing: 'ACTIVE NOW'),
           Spacing.v8,
@@ -329,7 +325,11 @@ class DiscoverTabView extends StatelessWidget {
                 color: kColorWhite.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.mic_rounded, color: kColorWhite, size: 24),
+              child: const Icon(
+                Icons.mic_rounded,
+                color: kColorWhite,
+                size: 24,
+              ),
             ),
             Spacing.h12,
             Expanded(
@@ -392,7 +392,11 @@ class DiscoverTabView extends StatelessWidget {
                 color: kColorWhite.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.business_center_rounded, color: kColorWhite, size: 24),
+              child: const Icon(
+                Icons.business_center_rounded,
+                color: kColorWhite,
+                size: 24,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -442,7 +446,25 @@ class DiscoverTabView extends StatelessWidget {
     );
   }
 
-  Widget _suggestedUsersGrid(List<({String name, String image})> users) {
+  Widget _suggestedUsersGrid(DiscoverTabController controller) {
+    if (controller.isSuggestedUsersLoading.value) {
+      return const SizedBox(
+        height: 120,
+        child: Center(
+          child: CircularProgressIndicator(color: kColorWhite, strokeWidth: 2),
+        ),
+      );
+    }
+
+    final users = controller.suggestedUsers.isNotEmpty
+        ? controller.suggestedUsers
+        : <Map<String, dynamic>>[
+            {'name': 'Jessica', 'displayPicture': kImgTemp2},
+            {'name': 'Parth', 'displayPicture': kImgTemp3},
+            {'name': 'Jessica', 'displayPicture': kImgTemp4},
+            {'name': 'Parth', 'displayPicture': kImgTemp5},
+          ];
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       child: LayoutBuilder(
@@ -459,8 +481,11 @@ class DiscoverTabView extends StatelessWidget {
               mainAxisSpacing: 16,
               mainAxisExtent: isNarrow ? 148 : 160,
             ),
-            itemBuilder: (_, index) =>
-                _userCard(users[index], isCompact: isNarrow),
+            itemBuilder: (_, index) => _userCard(
+              users[index],
+              fallbackImage: _fallbackImageForIndex(index),
+              isCompact: isNarrow,
+            ),
           );
         },
       ),
@@ -468,9 +493,14 @@ class DiscoverTabView extends StatelessWidget {
   }
 
   Widget _userCard(
-    ({String name, String image}) user, {
+    Map<String, dynamic> user, {
+    required String fallbackImage,
     required bool isCompact,
   }) {
+    final name = user['name']?.toString().trim().isNotEmpty ?? false
+        ? user['name'].toString().trim()
+        : 'User';
+    final avatar = user['displayPicture']?.toString().trim();
     return Container(
       decoration: BoxDecoration(
         color: kColorDiscoverCard.withValues(alpha: 0.95),
@@ -483,16 +513,41 @@ class DiscoverTabView extends StatelessWidget {
             width: isCompact ? 82 : 92,
             height: isCompact ? 82 : 92,
             decoration: const BoxDecoration(shape: BoxShape.circle),
-            child: ClipOval(child: Image.asset(user.image, fit: BoxFit.cover)),
+            child: ClipOval(child: _profileImage(avatar, fallbackImage)),
           ),
           if (isCompact) Spacing.v8 else Spacing.v10,
           SemiBoldText(
-            text: user.name,
+            text: name,
             fontSize: TextStyles.k14FontSize,
             color: kColorWhite,
           ),
         ],
       ),
+    );
+  }
+
+  String _fallbackImageForIndex(int index) {
+    const fallbacks = [kImgTemp2, kImgTemp3, kImgTemp4, kImgTemp5];
+    return fallbacks[index % fallbacks.length];
+  }
+
+  Widget _profileImage(String? avatar, String fallbackImage) {
+    if (avatar == null || avatar.isEmpty) {
+      return Image.asset(fallbackImage, fit: BoxFit.cover);
+    }
+    if (!avatar.startsWith('http')) {
+      return Image.network(
+        'https://my-backend-api-960q.onrender.com$avatar',
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) =>
+            Image.asset(fallbackImage, fit: BoxFit.cover),
+      );
+    }
+    return Image.network(
+      avatar,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) =>
+          Image.asset(fallbackImage, fit: BoxFit.cover),
     );
   }
 
@@ -594,7 +649,10 @@ class DiscoverTabView extends StatelessWidget {
     );
   }
 
-  Widget _searchResultsList(BuildContext context, DiscoverTabController controller) {
+  Widget _searchResultsList(
+    BuildContext context,
+    DiscoverTabController controller,
+  ) {
     if (controller.isSearchLoading.value) {
       return const Center(
         child: CircularProgressIndicator(
@@ -608,7 +666,11 @@ class DiscoverTabView extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.search_off_rounded, color: kColorWhite.withValues(alpha: 0.5), size: 48),
+            Icon(
+              Icons.search_off_rounded,
+              color: kColorWhite.withValues(alpha: 0.5),
+              size: 48,
+            ),
             Spacing.v12,
             AppText(
               text: 'No users found matching "${controller.searchQuery.value}"',
@@ -623,7 +685,8 @@ class DiscoverTabView extends StatelessWidget {
     return ListView.separated(
       padding: const EdgeInsets.only(bottom: 24, top: 8),
       itemCount: controller.searchResults.length,
-      separatorBuilder: (_, __) => const Divider(color: kColorDiscoverSearchBg, height: 1),
+      separatorBuilder: (_, __) =>
+          const Divider(color: kColorDiscoverSearchBg, height: 1),
       itemBuilder: (context, index) {
         final user = controller.searchResults[index];
         final String name = user['name']?.toString() ?? 'User';
@@ -641,11 +704,16 @@ class DiscoverTabView extends StatelessWidget {
                 height: 44,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: kColorWhite.withValues(alpha: 0.15), width: 1),
+                  border: Border.all(
+                    color: kColorWhite.withValues(alpha: 0.15),
+                    width: 1,
+                  ),
                 ),
                 child: ClipOval(
                   child: avatar == null || avatar.isEmpty
-                      ? _initialsAvatar(name.isNotEmpty ? name[0].toUpperCase() : 'U')
+                      ? _initialsAvatar(
+                          name.isNotEmpty ? name[0].toUpperCase() : 'U',
+                        )
                       : Image.network(
                           avatar.startsWith('http')
                               ? avatar
@@ -680,7 +748,10 @@ class DiscoverTabView extends StatelessWidget {
                 onTap: () => controller.toggleFollow(context, id),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     gradient: isFollowing
                         ? null
@@ -693,7 +764,10 @@ class DiscoverTabView extends StatelessWidget {
                     color: isFollowing ? Colors.transparent : null,
                     borderRadius: BorderRadius.circular(20),
                     border: isFollowing
-                        ? Border.all(color: kColorWhite.withValues(alpha: 0.5), width: 1)
+                        ? Border.all(
+                            color: kColorWhite.withValues(alpha: 0.5),
+                            width: 1,
+                          )
                         : null,
                   ),
                   child: SemiBoldText(

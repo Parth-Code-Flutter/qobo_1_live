@@ -18,7 +18,12 @@ double _audioParticipantMinTileHeight(BuildContext context) {
   const avatarBlock = _kAudioAvatarSize + 8;
   const nameLine = TextStyles.k14FontSize * 1.35;
   const roleLine = TextStyles.k12FontSize * 1.35;
-  return avatarBlock + 8 * scale + nameLine * scale + 2 * scale + roleLine * scale + 8;
+  return avatarBlock +
+      8 * scale +
+      nameLine * scale +
+      2 * scale +
+      roleLine * scale +
+      8;
 }
 
 double _audioGridChildAspectRatio(double viewportWidth, BuildContext context) {
@@ -58,7 +63,14 @@ class _AudioParticipant {
 
 /// Audio Room discover content — participant grid + “Others in the room” (Figma).
 class DiscoverAudioRoomView extends StatelessWidget {
-  const DiscoverAudioRoomView({super.key});
+  const DiscoverAudioRoomView({
+    super.key,
+    this.rooms = const <Map<String, dynamic>>[],
+    this.isLoading = false,
+  });
+
+  final List<Map<String, dynamic>> rooms;
+  final bool isLoading;
 
   static const String roomLabel = 'Audio Room';
 
@@ -146,6 +158,19 @@ class DiscoverAudioRoomView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final participants = rooms.isNotEmpty
+        ? List<_AudioParticipant>.generate(
+            rooms.length,
+            (index) => _participantFromRoom(rooms[index], index),
+          )
+        : _participants;
+
+    if (isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: kColorWhite, strokeWidth: 2),
+      );
+    }
+
     // Transparent: uses parent Discover tab scaffold background (kImgBG).
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -171,11 +196,11 @@ class DiscoverAudioRoomView extends StatelessWidget {
                   childAspectRatio: aspect,
                 ),
                 delegate: SliverChildBuilderDelegate((context, index) {
-                  if (index < _participants.length) {
-                    return _ParticipantTile(participant: _participants[index]);
+                  if (index < participants.length) {
+                    return _ParticipantTile(participant: participants[index]);
                   }
                   return const _AddParticipantTile();
-                }, childCount: _participants.length + 1),
+                }, childCount: participants.length + 1),
               ),
             ),
             SliverToBoxAdapter(
@@ -190,6 +215,26 @@ class DiscoverAudioRoomView extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+
+  _AudioParticipant _participantFromRoom(Map<String, dynamic> room, int index) {
+    const fallbackImages = [kImgTemp2, kImgTemp3, kImgTemp4, kImgTemp5];
+    final name =
+        room['hostName']?.toString() ??
+        room['name']?.toString() ??
+        room['title']?.toString() ??
+        'Audio Room';
+    final isSpeaking = index == 1;
+    return _AudioParticipant(
+      name: name,
+      role: index == 0
+          ? 'Host'
+          : isSpeaking
+          ? 'Speaking'
+          : 'Member Listener',
+      imageAsset: fallbackImages[index % fallbackImages.length],
+      mic: isSpeaking ? _AudioMicVisual.speaking : _AudioMicVisual.unmuted,
     );
   }
 }
@@ -236,7 +281,9 @@ class _ParticipantTile extends StatelessWidget {
                         bottom: 0,
                         left: 0,
                         right: 0,
-                        child: Center(child: _MicBadge(visual: participant.mic)),
+                        child: Center(
+                          child: _MicBadge(visual: participant.mic),
+                        ),
                       ),
                     ],
                   ),

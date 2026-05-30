@@ -20,7 +20,14 @@ typedef _VideoRoomTileData = ({
 
 /// Video Room discover feed: every tile expands to the hero layout on tap.
 class DiscoverVideoRoomView extends StatefulWidget {
-  const DiscoverVideoRoomView({super.key});
+  const DiscoverVideoRoomView({
+    super.key,
+    this.rooms = const <Map<String, dynamic>>[],
+    this.isLoading = false,
+  });
+
+  final List<Map<String, dynamic>> rooms;
+  final bool isLoading;
 
   static const String roomLabel = 'Video Room';
 
@@ -93,6 +100,13 @@ class _DiscoverVideoRoomViewState extends State<DiscoverVideoRoomView> {
 
   @override
   Widget build(BuildContext context) {
+    final tiles = widget.rooms.isNotEmpty
+        ? List<_VideoRoomTileData>.generate(
+            widget.rooms.length,
+            (index) => _tileFromRoom(widget.rooms[index], index),
+          )
+        : DiscoverVideoRoomView._tiles;
+
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
@@ -105,21 +119,63 @@ class _DiscoverVideoRoomViewState extends State<DiscoverVideoRoomView> {
           ],
         ),
       ),
-      child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
-        physics: const BouncingScrollPhysics(),
-        itemCount: DiscoverVideoRoomView._tiles.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
-        itemBuilder: (context, index) {
-          final data = DiscoverVideoRoomView._tiles[index];
-          final expanded = _expandedIndex == index;
-          return _ExpandableVideoRoomTile(
-            data: data,
-            expanded: expanded,
-            onToggle: () => _onTileTap(index),
-          );
-        },
-      ),
+      child: widget.isLoading
+          ? const Center(
+              child: CircularProgressIndicator(
+                color: kColorWhite,
+                strokeWidth: 2,
+              ),
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
+              physics: const BouncingScrollPhysics(),
+              itemCount: tiles.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final data = tiles[index];
+                final expanded = _expandedIndex == index;
+                return _ExpandableVideoRoomTile(
+                  data: data,
+                  expanded: expanded,
+                  onToggle: () => _onTileTap(index),
+                );
+              },
+            ),
+    );
+  }
+
+  _VideoRoomTileData _tileFromRoom(Map<String, dynamic> room, int index) {
+    const fallbackImages = [kImgTemp2, kImgTemp3, kImgTemp4, kImgTemp5];
+    final title =
+        room['name']?.toString() ??
+        room['title']?.toString() ??
+        room['hostName']?.toString() ??
+        'Live Video Room';
+    final host =
+        room['hostName']?.toString() ??
+        room['host']?.toString() ??
+        room['userName']?.toString() ??
+        title;
+    final viewers =
+        room['viewerCount']?.toString() ??
+        room['watching']?.toString() ??
+        room['_count']?.toString() ??
+        '0';
+    return (
+      collapsedTitle: title,
+      hostName: host,
+      streamSubtitle:
+          room['bio']?.toString() ??
+          room['category']?.toString() ??
+          'Live video stream',
+      watchingLabel: '$viewers watching',
+      viewerCountShort: viewers,
+      image: fallbackImages[index % fallbackImages.length],
+      avatar: fallbackImages[(index + 1) % fallbackImages.length],
+      tags: [
+        '#${(room['type']?.toString() ?? 'video').toUpperCase()}',
+        if (room['country'] != null) '#${room['country']}',
+      ],
     );
   }
 }
