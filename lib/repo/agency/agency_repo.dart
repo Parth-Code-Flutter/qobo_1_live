@@ -6,7 +6,8 @@ import 'package:qobo_one_live/utils/api_response_utils.dart';
 
 /// Agency repository contains API calls for agency and host management.
 class AgencyRepo {
-  AgencyRepo({ApiService? apiService}) : _apiService = apiService ?? ApiService();
+  AgencyRepo({ApiService? apiService})
+    : _apiService = apiService ?? ApiService();
 
   final ApiService _apiService;
 
@@ -15,15 +16,30 @@ class AgencyRepo {
   /// Uses multipart/form-data.
   Future<Map<String, dynamic>?> hostOnboarding({
     required String agencyCode,
-    required String name,
-    required String phone,
+    required String hostName,
+    required String gmail,
+    required String whatsapp,
+    required String category,
     required File hostRealPhoto,
+    String? birthday,
+    String? hostIdNumber,
     bool isShowLoader = true,
   }) async {
     final fields = <String, String>{
+      // Documented backend fields from Qobo1live_API_Documentation.docx.
+      'agencyCode': agencyCode,
+      'hostName': hostName,
+      'gmail': gmail,
+      'whatsapp': whatsapp,
+      'category': category,
+      // Compatibility aliases required by the currently deployed backend.
       'agency_code': agencyCode,
-      'name': name,
-      'phone': phone,
+      'name': hostName,
+      'phone': whatsapp,
+      if (birthday != null && birthday.trim().isNotEmpty)
+        'birthday': birthday.trim(),
+      if (hostIdNumber != null && hostIdNumber.trim().isNotEmpty)
+        'hostIdNumber': hostIdNumber.trim(),
     };
 
     final response = await _apiService.multipartFormRequest(
@@ -39,13 +55,21 @@ class AgencyRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
-  /// Calls `GET /api/agency/host-verify-status?phone=...` to verify host onboarding status.
+  /// Calls `GET /api/agency/host-verify-status?application_id=...`
+  /// or `?phone=...` to verify host onboarding status.
   Future<Map<String, dynamic>?> hostVerifyStatus({
-    required String phone,
+    String? applicationId,
+    String? phone,
     bool isShowLoader = true,
   }) async {
+    final id = applicationId?.trim() ?? '';
+    final phoneValue = phone?.trim() ?? '';
+    final path = id.isNotEmpty
+        ? '${AgencyEndpoints.hostVerifyStatus}?application_id=${Uri.encodeComponent(id)}'
+        : '${AgencyEndpoints.hostVerifyStatus}?phone=${Uri.encodeComponent(phoneValue)}';
+
     final response = await _apiService.getRequest(
-      endPoint: '${AgencyEndpoints.hostVerifyStatus}?phone=${Uri.encodeComponent(phone)}',
+      endPoint: path,
       isShowLoader: isShowLoader,
     );
 
@@ -60,9 +84,7 @@ class AgencyRepo {
   }) async {
     final response = await _apiService.postRequest(
       endPoint: AgencyEndpoints.registerAgency,
-      requestModel: <String, dynamic>{
-        'agency_name': agencyName,
-      },
+      requestModel: <String, dynamic>{'agency_name': agencyName},
       isShowLoader: isShowLoader,
     );
 
@@ -76,7 +98,8 @@ class AgencyRepo {
     bool isShowLoader = true,
   }) async {
     final response = await _apiService.getRequest(
-      endPoint: '${AgencyEndpoints.generateLink}?agency_id=${Uri.encodeComponent(agencyId)}',
+      endPoint:
+          '${AgencyEndpoints.generateLink}?agency_id=${Uri.encodeComponent(agencyId)}',
       isShowLoader: isShowLoader,
     );
 
@@ -90,7 +113,8 @@ class AgencyRepo {
     bool isShowLoader = true,
   }) async {
     final response = await _apiService.getRequest(
-      endPoint: '${AgencyEndpoints.hostList}?agency_id=${Uri.encodeComponent(agencyId)}',
+      endPoint:
+          '${AgencyEndpoints.hostList}?agency_id=${Uri.encodeComponent(agencyId)}',
       isShowLoader: isShowLoader,
     );
 

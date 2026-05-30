@@ -57,7 +57,8 @@ class AgencyHostOnboardingController extends GetxController {
 
   Future<void> pickBirthday(BuildContext context) async {
     final now = DateTime.now();
-    final initial = selectedBirthday.value ?? DateTime(now.year - 22, now.month, now.day);
+    final initial =
+        selectedBirthday.value ?? DateTime(now.year - 22, now.month, now.day);
     final picked = await showDatePicker(
       context: context,
       initialDate: initial,
@@ -158,37 +159,50 @@ class AgencyHostOnboardingController extends GetxController {
     }
 
     isSubmitLoading.value = true;
-    final phoneNum = whatsAppController.text.trim();
+    final whatsapp = whatsAppController.text.trim();
     final response = await _agencyRepo.hostOnboarding(
       agencyCode: agencyCodeController.text.trim(),
-      name: hostNameController.text.trim(),
-      phone: phoneNum,
+      hostName: hostNameController.text.trim(),
+      gmail: gmailController.text.trim(),
+      whatsapp: whatsapp,
+      category: selectedCategory.value!.apiValue,
       hostRealPhoto: hostPhoto.value!,
+      birthday: selectedBirthday.value?.toIso8601String(),
+      hostIdNumber: hostIdController.text.trim(),
       isShowLoader: false,
     );
     isSubmitLoading.value = false;
 
     if (!context.mounted) return;
 
-    if (response != null && (response['statusCode'] == 1 || response['statusCode'] == 200 || response['statusCode'] == 201)) {
+    if (response != null &&
+        (response['statusCode'] == 1 ||
+            response['statusCode'] == 200 ||
+            response['statusCode'] == 201)) {
       final appData = response['data'];
-      final appId = appData != null && appData is Map ? (appData['_id'] ?? appData['id'] ?? 'APP-90210') : 'APP-90210';
+      final appId = appData != null && appData is Map
+          ? (appData['_id'] ?? appData['id'] ?? 'APP-90210')
+          : 'APP-90210';
       await CommonGiffyDialog.showSuccess(
         context,
         title: 'Application Submitted',
-        subtitle: response['message'] ?? 'Your host application has been submitted successfully!',
+        subtitle:
+            response['message'] ??
+            'Your host application has been submitted successfully!',
         buttonText: 'Check Status',
         gifAssetPath: kGifCongratulation,
         onPressed: () {
           Get.back<void>(); // Dismiss dialog
-          Get.offNamed(Routes.AGENCY_HOST_STATUS, arguments: {
-            'application_id': appId.toString(),
-            'phone': phoneNum,
-          });
+          Get.offNamed(
+            Routes.AGENCY_HOST_STATUS,
+            arguments: {'application_id': appId.toString(), 'phone': whatsapp},
+          );
         },
       );
     } else {
-      final msg = response?['message'] ?? 'Failed to submit host onboarding application';
+      final msg =
+          response?['message'] ??
+          'Failed to submit host onboarding application';
       AppToast.showError(context, msg.toString());
     }
   }

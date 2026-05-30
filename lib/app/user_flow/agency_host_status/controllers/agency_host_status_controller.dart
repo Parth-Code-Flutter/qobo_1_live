@@ -19,18 +19,24 @@ class AgencyHostStatusController extends GetxController {
     } else {
       applicationId.value = 'APP-0000';
     }
-    
-    if (phone.value.isNotEmpty) {
+
+    if (applicationId.value.isNotEmpty || phone.value.isNotEmpty) {
       fetchStatus();
     }
   }
 
   Future<void> fetchStatus() async {
-    if (phone.value.isEmpty) return;
+    if (applicationId.value.isEmpty && phone.value.isEmpty) return;
     try {
       isLoading.value = true;
-      final response = await _agencyRepo.hostVerifyStatus(phone: phone.value, isShowLoader: false);
-      if (response != null && response['statusCode'] == 1 && response['data'] != null) {
+      final response = await _agencyRepo.hostVerifyStatus(
+        applicationId: applicationId.value,
+        phone: phone.value,
+        isShowLoader: false,
+      );
+      if (response != null &&
+          response['statusCode'] == 1 &&
+          response['data'] != null) {
         final data = response['data'];
         if (data is Map) {
           status.value = data['status']?.toString() ?? 'Under Review';
