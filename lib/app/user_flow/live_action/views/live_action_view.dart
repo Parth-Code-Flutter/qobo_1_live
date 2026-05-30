@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
@@ -23,30 +21,18 @@ class LiveActionView extends GetView<LiveActionController> {
 
   /// Figma: 1 center + 3 inner ring + 4 outer ring (8 listeners).
   static const _orbitParticipants = <_OrbitSeat>[
-    _OrbitSeat('Afrin Sabila', 'ID-1245', '12', kImgTemp2, _SeatMic.active),
-    _OrbitSeat('Afrin Sabila', 'ID-1245', '12', kImgTemp3, _SeatMic.muted),
-    _OrbitSeat('Afrin Sabila', 'ID-1245', '12', kImgTemp4, _SeatMic.idle),
-    _OrbitSeat('Afrin Sabila', 'ID-1245', '12', kImgTemp5, _SeatMic.muted),
-    _OrbitSeat('Afrin Sabila', 'ID-1245', '12', kImgTemp2, _SeatMic.idle),
-    _OrbitSeat('Afrin Sabila', 'ID-1245', '12', kImgTemp3, _SeatMic.muted),
-    _OrbitSeat('Afrin Sabila', 'ID-1245', '12', kImgTemp4, _SeatMic.idle),
-    _OrbitSeat('Afrin Sabila', 'ID-1245', '12', kImgTemp5, _SeatMic.muted),
-  ];
-
-  /// Alignment positions on the orbit stack (Figma concentric layout).
-  static const _orbitSeatAlignments = <Alignment>[
-    Alignment(0, -0.24),
-    Alignment(-0.50, 0.02),
-    Alignment(0, 0.22),
-    Alignment(0.50, 0.02),
-    Alignment(-0.78, 0.44),
-    Alignment(-0.30, 0.62),
-    Alignment(0.30, 0.62),
-    Alignment(0.78, 0.44),
+    _OrbitSeat('Afrin Sabila', '12', kImgTemp2, _SeatMic.active),
+    _OrbitSeat('Afrin Sabila', '12', kImgTemp3, _SeatMic.muted),
+    _OrbitSeat('Afrin Sabila', '12', kImgTemp4, _SeatMic.idle),
+    _OrbitSeat('Afrin Sabila', '12', kImgTemp5, _SeatMic.muted),
+    _OrbitSeat('Afrin Sabila', '12', kImgTemp2, _SeatMic.idle),
+    _OrbitSeat('Afrin Sabila', '12', kImgTemp3, _SeatMic.muted),
+    _OrbitSeat('Afrin Sabila', '12', kImgTemp4, _SeatMic.idle),
+    _OrbitSeat('Afrin Sabila', '12', kImgTemp5, _SeatMic.muted),
   ];
 
   static const _activityLines = <_ActivityLine>[
-    _ActivityLine('Jessscia sent a flower', kImgTemp3, '🌸'),
+    _ActivityLine('Jessica sent a flower', kImgTemp3, '🌸'),
     _ActivityLine('Jenifer Sent a flower', kImgTemp4, '🌸'),
   ];
 
@@ -66,15 +52,14 @@ class LiveActionView extends GetView<LiveActionController> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _header(context),
-            Spacing.v6,
-            _announcementBar(),
             Spacing.v8,
-            _roomActionPills(),
+            _announcementBar(),
+            Spacing.v6,
             Expanded(child: _stageArea(context)),
             _activityFeed(),
-            Spacing.v6,
+            Spacing.v8,
             _compactAdBanner(),
-            Spacing.v6,
+            Spacing.v8,
             _bottomChatBar(context),
             SizedBox(height: MediaQuery.paddingOf(context).bottom + 76),
           ],
@@ -85,7 +70,7 @@ class LiveActionView extends GetView<LiveActionController> {
 
   Widget _header(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(6, 4, 10, 0),
+      padding: const EdgeInsets.fromLTRB(10, 6, 12, 0),
       child: Row(
         children: [
           IconButton(
@@ -96,15 +81,16 @@ class LiveActionView extends GetView<LiveActionController> {
               size: 20,
             ),
           ),
+          Spacing.h4,
           ClipOval(
             child: Image.asset(
               kImgTemp2,
-              width: 40,
-              height: 40,
+              width: 42,
+              height: 42,
               fit: BoxFit.cover,
             ),
           ),
-          Spacing.h8,
+          Spacing.h10,
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -124,9 +110,9 @@ class LiveActionView extends GetView<LiveActionController> {
               ],
             ),
           ),
-          _headerIconButton(Icons.ios_share_rounded),
-          Spacing.h6,
           _viewerPill(),
+          Spacing.h6,
+          _roomMenuButton(),
           Spacing.h6,
           _headerIconButton(Icons.power_settings_new_rounded),
         ],
@@ -136,11 +122,11 @@ class LiveActionView extends GetView<LiveActionController> {
 
   Widget _headerIconButton(IconData icon) {
     return Container(
-      width: 34,
-      height: 34,
+      width: 36,
+      height: 36,
       decoration: BoxDecoration(
         color: LiveActionColors.pillFill,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: LiveActionColors.pillBorder, width: 0.8),
       ),
       child: Icon(icon, color: kColorWhite, size: 18),
@@ -149,11 +135,11 @@ class LiveActionView extends GetView<LiveActionController> {
 
   Widget _viewerPill() {
     return Container(
-      height: 34,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
+      height: 36,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         color: LiveActionColors.pillFill,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: LiveActionColors.pillBorder, width: 0.8),
       ),
       child: Row(
@@ -176,12 +162,48 @@ class LiveActionView extends GetView<LiveActionController> {
     );
   }
 
+  Widget _roomMenuButton() {
+    return PopupMenuButton<String>(
+      padding: EdgeInsets.zero,
+      offset: const Offset(0, 42),
+      color: const Color(0xFF35184C),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      itemBuilder: (context) => const [
+        PopupMenuItem(
+          value: 'share',
+          child: _RoomMenuItem(icon: Icons.ios_share_rounded, label: 'Share'),
+        ),
+        PopupMenuItem(
+          value: 'settings',
+          child: _RoomMenuItem(icon: Icons.settings_rounded, label: 'Room Set'),
+        ),
+        PopupMenuItem(
+          value: 'ranking',
+          child: _RoomMenuItem(
+            icon: Icons.calendar_month_rounded,
+            label: 'Ranking',
+          ),
+        ),
+      ],
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: LiveActionColors.pillFill,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: LiveActionColors.pillBorder, width: 0.8),
+        ),
+        child: const Icon(Icons.more_horiz_rounded, color: kColorWhite),
+      ),
+    );
+  }
+
   Widget _announcementBar() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
-        height: 36,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        height: 38,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
           color: LiveActionColors.announcementFill,
           borderRadius: BorderRadius.circular(20),
@@ -194,7 +216,7 @@ class LiveActionView extends GetView<LiveActionController> {
             Expanded(
               child: AppText(
                 text: _announcement,
-                fontSize: TextStyles.k10FontSize,
+                fontSize: TextStyles.k12FontSize,
                 color: kColorWhite,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -211,221 +233,270 @@ class LiveActionView extends GetView<LiveActionController> {
     );
   }
 
-  Widget _roomActionPills() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      child: Row(
-        children: [
-          Expanded(child: _actionPill('Room Set', Icons.settings_rounded)),
-          Spacing.h10,
-          Expanded(child: _actionPill('Ranking', Icons.calendar_month_rounded)),
-        ],
-      ),
-    );
-  }
-
-  Widget _actionPill(String label, IconData icon) {
-    return Container(
-      height: 38,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        color: LiveActionColors.pillFill,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: LiveActionColors.pillBorder, width: 0.9),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: kColorWhite, size: 16),
-          const SizedBox(width: 5),
-          Flexible(
-            child: SemiBoldText(
-              text: label,
-              fontSize: TextStyles.k12FontSize,
-              color: kColorWhite,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              align: TextAlign.center,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _stageArea(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final w = constraints.maxWidth;
-
-        return Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _openSeat(),
-                  SizedBox(width: w * 0.08),
-                  _hostSeat(),
-                  SizedBox(width: w * 0.08),
-                  _openSeat(),
-                ],
-              ),
-            ),
-            const SizedBox(height: 2),
-            Expanded(
-              child: Stack(
-                fit: StackFit.expand,
-                clipBehavior: Clip.none,
-                children: [
-                  const Positioned.fill(
-                    child: CustomPaint(painter: _OrbitRingsPainter()),
+        final stageHeight = constraints.maxHeight.clamp(318.0, 360.0);
+        return Align(
+          alignment: Alignment.topCenter,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            child: SizedBox(
+              height: stageHeight,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(28),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      kColorWhite.withValues(alpha: 0.14),
+                      kColorBlack.withValues(alpha: 0.18),
+                    ],
                   ),
-                  for (var i = 0; i < _orbitSeatAlignments.length; i++)
-                    Align(
-                      alignment: _orbitSeatAlignments[i],
-                      child: _orbitSeatTile(_orbitParticipants[i]),
+                  border: Border.all(
+                    color: kColorWhite.withValues(alpha: 0.16),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: kColorBlack.withValues(alpha: 0.18),
+                      blurRadius: 22,
+                      offset: const Offset(0, 14),
                     ),
-                ],
+                  ],
+                ),
+                child: LayoutBuilder(
+                  builder: (context, cardConstraints) {
+                    final tileWidth = (cardConstraints.maxWidth - 30) / 4;
+                    return Column(
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(child: _openSeatCompact()),
+                            Expanded(flex: 2, child: _hostSpotlight()),
+                            Expanded(child: _openSeatCompact()),
+                          ],
+                        ),
+                        Spacing.v8,
+                        Row(
+                          children: [
+                            const SemiBoldText(
+                              text: 'Speakers',
+                              fontSize: TextStyles.k12FontSize,
+                              color: kColorWhite,
+                            ),
+                            Spacing.h8,
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: const BoxDecoration(
+                                color: LiveActionColors.micActive,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: LiveActionColors.micActive.withValues(
+                                  alpha: 0.14,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const SemiBoldText(
+                                text: '8 online',
+                                fontSize: 9,
+                                color: LiveActionColors.micActive,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Spacing.v8,
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            for (final seat in _orbitParticipants)
+                              _stageSeatBubble(seat, tileWidth),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
-          ],
+          ),
         );
       },
     );
   }
 
-  Widget _hostSeat() {
+  Widget _hostSpotlight() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            Container(
+              width: 82,
+              height: 82,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    LiveActionColors.micActive.withValues(alpha: 0.25),
+                    kColorWhite.withValues(alpha: 0.04),
+                  ],
+                ),
+              ),
+            ),
+            const Positioned(
+              top: 0,
+              child: Icon(
+                Icons.workspace_premium_rounded,
+                color: LiveActionColors.crownGold,
+                size: 22,
+              ),
+            ),
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: kColorWhite, width: 2.4),
+                boxShadow: [
+                  BoxShadow(
+                    color: kColorBlack.withValues(alpha: 0.28),
+                    blurRadius: 14,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: ClipOval(child: Image.asset(kImgTemp2, fit: BoxFit.cover)),
+            ),
+            Positioned(
+              right: 27,
+              bottom: 8,
+              child: _micBadge(_SeatMic.active, size: 22),
+            ),
+          ],
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+          decoration: BoxDecoration(
+            color: kColorWhite.withValues(alpha: 0.16),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: kColorWhite.withValues(alpha: 0.18)),
+          ),
+          child: const SemiBoldText(
+            text: 'Host',
+            fontSize: TextStyles.k12FontSize,
+            color: kColorWhite,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _openSeatCompact() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 46,
+          height: 46,
+          decoration: BoxDecoration(
+            color: kColorWhite.withValues(alpha: 0.12),
+            shape: BoxShape.circle,
+            border: Border.all(color: kColorWhite.withValues(alpha: 0.26)),
+          ),
+          child: const Icon(Icons.add_rounded, color: kColorWhite, size: 28),
+        ),
+        const SizedBox(height: 5),
+        AppText(
+          text: 'Open',
+          fontSize: TextStyles.k10FontSize,
+          color: kColorWhite.withValues(alpha: 0.74),
+          align: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  Widget _stageSeatBubble(_OrbitSeat seat, double width) {
     return SizedBox(
-      width: 76,
+      width: width,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Stack(
             clipBehavior: Clip.none,
-            alignment: Alignment.topCenter,
+            alignment: Alignment.center,
             children: [
-              const Positioned(
-                top: -12,
-                child: Icon(
-                  Icons.workspace_premium_rounded,
-                  color: LiveActionColors.crownGold,
-                  size: 28,
-                ),
-              ),
               Container(
-                width: 58,
-                height: 58,
+                width: 50,
+                height: 50,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: kColorWhite, width: 2),
+                  border: Border.all(
+                    color: seat.mic == _SeatMic.active
+                        ? LiveActionColors.micActive
+                        : kColorWhite.withValues(alpha: 0.7),
+                    width: 1.6,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: kColorBlack.withValues(alpha: 0.18),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: ClipOval(
-                  child: Image.asset(kImgTemp2, fit: BoxFit.cover),
+                  child: Image.asset(seat.imageAsset, fit: BoxFit.cover),
                 ),
               ),
               Positioned(
-                right: 0,
-                bottom: 0,
-                child: _micBadge(_SeatMic.active, size: 20),
+                left: -1,
+                top: -2,
+                child: _micBadge(seat.mic, size: 17),
+              ),
+              Positioned(
+                right: -3,
+                bottom: -4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 5,
+                    vertical: 1,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF20132E),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: LiveActionColors.diamondGold.withValues(
+                        alpha: 0.8,
+                      ),
+                    ),
+                  ),
+                  child: SemiBoldText(
+                    text: seat.diamonds,
+                    fontSize: 8,
+                    color: LiveActionColors.diamondGold,
+                  ),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-            decoration: BoxDecoration(
-              color: LiveActionColors.pillFill,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: LiveActionColors.pillBorder,
-                width: 0.6,
-              ),
-            ),
-            child: const SemiBoldText(
-              text: 'Host',
-              fontSize: TextStyles.k12FontSize,
-              color: kColorWhite,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _openSeat() {
-    return SizedBox(
-      width: 62,
-      child: Column(
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: LiveActionColors.openSeatFill,
-              border: Border.all(
-                color: kColorWhite.withValues(alpha: 0.35),
-                width: 1.2,
-              ),
-            ),
-            child: Icon(
-              Icons.add_rounded,
-              color: kColorWhite.withValues(alpha: 0.9),
-              size: 28,
-            ),
-          ),
-          Spacing.v6,
-          AppText(
-            text: 'Open Set',
-            fontSize: TextStyles.k10FontSize,
-            color: kColorWhite.withValues(alpha: 0.9),
-            align: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _orbitSeatTile(_OrbitSeat seat) {
-    return SizedBox(
-      width: 58,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 36,
-            height: 36,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: kColorWhite.withValues(alpha: 0.75),
-                      width: 1.2,
-                    ),
-                  ),
-                  child: ClipOval(
-                    child: Image.asset(seat.imageAsset, fit: BoxFit.cover),
-                  ),
-                ),
-                Positioned(
-                  left: -2,
-                  top: -2,
-                  child: _micBadge(seat.mic, size: 15),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 3),
+          const SizedBox(height: 5),
           SemiBoldText(
             text: seat.name,
             fontSize: 8,
@@ -433,36 +504,6 @@ class LiveActionView extends GetView<LiveActionController> {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             align: TextAlign.center,
-          ),
-          AppText(
-            text: seat.idLabel,
-            fontSize: 7,
-            color: kColorWhite.withValues(alpha: 0.75),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            align: TextAlign.center,
-          ),
-          const SizedBox(height: 1),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SvgPicture.asset(
-                kIconDiamond,
-                width: 9,
-                height: 8,
-                colorFilter: const ColorFilter.mode(
-                  LiveActionColors.diamondGold,
-                  BlendMode.srcIn,
-                ),
-              ),
-              const SizedBox(width: 2),
-              SemiBoldText(
-                text: seat.diamonds,
-                fontSize: 7,
-                color: LiveActionColors.diamondGold,
-              ),
-            ],
           ),
         ],
       ),
@@ -496,59 +537,98 @@ class LiveActionView extends GetView<LiveActionController> {
 
   Widget _activityFeed() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: _activityLines
-            .map(
-              (line) => Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Row(
-                  children: [
-                    ClipOval(
-                      child: Image.asset(
-                        line.avatarAsset,
-                        width: 22,
-                        height: 22,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                    Spacing.h8,
-                    Expanded(
-                      child: RichText(
-                        text: TextSpan(
-                          style: TextStyles.kRegularPoppins(
-                            fontSize: TextStyles.k10FontSize,
-                            colors: kColorWhite,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        height: 52,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: kColorBlack.withValues(alpha: 0.16),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.05)),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 62,
+              height: 34,
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.centerLeft,
+                children: [
+                  for (var i = 0; i < _activityLines.length; i++)
+                    Positioned(
+                      left: i * 22,
+                      child: Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0xFF180B2A),
+                            width: 2,
                           ),
-                          children: [
-                            TextSpan(
-                              text: line.message,
-                              style: TextStyles.kSemiBoldPoppins(
-                                fontSize: TextStyles.k10FontSize,
-                                colors: kColorWhite,
-                              ),
-                            ),
-                            TextSpan(text: ' ${line.emoji} x1'),
-                          ],
+                        ),
+                        child: ClipOval(
+                          child: Image.asset(
+                            _activityLines[i].avatarAsset,
+                            fit: BoxFit.cover,
+                          ),
                         ),
                       ),
                     ),
+                ],
+              ),
+            ),
+            Spacing.h6,
+            Expanded(
+              child: RichText(
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                text: TextSpan(
+                  style: TextStyles.kRegularPoppins(
+                    fontSize: TextStyles.k10FontSize,
+                    colors: kColorWhite,
+                  ),
+                  children: [
+                    TextSpan(
+                      text: _activityLines.first.message,
+                      style: TextStyles.kSemiBoldPoppins(
+                        fontSize: TextStyles.k10FontSize,
+                        colors: kColorWhite,
+                      ),
+                    ),
+                    TextSpan(text: ' ${_activityLines.first.emoji} x1'),
                   ],
                 ),
               ),
-            )
-            .toList(),
+            ),
+            Spacing.h8,
+            Container(
+              width: 34,
+              height: 30,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: kColorWhite.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: const SemiBoldText(
+                text: '+1',
+                fontSize: 9,
+                color: kColorWhite,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _compactAdBanner() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
-        height: 52,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        height: 54,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
           color: LiveActionColors.inputFill,
           borderRadius: BorderRadius.circular(18),
@@ -557,10 +637,12 @@ class LiveActionView extends GetView<LiveActionController> {
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+              width: 34,
+              height: 34,
+              alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: kColorPrimary,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: const SemiBoldText(
                 text: 'Ad',
@@ -612,12 +694,12 @@ class LiveActionView extends GetView<LiveActionController> {
 
   Widget _bottomChatBar(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 0, 14, 4),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
       child: Row(
         children: [
           Expanded(
             child: Container(
-              height: 44,
+              height: 46,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
                 color: LiveActionColors.inputFill,
@@ -652,7 +734,7 @@ class LiveActionView extends GetView<LiveActionController> {
             gradient: const [Color(0xFF9B5CFF), Color(0xFFFFB347)],
             icon: Icons.card_giftcard_rounded,
           ),
-          Spacing.h6,
+          Spacing.h8,
           _giftButton(
             gradient: const [Color(0xFFE53935), Color(0xFFFFCA28)],
             icon: Icons.redeem_rounded,
@@ -664,10 +746,10 @@ class LiveActionView extends GetView<LiveActionController> {
 
   Widget _giftButton({required List<Color> gradient, required IconData icon}) {
     return Container(
-      width: 44,
-      height: 44,
+      width: 46,
+      height: 46,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -688,17 +770,32 @@ class LiveActionView extends GetView<LiveActionController> {
 
 enum _SeatMic { active, muted, idle }
 
+class _RoomMenuItem extends StatelessWidget {
+  const _RoomMenuItem({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: kColorWhite, size: 18),
+        Spacing.h10,
+        SemiBoldText(
+          text: label,
+          fontSize: TextStyles.k12FontSize,
+          color: kColorWhite,
+        ),
+      ],
+    );
+  }
+}
+
 class _OrbitSeat {
-  const _OrbitSeat(
-    this.name,
-    this.idLabel,
-    this.diamonds,
-    this.imageAsset,
-    this.mic,
-  );
+  const _OrbitSeat(this.name, this.diamonds, this.imageAsset, this.mic);
 
   final String name;
-  final String idLabel;
   final String diamonds;
   final String imageAsset;
   final _SeatMic mic;
@@ -710,55 +807,4 @@ class _ActivityLine {
   final String message;
   final String avatarAsset;
   final String emoji;
-}
-
-/// Three dashed concentric rings (Figma orbit stage).
-class _OrbitRingsPainter extends CustomPainter {
-  const _OrbitRingsPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height * 0.35);
-    final radii = <double>[
-      size.width * 0.12,
-      size.width * 0.30,
-      size.width * 0.46,
-    ];
-
-    final paint = Paint()
-      ..color = LiveActionColors.orbitLine
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1
-      ..strokeCap = StrokeCap.round;
-
-    for (final r in radii) {
-      _paintDashedCircle(canvas, center, r, paint);
-    }
-  }
-
-  void _paintDashedCircle(
-    Canvas canvas,
-    Offset center,
-    double radius,
-    Paint paint,
-  ) {
-    const dashLength = 6.0;
-    const gapLength = 5.0;
-    final step = (dashLength + gapLength) / radius;
-    var angle = 0.0;
-    while (angle < 2 * math.pi) {
-      final sweep = dashLength / radius;
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        angle,
-        sweep,
-        false,
-        paint,
-      );
-      angle += step;
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _OrbitRingsPainter oldDelegate) => false;
 }
