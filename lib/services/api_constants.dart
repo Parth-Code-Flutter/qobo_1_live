@@ -82,6 +82,9 @@ class RoomEndpoints {
   /// GET /api/room/agora-token
   static const String agoraToken = '/api/room/agora-token';
 
+  /// GET /api/room/zego-token
+  static const String zegoToken = '/api/room/zego-token';
+
   /// POST /api/room/kick
   static const String kick = '/api/room/kick';
 
@@ -113,6 +116,9 @@ class AgencyEndpoints {
 
   /// GET /api/agency/revenue
   static const String revenue = '/api/agency/revenue';
+
+  /// POST /api/agency/payout
+  static const String payout = '/api/agency/payout';
 }
 
 /// Central place for economy related API endpoints.
@@ -154,6 +160,9 @@ class EconomyEndpoints {
 
   /// POST /api/economy/aristocracy/buy
   static const String buyAristocracy = '/api/economy/aristocracy/buy';
+
+  /// GET /api/economy/seller/dashboard
+  static const String sellerDashboard = '/api/economy/seller/dashboard';
 }
 
 /// Central place for PK and Call related API endpoints.
@@ -166,11 +175,20 @@ class PkEndpoints {
   /// POST /api/pk/send-request
   static const String sendRequest = '/api/pk/send-request';
 
+  /// POST /api/pk/accept-reject
+  static const String acceptReject = '/api/pk/accept-reject';
+
+  /// GET /api/pk/status
+  static const String status = '/api/pk/status';
+
   /// POST /api/pk/dating-onboarding
   static const String callOnboarding = '/api/pk/dating-onboarding';
 
   /// GET /api/pk/dating-list
   static const String callList = '/api/pk/dating-list';
+
+  /// POST /api/pk/dating-action
+  static const String datingAction = '/api/pk/dating-action';
 }
 
 /// Central place for chat related API endpoints.
@@ -190,6 +208,9 @@ class UserEndpoints {
 
   /// GET /api/user/follow-list
   static const String followList = '/api/user/follow-list';
+
+  /// GET /api/user/patti-style/:user_id
+  static const String pattiStyle = '/api/user/patti-style';
 
   /// POST /api/user/block
   static const String block = '/api/user/block';
@@ -217,6 +238,9 @@ class UserEndpoints {
 
   /// GET /api/user/visitors
   static const String visitors = '/api/user/visitors';
+
+  /// DELETE /api/user/delete
+  static const String delete = '/api/user/delete';
 }
 
 /// Central place for family related API endpoints.
@@ -254,4 +278,3 @@ class SupportEndpoints {
   /// GET /api/support/tickets
   static const String tickets = '/api/support/tickets';
 }
-

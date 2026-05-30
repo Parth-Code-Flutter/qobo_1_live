@@ -11,8 +11,12 @@ class ResetPasswordRequestModel {
   final String password;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'phone': phone,
-        'otp': otp,
-        'password': password,
-      };
+    'phone': phone,
+    // Current backend documentation uses code/newPassword. Keep otp/password
+    // aliases while older deployments finish migrating.
+    'code': otp,
+    'otp': otp,
+    'newPassword': password,
+    'password': password,
+  };
 }

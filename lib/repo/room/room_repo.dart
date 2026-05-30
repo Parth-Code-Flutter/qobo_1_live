@@ -38,13 +38,24 @@ class RoomRepo {
 
   /// Calls `GET /api/room/list` to fetch active live rooms.
   Future<Map<String, dynamic>?> listActiveRooms({
-    required String type, // 'AUDIO' or 'VIDEO'
+    String? type, // 'audio'/'video' or legacy 'AUDIO'/'VIDEO'
     String? country,
+    String? category,
     bool isShowLoader = true,
   }) async {
-    var path = '${RoomEndpoints.listActiveRooms}?type=$type';
+    var path = RoomEndpoints.listActiveRooms;
+    final params = <String, String>{};
+    if (type != null && type.trim().isNotEmpty) {
+      params['type'] = type.trim();
+    }
     if (country != null && country.isNotEmpty) {
-      path += '&country=${Uri.encodeComponent(country)}';
+      params['country'] = country;
+    }
+    if (category != null && category.trim().isNotEmpty) {
+      params['category'] = category.trim();
+    }
+    if (params.isNotEmpty) {
+      path += '?${Uri(queryParameters: params).query}';
     }
 
     final response = await _apiService.getRequest(
@@ -63,9 +74,7 @@ class RoomRepo {
   }) async {
     final response = await _apiService.postRequest(
       endPoint: RoomEndpoints.joinRoom,
-      requestModel: <String, dynamic>{
-        'room_id': roomId,
-      },
+      requestModel: <String, dynamic>{'room_id': roomId},
       isShowLoader: isShowLoader,
     );
 
@@ -75,7 +84,7 @@ class RoomRepo {
 
   /// Calls `POST /api/room/mic-action` to change seat status.
   Future<Map<String, dynamic>?> micAction({
-    required String roomId,
+    String? roomId,
     required String action, // 'mute', 'unmute', 'lock', 'unlock'
     required int seatId,
     bool isShowLoader = true,
@@ -83,7 +92,7 @@ class RoomRepo {
     final response = await _apiService.postRequest(
       endPoint: RoomEndpoints.micAction,
       requestModel: <String, dynamic>{
-        'room_id': roomId,
+        if (roomId != null && roomId.trim().isNotEmpty) 'room_id': roomId,
         'action': action,
         'seat_id': seatId,
       },
@@ -101,9 +110,133 @@ class RoomRepo {
   }) async {
     final response = await _apiService.postRequest(
       endPoint: RoomEndpoints.securitySos,
+      requestModel: <String, dynamic>{'room_id': roomId},
+      isShowLoader: isShowLoader,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// Calls `GET /api/room/video-swiper` for discover video host cards.
+  Future<Map<String, dynamic>?> getVideoSwiper({
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.getRequest(
+      endPoint: RoomEndpoints.videoSwiper,
+      isShowLoader: isShowLoader,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// Calls `GET /api/room/agora-token?room_id=...`.
+  Future<Map<String, dynamic>?> getAgoraToken({
+    required String roomId,
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.getRequest(
+      endPoint:
+          '${RoomEndpoints.agoraToken}?room_id=${Uri.encodeComponent(roomId)}',
+      isShowLoader: isShowLoader,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// Calls `GET /api/room/zego-token?room_id=...`.
+  Future<Map<String, dynamic>?> getZegoToken({
+    required String roomId,
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.getRequest(
+      endPoint:
+          '${RoomEndpoints.zegoToken}?room_id=${Uri.encodeComponent(roomId)}',
+      isShowLoader: isShowLoader,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// Calls `POST /api/room/kick`.
+  Future<Map<String, dynamic>?> kickParticipant({
+    required String roomId,
+    required String targetUserId,
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: RoomEndpoints.kick,
       requestModel: <String, dynamic>{
         'room_id': roomId,
+        'target_user_id': targetUserId,
       },
+      isShowLoader: isShowLoader,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// Calls `GET /api/room/watch-history`.
+  Future<Map<String, dynamic>?> getWatchHistory({
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.getRequest(
+      endPoint: RoomEndpoints.watchHistory,
+      isShowLoader: isShowLoader,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// Calls `POST /api/room/watch-history/record`.
+  Future<Map<String, dynamic>?> recordWatchHistory({
+    required String roomId,
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: RoomEndpoints.recordWatchHistory,
+      requestModel: <String, dynamic>{'room_id': roomId},
+      isShowLoader: isShowLoader,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// Calls `GET /api/room/share?room_id=...`.
+  Future<Map<String, dynamic>?> getShareLink({
+    required String roomId,
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.getRequest(
+      endPoint:
+          '${RoomEndpoints.shareRoom}?room_id=${Uri.encodeComponent(roomId)}',
+      isShowLoader: isShowLoader,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// Calls `GET /api/room/translate?text=...&target_lang=...`.
+  Future<Map<String, dynamic>?> translateText({
+    required String text,
+    required String targetLang,
+    bool isShowLoader = true,
+  }) async {
+    final query = Uri(
+      queryParameters: <String, String>{
+        'text': text,
+        'target_lang': targetLang,
+      },
+    ).query;
+    final response = await _apiService.getRequest(
+      endPoint: '${RoomEndpoints.translateText}?$query',
       isShowLoader: isShowLoader,
     );
 

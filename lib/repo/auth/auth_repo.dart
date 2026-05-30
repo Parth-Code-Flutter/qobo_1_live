@@ -47,14 +47,19 @@ class AuthRepo {
     required String email,
     required String username,
     required String password,
+    String? phone,
+    String? gender,
     bool isShowLoader = true,
   }) async {
     final response = await _apiService.postRequest(
       endPoint: AuthEndpoints.register,
       requestModel: <String, dynamic>{
+        'name': username,
         'email': email,
         'username': username,
+        if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
         'password': password,
+        if (gender != null && gender.trim().isNotEmpty) 'gender': gender.trim(),
       },
       isShowLoader: isShowLoader,
       isLoginCall: true,
@@ -257,7 +262,8 @@ class AuthRepo {
     bool isShowLoader = false,
   }) async {
     final response = await _apiService.getRequest(
-      endPoint: '${AuthEndpoints.searchUsers}?query=${Uri.encodeComponent(query)}',
+      endPoint:
+          '${AuthEndpoints.searchUsers}?query=${Uri.encodeComponent(query)}',
       isShowLoader: isShowLoader,
     );
 
@@ -273,10 +279,7 @@ class AuthRepo {
   }) async {
     final response = await _apiService.postRequest(
       endPoint: AuthEndpoints.followUnfollow,
-      requestModel: {
-        'target_id': targetId,
-        'action': action,
-      },
+      requestModel: {'target_id': targetId, 'action': action},
       isShowLoader: isShowLoader,
     );
 

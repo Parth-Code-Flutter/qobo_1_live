@@ -134,4 +134,19 @@ class AgencyRepo {
     if (response == null) return null;
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
+
+  /// Calls `POST /api/agency/payout` to process agency commissions payout.
+  Future<Map<String, dynamic>?> processPayout({
+    Map<String, dynamic> requestModel = const <String, dynamic>{},
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: AgencyEndpoints.payout,
+      requestModel: requestModel,
+      isShowLoader: isShowLoader,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
 }
