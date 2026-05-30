@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -146,37 +147,68 @@ class _DiscoverVideoRoomViewState extends State<DiscoverVideoRoomView> {
 
   _VideoRoomTileData _tileFromRoom(Map<String, dynamic> room, int index) {
     const fallbackImages = [kImgTemp2, kImgTemp3, kImgTemp4, kImgTemp5];
+    final host = room['host'];
+    final hostMap = host is Map ? host : const <String, dynamic>{};
     final title =
-        room['name']?.toString() ??
-        room['title']?.toString() ??
-        room['hostName']?.toString() ??
+        _text(room['name']) ??
+        _text(room['title']) ??
+        _text(room['hostName']) ??
         'Live Video Room';
-    final host =
-        room['hostName']?.toString() ??
-        room['host']?.toString() ??
-        room['userName']?.toString() ??
+    final hostName =
+        _text(room['hostName']) ??
+        _text(hostMap['name']) ??
+        _text(room['userName']) ??
         title;
     final viewers =
-        room['viewerCount']?.toString() ??
-        room['watching']?.toString() ??
-        room['_count']?.toString() ??
+        _text(room['viewerCount']) ??
+        _text(room['onlineCount']) ??
+        _text(room['heatScore']) ??
+        _text(room['audienceCount']) ??
+        _text(room['watching']) ??
+        _text(room['_count']) ??
         '0';
+    final image =
+        ApiImageUtils.normalize(
+          _text(room['coverImage']) ??
+              _text(room['image']) ??
+              _text(room['thumbnail']) ??
+              _text(room['poster']),
+        ) ??
+        fallbackImages[index % fallbackImages.length];
+    final avatar =
+        ApiImageUtils.normalize(
+          _text(room['hostDisplayPicture']) ??
+              _text(room['hostAvatar']) ??
+              _text(hostMap['displayPicture']),
+        ) ??
+        fallbackImages[(index + 1) % fallbackImages.length];
     return (
       collapsedTitle: title,
-      hostName: host,
+      hostName: hostName,
       streamSubtitle:
-          room['bio']?.toString() ??
-          room['category']?.toString() ??
-          'Live video stream',
+          _text(room['bio']) ?? _text(room['category']) ?? 'Live video stream',
       watchingLabel: '$viewers watching',
       viewerCountShort: viewers,
-      image: fallbackImages[index % fallbackImages.length],
-      avatar: fallbackImages[(index + 1) % fallbackImages.length],
+      image: image,
+      avatar: avatar,
       tags: [
         '#${(room['type']?.toString() ?? 'video').toUpperCase()}',
-        if (room['country'] != null) '#${room['country']}',
+        if (_text(room['countryName']) != null) '#${room['countryName']}',
+        if (_text(room['countryName']) == null &&
+            _text(room['countryCode']) != null)
+          '#${room['countryCode']}',
+        if (_text(room['countryName']) == null &&
+            _text(room['countryCode']) == null &&
+            _text(room['country']) != null)
+          '#${room['country']}',
       ],
     );
+  }
+
+  String? _text(dynamic value) {
+    final text = value?.toString().trim();
+    if (text == null || text.isEmpty || text == 'null') return null;
+    return text;
   }
 }
 
@@ -241,11 +273,10 @@ class _CollapsedTile extends StatelessWidget {
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: Image.asset(
-                        data.image,
+                      child: _RoomImage(
+                        path: data.image,
                         width: thumbSize,
                         height: thumbSize,
-                        fit: BoxFit.cover,
                       ),
                     ),
                     Positioned(left: 6, top: 6, child: _miniLiveBadge()),
@@ -301,11 +332,10 @@ class _CollapsedTile extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         ClipOval(
-                          child: Image.asset(
-                            data.avatar,
+                          child: _RoomImage(
+                            path: data.avatar,
                             width: 26,
                             height: 26,
-                            fit: BoxFit.cover,
                           ),
                         ),
                         Spacing.h8,
@@ -385,7 +415,7 @@ class _ExpandedHeroCard extends StatelessWidget {
             GestureDetector(
               onTap: onCollapse,
               behavior: HitTestBehavior.opaque,
-              child: Image.asset(data.image, fit: BoxFit.cover),
+              child: _RoomImage(path: data.image, fit: BoxFit.cover),
             ),
             Positioned.fill(
               child: IgnorePointer(
@@ -564,6 +594,48 @@ class _TagChip extends StatelessWidget {
         fontSize: TextStyles.k12FontSize,
         color: kColorWhite.withValues(alpha: 0.9),
       ),
+    );
+  }
+}
+
+class _RoomImage extends StatelessWidget {
+  const _RoomImage({
+    required this.path,
+    this.width,
+    this.height,
+    this.fit = BoxFit.cover,
+  });
+
+  final String path;
+  final double? width;
+  final double? height;
+  final BoxFit fit;
+
+  @override
+  Widget build(BuildContext context) {
+    if (path.startsWith('http')) {
+      return Image.network(
+        path,
+        width: width,
+        height: height,
+        fit: fit,
+        errorBuilder: (_, __, ___) => _fallback(),
+      );
+    }
+    return Image.asset(
+      path,
+      width: width,
+      height: height,
+      fit: fit,
+      errorBuilder: (_, __, ___) => _fallback(),
+    );
+  }
+
+  Widget _fallback() {
+    return Container(
+      width: width,
+      height: height,
+      color: kColorVideoListTileBg,
     );
   }
 }

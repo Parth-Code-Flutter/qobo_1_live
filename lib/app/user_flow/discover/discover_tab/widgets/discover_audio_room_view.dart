@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -159,11 +160,14 @@ class DiscoverAudioRoomView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final participants = rooms.isNotEmpty
-        ? List<_AudioParticipant>.generate(
-            rooms.length,
-            (index) => _participantFromRoom(rooms[index], index),
-          )
+        ? _participantsFromRooms(rooms)
         : _participants;
+    final othersAvatarAssets = rooms.isNotEmpty
+        ? _othersFromRooms(rooms)
+        : _othersAvatarAssets;
+    final overflowCount = rooms.isNotEmpty
+        ? _overflowCountFromRooms(rooms)
+        : 52;
 
     if (isLoading) {
       return const Center(
@@ -207,8 +211,8 @@ class DiscoverAudioRoomView extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(18, 8, 18, 28),
                 child: _OthersInRoomSection(
-                  avatarAssets: _othersAvatarAssets,
-                  overflowCount: 52,
+                  avatarAssets: othersAvatarAssets,
+                  overflowCount: overflowCount,
                 ),
               ),
             ),
@@ -218,13 +222,69 @@ class DiscoverAudioRoomView extends StatelessWidget {
     );
   }
 
+  List<_AudioParticipant> _participantsFromRooms(
+    List<Map<String, dynamic>> rooms,
+  ) {
+    final firstRoom = rooms.first;
+    final seats = firstRoom['seats'] ?? firstRoom['participants'];
+    if (seats is List && seats.isNotEmpty) {
+      final seatParticipants = <_AudioParticipant>[];
+      for (var i = 0; i < seats.length; i++) {
+        final seat = seats[i];
+        if (seat is Map) {
+          final occupant = seat['occupant'];
+          if (occupant is Map) {
+            seatParticipants.add(_participantFromSeat(seat, occupant, i));
+          }
+        }
+      }
+      if (seatParticipants.isNotEmpty) return seatParticipants;
+    }
+
+    return List<_AudioParticipant>.generate(
+      rooms.length,
+      (index) => _participantFromRoom(rooms[index], index),
+    );
+  }
+
+  _AudioParticipant _participantFromSeat(Map seat, Map occupant, int index) {
+    const fallbackImages = [kImgTemp2, kImgTemp3, kImgTemp4, kImgTemp5];
+    final image =
+        ApiImageUtils.normalize(occupant['displayPicture']?.toString()) ??
+        fallbackImages[index % fallbackImages.length];
+    final isMuted = seat['isMuted'] == true;
+    final isHost = index == 0;
+    return _AudioParticipant(
+      name: occupant['name']?.toString() ?? 'Member',
+      role: isHost ? 'Host' : 'Member Listener',
+      imageAsset: image,
+      mic: isHost
+          ? _AudioMicVisual.speaking
+          : isMuted
+          ? _AudioMicVisual.muted
+          : _AudioMicVisual.unmuted,
+    );
+  }
+
   _AudioParticipant _participantFromRoom(Map<String, dynamic> room, int index) {
     const fallbackImages = [kImgTemp2, kImgTemp3, kImgTemp4, kImgTemp5];
+    final host = room['host'];
+    final hostMap = host is Map ? host : const <String, dynamic>{};
     final name =
         room['hostName']?.toString() ??
+        hostMap['name']?.toString() ??
         room['name']?.toString() ??
         room['title']?.toString() ??
         'Audio Room';
+    final image =
+        ApiImageUtils.normalize(
+          room['hostDisplayPicture']?.toString() ??
+              room['hostAvatar']?.toString() ??
+              hostMap['displayPicture']?.toString() ??
+              room['coverImage']?.toString() ??
+              room['image']?.toString(),
+        ) ??
+        fallbackImages[index % fallbackImages.length];
     final isSpeaking = index == 1;
     return _AudioParticipant(
       name: name,
@@ -233,9 +293,36 @@ class DiscoverAudioRoomView extends StatelessWidget {
           : isSpeaking
           ? 'Speaking'
           : 'Member Listener',
-      imageAsset: fallbackImages[index % fallbackImages.length],
+      imageAsset: image,
       mic: isSpeaking ? _AudioMicVisual.speaking : _AudioMicVisual.unmuted,
     );
+  }
+
+  List<String> _othersFromRooms(List<Map<String, dynamic>> rooms) {
+    final avatars = <String>[];
+    for (final room in rooms) {
+      final seats = room['seats'] ?? room['participants'];
+      if (seats is List) {
+        for (final seat in seats) {
+          if (seat is Map && seat['occupant'] is Map) {
+            final occupant = seat['occupant'] as Map;
+            final image = ApiImageUtils.normalize(
+              occupant['displayPicture']?.toString(),
+            );
+            if (image != null) avatars.add(image);
+          }
+        }
+      }
+    }
+    return avatars.isEmpty ? _othersAvatarAssets : avatars.take(5).toList();
+  }
+
+  int _overflowCountFromRooms(List<Map<String, dynamic>> rooms) {
+    final first = rooms.first;
+    return int.tryParse(
+          '${first['listenerCount'] ?? first['audienceCount'] ?? first['viewerCount'] ?? rooms.length}',
+        ) ??
+        rooms.length;
   }
 }
 
@@ -324,12 +411,21 @@ class _AvatarRing extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final inner = ClipOval(
-      child: Image.asset(
-        imageAsset,
-        width: _kAudioAvatarSize,
-        height: _kAudioAvatarSize,
-        fit: BoxFit.cover,
-      ),
+      child: imageAsset.startsWith('http')
+          ? Image.network(
+              imageAsset,
+              width: _kAudioAvatarSize,
+              height: _kAudioAvatarSize,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _fallback(),
+            )
+          : Image.asset(
+              imageAsset,
+              width: _kAudioAvatarSize,
+              height: _kAudioAvatarSize,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _fallback(),
+            ),
     );
 
     if (!speaking) return inner;
@@ -342,6 +438,14 @@ class _AvatarRing extends StatelessWidget {
         border: Border.all(color: kColorAudioSpeakingGreen, width: 2),
       ),
       child: Center(child: inner),
+    );
+  }
+
+  Widget _fallback() {
+    return Container(
+      width: _kAudioAvatarSize,
+      height: _kAudioAvatarSize,
+      color: kColorAudioMicBadgeBg,
     );
   }
 }
@@ -502,10 +606,23 @@ class _OthersInRoomSection extends StatelessWidget {
                           ),
                         ),
                         child: ClipOval(
-                          child: Image.asset(
-                            avatarAssets[i],
-                            fit: BoxFit.cover,
-                          ),
+                          child: avatarAssets[i].startsWith('http')
+                              ? Image.network(
+                                  avatarAssets[i],
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) =>
+                                      const ColoredBox(
+                                        color: kColorAudioMicBadgeBg,
+                                      ),
+                                )
+                              : Image.asset(
+                                  avatarAssets[i],
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) =>
+                                      const ColoredBox(
+                                        color: kColorAudioMicBadgeBg,
+                                      ),
+                                ),
                         ),
                       ),
                     ),

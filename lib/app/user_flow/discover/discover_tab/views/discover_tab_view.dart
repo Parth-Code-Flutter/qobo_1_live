@@ -5,6 +5,7 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
+import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -535,16 +536,9 @@ class DiscoverTabView extends StatelessWidget {
     if (avatar == null || avatar.isEmpty) {
       return Image.asset(fallbackImage, fit: BoxFit.cover);
     }
-    if (!avatar.startsWith('http')) {
-      return Image.network(
-        'https://my-backend-api-960q.onrender.com$avatar',
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) =>
-            Image.asset(fallbackImage, fit: BoxFit.cover),
-      );
-    }
+    final normalized = ApiImageUtils.normalize(avatar);
     return Image.network(
-      avatar,
+      normalized ?? avatar,
       fit: BoxFit.cover,
       errorBuilder: (_, __, ___) =>
           Image.asset(fallbackImage, fit: BoxFit.cover),
@@ -715,9 +709,7 @@ class DiscoverTabView extends StatelessWidget {
                           name.isNotEmpty ? name[0].toUpperCase() : 'U',
                         )
                       : Image.network(
-                          avatar.startsWith('http')
-                              ? avatar
-                              : 'https://my-backend-api-960q.onrender.com$avatar',
+                          ApiImageUtils.normalize(avatar) ?? avatar,
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => _initialsAvatar(
                             name.isNotEmpty ? name[0].toUpperCase() : 'U',

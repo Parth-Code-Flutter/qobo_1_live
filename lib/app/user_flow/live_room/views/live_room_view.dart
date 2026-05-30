@@ -49,7 +49,7 @@ class LiveRoomView extends StatelessWidget {
                       Spacing.v12,
                       _filterAndCategoryRow(categories),
                       Spacing.v12,
-                      _topBanner(),
+                      _topBanner(controller),
                       Spacing.v12,
                     ],
                   ),
@@ -88,10 +88,16 @@ class LiveRoomView extends StatelessWidget {
                           final room = controller.rooms[index];
                           return GestureDetector(
                             onTap: () {
-                              Get.toNamed('/live-broadcast', arguments: {
-                                'isHost': false,
-                                'roomType': room['badge'] == 'AUDIO' ? 'AUDIO' : 'VIDEO',
-                              });
+                              Get.toNamed(
+                                '/live-broadcast',
+                                arguments: {
+                                  'isHost': false,
+                                  'roomType': room['roomType'] == 'AUDIO'
+                                      ? 'AUDIO'
+                                      : 'VIDEO',
+                                  'roomData': room['roomData'],
+                                },
+                              );
                             },
                             child: CommonLiveRoomWidget(
                               imageUrl: room['image'] as String,
@@ -116,24 +122,38 @@ class LiveRoomView extends StatelessWidget {
   }
 
   /// Promo banner shown above the live-room listing.
-  Widget _topBanner() {
+  Widget _topBanner(LiveRoomController controller) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(14),
       child: AspectRatio(
         aspectRatio: 3.2,
-        child: Image.asset(
-          kImgTemp1,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(
-            color: const Color(0x66351B6C),
-            alignment: Alignment.center,
-            child: SemiBoldText(
-              text: 'Celebration Banner',
-              fontSize: TextStyles.k14FontSize,
-              color: kColorWhite,
-            ),
-          ),
-        ),
+        child: Obx(() {
+          final bannerUrl = controller.promoBannerImageUrl.value;
+          if (bannerUrl != null && bannerUrl.isNotEmpty) {
+            return Image.network(
+              bannerUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _bannerFallback(),
+            );
+          }
+          return Image.asset(
+            kImgTemp1,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _bannerFallback(),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _bannerFallback() {
+    return Container(
+      color: const Color(0x66351B6C),
+      alignment: Alignment.center,
+      child: const SemiBoldText(
+        text: 'Celebration Banner',
+        fontSize: TextStyles.k14FontSize,
+        color: kColorWhite,
       ),
     );
   }

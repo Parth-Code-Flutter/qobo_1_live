@@ -1,18 +1,23 @@
 import 'package:get/get.dart';
-import 'package:qobo_one_live/repo/room/room_repo.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/repo/activity/activity_repo.dart';
+import 'package:qobo_one_live/repo/room/room_repo.dart';
+import 'package:qobo_one_live/utils/api_image_utils.dart';
 
 /// Controller for live room flow.
 class LiveRoomController extends GetxController {
   final RoomRepo _roomRepo = RoomRepo();
+  final ActivityRepo _activityRepo = ActivityRepo();
 
   int selectedCategoryIndex = 0;
   final isLoading = false.obs;
   final rooms = <Map<String, dynamic>>[].obs;
+  final promoBannerImageUrl = RxnString();
 
   @override
   void onInit() {
     super.onInit();
+    fetchPromoBanner();
     fetchActiveRooms();
   }
 
@@ -23,90 +28,122 @@ class LiveRoomController extends GetxController {
     fetchActiveRooms();
   }
 
+  Future<void> fetchPromoBanner() async {
+    final response = await _activityRepo.getActivities(isShowLoader: false);
+    if (response == null || response['statusCode'] != 1) return;
+    final data = response['data'];
+    if (data is! List) return;
+
+    final events = data.whereType<Map>().toList()
+      ..sort((a, b) {
+        final aPriority = int.tryParse('${a['priority'] ?? 999}') ?? 999;
+        final bPriority = int.tryParse('${b['priority'] ?? 999}') ?? 999;
+        return aPriority.compareTo(bPriority);
+      });
+
+    for (final event in events) {
+      final placement = event['placement']?.toString().toLowerCase();
+      final status = event['status']?.toString().toLowerCase();
+      final image = ApiImageUtils.normalize(event['imageUrl']?.toString());
+      final isLiveRoomsPlacement =
+          placement == null || placement.isEmpty || placement == 'live_rooms';
+      if (isLiveRoomsPlacement && status == 'active' && image != null) {
+        promoBannerImageUrl.value = image;
+        return;
+      }
+    }
+  }
+
   Future<void> fetchActiveRooms() async {
     try {
       isLoading.value = true;
-      // Map category tab to room type or country filter
-      // Tab 0: Sab (All, load VIDEO by default)
-      // Tab 1: Shresth (Load AUDIO rooms)
-      // Tab 2: Naya (Load VIDEO rooms)
-      // Tab 3: Bangladesh (Load with country filter)
-      String type = 'VIDEO';
       String? country;
-      
-      if (selectedCategoryIndex == 1) {
-        type = 'AUDIO';
+      String? category;
+
+      if (selectedCategoryIndex == 0) {
+        category = 'Sab';
+      } else if (selectedCategoryIndex == 1) {
+        category = 'Shresth';
+      } else if (selectedCategoryIndex == 2) {
+        category = 'Naya';
       } else if (selectedCategoryIndex == 3) {
         country = 'BD';
       }
 
-      final response = await _roomRepo.listActiveRooms(type: type, country: country, isShowLoader: false);
-      
+      var response = await _roomRepo.listActiveRooms(
+        country: country,
+        category: category,
+        isShowLoader: false,
+      );
+      if (selectedCategoryIndex == 3 && !_hasRoomData(response)) {
+        response = await _roomRepo.listActiveRooms(
+          country: 'Bangladesh',
+          isShowLoader: false,
+        );
+      }
+
       final List<Map<String, dynamic>> fetchedList = [];
-      if (response != null && response['statusCode'] == 1 && response['data'] is List) {
+      if (response != null &&
+          response['statusCode'] == 1 &&
+          response['data'] is List) {
         final rawRooms = response['data'] as List;
         for (final item in rawRooms) {
           if (item is Map) {
-            fetchedList.add({
-              'id': item['_id'] ?? item['id'] ?? '',
-              'nameAge': '${item['name'] ?? 'Room'}, ${item['maxSeats'] ?? 8} Seats',
-              'badge': item['type'] ?? 'VIDEO',
-              'location': item['country'] ?? 'IN',
-              'points': '100',
-              'favorite': false,
-              'image': item['type'] == 'AUDIO' ? kImgTemp2 : kImgTemp3,
-            });
+            fetchedList.add(_mapRoom(item));
           }
         }
       }
 
-      // Fallback list to display beautiful mock rooms if backend has none
-      if (fetchedList.isEmpty) {
-        fetchedList.addAll([
-          {
-            'id': 'mock_1',
-            'nameAge': 'Mariana, 25',
-            'badge': 'Premier',
-            'location': 'Roha',
-            'points': '2105',
-            'favorite': false,
-            'image': kImgTemp2,
-          },
-          {
-            'id': 'mock_2',
-            'nameAge': 'Afrin, 22',
-            'badge': 'Premier',
-            'location': 'Roha',
-            'points': '2105',
-            'favorite': true,
-            'image': kImgTemp3,
-          },
-          {
-            'id': 'mock_3',
-            'nameAge': 'Zara, 24',
-            'badge': 'Hourly',
-            'location': 'Dhaka',
-            'points': '1950',
-            'favorite': false,
-            'image': kImgTemp4,
-          },
-          {
-            'id': 'mock_4',
-            'nameAge': 'Elena, 26',
-            'badge': 'Supreme',
-            'location': 'Mumbai',
-            'points': '3200',
-            'favorite': false,
-            'image': kImgTemp5,
-          },
-        ]);
-      }
-      
       rooms.assignAll(fetchedList);
     } catch (_) {
       // ignore
     } finally {
       isLoading.value = false;
     }
+  }
+
+  Map<String, dynamic> _mapRoom(Map room) {
+    final type = room['type']?.toString().toUpperCase() ?? 'VIDEO';
+    final rankBadge = room['roomRankBadge'];
+    final image = ApiImageUtils.normalize(
+      room['coverImage']?.toString() ??
+          room['image']?.toString() ??
+          room['thumbnail']?.toString(),
+    );
+    final title =
+        room['name']?.toString() ?? room['title']?.toString() ?? 'Room';
+    final seats = room['maxSeats'] ?? room['seatConfig'] ?? 0;
+    final count =
+        room['heatScore'] ??
+        room['viewerCount'] ??
+        room['onlineCount'] ??
+        room['listenerCount'] ??
+        room['audienceCount'] ??
+        0;
+
+    return {
+      'id': room['_id'] ?? room['id'] ?? '',
+      'roomData': Map<String, dynamic>.from(room),
+      'nameAge': seats == 0 ? title : '$title, $seats Seats',
+      'badge': rankBadge is Map
+          ? (rankBadge['label']?.toString() ?? type)
+          : type,
+      'roomType': type,
+      'location':
+          room['countryName']?.toString() ??
+          room['countryCode']?.toString() ??
+          room['country']?.toString() ??
+          'IN',
+      'points': count.toString(),
+      'favorite': room['isFavorite'] == true || room['isFollowed'] == true,
+      'image': image ?? (type == 'AUDIO' ? kImgTemp2 : kImgTemp3),
+    };
+  }
+
+  bool _hasRoomData(Map<String, dynamic>? response) {
+    return response != null &&
+        response['statusCode'] == 1 &&
+        response['data'] is List &&
+        (response['data'] as List).isNotEmpty;
   }
 }
