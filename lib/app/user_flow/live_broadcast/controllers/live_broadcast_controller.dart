@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
+import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 
 class LiveBroadcastController extends GetxController {
   final isHost = false.obs;
@@ -32,8 +33,9 @@ class LiveBroadcastController extends GetxController {
         final normalizedRoomData = Map<String, dynamic>.from(roomData);
         final streamingId = _extractStreamingId(normalizedRoomData);
         hasExplicitStreamingId.value = streamingId != null;
-        roomId.value =
+        final rawId =
             streamingId ?? _extractBackendRoomId(normalizedRoomData) ?? '';
+        roomId.value = ZegoLiveIdUtils.sanitize(rawId);
       }
     }
     _validateStreamingInput();
@@ -44,6 +46,23 @@ class LiveBroadcastController extends GetxController {
 
   void setConnectionIssue(String message) {
     connectionIssue.value = message;
+  }
+
+  void handleZegoLoginFailed(int errorCode) {
+    connectionIssue.value =
+        'Could not join live room (error $errorCode). '
+        'Verify Zego App ID / App Sign in the console.';
+    if (Get.isSnackbarOpen) {
+      Get.closeAllSnackbars();
+    }
+    Get.snackbar(
+      'Live stream',
+      connectionIssue.value,
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.black87,
+      colorText: kColorWhite,
+      duration: const Duration(seconds: 4),
+    );
   }
 
   void _validateStreamingInput() {

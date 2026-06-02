@@ -10,6 +10,7 @@ import 'package:zego_uikit_prebuilt_live_streaming/zego_uikit_prebuilt_live_stre
 import 'package:zego_uikit_signaling_plugin/zego_uikit_signaling_plugin.dart';
 import 'package:qobo_one_live/constants/zego_config.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
+import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 
 import '../controllers/live_broadcast_controller.dart';
 import '../widgets/gifts_bottom_sheet.dart';
@@ -54,24 +55,31 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
     final rawUserId = userSession.userId.isNotEmpty
         ? userSession.userId
         : 'user_${userSession.hashCode}';
-    // ZEGOCLOUD limits userID to 32 characters/bytes. Remove hyphens and truncate if needed.
-    var currentUserId = rawUserId.replaceAll('-', '');
-    if (currentUserId.length > 32) {
-      currentUserId = currentUserId.substring(0, 32);
-    }
-    final currentUserName = userSession.displayName;
+    final currentUserId = ZegoLiveIdUtils.sanitizeUserId(rawUserId);
+    final currentUserName = userSession.displayName.isNotEmpty
+        ? userSession.displayName
+        : 'Host';
+
+    final signalingPlugins = ZegoConfig.useSignalingPlugin
+        ? [ZegoUIKitSignalingPlugin()]
+        : null;
 
     return Obx(() {
       if (!controller.canOpenZego) {
         return Positioned.fill(child: _buildConnectionIssueState());
       }
 
+      final liveId = controller.roomId.value;
+      if (liveId.isEmpty) {
+        return Positioned.fill(child: _buildConnectionIssueState());
+      }
+
       final config = controller.isHost.value
           ? ZegoUIKitPrebuiltLiveStreamingConfig.host(
-              plugins: [ZegoUIKitSignalingPlugin()],
+              plugins: signalingPlugins,
             )
           : ZegoUIKitPrebuiltLiveStreamingConfig.audience(
-              plugins: [ZegoUIKitSignalingPlugin()],
+              plugins: signalingPlugins,
             );
 
       // Customize Zego controls so they do not conflict with our custom styled overlays
@@ -99,20 +107,19 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
       }
 
       return Positioned.fill(
+        key: ValueKey('zego_$liveId'),
         child: ZegoUIKitPrebuiltLiveStreaming(
           appID: ZegoConfig.appId,
           appSign: ZegoConfig.appSign,
           userID: currentUserId,
           userName: currentUserName,
-          liveID: controller.roomId.value,
+          liveID: liveId,
           config: config,
           events: ZegoUIKitPrebuiltLiveStreamingEvents(
             room: ZegoLiveStreamingRoomEvents(
               onLoginFailed: (event, defaultAction) {
-                controller.setConnectionIssue(
-                  'Zego login failed (${event.errorCode}). Please check zegoLiveId/channelName for this room.',
-                );
-                defaultAction(event);
+                // Avoid defaultAction dialog — it crashes if Obx rebuilds first.
+                controller.handleZegoLoginFailed(event.errorCode);
               },
             ),
             onEnded: (event, defaultAction) {

@@ -13,6 +13,7 @@ class LiveRoomController extends GetxController {
   final isLoading = false.obs;
   final rooms = <Map<String, dynamic>>[].obs;
   final promoBannerImageUrl = RxnString();
+  final highlightJoinGrid = false.obs;
 
   @override
   void onInit() {
@@ -60,14 +61,15 @@ class LiveRoomController extends GetxController {
       String? country;
       String? category;
 
+      // Map UI tabs to API filters (backend may accept legacy keys too).
       if (selectedCategoryIndex == 0) {
-        category = 'sab';
+        category = 'trending';
       } else if (selectedCategoryIndex == 1) {
-        category = 'shresth';
+        category = 'top';
       } else if (selectedCategoryIndex == 2) {
-        category = 'naya';
+        category = 'new';
       } else if (selectedCategoryIndex == 3) {
-        country = 'BD';
+        country = 'IN';
       }
 
       var response = await _roomRepo.listActiveRooms(
@@ -77,7 +79,7 @@ class LiveRoomController extends GetxController {
       );
       if (selectedCategoryIndex == 3 && !_hasRoomData(response)) {
         response = await _roomRepo.listActiveRooms(
-          country: 'Bangladesh',
+          country: 'BD',
           isShowLoader: false,
         );
       }
@@ -145,5 +147,31 @@ class LiveRoomController extends GetxController {
         response['statusCode'] == 1 &&
         response['data'] is List &&
         (response['data'] as List).isNotEmpty;
+  }
+
+  void openGoLive() {
+    Get.toNamed(
+      '/live-room-create',
+      arguments: {'mode': 'live_streaming'},
+    );
+  }
+
+  void focusJoinLive() {
+    highlightJoinGrid.value = true;
+    Future.delayed(const Duration(seconds: 3), () {
+      if (isClosed) return;
+      highlightJoinGrid.value = false;
+    });
+  }
+
+  void joinRoom(Map<String, dynamic> room) {
+    Get.toNamed(
+      '/live-broadcast',
+      arguments: {
+        'isHost': false,
+        'roomType': room['roomType'] == 'AUDIO' ? 'AUDIO' : 'VIDEO',
+        'roomData': room['roomData'],
+      },
+    );
   }
 }

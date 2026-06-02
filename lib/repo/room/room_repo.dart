@@ -36,6 +36,28 @@ class RoomRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
+  /// Calls `POST /api/live-streaming/create` to register a host live stream.
+  Future<Map<String, dynamic>?> createLiveStreaming({
+    required String name,
+    required String liveStreamingId,
+    required bool onlyFollows,
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: RoomEndpoints.createLiveStreaming,
+      requestModel: <String, dynamic>{
+        'name': name,
+        'liveStreamingId': liveStreamingId,
+        'onlyFollows': onlyFollows,
+      },
+      isShowLoader: isShowLoader,
+      isLoginCall: false,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
   /// Calls `GET /api/room/list` to fetch active live rooms.
   Future<Map<String, dynamic>?> listActiveRooms({
     String? type, // 'audio'/'video' or legacy 'AUDIO'/'VIDEO'

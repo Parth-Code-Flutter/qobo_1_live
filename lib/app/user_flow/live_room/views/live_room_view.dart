@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
@@ -46,7 +47,9 @@ class LiveRoomView extends StatelessWidget {
                   child: Column(
                     children: [
                       _topHeader(userSession),
-                      Spacing.v12,
+                      Spacing.v16,
+                      _actionCtas(controller),
+                      Spacing.v16,
                       _filterAndCategoryRow(categories),
                       Spacing.v12,
                       _topBanner(controller),
@@ -66,49 +69,54 @@ class LiveRoomView extends StatelessWidget {
                         );
                       }
                       if (controller.rooms.isEmpty) {
-                        return const Center(
-                          child: AppText(
-                            text: 'No active rooms found',
-                            color: kColorWhite,
-                            fontSize: 16,
-                          ),
-                        );
+                        return _emptyState(controller);
                       }
-                      return GridView.builder(
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: controller.rooms.length,
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              mainAxisSpacing: 12,
-                              crossAxisSpacing: 12,
-                              childAspectRatio: 0.8,
-                            ),
-                        itemBuilder: (context, index) {
-                          final room = controller.rooms[index];
-                          return GestureDetector(
-                            onTap: () {
-                              Get.toNamed(
-                                '/live-broadcast',
-                                arguments: {
-                                  'isHost': false,
-                                  'roomType': room['roomType'] == 'AUDIO'
-                                      ? 'AUDIO'
-                                      : 'VIDEO',
-                                  'roomData': room['roomData'],
+                      final highlight = controller.highlightJoinGrid.value;
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _liveCountStrip(controller.rooms.length),
+                          Spacing.v10,
+                          Expanded(
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
+                                  color: highlight
+                                      ? LiveRoomUiColors.joinLiveBorder
+                                      : Colors.transparent,
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: GridView.builder(
+                                physics: const BouncingScrollPhysics(),
+                                itemCount: controller.rooms.length,
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 2,
+                                      mainAxisSpacing: 12,
+                                      crossAxisSpacing: 12,
+                                      childAspectRatio: 0.8,
+                                    ),
+                                itemBuilder: (context, index) {
+                                  final room = controller.rooms[index];
+                                  return GestureDetector(
+                                    onTap: () => controller.joinRoom(room),
+                                    child: CommonLiveRoomWidget(
+                                      imageUrl: room['image'] as String,
+                                      userNameAge: room['nameAge'] as String,
+                                      badgeText: room['badge'] as String,
+                                      locationText: room['location'] as String,
+                                      pointsText: room['points'] as String,
+                                      isFavorite: room['favorite'] as bool,
+                                    ),
+                                  );
                                 },
-                              );
-                            },
-                            child: CommonLiveRoomWidget(
-                              imageUrl: room['image'] as String,
-                              userNameAge: room['nameAge'] as String,
-                              badgeText: room['badge'] as String,
-                              locationText: room['location'] as String,
-                              pointsText: room['points'] as String,
-                              isFavorite: room['favorite'] as bool,
+                              ),
                             ),
-                          );
-                        },
+                          ),
+                        ],
                       );
                     }),
                   ),
@@ -118,6 +126,161 @@ class LiveRoomView extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  /// Primary actions: start broadcasting or jump into an existing room.
+  Widget _actionCtas(LiveRoomController controller) {
+    return Row(
+      children: [
+        Expanded(
+          child: _ctaButton(
+            label: LocaleKeys.liveRoomGoLive.tr,
+            icon: Icons.videocam_rounded,
+            filled: true,
+            onTap: controller.openGoLive,
+          ),
+        ),
+        Spacing.h12,
+        Expanded(
+          child: _ctaButton(
+            label: LocaleKeys.liveRoomJoinLive.tr,
+            icon: Icons.sensors_rounded,
+            filled: false,
+            onTap: controller.focusJoinLive,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _ctaButton({
+    required String label,
+    required IconData icon,
+    required bool filled,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 52,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          gradient: filled
+              ? const LinearGradient(
+                  colors: [
+                    LiveRoomUiColors.goLiveGradientStart,
+                    LiveRoomUiColors.goLiveGradientEnd,
+                  ],
+                )
+              : null,
+          color: filled ? null : LiveRoomUiColors.chipInactiveBg,
+          border: Border.all(
+            color: filled
+                ? Colors.transparent
+                : LiveRoomUiColors.joinLiveBorder,
+            width: 1.2,
+          ),
+          boxShadow: filled
+              ? [
+                  BoxShadow(
+                    color: LiveRoomUiColors.goLiveGradientStart
+                        .withValues(alpha: 0.4),
+                    blurRadius: 14,
+                    offset: const Offset(0, 6),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: kColorWhite, size: 20),
+            Spacing.h8,
+            SemiBoldText(
+              text: label,
+              fontSize: TextStyles.k14FontSize,
+              color: kColorWhite,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Small "x rooms live now" strip above the listing grid.
+  Widget _liveCountStrip(int count) {
+    return Row(
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: const BoxDecoration(
+            color: LiveRoomUiColors.liveDot,
+            shape: BoxShape.circle,
+          ),
+        ),
+        Spacing.h8,
+        SemiBoldText(
+          text: '$count ${LocaleKeys.liveRoomActiveNow.tr}',
+          fontSize: TextStyles.k12FontSize,
+          color: kColorWhite,
+        ),
+        const Spacer(),
+        AppText(
+          text: LocaleKeys.liveRoomJoinHint.tr,
+          fontSize: TextStyles.k12FontSize,
+          color: kColorHint,
+        ),
+      ],
+    );
+  }
+
+  Widget _emptyState(LiveRoomController controller) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 88,
+            height: 88,
+            decoration: BoxDecoration(
+              color: LiveRoomUiColors.chipInactiveBg,
+              shape: BoxShape.circle,
+              border: Border.all(color: LiveRoomUiColors.joinLiveBorder),
+            ),
+            child: const Icon(
+              Icons.live_tv_rounded,
+              color: kColorWhite,
+              size: 38,
+            ),
+          ),
+          Spacing.v16,
+          SemiBoldText(
+            text: LocaleKeys.liveRoomEmptyTitle.tr,
+            fontSize: TextStyles.k16FontSize,
+            color: kColorWhite,
+          ),
+          Spacing.v8,
+          AppText(
+            text: LocaleKeys.liveRoomEmptySubtitle.tr,
+            fontSize: TextStyles.k12FontSize,
+            color: kColorHint,
+            align: TextAlign.center,
+          ),
+          Spacing.v20,
+          SizedBox(
+            width: 180,
+            child: _ctaButton(
+              label: LocaleKeys.liveRoomGoLive.tr,
+              icon: Icons.videocam_rounded,
+              filled: true,
+              onTap: controller.openGoLive,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

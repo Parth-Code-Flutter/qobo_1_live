@@ -1,36 +1,140 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
-import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/repo/room/room_repo.dart';
+import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
+import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
+
+/// Create flow: live streaming (Zego) vs audio/video party room.
+enum LiveRoomCreateMode { liveStreaming, audioVideoRoom }
 
 class LiveRoomCreateController extends GetxController {
-  final roomNameController = TextEditingController();
-  final roomType = 'AUDIO'.obs; // AUDIO or VIDEO
+  final streamNameController = TextEditingController();
+  final announcementController = TextEditingController();
+
+  final mode = LiveRoomCreateMode.audioVideoRoom.obs;
+  final liveStreamingId = ''.obs;
+  final onlyFollows = false.obs;
+
+  final roomType = 'AUDIO'.obs;
   final seatCount = '8'.obs;
+  final isPrivate = false.obs;
+  final selectedCategoryIndex = 0.obs;
+  final selectedRegion = 'IN'.obs;
+
+  static const categories = <String>[
+    'Just Chat',
+    'Music',
+    'Dance',
+    'Gaming',
+    'Cooking',
+    'Comedy',
+  ];
+
+  static const regions = <({String label, String code})>[
+    (label: 'India', code: 'IN'),
+    (label: 'Bangladesh', code: 'BD'),
+    (label: 'Global', code: 'GLOBAL'),
+  ];
 
   final RoomRepo _roomRepo = RoomRepo();
+
+  bool get isLiveStreamingMode =>
+      mode.value == LiveRoomCreateMode.liveStreaming;
 
   @override
   void onInit() {
     super.onInit();
+    _generateLiveStreamingId();
+
     final args = Get.arguments;
-    if (args != null && args is Map) {
+    if (args is Map) {
+      if (args['mode'] == 'live_streaming') {
+        mode.value = LiveRoomCreateMode.liveStreaming;
+      }
       if (args.containsKey('type')) {
-        roomType.value = args['type'];
+        roomType.value = args['type'].toString();
       }
     }
   }
 
-  void selectRoomType(String type) {
-    roomType.value = type;
+  void _generateLiveStreamingId() {
+    liveStreamingId.value = ZegoLiveIdUtils.generate();
   }
 
-  void selectSeats(String count) {
-    seatCount.value = count;
+  void regenerateLiveStreamingId() {
+    _generateLiveStreamingId();
   }
 
-  void createRoom(BuildContext context) async {
-    if (roomNameController.text.trim().isEmpty) {
+  void selectRoomType(String type) => roomType.value = type;
+
+  void selectSeats(String count) => seatCount.value = count;
+
+  void selectCategory(int index) => selectedCategoryIndex.value = index;
+
+  void selectRegion(String code) => selectedRegion.value = code;
+
+  void setPrivate(bool value) => isPrivate.value = value;
+
+  void setOnlyFollows(bool value) => onlyFollows.value = value;
+
+  /// Host starts a Zego live stream (from Live Rooms → Go Live).
+  Future<void> startLiveStreaming(BuildContext context) async {
+    final name = streamNameController.text.trim();
+    if (name.isEmpty) {
+      AppToast.showError(context, 'Please enter a live streaming name');
+      return;
+    }
+
+    final response = await _roomRepo.createLiveStreaming(
+      name: name,
+      liveStreamingId: liveStreamingId.value,
+      onlyFollows: onlyFollows.value,
+    );
+
+    if (!context.mounted) return;
+
+    if (_isSuccess(response)) {
+      final data = _normalizeStreamPayload(response!['data'], name);
+      AppToast.showSuccess(
+        context,
+        response['message']?.toString() ?? 'Live streaming started',
+      );
+      _openZegoHost(data);
+      return;
+    }
+
+    // API not ready yet — still open Zego with client-generated channel id.
+    final localData = _buildLocalStreamPayload(name);
+    AppToast.showSuccess(context, 'Starting live stream');
+    _openZegoHost(localData);
+  }
+
+  void _openZegoHost(Map<String, dynamic> roomData) {
+    Get.offNamed(
+      Routes.LIVE_BROADCAST,
+      arguments: {
+        'isHost': true,
+        'roomType': 'VIDEO',
+        'roomData': roomData,
+      },
+    );
+  }
+
+  Map<String, dynamic> _buildLocalStreamPayload(String name) {
+    final id = ZegoLiveIdUtils.sanitize(liveStreamingId.value);
+    liveStreamingId.value = id;
+    return {
+      'name': name,
+      'liveStreamingId': id,
+      'zegoLiveId': id,
+      'onlyFollows': onlyFollows.value,
+      'isLive': true,
+    };
+  }
+
+  Future<void> createRoom(BuildContext context) async {
+    if (streamNameController.text.trim().isEmpty) {
       AppToast.showError(context, 'Please enter a room name');
       return;
     }
@@ -38,24 +142,22 @@ class LiveRoomCreateController extends GetxController {
     final maxSeats = int.tryParse(seatCount.value) ?? 8;
 
     final response = await _roomRepo.createRoom(
-      name: roomNameController.text.trim(),
+      name: streamNameController.text.trim(),
       type: roomType.value,
-      country: 'IN',
+      country: selectedRegion.value,
       maxSeats: maxSeats,
+      isPrivate: isPrivate.value,
     );
 
     if (!context.mounted) return;
 
-    if (response != null &&
-        (response['statusCode'] == 1 ||
-            response['statusCode'] == 200 ||
-            response['statusCode'] == 201)) {
+    if (_isSuccess(response)) {
       AppToast.showSuccess(
         context,
-        response['message'] ?? 'Room created successfully!',
+        response!['message']?.toString() ?? 'Room created successfully!',
       );
       Get.offNamed(
-        '/live-broadcast',
+        Routes.LIVE_BROADCAST,
         arguments: {
           'isHost': true,
           'roomType': roomType.value,
@@ -65,14 +167,42 @@ class LiveRoomCreateController extends GetxController {
     } else {
       AppToast.showError(
         context,
-        response?['message'] ?? 'Failed to create room',
+        response?['message']?.toString() ?? 'Failed to create room',
       );
     }
   }
 
+  bool _isSuccess(Map<String, dynamic>? response) {
+    if (response == null) return false;
+    final code = response['statusCode'];
+    return code == 1 || code == 200 || code == 201;
+  }
+
+  /// Ensures Zego receives `zegoLiveId` even if backend uses another key.
+  Map<String, dynamic> _normalizeStreamPayload(dynamic raw, String name) {
+    final map = raw is Map
+        ? Map<String, dynamic>.from(raw)
+        : <String, dynamic>{};
+
+    final zegoId = ZegoLiveIdUtils.sanitize(
+      map['zegoLiveId']?.toString() ??
+          map['zego_live_id']?.toString() ??
+          map['liveStreamingId']?.toString() ??
+          map['live_streaming_id']?.toString() ??
+          liveStreamingId.value,
+    );
+
+    map['name'] = map['name'] ?? name;
+    map['liveStreamingId'] = zegoId;
+    map['zegoLiveId'] = zegoId;
+    map['onlyFollows'] = map['onlyFollows'] ?? onlyFollows.value;
+    return map;
+  }
+
   @override
   void onClose() {
-    roomNameController.dispose();
+    streamNameController.dispose();
+    announcementController.dispose();
     super.onClose();
   }
 }

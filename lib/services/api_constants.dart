@@ -58,6 +58,9 @@ class RoomEndpoints {
   /// POST /api/room/create
   static const String create = '/api/room/create';
 
+  /// POST /api/live-streaming/create — host starts Zego live stream
+  static const String createLiveStreaming = '/api/live-streaming/create';
+
   /// GET /api/room/list
   static const String listActiveRooms = '/api/room/list';
 

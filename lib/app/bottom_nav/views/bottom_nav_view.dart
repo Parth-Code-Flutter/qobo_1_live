@@ -46,24 +46,6 @@ class BottomNavView extends GetView<BottomNavController> {
         }
         return Spacing.shrink;
       }),
-      floatingActionButton: Obx(
-        () => controller.selectedIndex.value == 1
-            ? FloatingActionButton.extended(
-                heroTag: 'bottom-nav-go-live',
-                onPressed: controller.onGoLivePressed,
-                backgroundColor: kColorBottomNavHeart,
-                foregroundColor: kColorWhite,
-                elevation: 10,
-                icon: const Icon(Icons.videocam_rounded, size: 22),
-                label: const SemiBoldText(
-                  text: 'Go Live',
-                  fontSize: TextStyles.k14FontSize,
-                  color: kColorWhite,
-                ),
-              )
-            : Spacing.shrink,
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: ClipRect(
         child: Obx(
           () => BackdropFilter(
