@@ -16,17 +16,69 @@ class LiveRoomController extends GetxController {
   int selectedCategoryIndex = 0;
   LiveRoomFilterState filters = const LiveRoomFilterState();
   final isLoading = false.obs;
+  final allRooms = <Map<String, dynamic>>[].obs;
   final rooms = <Map<String, dynamic>>[].obs;
   final promoBannerImageUrl = RxnString();
   final highlightJoinGrid = false.obs;
+  final isSearchExpanded = false.obs;
+  final searchQuery = ''.obs;
+
+  final searchController = TextEditingController();
+  final searchFocusNode = FocusNode();
 
   bool get hasActiveFilters => filters.hasActiveFilters;
+
+  bool get isSearching => searchQuery.value.isNotEmpty;
 
   @override
   void onInit() {
     super.onInit();
+    searchController.addListener(_onSearchChanged);
     fetchPromoBanner();
     fetchActiveRooms();
+  }
+
+  void _onSearchChanged() {
+    final query = searchController.text.trim();
+    if (searchQuery.value == query) return;
+    searchQuery.value = query;
+    _applySearchFilter();
+  }
+
+  void openSearch() {
+    isSearchExpanded.value = true;
+    Future.microtask(() {
+      if (!searchFocusNode.hasFocus) {
+        searchFocusNode.requestFocus();
+      }
+    });
+  }
+
+  void closeSearch() {
+    searchController.clear();
+    searchQuery.value = '';
+    isSearchExpanded.value = false;
+    searchFocusNode.unfocus();
+    _applySearchFilter();
+  }
+
+  void _applySearchFilter() {
+    final query = searchQuery.value.toLowerCase();
+    if (query.isEmpty) {
+      rooms.assignAll(allRooms);
+      return;
+    }
+
+    rooms.assignAll(
+      allRooms.where((room) {
+        final title = (room['nameAge'] as String? ?? '').toLowerCase();
+        final location = (room['location'] as String? ?? '').toLowerCase();
+        final badge = (room['badge'] as String? ?? '').toLowerCase();
+        return title.contains(query) ||
+            location.contains(query) ||
+            badge.contains(query);
+      }),
+    );
   }
 
   void onCategorySelected(int index) {
@@ -128,7 +180,8 @@ class LiveRoomController extends GetxController {
         }
       }
 
-      rooms.assignAll(fetchedList);
+      allRooms.assignAll(fetchedList);
+      _applySearchFilter();
     } catch (_) {
       // ignore
     } finally {
@@ -219,5 +272,13 @@ class LiveRoomController extends GetxController {
         'roomData': room['roomData'],
       },
     );
+  }
+
+  @override
+  void onClose() {
+    searchController.removeListener(_onSearchChanged);
+    searchController.dispose();
+    searchFocusNode.dispose();
+    super.onClose();
   }
 }

@@ -46,7 +46,7 @@ class LiveRoomView extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
                   child: Column(
                     children: [
-                      _topHeader(userSession),
+                      _topHeader(userSession, controller),
                       Spacing.v16,
                       _actionCtas(controller),
                       Spacing.v16,
@@ -69,6 +69,9 @@ class LiveRoomView extends StatelessWidget {
                         );
                       }
                       if (controller.rooms.isEmpty) {
+                        if (controller.isSearching) {
+                          return _searchEmptyState(controller);
+                        }
                         return _emptyState(controller);
                       }
                       final highlight = controller.highlightJoinGrid.value;
@@ -237,6 +240,28 @@ class LiveRoomView extends StatelessWidget {
     );
   }
 
+  Widget _searchEmptyState(LiveRoomController controller) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.search_off_rounded,
+            color: kColorHint,
+            size: 48,
+          ),
+          Spacing.v12,
+          SemiBoldText(
+            text: 'No rooms match "${controller.searchQuery.value}"',
+            fontSize: TextStyles.k14FontSize,
+            color: kColorWhite,
+            align: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _emptyState(LiveRoomController controller) {
     return Center(
       child: Column(
@@ -321,96 +346,193 @@ class LiveRoomView extends StatelessWidget {
     );
   }
 
-  Widget _topHeader(UserSessionController userSession) {
-    return GetBuilder<UserSessionController>(
-      init: userSession,
-      builder: (session) {
-        final avatarUrl = session.displayPictureUrl;
-        return Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                color: kColorWhite,
-                shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xB3FFFFFF), width: 1),
-              ),
-              child: ClipOval(
-                child: SafeNetworkAvatar(
-                  url: avatarUrl,
-                  size: 40,
-                  fallback: _initialsAvatar(session.initials),
+  Widget _topHeader(
+    UserSessionController userSession,
+    LiveRoomController liveRoomController,
+  ) {
+    return Obx(() {
+      if (liveRoomController.isSearchExpanded.value) {
+        return _expandedSearchBar(liveRoomController);
+      }
+
+      return GetBuilder<UserSessionController>(
+        init: userSession,
+        builder: (session) {
+          final avatarUrl = session.displayPictureUrl;
+          return Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: kColorWhite,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xB3FFFFFF),
+                    width: 1,
+                  ),
+                ),
+                child: ClipOval(
+                  child: SafeNetworkAvatar(
+                    url: avatarUrl,
+                    size: 40,
+                    fallback: _initialsAvatar(session.initials),
+                  ),
                 ),
               ),
-            ),
-            Spacing.h10,
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AppText(
-                    text: LocaleKeys.liveRoomWelcome.tr,
-                    fontSize: TextStyles.k14FontSize,
-                    color: kColorWhite,
-                  ),
-                  SemiBoldText(
-                    text: session.displayName,
-                    fontSize: TextStyles.k14FontSize,
-                    color: kColorWhite,
-                  ),
-                ],
+              Spacing.h10,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppText(
+                      text: LocaleKeys.liveRoomWelcome.tr,
+                      fontSize: TextStyles.k14FontSize,
+                      color: kColorWhite,
+                    ),
+                    SemiBoldText(
+                      text: session.displayName,
+                      fontSize: TextStyles.k14FontSize,
+                      color: kColorWhite,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Material(
-                  color: kColorWhite,
+              Material(
+                color: kColorWhite,
+                borderRadius: BorderRadius.circular(22),
+                child: InkWell(
+                  onTap: liveRoomController.openSearch,
                   borderRadius: BorderRadius.circular(22),
-                  child: InkWell(
-                    onTap: () {},
-                    borderRadius: BorderRadius.circular(22),
-                    child: SizedBox(
-                      width: 30,
-                      height: 30,
-                      child: Center(
-                        child: SvgPicture.asset(
-                          kIconSearch,
-                          width: 18,
-                          height: 18,
-                          colorFilter: const ColorFilter.mode(
-                            kColorPrimary,
-                            BlendMode.srcIn,
-                          ),
+                  child: SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: Center(
+                      child: SvgPicture.asset(
+                        kIconSearch,
+                        width: 18,
+                        height: 18,
+                        colorFilter: const ColorFilter.mode(
+                          kColorPrimary,
+                          BlendMode.srcIn,
                         ),
                       ),
                     ),
                   ),
                 ),
-                Spacing.h8,
+              ),
+              Spacing.h8,
+              InkWell(
+                onTap: () => Get.toNamed(Routes.LEADER_BOARD),
+                borderRadius: BorderRadius.circular(22),
+                child: SizedBox(
+                  width: 36,
+                  height: 36,
+                  child: Center(
+                    child: SvgPicture.asset(kIconLeaderboard),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      );
+    });
+  }
 
-                InkWell(
-                  onTap: () => Get.toNamed(Routes.LEADER_BOARD),
-                  borderRadius: BorderRadius.circular(22),
-                  child: SizedBox(
-                    width: 30,
-                    height: 30,
-                    child: Center(
-                      child: SvgPicture.asset(
-                        kIconLeaderboard,
-                        // width: 18,
-                        // height: 18,
+  Widget _expandedSearchBar(LiveRoomController controller) {
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+      alignment: Alignment.centerLeft,
+      child: Row(
+        children: [
+          Material(
+            color: LiveRoomUiColors.chipInactiveBg,
+            shape: const CircleBorder(),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: controller.closeSearch,
+              customBorder: const CircleBorder(),
+              child: const SizedBox(
+                width: 40,
+                height: 40,
+                child: Icon(
+                  Icons.arrow_back_ios_new,
+                  color: kColorWhite,
+                  size: 18,
+                ),
+              ),
+            ),
+          ),
+          Spacing.h10,
+          Expanded(
+            child: Container(
+              height: 44,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                color: kColorWhite,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                  color: LiveRoomUiColors.joinLiveBorder.withValues(alpha: 0.6),
+                ),
+              ),
+              child: Row(
+                children: [
+                  SvgPicture.asset(
+                    kIconSearch,
+                    width: 18,
+                    height: 18,
+                    colorFilter: const ColorFilter.mode(
+                      kColorPrimary,
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                  Spacing.h10,
+                  Expanded(
+                    child: TextField(
+                      controller: controller.searchController,
+                      focusNode: controller.searchFocusNode,
+                      textInputAction: TextInputAction.search,
+                      style: TextStyles.kRegularPoppins(
+                        fontSize: TextStyles.k14FontSize,
+                        colors: kColorText,
+                      ),
+                      cursorColor: kColorPrimary,
+                      decoration: InputDecoration(
+                        isDense: true,
+                        border: InputBorder.none,
+                        hintText: 'Search live rooms...',
+                        hintStyle: TextStyles.kRegularPoppins(
+                          fontSize: TextStyles.k14FontSize,
+                          colors: kColorHint,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                  Obx(() {
+                    if (controller.searchQuery.value.isEmpty) {
+                      return Spacing.shrink;
+                    }
+                    return GestureDetector(
+                      onTap: controller.searchController.clear,
+                      child: const Icon(
+                        Icons.close_rounded,
+                        size: 20,
+                        color: kColorHint,
+                      ),
+                    );
+                  }),
+                ],
+              ),
             ),
-          ],
-        );
-      },
+          ),
+        ],
+      ),
     );
   }
 
