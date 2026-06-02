@@ -1,4 +1,7 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/app/user_flow/live_room/models/live_room_filter_state.dart';
+import 'package:qobo_one_live/app/user_flow/live_room/widgets/live_room_filter_sheet.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/repo/activity/activity_repo.dart';
 import 'package:qobo_one_live/repo/room/room_repo.dart';
@@ -10,10 +13,13 @@ class LiveRoomController extends GetxController {
   final ActivityRepo _activityRepo = ActivityRepo();
 
   int selectedCategoryIndex = 0;
+  LiveRoomFilterState filters = const LiveRoomFilterState();
   final isLoading = false.obs;
   final rooms = <Map<String, dynamic>>[].obs;
   final promoBannerImageUrl = RxnString();
   final highlightJoinGrid = false.obs;
+
+  bool get hasActiveFilters => filters.hasActiveFilters;
 
   @override
   void onInit() {
@@ -25,6 +31,17 @@ class LiveRoomController extends GetxController {
   void onCategorySelected(int index) {
     if (selectedCategoryIndex == index) return;
     selectedCategoryIndex = index;
+    update();
+    fetchActiveRooms();
+  }
+
+  Future<void> openFilterSheet(BuildContext context) async {
+    final result = await showLiveRoomFilterSheet(
+      context: context,
+      initial: filters,
+    );
+    if (result == null) return;
+    filters = result;
     update();
     fetchActiveRooms();
   }
@@ -60,6 +77,15 @@ class LiveRoomController extends GetxController {
       isLoading.value = true;
       String? country;
       String? category;
+      String? type;
+
+      if (filters.roomType != LiveRoomFilterState.allTypes) {
+        type = filters.roomType;
+      }
+
+      if (filters.region != LiveRoomFilterState.allRegions) {
+        country = filters.region == 'GLOBAL' ? null : filters.region;
+      }
 
       // Map UI tabs to API filters (backend may accept legacy keys too).
       if (selectedCategoryIndex == 0) {
@@ -68,18 +94,23 @@ class LiveRoomController extends GetxController {
         category = 'top';
       } else if (selectedCategoryIndex == 2) {
         category = 'new';
-      } else if (selectedCategoryIndex == 3) {
+      } else if (selectedCategoryIndex == 3 && country == null) {
         country = 'IN';
       }
 
       var response = await _roomRepo.listActiveRooms(
+        type: type,
         country: country,
         category: category,
         isShowLoader: false,
       );
-      if (selectedCategoryIndex == 3 && !_hasRoomData(response)) {
+      if (selectedCategoryIndex == 3 &&
+          country == 'IN' &&
+          !_hasRoomData(response)) {
         response = await _roomRepo.listActiveRooms(
+          type: type,
           country: 'BD',
+          category: category,
           isShowLoader: false,
         );
       }

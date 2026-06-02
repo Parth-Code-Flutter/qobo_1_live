@@ -50,7 +50,7 @@ class LiveRoomView extends StatelessWidget {
                       Spacing.v16,
                       _actionCtas(controller),
                       Spacing.v16,
-                      _filterAndCategoryRow(categories),
+                      _filterAndCategoryRow(context, categories),
                       Spacing.v12,
                       _topBanner(controller),
                       Spacing.v12,
@@ -414,54 +414,87 @@ class LiveRoomView extends StatelessWidget {
     );
   }
 
-  Widget _filterAndCategoryRow(List<String> categories) {
+  Widget _filterAndCategoryRow(
+    BuildContext context,
+    List<String> categories,
+  ) {
     final liveRoomController = _resolveController();
-    return Row(
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: const BoxDecoration(
-            color: kColorWhite,
-            shape: BoxShape.circle,
+    return SizedBox(
+      height: 44,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          _filterButton(
+            hasActiveFilters: liveRoomController.hasActiveFilters,
+            onTap: () => liveRoomController.openFilterSheet(context),
           ),
-          child: Center(
-            child: SvgPicture.asset(
-              kIconFilter,
-              width: 20,
-              height: 20,
-              colorFilter: const ColorFilter.mode(
-                kColorPrimary,
-                BlendMode.srcIn,
-              ),
-            ),
-          ),
-        ),
-        Spacing.h10,
-        Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: List.generate(categories.length, (index) {
-                return Padding(
-                  padding: EdgeInsets.only(
-                    right: index == categories.length - 1 ? 0 : 10,
-                  ),
-                  child: _categoryChip(
-                    label: categories[index],
-                    isSelected:
-                        liveRoomController.selectedCategoryIndex == index,
-                    onTap: () {
-                      // Keep this UI-only for now; filtering behavior can be added later.
-                      liveRoomController.onCategorySelected(index);
-                    },
-                  ),
+          Spacing.h12,
+          Expanded(
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              itemCount: categories.length,
+              separatorBuilder: (_, __) => Spacing.h8,
+              itemBuilder: (context, index) {
+                return _categoryChip(
+                  label: categories[index],
+                  isSelected:
+                      liveRoomController.selectedCategoryIndex == index,
+                  onTap: () => liveRoomController.onCategorySelected(index),
                 );
-              }),
+              },
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _filterButton({
+    required bool hasActiveFilters,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: kColorWhite,
+      shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              SvgPicture.asset(
+                kIconFilter,
+                width: 20,
+                height: 20,
+                colorFilter: const ColorFilter.mode(
+                  kColorPrimary,
+                  BlendMode.srcIn,
+                ),
+              ),
+              if (hasActiveFilters)
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: LiveRoomUiColors.goLiveGradientStart,
+                      shape: BoxShape.circle,
+                      border: Border.fromBorderSide(
+                        BorderSide(color: kColorWhite, width: 1.2),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
-      ],
+      ),
     );
   }
 
@@ -470,30 +503,52 @@ class LiveRoomView extends StatelessWidget {
     required bool isSelected,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          gradient: isSelected
-              ? const LinearGradient(
-                  colors: [
-                    kColorLiveFilterChipGradientStart,
-                    kColorLiveFilterChipGradientMid,
-                    kColorLiveFilterChipGradientEnd,
-                  ],
-                )
-              : null,
-          border: Border.all(
-            color: isSelected ? kColorLiveFilterChipBorder : Colors.transparent,
-            width: 1,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(22),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            gradient: isSelected
+                ? const LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      kColorLiveFilterChipGradientStart,
+                      kColorLiveFilterChipGradientMid,
+                      kColorLiveFilterChipGradientEnd,
+                    ],
+                  )
+                : null,
+            color: isSelected ? null : LiveRoomUiColors.chipInactiveBg,
+            border: Border.all(
+              color: isSelected
+                  ? kColorLiveFilterChipBorder
+                  : LiveRoomUiColors.cardBorder,
+              width: 1,
+            ),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: kColorPrimary.withValues(alpha: 0.35),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
           ),
-        ),
-        child: SemiBoldText(
-          text: label,
-          fontSize: TextStyles.k14FontSize,
-          color: isSelected ? kColorWhite : kColorHint,
+          child: Center(
+            child: SemiBoldText(
+              text: label,
+              fontSize: TextStyles.k12FontSize,
+              color: isSelected ? kColorWhite : const Color(0xFFB8B8D0),
+            ),
+          ),
         ),
       ),
     );
