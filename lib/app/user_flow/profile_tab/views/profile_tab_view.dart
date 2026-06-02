@@ -290,8 +290,12 @@ class ProfileTabView extends StatelessWidget {
         Spacing.h10,
         Expanded(
           child: _actionCard(
-            title: 'Live Streamer\nCenter',
-            icon: kIconMike,
+            title: 'Agency &\nHost',
+            trailing: const Icon(
+              Icons.groups_rounded,
+              color: kColorWhite,
+              size: 24,
+            ),
             start: kColorProfileActionPinkStart,
             end: kColorProfileActionPinkEnd,
             onTap: () {
@@ -318,7 +322,7 @@ class ProfileTabView extends StatelessWidget {
                       ),
                       Spacing.v20,
                       const SemiBoldText(
-                        text: 'Streamer & Agency Center',
+                        text: 'Agency & Host',
                         fontSize: 16,
                         color: kColorWhite,
                       ),
@@ -398,11 +402,17 @@ class ProfileTabView extends StatelessWidget {
 
   Widget _actionCard({
     required String title,
-    required String icon,
+    String? icon,
+    Widget? trailing,
     required Color start,
     required Color end,
     required VoidCallback onTap,
   }) {
+    assert(
+      icon != null || trailing != null,
+      'Provide either icon asset or trailing widget',
+    );
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -423,7 +433,13 @@ class ProfileTabView extends StatelessWidget {
               ),
             ),
             Spacing.h8,
-            SvgPicture.asset(icon, width: 20, height: 20, fit: BoxFit.contain),
+            trailing ??
+                SvgPicture.asset(
+                  icon!,
+                  width: 20,
+                  height: 20,
+                  fit: BoxFit.contain,
+                ),
           ],
         ),
       ),
