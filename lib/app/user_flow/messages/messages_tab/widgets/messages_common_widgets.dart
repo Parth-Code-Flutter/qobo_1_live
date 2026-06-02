@@ -10,11 +10,13 @@ class MessageMatchUser {
   const MessageMatchUser({
     required this.name,
     required this.imagePath,
+    this.imageUrl,
     this.hasStoryRing = false,
   });
 
   final String name;
   final String imagePath;
+  final String? imageUrl;
   final bool hasStoryRing;
 }
 
@@ -59,7 +61,7 @@ class MessageMatchAvatarItem extends StatelessWidget {
                   : null,
             ),
             child: ClipOval(
-              child: Image.asset(user.imagePath, fit: BoxFit.cover),
+              child: _matchAvatar(user),
             ),
           ),
           Spacing.v6,
@@ -74,6 +76,19 @@ class MessageMatchAvatarItem extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _matchAvatar(MessageMatchUser user) {
+    final url = user.imageUrl;
+    if (url != null && url.isNotEmpty) {
+      return Image.network(
+        url,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) =>
+            Image.asset(user.imagePath, fit: BoxFit.cover),
+      );
+    }
+    return Image.asset(user.imagePath, fit: BoxFit.cover);
   }
 }
 

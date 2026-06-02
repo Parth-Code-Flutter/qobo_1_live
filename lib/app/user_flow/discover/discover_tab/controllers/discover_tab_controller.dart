@@ -10,18 +10,16 @@ import '../models/discover_room_selection.dart';
 
 /// Controller for discover tab local UI state.
 class DiscoverTabController extends GetxController {
-  final roomSelection = DiscoverRoomSelection.none.obs;
+  final roomSelection = DiscoverRoomSelection.video.obs;
 
   final searchController = TextEditingController();
 
   final AuthRepo _authRepo = AuthRepo();
   final RoomRepo _roomRepo = RoomRepo();
   final searchResults = <dynamic>[].obs;
-  final suggestedUsers = <Map<String, dynamic>>[].obs;
   final videoRooms = <Map<String, dynamic>>[].obs;
   final audioRooms = <Map<String, dynamic>>[].obs;
   final isSearchLoading = false.obs;
-  final isSuggestedUsersLoading = false.obs;
   final isVideoRoomsLoading = false.obs;
   final isAudioRoomsLoading = false.obs;
   final followingUserIds = <String>{}.obs;
@@ -33,7 +31,7 @@ class DiscoverTabController extends GetxController {
   void onInit() {
     super.onInit();
     searchController.addListener(_onSearchChanged);
-    fetchSuggestedUsers();
+    fetchVideoRooms();
   }
 
   void _onSearchChanged() {
@@ -65,30 +63,6 @@ class DiscoverTabController extends GetxController {
       searchResults.clear();
     } finally {
       isSearchLoading.value = false;
-    }
-  }
-
-  Future<void> fetchSuggestedUsers() async {
-    try {
-      isSuggestedUsersLoading.value = true;
-      final response = await _authRepo.searchUsers(query: 'a');
-      if (response != null && response['statusCode'] == 1) {
-        final list = response['data'];
-        if (list is List) {
-          suggestedUsers.assignAll(
-            list
-                .whereType<Map>()
-                .map((item) => Map<String, dynamic>.from(item))
-                .take(8),
-          );
-          return;
-        }
-      }
-      suggestedUsers.clear();
-    } catch (_) {
-      suggestedUsers.clear();
-    } finally {
-      isSuggestedUsersLoading.value = false;
     }
   }
 
@@ -271,9 +245,9 @@ class DiscoverTabController extends GetxController {
     return 'VIDEO';
   }
 
-  /// Default feed (no room chip selected). Called when user switches to Discover tab.
+  /// Resets Discover to the default Video Room tab when user returns to this nav item.
   void clearRoomMode() {
-    roomSelection.value = DiscoverRoomSelection.none;
+    selectVideoRoom();
   }
 
   @override
