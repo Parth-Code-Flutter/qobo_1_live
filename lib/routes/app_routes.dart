@@ -21,6 +21,7 @@ abstract class Routes {
   static const AGENCY_HOST_LIST = _Paths.AGENCY_HOST_LIST;
   static const AGENCY_REVENUE = _Paths.AGENCY_REVENUE;
   static const LIVE_ACTION = _Paths.LIVE_ACTION;
+  static const JOIN_LIVE = _Paths.JOIN_LIVE;
   static const LIVE_ROOM_CREATE = _Paths.LIVE_ROOM_CREATE;
   static const LIVE_BROADCAST = _Paths.LIVE_BROADCAST;
   static const CHAT_DETAIL = _Paths.CHAT_DETAIL;
@@ -69,6 +70,7 @@ abstract class _Paths {
   static const AGENCY_HOST_LIST = '/agency-host-list';
   static const AGENCY_REVENUE = '/agency-revenue';
   static const LIVE_ACTION = '/live-action';
+  static const JOIN_LIVE = '/join-live';
   static const LIVE_ROOM_CREATE = '/live-room-create';
   static const LIVE_BROADCAST = '/live-broadcast';
   static const CHAT_DETAIL = '/chat-detail';

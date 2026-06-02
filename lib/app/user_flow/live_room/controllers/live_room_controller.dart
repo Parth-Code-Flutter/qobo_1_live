@@ -5,6 +5,7 @@ import 'package:qobo_one_live/app/user_flow/live_room/widgets/live_room_filter_s
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/repo/activity/activity_repo.dart';
 import 'package:qobo_one_live/repo/room/room_repo.dart';
+import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 
 /// Controller for live room flow.
@@ -181,23 +182,37 @@ class LiveRoomController extends GetxController {
   }
 
   void openGoLive() {
-    Get.toNamed(
-      '/live-room-create',
-      arguments: {'mode': 'live_streaming'},
-    );
+    Get.toNamed(Routes.LIVE_ROOM_CREATE, arguments: {'mode': 'live_streaming'});
   }
 
   void focusJoinLive() {
-    highlightJoinGrid.value = true;
-    Future.delayed(const Duration(seconds: 3), () {
-      if (isClosed) return;
-      highlightJoinGrid.value = false;
-    });
+    Get.toNamed(Routes.JOIN_LIVE);
+  }
+
+  void joinManualLive(String liveStreamId) {
+    final id = liveStreamId.trim();
+    if (id.isEmpty) return;
+
+    Get.toNamed(
+      Routes.LIVE_BROADCAST,
+      arguments: {
+        'isHost': false,
+        'roomType': 'VIDEO',
+        'roomData': {
+          'id': id,
+          'room_id': id,
+          'zegoLiveId': id,
+          'channelName': id,
+          'name': 'Manual Live',
+          'type': 'VIDEO',
+        },
+      },
+    );
   }
 
   void joinRoom(Map<String, dynamic> room) {
     Get.toNamed(
-      '/live-broadcast',
+      Routes.LIVE_BROADCAST,
       arguments: {
         'isHost': false,
         'roomType': room['roomType'] == 'AUDIO' ? 'AUDIO' : 'VIDEO',
