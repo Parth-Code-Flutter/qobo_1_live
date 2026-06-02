@@ -62,6 +62,10 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
     final currentUserName = userSession.displayName;
 
     return Obx(() {
+      if (!controller.canOpenZego) {
+        return Positioned.fill(child: _buildConnectionIssueState());
+      }
+
       final config = controller.isHost.value
           ? ZegoUIKitPrebuiltLiveStreamingConfig.host(
               plugins: [ZegoUIKitSignalingPlugin()],
@@ -103,6 +107,14 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
           liveID: controller.roomId.value,
           config: config,
           events: ZegoUIKitPrebuiltLiveStreamingEvents(
+            room: ZegoLiveStreamingRoomEvents(
+              onLoginFailed: (event, defaultAction) {
+                controller.setConnectionIssue(
+                  'Zego login failed (${event.errorCode}). Please check zegoLiveId/channelName for this room.',
+                );
+                defaultAction(event);
+              },
+            ),
             onEnded: (event, defaultAction) {
               controller.leaveRoom();
               defaultAction.call();
@@ -113,29 +125,97 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
     });
   }
 
-  Widget _buildTopHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(child: _hostSummaryCard()),
-          Spacing.h10,
-          _topActions(),
-        ],
+  Widget _buildConnectionIssueState() {
+    return Container(
+      color: Colors.black,
+      padding: const EdgeInsets.symmetric(horizontal: 28),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: _surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.wifi_tethering_error_rounded,
+                color: _accent,
+                size: 42,
+              ),
+              Spacing.v12,
+              const SemiBoldText(
+                text: 'Unable to join live',
+                fontSize: TextStyles.k18FontSize,
+                color: kColorWhite,
+                align: TextAlign.center,
+              ),
+              Spacing.v8,
+              Obx(
+                () => AppText(
+                  text: controller.connectionIssue.value,
+                  fontSize: TextStyles.k12FontSize,
+                  color: kColorWhite.withValues(alpha: 0.72),
+                  align: TextAlign.center,
+                ),
+              ),
+              Spacing.v16,
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: TextButton(
+                  onPressed: controller.leaveRoom,
+                  style: TextButton.styleFrom(
+                    backgroundColor: _accentPurple,
+                    foregroundColor: kColorWhite,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const SemiBoldText(
+                    text: 'Back',
+                    fontSize: TextStyles.k14FontSize,
+                    color: kColorWhite,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _hostSummaryCard() {
+  Widget _buildTopHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 14, 12, 0),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isCompact = constraints.maxWidth < 390;
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: _hostSummaryCard(compact: isCompact)),
+              SizedBox(width: isCompact ? 6 : 10),
+              _topActions(compact: isCompact),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _hostSummaryCard({bool compact = false}) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(compact ? 20 : 24),
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 238),
-        padding: const EdgeInsets.all(8),
+        constraints: BoxConstraints(maxWidth: compact ? 170 : 238),
+        padding: EdgeInsets.all(compact ? 6 : 8),
         decoration: BoxDecoration(
           color: _surface,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(compact ? 20 : 24),
           border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
         ),
         child: Row(
@@ -143,9 +223,9 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
           children: [
             Stack(
               children: [
-                const CircleAvatar(
-                  radius: 24,
-                  backgroundImage: AssetImage(kImgTemp2),
+                CircleAvatar(
+                  radius: compact ? 19 : 24,
+                  backgroundImage: const AssetImage(kImgTemp2),
                 ),
                 Positioned(
                   right: 0,
@@ -162,15 +242,17 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                 ),
               ],
             ),
-            Spacing.h10,
+            SizedBox(width: compact ? 7 : 10),
             Flexible(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SemiBoldText(
+                  SemiBoldText(
                     text: 'Star Host',
-                    fontSize: TextStyles.k16FontSize,
+                    fontSize: compact
+                        ? TextStyles.k14FontSize
+                        : TextStyles.k16FontSize,
                     color: kColorWhite,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -182,8 +264,10 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                       const Icon(Icons.favorite, color: _accent, size: 14),
                       Spacing.h4,
                       AppText(
-                        text: '1.2k  •  ${controller.roomType.value}',
-                        fontSize: TextStyles.k10FontSize,
+                        text: compact
+                            ? '1.2k'
+                            : '1.2k  •  ${controller.roomType.value}',
+                        fontSize: compact ? 9 : TextStyles.k10FontSize,
                         color: kColorWhite.withValues(alpha: 0.72),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -193,8 +277,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                 ],
               ),
             ),
-            Spacing.h8,
-            _followButton(),
+            if (!compact) ...[Spacing.h8, _followButton()],
           ],
         ),
       ),
@@ -217,36 +300,48 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
     );
   }
 
-  Widget _topActions() {
+  Widget _topActions({bool compact = false}) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _viewerCountPill(),
-        Spacing.h8,
-        _topIconButton(Icons.ios_share_rounded, onTap: controller.shareRoom),
-        Spacing.h8,
-        _topIconButton(Icons.close_rounded, onTap: controller.leaveRoom),
+        _viewerCountPill(compact: compact),
+        SizedBox(width: compact ? 5 : 8),
+        _topIconButton(
+          Icons.ios_share_rounded,
+          compact: compact,
+          onTap: controller.shareRoom,
+        ),
+        SizedBox(width: compact ? 5 : 8),
+        _topIconButton(
+          Icons.close_rounded,
+          compact: compact,
+          onTap: controller.leaveRoom,
+        ),
       ],
     );
   }
 
-  Widget _viewerCountPill() {
+  Widget _viewerCountPill({bool compact = false}) {
     return Container(
-      height: 42,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      height: compact ? 36 : 42,
+      padding: EdgeInsets.symmetric(horizontal: compact ? 9 : 12),
       decoration: BoxDecoration(
         color: const Color(0xCC1A2233),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
       ),
-      child: const Row(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.person_rounded, color: kColorWhite, size: 20),
-          SizedBox(width: 5),
+          Icon(
+            Icons.person_rounded,
+            color: kColorWhite,
+            size: compact ? 17 : 20,
+          ),
+          SizedBox(width: compact ? 3 : 5),
           SemiBoldText(
             text: '1',
-            fontSize: TextStyles.k14FontSize,
+            fontSize: compact ? TextStyles.k12FontSize : TextStyles.k14FontSize,
             color: kColorWhite,
           ),
         ],
@@ -254,18 +349,22 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
     );
   }
 
-  Widget _topIconButton(IconData icon, {VoidCallback? onTap}) {
+  Widget _topIconButton(
+    IconData icon, {
+    bool compact = false,
+    VoidCallback? onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 42,
-        height: 42,
+        width: compact ? 36 : 42,
+        height: compact ? 36 : 42,
         decoration: BoxDecoration(
           color: _surface,
           shape: BoxShape.circle,
           border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
         ),
-        child: Icon(icon, color: kColorWhite, size: 22),
+        child: Icon(icon, color: kColorWhite, size: compact ? 19 : 22),
       ),
     );
   }

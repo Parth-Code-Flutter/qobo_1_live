@@ -17,6 +17,7 @@ typedef _VideoRoomTileData = ({
   String image,
   String avatar,
   List<String> tags,
+  Map<String, dynamic> room,
 });
 
 /// Video Room discover feed: every tile expands to the hero layout on tap.
@@ -25,10 +26,12 @@ class DiscoverVideoRoomView extends StatefulWidget {
     super.key,
     this.rooms = const <Map<String, dynamic>>[],
     this.isLoading = false,
+    this.onJoinLive,
   });
 
   final List<Map<String, dynamic>> rooms;
   final bool isLoading;
+  final ValueChanged<Map<String, dynamic>>? onJoinLive;
 
   static const String roomLabel = 'Video Room';
 
@@ -96,6 +99,9 @@ class _DiscoverVideoRoomViewState extends State<DiscoverVideoRoomView> {
                   data: data,
                   expanded: expanded,
                   onToggle: () => _onTileTap(index),
+                  onJoinLive: widget.onJoinLive == null
+                      ? null
+                      : () => widget.onJoinLive!(data.room),
                 );
               },
             ),
@@ -159,6 +165,7 @@ class _DiscoverVideoRoomViewState extends State<DiscoverVideoRoomView> {
             _text(room['country']) != null)
           '#${room['country']}',
       ],
+      room: room,
     );
   }
 
@@ -219,11 +226,13 @@ class _ExpandableVideoRoomTile extends StatelessWidget {
     required this.data,
     required this.expanded,
     required this.onToggle,
+    this.onJoinLive,
   });
 
   final _VideoRoomTileData data;
   final bool expanded;
   final VoidCallback onToggle;
+  final VoidCallback? onJoinLive;
 
   @override
   Widget build(BuildContext context) {
@@ -232,7 +241,11 @@ class _ExpandableVideoRoomTile extends StatelessWidget {
       curve: Curves.easeInOutCubic,
       alignment: Alignment.topCenter,
       child: expanded
-          ? _ExpandedHeroCard(data: data, onCollapse: onToggle)
+          ? _ExpandedHeroCard(
+              data: data,
+              onCollapse: onToggle,
+              onJoinLive: onJoinLive,
+            )
           : _CollapsedTile(data: data, onExpand: onToggle),
     );
   }
@@ -400,10 +413,15 @@ class _CollapsedTile extends StatelessWidget {
 
 /// Hero card — tap image/overlay to collapse; Join Live does not collapse.
 class _ExpandedHeroCard extends StatelessWidget {
-  const _ExpandedHeroCard({required this.data, required this.onCollapse});
+  const _ExpandedHeroCard({
+    required this.data,
+    required this.onCollapse,
+    this.onJoinLive,
+  });
 
   final _VideoRoomTileData data;
   final VoidCallback onCollapse;
+  final VoidCallback? onJoinLive;
 
   @override
   Widget build(BuildContext context) {
@@ -499,7 +517,7 @@ class _ExpandedHeroCard extends StatelessWidget {
                       color: kColorVideoJoinLivePurple,
                       borderRadius: BorderRadius.circular(14),
                       child: InkWell(
-                        onTap: () {},
+                        onTap: onJoinLive,
                         borderRadius: BorderRadius.circular(14),
                         child: const Center(
                           child: SemiBoldText(

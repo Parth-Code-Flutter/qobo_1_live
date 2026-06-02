@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/repo/room/room_repo.dart';
+import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 
 import '../models/discover_room_selection.dart';
@@ -189,6 +190,85 @@ class DiscoverTabController extends GetxController {
     if (audioRooms.isEmpty && !isAudioRoomsLoading.value) {
       fetchAudioRooms();
     }
+  }
+
+  Future<void> joinLiveRoom(
+    BuildContext context,
+    Map<String, dynamic> room,
+  ) async {
+    final roomId = _extractRoomId(room);
+    if (roomId == null) {
+      AppToast.showError(
+        context,
+        'Cannot join this live room because room id is missing.',
+      );
+      return;
+    }
+
+    try {
+      final response = await _roomRepo.joinRoom(roomId: roomId);
+      if (!context.mounted) return;
+
+      if (response != null && response['statusCode'] == 1) {
+        final responseData = response['data'];
+        final mergedRoomData = <String, dynamic>{
+          ...room,
+          if (responseData is Map) ...Map<String, dynamic>.from(responseData),
+          'room_id': roomId,
+        };
+
+        Get.toNamed(
+          Routes.LIVE_BROADCAST,
+          arguments: {
+            'isHost': false,
+            'roomType': _extractRoomType(mergedRoomData),
+            'roomData': mergedRoomData,
+          },
+        );
+        return;
+      }
+
+      AppToast.showError(
+        context,
+        response?['message']?.toString() ?? 'Unable to join live room.',
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      AppToast.showError(context, 'Unable to join live room: $e');
+    }
+  }
+
+  String? _extractRoomId(Map<String, dynamic> room) {
+    const keys = [
+      'room_id',
+      'roomId',
+      'zegoLiveId',
+      'zego_live_id',
+      'zegoRoomId',
+      'zego_room_id',
+      'channelName',
+      'channel_name',
+      'liveStreamingId',
+      'livestreamingId',
+      'live_streaming_id',
+      'liveStreamId',
+      'live_id',
+      'liveId',
+      '_id',
+      'id',
+    ];
+
+    for (final key in keys) {
+      final value = room[key]?.toString().trim();
+      if (value != null && value.isNotEmpty && value != 'null') return value;
+    }
+    return null;
+  }
+
+  String _extractRoomType(Map<String, dynamic> room) {
+    final type = room['type']?.toString().trim().toUpperCase();
+    if (type == 'AUDIO') return 'AUDIO';
+    return 'VIDEO';
   }
 
   /// Default feed (no room chip selected). Called when user switches to Discover tab.

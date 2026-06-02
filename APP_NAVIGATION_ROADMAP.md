@@ -7,8 +7,8 @@ This document acts as the definitive roadmap and navigation hierarchy of the **Q
 ## 📊 Project Progress Dashboard (Mobile App)
 
 *   **Total Developed UI Screens & Sub-views:** 39 Surfaces
-*   **Fully Integrated & Wired Screens:** 12 Screens (Splash, Login, Phone Login, OTP Verify, New Password, Onboarding, Profile Edit, User Search, Room Creation, Discover Search/Follow, Entrance Patti Store, User Level)
-*   **Fully Designed Premium Mock Screens:** 27 Screens (Discover Swipers, Live Broadcast view, Messaging, Wallet, Transaction Log, Onboarding Status, Revenue, Agency Owner Hub, Agency Recruitment, Agency Hosts List, Coin Seller Dashboard, Block List, Settings, Followers List, Family Hub, Visitors List, Backpack, SVIP Center, Aristocracy Center, Mall Store, Point Center, Medals List, Broadcast History, Customer Support Support, PK Battles Matching, Call Cards Deck, Live Moderation Console)
+*   **Fully Integrated & Wired Screens:** 14 Screens (Splash, Login, Phone Login, OTP Verify, New Password, Onboarding, Profile Edit, User Search, Room Creation, Discover Search/Follow, Entrance Patti Store, User Level, Agency Host Onboarding Form, Agency Host Status)
+*   **Fully Designed Premium Mock Screens:** 25 Screens (Discover Swipers, Live Broadcast view, Messaging, Wallet, Transaction Log, Revenue, Agency Owner Hub, Agency Recruitment, Agency Hosts List, Coin Seller Dashboard, Block List, Settings, Followers List, Family Hub, Visitors List, Backpack, SVIP Center, Aristocracy Center, Mall Store, Point Center, Medals List, Broadcast History, Customer Support Support, PK Battles Matching, Call Cards Deck, Live Moderation Console)
 
 ---
 

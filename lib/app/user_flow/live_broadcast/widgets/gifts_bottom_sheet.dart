@@ -20,16 +20,51 @@ class _GiftsBottomSheetState extends State<GiftsBottomSheet> {
 
   final _tabs = ['Popular', 'Exclusive', 'Events', 'Backpack'];
 
-  final _gifts = [
-    {'name': 'Rose', 'price': '10', 'icon': '🌹'},
-    {'name': 'Diamond', 'price': '99', 'icon': '💎'},
-    {'name': 'Ring', 'price': '299', 'icon': '💍'},
-    {'name': 'Crown', 'price': '999', 'icon': '👑'},
-    {'name': 'Castle', 'price': '5000', 'icon': '🏰'},
-    {'name': 'Rocket', 'price': '10000', 'icon': '🚀'},
-    {'name': 'Unicorn', 'price': '2500', 'icon': '🦄'},
-    {'name': 'Fireworks', 'price': '500', 'icon': '🎆'},
-  ];
+  final Map<String, List<Map<String, String>>> _giftsByTab = const {
+    'Popular': [
+      {'name': 'Rose', 'price': '10', 'icon': '🌹'},
+      {'name': 'Diamond', 'price': '99', 'icon': '💎'},
+      {'name': 'Ring', 'price': '299', 'icon': '💍'},
+      {'name': 'Crown', 'price': '999', 'icon': '👑'},
+      {'name': 'Castle', 'price': '5000', 'icon': '🏰'},
+      {'name': 'Rocket', 'price': '10000', 'icon': '🚀'},
+      {'name': 'Unicorn', 'price': '2500', 'icon': '🦄'},
+      {'name': 'Fireworks', 'price': '500', 'icon': '🎆'},
+    ],
+    'Exclusive': [
+      {'name': 'Phoenix', 'price': '18888', 'icon': '🔥'},
+      {'name': 'Galaxy', 'price': '28888', 'icon': '🌌'},
+      {'name': 'Yacht', 'price': '38888', 'icon': '🛥️'},
+      {'name': 'Supercar', 'price': '58888', 'icon': '🏎️'},
+      {'name': 'Dragon', 'price': '88888', 'icon': '🐉'},
+      {'name': 'Airship', 'price': '128888', 'icon': '🛸'},
+      {'name': 'Scepter', 'price': '16888', 'icon': '🪄'},
+      {'name': 'Treasure', 'price': '22888', 'icon': '💰'},
+    ],
+    'Events': [
+      {'name': 'Party Pop', 'price': '199', 'icon': '🎉'},
+      {'name': 'Cake', 'price': '299', 'icon': '🎂'},
+      {'name': 'Music Box', 'price': '399', 'icon': '🎵'},
+      {'name': 'Lucky Star', 'price': '520', 'icon': '⭐'},
+      {'name': 'New Year', 'price': '2026', 'icon': '🎊'},
+      {'name': 'Trophy', 'price': '1314', 'icon': '🏆'},
+      {'name': 'Love Rain', 'price': '999', 'icon': '💞'},
+      {'name': 'Festival', 'price': '666', 'icon': '🎭'},
+    ],
+    'Backpack': [
+      {'name': 'My Rose', 'price': 'x12', 'icon': '🌹'},
+      {'name': 'My Heart', 'price': 'x4', 'icon': '💖'},
+      {'name': 'My Star', 'price': 'x6', 'icon': '🌟'},
+      {'name': 'My Mic', 'price': 'x2', 'icon': '🎤'},
+      {'name': 'My Crown', 'price': 'x1', 'icon': '👑'},
+      {'name': 'My Ring', 'price': 'x3', 'icon': '💍'},
+      {'name': 'My Rocket', 'price': 'x1', 'icon': '🚀'},
+      {'name': 'My Party', 'price': 'x5', 'icon': '🎉'},
+    ],
+  };
+
+  List<Map<String, String>> get _visibleGifts =>
+      _giftsByTab[_tabs[_selectedTabIndex]] ?? const [];
 
   @override
   Widget build(BuildContext context) {
@@ -56,9 +91,7 @@ class _GiftsBottomSheetState extends State<GiftsBottomSheet> {
           Spacing.v16,
           _buildTabBar(),
           Spacing.v12,
-          Expanded(
-            child: _buildGiftsGrid(),
-          ),
+          Expanded(child: _buildGiftsGrid()),
           _buildBottomBar(),
         ],
       ),
@@ -73,12 +106,17 @@ class _GiftsBottomSheetState extends State<GiftsBottomSheet> {
         children: List.generate(_tabs.length, (index) {
           final isSelected = _selectedTabIndex == index;
           return GestureDetector(
-            onTap: () => setState(() => _selectedTabIndex = index),
+            onTap: () => setState(() {
+              _selectedTabIndex = index;
+              _selectedGiftIndex = -1;
+            }),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               margin: const EdgeInsets.only(right: 8),
               decoration: BoxDecoration(
-                color: isSelected ? Colors.pinkAccent.withValues(alpha: 0.15) : Colors.transparent,
+                color: isSelected
+                    ? Colors.pinkAccent.withValues(alpha: 0.15)
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: isSelected ? Colors.pinkAccent : Colors.transparent,
@@ -97,6 +135,7 @@ class _GiftsBottomSheetState extends State<GiftsBottomSheet> {
   }
 
   Widget _buildGiftsGrid() {
+    final gifts = _visibleGifts;
     return GridView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -105,15 +144,17 @@ class _GiftsBottomSheetState extends State<GiftsBottomSheet> {
         crossAxisSpacing: 12,
         childAspectRatio: 0.8,
       ),
-      itemCount: _gifts.length,
+      itemCount: gifts.length,
       itemBuilder: (context, index) {
-        final gift = _gifts[index];
+        final gift = gifts[index];
         final isSelected = _selectedGiftIndex == index;
         return GestureDetector(
           onTap: () => setState(() => _selectedGiftIndex = index),
           child: Container(
             decoration: BoxDecoration(
-              color: isSelected ? Colors.pinkAccent.withValues(alpha: 0.1) : Colors.transparent,
+              color: isSelected
+                  ? Colors.pinkAccent.withValues(alpha: 0.1)
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: isSelected ? Colors.pinkAccent : Colors.transparent,
@@ -136,7 +177,11 @@ class _GiftsBottomSheetState extends State<GiftsBottomSheet> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.diamond_outlined, color: Colors.orange, size: 10),
+                    const Icon(
+                      Icons.diamond_outlined,
+                      color: Colors.orange,
+                      size: 10,
+                    ),
                     Spacing.h4,
                     AppText(
                       text: gift['price']!,
@@ -155,6 +200,7 @@ class _GiftsBottomSheetState extends State<GiftsBottomSheet> {
 
   Widget _buildBottomBar() {
     final controller = Get.find<LiveBroadcastController>();
+    final gifts = _visibleGifts;
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       decoration: const BoxDecoration(
@@ -165,14 +211,24 @@ class _GiftsBottomSheetState extends State<GiftsBottomSheet> {
         children: [
           Row(
             children: [
-              const Icon(Icons.diamond_outlined, color: Colors.orange, size: 16),
+              const Icon(
+                Icons.diamond_outlined,
+                color: Colors.orange,
+                size: 16,
+              ),
               Spacing.h6,
-              Obx(() => SemiBoldText(
-                    text: controller.coinsBalance.value.toString(),
-                    fontSize: TextStyles.k14FontSize,
-                    color: kColorWhite,
-                  )),
-              const Icon(Icons.chevron_right_rounded, color: kColorHint, size: 16),
+              Obx(
+                () => SemiBoldText(
+                  text: controller.coinsBalance.value.toString(),
+                  fontSize: TextStyles.k14FontSize,
+                  color: kColorWhite,
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: kColorHint,
+                size: 16,
+              ),
             ],
           ),
           const Spacer(),
@@ -182,10 +238,12 @@ class _GiftsBottomSheetState extends State<GiftsBottomSheet> {
             child: appButton(
               onPressed: () {
                 if (_selectedGiftIndex == -1) return;
-                controller.sendGift(_gifts[_selectedGiftIndex]);
+                controller.sendGift(gifts[_selectedGiftIndex]);
               },
               buttonText: 'Send',
-              buttonColor: _selectedGiftIndex != -1 ? Colors.pinkAccent : kColorHint,
+              buttonColor: _selectedGiftIndex != -1
+                  ? Colors.pinkAccent
+                  : kColorHint,
               borderRadius: 20,
             ),
           ),

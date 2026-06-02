@@ -8,7 +8,9 @@ import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 class LiveBroadcastController extends GetxController {
   final isHost = false.obs;
   final roomType = 'VIDEO'.obs;
-  final roomId = 'test_room'.obs;
+  final roomId = ''.obs;
+  final hasExplicitStreamingId = false.obs;
+  final connectionIssue = ''.obs;
 
   final chatMessages = <Map<String, dynamic>>[].obs;
   final chatTextController = TextEditingController();
@@ -27,11 +29,71 @@ class LiveBroadcastController extends GetxController {
       if (args.containsKey('roomType')) roomType.value = args['roomType'];
       if (args.containsKey('roomData') && args['roomData'] != null) {
         final roomData = args['roomData'];
-        roomId.value = (roomData['room_id'] ?? roomData['id'] ?? 'test_room')
-            .toString();
+        final normalizedRoomData = Map<String, dynamic>.from(roomData);
+        final streamingId = _extractStreamingId(normalizedRoomData);
+        hasExplicitStreamingId.value = streamingId != null;
+        roomId.value =
+            streamingId ?? _extractBackendRoomId(normalizedRoomData) ?? '';
       }
     }
+    _validateStreamingInput();
     chatMessages.clear();
+  }
+
+  bool get canOpenZego => connectionIssue.value.isEmpty;
+
+  void setConnectionIssue(String message) {
+    connectionIssue.value = message;
+  }
+
+  void _validateStreamingInput() {
+    final liveId = roomId.value.trim();
+    if (liveId.isEmpty || liveId == 'test_room' || liveId == 'null') {
+      connectionIssue.value =
+          'Live stream id is missing. Please ask backend to return zegoLiveId or channelName for this room.';
+      return;
+    }
+
+    if (!isHost.value && !hasExplicitStreamingId.value) {
+      connectionIssue.value =
+          'This room has only backend room id. Audience join needs zegoLiveId/channelName from API.';
+      return;
+    }
+
+    connectionIssue.value = '';
+  }
+
+  String? _extractStreamingId(Map<String, dynamic> roomData) {
+    const keys = [
+      'zegoLiveId',
+      'zego_live_id',
+      'zegoRoomId',
+      'zego_room_id',
+      'channelName',
+      'channel_name',
+      'liveStreamingId',
+      'livestreamingId',
+      'live_streaming_id',
+      'liveStreamId',
+      'live_id',
+      'liveId',
+    ];
+
+    return _firstNonEmpty(roomData, keys);
+  }
+
+  String? _extractBackendRoomId(Map<String, dynamic> roomData) {
+    const keys = ['room_id', 'roomId', '_id', 'id'];
+
+    return _firstNonEmpty(roomData, keys);
+  }
+
+  String? _firstNonEmpty(Map<String, dynamic> roomData, List<String> keys) {
+    for (final key in keys) {
+      final value = roomData[key]?.toString().trim();
+      if (value != null && value.isNotEmpty && value != 'null') return value;
+    }
+    return null;
   }
 
   void sendMessage() {

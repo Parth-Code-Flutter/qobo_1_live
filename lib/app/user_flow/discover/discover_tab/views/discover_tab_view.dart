@@ -57,6 +57,8 @@ class DiscoverTabView extends StatelessWidget {
                       return DiscoverVideoRoomView(
                         rooms: discoverController.videoRooms,
                         isLoading: discoverController.isVideoRoomsLoading.value,
+                        onJoinLive: (room) =>
+                            discoverController.joinLiveRoom(context, room),
                       );
                     case DiscoverRoomSelection.audio:
                       return DiscoverAudioRoomView(
@@ -507,6 +509,7 @@ class DiscoverTabView extends StatelessWidget {
             text: name,
             fontSize: TextStyles.k14FontSize,
             color: kColorWhite,
+            align: TextAlign.center,
           ),
         ],
       ),
