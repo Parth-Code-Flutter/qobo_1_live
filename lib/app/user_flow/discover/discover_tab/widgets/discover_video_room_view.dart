@@ -7,12 +7,11 @@ import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
-/// One video room row: same model for collapsed (compact) and expanded (hero).
+/// One video room row for collapsed header + expanded body.
 typedef _VideoRoomTileData = ({
-  String collapsedTitle,
+  String title,
   String hostName,
-  String streamSubtitle,
-  String watchingLabel,
+  String category,
   String viewerCountShort,
   String image,
   String avatar,
@@ -20,7 +19,7 @@ typedef _VideoRoomTileData = ({
   Map<String, dynamic> room,
 });
 
-/// Video Room discover feed: every tile expands to the hero layout on tap.
+/// Video Room discover feed — accordion tiles (tap to expand / collapse).
 class DiscoverVideoRoomView extends StatefulWidget {
   const DiscoverVideoRoomView({
     super.key,
@@ -40,22 +39,28 @@ class DiscoverVideoRoomView extends StatefulWidget {
     BlendMode.srcIn,
   );
 
+  static const _tileGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [kColorVideoTileGradientStart, kColorVideoTileGradientEnd],
+  );
+
+  static const _previewGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [kColorVideoPreviewGradientStart, kColorVideoPreviewGradientEnd],
+  );
+
   @override
   State<DiscoverVideoRoomView> createState() => _DiscoverVideoRoomViewState();
 }
 
 class _DiscoverVideoRoomViewState extends State<DiscoverVideoRoomView> {
-  /// Index of expanded tile, or `null` when all are collapsed.
-  /// First tile starts expanded (Video Room default).
-  int? _expandedIndex = 0;
+  int? _expandedIndex;
 
   void _onTileTap(int index) {
     setState(() {
-      if (_expandedIndex == index) {
-        _expandedIndex = null;
-      } else {
-        _expandedIndex = index;
-      }
+      _expandedIndex = _expandedIndex == index ? null : index;
     });
   }
 
@@ -66,46 +71,32 @@ class _DiscoverVideoRoomViewState extends State<DiscoverVideoRoomView> {
       (index) => _tileFromRoom(widget.rooms[index], index),
     );
 
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            kColorVideoRoomBgGradientTop,
-            kColorVideoRoomBgGradientBottom,
-          ],
-        ),
-      ),
-      child: widget.isLoading
-          ? const Center(
-              child: CircularProgressIndicator(
-                color: kColorWhite,
-                strokeWidth: 2,
-              ),
-            )
-          : tiles.isEmpty
-          ? const _VideoRoomsEmptyState()
-          : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
-              physics: const BouncingScrollPhysics(),
-              itemCount: tiles.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final data = tiles[index];
-                final expanded = _expandedIndex == index;
-                return _ExpandableVideoRoomTile(
-                  data: data,
-                  expanded: expanded,
-                  onToggle: () => _onTileTap(index),
-                  onJoinLive: widget.onJoinLive == null
-                      ? null
-                      : () => widget.onJoinLive!(data.room),
-                );
-              },
+    return widget.isLoading
+        ? const Center(
+            child: CircularProgressIndicator(
+              color: kColorWhite,
+              strokeWidth: 2,
             ),
-    );
+          )
+        : tiles.isEmpty
+        ? const _VideoRoomsEmptyState()
+        : ListView.separated(
+            padding: const EdgeInsets.fromLTRB(14, 4, 14, 24),
+            physics: const BouncingScrollPhysics(),
+            itemCount: tiles.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final data = tiles[index];
+              return _VideoRoomAccordionTile(
+                data: data,
+                expanded: _expandedIndex == index,
+                onToggle: () => _onTileTap(index),
+                onJoinLive: widget.onJoinLive == null
+                    ? null
+                    : () => widget.onJoinLive!(data.room),
+              );
+            },
+          );
   }
 
   _VideoRoomTileData _tileFromRoom(Map<String, dynamic> room, int index) {
@@ -146,11 +137,10 @@ class _DiscoverVideoRoomViewState extends State<DiscoverVideoRoomView> {
         ) ??
         fallbackImages[(index + 1) % fallbackImages.length];
     return (
-      collapsedTitle: title,
+      title: title,
       hostName: hostName,
-      streamSubtitle:
+      category:
           _text(room['bio']) ?? _text(room['category']) ?? 'Live video stream',
-      watchingLabel: '$viewers watching',
       viewerCountShort: viewers,
       image: image,
       avatar: avatar,
@@ -164,6 +154,10 @@ class _DiscoverVideoRoomViewState extends State<DiscoverVideoRoomView> {
             _text(room['countryCode']) == null &&
             _text(room['country']) != null)
           '#${room['country']}',
+        if (_text(room['countryName']) == null &&
+            _text(room['countryCode']) == null &&
+            _text(room['country']) == null)
+          '#Global',
       ],
       room: room,
     );
@@ -191,8 +185,16 @@ class _VideoRoomsEmptyState extends StatelessWidget {
               width: 58,
               height: 58,
               decoration: BoxDecoration(
-                color: kColorWhite.withValues(alpha: 0.12),
+                gradient: const LinearGradient(
+                  colors: [
+                    kColorVideoPreviewGradientStart,
+                    kColorVideoPreviewGradientEnd,
+                  ],
+                ),
                 shape: BoxShape.circle,
+                border: Border.all(
+                  color: kColorVideoPreviewAccent.withValues(alpha: 0.4),
+                ),
               ),
               child: const Icon(
                 Icons.videocam_off_outlined,
@@ -221,8 +223,9 @@ class _VideoRoomsEmptyState extends StatelessWidget {
   }
 }
 
-class _ExpandableVideoRoomTile extends StatelessWidget {
-  const _ExpandableVideoRoomTile({
+/// Single accordion card: header always visible; body animates open below.
+class _VideoRoomAccordionTile extends StatelessWidget {
+  const _VideoRoomAccordionTile({
     required this.data,
     required this.expanded,
     required this.onToggle,
@@ -236,123 +239,131 @@ class _ExpandableVideoRoomTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 320),
-      curve: Curves.easeInOutCubic,
-      alignment: Alignment.topCenter,
-      child: expanded
-          ? _ExpandedHeroCard(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        gradient: DiscoverVideoRoomView._tileGradient,
+        border: Border.all(
+          color: expanded
+              ? kColorVideoPreviewAccent.withValues(alpha: 0.65)
+              : kColorWhite.withValues(alpha: 0.12),
+          width: expanded ? 1.5 : 1,
+        ),
+        boxShadow: expanded
+            ? [
+                BoxShadow(
+                  color: kColorVideoJoinLivePurple.withValues(alpha: 0.35),
+                  blurRadius: 18,
+                  offset: const Offset(0, 6),
+                ),
+                BoxShadow(
+                  color: kColorVideoPreviewAccent.withValues(alpha: 0.15),
+                  blurRadius: 24,
+                  spreadRadius: -4,
+                ),
+              ]
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _CollapsedHeader(
+            data: data,
+            expanded: expanded,
+            onTap: onToggle,
+          ),
+          AnimatedCrossFade(
+            firstCurve: Curves.easeOutCubic,
+            secondCurve: Curves.easeOutCubic,
+            sizeCurve: Curves.easeOutCubic,
+            crossFadeState: expanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 280),
+            firstChild: const SizedBox(width: double.infinity),
+            secondChild: _ExpandedBody(
               data: data,
-              onCollapse: onToggle,
               onJoinLive: onJoinLive,
-            )
-          : _CollapsedTile(data: data, onExpand: onToggle),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-/// Compact row — tap anywhere to expand.
-class _CollapsedTile extends StatelessWidget {
-  const _CollapsedTile({required this.data, required this.onExpand});
+class _CollapsedHeader extends StatelessWidget {
+  const _CollapsedHeader({
+    required this.data,
+    required this.expanded,
+    required this.onTap,
+  });
 
   final _VideoRoomTileData data;
-  final VoidCallback onExpand;
+  final bool expanded;
+  final VoidCallback onTap;
 
-  static const ColorFilter _whiteIcon = ColorFilter.mode(
-    kColorWhite,
-    BlendMode.srcIn,
-  );
+  static const double _thumbSize = 76;
 
   @override
   Widget build(BuildContext context) {
-    const thumbSize = 92.0;
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onExpand,
-        borderRadius: BorderRadius.circular(16),
-        child: Ink(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: kColorVideoListTileBg,
-            borderRadius: BorderRadius.circular(16),
-          ),
+        onTap: onTap,
+        splashColor: kColorVideoPreviewAccent.withValues(alpha: 0.2),
+        highlightColor: kColorWhite.withValues(alpha: 0.06),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(12, 12, 10, expanded ? 10 : 12),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              SizedBox(
-                width: thumbSize,
-                height: thumbSize,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: _RoomImage(
-                        path: data.image,
-                        width: thumbSize,
-                        height: thumbSize,
-                      ),
-                    ),
-                    Positioned(left: 6, top: 6, child: _miniLiveBadge()),
-                    Positioned(
-                      right: 6,
-                      bottom: 6,
-                      child: Container(
-                        width: 28,
-                        height: 28,
-                        decoration: const BoxDecoration(
-                          color: kColorVideoThumbActionPurple,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: SvgPicture.asset(
-                            kIconVideoCamera,
-                            width: 14,
-                            height: 14,
-                            colorFilter: _whiteIcon,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              _ThumbWithFrame(data: data, size: _thumbSize),
               Spacing.h12,
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
                           child: SemiBoldText(
-                            text: data.collapsedTitle,
+                            text: expanded
+                                ? data.title
+                                : '${data.title} LIVE 🔴',
                             fontSize: TextStyles.k16FontSize,
                             color: kColorWhite,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        Icon(
-                          Icons.more_vert_rounded,
-                          color: kColorWhite.withValues(alpha: 0.55),
-                          size: 22,
-                        ),
+                        if (!expanded) ...[
+                          Spacing.h4,
+                          _ViewerMiniPill(count: data.viewerCountShort),
+                        ],
                       ],
+                    ),
+                    Spacing.v4,
+                    AppText(
+                      text: data.category,
+                      fontSize: TextStyles.k12FontSize,
+                      color: kColorVideoSecondaryText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     Spacing.v8,
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        ClipOval(
-                          child: _RoomImage(
-                            path: data.avatar,
-                            width: 26,
-                            height: 26,
-                          ),
-                        ),
+                        _AvatarRing(path: data.avatar, size: 26),
                         Spacing.h8,
                         Expanded(
                           child: Column(
@@ -362,6 +373,8 @@ class _CollapsedTile extends StatelessWidget {
                                 text: data.hostName,
                                 fontSize: TextStyles.k14FontSize,
                                 color: kColorWhite,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                               AppText(
                                 text: 'Host',
@@ -376,32 +389,190 @@ class _CollapsedTile extends StatelessWidget {
                   ],
                 ),
               ),
+              Spacing.h6,
+              _ExpandChevron(expanded: expanded),
             ],
           ),
         ),
       ),
     );
   }
+}
 
-  Widget _miniLiveBadge() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+class _ExpandChevron extends StatelessWidget {
+  const _ExpandChevron({required this.expanded});
+
+  final bool expanded;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+      width: 32,
+      height: 32,
       decoration: BoxDecoration(
-        color: kColorVideoLiveBadgeRed,
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: expanded
+              ? [
+                  kColorVideoJoinLivePurple,
+                  kColorVideoJoinLiveGradientEnd,
+                ]
+              : [
+                  kColorWhite.withValues(alpha: 0.14),
+                  kColorWhite.withValues(alpha: 0.06),
+                ],
+        ),
+        border: Border.all(
+          color: expanded
+              ? kColorVideoPreviewAccent.withValues(alpha: 0.5)
+              : kColorWhite.withValues(alpha: 0.15),
+        ),
+      ),
+      child: AnimatedRotation(
+        turns: expanded ? 0.5 : 0,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+        child: Icon(
+          Icons.keyboard_arrow_down_rounded,
+          color: kColorWhite.withValues(alpha: expanded ? 1 : 0.75),
+          size: 22,
+        ),
+      ),
+    );
+  }
+}
+
+class _ThumbWithFrame extends StatelessWidget {
+  const _ThumbWithFrame({required this.data, required this.size});
+
+  final _VideoRoomTileData data;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(14),
+        gradient: LinearGradient(
+          colors: [
+            kColorVideoPreviewAccent.withValues(alpha: 0.7),
+            kColorVideoJoinLivePurple.withValues(alpha: 0.5),
+          ],
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            _RoomImage(path: data.image, width: size, height: size),
+            const Positioned(left: 6, top: 6, child: _LiveBadge(compact: true)),
+            Positioned(
+              right: 4,
+              bottom: 4,
+              child: Container(
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [
+                      kColorVideoJoinLivePurple,
+                      kColorVideoJoinLiveGradientEnd,
+                    ],
+                  ),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.35),
+                      blurRadius: 4,
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: SvgPicture.asset(
+                    kIconVideoCamera,
+                    width: 13,
+                    height: 13,
+                    colorFilter: DiscoverVideoRoomView._whiteIcon,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AvatarRing extends StatelessWidget {
+  const _AvatarRing({required this.path, required this.size});
+
+  final String path;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      padding: const EdgeInsets.all(1.5),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          colors: [
+            kColorVideoPreviewAccent.withValues(alpha: 0.8),
+            kColorVideoJoinLivePurple,
+          ],
+        ),
+      ),
+      child: ClipOval(
+        child: _RoomImage(path: path, width: size, height: size),
+      ),
+    );
+  }
+}
+
+class _ViewerMiniPill extends StatelessWidget {
+  const _ViewerMiniPill({required this.count});
+
+  final String count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            kColorVideoViewerPillBg,
+            kColorVideoJoinLivePurple.withValues(alpha: 0.85),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: kColorVideoPreviewAccent.withValues(alpha: 0.35),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           SvgPicture.asset(
-            kIconVideoCamera,
-            width: 11,
-            height: 11,
-            colorFilter: _whiteIcon,
+            kIconEye,
+            width: 12,
+            height: 12,
+            colorFilter: DiscoverVideoRoomView._whiteIcon,
           ),
           const SizedBox(width: 4),
-          const SemiBoldText(
-            text: 'Live',
+          SemiBoldText(
+            text: count,
             fontSize: TextStyles.k10FontSize,
             color: kColorWhite,
           ),
@@ -411,183 +582,261 @@ class _CollapsedTile extends StatelessWidget {
   }
 }
 
-/// Hero card — tap image/overlay to collapse; Join Live does not collapse.
-class _ExpandedHeroCard extends StatelessWidget {
-  const _ExpandedHeroCard({
-    required this.data,
-    required this.onCollapse,
-    this.onJoinLive,
-  });
+class _ExpandedBody extends StatelessWidget {
+  const _ExpandedBody({required this.data, this.onJoinLive});
 
   final _VideoRoomTileData data;
-  final VoidCallback onCollapse;
   final VoidCallback? onJoinLive;
 
   @override
   Widget build(BuildContext context) {
-    return AspectRatio(
-      aspectRatio: 3 / 4,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            GestureDetector(
-              onTap: onCollapse,
-              behavior: HitTestBehavior.opaque,
-              child: _RoomImage(path: data.image, fit: BoxFit.cover),
-            ),
-            Positioned.fill(
-              child: IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black.withValues(alpha: 0.1),
-                        Colors.black.withValues(alpha: 0.05),
-                        Colors.black.withValues(alpha: 0.72),
-                      ],
-                      stops: const [0.0, 0.45, 1.0],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              left: 12,
-              top: 12,
-              child: GestureDetector(
-                onTap: onCollapse,
-                child: _liveBadgeFeatured(compact: false),
-              ),
-            ),
-            Positioned(
-              right: 12,
-              top: 12,
-              child: GestureDetector(
-                onTap: onCollapse,
-                child: _viewerCountPill(data.viewerCountShort),
-              ),
-            ),
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 16,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  GestureDetector(
-                    onTap: onCollapse,
-                    behavior: HitTestBehavior.translucent,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        BoldText(
-                          text: data.hostName,
-                          fontSize: TextStyles.k18FontSize,
-                          color: kColorWhite,
-                        ),
-                        Spacing.v4,
-                        AppText(
-                          text: data.streamSubtitle,
-                          fontSize: TextStyles.k14FontSize,
-                          color: kColorWhite.withValues(alpha: 0.92),
-                        ),
-                        if (data.tags.isNotEmpty) ...[
-                          Spacing.v10,
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              for (final tag in data.tags) _TagChip(label: tag),
-                            ],
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 46,
-                    child: Material(
-                      color: kColorVideoJoinLivePurple,
-                      borderRadius: BorderRadius.circular(14),
-                      child: InkWell(
-                        onTap: onJoinLive,
-                        borderRadius: BorderRadius.circular(14),
-                        child: const Center(
-                          child: SemiBoldText(
-                            text: 'Join Live',
-                            fontSize: TextStyles.k14FontSize,
-                            color: kColorWhite,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Container(
+            height: 1,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.transparent,
+                  kColorVideoPreviewAccent.withValues(alpha: 0.45),
+                  Colors.transparent,
                 ],
               ),
             ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _PreviewFrame(
+                imagePath: data.image,
+                viewerCount: data.viewerCountShort,
+              ),
+              const SizedBox(height: 14),
+              if (data.tags.isNotEmpty)
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final tag in data.tags) _TagChip(label: tag),
+                  ],
+                ),
+              if (data.tags.isNotEmpty) Spacing.v12,
+              _JoinLiveButton(onTap: onJoinLive),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Preview area with purple gradient base so empty/failed images match the app.
+class _PreviewFrame extends StatelessWidget {
+  const _PreviewFrame({
+    required this.imagePath,
+    required this.viewerCount,
+  });
+
+  final String imagePath;
+  final String viewerCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          colors: [
+            kColorVideoPreviewAccent.withValues(alpha: 0.55),
+            kColorVideoJoinLivePurple.withValues(alpha: 0.35),
           ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: kColorVideoJoinLivePurple.withValues(alpha: 0.25),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(2),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: AspectRatio(
+          aspectRatio: 16 / 9,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: DiscoverVideoRoomView._previewGradient,
+                ),
+              ),
+              const _PreviewDecorations(),
+              _RoomImage(path: imagePath, fit: BoxFit.cover),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      kColorVideoPreviewGradientStart.withValues(alpha: 0.35),
+                      Colors.transparent,
+                      kColorVideoRoomBgGradientBottom.withValues(alpha: 0.55),
+                    ],
+                    stops: const [0.0, 0.45, 1.0],
+                  ),
+                ),
+              ),
+              const Positioned(left: 10, top: 10, child: _LiveBadge(compact: false)),
+              Positioned(
+                right: 10,
+                top: 10,
+                child: _ViewerMiniPill(count: viewerCount),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
+}
 
-  Widget _liveBadgeFeatured({required bool compact}) {
-    final pad = compact
-        ? const EdgeInsets.symmetric(horizontal: 8, vertical: 5)
-        : const EdgeInsets.symmetric(horizontal: 12, vertical: 7);
+/// Soft glow orbs behind preview when stream thumb is missing.
+class _PreviewDecorations extends StatelessWidget {
+  const _PreviewDecorations();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Positioned(
+          right: -20,
+          top: -10,
+          child: Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: kColorVideoPreviewAccent.withValues(alpha: 0.22),
+            ),
+          ),
+        ),
+        Positioned(
+          left: -16,
+          bottom: -24,
+          child: Container(
+            width: 88,
+            height: 88,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: kColorVideoJoinLiveGradientEnd.withValues(alpha: 0.2),
+            ),
+          ),
+        ),
+        Center(
+          child: Icon(
+            Icons.live_tv_rounded,
+            size: 48,
+            color: kColorWhite.withValues(alpha: 0.18),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _JoinLiveButton extends StatelessWidget {
+  const _JoinLiveButton({this.onTap});
+
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: pad,
+      height: 48,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        gradient: const LinearGradient(
+          colors: [
+            kColorVideoJoinLivePurple,
+            kColorVideoJoinLiveGradientEnd,
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: kColorVideoJoinLivePurple.withValues(alpha: 0.45),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: const Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.play_circle_fill_rounded, color: kColorWhite, size: 22),
+                SizedBox(width: 8),
+                SemiBoldText(
+                  text: 'Join Live',
+                  fontSize: TextStyles.k14FontSize,
+                  color: kColorWhite,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LiveBadge extends StatelessWidget {
+  const _LiveBadge({required this.compact});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 8 : 10,
+        vertical: compact ? 4 : 6,
+      ),
       decoration: BoxDecoration(
         color: kColorVideoLiveBadgeRed,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(compact ? 12 : 16),
+        boxShadow: [
+          BoxShadow(
+            color: kColorVideoLiveBadgeRed.withValues(alpha: 0.45),
+            blurRadius: compact ? 4 : 8,
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           SvgPicture.asset(
             kIconVideoCamera,
-            width: compact ? 11 : 13,
-            height: compact ? 11 : 13,
+            width: compact ? 10 : 12,
+            height: compact ? 10 : 12,
             colorFilter: DiscoverVideoRoomView._whiteIcon,
           ),
-          SizedBox(width: compact ? 5 : 6),
+          SizedBox(width: compact ? 4 : 5),
           SemiBoldText(
             text: 'Live',
             fontSize: compact ? TextStyles.k10FontSize : TextStyles.k12FontSize,
-            color: kColorWhite,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _viewerCountPill(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: kColorVideoViewerPillBg,
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SvgPicture.asset(
-            kIconEye,
-            width: 14,
-            height: 14,
-            colorFilter: DiscoverVideoRoomView._whiteIcon,
-          ),
-          Spacing.h6,
-          SemiBoldText(
-            text: label,
-            fontSize: TextStyles.k12FontSize,
             color: kColorWhite,
           ),
         ],
@@ -606,13 +855,21 @@ class _TagChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: kColorVideoTagBg,
+        gradient: LinearGradient(
+          colors: [
+            kColorVideoTagBg,
+            kColorVideoJoinLivePurple.withValues(alpha: 0.65),
+          ],
+        ),
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: kColorVideoPreviewAccent.withValues(alpha: 0.35),
+        ),
       ),
       child: AppText(
         text: label,
         fontSize: TextStyles.k12FontSize,
-        color: kColorWhite.withValues(alpha: 0.9),
+        color: kColorWhite.withValues(alpha: 0.92),
       ),
     );
   }
@@ -652,10 +909,21 @@ class _RoomImage extends StatelessWidget {
   }
 
   Widget _fallback() {
-    return Container(
+    return SizedBox(
       width: width,
       height: height,
-      color: kColorVideoListTileBg,
+      child: const DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: DiscoverVideoRoomView._previewGradient,
+        ),
+        child: Center(
+          child: Icon(
+            Icons.videocam_rounded,
+            color: kColorWhite,
+            size: 32,
+          ),
+        ),
+      ),
     );
   }
 }

@@ -84,6 +84,12 @@ const kColorVideoListTileBg = Color(0xE628173F);
 const kColorVideoTagBg = Color(0xFF2D1B45);
 const kColorVideoSecondaryText = Color(0xFFB0B0B0);
 const kColorVideoThumbActionPurple = Color(0xFF7A1E63);
+const kColorVideoTileGradientStart = Color(0xFF4A2A72);
+const kColorVideoTileGradientEnd = Color(0xFF24143A);
+const kColorVideoPreviewGradientStart = Color(0xFF5C3488);
+const kColorVideoPreviewGradientEnd = Color(0xFF2E1848);
+const kColorVideoPreviewAccent = Color(0xFF9B6FD4);
+const kColorVideoJoinLiveGradientEnd = Color(0xFFB8328A);
 
 /// Discover → Audio Room participant grid (Figma).
 const kColorAudioSpeakingGreen = Color(0xFF4ADE80);
