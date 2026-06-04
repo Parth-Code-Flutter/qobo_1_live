@@ -7,39 +7,17 @@ import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
+import 'package:qobo_one_live/app/user_flow/agency_owner_dashboard/models/agency_revenue_demo.dart';
+
 import '../controllers/live_action_controller.dart';
+import '../models/live_map_host.dart';
 
 /// Figma-style live discovery map shown from the center heart tab.
 class LiveActionView extends GetView<LiveActionController> {
   const LiveActionView({super.key});
 
-  static const _mapUsers = <_MapUser>[
-    _MapUser('Afrin Sabila', 'LV.10', kImgTemp2, Alignment(-0.68, -0.82)),
-    _MapUser('Afrin Sabila', 'LV.08', kImgTemp3, Alignment(0.54, -0.84)),
-    _MapUser('Afrin Sabila', 'LV.09', kImgTemp4, Alignment(-0.10, -0.42)),
-    _MapUser('Afrin Sabila', 'LV.12', kImgTemp5, Alignment(0.62, -0.30)),
-    _MapUser('Afrin Sabila', 'LV.07', kImgTemp3, Alignment(-0.78, 0.10)),
-    _MapUser('Afrin Sabila', 'LV.14', kImgTemp2, Alignment(0.10, 0.10)),
-    _MapUser('Afrin Sabila', 'LV.11', kImgTemp4, Alignment(0.56, 0.46)),
-    _MapUser('Afrin Sabila', 'LV.06', kImgTemp5, Alignment(0.08, 0.78)),
-  ];
-
-  static const _suggestions = <String>[
-    kImgTemp2,
-    kImgTemp3,
-    kImgTemp4,
-    kImgTemp5,
-    kImgTemp2,
-    kImgTemp3,
-    kImgTemp4,
-  ];
-
   @override
   Widget build(BuildContext context) {
-    if (!Get.isRegistered<LiveActionController>()) {
-      Get.put(LiveActionController());
-    }
-
     return Container(
       decoration: const BoxDecoration(
         image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
@@ -145,15 +123,16 @@ class LiveActionView extends GetView<LiveActionController> {
   }
 
   Widget _mapStage() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
+    return GetBuilder<LiveActionController>(
+      builder: (ctrl) {
+        final hosts = ctrl.mapHosts;
         return Stack(
           fit: StackFit.expand,
           children: [
             Positioned.fill(
               child: CustomPaint(
                 painter: _LiveMapPainter(
-                  users: _mapUsers.map((user) => user.alignment).toList(),
+                  users: hosts.map((h) => h.alignment).toList(),
                 ),
               ),
             ),
@@ -171,10 +150,36 @@ class LiveActionView extends GetView<LiveActionController> {
                 ),
               ),
             ),
-            for (final user in _mapUsers)
+            if (ctrl.isAgencyHostsView)
+              Positioned(
+                top: 8,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: kColorPrimary.withValues(alpha: 0.35),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: kColorWhite.withValues(alpha: 0.24),
+                      ),
+                    ),
+                    child: SemiBoldText(
+                      text: '${AgencyRevenueDemo.agencyName} hosts',
+                      fontSize: TextStyles.k12FontSize,
+                      color: kColorWhite,
+                    ),
+                  ),
+                ),
+              ),
+            for (final host in hosts)
               Align(
-                alignment: user.alignment,
-                child: _MapUserNode(user: user),
+                alignment: host.alignment,
+                child: _MapUserNode(host: host),
               ),
           ],
         );
@@ -183,73 +188,87 @@ class LiveActionView extends GetView<LiveActionController> {
   }
 
   Widget _suggestionStrip(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(22, 0, 22, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 148,
-            height: 1,
-            color: kColorWhite.withValues(alpha: 0.78),
-          ),
-          const SizedBox(height: 14),
-          Row(
+    return GetBuilder<LiveActionController>(
+      builder: (ctrl) {
+        final images = ctrl.suggestionAssets;
+        final label = ctrl.isAgencyHostsView
+            ? 'Agency hosts'
+            : 'Suggestion for you';
+        final moreCount = ctrl.isAgencyHostsView
+            ? '+${AgencyRevenueDemo.hosts.length}'
+            : '+52';
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(22, 0, 22, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(
-                Icons.person_outline_rounded,
-                color: kColorWhite,
-                size: 18,
-              ),
-              Spacing.h8,
-              const SemiBoldText(
-                text: 'Suggestion for you',
-                fontSize: TextStyles.k12FontSize,
-                color: kColorWhite,
-              ),
-            ],
-          ),
-          Spacing.v10,
-          Row(
-            children: [
-              for (final image in _suggestions)
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: _SuggestionAvatar(imageAsset: image),
-                ),
               Container(
-                height: 28,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                decoration: BoxDecoration(
-                  color: kColorPrimary,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: kColorPrimary.withValues(alpha: 0.35),
-                      blurRadius: 12,
-                      offset: const Offset(0, 5),
+                width: 148,
+                height: 1,
+                color: kColorWhite.withValues(alpha: 0.78),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Icon(
+                    ctrl.isAgencyHostsView
+                        ? Icons.groups_rounded
+                        : Icons.person_outline_rounded,
+                    color: kColorWhite,
+                    size: 18,
+                  ),
+                  Spacing.h8,
+                  SemiBoldText(
+                    text: label,
+                    fontSize: TextStyles.k12FontSize,
+                    color: kColorWhite,
+                  ),
+                ],
+              ),
+              Spacing.v10,
+              Row(
+                children: [
+                  for (final image in images)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: _SuggestionAvatar(imageAsset: image),
                     ),
-                  ],
-                ),
-                alignment: Alignment.center,
-                child: const SemiBoldText(
-                  text: '+52',
-                  fontSize: TextStyles.k10FontSize,
-                  color: kColorWhite,
-                ),
+                  Container(
+                    height: 28,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: kColorPrimary,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: kColorPrimary.withValues(alpha: 0.35),
+                          blurRadius: 12,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    alignment: Alignment.center,
+                    child: SemiBoldText(
+                      text: moreCount,
+                      fontSize: TextStyles.k10FontSize,
+                      color: kColorWhite,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
 
 class _MapUserNode extends StatelessWidget {
-  const _MapUserNode({required this.user});
+  const _MapUserNode({required this.host});
 
-  final _MapUser user;
+  final LiveMapHost host;
 
   @override
   Widget build(BuildContext context) {
@@ -258,28 +277,50 @@ class _MapUserNode extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 58,
-            height: 58,
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: kColorWhite, width: 1.5),
-              boxShadow: [
-                BoxShadow(
-                  color: kColorBlack.withValues(alpha: 0.25),
-                  blurRadius: 14,
-                  offset: const Offset(0, 7),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: 58,
+                height: 58,
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: host.isAgencyHost ? kColorPrimary : kColorWhite,
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: kColorBlack.withValues(alpha: 0.25),
+                      blurRadius: 14,
+                      offset: const Offset(0, 7),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: ClipOval(
-              child: Image.asset(user.imageAsset, fit: BoxFit.cover),
-            ),
+                child: ClipOval(
+                  child: Image.asset(host.imageAsset, fit: BoxFit.cover),
+                ),
+              ),
+              if (host.isAgencyHost)
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: Colors.greenAccent,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: kColorWhite, width: 1),
+                    ),
+                  ),
+                ),
+            ],
           ),
           Spacing.v4,
           SemiBoldText(
-            text: user.name,
+            text: host.name,
             fontSize: 9,
             color: kColorWhite,
             maxLines: 1,
@@ -292,12 +333,16 @@ class _MapUserNode extends StatelessWidget {
             decoration: BoxDecoration(
               color: const Color(0xFF2D0D58).withValues(alpha: 0.92),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: LiveActionColors.diamondGold),
+              border: Border.all(
+                color: host.isAgencyHost
+                    ? kColorPrimary
+                    : LiveActionColors.diamondGold,
+              ),
             ),
             child: SemiBoldText(
-              text: user.level,
+              text: host.levelBadge,
               fontSize: 7,
-              color: LiveActionColors.diamondGold,
+              color: host.isAgencyHost ? kColorWhite : LiveActionColors.diamondGold,
             ),
           ),
         ],
@@ -381,14 +426,11 @@ class _LiveMapPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _LiveMapPainter oldDelegate) => false;
-}
-
-class _MapUser {
-  const _MapUser(this.name, this.level, this.imageAsset, this.alignment);
-
-  final String name;
-  final String level;
-  final String imageAsset;
-  final Alignment alignment;
+  bool shouldRepaint(covariant _LiveMapPainter oldDelegate) {
+    if (oldDelegate.users.length != users.length) return true;
+    for (var i = 0; i < users.length; i++) {
+      if (oldDelegate.users[i] != users[i]) return true;
+    }
+    return false;
+  }
 }

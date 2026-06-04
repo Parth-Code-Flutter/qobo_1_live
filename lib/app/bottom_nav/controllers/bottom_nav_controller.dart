@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/discover/discover_tab/controllers/discover_tab_controller.dart';
+import 'package:qobo_one_live/app/user_flow/live_action/controllers/live_action_controller.dart';
 import 'package:qobo_one_live/constants/status_code_constants.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
@@ -19,6 +20,9 @@ class BottomNavController extends GetxController {
       : Get.put(UserSessionController(), permanent: true);
   final selectedIndex = 0.obs;
   Map<String, dynamic>? profileData;
+
+  /// Center heart tab — live host map ([LiveActionView]).
+  static const int heartTabIndex = 2;
 
   /// Bottom-nav tabs (Figma-style labels + centered heart action).
   final items =
@@ -73,6 +77,46 @@ class BottomNavController extends GetxController {
     if (index == 0 && Get.isRegistered<DiscoverTabController>()) {
       Get.find<DiscoverTabController>().clearRoomMode();
     }
+    if (index != heartTabIndex &&
+        Get.isRegistered<LiveActionController>() &&
+        Get.find<LiveActionController>().isAgencyHostsView) {
+      Get.find<LiveActionController>().configureDiscoverHosts();
+    }
+  }
+
+  /// Opens the heart-tab host map with agency hosts (from owner dashboard).
+  void openHeartTabForAgencyHosts() {
+    final popped = _popToBottomNavIfNeeded();
+    onNavBarTabSelected(heartTabIndex);
+    _applyAgencyHostsOnLiveAction(afterPop: popped);
+  }
+
+  bool _popToBottomNavIfNeeded() {
+    if (Get.currentRoute == Routes.BOTTOM_NAV) return false;
+    var popped = false;
+    while (Get.key.currentState?.canPop() ?? false) {
+      final route = Get.currentRoute;
+      if (route == Routes.BOTTOM_NAV) break;
+      Get.back<void>();
+      popped = true;
+      if (Get.currentRoute == Routes.BOTTOM_NAV) break;
+    }
+    return popped;
+  }
+
+  void _applyAgencyHostsOnLiveAction({required bool afterPop}) {
+    void apply() {
+      if (!Get.isRegistered<LiveActionController>()) {
+        Get.put(LiveActionController());
+      }
+      Get.find<LiveActionController>().configureAgencyHosts();
+    }
+
+    if (afterPop) {
+      Future.microtask(apply);
+      return;
+    }
+    apply();
   }
 
   Future<void> onLogoutPressed() async {

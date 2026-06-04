@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:qobo_one_live/app/bottom_nav/controllers/bottom_nav_controller.dart';
 import 'package:qobo_one_live/app/user_flow/agency_owner_dashboard/models/agency_revenue_demo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/agency_session_controller.dart';
@@ -44,8 +45,18 @@ class AgencyOwnerDashboardController extends GetxController {
     Get.toNamed(Routes.AGENCY_RECRUIT_LINK);
   }
 
+  /// Heart tab host map (constellation UI) — agency hosts from demo/API later.
   void openHostList() {
-    Get.toNamed(Routes.AGENCY_HOST_LIST);
+    if (Get.isRegistered<BottomNavController>()) {
+      Get.find<BottomNavController>().openHeartTabForAgencyHosts();
+      return;
+    }
+    Get.offAllNamed(Routes.BOTTOM_NAV);
+    Future.microtask(() {
+      if (Get.isRegistered<BottomNavController>()) {
+        Get.find<BottomNavController>().openHeartTabForAgencyHosts();
+      }
+    });
   }
 
   void openRevenue() {
@@ -57,6 +68,6 @@ class AgencyOwnerDashboardController extends GetxController {
   }
 
   void openHostDetail(AgencyHostRevenueDemo host) {
-    Get.toNamed(Routes.AGENCY_HOST_LIST, arguments: {'highlightHostId': host.id});
+    openHostList();
   }
 }
