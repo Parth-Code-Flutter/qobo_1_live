@@ -15,7 +15,6 @@ class AristocracyCenterView extends GetView<AristocracyCenterController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kColorAppBackground,
       appBar: const CommonAppBarWidget(
         title: 'Aristocracy Center',
         useMaterialAppBar: true,

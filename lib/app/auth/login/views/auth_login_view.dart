@@ -24,7 +24,6 @@ class AuthLoginView extends GetView<AuthLoginController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kColorWhite,
       resizeToAvoidBottomInset: true,
       appBar: CommonAppBarWidget(title: '', showBackButton: false),
       body: GestureDetector(

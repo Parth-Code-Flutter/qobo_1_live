@@ -40,6 +40,28 @@ Register routes in **`lib/routes/app_pages.dart`** / **`app_routes.dart`** when 
 - Write **clear, minimal comments** where they aid understanding (non-obvious flow, API quirks, TODO tied to backend).
 - Avoid noisy comments on trivial code; match the tone of nearby files in this repo.
 
+## 6. Light / dark theming (required for new screens)
+
+The app supports **Light**, **Dark**, and **System** via `ThemeController` + `Get.changeThemeMode`. New UI must respect the active theme.
+
+**Do not** hardcode `kColorWhite`, `kColorBackground`, `kColorText`, or `kImgBG` for screen chrome unless it is a fixed brand accent (e.g. `kColorPrimary` buttons).
+
+**Use instead:**
+
+| Need | Use |
+| --- | --- |
+| Screen scaffold | `ThemedScaffold` (`lib/utils/app_widgets/themed_scaffold.dart`) or `Scaffold(backgroundColor: context.appColors.scaffold)` |
+| Tab / hero full bleed (Discover, Live Rooms, Profile, Messages) | `AppScreenBackground` (`lib/utils/app_widgets/app_screen_background.dart`) |
+| Semantic colors | `context.appColors` from `lib/theme/theme_context.dart` |
+| Text on hero/tab headers | `context.appColors.onHeroPrimary` / `onHeroSecondary` / `onHeroMuted` |
+| Cards, sheets, list tiles | `context.appColors.surface`, `.textPrimary`, `.hint`, `.divider` |
+| App bars | `CommonAppBarWidget` without overriding colors, or theme surface/onSurface |
+| Theme toggle | Settings → Appearance (`ThemeController.setThemeMode`) |
+
+**Theme files:** `lib/theme/app_theme.dart`, `lib/theme/app_theme_colors.dart`, `lib/services/theme_controller.dart`.
+
+When editing an existing screen, migrate hardcoded background/text colors to theme tokens in the same PR when practical.
+
 ---
 
 *Extend this file anytime — additional bullets can be appended below this line.*

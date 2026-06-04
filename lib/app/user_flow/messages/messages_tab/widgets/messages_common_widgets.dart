@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/theme/theme_context.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -45,6 +46,7 @@ class MessageMatchAvatarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     return SizedBox(
       width: 66,
       child: Column(
@@ -57,7 +59,7 @@ class MessageMatchAvatarItem extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: user.hasStoryRing
-                  ? Border.all(color: kColorWhite, width: 1.2)
+                  ? Border.all(color: colors.chipSelected, width: 1.2)
                   : null,
             ),
             child: ClipOval(
@@ -67,7 +69,7 @@ class MessageMatchAvatarItem extends StatelessWidget {
           Spacing.v6,
           AppText(
             text: user.name,
-            color: kColorWhite,
+            color: colors.onHeroPrimary,
             fontSize: TextStyles.k12FontSize,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -100,6 +102,7 @@ class MessageListTileItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     return GestureDetector(
       onTap: () {
         Get.toNamed(
@@ -126,13 +129,13 @@ class MessageListTileItem extends StatelessWidget {
                 children: [
                   SemiBoldText(
                     text: item.name,
-                    color: kColorWhite,
+                    color: colors.onHeroPrimary,
                     fontSize: TextStyles.k14FontSize,
                   ),
                   Spacing.v2,
                   AppText(
                     text: item.message,
-                    color: kColorWhite.withValues(alpha: 0.9),
+                    color: colors.onHeroSecondary,
                     fontSize: TextStyles.k10FontSize,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -148,7 +151,7 @@ class MessageListTileItem extends StatelessWidget {
                 children: [
                   AppText(
                     text: item.time,
-                    color: kColorWhite,
+                    color: colors.onHeroMuted,
                     fontSize: TextStyles.k10FontSize,
                   ),
                   Spacing.v6,
@@ -176,7 +179,7 @@ class MessageListTileItem extends StatelessWidget {
             Icon(
               Icons.more_vert,
               size: 18,
-              color: kColorWhite.withValues(alpha: 0.65),
+              color: colors.iconMuted,
             ),
           ],
         ),

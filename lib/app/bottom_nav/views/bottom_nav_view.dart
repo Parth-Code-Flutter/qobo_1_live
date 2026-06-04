@@ -8,8 +8,8 @@ import 'package:qobo_one_live/app/user_flow/live_room/views/live_room_view.dart'
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/views/messages_tab_view.dart';
 import 'package:qobo_one_live/app/user_flow/profile_tab/views/profile_tab_view.dart';
 import 'package:qobo_one_live/app/user_flow/live_action/views/live_action_view.dart';
-import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/theme/theme_context.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -24,9 +24,10 @@ class BottomNavView extends GetView<BottomNavController> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final colors = context.appColors;
 
     return Scaffold(
-      backgroundColor: kColorWhite,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       extendBody: true,
       body: Obx(() {
         if (controller.selectedIndex.value == 0) {
@@ -55,21 +56,24 @@ class BottomNavView extends GetView<BottomNavController> {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    const Color(0xFF181A5A).withValues(alpha: 0.86),
-                    const Color(0xFF121644).withValues(alpha: 0.93),
-                  ],
+                  colors: [colors.navBarTop, colors.navBarBottom],
                 ),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(26),
                   topRight: Radius.circular(26),
                 ),
                 border: Border(
-                  top: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    width: 0.7,
-                  ),
+                  top: BorderSide(color: colors.navBarBorder, width: 0.7),
                 ),
+                boxShadow: colors.isDark
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.06),
+                          blurRadius: 12,
+                          offset: const Offset(0, -2),
+                        ),
+                      ],
               ),
               child: Padding(
                 padding: EdgeInsets.only(bottom: bottomInset),
@@ -128,16 +132,19 @@ class _BottomNavTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final isCenterTab = iconPath == kIconHeart;
     final displayIconPath = selected ? selectedIconPath : iconPath;
-    final color = selected ? kColorWhite : Colors.white.withValues(alpha: 0.42);
+    final color = selected
+        ? colors.navLabelSelected
+        : colors.navLabelUnselected;
     final tintIcon = iconPath != kIconHeart;
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        splashColor: Colors.white.withValues(alpha: 0.08),
+        splashColor: colors.navLabelUnselected.withValues(alpha: 0.12),
         highlightColor: Colors.transparent,
         child: isCenterTab
             ? Center(
@@ -191,11 +198,11 @@ class _BottomNavTab extends StatelessWidget {
                     style: selected
                         ? TextStyles.kSemiBoldPoppins(
                             fontSize: TextStyles.k12FontSize,
-                            colors: kColorWhite,
+                            colors: colors.navLabelSelected,
                           )
                         : TextStyles.kRegularPoppins(
                             fontSize: TextStyles.k10FontSize,
-                            colors: Colors.white.withValues(alpha: 0.45),
+                            colors: colors.navLabelUnselected,
                           ),
                   ),
                 ],

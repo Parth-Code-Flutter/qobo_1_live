@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/theme/app_theme_colors.dart';
+import 'package:qobo_one_live/theme/theme_context.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
@@ -51,6 +53,59 @@ class DiscoverVideoRoomView extends StatefulWidget {
     colors: [kColorVideoPreviewGradientStart, kColorVideoPreviewGradientEnd],
   );
 
+  static BoxDecoration accordionDecoration(
+    AppThemeColors colors, {
+    required bool expanded,
+  }) {
+    if (colors.isDark) {
+      return BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        gradient: _tileGradient,
+        border: Border.all(
+          color: expanded
+              ? kColorVideoPreviewAccent.withValues(alpha: 0.65)
+              : kColorWhite.withValues(alpha: 0.12),
+          width: expanded ? 1.5 : 1,
+        ),
+        boxShadow: expanded
+            ? [
+                BoxShadow(
+                  color: kColorVideoJoinLivePurple.withValues(alpha: 0.35),
+                  blurRadius: 18,
+                  offset: const Offset(0, 6),
+                ),
+                BoxShadow(
+                  color: kColorVideoPreviewAccent.withValues(alpha: 0.15),
+                  blurRadius: 24,
+                  spreadRadius: -4,
+                ),
+              ]
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+      );
+    }
+    return BoxDecoration(
+      color: colors.surface,
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(
+        color: expanded ? colors.chipSelected : colors.border,
+        width: expanded ? 1.5 : 1,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.06),
+          blurRadius: 12,
+          offset: const Offset(0, 4),
+        ),
+      ],
+    );
+  }
+
   @override
   State<DiscoverVideoRoomView> createState() => _DiscoverVideoRoomViewState();
 }
@@ -71,15 +126,16 @@ class _DiscoverVideoRoomViewState extends State<DiscoverVideoRoomView> {
       (index) => _tileFromRoom(widget.rooms[index], index),
     );
 
-    return widget.isLoading
-        ? const Center(
+    final colors = context.appColors;
+    final content = widget.isLoading
+        ? Center(
             child: CircularProgressIndicator(
-              color: kColorWhite,
+              color: kColorPrimary,
               strokeWidth: 2,
             ),
           )
         : tiles.isEmpty
-        ? const _VideoRoomsEmptyState()
+        ? _VideoRoomsEmptyState(colors: colors)
         : ListView.separated(
             padding: const EdgeInsets.fromLTRB(14, 4, 14, 24),
             physics: const BouncingScrollPhysics(),
@@ -97,6 +153,24 @@ class _DiscoverVideoRoomViewState extends State<DiscoverVideoRoomView> {
               );
             },
           );
+
+    if (colors.isDark) {
+      return Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              kColorVideoRoomBgGradientTop,
+              kColorVideoRoomBgGradientBottom,
+            ],
+          ),
+        ),
+        child: content,
+      );
+    }
+    return content;
   }
 
   _VideoRoomTileData _tileFromRoom(Map<String, dynamic> room, int index) {
@@ -171,7 +245,9 @@ class _DiscoverVideoRoomViewState extends State<DiscoverVideoRoomView> {
 }
 
 class _VideoRoomsEmptyState extends StatelessWidget {
-  const _VideoRoomsEmptyState();
+  const _VideoRoomsEmptyState({required this.colors});
+
+  final AppThemeColors colors;
 
   @override
   Widget build(BuildContext context) {
@@ -203,17 +279,17 @@ class _VideoRoomsEmptyState extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 14),
-            const SemiBoldText(
+            SemiBoldText(
               text: 'No data found',
               fontSize: TextStyles.k16FontSize,
-              color: kColorWhite,
+              color: colors.onHeroPrimary,
               align: TextAlign.center,
             ),
             Spacing.v6,
             AppText(
               text: 'Video rooms will appear here when available.',
               fontSize: TextStyles.k12FontSize,
-              color: kColorWhite.withValues(alpha: 0.72),
+              color: colors.onHeroMuted,
               align: TextAlign.center,
             ),
           ],
@@ -239,38 +315,13 @@ class _VideoRoomAccordionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOutCubic,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        gradient: DiscoverVideoRoomView._tileGradient,
-        border: Border.all(
-          color: expanded
-              ? kColorVideoPreviewAccent.withValues(alpha: 0.65)
-              : kColorWhite.withValues(alpha: 0.12),
-          width: expanded ? 1.5 : 1,
-        ),
-        boxShadow: expanded
-            ? [
-                BoxShadow(
-                  color: kColorVideoJoinLivePurple.withValues(alpha: 0.35),
-                  blurRadius: 18,
-                  offset: const Offset(0, 6),
-                ),
-                BoxShadow(
-                  color: kColorVideoPreviewAccent.withValues(alpha: 0.15),
-                  blurRadius: 24,
-                  spreadRadius: -4,
-                ),
-              ]
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.25),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+      decoration: DiscoverVideoRoomView.accordionDecoration(
+        colors,
+        expanded: expanded,
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -316,12 +367,18 @@ class _CollapsedHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final titleColor = colors.isDark ? kColorWhite : colors.onHeroPrimary;
+    final mutedColor =
+        colors.isDark ? kColorVideoSecondaryText : colors.onHeroSecondary;
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         splashColor: kColorVideoPreviewAccent.withValues(alpha: 0.2),
-        highlightColor: kColorWhite.withValues(alpha: 0.06),
+        highlightColor: colors.isDark
+            ? kColorWhite.withValues(alpha: 0.06)
+            : colors.surfaceMuted,
         child: Padding(
           padding: EdgeInsets.fromLTRB(12, 12, 10, expanded ? 10 : 12),
           child: Row(
@@ -341,7 +398,7 @@ class _CollapsedHeader extends StatelessWidget {
                                 ? data.title
                                 : '${data.title} LIVE 🔴',
                             fontSize: TextStyles.k16FontSize,
-                            color: kColorWhite,
+                            color: titleColor,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -356,7 +413,7 @@ class _CollapsedHeader extends StatelessWidget {
                     AppText(
                       text: data.category,
                       fontSize: TextStyles.k12FontSize,
-                      color: kColorVideoSecondaryText,
+                      color: mutedColor,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -372,14 +429,14 @@ class _CollapsedHeader extends StatelessWidget {
                               AppText(
                                 text: data.hostName,
                                 fontSize: TextStyles.k14FontSize,
-                                color: kColorWhite,
+                                color: titleColor,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                               AppText(
                                 text: 'Host',
                                 fontSize: TextStyles.k12FontSize,
-                                color: kColorVideoSecondaryText,
+                                color: mutedColor,
                               ),
                             ],
                           ),
@@ -406,6 +463,7 @@ class _ExpandChevron extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 280),
       curve: Curves.easeOutCubic,
@@ -413,23 +471,30 @@ class _ExpandChevron extends StatelessWidget {
       height: 32,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: expanded
-              ? [
-                  kColorVideoJoinLivePurple,
-                  kColorVideoJoinLiveGradientEnd,
-                ]
-              : [
-                  kColorWhite.withValues(alpha: 0.14),
-                  kColorWhite.withValues(alpha: 0.06),
-                ],
-        ),
+        gradient: colors.isDark
+            ? LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: expanded
+                    ? [
+                        kColorVideoJoinLivePurple,
+                        kColorVideoJoinLiveGradientEnd,
+                      ]
+                    : [
+                        kColorWhite.withValues(alpha: 0.14),
+                        kColorWhite.withValues(alpha: 0.06),
+                      ],
+              )
+            : null,
+        color: colors.isDark ? null : colors.surfaceMuted,
         border: Border.all(
           color: expanded
-              ? kColorVideoPreviewAccent.withValues(alpha: 0.5)
-              : kColorWhite.withValues(alpha: 0.15),
+              ? (colors.isDark
+                  ? kColorVideoPreviewAccent.withValues(alpha: 0.5)
+                  : colors.chipSelected)
+              : (colors.isDark
+                  ? kColorWhite.withValues(alpha: 0.15)
+                  : colors.border),
         ),
       ),
       child: AnimatedRotation(
@@ -438,7 +503,9 @@ class _ExpandChevron extends StatelessWidget {
         curve: Curves.easeOutCubic,
         child: Icon(
           Icons.keyboard_arrow_down_rounded,
-          color: kColorWhite.withValues(alpha: expanded ? 1 : 0.75),
+          color: colors.isDark
+              ? kColorWhite.withValues(alpha: expanded ? 1 : 0.75)
+              : colors.onHeroPrimary,
           size: 22,
         ),
       ),

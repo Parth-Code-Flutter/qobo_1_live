@@ -9,6 +9,9 @@ import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/app/user_flow/wallet/bindings/wallet_binding.dart';
 import 'package:qobo_one_live/app/user_flow/wallet/views/wallet_view.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
+import 'package:qobo_one_live/theme/app_theme_colors.dart';
+import 'package:qobo_one_live/theme/theme_context.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_screen_background.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -22,23 +25,21 @@ class ProfileTabView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final userSession = _resolveUserSession();
-    return Container(
-      decoration: const BoxDecoration(
-        image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
-      ),
+    final colors = context.appColors;
+    return AppScreenBackground(
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           child: SingleChildScrollView(
             child: Column(
               children: [
-                _profileHero(userSession),
+                _profileHero(context, colors, userSession),
                 Spacing.v16,
                 _profileActionCards(),
                 Spacing.v12,
-                _profileFeatureGrid(),
+                _profileFeatureGrid(context, colors),
                 Spacing.v20,
-                _settingsRow(),
+                _settingsRow(context, colors),
                 Spacing.v12,
                 appButton(
                   onPressed: onLogoutPressed,
@@ -64,7 +65,11 @@ class ProfileTabView extends StatelessWidget {
     );
   }
 
-  Widget _profileHero(UserSessionController userSession) {
+  Widget _profileHero(
+    BuildContext context,
+    AppThemeColors colors,
+    UserSessionController userSession,
+  ) {
     return GetBuilder<UserSessionController>(
       init: userSession,
       builder: (session) {
@@ -85,9 +90,9 @@ class ProfileTabView extends StatelessWidget {
                         height: avatarSize,
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
-                          color: kColorWhite,
+                          color: colors.surface,
                           shape: BoxShape.circle,
-                          border: Border.all(color: kColorWhite, width: 1.2),
+                          border: Border.all(color: colors.border, width: 1.2),
                         ),
                         child: ClipOval(
                           child: imageUrl == null
@@ -110,7 +115,7 @@ class ProfileTabView extends StatelessWidget {
                               fontSize: isCompact
                                   ? TextStyles.k18FontSize
                                   : TextStyles.k20FontSize,
-                              color: kColorWhite,
+                              color: colors.onHeroPrimary,
                             ),
                             Spacing.v2,
                             AppText(
@@ -119,10 +124,10 @@ class ProfileTabView extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               fontSize: TextStyles.k14FontSize,
-                              color: kColorWhite,
+                              color: colors.onHeroSecondary,
                               style: TextStyles.kRegularPoppins(
                                 fontSize: TextStyles.k14FontSize,
-                                colors: kColorWhite,
+                                colors: colors.onHeroSecondary,
                               ),
                             ),
                             Spacing.v10,
@@ -153,11 +158,11 @@ class ProfileTabView extends StatelessWidget {
                       ),
                       GestureDetector(
                         onTap: () => Get.toNamed(Routes.USER_BASIC_PROFILE),
-                        child: const Padding(
-                          padding: EdgeInsets.only(right: 4),
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 4),
                           child: Icon(
                             Icons.chevron_right_rounded,
-                            color: kColorWhite,
+                            color: colors.onHeroPrimary,
                             size: 34,
                           ),
                         ),
@@ -168,14 +173,16 @@ class ProfileTabView extends StatelessWidget {
                   Row(
                     children: [
                       _statBlock(
+                        colors,
                         '2K',
                         'Visitors',
                         onTap: () => Get.toNamed(Routes.VISITORS),
                       ),
-                      _statDivider(),
-                      _statBlock('1K', 'Friends'),
-                      _statDivider(),
+                      _statDivider(colors),
+                      _statBlock(colors, '1K', 'Friends'),
+                      _statDivider(colors),
                       _statBlock(
+                        colors,
                         '1K',
                         'Following',
                         onTap: () => Get.toNamed(
@@ -183,8 +190,9 @@ class ProfileTabView extends StatelessWidget {
                           arguments: const {'initialTab': 0},
                         ),
                       ),
-                      _statDivider(),
+                      _statDivider(colors),
                       _statBlock(
+                        colors,
                         '10K',
                         'Followers',
                         onTap: () => Get.toNamed(
@@ -222,19 +230,24 @@ class ProfileTabView extends StatelessWidget {
     );
   }
 
-  Widget _statBlock(String value, String label, {VoidCallback? onTap}) {
+  Widget _statBlock(
+    AppThemeColors colors,
+    String value,
+    String label, {
+    VoidCallback? onTap,
+  }) {
     final content = Column(
       children: [
         BoldText(
           text: value,
           fontSize: TextStyles.k20FontSize,
-          color: kColorWhite,
+          color: colors.onHeroPrimary,
         ),
         Spacing.v6,
         AppText(
           text: label,
           fontSize: TextStyles.k12FontSize,
-          color: kColorWhite,
+          color: colors.onHeroSecondary,
         ),
       ],
     );
@@ -250,12 +263,12 @@ class ProfileTabView extends StatelessWidget {
     );
   }
 
-  Widget _statDivider() {
+  Widget _statDivider(AppThemeColors colors) {
     return Container(
       width: 1.2,
       height: 52,
       margin: const EdgeInsets.symmetric(horizontal: 6),
-      color: kColorWhite.withValues(alpha: 0.85),
+      color: colors.divider,
     );
   }
 
@@ -446,7 +459,7 @@ class ProfileTabView extends StatelessWidget {
     );
   }
 
-  Widget _profileFeatureGrid() {
+  Widget _profileFeatureGrid(BuildContext context, AppThemeColors colors) {
     final features = <_ProfileFeatureItem>[
       _ProfileFeatureItem('Visitors', kIconVisitor, const [
         Color(0xFF1F74F2),
@@ -514,7 +527,7 @@ class ProfileTabView extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: kColorProfileFeatureBorder.withValues(alpha: 0.75),
+          color: colors.profileFeatureBorder.withValues(alpha: 0.75),
           width: 1,
         ),
       ),
@@ -528,12 +541,12 @@ class ProfileTabView extends StatelessWidget {
           crossAxisSpacing: 8,
           mainAxisExtent: 104,
         ),
-        itemBuilder: (_, index) => _featureItem(features[index]),
+        itemBuilder: (_, index) => _featureItem(features[index], colors),
       ),
     );
   }
 
-  Widget _featureItem(_ProfileFeatureItem item) {
+  Widget _featureItem(_ProfileFeatureItem item, AppThemeColors colors) {
     return GestureDetector(
       onTap: () {
         if (item.onTapRoute != null) {
@@ -575,7 +588,7 @@ class ProfileTabView extends StatelessWidget {
             child: AppText(
               text: item.label,
               fontSize: TextStyles.k12FontSize,
-              color: kColorWhite,
+              color: colors.onHeroPrimary,
               align: TextAlign.center,
             ),
           ),
@@ -591,30 +604,36 @@ class ProfileTabView extends StatelessWidget {
     return Get.put(UserSessionController(), permanent: true);
   }
 
-  Widget _settingsRow() {
+  Widget _settingsRow(BuildContext context, AppThemeColors colors) {
     return GestureDetector(
       onTap: () => Get.toNamed(Routes.SETTINGS),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
-          color: kColorWhite.withValues(alpha: 0.12),
-          border: Border.all(color: kColorWhite.withValues(alpha: 0.2)),
+          color: colors.isDark
+              ? kColorWhite.withValues(alpha: 0.12)
+              : colors.surface,
+          border: Border.all(
+            color: colors.isDark
+                ? kColorWhite.withValues(alpha: 0.2)
+                : colors.border,
+          ),
         ),
         child: Row(
           children: [
-            const Icon(Icons.settings_rounded, color: kColorWhite, size: 22),
+            Icon(Icons.settings_rounded, color: colors.onHeroPrimary, size: 22),
             Spacing.h12,
-            const Expanded(
+            Expanded(
               child: SemiBoldText(
                 text: 'Settings',
                 fontSize: TextStyles.k14FontSize,
-                color: kColorWhite,
+                color: colors.onHeroPrimary,
               ),
             ),
-            const Icon(
+            Icon(
               Icons.chevron_right_rounded,
-              color: kColorWhite,
+              color: colors.onHeroPrimary,
               size: 22,
             ),
           ],

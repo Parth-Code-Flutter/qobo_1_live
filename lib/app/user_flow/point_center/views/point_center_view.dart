@@ -18,7 +18,6 @@ class PointCenterView extends GetView<PointCenterController> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: kColorBackground,
         appBar: const CommonAppBarWidget(
           title: 'Point Center',
           useMaterialAppBar: true,

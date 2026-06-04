@@ -22,7 +22,6 @@ class NewPasswordView extends GetView<NewPasswordController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kColorWhite,
       resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: GestureDetector(

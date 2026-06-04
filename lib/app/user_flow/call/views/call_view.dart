@@ -16,7 +16,6 @@ class CallView extends GetView<CallController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kColorAppBackground,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -806,7 +805,6 @@ class CallView extends GetView<CallController> {
             children: [
               CircleAvatar(
                 radius: 28,
-                backgroundColor: kColorAppBackground,
                 child: ClipOval(
                   child: match['avatar'].toString().startsWith('http')
                       ? SafeNetworkAvatar(

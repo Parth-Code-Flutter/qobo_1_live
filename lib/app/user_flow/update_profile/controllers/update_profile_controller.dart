@@ -142,7 +142,6 @@ class UpdateProfileController extends GetxController {
 
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: kColorWhite,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),

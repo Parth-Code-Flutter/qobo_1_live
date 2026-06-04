@@ -1,4 +1,5 @@
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/theme/theme_context.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -93,6 +94,23 @@ class AppTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final fieldTextStyle = textStyle ??
+        TextStyles.kRegularPoppins(
+          fontSize: TextStyles.k14FontSize,
+          colors: colors.textPrimary,
+        );
+    final fieldHintStyle = hintStyle ??
+        TextStyles.kRegularPoppins(
+          fontSize: TextStyles.k12FontSize,
+          colors: colors.hint,
+        );
+    final fieldLabelStyle = labelStyle ??
+        TextStyles.kSemiBoldPoppins(
+          fontSize: TextStyles.k12FontSize,
+          colors: colors.textPrimary,
+        );
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -110,7 +128,7 @@ class AppTextField extends StatelessWidget {
                 Flexible(
                   child: AppText(
                     text: labelText ?? '',
-                    style: labelStyle ?? AppUIUtils.labelTextFieldTextStyle,
+                    style: fieldLabelStyle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -118,9 +136,7 @@ class AppTextField extends StatelessWidget {
                 if (isRequired)
                   AppText(
                     text: ' *',
-                    style: labelStyle ??
-                        AppUIUtils.labelTextFieldTextStyle
-                            .copyWith(color: kColorRed),
+                    style: fieldLabelStyle.copyWith(color: kColorRed),
                   ),
               ],
             ),
@@ -137,7 +153,7 @@ class AppTextField extends StatelessWidget {
             autofocus: autoFocus ?? false,
             controller: controller,
             cursorColor: kColorPrimary,
-            style: textStyle ?? AppUIUtils.globalTextStyle,
+            style: fieldTextStyle,
             // TextStyles.kPrimaryBoldInter(
             // fontSize: TextStyles.k24FontSize, colors: kColorD9D9D9),
             keyboardType: textInputType,
@@ -157,14 +173,14 @@ class AppTextField extends StatelessWidget {
             validator: validator,
             autofillHints: autofillHints,
             decoration: InputDecoration(
-              fillColor: fillColor ?? kColorWhite,
+              fillColor: fillColor ?? colors.searchFieldFill,
               filled: true,
               isDense: true,
               // alignLabelWithHint: true,
               counterText: !showCounter ? '' : null,
               contentPadding: padding,
               hintText: hintText,
-              hintStyle: hintStyle ?? AppUIUtils.hintTextFieldTextStyle,
+              hintStyle: fieldHintStyle,
               errorStyle: TextStyles.kMediumPoppins(
                 colors: kColorRed,
                 fontSize: TextStyles.k10FontSize,
@@ -179,7 +195,7 @@ class AppTextField extends StatelessWidget {
                           children: [
                             TextSpan(
                               text: labelText ?? '',
-                              style: labelStyle ?? AppUIUtils.labelTextFieldTextStyle,
+                              style: fieldLabelStyle,
                             ),
                             TextSpan(
                               text: (isRequired ? ' *' : ''),
@@ -238,17 +254,19 @@ class AppTextField extends StatelessWidget {
   }
 
   Widget _title(BuildContext context) {
+    final colors = context.appColors;
+    final style = TextStyles.kRegularPoppins(
+      fontSize: TextStyles.k12FontSize,
+      colors: colors.textPrimary,
+    );
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        AppText(
-          text: fieldTitle ?? '',
-          style: TextStyles.kRegularPoppins(),
-        ),
+        AppText(text: fieldTitle ?? '', style: style),
         if (isRequired)
           AppText(
             text: ' *',
-            style: TextStyles.kRegularPoppins(),
+            style: style.copyWith(color: kColorRed),
           ),
       ],
     );
@@ -257,7 +275,10 @@ class AppTextField extends StatelessWidget {
   Widget _ex(BuildContext context) {
     return AppText(
       text: exText ?? '',
-      style: TextStyles.kRegularPoppins(),
+      style: TextStyles.kRegularPoppins(
+        fontSize: TextStyles.k12FontSize,
+        colors: context.appColors.textSecondary,
+      ),
     );
   }
 
@@ -269,7 +290,9 @@ class AppTextField extends StatelessWidget {
       gapPadding: gapPadding,
       borderRadius: inputBorderRadius ?? AppUIUtils.primaryBorderRadius,
       borderSide: BorderSide(
-        color: error ?? false ? kColorRed : (borderColor ?? kColorTextFieldBorder),
+        color: error ?? false
+            ? kColorRed
+            : (borderColor ?? context.appColors.searchFieldBorder),
         width: borderWidth,
         // width: error ?? false ? 0.7 : 0.7,
       ),
@@ -281,7 +304,9 @@ class AppTextField extends StatelessWidget {
       gapPadding: gapPadding,
       borderRadius: inputBorderRadius ?? AppUIUtils.primaryBorderRadius,
       borderSide: BorderSide(
-        color: error ?? false ? kColorRed : (borderColor ?? kColorTextFieldBorder),
+        color: error ?? false
+            ? kColorRed
+            : (borderColor ?? kColorPrimary),
         width: borderWidth,
         // width: error ?? false ? 0.7 : 0.7,
       ),

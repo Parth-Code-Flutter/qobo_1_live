@@ -15,7 +15,6 @@ class LiveModerationView extends GetView<LiveModerationController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kColorBackground,
       appBar: const CommonAppBarWidget(
         title: 'Security Moderation',
         useMaterialAppBar: true,

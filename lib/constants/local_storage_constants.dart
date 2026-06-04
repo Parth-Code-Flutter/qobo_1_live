@@ -1,3 +1,6 @@
+/// App theme: `light`, `dark`, or `system`.
+const String kStorageThemeMode = 'app_theme_mode';
+
 const String kStorageIsLoggedIn = 'is_logged_in';
 const String kStorageIsAdmin = 'is_admin_in';
 const String kStorageIsEmployee = 'is_employee_in';

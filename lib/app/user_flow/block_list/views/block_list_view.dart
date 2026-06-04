@@ -15,7 +15,6 @@ class BlockListView extends GetView<BlockListController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kColorWhite,
       appBar: const CommonAppBarWidget(
         title: 'Block List',
         useMaterialAppBar: true,

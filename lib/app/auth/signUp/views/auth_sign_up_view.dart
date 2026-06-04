@@ -21,7 +21,6 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kColorWhite,
       resizeToAvoidBottomInset: true,
       appBar: CommonAppBarWidget(title: '', showBackButton: true),
       body: GestureDetector(

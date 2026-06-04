@@ -17,7 +17,6 @@ class BackpackView extends GetView<BackpackController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kColorAppBackground,
       appBar: const CommonAppBarWidget(
         title: 'My Backpack',
         useMaterialAppBar: true,

@@ -14,7 +14,6 @@ class TransactionHistoryView extends GetView<TransactionHistoryController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kColorBackground,
       appBar: const CommonAppBarWidget(
         title: 'Transaction History',
         useMaterialAppBar: true,

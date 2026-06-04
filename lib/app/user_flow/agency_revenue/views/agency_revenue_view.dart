@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/theme/app_theme_colors.dart';
+import 'package:qobo_one_live/theme/theme_context.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
@@ -15,8 +17,10 @@ class AgencyRevenueView extends GetView<AgencyRevenueController> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+
     return Scaffold(
-      backgroundColor: kColorWhite,
+      backgroundColor: colors.scaffold,
       appBar: CommonAppBarWidget(
         title: 'Agency Revenue',
         useMaterialAppBar: true,
@@ -26,15 +30,15 @@ class AgencyRevenueView extends GetView<AgencyRevenueController> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildMonthSelector(),
+            _buildMonthSelector(colors),
             Spacing.v16,
             _buildBalanceCard(context),
             Spacing.v16,
-            Obx(() => _statsRow()),
+            Obx(() => _statsRow(colors)),
             Spacing.v24,
-            _sectionTitle('Revenue History'),
+            _sectionTitle(colors, 'Revenue History'),
             Spacing.v12,
-            _buildHistoryList(),
+            _buildHistoryList(colors),
           ],
         ),
       ),
@@ -64,14 +68,14 @@ class AgencyRevenueView extends GetView<AgencyRevenueController> {
     );
   }
 
-  Widget _buildMonthSelector() {
+  Widget _buildMonthSelector(AppThemeColors colors) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SemiBoldText(
+        SemiBoldText(
           text: 'Select Month',
           fontSize: TextStyles.k14FontSize,
-          color: kColorText,
+          color: colors.textPrimary,
         ),
         Spacing.v10,
         Obx(
@@ -91,18 +95,16 @@ class AgencyRevenueView extends GetView<AgencyRevenueController> {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: selected ? kColorPrimary : kColorBackground,
+                        color: selected ? kColorPrimary : colors.surface,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: selected
-                              ? kColorPrimary
-                              : kColorHint.withValues(alpha: 0.25),
+                          color: selected ? kColorPrimary : colors.border,
                         ),
                       ),
                       child: SemiBoldText(
                         text: month,
                         fontSize: TextStyles.k12FontSize,
-                        color: selected ? kColorWhite : kColorHint,
+                        color: selected ? kColorWhite : colors.textSecondary,
                       ),
                     ),
                   ),
@@ -115,30 +117,31 @@ class AgencyRevenueView extends GetView<AgencyRevenueController> {
     );
   }
 
-  Widget _statsRow() {
+  Widget _statsRow(AppThemeColors colors) {
     return Row(
       children: [
         Expanded(
           child: _miniStatCard(
+            colors,
             'Pending',
             controller.pendingCommissionCount.value,
           ),
         ),
         Spacing.h10,
         Expanded(
-          child: _miniStatCard('Hosts', controller.hostsCount.value),
+          child: _miniStatCard(colors, 'Hosts', controller.hostsCount.value),
         ),
       ],
     );
   }
 
-  Widget _miniStatCard(String label, String value) {
+  Widget _miniStatCard(AppThemeColors colors, String label, String value) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: kColorBackground,
+        color: colors.surfaceMuted,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: kColorHint.withValues(alpha: 0.12)),
+        border: Border.all(color: colors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -146,13 +149,13 @@ class AgencyRevenueView extends GetView<AgencyRevenueController> {
           AppText(
             text: label,
             fontSize: TextStyles.k12FontSize,
-            color: kColorHint,
+            color: colors.textSecondary,
           ),
           Spacing.v4,
           SemiBoldText(
             text: value,
             fontSize: TextStyles.k18FontSize,
-            color: kColorText,
+            color: colors.textPrimary,
           ),
         ],
       ),
@@ -217,24 +220,24 @@ class AgencyRevenueView extends GetView<AgencyRevenueController> {
     );
   }
 
-  Widget _sectionTitle(String title) {
+  Widget _sectionTitle(AppThemeColors colors, String title) {
     return SemiBoldText(
       text: title,
       fontSize: TextStyles.k18FontSize,
-      color: kColorText,
+      color: colors.textPrimary,
     );
   }
 
-  Widget _buildHistoryList() {
+  Widget _buildHistoryList(AppThemeColors colors) {
     return Obx(() {
       if (controller.historyList.isEmpty) {
-        return const Center(
+        return Center(
           child: Padding(
-            padding: EdgeInsets.all(32),
+            padding: const EdgeInsets.all(32),
             child: AppText(
               text: 'No revenue history yet.',
               fontSize: TextStyles.k14FontSize,
-              color: kColorHint,
+              color: colors.textSecondary,
             ),
           ),
         );
@@ -244,7 +247,7 @@ class AgencyRevenueView extends GetView<AgencyRevenueController> {
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         itemCount: controller.historyList.length,
-        separatorBuilder: (_, __) => const Divider(color: kColorHint, height: 24),
+        separatorBuilder: (_, __) => Divider(color: colors.divider, height: 24),
         itemBuilder: (context, index) {
           final item = controller.historyList[index];
           return Row(
@@ -266,13 +269,13 @@ class AgencyRevenueView extends GetView<AgencyRevenueController> {
                     SemiBoldText(
                       text: 'Payout',
                       fontSize: TextStyles.k16FontSize,
-                      color: kColorText,
+                      color: colors.textPrimary,
                     ),
                     Spacing.v4,
                     AppText(
                       text: item.date,
                       fontSize: TextStyles.k12FontSize,
-                      color: kColorHint,
+                      color: colors.textSecondary,
                     ),
                   ],
                 ),
