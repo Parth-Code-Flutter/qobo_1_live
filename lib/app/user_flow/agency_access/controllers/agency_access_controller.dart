@@ -1,19 +1,16 @@
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
-import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
+import 'package:qobo_one_live/services/agency_session_controller.dart';
 
 enum AgencyAccessMode { host, owner }
 
 class AgencyAccessController extends GetxController {
-  final ownerFormKey = GlobalKey<FormState>();
-
   final mode = AgencyAccessMode.host.obs;
-  final obscurePassword = true.obs;
 
-  final agencyCodeController = TextEditingController();
-  final ownerPhoneController = TextEditingController();
-  final ownerPasswordController = TextEditingController();
+  AgencySessionController get _agencySession =>
+      Get.find<AgencySessionController>();
+
+  bool get ownerHasAgency => _agencySession.hasAgency.value;
 
   @override
   void onInit() {
@@ -24,25 +21,8 @@ class AgencyAccessController extends GetxController {
     }
   }
 
-  @override
-  void onClose() {
-    agencyCodeController.dispose();
-    ownerPhoneController.dispose();
-    ownerPasswordController.dispose();
-    super.onClose();
-  }
-
   void selectMode(AgencyAccessMode value) {
     mode.value = value;
-  }
-
-  void togglePasswordVisibility() {
-    obscurePassword.value = !obscurePassword.value;
-  }
-
-  String? validateRequired(String label, String? value) {
-    if ((value ?? '').trim().isEmpty) return '$label is required';
-    return null;
   }
 
   void openHostApplication() {
@@ -57,14 +37,7 @@ class AgencyAccessController extends GetxController {
     Get.toNamed(Routes.AGENCY_OWNER_REGISTER);
   }
 
-  void continueOwnerLogin(BuildContext context) {
-    FocusScope.of(context).unfocus();
-    if (!(ownerFormKey.currentState?.validate() ?? false)) return;
-
-    AppToast.showSuccess(
-      context,
-      'Agency login UI ready. API binding pending.',
-    );
+  void openOwnerDashboard() {
     Get.toNamed(Routes.AGENCY_OWNER);
   }
 }

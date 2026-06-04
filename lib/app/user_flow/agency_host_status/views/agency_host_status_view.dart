@@ -97,8 +97,8 @@ class AgencyHostStatusView extends GetView<AgencyHostStatusController> {
         Spacing.v8,
         AppText(
           text: searched
-              ? 'Use any available ID or phone number to refresh the latest agency host status.'
-              : 'Check by Application ID, Host ID, Agency ID, or phone number.',
+              ? 'Use your application ID or WhatsApp number to refresh status.'
+              : 'Check by Application ID or phone number.',
           fontSize: TextStyles.k14FontSize,
           color: kColorHint,
           align: TextAlign.center,
@@ -133,8 +133,6 @@ class AgencyHostStatusView extends GetView<AgencyHostStatusController> {
                   'Application ID',
                   AgencyStatusLookupType.applicationId,
                 ),
-                _lookupChip('Host ID', AgencyStatusLookupType.hostId),
-                _lookupChip('Agency ID', AgencyStatusLookupType.agencyId),
                 _lookupChip('Phone', AgencyStatusLookupType.phone),
               ],
             ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -17,7 +18,7 @@ class AgencyRecruitLinkView extends GetView<AgencyRecruitLinkController> {
       backgroundColor: kColorWhite,
       appBar: AppBar(
         title: const SemiBoldText(
-          text: 'Agency Dashboard',
+          text: 'Recruit Hosts',
           fontSize: TextStyles.k18FontSize,
           color: kColorText,
         ),
@@ -64,18 +65,26 @@ class AgencyRecruitLinkView extends GetView<AgencyRecruitLinkController> {
               _buildLinkSection(context),
               const Spacer(),
               appButton(
-                onPressed: () {
-                  Get.toNamed('/agency-host-list'); // Testing nav
-                },
+                onPressed: () => Get.toNamed(Routes.AGENCY_HOST_LIST),
                 buttonText: 'View My Hosts',
                 buttonColor: kColorPrimary,
               ),
               Spacing.v12,
               appButton(
-                onPressed: () {
-                  Get.offAllNamed('/bottom-nav'); // Back to main
-                },
-                buttonText: 'Back to Home',
+                onPressed: () => Get.toNamed(Routes.AGENCY_REVENUE),
+                buttonText: 'Agency Revenue',
+                isGradient: false,
+                buttonColor: kColorWhite,
+                textColor: kColorPrimary,
+              ),
+              Spacing.v12,
+              TextButton(
+                onPressed: () => Get.toNamed(Routes.AGENCY_OWNER),
+                child: const SemiBoldText(
+                  text: 'Back to Dashboard',
+                  fontSize: TextStyles.k14FontSize,
+                  color: kColorPrimary,
+                ),
               ),
             ],
           ),

@@ -85,7 +85,8 @@ import '../app/user_flow/pk_battle/views/pk_battle_view.dart';
 import '../app/user_flow/call/bindings/call_binding.dart';
 import '../app/user_flow/call/views/call_view.dart';
 import '../app/user_flow/coin_seller/views/coin_seller_view.dart';
-import '../app/user_flow/agency_host_onboarding/views/agency_owner_view.dart';
+import '../app/user_flow/agency_owner_dashboard/bindings/agency_owner_dashboard_binding.dart';
+import '../app/user_flow/agency_owner_dashboard/views/agency_owner_dashboard_view.dart';
 
 part 'app_routes.dart';
 
@@ -306,6 +307,10 @@ class AppPages {
       binding: CallBinding(),
     ),
     GetPage(name: _Paths.COIN_SELLER, page: () => const CoinSellerView()),
-    GetPage(name: _Paths.AGENCY_OWNER, page: () => const AgencyOwnerView()),
+    GetPage(
+      name: _Paths.AGENCY_OWNER,
+      page: () => const AgencyOwnerDashboardView(),
+      binding: AgencyOwnerDashboardBinding(),
+    ),
   ];
 }

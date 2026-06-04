@@ -4,7 +4,7 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
-import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
+import 'package:qobo_one_live/services/agency_session_controller.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -109,7 +109,7 @@ class AgencyAccessView extends GetView<AgencyAccessController> {
         Spacing.v6,
         const AppText(
           text:
-              'Hosts can apply or check approval status. Agency owners can sign in to manage hosts, codes, revenue, and payouts.',
+              'Hosts can apply or check approval status. Agency owners register once, then manage recruit links, hosts, and revenue from the dashboard.',
           fontSize: 13,
           color: kColorHint,
         ),
@@ -235,82 +235,65 @@ class AgencyAccessView extends GetView<AgencyAccessController> {
   }
 
   Widget _ownerPanel(BuildContext context) {
-    return Form(
-      key: controller.ownerFormKey,
-      child: Column(
-        key: const ValueKey('owner-panel'),
+    final session = Get.find<AgencySessionController>();
+
+    return Obx(
+      () => Column(
+        key: ValueKey('owner-panel-${session.hasAgency.value}'),
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _infoCard(
             icon: Icons.admin_panel_settings_rounded,
-            title: 'Agency owner login',
-            subtitle:
-                'Use this UI to enter the agency portal. API connection will be added after the backend contract is confirmed.',
-            color: Colors.deepOrange,
+            title: session.hasAgency.value
+                ? 'Agency dashboard ready'
+                : 'Register your agency',
+            subtitle: session.hasAgency.value
+                ? 'You are signed in with your app account. Open the dashboard to manage recruit links, hosts, and revenue.'
+                : 'Agency owners use the same app login. Register your agency once, then manage everything from the owner dashboard.',
+            color: session.hasAgency.value ? kColorPrimary : Colors.deepOrange,
           ),
           Spacing.v16,
-          _fieldLabel('Agency code'),
-          Spacing.v6,
-          AppTextField(
-            controller: controller.agencyCodeController,
-            validator: (v) => controller.validateRequired('Agency code', v),
-            hintText: 'Enter agency code',
-            borderColor: kColorHint,
-            textInputAction: TextInputAction.next,
-            prefix: _fieldIcon(Icons.key_rounded),
-          ),
-          Spacing.v12,
-          _fieldLabel('Phone or Gmail'),
-          Spacing.v6,
-          AppTextField(
-            controller: controller.ownerPhoneController,
-            validator: (v) => controller.validateRequired('Phone or Gmail', v),
-            hintText: 'Enter phone or Gmail',
-            borderColor: kColorHint,
-            textInputAction: TextInputAction.next,
-            textInputType: TextInputType.emailAddress,
-            prefix: _fieldIcon(Icons.alternate_email_rounded),
-          ),
-          Spacing.v12,
-          _fieldLabel('Password'),
-          Spacing.v6,
-          Obx(
-            () => AppTextField(
-              controller: controller.ownerPasswordController,
-              validator: (v) => controller.validateRequired('Password', v),
-              hintText: 'Enter password',
-              borderColor: kColorHint,
-              obscureText: controller.obscurePassword.value,
-              textInputAction: TextInputAction.done,
-              prefix: _fieldIcon(Icons.lock_outline_rounded),
-              suffix: IconButton(
-                onPressed: controller.togglePasswordVisibility,
-                icon: Icon(
-                  controller.obscurePassword.value
-                      ? Icons.visibility_off_outlined
-                      : Icons.visibility_outlined,
-                  color: kColorHint,
-                ),
+          if (session.hasAgency.value) ...[
+            appButton(
+              onPressed: controller.openOwnerDashboard,
+              buttonText: 'Open Agency Dashboard',
+              buttonIcon: const Icon(
+                Icons.dashboard_rounded,
+                color: kColorWhite,
+                size: 20,
               ),
+              borderRadius: 16,
             ),
-          ),
-          Spacing.v24,
-          appButton(
-            onPressed: () => controller.continueOwnerLogin(context),
-            buttonText: 'Login to Agency Portal',
-            buttonIcon: const Icon(
-              Icons.login_rounded,
-              color: kColorWhite,
-              size: 20,
+            Spacing.v12,
+            _outlineAction(
+              icon: Icons.add_business_rounded,
+              label: 'Register Another Agency',
+              onTap: controller.openOwnerRegister,
             ),
-            borderRadius: 16,
-          ),
-          Spacing.v12,
-          _outlineAction(
-            icon: Icons.add_business_rounded,
-            label: 'Register New Agency',
-            onTap: controller.openOwnerRegister,
-          ),
+          ] else ...[
+            appButton(
+              onPressed: controller.openOwnerRegister,
+              buttonText: 'Register New Agency',
+              buttonIcon: const Icon(
+                Icons.add_business_rounded,
+                color: kColorWhite,
+                size: 20,
+              ),
+              borderRadius: 16,
+            ),
+            Spacing.v12,
+            _outlineAction(
+              icon: Icons.dashboard_outlined,
+              label: 'Open Agency Dashboard',
+              onTap: controller.openOwnerDashboard,
+            ),
+          ],
+          Spacing.v20,
+          _stepList(const [
+            'Register agency with your logged-in account',
+            'Share recruit code/link with hosts',
+            'Review hosts and revenue in the dashboard',
+          ]),
         ],
       ),
     );
@@ -443,14 +426,4 @@ class AgencyAccessView extends GetView<AgencyAccessController> {
     );
   }
 
-  Widget _fieldLabel(String label) {
-    return AppText(text: label, fontSize: 13, color: kColorText);
-  }
-
-  Widget _fieldIcon(IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 14, right: 10),
-      child: Icon(icon, color: kColorHint, size: 22),
-    );
-  }
 }

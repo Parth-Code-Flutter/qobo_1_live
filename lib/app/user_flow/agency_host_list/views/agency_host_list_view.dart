@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/app_widgets/safe_network_avatar.dart';
@@ -21,7 +22,7 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
         useMaterialAppBar: true,
         actions: [
           IconButton(
-            onPressed: () => Get.toNamed('/agency-revenue'),
+            onPressed: () => Get.toNamed(Routes.AGENCY_REVENUE),
             icon: const Icon(Icons.account_balance_wallet_rounded, color: kColorText),
           ),
           IconButton(
@@ -57,24 +58,37 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
 
   Widget _buildEmptyState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.group_off_rounded, size: 64, color: kColorHint),
-          Spacing.v16,
-          const SemiBoldText(
-            text: 'No Hosts Yet',
-            fontSize: TextStyles.k18FontSize,
-            color: kColorText,
-          ),
-          Spacing.v8,
-          const AppText(
-            text: 'Share your recruit link to invite hosts to your agency.',
-            fontSize: TextStyles.k14FontSize,
-            color: kColorHint,
-            align: TextAlign.center,
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 28),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.group_off_rounded, size: 64, color: kColorHint),
+            Spacing.v16,
+            const SemiBoldText(
+              text: 'No Hosts Yet',
+              fontSize: TextStyles.k18FontSize,
+              color: kColorText,
+            ),
+            Spacing.v8,
+            const AppText(
+              text:
+                  'Share your recruit link to invite hosts. Approved hosts will appear here once the host list API is connected.',
+              fontSize: TextStyles.k14FontSize,
+              color: kColorHint,
+              align: TextAlign.center,
+            ),
+            Spacing.v20,
+            TextButton(
+              onPressed: () => Get.toNamed(Routes.AGENCY_RECRUIT_LINK),
+              child: const SemiBoldText(
+                text: 'Open Recruit Link',
+                fontSize: TextStyles.k14FontSize,
+                color: kColorPrimary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

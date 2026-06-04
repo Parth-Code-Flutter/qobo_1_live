@@ -1,13 +1,16 @@
 import 'dart:io';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/services/agency_session_controller.dart';
 import 'package:qobo_one_live/utils/app_dialogs/common_giffy_dialog.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_media_picker.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/validations/text_field_validations.dart';
-import 'package:qobo_one_live/routes/app_pages.dart';
 
 class AgencyOwnerRegisterController extends GetxController {
   final formKey = GlobalKey<FormState>();
@@ -71,16 +74,36 @@ class AgencyOwnerRegisterController extends GetxController {
 
     if (!context.mounted) return;
     
+    final agencyName = agencyNameController.text.trim();
+    final code = _generateAgencyCode(agencyName);
+
+    if (!Get.isRegistered<AgencySessionController>()) {
+      Get.put(AgencySessionController(), permanent: true);
+    }
+    Get.find<AgencySessionController>().setAgency(
+      id: 'local_${DateTime.now().millisecondsSinceEpoch}',
+      name: agencyName,
+      code: code,
+    );
+
     await CommonGiffyDialog.showSuccess(
       context,
       title: 'Agency Registered',
-      subtitle: 'Your agency has been successfully registered locally.',
-      buttonText: 'Get Recruit Link',
+      subtitle:
+          'Your agency "$agencyName" is ready. Open the dashboard to share your recruit link.',
+      buttonText: 'Open Dashboard',
       gifAssetPath: kGifCongratulation,
       onPressed: () {
-        Get.back<void>(); // close dialog
-        Get.offNamed(Routes.AGENCY_RECRUIT_LINK);
+        Get.back<void>();
+        Get.offNamed(Routes.AGENCY_OWNER);
       },
     );
+  }
+
+  String _generateAgencyCode(String name) {
+    final cleaned = name.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase();
+    final prefix = cleaned.length >= 4 ? cleaned.substring(0, 4) : 'QOBO';
+    final suffix = Random().nextInt(9999).toString().padLeft(4, '0');
+    return '$prefix$suffix';
   }
 }
