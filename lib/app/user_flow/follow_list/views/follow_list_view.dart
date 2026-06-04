@@ -15,6 +15,7 @@ class FollowListView extends GetView<FollowListController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: kColorWhite,
       appBar: const CommonAppBarWidget(
         title: 'Connections',
         useMaterialAppBar: true,

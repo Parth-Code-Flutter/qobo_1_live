@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
-import 'package:qobo_one_live/theme/app_theme_colors.dart';
-import 'package:qobo_one_live/theme/theme_context.dart';
-import 'package:qobo_one_live/utils/app_widgets/app_screen_background.dart';
-import 'package:qobo_one_live/utils/app_widgets/app_search_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -25,28 +22,33 @@ class MessagesTabView extends StatelessWidget {
     return GetBuilder<MessagesTabController>(
       init: messagesController,
       builder: (messagesController) {
-        final colors = context.appColors;
-        return AppScreenBackground(
+        return Container(
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage(kImgBG),
+              fit: BoxFit.cover,
+            ),
+          ),
           child: SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _topHeader(colors, userSession),
+                  _topHeader(userSession),
                   Spacing.v16,
-                  SemiBoldText(
+                  const SemiBoldText(
                     text: 'New Match',
                     fontSize: TextStyles.k18FontSize,
-                    color: colors.onHeroPrimary,
+                    color: kColorWhite,
                   ),
                   Spacing.v12,
-                  Obx(() => _newMatchRow(context, colors, messagesController)),
+                  Obx(() => _newMatchRow(messagesController)),
                   Spacing.v20,
-                  SemiBoldText(
+                  const SemiBoldText(
                     text: 'Message',
                     fontSize: TextStyles.k18FontSize,
-                    color: colors.onHeroPrimary,
+                    color: kColorWhite,
                   ),
                   Spacing.v8,
                   Expanded(
@@ -68,17 +70,13 @@ class MessagesTabView extends StatelessWidget {
     );
   }
 
-  Widget _newMatchRow(
-    BuildContext context,
-    AppThemeColors colors,
-    MessagesTabController messagesController,
-  ) {
+  Widget _newMatchRow(MessagesTabController messagesController) {
     if (messagesController.isNewMatchesLoading.value) {
-      return SizedBox(
+      return const SizedBox(
         height: 86,
         child: Center(
           child: CircularProgressIndicator(
-            color: colors.chipSelected,
+            color: kColorWhite,
             strokeWidth: 2,
           ),
         ),
@@ -108,7 +106,7 @@ class MessagesTabView extends StatelessWidget {
     );
   }
 
-  Widget _topHeader(AppThemeColors colors, UserSessionController userSession) {
+  Widget _topHeader(UserSessionController userSession) {
     return GetBuilder<UserSessionController>(
       init: userSession,
       builder: (session) {
@@ -121,7 +119,7 @@ class MessagesTabView extends StatelessWidget {
               padding: const EdgeInsets.all(1),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: colors.onHeroPrimary, width: 1),
+                border: Border.all(color: kColorWhite, width: 1),
               ),
               child: ClipOval(
                 child: avatarUrl == null
@@ -135,10 +133,46 @@ class MessagesTabView extends StatelessWidget {
               ),
             ),
             Spacing.h10,
-            Expanded(child: const AppSearchField()),
+            Expanded(child: _searchBar()),
           ],
         );
       },
+    );
+  }
+
+  Widget _searchBar() {
+    return Container(
+      height: 38,
+      decoration: BoxDecoration(
+        color: kColorDiscoverSearchBg,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: TextField(
+        textInputAction: TextInputAction.search,
+        style: TextStyles.kRegularPoppins(
+          fontSize: TextStyles.k12FontSize,
+          colors: kColorText,
+        ),
+        decoration: InputDecoration(
+          isDense: true,
+          border: InputBorder.none,
+          hintText: 'Search',
+          hintStyle: TextStyles.kRegularPoppins(
+            fontSize: TextStyles.k12FontSize,
+            colors: kColorHint,
+          ),
+          prefixIcon: const Padding(
+            padding: EdgeInsets.only(top: 10),
+            child: Icon(
+              Icons.search_rounded,
+              size: 16,
+              color: kColorHint,
+            ),
+          ),
+          prefixIconConstraints: const BoxConstraints(minWidth: 34),
+          contentPadding: const EdgeInsets.only(top: 10, right: 10),
+        ),
+      ),
     );
   }
 
@@ -178,30 +212,23 @@ class _InlineEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     return Container(
       width: double.infinity,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: colors.isDark
-            ? kColorWhite.withValues(alpha: 0.08)
-            : colors.surfaceMuted,
+        color: kColorWhite.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: colors.isDark
-              ? kColorWhite.withValues(alpha: 0.08)
-              : colors.border,
-        ),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: colors.onHeroMuted, size: 18),
+          Icon(icon, color: kColorWhite.withValues(alpha: 0.74), size: 18),
           Spacing.h8,
           SemiBoldText(
             text: text,
             fontSize: TextStyles.k12FontSize,
-            color: colors.onHeroSecondary,
+            color: kColorWhite,
           ),
         ],
       ),
@@ -214,28 +241,27 @@ class _MessagesEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             Icons.chat_bubble_outline_rounded,
-            color: colors.onHeroMuted,
+            color: kColorWhite.withValues(alpha: 0.7),
             size: 54,
           ),
           Spacing.v12,
-          SemiBoldText(
+          const SemiBoldText(
             text: 'No data found',
             fontSize: TextStyles.k16FontSize,
-            color: colors.onHeroPrimary,
+            color: kColorWhite,
             align: TextAlign.center,
           ),
           Spacing.v6,
           AppText(
             text: 'Messages will appear here when available.',
             fontSize: TextStyles.k12FontSize,
-            color: colors.onHeroMuted,
+            color: kColorWhite.withValues(alpha: 0.72),
             align: TextAlign.center,
           ),
         ],

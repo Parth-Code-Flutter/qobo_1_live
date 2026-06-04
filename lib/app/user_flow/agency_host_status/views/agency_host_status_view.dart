@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/theme/app_theme_colors.dart';
-import 'package:qobo_one_live/theme/theme_context.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
@@ -16,13 +14,18 @@ class AgencyHostStatusView extends GetView<AgencyHostStatusController> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     return Scaffold(
-      backgroundColor: colors.scaffold,
+      backgroundColor: kColorWhite,
       appBar: AppBar(
-        title: const Text('Application Status'),
+        title: const SemiBoldText(
+          text: 'Application Status',
+          fontSize: TextStyles.k18FontSize,
+          color: kColorText,
+        ),
+        backgroundColor: kColorWhite,
         centerTitle: true,
         elevation: 0,
+        leading: const BackButton(color: kColorText),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -36,11 +39,11 @@ class AgencyHostStatusView extends GetView<AgencyHostStatusController> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Obx(() => _statusHero(colors)),
+              Obx(() => _statusHero()),
               Spacing.v24,
-              _lookupCard(colors),
+              _lookupCard(context),
               Spacing.v20,
-              Obx(() => _statusCard(colors)),
+              Obx(() => _statusCard()),
               Spacing.v28,
               Obx(
                 () => controller.isLoading.value
@@ -57,10 +60,10 @@ class AgencyHostStatusView extends GetView<AgencyHostStatusController> {
               Spacing.v16,
               TextButton(
                 onPressed: () => Get.offAllNamed('/bottom-nav'),
-                child: AppText(
+                child: const AppText(
                   text: 'Back to Home',
                   fontSize: TextStyles.k14FontSize,
-                  color: colors.textSecondary,
+                  color: kColorHint,
                 ),
               ),
             ],
@@ -70,7 +73,7 @@ class AgencyHostStatusView extends GetView<AgencyHostStatusController> {
     );
   }
 
-  Widget _statusHero(AppThemeColors colors) {
+  Widget _statusHero() {
     final searched = controller.hasSearched.value;
     final status = controller.status.value;
     final icon = !searched
@@ -88,7 +91,7 @@ class AgencyHostStatusView extends GetView<AgencyHostStatusController> {
         SemiBoldText(
           text: searched ? _titleForStatus(status) : 'Find Your Application',
           fontSize: TextStyles.k22FontSize,
-          color: colors.textPrimary,
+          color: kColorText,
           align: TextAlign.center,
         ),
         Spacing.v8,
@@ -97,28 +100,28 @@ class AgencyHostStatusView extends GetView<AgencyHostStatusController> {
               ? 'Use your application ID or WhatsApp number to refresh status.'
               : 'Check by Application ID or phone number.',
           fontSize: TextStyles.k14FontSize,
-          color: colors.textSecondary,
+          color: kColorHint,
           align: TextAlign.center,
         ),
       ],
     );
   }
 
-  Widget _lookupCard(AppThemeColors colors) {
+  Widget _lookupCard(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: colors.surfaceMuted,
+        color: Colors.grey.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: colors.border),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.18)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SemiBoldText(
+          const SemiBoldText(
             text: 'Search With',
             fontSize: TextStyles.k14FontSize,
-            color: colors.textPrimary,
+            color: kColorText,
           ),
           Spacing.v12,
           Obx(
@@ -127,11 +130,10 @@ class AgencyHostStatusView extends GetView<AgencyHostStatusController> {
               runSpacing: 8,
               children: [
                 _lookupChip(
-                  colors,
                   'Application ID',
                   AgencyStatusLookupType.applicationId,
                 ),
-                _lookupChip(colors, 'Phone', AgencyStatusLookupType.phone),
+                _lookupChip('Phone', AgencyStatusLookupType.phone),
               ],
             ),
           ),
@@ -142,11 +144,12 @@ class AgencyHostStatusView extends GetView<AgencyHostStatusController> {
               hintText: controller.lookupHint,
               textInputType: controller.keyboardType,
               textInputAction: TextInputAction.done,
+              borderColor: kColorHint,
               prefix: Padding(
                 padding: const EdgeInsets.only(left: 14, right: 10),
                 child: Icon(
                   _iconForLookup(controller.lookupType.value),
-                  color: colors.iconMuted,
+                  color: kColorHint,
                   size: 22,
                 ),
               ),
@@ -157,11 +160,7 @@ class AgencyHostStatusView extends GetView<AgencyHostStatusController> {
     );
   }
 
-  Widget _lookupChip(
-    AppThemeColors colors,
-    String label,
-    AgencyStatusLookupType type,
-  ) {
+  Widget _lookupChip(String label, AgencyStatusLookupType type) {
     final selected = controller.lookupType.value == type;
     return GestureDetector(
       onTap: () => controller.selectLookupType(type),
@@ -169,22 +168,22 @@ class AgencyHostStatusView extends GetView<AgencyHostStatusController> {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? kColorPrimary : colors.surface,
+          color: selected ? kColorPrimary : kColorWhite,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: selected ? kColorPrimary : colors.border,
+            color: selected ? kColorPrimary : kColorHint.withValues(alpha: 0.3),
           ),
         ),
         child: SemiBoldText(
           text: label,
           fontSize: TextStyles.k12FontSize,
-          color: selected ? kColorWhite : colors.textSecondary,
+          color: selected ? kColorWhite : kColorHint,
         ),
       ),
     );
   }
 
-  Widget _statusCard(AppThemeColors colors) {
+  Widget _statusCard() {
     final searched = controller.hasSearched.value;
     final status = controller.status.value;
     final reason = controller.reason.value;
@@ -198,10 +197,10 @@ class AgencyHostStatusView extends GetView<AgencyHostStatusController> {
       ),
       child: Column(
         children: [
-          AppText(
+          const AppText(
             text: 'Current Status',
             fontSize: TextStyles.k14FontSize,
-            color: colors.textSecondary,
+            color: kColorHint,
           ),
           Spacing.v8,
           SemiBoldText(
@@ -215,21 +214,21 @@ class AgencyHostStatusView extends GetView<AgencyHostStatusController> {
             AppText(
               text: reason,
               fontSize: 13,
-              color: colors.textSecondary,
+              color: kColorHint,
               align: TextAlign.center,
             ),
           ],
           Spacing.v16,
-          _metaRow(colors, 'Application ID', controller.applicationId.value),
-          _metaRow(colors, 'Host ID', controller.hostId.value),
-          _metaRow(colors, 'Agency ID', controller.agencyId.value),
-          _metaRow(colors, 'Phone', controller.phone.value),
+          _metaRow('Application ID', controller.applicationId.value),
+          _metaRow('Host ID', controller.hostId.value),
+          _metaRow('Agency ID', controller.agencyId.value),
+          _metaRow('Phone', controller.phone.value),
         ],
       ),
     );
   }
 
-  Widget _metaRow(AppThemeColors colors, String label, String value) {
+  Widget _metaRow(String label, String value) {
     if (value.trim().isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(top: 8),
@@ -239,14 +238,14 @@ class AgencyHostStatusView extends GetView<AgencyHostStatusController> {
             child: AppText(
               text: label,
               fontSize: TextStyles.k12FontSize,
-              color: colors.textSecondary,
+              color: kColorHint,
             ),
           ),
           Flexible(
             child: SemiBoldText(
               text: value,
               fontSize: TextStyles.k12FontSize,
-              color: colors.textPrimary,
+              color: kColorText,
               align: TextAlign.right,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,

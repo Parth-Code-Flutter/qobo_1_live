@@ -17,6 +17,7 @@ class VipStoreView extends GetView<VipStoreController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: kColorBackground,
       appBar: const CommonAppBarWidget(
         title: 'VIP Store',
         useMaterialAppBar: true,

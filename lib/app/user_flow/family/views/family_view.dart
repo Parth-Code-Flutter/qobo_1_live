@@ -15,6 +15,7 @@ class FamilyView extends GetView<FamilyController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: kColorAppBackground,
       appBar: CommonAppBarWidget(
         title: 'Family Hub',
         useMaterialAppBar: true,

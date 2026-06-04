@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/theme/app_theme_colors.dart';
-import 'package:qobo_one_live/theme/theme_context.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
@@ -17,7 +15,6 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Container(
@@ -37,7 +34,7 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
                       top: Radius.circular(28),
                     ),
                     child: ColoredBox(
-                      color: colors.surface,
+                      color: kColorWhite,
                       child: Form(
                         key: controller.formKey,
                         autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -59,39 +56,42 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _formHeader(colors),
+                                    _formHeader(),
                                     Spacing.v20,
-                                    Center(child: _agencyLogoPicker(context, colors)),
+                                    Center(child: _agencyLogoPicker(context)),
                                     Spacing.v24,
-                                    _fieldLabel(colors, 'Agency Name'),
+                                    _fieldLabel('Agency Name'),
                                     Spacing.v6,
                                     AppTextField(
                                       controller: controller.agencyNameController,
                                       validator: (v) => controller.validateAgencyName(context, v),
                                       hintText: 'Enter agency name',
+                                      borderColor: kColorHint,
                                       textInputAction: TextInputAction.next,
-                                      prefix: _fieldIcon(colors, Icons.business_rounded),
+                                      prefix: _fieldIcon(Icons.business_rounded),
                                     ),
                                     Spacing.v16,
-                                    _fieldLabel(colors, 'Owner Name'),
+                                    _fieldLabel('Owner Name'),
                                     Spacing.v6,
                                     AppTextField(
                                       controller: controller.ownerNameController,
                                       validator: (v) => controller.validateOwnerName(context, v),
                                       hintText: 'Enter your name',
+                                      borderColor: kColorHint,
                                       textInputAction: TextInputAction.next,
-                                      prefix: _fieldIcon(colors, Icons.person_outline_rounded),
+                                      prefix: _fieldIcon(Icons.person_outline_rounded),
                                     ),
                                     Spacing.v16,
-                                    _fieldLabel(colors, 'WhatsApp Number'),
+                                    _fieldLabel('WhatsApp Number'),
                                     Spacing.v6,
                                     AppTextField(
                                       controller: controller.whatsappController,
                                       validator: (v) => controller.validateWhatsApp(context, v),
                                       hintText: '10-digit mobile number',
+                                      borderColor: kColorHint,
                                       textInputType: TextInputType.phone,
                                       textInputAction: TextInputAction.done,
-                                      prefix: _fieldIcon(colors, Icons.phone_android_outlined),
+                                      prefix: _fieldIcon(Icons.phone_android_outlined),
                                     ),
                                     Spacing.v32,
                                     Obx(
@@ -155,26 +155,26 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
     );
   }
 
-  Widget _formHeader(AppThemeColors colors) {
+  Widget _formHeader() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        BoldText(
+        const BoldText(
           text: 'Become an Agency Owner',
           fontSize: TextStyles.k22FontSize,
-          color: colors.textPrimary,
+          color: kColorText,
         ),
         Spacing.v4,
-        AppText(
+        const AppText(
           text: 'Fill out this form to register your own agency and start recruiting hosts.',
           fontSize: TextStyles.k12FontSize,
-          color: colors.textSecondary,
+          color: kColorHint,
         ),
       ],
     );
   }
 
-  Widget _agencyLogoPicker(BuildContext context, AppThemeColors colors) {
+  Widget _agencyLogoPicker(BuildContext context) {
     return Obx(() {
       final file = controller.agencyLogo.value;
       return GestureDetector(
@@ -187,8 +187,8 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
               decoration: BoxDecoration(
                 shape: BoxShape.rectangle,
                 borderRadius: BorderRadius.circular(20),
-                color: colors.surfaceMuted,
-                border: Border.all(color: colors.border),
+                color: kColorAvatarFallbackBg.withValues(alpha: 0.15),
+                border: Border.all(color: kColorHint.withValues(alpha: 0.4)),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
@@ -198,16 +198,16 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
                         child: Icon(
                           Icons.add_photo_alternate_outlined,
                           size: 32,
-                          color: colors.iconMuted,
+                          color: kColorHint.withValues(alpha: 0.8),
                         ),
                       ),
               ),
             ),
             Spacing.v8,
-            AppText(
+            const AppText(
               text: 'Upload Agency Logo',
               fontSize: TextStyles.k12FontSize,
-              color: colors.textSecondary,
+              color: kColorHint,
             ),
           ],
         ),
@@ -215,18 +215,18 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
     });
   }
 
-  Widget _fieldLabel(AppThemeColors colors, String label) {
+  Widget _fieldLabel(String label) {
     return AppText(
       text: label,
       fontSize: TextStyles.k12FontSize,
-      color: colors.textPrimary,
+      color: kColorText,
     );
   }
 
-  Widget _fieldIcon(AppThemeColors colors, IconData icon) {
+  Widget _fieldIcon(IconData icon) {
     return Padding(
       padding: const EdgeInsets.only(left: 14, right: 12),
-      child: Icon(icon, size: 20, color: colors.iconMuted),
+      child: Icon(icon, size: 20, color: kColorHint),
     );
   }
 }

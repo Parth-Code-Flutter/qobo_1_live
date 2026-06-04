@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
-import 'package:qobo_one_live/theme/app_theme_colors.dart';
-import 'package:qobo_one_live/theme/theme_context.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -16,14 +14,19 @@ class AgencyRecruitLinkView extends GetView<AgencyRecruitLinkController> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     return Scaffold(
+      backgroundColor: kColorWhite,
       appBar: AppBar(
-        title: const Text('Recruit Hosts'),
+        title: const SemiBoldText(
+          text: 'Recruit Hosts',
+          fontSize: TextStyles.k18FontSize,
+          color: kColorText,
+        ),
+        backgroundColor: kColorWhite,
         centerTitle: true,
         elevation: 0,
+        leading: const BackButton(color: kColorText),
       ),
-      backgroundColor: colors.scaffold,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -41,25 +44,25 @@ class AgencyRecruitLinkView extends GetView<AgencyRecruitLinkController> {
                   children: [
                     const Icon(Icons.people_alt_rounded, size: 48, color: kColorPrimary),
                     Spacing.v16,
-                    SemiBoldText(
+                    const SemiBoldText(
                       text: 'Recruit New Hosts',
                       fontSize: TextStyles.k20FontSize,
-                      color: colors.textPrimary,
+                      color: kColorText,
                     ),
                     Spacing.v8,
-                    AppText(
+                    const AppText(
                       text: 'Share your exclusive code or link with hosts so they can apply directly under your agency.',
                       fontSize: TextStyles.k14FontSize,
-                      color: colors.textSecondary,
+                      color: kColorHint,
                       align: TextAlign.center,
                     ),
                   ],
                 ),
               ),
               Spacing.v32,
-              _buildCodeSection(context, colors),
+              _buildCodeSection(context),
               Spacing.v20,
-              _buildLinkSection(context, colors),
+              _buildLinkSection(context),
               const Spacer(),
               appButton(
                 onPressed: () => Get.toNamed(Routes.AGENCY_HOST_LIST),
@@ -90,22 +93,21 @@ class AgencyRecruitLinkView extends GetView<AgencyRecruitLinkController> {
     );
   }
 
-  Widget _buildCodeSection(BuildContext context, AppThemeColors colors) {
+  Widget _buildCodeSection(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppText(
+        const AppText(
           text: 'Your Agency Code',
           fontSize: TextStyles.k14FontSize,
-          color: colors.textPrimary,
+          color: kColorText,
         ),
         Spacing.v8,
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: colors.searchFieldFill,
+            color: kColorBackground,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: colors.searchFieldBorder),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -126,22 +128,21 @@ class AgencyRecruitLinkView extends GetView<AgencyRecruitLinkController> {
     );
   }
 
-  Widget _buildLinkSection(BuildContext context, AppThemeColors colors) {
+  Widget _buildLinkSection(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppText(
+        const AppText(
           text: 'Your Direct Link',
           fontSize: TextStyles.k14FontSize,
-          color: colors.textPrimary,
+          color: kColorText,
         ),
         Spacing.v8,
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: colors.searchFieldFill,
+            color: kColorBackground,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: colors.searchFieldBorder),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,

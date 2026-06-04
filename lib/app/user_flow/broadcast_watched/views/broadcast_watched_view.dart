@@ -16,6 +16,7 @@ class BroadcastWatchedView extends GetView<BroadcastWatchedController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: kColorBackground,
       appBar: const CommonAppBarWidget(
         title: 'Broadcast History',
         useMaterialAppBar: true,

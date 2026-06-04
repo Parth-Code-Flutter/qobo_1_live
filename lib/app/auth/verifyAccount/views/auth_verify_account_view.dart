@@ -39,6 +39,7 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
+        backgroundColor: kColorWhite,
         resizeToAvoidBottomInset: true,
         appBar: CommonAppBarWidget(
           title: '',

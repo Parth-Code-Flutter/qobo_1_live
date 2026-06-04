@@ -15,6 +15,7 @@ class SvipView extends GetView<SvipController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: kColorAppBackground,
       appBar: const CommonAppBarWidget(
         title: 'SVIP Center',
         useMaterialAppBar: true,

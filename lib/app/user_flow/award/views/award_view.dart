@@ -15,6 +15,7 @@ class AwardView extends GetView<AwardController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: kColorBackground,
       appBar: const CommonAppBarWidget(
         title: 'Medals & Awards',
         useMaterialAppBar: true,
@@ -185,6 +186,7 @@ class AwardView extends GetView<AwardController> {
                       child: LinearProgressIndicator(
                         value: progress,
                         minHeight: 6,
+                        backgroundColor: kColorBackground,
                         valueColor: AlwaysStoppedAnimation<Color>(
                           isUnlocked ? kColorPrimary : Colors.grey.shade400,
                         ),

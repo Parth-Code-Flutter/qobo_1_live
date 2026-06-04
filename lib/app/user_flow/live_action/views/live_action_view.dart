@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/constants/live_action_colors.dart';
-import 'package:qobo_one_live/utils/app_widgets/app_search_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -60,7 +59,7 @@ class LiveActionView extends GetView<LiveActionController> {
           bottom: false,
           child: Column(
             children: [
-              _topBar(context),
+              _topBar(),
               Expanded(child: _mapStage()),
               _suggestionStrip(context),
               SizedBox(height: MediaQuery.paddingOf(context).bottom + 94),
@@ -71,7 +70,7 @@ class LiveActionView extends GetView<LiveActionController> {
     );
   }
 
-  Widget _topBar(BuildContext context) {
+  Widget _topBar() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: Row(
@@ -82,8 +81,44 @@ class LiveActionView extends GetView<LiveActionController> {
           ),
           Spacing.h10,
           Expanded(
-            child: AppSearchField(
-              borderRadius: const BorderRadius.all(Radius.circular(12)),
+            child: Container(
+              height: 38,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: kColorWhite,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: kColorBlack.withValues(alpha: 0.12),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.search_rounded, size: 17, color: kColorHint),
+                  Spacing.h8,
+                  Expanded(
+                    child: TextField(
+                      textInputAction: TextInputAction.search,
+                      style: TextStyles.kRegularPoppins(
+                        fontSize: TextStyles.k12FontSize,
+                        colors: kColorText,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Search',
+                        isDense: true,
+                        border: InputBorder.none,
+                        hintStyle: TextStyles.kRegularPoppins(
+                          fontSize: TextStyles.k10FontSize,
+                          colors: kColorHint,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           Spacing.h10,

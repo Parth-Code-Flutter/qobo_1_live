@@ -14,6 +14,7 @@ class UserLevelView extends GetView<UserLevelController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: kColorBackground,
       appBar: const CommonAppBarWidget(
         title: 'User Level & Badges',
         useMaterialAppBar: true,
@@ -267,6 +268,7 @@ class UserLevelView extends GetView<UserLevelController> {
               child: LinearProgressIndicator(
                 value: controller.progress,
                 minHeight: 12,
+                backgroundColor: kColorBackground,
                 valueColor: const AlwaysStoppedAnimation<Color>(kColorPrimary),
               ),
             ),

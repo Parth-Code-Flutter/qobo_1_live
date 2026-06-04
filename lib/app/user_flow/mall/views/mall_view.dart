@@ -16,6 +16,7 @@ class MallView extends GetView<MallController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: kColorAppBackground,
       appBar: const CommonAppBarWidget(
         title: 'Virtual Mall',
         useMaterialAppBar: true,

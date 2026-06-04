@@ -15,6 +15,7 @@ class EntrancePattiView extends GetView<EntrancePattiController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: kColorBackground,
       appBar: const CommonAppBarWidget(
         title: 'Entrance Patti & Frames',
         useMaterialAppBar: true,

@@ -5,9 +5,6 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
-import 'package:qobo_one_live/theme/theme_context.dart';
-import 'package:qobo_one_live/utils/app_widgets/app_screen_background.dart';
-import 'package:qobo_one_live/utils/app_widgets/app_search_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -26,26 +23,26 @@ class DiscoverTabView extends StatelessWidget {
     final discoverController = _resolveController();
     final userSession = _resolveUserSession();
 
-    return AppScreenBackground(
+    return Container(
+      decoration: const BoxDecoration(
+        image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
+      ),
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _topHeader(context, userSession),
+              _topHeader(userSession),
               Spacing.v16,
-              _searchBar(context, discoverController),
+              _searchBar(discoverController),
               Spacing.v12,
               Obx(() {
                 if (discoverController.searchQuery.value.isNotEmpty) {
                   return const SizedBox.shrink();
                 }
                 return Column(
-                  children: [
-                    _roomModeRow(context, discoverController),
-                    Spacing.v16,
-                  ],
+                  children: [_roomModeRow(discoverController), Spacing.v16],
                 );
               }),
               Expanded(
@@ -82,9 +79,7 @@ class DiscoverTabView extends StatelessWidget {
   }
 
   /// Header row (real profile image/name + location) matching Figma.
-  Widget _topHeader(BuildContext context, UserSessionController userSession) {
-    final onHero = context.appColors.onHeroPrimary;
-    final onHeroSoft = context.appColors.onHeroSecondary;
+  Widget _topHeader(UserSessionController userSession) {
     return GetBuilder<UserSessionController>(
       init: userSession,
       builder: (session) {
@@ -97,7 +92,7 @@ class DiscoverTabView extends StatelessWidget {
               padding: const EdgeInsets.all(1),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: onHero, width: 1),
+                border: Border.all(color: kColorWhite, width: 1),
               ),
               child: ClipOval(
                 child: avatarUrl == null
@@ -115,15 +110,15 @@ class DiscoverTabView extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  SemiBoldText(
+                  const SemiBoldText(
                     text: 'EXPLORE',
                     fontSize: TextStyles.k24FontSize - 2,
-                    color: onHero,
+                    color: kColorWhite,
                   ),
                   AppText(
                     text: session.displayName,
                     fontSize: TextStyles.k10FontSize,
-                    color: onHeroSoft,
+                    color: kColorWhite.withValues(alpha: 0.9),
                     align: TextAlign.center,
                   ),
                 ],
@@ -133,7 +128,7 @@ class DiscoverTabView extends StatelessWidget {
               width: 30,
               height: 30,
               decoration: BoxDecoration(
-                color: context.appColors.surface,
+                color: kColorWhite,
                 borderRadius: BorderRadius.circular(22),
               ),
               child: Center(
@@ -154,20 +149,50 @@ class DiscoverTabView extends StatelessWidget {
     );
   }
 
-  Widget _searchBar(BuildContext context, DiscoverTabController discoverController) {
-    return AppSearchField(
-      controller: discoverController.searchController,
-      borderRadius: AppUIUtils.primaryBorderRadius,
+  Widget _searchBar(DiscoverTabController discoverController) {
+    return Container(
+      height: 38,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: kColorDiscoverSearchBg,
+        borderRadius: AppUIUtils.primaryBorderRadius,
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.search_rounded, size: 16, color: kColorHint),
+          Spacing.h6,
+          Expanded(
+            child: TextField(
+              controller: discoverController.searchController,
+              textInputAction: TextInputAction.search,
+              style: TextStyles.kRegularPoppins(
+                fontSize: TextStyles.k12FontSize,
+                colors: kColorText,
+              ),
+              cursorColor: kColorPrimary,
+              decoration: InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                hintText: 'Search',
+                hintStyle: TextStyles.kRegularPoppins(
+                  fontSize: TextStyles.k12FontSize,
+                  colors: kColorHint,
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _roomModeRow(BuildContext context, DiscoverTabController controller) {
+  Widget _roomModeRow(DiscoverTabController controller) {
     return Obx(
       () => Row(
         children: [
           Expanded(
             child: _modeChip(
-              context: context,
               icon: Icons.videocam_outlined,
               label: DiscoverVideoRoomView.roomLabel,
               isSelected:
@@ -178,7 +203,6 @@ class DiscoverTabView extends StatelessWidget {
           Spacing.h12,
           Expanded(
             child: _modeChip(
-              context: context,
               icon: Icons.graphic_eq_rounded,
               label: DiscoverAudioRoomView.roomLabel,
               isSelected:
@@ -196,14 +220,11 @@ class DiscoverTabView extends StatelessWidget {
   }
 
   Widget _modeChip({
-    required BuildContext context,
     required IconData icon,
     required String label,
     required bool isSelected,
     required VoidCallback onTap,
   }) {
-    final colors = context.appColors;
-    final chipText = isSelected ? kColorWhite : colors.onHeroPrimary;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -211,24 +232,24 @@ class DiscoverTabView extends StatelessWidget {
         curve: Curves.easeOutCubic,
         height: 40,
         decoration: BoxDecoration(
-          color: isSelected ? colors.chipSelected : Colors.transparent,
+          color: isSelected ? kColorDiscoverChip : Colors.transparent,
           borderRadius: BorderRadius.circular(22),
           border: Border.all(
             color: isSelected
-                ? colors.chipUnselectedBorder.withValues(alpha: 0.75)
-                : colors.chipUnselectedBorder,
+                ? kColorDiscoverModeBorder.withValues(alpha: 0.75)
+                : kColorWhite.withValues(alpha: 0.9),
             width: 1,
           ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 15, color: chipText),
+            Icon(icon, size: 15, color: kColorWhite),
             Spacing.h8,
             SemiBoldText(
               text: label,
               fontSize: TextStyles.k24FontSize - 11,
-              color: chipText,
+              color: kColorWhite,
             ),
           ],
         ),
@@ -267,7 +288,6 @@ class DiscoverTabView extends StatelessWidget {
     BuildContext context,
     DiscoverTabController controller,
   ) {
-    final colors = context.appColors;
     if (controller.isSearchLoading.value) {
       return const Center(
         child: CircularProgressIndicator(
@@ -283,14 +303,14 @@ class DiscoverTabView extends StatelessWidget {
           children: [
             Icon(
               Icons.search_off_rounded,
-              color: colors.onHeroMuted,
+              color: kColorWhite.withValues(alpha: 0.5),
               size: 48,
             ),
             Spacing.v12,
             AppText(
               text: 'No users found matching "${controller.searchQuery.value}"',
               fontSize: TextStyles.k14FontSize,
-              color: colors.onHeroSecondary,
+              color: kColorWhite.withValues(alpha: 0.7),
             ),
           ],
         ),
@@ -301,7 +321,7 @@ class DiscoverTabView extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 24, top: 8),
       itemCount: controller.searchResults.length,
       separatorBuilder: (_, __) =>
-          Divider(color: colors.divider, height: 1),
+          const Divider(color: kColorDiscoverSearchBg, height: 1),
       itemBuilder: (context, index) {
         final user = controller.searchResults[index];
         final String name = user['name']?.toString() ?? 'User';
@@ -320,7 +340,7 @@ class DiscoverTabView extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: colors.border,
+                    color: kColorWhite.withValues(alpha: 0.15),
                     width: 1,
                   ),
                 ),
@@ -346,13 +366,13 @@ class DiscoverTabView extends StatelessWidget {
                     SemiBoldText(
                       text: name,
                       fontSize: TextStyles.k16FontSize,
-                      color: colors.onHeroPrimary,
+                      color: kColorWhite,
                     ),
                     Spacing.v2,
                     AppText(
                       text: 'ID: ${id.length > 8 ? id.substring(0, 8) : id}',
                       fontSize: TextStyles.k12FontSize,
-                      color: colors.onHeroMuted,
+                      color: kColorWhite.withValues(alpha: 0.6),
                     ),
                   ],
                 ),
@@ -378,7 +398,7 @@ class DiscoverTabView extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                     border: isFollowing
                         ? Border.all(
-                            color: colors.chipUnselectedBorder,
+                            color: kColorWhite.withValues(alpha: 0.5),
                             width: 1,
                           )
                         : null,
@@ -386,7 +406,7 @@ class DiscoverTabView extends StatelessWidget {
                   child: SemiBoldText(
                     text: isFollowing ? 'Following' : 'Follow',
                     fontSize: TextStyles.k12FontSize,
-                    color: isFollowing ? colors.onHeroPrimary : kColorWhite,
+                    color: kColorWhite,
                   ),
                 ),
               ),

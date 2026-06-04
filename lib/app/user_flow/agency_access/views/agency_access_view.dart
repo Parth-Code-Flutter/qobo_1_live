@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
-import 'package:qobo_one_live/theme/app_theme_colors.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/services/agency_session_controller.dart';
-import 'package:qobo_one_live/theme/theme_context.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -17,39 +15,23 @@ class AgencyAccessView extends GetView<AgencyAccessController> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Container(
-        decoration: BoxDecoration(
-          image: colors.isDark
-              ? const DecorationImage(
-                  image: AssetImage(kImgBG),
-                  fit: BoxFit.cover,
-                )
-              : null,
-          gradient: colors.isDark
-              ? null
-              : LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    colors.heroGradientTop,
-                    colors.heroGradientBottom,
-                  ],
-                ),
+        decoration: const BoxDecoration(
+          image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
         ),
         child: SafeArea(
           child: Column(
             children: [
-              _topBar(colors),
+              _topBar(),
               Expanded(
                 child: ClipRRect(
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(30),
                   ),
                   child: ColoredBox(
-                    color: colors.surface,
+                    color: kColorWhite,
                     child: SingleChildScrollView(
                       keyboardDismissBehavior:
                           ScrollViewKeyboardDismissBehavior.onDrag,
@@ -62,17 +44,17 @@ class AgencyAccessView extends GetView<AgencyAccessController> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _header(colors),
+                          _header(),
                           Spacing.v20,
-                          _modeSwitcher(colors),
+                          _modeSwitcher(),
                           Spacing.v20,
                           Obx(
                             () => AnimatedSwitcher(
                               duration: const Duration(milliseconds: 220),
                               child:
                                   controller.mode.value == AgencyAccessMode.host
-                                  ? _hostPanel(colors)
-                                  : _ownerPanel(colors),
+                                  ? _hostPanel(context)
+                                  : _ownerPanel(context),
                             ),
                           ),
                         ],
@@ -88,8 +70,7 @@ class AgencyAccessView extends GetView<AgencyAccessController> {
     );
   }
 
-  Widget _topBar(AppThemeColors colors) {
-    final onHero = colors.isDark ? kColorWhite : colors.onHeroPrimary;
+  Widget _topBar() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 4, 14, 10),
       child: Stack(
@@ -99,58 +80,57 @@ class AgencyAccessView extends GetView<AgencyAccessController> {
             alignment: Alignment.centerLeft,
             child: IconButton(
               onPressed: () => Get.back<void>(),
-              icon: Icon(
+              icon: const Icon(
                 Icons.arrow_back_ios_new_rounded,
-                color: onHero,
+                color: kColorWhite,
                 size: 20,
               ),
             ),
           ),
-          SemiBoldText(
+          const SemiBoldText(
             text: 'Agency Access',
             fontSize: TextStyles.k18FontSize,
-            color: onHero,
+            color: kColorWhite,
           ),
         ],
       ),
     );
   }
 
-  Widget _header(AppThemeColors colors) {
+  Widget _header() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        BoldText(
+        const BoldText(
           text: 'Choose your agency flow',
           fontSize: TextStyles.k22FontSize,
-          color: colors.textPrimary,
+          color: kColorText,
         ),
         Spacing.v6,
-        AppText(
+        const AppText(
           text:
               'Hosts can apply or check approval status. Agency owners register once, then manage recruit links, hosts, and revenue from the dashboard.',
           fontSize: 13,
-          color: colors.textSecondary,
+          color: kColorHint,
         ),
       ],
     );
   }
 
-  Widget _modeSwitcher(AppThemeColors colors) {
+  Widget _modeSwitcher() {
     return Obx(() {
       final selected = controller.mode.value;
       return Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: colors.surfaceMuted,
+          color: kColorAvatarFallbackBg.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: colors.border),
+          border: Border.all(color: kColorHint.withValues(alpha: 0.16)),
         ),
         child: Row(
           children: [
             Expanded(
               child: _modeButton(
-                colors: colors,
                 label: 'Host',
                 icon: Icons.video_call_rounded,
                 selected: selected == AgencyAccessMode.host,
@@ -159,7 +139,6 @@ class AgencyAccessView extends GetView<AgencyAccessController> {
             ),
             Expanded(
               child: _modeButton(
-                colors: colors,
                 label: 'Agency Owner',
                 icon: Icons.business_center_rounded,
                 selected: selected == AgencyAccessMode.owner,
@@ -173,7 +152,6 @@ class AgencyAccessView extends GetView<AgencyAccessController> {
   }
 
   Widget _modeButton({
-    required AppThemeColors colors,
     required String label,
     required IconData icon,
     required bool selected,
@@ -200,17 +178,13 @@ class AgencyAccessView extends GetView<AgencyAccessController> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              size: 18,
-              color: selected ? kColorWhite : colors.textSecondary,
-            ),
+            Icon(icon, size: 18, color: selected ? kColorWhite : kColorHint),
             Spacing.h6,
             Flexible(
               child: SemiBoldText(
                 text: label,
                 fontSize: 13,
-                color: selected ? kColorWhite : colors.textSecondary,
+                color: selected ? kColorWhite : kColorHint,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -221,13 +195,12 @@ class AgencyAccessView extends GetView<AgencyAccessController> {
     );
   }
 
-  Widget _hostPanel(AppThemeColors colors) {
+  Widget _hostPanel(BuildContext context) {
     return Column(
       key: const ValueKey('host-panel'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _infoCard(
-          colors: colors,
           icon: Icons.verified_user_rounded,
           title: 'Host application',
           subtitle:
@@ -247,13 +220,12 @@ class AgencyAccessView extends GetView<AgencyAccessController> {
         ),
         Spacing.v12,
         _outlineAction(
-          colors: colors,
           icon: Icons.manage_search_rounded,
           label: 'Check Application Status',
           onTap: controller.openHostStatus,
         ),
         Spacing.v20,
-        _stepList(colors, const [
+        _stepList(const [
           'Apply with host details',
           'Agency/admin reviews the profile',
           'Approved hosts can start streaming',
@@ -262,7 +234,7 @@ class AgencyAccessView extends GetView<AgencyAccessController> {
     );
   }
 
-  Widget _ownerPanel(AppThemeColors colors) {
+  Widget _ownerPanel(BuildContext context) {
     final session = Get.find<AgencySessionController>();
 
     return Obx(
@@ -271,7 +243,6 @@ class AgencyAccessView extends GetView<AgencyAccessController> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _infoCard(
-            colors: colors,
             icon: Icons.admin_panel_settings_rounded,
             title: session.hasAgency.value
                 ? 'Agency dashboard ready'
@@ -295,7 +266,6 @@ class AgencyAccessView extends GetView<AgencyAccessController> {
             ),
             Spacing.v12,
             _outlineAction(
-              colors: colors,
               icon: Icons.add_business_rounded,
               label: 'Register Another Agency',
               onTap: controller.openOwnerRegister,
@@ -313,14 +283,13 @@ class AgencyAccessView extends GetView<AgencyAccessController> {
             ),
             Spacing.v12,
             _outlineAction(
-              colors: colors,
               icon: Icons.dashboard_outlined,
               label: 'Open Agency Dashboard',
               onTap: controller.openOwnerDashboard,
             ),
           ],
           Spacing.v20,
-          _stepList(colors, const [
+          _stepList(const [
             'Register agency with your logged-in account',
             'Share recruit code/link with hosts',
             'Review hosts and revenue in the dashboard',
@@ -331,7 +300,6 @@ class AgencyAccessView extends GetView<AgencyAccessController> {
   }
 
   Widget _infoCard({
-    required AppThemeColors colors,
     required IconData icon,
     required String title,
     required String subtitle,
@@ -361,16 +329,12 @@ class AgencyAccessView extends GetView<AgencyAccessController> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SemiBoldText(
-                  text: title,
-                  fontSize: 15,
-                  color: colors.textPrimary,
-                ),
+                SemiBoldText(text: title, fontSize: 15, color: kColorText),
                 Spacing.v4,
                 AppText(
                   text: subtitle,
                   fontSize: TextStyles.k12FontSize,
-                  color: colors.textSecondary,
+                  color: kColorHint,
                 ),
               ],
             ),
@@ -381,7 +345,6 @@ class AgencyAccessView extends GetView<AgencyAccessController> {
   }
 
   Widget _outlineAction({
-    required AppThemeColors colors,
     required IconData icon,
     required String label,
     required VoidCallback onTap,
@@ -392,9 +355,9 @@ class AgencyAccessView extends GetView<AgencyAccessController> {
         height: 52,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: colors.surface,
+          color: kColorWhite,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: colors.chipUnselectedBorder),
+          border: Border.all(color: kColorPrimary.withValues(alpha: 0.28)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -412,21 +375,20 @@ class AgencyAccessView extends GetView<AgencyAccessController> {
     );
   }
 
-  Widget _stepList(AppThemeColors colors, List<String> steps) {
+  Widget _stepList(List<String> steps) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: colors.surfaceMuted,
+        color: kColorAvatarFallbackBg.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: colors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SemiBoldText(
+          const SemiBoldText(
             text: 'Flow Preview',
             fontSize: TextStyles.k14FontSize,
-            color: colors.textPrimary,
+            color: kColorText,
           ),
           Spacing.v12,
           for (var i = 0; i < steps.length; i++) ...[
@@ -452,7 +414,7 @@ class AgencyAccessView extends GetView<AgencyAccessController> {
                   child: AppText(
                     text: steps[i],
                     fontSize: 13,
-                    color: colors.textPrimary,
+                    color: kColorText,
                   ),
                 ),
               ],
@@ -463,4 +425,5 @@ class AgencyAccessView extends GetView<AgencyAccessController> {
       ),
     );
   }
+
 }

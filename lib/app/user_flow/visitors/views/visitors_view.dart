@@ -16,6 +16,7 @@ class VisitorsView extends GetView<VisitorsController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: kColorBackground,
       appBar: const CommonAppBarWidget(
         title: 'Profile Visitors',
         useMaterialAppBar: true,

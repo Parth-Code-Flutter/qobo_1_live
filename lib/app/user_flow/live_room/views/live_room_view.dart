@@ -7,10 +7,6 @@ import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
-import 'package:qobo_one_live/theme/app_theme_colors.dart';
-import 'package:qobo_one_live/theme/theme_context.dart';
-import 'package:qobo_one_live/utils/app_widgets/app_screen_background.dart';
-import 'package:qobo_one_live/utils/app_widgets/app_search_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/safe_network_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -36,8 +32,13 @@ class LiveRoomView extends StatelessWidget {
     return GetBuilder<LiveRoomController>(
       init: liveRoomController,
       builder: (controller) {
-        final colors = context.appColors;
-        return AppScreenBackground(
+        return Container(
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage(kImgBG),
+              fit: BoxFit.cover,
+            ),
+          ),
           child: SafeArea(
             child: Column(
               children: [
@@ -45,11 +46,11 @@ class LiveRoomView extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
                   child: Column(
                     children: [
-                      _topHeader(context, colors, userSession, controller),
+                      _topHeader(userSession, controller),
                       Spacing.v16,
-                      _actionCtas(colors, controller),
+                      _actionCtas(controller),
                       Spacing.v16,
-                      _filterAndCategoryRow(context, colors, categories),
+                      _filterAndCategoryRow(context, categories),
                       Spacing.v12,
                       _topBanner(controller),
                       Spacing.v12,
@@ -69,15 +70,15 @@ class LiveRoomView extends StatelessWidget {
                       }
                       if (controller.rooms.isEmpty) {
                         if (controller.isSearching) {
-                          return _searchEmptyState(colors, controller);
+                          return _searchEmptyState(controller);
                         }
-                        return _emptyState(colors, controller);
+                        return _emptyState(controller);
                       }
                       final highlight = controller.highlightJoinGrid.value;
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _liveCountStrip(colors, controller.rooms.length),
+                          _liveCountStrip(controller.rooms.length),
                           Spacing.v10,
                           Expanded(
                             child: AnimatedContainer(
@@ -132,12 +133,11 @@ class LiveRoomView extends StatelessWidget {
   }
 
   /// Primary actions: start broadcasting or jump into an existing room.
-  Widget _actionCtas(AppThemeColors colors, LiveRoomController controller) {
+  Widget _actionCtas(LiveRoomController controller) {
     return Row(
       children: [
         Expanded(
           child: _ctaButton(
-            colors: colors,
             label: LocaleKeys.liveRoomGoLive.tr,
             icon: Icons.videocam_rounded,
             filled: true,
@@ -147,7 +147,6 @@ class LiveRoomView extends StatelessWidget {
         Spacing.h12,
         Expanded(
           child: _ctaButton(
-            colors: colors,
             label: LocaleKeys.liveRoomJoinLive.tr,
             icon: Icons.sensors_rounded,
             filled: false,
@@ -159,13 +158,11 @@ class LiveRoomView extends StatelessWidget {
   }
 
   Widget _ctaButton({
-    required AppThemeColors colors,
     required String label,
     required IconData icon,
     required bool filled,
     required VoidCallback onTap,
   }) {
-    final labelColor = filled ? kColorWhite : colors.onHeroPrimary;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -181,17 +178,11 @@ class LiveRoomView extends StatelessWidget {
                   ],
                 )
               : null,
-          color: filled
-              ? null
-              : (colors.isDark
-                  ? LiveRoomUiColors.chipInactiveBg
-                  : colors.surface),
+          color: filled ? null : LiveRoomUiColors.chipInactiveBg,
           border: Border.all(
             color: filled
                 ? Colors.transparent
-                : (colors.isDark
-                    ? LiveRoomUiColors.joinLiveBorder
-                    : colors.chipUnselectedBorder),
+                : LiveRoomUiColors.joinLiveBorder,
             width: 1.2,
           ),
           boxShadow: filled
@@ -208,12 +199,12 @@ class LiveRoomView extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: labelColor, size: 20),
+            Icon(icon, color: kColorWhite, size: 20),
             Spacing.h8,
             SemiBoldText(
               text: label,
               fontSize: TextStyles.k14FontSize,
-              color: labelColor,
+              color: kColorWhite,
             ),
           ],
         ),
@@ -222,7 +213,7 @@ class LiveRoomView extends StatelessWidget {
   }
 
   /// Small "x rooms live now" strip above the listing grid.
-  Widget _liveCountStrip(AppThemeColors colors, int count) {
+  Widget _liveCountStrip(int count) {
     return Row(
       children: [
         Container(
@@ -237,33 +228,33 @@ class LiveRoomView extends StatelessWidget {
         SemiBoldText(
           text: '$count ${LocaleKeys.liveRoomActiveNow.tr}',
           fontSize: TextStyles.k12FontSize,
-          color: colors.onHeroPrimary,
+          color: kColorWhite,
         ),
         const Spacer(),
         AppText(
           text: LocaleKeys.liveRoomJoinHint.tr,
           fontSize: TextStyles.k12FontSize,
-          color: colors.onHeroMuted,
+          color: kColorHint,
         ),
       ],
     );
   }
 
-  Widget _searchEmptyState(AppThemeColors colors, LiveRoomController controller) {
+  Widget _searchEmptyState(LiveRoomController controller) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
+          const Icon(
             Icons.search_off_rounded,
-            color: colors.hint,
+            color: kColorHint,
             size: 48,
           ),
           Spacing.v12,
           SemiBoldText(
             text: 'No rooms match "${controller.searchQuery.value}"',
             fontSize: TextStyles.k14FontSize,
-            color: colors.onHeroPrimary,
+            color: kColorWhite,
             align: TextAlign.center,
           ),
         ],
@@ -271,7 +262,7 @@ class LiveRoomView extends StatelessWidget {
     );
   }
 
-  Widget _emptyState(AppThemeColors colors, LiveRoomController controller) {
+  Widget _emptyState(LiveRoomController controller) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -280,15 +271,13 @@ class LiveRoomView extends StatelessWidget {
             width: 88,
             height: 88,
             decoration: BoxDecoration(
-              color: colors.isDark
-                  ? LiveRoomUiColors.chipInactiveBg
-                  : colors.surface,
+              color: LiveRoomUiColors.chipInactiveBg,
               shape: BoxShape.circle,
-              border: Border.all(color: colors.border),
+              border: Border.all(color: LiveRoomUiColors.joinLiveBorder),
             ),
-            child: Icon(
+            child: const Icon(
               Icons.live_tv_rounded,
-              color: colors.onHeroPrimary,
+              color: kColorWhite,
               size: 38,
             ),
           ),
@@ -296,20 +285,19 @@ class LiveRoomView extends StatelessWidget {
           SemiBoldText(
             text: LocaleKeys.liveRoomEmptyTitle.tr,
             fontSize: TextStyles.k16FontSize,
-            color: colors.onHeroPrimary,
+            color: kColorWhite,
           ),
           Spacing.v8,
           AppText(
             text: LocaleKeys.liveRoomEmptySubtitle.tr,
             fontSize: TextStyles.k12FontSize,
-            color: colors.onHeroMuted,
+            color: kColorHint,
             align: TextAlign.center,
           ),
           Spacing.v20,
           SizedBox(
             width: 180,
             child: _ctaButton(
-              colors: colors,
               label: LocaleKeys.liveRoomGoLive.tr,
               icon: Icons.videocam_rounded,
               filled: true,
@@ -359,14 +347,12 @@ class LiveRoomView extends StatelessWidget {
   }
 
   Widget _topHeader(
-    BuildContext context,
-    AppThemeColors colors,
     UserSessionController userSession,
     LiveRoomController liveRoomController,
   ) {
     return Obx(() {
       if (liveRoomController.isSearchExpanded.value) {
-        return _expandedSearchBar(colors, liveRoomController);
+        return _expandedSearchBar(liveRoomController);
       }
 
       return GetBuilder<UserSessionController>(
@@ -380,10 +366,10 @@ class LiveRoomView extends StatelessWidget {
                 height: 44,
                 padding: const EdgeInsets.all(2),
                 decoration: BoxDecoration(
-                  color: colors.surface,
+                  color: kColorWhite,
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: colors.border,
+                    color: const Color(0xB3FFFFFF),
                     width: 1,
                   ),
                 ),
@@ -403,18 +389,18 @@ class LiveRoomView extends StatelessWidget {
                     AppText(
                       text: LocaleKeys.liveRoomWelcome.tr,
                       fontSize: TextStyles.k14FontSize,
-                      color: colors.onHeroSecondary,
+                      color: kColorWhite,
                     ),
                     SemiBoldText(
                       text: session.displayName,
                       fontSize: TextStyles.k14FontSize,
-                      color: colors.onHeroPrimary,
+                      color: kColorWhite,
                     ),
                   ],
                 ),
               ),
               Material(
-                color: colors.surface,
+                color: kColorWhite,
                 borderRadius: BorderRadius.circular(22),
                 child: InkWell(
                   onTap: liveRoomController.openSearch,
@@ -455,10 +441,7 @@ class LiveRoomView extends StatelessWidget {
     });
   }
 
-  Widget _expandedSearchBar(
-    AppThemeColors colors,
-    LiveRoomController controller,
-  ) {
+  Widget _expandedSearchBar(LiveRoomController controller) {
     return AnimatedSize(
       duration: const Duration(milliseconds: 280),
       curve: Curves.easeOutCubic,
@@ -466,18 +449,18 @@ class LiveRoomView extends StatelessWidget {
       child: Row(
         children: [
           Material(
-            color: colors.surfaceMuted,
+            color: LiveRoomUiColors.chipInactiveBg,
             shape: const CircleBorder(),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
               onTap: controller.closeSearch,
               customBorder: const CircleBorder(),
-              child: SizedBox(
+              child: const SizedBox(
                 width: 40,
                 height: 40,
                 child: Icon(
                   Icons.arrow_back_ios_new,
-                  color: colors.onHeroPrimary,
+                  color: kColorWhite,
                   size: 18,
                 ),
               ),
@@ -485,40 +468,69 @@ class LiveRoomView extends StatelessWidget {
           ),
           Spacing.h10,
           Expanded(
-            child: AppSearchField(
-              controller: controller.searchController,
-              focusNode: controller.searchFocusNode,
-              hintText: 'Search live rooms...',
+            child: Container(
               height: 44,
-              fontSize: TextStyles.k14FontSize,
-              borderRadius: BorderRadius.circular(22),
-              leading: SvgPicture.asset(
-                kIconSearch,
-                width: 18,
-                height: 18,
-                colorFilter: ColorFilter.mode(
-                  colors.isDark ? kColorPrimary : colors.chipSelected,
-                  BlendMode.srcIn,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                color: kColorWhite,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                  color: LiveRoomUiColors.joinLiveBorder.withValues(alpha: 0.6),
                 ),
+              ),
+              child: Row(
+                children: [
+                  SvgPicture.asset(
+                    kIconSearch,
+                    width: 18,
+                    height: 18,
+                    colorFilter: const ColorFilter.mode(
+                      kColorPrimary,
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                  Spacing.h10,
+                  Expanded(
+                    child: TextField(
+                      controller: controller.searchController,
+                      focusNode: controller.searchFocusNode,
+                      textInputAction: TextInputAction.search,
+                      style: TextStyles.kRegularPoppins(
+                        fontSize: TextStyles.k14FontSize,
+                        colors: kColorText,
+                      ),
+                      cursorColor: kColorPrimary,
+                      decoration: InputDecoration(
+                        isDense: true,
+                        border: InputBorder.none,
+                        hintText: 'Search live rooms...',
+                        hintStyle: TextStyles.kRegularPoppins(
+                          fontSize: TextStyles.k14FontSize,
+                          colors: kColorHint,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Obx(() {
+                    if (controller.searchQuery.value.isEmpty) {
+                      return Spacing.shrink;
+                    }
+                    return GestureDetector(
+                      onTap: controller.searchController.clear,
+                      child: const Icon(
+                        Icons.close_rounded,
+                        size: 20,
+                        color: kColorHint,
+                      ),
+                    );
+                  }),
+                ],
               ),
             ),
           ),
-          Obx(() {
-            if (controller.searchQuery.value.isEmpty) {
-              return Spacing.shrink;
-            }
-            return Padding(
-              padding: const EdgeInsets.only(left: 8),
-              child: GestureDetector(
-                onTap: controller.searchController.clear,
-                child: Icon(
-                  Icons.close_rounded,
-                  size: 22,
-                  color: colors.iconMuted,
-                ),
-              ),
-            );
-          }),
         ],
       ),
     );
@@ -526,7 +538,6 @@ class LiveRoomView extends StatelessWidget {
 
   Widget _filterAndCategoryRow(
     BuildContext context,
-    AppThemeColors colors,
     List<String> categories,
   ) {
     final liveRoomController = _resolveController();
@@ -536,7 +547,6 @@ class LiveRoomView extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           _filterButton(
-            colors: colors,
             hasActiveFilters: liveRoomController.hasActiveFilters,
             onTap: () => liveRoomController.openFilterSheet(context),
           ),
@@ -549,7 +559,6 @@ class LiveRoomView extends StatelessWidget {
               separatorBuilder: (_, __) => Spacing.h8,
               itemBuilder: (context, index) {
                 return _categoryChip(
-                  colors: colors,
                   label: categories[index],
                   isSelected:
                       liveRoomController.selectedCategoryIndex == index,
@@ -564,12 +573,11 @@ class LiveRoomView extends StatelessWidget {
   }
 
   Widget _filterButton({
-    required AppThemeColors colors,
     required bool hasActiveFilters,
     required VoidCallback onTap,
   }) {
     return Material(
-      color: colors.surface,
+      color: kColorWhite,
       shape: const CircleBorder(),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -613,7 +621,6 @@ class LiveRoomView extends StatelessWidget {
   }
 
   Widget _categoryChip({
-    required AppThemeColors colors,
     required String label,
     required bool isSelected,
     required VoidCallback onTap,
@@ -640,15 +647,11 @@ class LiveRoomView extends StatelessWidget {
                     ],
                   )
                 : null,
-            color: isSelected
-                ? null
-                : (colors.isDark
-                    ? LiveRoomUiColors.chipInactiveBg
-                    : colors.surface),
+            color: isSelected ? null : LiveRoomUiColors.chipInactiveBg,
             border: Border.all(
               color: isSelected
                   ? kColorLiveFilterChipBorder
-                  : colors.border,
+                  : LiveRoomUiColors.cardBorder,
               width: 1,
             ),
             boxShadow: isSelected
@@ -665,7 +668,7 @@ class LiveRoomView extends StatelessWidget {
             child: SemiBoldText(
               text: label,
               fontSize: TextStyles.k12FontSize,
-              color: isSelected ? kColorWhite : colors.onHeroMuted,
+              color: isSelected ? kColorWhite : const Color(0xFFB8B8D0),
             ),
           ),
         ),
