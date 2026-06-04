@@ -48,6 +48,10 @@ class LiveBroadcastController extends GetxController {
     connectionIssue.value = message;
   }
 
+  void clearConnectionIssue() {
+    connectionIssue.value = '';
+  }
+
   void handleZegoLoginFailed(int errorCode) {
     connectionIssue.value =
         'Could not join live room (error $errorCode). '

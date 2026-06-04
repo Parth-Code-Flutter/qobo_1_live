@@ -99,11 +99,14 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
         visible: false,
       );
 
-      // Configure for Audio rooms (turn off camera, show avatars and soundwaves)
       if (controller.roomType.value == 'AUDIO') {
         config.turnOnCameraWhenJoining = false;
+        config.turnOnMicrophoneWhenJoining = true;
         config.audioVideoView.showAvatarInAudioMode = true;
         config.audioVideoView.showSoundWavesInAudioMode = true;
+      } else {
+        config.turnOnCameraWhenJoining = controller.isHost.value;
+        config.turnOnMicrophoneWhenJoining = true;
       }
 
       return Positioned.fill(
@@ -117,6 +120,12 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
           config: config,
           events: ZegoUIKitPrebuiltLiveStreamingEvents(
             room: ZegoLiveStreamingRoomEvents(
+              onStateChanged: (state) {
+                if (state.reason == ZegoRoomStateChangedReason.Logined &&
+                    state.errorCode == 0) {
+                  controller.clearConnectionIssue();
+                }
+              },
               onLoginFailed: (event, defaultAction) {
                 // Avoid defaultAction dialog — it crashes if Obx rebuilds first.
                 controller.handleZegoLoginFailed(event.errorCode);
