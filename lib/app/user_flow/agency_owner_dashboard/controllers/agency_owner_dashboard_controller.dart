@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:qobo_one_live/app/user_flow/agency_owner_dashboard/models/agency_revenue_demo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/agency_session_controller.dart';
 
@@ -7,16 +8,37 @@ class AgencyOwnerDashboardController extends GetxController {
 
   bool get hasAgency => _session.hasAgency.value;
 
-  String get agencyName =>
-      _session.agencyName.value.isNotEmpty
+  bool get isDemoPreview => !hasAgency;
+
+  String get displayAgencyName =>
+      hasAgency && _session.agencyName.value.isNotEmpty
           ? _session.agencyName.value
-          : 'Your Agency';
+          : AgencyRevenueDemo.agencyName;
 
-  String get agencyCode => _session.agencyCode.value;
+  String get displayAgencyCode =>
+      hasAgency && _session.agencyCode.value.isNotEmpty
+          ? _session.agencyCode.value
+          : AgencyRevenueDemo.agencyCode;
 
-  String get commissionLabel => _session.commissionPercentLabel;
+  String get displayOwnerName => AgencyRevenueDemo.ownerName;
 
-  String get agencyStatus => _session.status.value;
+  int get ownerCoinsPerSecond => AgencyRevenueDemo.ownerCoinsPerSecond;
+
+  AgencyCallSample get sampleCall => AgencyRevenueDemo.sampleCall;
+
+  List<AgencyHostRevenueDemo> get hosts => AgencyRevenueDemo.hosts;
+
+  int get totalAgencyEarnings => AgencyRevenueDemo.totalAgencyEarnings;
+
+  int get companyShare => AgencyRevenueDemo.companyShare;
+
+  int get hostCallShare => AgencyRevenueDemo.hostCallShare;
+
+  int get ownerCommission => AgencyRevenueDemo.ownerCommissionCoins;
+
+  int get totalGifts => AgencyRevenueDemo.totalGiftsVolume;
+
+  int get availableForPayout => AgencyRevenueDemo.availableForPayout;
 
   void openRecruitLink() {
     Get.toNamed(Routes.AGENCY_RECRUIT_LINK);
@@ -32,5 +54,9 @@ class AgencyOwnerDashboardController extends GetxController {
 
   void openRegisterAgency() {
     Get.toNamed(Routes.AGENCY_OWNER_REGISTER);
+  }
+
+  void openHostDetail(AgencyHostRevenueDemo host) {
+    Get.toNamed(Routes.AGENCY_HOST_LIST, arguments: {'highlightHostId': host.id});
   }
 }

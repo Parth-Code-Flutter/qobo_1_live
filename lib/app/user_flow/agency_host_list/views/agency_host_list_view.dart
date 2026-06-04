@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
-import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/app_widgets/safe_network_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -16,43 +16,72 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kColorWhite,
-      appBar: CommonAppBarWidget(
-        title: 'My Hosts',
-        useMaterialAppBar: true,
-        actions: [
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              _header(),
+              Expanded(
+                child: Obx(() {
+                  if (controller.isLoading.value) {
+                    return const Center(
+                      child: CircularProgressIndicator(color: kColorPrimary),
+                    );
+                  }
+                  if (controller.hostList.isEmpty) {
+                    return _buildEmptyState();
+                  }
+                  return ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                    itemCount: controller.hostList.length,
+                    separatorBuilder: (_, __) => Spacing.v12,
+                    itemBuilder: (context, index) {
+                      final host = controller.hostList[index];
+                      final highlighted =
+                          controller.highlightHostId.value == host.id;
+                      return _buildHostCard(host, highlighted: highlighted);
+                    },
+                  );
+                }),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _header() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: Get.back,
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: kColorWhite, size: 18),
+          ),
+          const Expanded(
+            child: Center(
+              child: SemiBoldText(
+                text: 'My Hosts',
+                fontSize: TextStyles.k18FontSize,
+                color: kColorWhite,
+              ),
+            ),
+          ),
           IconButton(
             onPressed: () => Get.toNamed(Routes.AGENCY_REVENUE),
-            icon: const Icon(Icons.account_balance_wallet_rounded, color: kColorText),
+            icon: const Icon(Icons.account_balance_wallet_rounded, color: kColorWhite),
           ),
           IconButton(
             onPressed: controller.refreshList,
-            icon: const Icon(Icons.refresh_rounded, color: kColorText),
+            icon: const Icon(Icons.refresh_rounded, color: kColorWhite),
           ),
-          const SizedBox(width: 4),
         ],
       ),
-      body: Obx(() {
-        if (controller.isLoading.value) {
-          return const Center(
-            child: CircularProgressIndicator(color: kColorPrimary),
-          );
-        }
-
-        if (controller.hostList.isEmpty) {
-          return _buildEmptyState();
-        }
-
-        return ListView.separated(
-          padding: const EdgeInsets.all(20),
-          itemCount: controller.hostList.length,
-          separatorBuilder: (context, index) => Spacing.v12,
-          itemBuilder: (context, index) {
-            final host = controller.hostList[index];
-            return _buildHostCard(host);
-          },
-        );
-      }),
     );
   }
 
@@ -63,29 +92,19 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.group_off_rounded, size: 64, color: kColorHint),
+            Icon(Icons.group_off_rounded, size: 64, color: kColorWhite.withValues(alpha: 0.5)),
             Spacing.v16,
             const SemiBoldText(
               text: 'No Hosts Yet',
               fontSize: TextStyles.k18FontSize,
-              color: kColorText,
+              color: kColorWhite,
             ),
             Spacing.v8,
-            const AppText(
-              text:
-                  'Share your recruit link to invite hosts. Approved hosts will appear here once the host list API is connected.',
+            AppText(
+              text: 'Share your recruit link to invite hosts.',
               fontSize: TextStyles.k14FontSize,
-              color: kColorHint,
+              color: kColorWhite.withValues(alpha: 0.7),
               align: TextAlign.center,
-            ),
-            Spacing.v20,
-            TextButton(
-              onPressed: () => Get.toNamed(Routes.AGENCY_RECRUIT_LINK),
-              child: const SemiBoldText(
-                text: 'Open Recruit Link',
-                fontSize: TextStyles.k14FontSize,
-                color: kColorPrimary,
-              ),
             ),
           ],
         ),
@@ -93,57 +112,126 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
     );
   }
 
-  Widget _buildHostCard(AgencyHostModel host) {
+  Widget _buildHostCard(AgencyHostModel host, {bool highlighted = false}) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: kColorBackground,
+        color: kColorWhite.withValues(alpha: highlighted ? 0.14 : 0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: kColorHint.withValues(alpha: 0.1)),
+        border: Border.all(
+          color: highlighted
+              ? kColorPrimary.withValues(alpha: 0.8)
+              : kColorWhite.withValues(alpha: 0.12),
+          width: highlighted ? 1.5 : 1,
+        ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SafeNetworkAvatar(
-            url: host.avatarUrl,
-            size: 56,
-            fallback: CircleAvatar(
-              radius: 28,
-              backgroundColor: kColorHint.withValues(alpha: 0.1),
-              child: const Icon(Icons.person, color: kColorHint),
-            ),
-          ),
-          Spacing.h16,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SemiBoldText(
-                  text: host.name,
-                  fontSize: TextStyles.k16FontSize,
-                  color: kColorText,
+          Row(
+            children: [
+              SafeNetworkAvatar(
+                url: host.avatarUrl,
+                size: 52,
+                fallback: CircleAvatar(
+                  radius: 26,
+                  backgroundColor: kColorPrimary.withValues(alpha: 0.35),
+                  child: SemiBoldText(
+                    text: host.name.isNotEmpty ? host.name[0] : '?',
+                    fontSize: TextStyles.k18FontSize,
+                    color: kColorWhite,
+                  ),
                 ),
-                Spacing.v4,
-                AppText(
-                  text: 'ID: ${host.id}',
-                  fontSize: TextStyles.k12FontSize,
-                  color: kColorHint,
-                ),
-                Spacing.v6,
-                Row(
+              ),
+              Spacing.h12,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.diamond_outlined, size: 14, color: Colors.orange),
-                    Spacing.h4,
+                    SemiBoldText(
+                      text: host.name,
+                      fontSize: TextStyles.k18FontSize,
+                      color: kColorWhite,
+                    ),
+                    Spacing.v2,
                     AppText(
-                      text: '${host.totalEarnings} Diamonds',
+                      text: 'ID: ${host.id} · ${host.coinsPerSecond} coins/sec',
                       fontSize: TextStyles.k12FontSize,
-                      color: kColorText,
+                      color: kColorWhite.withValues(alpha: 0.65),
+                    ),
+                    AppText(
+                      text: 'Last caller: ${host.lastViewer}',
+                      fontSize: TextStyles.k12FontSize,
+                      color: kColorWhite.withValues(alpha: 0.55),
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+              _buildStatusBadge(host.status),
+            ],
           ),
-          _buildStatusBadge(host.status),
+          Spacing.v12,
+          Row(
+            children: [
+              Expanded(
+                child: _statBox(
+                  Icons.payments_rounded,
+                  'Total earning',
+                  controller.formatCoins(host.totalEarnings),
+                ),
+              ),
+              Spacing.h8,
+              Expanded(
+                child: _statBox(
+                  Icons.card_giftcard_rounded,
+                  'Total gifts',
+                  controller.formatCoins(host.totalGifts),
+                ),
+              ),
+              Spacing.h8,
+              Expanded(
+                child: _statBox(
+                  Icons.call_rounded,
+                  'Calling spend',
+                  controller.formatCoins(host.totalCallingSpend),
+                ),
+              ),
+            ],
+          ),
+          Spacing.v10,
+          AppText(
+            text: '${host.callingMinutes} minutes on calls (gross viewer spend)',
+            fontSize: TextStyles.k12FontSize,
+            color: kColorWhite.withValues(alpha: 0.6),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _statBox(IconData icon, String label, String value) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.black26,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 16, color: kColorPrimary),
+          Spacing.v6,
+          AppText(
+            text: label,
+            fontSize: TextStyles.k10FontSize,
+            color: kColorWhite.withValues(alpha: 0.55),
+          ),
+          Spacing.v2,
+          SemiBoldText(
+            text: value,
+            fontSize: TextStyles.k12FontSize,
+            color: kColorWhite,
+          ),
         ],
       ),
     );
@@ -155,20 +243,16 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
 
     switch (status.toLowerCase()) {
       case 'active':
-        bgColor = Colors.green.withValues(alpha: 0.1);
-        textColor = Colors.green;
+        bgColor = Colors.green.withValues(alpha: 0.2);
+        textColor = Colors.greenAccent;
         break;
       case 'pending':
-        bgColor = Colors.orange.withValues(alpha: 0.1);
-        textColor = Colors.orange;
-        break;
-      case 'suspended':
-        bgColor = Colors.red.withValues(alpha: 0.1);
-        textColor = Colors.red;
+        bgColor = Colors.orange.withValues(alpha: 0.2);
+        textColor = Colors.orangeAccent;
         break;
       default:
-        bgColor = kColorHint.withValues(alpha: 0.1);
-        textColor = kColorHint;
+        bgColor = kColorWhite.withValues(alpha: 0.1);
+        textColor = kColorWhite.withValues(alpha: 0.7);
     }
 
     return Container(
