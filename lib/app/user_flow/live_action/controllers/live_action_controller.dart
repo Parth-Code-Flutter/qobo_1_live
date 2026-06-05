@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/bottom_nav/controllers/bottom_nav_controller.dart';
 import 'package:qobo_one_live/app/user_flow/agency_owner_dashboard/models/agency_revenue_demo.dart';
+import 'package:qobo_one_live/services/agency_session_controller.dart';
 import 'package:qobo_one_live/app/user_flow/live_action/models/live_map_host.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
@@ -95,7 +96,12 @@ class LiveActionController extends GetxController {
   /// Shows agency hosts on the heart map (from owner dashboard).
   void configureAgencyHosts() {
     isAgencyHostsView = true;
-    final hosts = AgencyRevenueDemo.hosts;
+    final session = Get.isRegistered<AgencySessionController>()
+        ? Get.find<AgencySessionController>()
+        : null;
+    final hosts = session != null && session.cachedHosts.isNotEmpty
+        ? session.cachedHosts
+        : AgencyRevenueDemo.hosts;
     final mapped = <LiveMapHost>[];
     for (var i = 0; i < hosts.length; i++) {
       final host = hosts[i];

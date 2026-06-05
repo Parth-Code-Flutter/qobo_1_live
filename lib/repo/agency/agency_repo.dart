@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:qobo_one_live/repo/agency/agency_api_utils.dart';
 import 'package:qobo_one_live/services/api_service.dart';
 import 'package:qobo_one_live/services/api_constants.dart';
 import 'package:qobo_one_live/utils/api_response_utils.dart';
@@ -93,14 +94,50 @@ class AgencyRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
-  /// Calls `POST /api/agency/register` to register as an agency owner.
-  Future<Map<String, dynamic>?> registerAgency({
-    required String agencyName,
+  /// `GET /api/agency/dashboard?month=YYYY-MM` — full owner dashboard payload.
+  Future<Map<String, dynamic>?> getAgencyDashboard({
+    String? month,
     bool isShowLoader = true,
   }) async {
+    final monthParam = month?.trim().isNotEmpty == true
+        ? month!.trim()
+        : agencyCurrentMonthParam();
+    var path = AgencyEndpoints.dashboard;
+    path += '?month=${Uri.encodeComponent(monthParam)}';
+    final response = await _apiService.getRequest(
+      endPoint: path,
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// Confirms logged-in user has an agency (uses dashboard endpoint).
+  Future<Map<String, dynamic>?> checkAgencyOwnerActive({
+    String? month,
+    bool isShowLoader = true,
+  }) => getAgencyDashboard(month: month, isShowLoader: isShowLoader);
+
+  /// `POST /api/agency/register` — register agency for logged-in user.
+  Future<Map<String, dynamic>?> registerAgency({
+    required String agencyName,
+    String? ownerName,
+    String? ownerWhatsapp,
+    String? logoUrl,
+    bool isShowLoader = true,
+  }) async {
+    final body = <String, dynamic>{
+      'agency_name': agencyName.trim(),
+      if (ownerName != null && ownerName.trim().isNotEmpty)
+        'owner_name': ownerName.trim(),
+      if (ownerWhatsapp != null && ownerWhatsapp.trim().isNotEmpty)
+        'owner_whatsapp': ownerWhatsapp.trim(),
+      if (logoUrl != null && logoUrl.trim().isNotEmpty)
+        'logo_url': logoUrl.trim(),
+    };
     final response = await _apiService.postRequest(
       endPoint: AgencyEndpoints.registerAgency,
-      requestModel: <String, dynamic>{'agency_name': agencyName},
+      requestModel: body,
       isShowLoader: isShowLoader,
     );
 
@@ -140,10 +177,15 @@ class AgencyRepo {
 
   /// Calls `GET /api/agency/revenue` to retrieve agency revenue stats.
   Future<Map<String, dynamic>?> getAgencyRevenueStats({
+    String? month,
     bool isShowLoader = true,
   }) async {
+    final monthParam = month?.trim().isNotEmpty == true
+        ? month!.trim()
+        : agencyCurrentMonthParam();
     final response = await _apiService.getRequest(
-      endPoint: AgencyEndpoints.revenue,
+      endPoint:
+          '${AgencyEndpoints.revenue}?month=${Uri.encodeComponent(monthParam)}',
       isShowLoader: isShowLoader,
     );
 
@@ -153,9 +195,12 @@ class AgencyRepo {
 
   /// Calls `POST /api/agency/payout` to process agency commissions payout.
   Future<Map<String, dynamic>?> processPayout({
-    Map<String, dynamic> requestModel = const <String, dynamic>{},
+    int? amount,
     bool isShowLoader = true,
   }) async {
+    final requestModel = <String, dynamic>{
+      if (amount != null) 'amount': amount,
+    };
     final response = await _apiService.postRequest(
       endPoint: AgencyEndpoints.payout,
       requestModel: requestModel,

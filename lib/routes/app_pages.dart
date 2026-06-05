@@ -25,6 +25,8 @@ import '../app/user_flow/agency_host_status/bindings/agency_host_status_binding.
 import '../app/user_flow/agency_host_status/views/agency_host_status_view.dart';
 import '../app/user_flow/agency_owner_register/bindings/agency_owner_register_binding.dart';
 import '../app/user_flow/agency_owner_register/views/agency_owner_register_view.dart';
+import '../app/user_flow/agency_owner_status/bindings/agency_owner_status_binding.dart';
+import '../app/user_flow/agency_owner_status/views/agency_owner_status_view.dart';
 import '../app/user_flow/agency_recruit_link/bindings/agency_recruit_link_binding.dart';
 import '../app/user_flow/agency_recruit_link/views/agency_recruit_link_view.dart';
 import '../app/user_flow/agency_host_list/bindings/agency_host_list_binding.dart';
@@ -160,6 +162,11 @@ class AppPages {
       name: _Paths.AGENCY_OWNER_REGISTER,
       page: () => const AgencyOwnerRegisterView(),
       binding: AgencyOwnerRegisterBinding(),
+    ),
+    GetPage(
+      name: _Paths.AGENCY_OWNER_STATUS,
+      page: () => const AgencyOwnerStatusView(),
+      binding: AgencyOwnerStatusBinding(),
     ),
     GetPage(
       name: _Paths.AGENCY_RECRUIT_LINK,

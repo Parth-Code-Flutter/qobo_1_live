@@ -1,7 +1,12 @@
 import 'package:get/get.dart';
+import 'package:qobo_one_live/app/user_flow/agency_owner_dashboard/models/agency_dashboard_data.dart';
+import 'package:qobo_one_live/app/user_flow/agency_owner_dashboard/models/agency_revenue_demo.dart';
+import 'package:qobo_one_live/app/user_flow/agency_owner_status/models/agency_owner_application_state.dart';
+import 'package:qobo_one_live/repo/agency/agency_api_utils.dart';
+import 'package:qobo_one_live/constants/local_storage_constants.dart';
+import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 
-/// In-memory agency context for owner UI (register → dashboard → sub-screens).
-/// API binding will hydrate this from backend later.
+/// Agency owner session: application review state + approved agency context.
 class AgencySessionController extends GetxController {
   final hasAgency = false.obs;
   final agencyId = ''.obs;
@@ -10,6 +15,232 @@ class AgencySessionController extends GetxController {
   final commissionRate = 0.0.obs;
   final status = ''.obs;
   final recruitLink = ''.obs;
+
+  final applicationState = AgencyOwnerApplicationState.none.obs;
+  final applicationId = ''.obs;
+  final appliedAgencyName = ''.obs;
+  final appliedOwnerName = ''.obs;
+  final appliedPhone = ''.obs;
+  final applicationReason = ''.obs;
+  final applicationSubmittedAt = ''.obs;
+
+  /// Hosts from last successful dashboard API (for heart-tab map).
+  final cachedHosts = <AgencyHostRevenueDemo>[].obs;
+
+  bool get hasApprovedAgency =>
+      hasAgency.value &&
+      applicationState.value == AgencyOwnerApplicationState.approved;
+
+  bool get isApplicationPending =>
+      applicationState.value == AgencyOwnerApplicationState.pending;
+
+  bool get isApplicationRejected =>
+      applicationState.value == AgencyOwnerApplicationState.rejected;
+
+  bool get canOpenOwnerDashboard => hasApprovedAgency;
+
+  @override
+  void onInit() {
+    super.onInit();
+    loadFromStorage();
+  }
+
+  LocalStorage get _storage {
+    if (Get.isRegistered<LocalStorage>()) return Get.find<LocalStorage>();
+    return Get.put(LocalStorage(), permanent: true);
+  }
+
+  Future<void> loadFromStorage() async {
+    final json = await _storage.getJsonFromStorage(kStorageAgencyOwnerApplication);
+    if (json == null || json.isEmpty) return;
+    _applyApplicationJson(json, persist: false);
+  }
+
+  Future<void> setPendingApplication({
+    required String id,
+    required String agencyNameValue,
+    required String ownerName,
+    required String phone,
+  }) async {
+    applicationState.value = AgencyOwnerApplicationState.pending;
+    applicationId.value = id;
+    appliedAgencyName.value = agencyNameValue;
+    appliedOwnerName.value = ownerName;
+    appliedPhone.value = phone;
+    applicationReason.value = '';
+    applicationSubmittedAt.value = DateTime.now().toIso8601String();
+    hasAgency.value = false;
+    await _persistApplication();
+    update();
+  }
+
+  /// `POST /api/agency/register` — active agency or pending application.
+  Future<void> applyRegisterResponse(Map<String, dynamic> data) async {
+    final agencyStatus = data['status']?.toString() ?? 'active';
+    if (isAgencyStatusPending(agencyStatus)) {
+      await applyPendingAgency(
+        agencyName: data['name']?.toString() ?? appliedAgencyName.value,
+        ownerName: appliedOwnerName.value,
+        phone: appliedPhone.value,
+        applicationId: data['id']?.toString() ?? data['application_id']?.toString(),
+        reason: data['reason']?.toString(),
+      );
+      return;
+    }
+    setAgency(
+      id: data['id']?.toString() ?? '',
+      name: data['name']?.toString() ?? appliedAgencyName.value,
+      code: data['code']?.toString() ?? '',
+      commission: _parseCommission(data['commissionRate']),
+      agencyStatus: agencyStatus,
+    );
+    await _clearApplicationStorage();
+    update();
+  }
+
+  /// `GET /api/agency/dashboard` — full dashboard only when agency is approved.
+  Future<void> applyDashboardResponse(AgencyDashboardData data) async {
+    if (data.isPending) {
+      await applyPendingAgency(
+        agencyName: data.agencyName,
+        ownerName: data.ownerName,
+        phone: appliedPhone.value,
+        reason: 'Waiting for super admin approval.',
+      );
+      status.value = data.agencyStatus;
+      return;
+    }
+    if (!data.isApproved) {
+      await applyPendingAgency(
+        agencyName: data.agencyName,
+        ownerName: data.ownerName,
+        phone: appliedPhone.value,
+      );
+      status.value = data.agencyStatus;
+      return;
+    }
+    setAgency(
+      id: data.agencyId,
+      name: data.agencyName,
+      code: data.agencyCode,
+      commission: data.commissionRate,
+      agencyStatus: data.agencyStatus,
+      link: data.recruitLink.isNotEmpty ? data.recruitLink : null,
+    );
+    cachedHosts.assignAll(data.hosts);
+    await _clearApplicationStorage();
+    update();
+  }
+
+  Future<void> applyPendingAgency({
+    required String agencyName,
+    String? ownerName,
+    String? phone,
+    String? applicationId,
+    String? reason,
+  }) async {
+    applicationState.value = AgencyOwnerApplicationState.pending;
+    appliedAgencyName.value = agencyName;
+    if (ownerName != null && ownerName.isNotEmpty) {
+      appliedOwnerName.value = ownerName;
+    }
+    if (phone != null && phone.isNotEmpty) {
+      appliedPhone.value = phone;
+    }
+    if (applicationId != null && applicationId.isNotEmpty) {
+      this.applicationId.value = applicationId;
+    }
+    applicationReason.value = reason ?? '';
+    hasAgency.value = false;
+    agencyId.value = '';
+    agencyCode.value = '';
+    recruitLink.value = '';
+    cachedHosts.clear();
+    await _persistApplication();
+    update();
+  }
+
+  /// `GET /api/agency/revenue` success — logged-in user has an active agency.
+  Future<void> applyRevenueActiveAgency(Map<String, dynamic> data) async {
+    final code = data['agencyCode']?.toString() ?? agencyCode.value;
+    if (agencyId.value.isEmpty && code.isNotEmpty) {
+      setAgency(
+        id: data['agency_id']?.toString() ?? data['agencyId']?.toString() ?? '',
+        name: appliedAgencyName.value.isNotEmpty
+            ? appliedAgencyName.value
+            : (data['agency_name']?.toString() ?? 'My Agency'),
+        code: code,
+        commission: _parseCommission(data['commissionRate']),
+        agencyStatus: 'active',
+      );
+    } else {
+      applicationState.value = AgencyOwnerApplicationState.approved;
+      hasAgency.value = true;
+      if (code.isNotEmpty) agencyCode.value = code;
+      commissionRate.value = _parseCommission(data['commissionRate']);
+    }
+    await _clearApplicationStorage();
+    update();
+  }
+
+  /// Reserved for a future agency-application-status API (not in current doc).
+  Future<void> applyStatusFromApi(Map<String, dynamic> data) async {
+    final state = AgencyOwnerApplicationState.fromApi(
+      data['status']?.toString(),
+    );
+    applicationState.value = state;
+    applicationId.value =
+        data['application_id']?.toString() ??
+        data['applicationId']?.toString() ??
+        data['id']?.toString() ??
+        applicationId.value;
+    appliedAgencyName.value =
+        data['agency_name']?.toString() ??
+        data['agencyName']?.toString() ??
+        appliedAgencyName.value;
+    appliedOwnerName.value =
+        data['owner_name']?.toString() ??
+        data['ownerName']?.toString() ??
+        appliedOwnerName.value;
+    appliedPhone.value =
+        data['phone']?.toString() ??
+        data['whatsapp']?.toString() ??
+        appliedPhone.value;
+    applicationReason.value = data['reason']?.toString() ?? '';
+    applicationSubmittedAt.value =
+        data['createdAt']?.toString() ??
+        data['submitted_at']?.toString() ??
+        applicationSubmittedAt.value;
+
+    if (state == AgencyOwnerApplicationState.approved) {
+      final agency = data['agency'];
+      if (agency is Map) {
+        setAgency(
+          id: agency['id']?.toString() ?? '',
+          name: agency['name']?.toString() ?? appliedAgencyName.value,
+          code: agency['code']?.toString() ?? '',
+          commission: _parseCommission(agency['commissionRate']),
+          agencyStatus: agency['status']?.toString() ?? 'active',
+          link: agency['recruitLink']?.toString(),
+        );
+      } else {
+        setAgency(
+          id: data['agency_id']?.toString() ?? data['agencyId']?.toString() ?? '',
+          name: appliedAgencyName.value,
+          code: data['agency_code']?.toString() ?? data['agencyCode']?.toString() ?? '',
+          commission: _parseCommission(data['commissionRate']),
+        );
+      }
+      await _clearApplicationStorage();
+    } else if (state == AgencyOwnerApplicationState.rejected) {
+      hasAgency.value = false;
+      await _persistApplication();
+    } else if (state == AgencyOwnerApplicationState.pending) {
+      hasAgency.value = false;
+      await _persistApplication();
+    }
+    update();
+  }
 
   void setAgency({
     required String id,
@@ -26,10 +257,11 @@ class AgencySessionController extends GetxController {
     status.value = agencyStatus;
     recruitLink.value =
         link ?? 'https://qobo1.live/invite/${code.trim().toUpperCase()}';
-    hasAgency.value = true;
+    hasAgency.value = id.isNotEmpty;
+    applicationState.value = AgencyOwnerApplicationState.approved;
   }
 
-  void clearAgency() {
+  Future<void> clearAgency() async {
     hasAgency.value = false;
     agencyId.value = '';
     agencyName.value = '';
@@ -37,6 +269,52 @@ class AgencySessionController extends GetxController {
     commissionRate.value = 0;
     status.value = '';
     recruitLink.value = '';
+    cachedHosts.clear();
+    applicationState.value = AgencyOwnerApplicationState.none;
+    applicationId.value = '';
+    appliedAgencyName.value = '';
+    appliedOwnerName.value = '';
+    appliedPhone.value = '';
+    applicationReason.value = '';
+    applicationSubmittedAt.value = '';
+    await _clearApplicationStorage();
+    update();
+  }
+
+  Future<void> _clearApplicationStorage() async {
+    await _storage.writeStringStorage(kStorageAgencyOwnerApplication, '');
+  }
+
+  Future<void> _persistApplication() async {
+    await _storage.writeJsonStorage(kStorageAgencyOwnerApplication, {
+      'status': applicationState.value.apiLabel,
+      'applicationId': applicationId.value,
+      'agencyName': appliedAgencyName.value,
+      'ownerName': appliedOwnerName.value,
+      'phone': appliedPhone.value,
+      'reason': applicationReason.value,
+      'submittedAt': applicationSubmittedAt.value,
+    });
+  }
+
+  void _applyApplicationJson(Map<String, dynamic> json, {required bool persist}) {
+    applicationState.value = AgencyOwnerApplicationState.fromApi(
+      json['status']?.toString(),
+    );
+    applicationId.value = json['applicationId']?.toString() ?? '';
+    appliedAgencyName.value = json['agencyName']?.toString() ?? '';
+    appliedOwnerName.value = json['ownerName']?.toString() ?? '';
+    appliedPhone.value = json['phone']?.toString() ?? '';
+    applicationReason.value = json['reason']?.toString() ?? '';
+    applicationSubmittedAt.value = json['submittedAt']?.toString() ?? '';
+    if (applicationState.value != AgencyOwnerApplicationState.approved) {
+      hasAgency.value = false;
+    }
+  }
+
+  double _parseCommission(dynamic raw) {
+    if (raw is num) return raw.toDouble();
+    return double.tryParse(raw?.toString() ?? '') ?? 0.10;
   }
 
   String get commissionPercentLabel {

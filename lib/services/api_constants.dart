@@ -111,6 +111,9 @@ class AgencyEndpoints {
   /// POST /api/agency/register
   static const String registerAgency = '/api/agency/register';
 
+  /// GET /api/agency/dashboard
+  static const String dashboard = '/api/agency/dashboard';
+
   /// GET /api/agency/generate-link
   static const String generateLink = '/api/agency/generate-link';
 

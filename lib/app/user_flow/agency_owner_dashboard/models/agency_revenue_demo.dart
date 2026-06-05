@@ -132,6 +132,7 @@ class AgencyHostRevenueDemo {
     required this.totalCallingSpend,
     required this.callingMinutes,
     required this.lastViewer,
+    this.photoUrl,
   });
 
   final String id;
@@ -143,6 +144,7 @@ class AgencyHostRevenueDemo {
   final int totalCallingSpend;
   final int callingMinutes;
   final String lastViewer;
+  final String? photoUrl;
 }
 
 class AgencyRevenueHistoryDemo {

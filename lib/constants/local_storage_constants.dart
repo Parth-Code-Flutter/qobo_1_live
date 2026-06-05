@@ -11,3 +11,6 @@ const String kStorageClientUserData = 'client_user_data';
 
 /// Cached response from GET organization-user (called once after login; cleared on logout).
 const String kStorageCachedOrganizationUserList = 'cached_organization_user_list';
+
+/// Pending / last agency owner application (until approved and agency session is set).
+const String kStorageAgencyOwnerApplication = 'agency_owner_application';

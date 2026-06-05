@@ -152,6 +152,16 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
   }
 
   Widget _dashboardBody() {
+    if (controller.isLoading.value) {
+      return const Center(
+        child: CircularProgressIndicator(color: kColorWhite),
+      );
+    }
+
+    if (controller.isApplicationPending.value) {
+      return _pendingApplicationBody();
+    }
+
     final session = Get.find<AgencySessionController>();
 
     return SingleChildScrollView(
@@ -160,6 +170,10 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (controller.loadError.value.isNotEmpty) ...[
+            _apiMessageChip(controller.loadError.value),
+            Spacing.v10,
+          ],
           if (controller.isDemoPreview) ...[
             _demoChip(),
             Spacing.v16,
@@ -201,6 +215,125 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
             _registerOutlineButton(),
           ],
           Spacing.v8,
+        ],
+      ),
+    );
+  }
+
+  Widget _pendingApplicationBody() {
+    final agencyName = controller.pendingAgencyName.value;
+    final message = controller.pendingMessage.value;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 28),
+        child: _glass(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          radius: _DashUi.radiusMd,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.orange.withValues(alpha: 0.18),
+                  border: Border.all(
+                    color: Colors.orange.withValues(alpha: 0.45),
+                    width: 1.5,
+                  ),
+                ),
+                child: const Icon(
+                  Icons.hourglass_top_rounded,
+                  color: Colors.orangeAccent,
+                  size: 36,
+                ),
+              ),
+              Spacing.v20,
+              const SemiBoldText(
+                text: 'Application Pending',
+                fontSize: TextStyles.k22FontSize,
+                color: kColorWhite,
+                align: TextAlign.center,
+              ),
+              Spacing.v10,
+              AppText(
+                text: agencyName.isNotEmpty
+                    ? 'Your application for "$agencyName" is under super admin review.'
+                    : 'Your agency application is under super admin review.',
+                fontSize: TextStyles.k14FontSize,
+                color: _DashUi.textSoft,
+                align: TextAlign.center,
+              ),
+              if (message.isNotEmpty) ...[
+                Spacing.v12,
+                AppText(
+                  text: message,
+                  fontSize: TextStyles.k12FontSize,
+                  color: _DashUi.textMuted,
+                  align: TextAlign.center,
+                ),
+              ],
+              Spacing.v8,
+              const AppText(
+                text:
+                    'Once approved, your full agency dashboard with hosts and revenue will appear here.',
+                fontSize: TextStyles.k12FontSize,
+                color: _DashUi.textMuted,
+                align: TextAlign.center,
+              ),
+              Spacing.v24,
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: controller.loadDashboard,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kColorPrimary,
+                    foregroundColor: kColorWhite,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  icon: const Icon(Icons.refresh_rounded, size: 20),
+                  label: const SemiBoldText(
+                    text: 'Refresh Status',
+                    fontSize: TextStyles.k14FontSize,
+                    color: kColorWhite,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _apiMessageChip(String message) {
+    return _glass(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      radius: _DashUi.radiusSm,
+      child: Row(
+        children: [
+          const Icon(Icons.info_outline_rounded, color: _DashUi.accentCyan, size: 18),
+          Spacing.h10,
+          Expanded(
+            child: AppText(
+              text: message,
+              fontSize: TextStyles.k12FontSize,
+              color: _DashUi.textSoft,
+            ),
+          ),
+          TextButton(
+            onPressed: controller.loadDashboard,
+            child: const SemiBoldText(
+              text: 'Retry',
+              fontSize: TextStyles.k12FontSize,
+              color: kColorWhite,
+            ),
+          ),
         ],
       ),
     );
@@ -452,7 +585,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
         Expanded(
           child: _miniMetric(
             label: 'Active hosts',
-            value: '${AgencyRevenueDemo.activeHosts}',
+            value: '${controller.activeHostsCount}',
             icon: Icons.groups_rounded,
             gradient: const [_DashUi.accentViolet, Color(0xFF5C6BC0)],
           ),

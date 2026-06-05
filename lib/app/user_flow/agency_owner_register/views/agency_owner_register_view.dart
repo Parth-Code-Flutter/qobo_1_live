@@ -101,7 +101,9 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
                                             controller.onSubmitPressed(context);
                                           }
                                         },
-                                        buttonText: controller.isSubmitLoading.value ? '' : 'Register Agency',
+                                        buttonText: controller.isSubmitLoading.value
+                                            ? ''
+                                            : 'Submit Application',
                                         buttonIcon: controller.isSubmitLoading.value
                                             ? const SizedBox(
                                                 width: 20,
@@ -146,7 +148,7 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
             ),
           ),
           const SemiBoldText(
-            text: 'Register Agency',
+            text: 'Apply for Agency',
             fontSize: TextStyles.k18FontSize,
             color: kColorWhite,
           ),
@@ -166,7 +168,8 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
         ),
         Spacing.v4,
         const AppText(
-          text: 'Fill out this form to register your own agency and start recruiting hosts.',
+          text:
+              'Submit your agency details for super admin review. You can open the owner dashboard only after approval.',
           fontSize: TextStyles.k12FontSize,
           color: kColorHint,
         ),
@@ -205,7 +208,7 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
             ),
             Spacing.v8,
             const AppText(
-              text: 'Upload Agency Logo',
+              text: 'Agency logo (optional — API uses logo_url when available)',
               fontSize: TextStyles.k12FontSize,
               color: kColorHint,
             ),

@@ -238,62 +238,141 @@ class AgencyAccessView extends GetView<AgencyAccessController> {
     final session = Get.find<AgencySessionController>();
 
     return Obx(
-      () => Column(
-        key: ValueKey('owner-panel-${session.hasAgency.value}'),
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _infoCard(
-            icon: Icons.admin_panel_settings_rounded,
-            title: session.hasAgency.value
-                ? 'Agency dashboard ready'
-                : 'Register your agency',
-            subtitle: session.hasAgency.value
-                ? 'You are signed in with your app account. Open the dashboard to manage recruit links, hosts, and revenue.'
-                : 'Agency owners use the same app login. Register your agency once, then manage everything from the owner dashboard.',
-            color: session.hasAgency.value ? kColorPrimary : Colors.deepOrange,
+      () {
+        final approved = session.hasApprovedAgency;
+        final pending = session.isApplicationPending;
+        final rejected = session.isApplicationRejected;
+
+        return Column(
+          key: ValueKey(
+            'owner-panel-${session.applicationState.value.name}-$approved',
           ),
-          Spacing.v16,
-          if (session.hasAgency.value) ...[
-            appButton(
-              onPressed: controller.openOwnerDashboard,
-              buttonText: 'Open Agency Dashboard',
-              buttonIcon: const Icon(
-                Icons.dashboard_rounded,
-                color: kColorWhite,
-                size: 20,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (controller.isRefreshingOwnerState.value)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 12),
+                child: LinearProgressIndicator(
+                  color: kColorPrimary,
+                  backgroundColor: kColorAvatarFallbackBg,
+                ),
               ),
-              borderRadius: 16,
+            _infoCard(
+              icon: approved
+                  ? Icons.admin_panel_settings_rounded
+                  : pending
+                  ? Icons.hourglass_top_rounded
+                  : Icons.add_business_rounded,
+              title: approved
+                  ? 'Agency approved'
+                  : pending
+                  ? 'Application under review'
+                  : rejected
+                  ? 'Application not approved'
+                  : 'Apply to become an agency',
+              subtitle: approved
+                  ? 'Your agency is active. Open the dashboard to manage recruit links, hosts, and revenue.'
+                  : pending
+                  ? 'Super admin is reviewing "${session.appliedAgencyName.value}". You will get dashboard access after approval.'
+                  : rejected
+                  ? session.applicationReason.value.isNotEmpty
+                        ? session.applicationReason.value
+                        : 'You can submit a new application or check status again.'
+                  : 'Submit agency details for super admin approval. Dashboard unlocks only after approval.',
+              color: approved
+                  ? kColorPrimary
+                  : pending
+                  ? Colors.orange
+                  : rejected
+                  ? Colors.redAccent
+                  : Colors.deepOrange,
             ),
-            Spacing.v12,
-            _outlineAction(
-              icon: Icons.add_business_rounded,
-              label: 'Register Another Agency',
-              onTap: controller.openOwnerRegister,
-            ),
-          ] else ...[
-            appButton(
-              onPressed: controller.openOwnerRegister,
-              buttonText: 'Register New Agency',
-              buttonIcon: const Icon(
-                Icons.add_business_rounded,
-                color: kColorWhite,
-                size: 20,
+            if (pending && session.applicationId.value.isNotEmpty) ...[
+              Spacing.v12,
+              _applicationIdChip(session.applicationId.value),
+            ],
+            Spacing.v16,
+            if (approved) ...[
+              appButton(
+                onPressed: controller.openOwnerDashboard,
+                buttonText: 'Open Agency Dashboard',
+                buttonIcon: const Icon(
+                  Icons.dashboard_rounded,
+                  color: kColorWhite,
+                  size: 20,
+                ),
+                borderRadius: 16,
               ),
-              borderRadius: 16,
-            ),
-            Spacing.v12,
-            _outlineAction(
-              icon: Icons.dashboard_outlined,
-              label: 'Open Agency Dashboard',
-              onTap: controller.openOwnerDashboard,
+            ] else ...[
+              appButton(
+                onPressed: controller.openOwnerApply,
+                buttonText: rejected
+                    ? 'Submit New Application'
+                    : 'Apply to Become Agency',
+                buttonIcon: const Icon(
+                  Icons.add_business_rounded,
+                  color: kColorWhite,
+                  size: 20,
+                ),
+                borderRadius: 16,
+              ),
+              Spacing.v12,
+              _outlineAction(
+                icon: Icons.manage_search_rounded,
+                label: 'Check Application Status',
+                onTap: controller.openOwnerStatus,
+              ),
+              if (pending) ...[
+                Spacing.v12,
+                _outlineAction(
+                  icon: Icons.dashboard_outlined,
+                  label: 'Refresh Approval Status',
+                  onTap: controller.openOwnerStatus,
+                ),
+              ],
+            ],
+            Spacing.v20,
+            _stepList(
+              approved
+                  ? const [
+                      'Agency approved by super admin',
+                      'Share recruit code/link with hosts',
+                      'Review hosts and revenue in the dashboard',
+                    ]
+                  : const [
+                      'Apply with agency name, owner details, and logo',
+                      'Super admin reviews your application',
+                      'After approval, open the agency owner dashboard',
+                    ],
             ),
           ],
-          Spacing.v20,
-          _stepList(const [
-            'Register agency with your logged-in account',
-            'Share recruit code/link with hosts',
-            'Review hosts and revenue in the dashboard',
-          ]),
+        );
+      },
+    );
+  }
+
+  Widget _applicationIdChip(String applicationId) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: kColorPrimary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: kColorPrimary.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.confirmation_number_outlined,
+              color: kColorPrimary, size: 18),
+          Spacing.h8,
+          Expanded(
+            child: SemiBoldText(
+              text: 'Application ID: $applicationId',
+              fontSize: TextStyles.k12FontSize,
+              color: kColorText,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ),
     );

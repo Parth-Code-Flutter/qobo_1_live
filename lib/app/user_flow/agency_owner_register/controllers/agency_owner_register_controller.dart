@@ -1,10 +1,11 @@
 import 'dart:io';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/repo/agency/agency_api_utils.dart';
+import 'package:qobo_one_live/repo/agency/agency_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/agency_session_controller.dart';
 import 'package:qobo_one_live/utils/app_dialogs/common_giffy_dialog.dart';
@@ -14,6 +15,7 @@ import 'package:qobo_one_live/utils/validations/text_field_validations.dart';
 
 class AgencyOwnerRegisterController extends GetxController {
   final formKey = GlobalKey<FormState>();
+  final AgencyRepo _agencyRepo = AgencyRepo();
 
   final agencyNameController = TextEditingController();
   final ownerNameController = TextEditingController();
@@ -21,7 +23,7 @@ class AgencyOwnerRegisterController extends GetxController {
 
   final agencyLogo = Rxn<File>();
   final isSubmitLoading = false.obs;
-  
+
   final ImagePicker _imagePicker = ImagePicker();
 
   @override
@@ -35,7 +37,7 @@ class AgencyOwnerRegisterController extends GetxController {
   Future<void> onLogoTap(BuildContext context) async {
     final source = await CommonMediaPicker.show(context);
     if (source == null) return;
-    
+
     final file = await _imagePicker.pickImage(
       source: source,
       imageQuality: 85,
@@ -59,51 +61,72 @@ class AgencyOwnerRegisterController extends GetxController {
 
   Future<void> onSubmitPressed(BuildContext context) async {
     FocusScope.of(context).unfocus();
-    
-    final isFormValid = formKey.currentState?.validate() ?? false;
-    if (agencyLogo.value == null) {
-      AppToast.showError(context, 'Agency logo is required');
-      return;
-    }
 
+    final isFormValid = formKey.currentState?.validate() ?? false;
     if (!isFormValid) return;
 
-    isSubmitLoading.value = true;
-    await Future<void>.delayed(const Duration(milliseconds: 600));
-    isSubmitLoading.value = false;
-
-    if (!context.mounted) return;
-    
     final agencyName = agencyNameController.text.trim();
-    final code = _generateAgencyCode(agencyName);
+    final ownerName = ownerNameController.text.trim();
+    final phone = whatsappController.text.trim();
+
+    isSubmitLoading.value = true;
 
     if (!Get.isRegistered<AgencySessionController>()) {
       Get.put(AgencySessionController(), permanent: true);
     }
-    Get.find<AgencySessionController>().setAgency(
-      id: 'local_${DateTime.now().millisecondsSinceEpoch}',
-      name: agencyName,
-      code: code,
-    );
+    final session = Get.find<AgencySessionController>();
 
-    await CommonGiffyDialog.showSuccess(
-      context,
-      title: 'Agency Registered',
-      subtitle:
-          'Your agency "$agencyName" is ready. Open the dashboard to share your recruit link.',
-      buttonText: 'Open Dashboard',
-      gifAssetPath: kGifCongratulation,
-      onPressed: () {
-        Get.back<void>();
-        Get.offNamed(Routes.AGENCY_OWNER);
-      },
-    );
-  }
+    try {
+      final response = await _agencyRepo.registerAgency(
+        agencyName: agencyName,
+        ownerName: ownerName,
+        ownerWhatsapp: phone,
+        isShowLoader: false,
+      );
 
-  String _generateAgencyCode(String name) {
-    final cleaned = name.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase();
-    final prefix = cleaned.length >= 4 ? cleaned.substring(0, 4) : 'QOBO';
-    final suffix = Random().nextInt(9999).toString().padLeft(4, '0');
-    return '$prefix$suffix';
+      final data = response?['data'];
+      if (isAgencyApiSuccess(response) && data is Map) {
+        final map = Map<String, dynamic>.from(data);
+        session.appliedAgencyName.value = agencyName;
+        session.appliedOwnerName.value = ownerName;
+        session.appliedPhone.value = phone;
+        await session.applyRegisterResponse(map);
+        isSubmitLoading.value = false;
+        if (!context.mounted) return;
+
+        final status = map['status']?.toString() ?? '';
+        final isPending = isAgencyStatusPending(status);
+
+        await CommonGiffyDialog.showSuccess(
+          context,
+          title: isPending ? 'Application Submitted' : 'Agency Registered',
+          subtitle: isPending
+              ? (response?['message']?.toString() ??
+                    'Your agency "$agencyName" is pending approval. Check the dashboard for status updates.')
+              : (response?['message']?.toString() ??
+                    'Your agency "$agencyName" is active. Open the dashboard to manage hosts and revenue.'),
+          buttonText: 'Open Dashboard',
+          gifAssetPath: kGifCongratulation,
+          onPressed: () {
+            Get.back<void>();
+            Get.offNamed(Routes.AGENCY_OWNER);
+          },
+        );
+        return;
+      }
+
+      final message =
+          agencyApiMessage(response) ??
+          'Registration failed. Please try again.';
+      isSubmitLoading.value = false;
+      if (context.mounted) {
+        AppToast.showError(context, message);
+      }
+    } catch (_) {
+      isSubmitLoading.value = false;
+      if (context.mounted) {
+        AppToast.showError(context, 'Failed to register agency. Try again.');
+      }
+    }
   }
 }
