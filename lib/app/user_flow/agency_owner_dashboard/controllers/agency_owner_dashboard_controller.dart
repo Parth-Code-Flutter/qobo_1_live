@@ -1,5 +1,4 @@
 import 'package:get/get.dart';
-import 'package:qobo_one_live/app/bottom_nav/controllers/bottom_nav_controller.dart';
 import 'package:qobo_one_live/app/user_flow/agency_owner_dashboard/models/agency_dashboard_data.dart';
 import 'package:qobo_one_live/app/user_flow/agency_owner_dashboard/models/agency_revenue_demo.dart';
 import 'package:qobo_one_live/repo/agency/agency_api_utils.dart';
@@ -146,16 +145,7 @@ class AgencyOwnerDashboardController extends GetxController {
   }
 
   void openHostList() {
-    if (Get.isRegistered<BottomNavController>()) {
-      Get.find<BottomNavController>().openHeartTabForAgencyHosts();
-      return;
-    }
-    Get.offAllNamed(Routes.BOTTOM_NAV);
-    Future.microtask(() {
-      if (Get.isRegistered<BottomNavController>()) {
-        Get.find<BottomNavController>().openHeartTabForAgencyHosts();
-      }
-    });
+    Get.toNamed(Routes.AGENCY_HOST_LIST);
   }
 
   void openRevenue() {
