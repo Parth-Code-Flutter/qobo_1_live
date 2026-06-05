@@ -206,7 +206,17 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
             for (final host in hosts)
               Align(
                 alignment: host.alignment,
-                child: _MapUserNode(host: host),
+                child: _MapUserNode(
+                  host: host,
+                  onTap: host.isPlaceholder || host.hostId == null
+                      ? null
+                      : () {
+                          final data = ctrl.hostById(host.hostId);
+                          if (data != null) {
+                            _openHostDetailSheet(context, data);
+                          }
+                        },
+                ),
               ),
           ],
         );
@@ -272,7 +282,10 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
                         for (final host in visible)
                           Padding(
                             padding: const EdgeInsets.only(right: 8),
-                            child: _OverflowHostAvatar(host: host),
+                            child: _OverflowHostAvatar(
+                              host: host,
+                              onTap: () => _openHostDetailSheet(context, host),
+                            ),
                           ),
                         Container(
                           height: 28,
@@ -307,6 +320,24 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
     );
   }
 
+  /// Single-host detail from API data (tree node or overflow avatar tap).
+  void _openHostDetailSheet(BuildContext context, AgencyHostModel host) {
+    showAppBottomSheet<void>(
+      context: context,
+      title: host.name,
+      subtitle: 'LV.${host.coinsPerSecond} · ${host.status}',
+      theme: AppBottomSheetTheme.dark,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        child: _HostSheetCard(
+          host: host,
+          formatCoins: controller.formatCoins,
+          showHostId: true,
+        ),
+      ),
+    );
+  }
+
   void _openHostListSheet(BuildContext context) {
     final hosts = controller.hostList;
     showAppBottomSheet<void>(
@@ -333,7 +364,7 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
                 children: [
                   for (var i = 0; i < hosts.length; i++) ...[
                     if (i > 0) const SizedBox(height: 10),
-                    _SheetHostTile(
+                    _HostSheetCard(
                       host: hosts[i],
                       formatCoins: controller.formatCoins,
                       highlighted:
@@ -347,16 +378,19 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
   }
 }
 
-class _SheetHostTile extends StatelessWidget {
-  const _SheetHostTile({
+/// Host stats card used in list + single-host detail bottom sheets.
+class _HostSheetCard extends StatelessWidget {
+  const _HostSheetCard({
     required this.host,
     required this.formatCoins,
     this.highlighted = false,
+    this.showHostId = false,
   });
 
   final AgencyHostModel host;
   final String Function(int) formatCoins;
   final bool highlighted;
+  final bool showHostId;
 
   @override
   Widget build(BuildContext context) {
@@ -442,6 +476,14 @@ class _SheetHostTile extends StatelessWidget {
             fontSize: TextStyles.k10FontSize,
             color: kColorWhite.withValues(alpha: 0.5),
           ),
+          if (showHostId && host.id.isNotEmpty) ...[
+            Spacing.v8,
+            AppText(
+              text: 'Host ID: ${host.id}',
+              fontSize: TextStyles.k10FontSize,
+              color: kColorWhite.withValues(alpha: 0.45),
+            ),
+          ],
         ],
       ),
     );
@@ -506,9 +548,10 @@ class _SheetHostTile extends StatelessWidget {
 }
 
 class _MapUserNode extends StatelessWidget {
-  const _MapUserNode({required this.host});
+  const _MapUserNode({required this.host, this.onTap});
 
   final LiveMapHost host;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -516,7 +559,7 @@ class _MapUserNode extends StatelessWidget {
       return _blankTreeSlot();
     }
 
-    return SizedBox(
+    final node = SizedBox(
       width: 88,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -596,6 +639,17 @@ class _MapUserNode extends StatelessWidget {
         ],
       ),
     );
+
+    if (onTap == null) return node;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: node,
+      ),
+    );
   }
 
   /// Empty tree node — dashed ring only, no label (fills sparse layouts).
@@ -625,13 +679,14 @@ class _MapUserNode extends StatelessWidget {
 }
 
 class _OverflowHostAvatar extends StatelessWidget {
-  const _OverflowHostAvatar({required this.host});
+  const _OverflowHostAvatar({required this.host, this.onTap});
 
   final AgencyHostModel host;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final avatar = Container(
       width: 30,
       height: 30,
       padding: const EdgeInsets.all(1.4),
@@ -649,6 +704,10 @@ class _OverflowHostAvatar extends StatelessWidget {
             : _initialFallback(),
       ),
     );
+
+    if (onTap == null) return avatar;
+
+    return GestureDetector(onTap: onTap, child: avatar);
   }
 
   Widget _initialFallback() {

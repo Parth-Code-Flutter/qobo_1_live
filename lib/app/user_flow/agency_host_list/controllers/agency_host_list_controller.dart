@@ -249,6 +249,15 @@ class AgencyHostListController extends GetxController {
     Get.back<void>();
   }
 
+  /// Resolves a tree/overflow node back to full API host data.
+  AgencyHostModel? hostById(String? hostId) {
+    if (hostId == null || hostId.isEmpty) return null;
+    for (final host in hostList) {
+      if (host.id == hostId) return host;
+    }
+    return null;
+  }
+
   String formatCoins(int value) {
     return value.toString().replaceAllMapped(
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
