@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
-import 'package:qobo_one_live/constants/live_action_colors.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_bottom_sheet.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/safe_network_avatar.dart';
@@ -44,8 +43,9 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
               return Column(
                 children: [
                   _topBar(),
-                  Expanded(child: _mapStage()),
-                  _suggestionStrip(context),
+                  Expanded(child: _mapStage(context)),
+                  if (controller.hasOverflowHosts)
+                    _overflowHostStrip(context),
                   SizedBox(height: MediaQuery.paddingOf(context).bottom + 16),
                 ],
               );
@@ -133,9 +133,19 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
     );
   }
 
-  Widget _mapStage() {
+  Widget _mapStage(BuildContext context) {
     return GetBuilder<AgencyHostListController>(
       builder: (ctrl) {
+        if (!ctrl.hasHosts) {
+          return const Center(
+            child: SemiBoldText(
+              text: 'No host found',
+              fontSize: TextStyles.k18FontSize,
+              color: kColorWhite,
+            ),
+          );
+        }
+
         final hosts = ctrl.mapHosts;
         return Stack(
           fit: StackFit.expand,
@@ -166,22 +176,29 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
               left: 0,
               right: 0,
               child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: kColorPrimary.withValues(alpha: 0.35),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _openHostListSheet(context),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: kColorWhite.withValues(alpha: 0.24),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: kColorPrimary.withValues(alpha: 0.35),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: kColorWhite.withValues(alpha: 0.24),
+                        ),
+                      ),
+                      child: SemiBoldText(
+                        text: '${ctrl.agencyDisplayName} hosts',
+                        fontSize: TextStyles.k12FontSize,
+                        color: kColorWhite,
+                      ),
                     ),
-                  ),
-                  child: SemiBoldText(
-                    text: '${ctrl.agencyDisplayName} hosts',
-                    fontSize: TextStyles.k12FontSize,
-                    color: kColorWhite,
                   ),
                 ),
               ),
@@ -197,12 +214,18 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
     );
   }
 
-  Widget _suggestionStrip(BuildContext context) {
+  /// Horizontal strip for hosts ranked below the top 10 tree slots.
+  Widget _overflowHostStrip(BuildContext context) {
     return GetBuilder<AgencyHostListController>(
       builder: (ctrl) {
-        final images = ctrl.suggestionAssets;
-        final hostCount = ctrl.hostList.length;
-        final moreCount = hostCount > 7 ? '+${hostCount - 7}' : '+$hostCount';
+        final overflow = ctrl.overflowHosts;
+        if (overflow.isEmpty) return const SizedBox.shrink();
+
+        // Show up to 7 avatars; badge counts any remaining in the strip.
+        const visibleAvatarLimit = 7;
+        final visible = overflow.take(visibleAvatarLimit).toList();
+        final hiddenCount = overflow.length - visible.length;
+        final moreLabel = hiddenCount > 0 ? '+$hiddenCount' : '+${overflow.length}';
 
         return Padding(
           padding: const EdgeInsets.fromLTRB(22, 0, 22, 12),
@@ -230,8 +253,8 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
                           size: 18,
                         ),
                         Spacing.h8,
-                        const SemiBoldText(
-                          text: 'Agency hosts',
+                        SemiBoldText(
+                          text: 'More hosts (${overflow.length})',
                           fontSize: TextStyles.k12FontSize,
                           color: kColorWhite,
                         ),
@@ -246,10 +269,10 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
                     Spacing.v10,
                     Row(
                       children: [
-                        for (final image in images)
+                        for (final host in visible)
                           Padding(
                             padding: const EdgeInsets.only(right: 8),
-                            child: _SuggestionAvatar(imageAsset: image),
+                            child: _OverflowHostAvatar(host: host),
                           ),
                         Container(
                           height: 28,
@@ -267,7 +290,7 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
                           ),
                           alignment: Alignment.center,
                           child: SemiBoldText(
-                            text: moreCount,
+                            text: moreLabel,
                             fontSize: TextStyles.k10FontSize,
                             color: kColorWhite,
                           ),
@@ -290,27 +313,18 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
       context: context,
       title: 'Agency hosts',
       subtitle: hosts.isEmpty
-          ? 'No hosts yet'
+          ? 'No host found'
           : '${hosts.length} host${hosts.length == 1 ? '' : 's'}',
       theme: AppBottomSheetTheme.dark,
       child: hosts.isEmpty
-          ? Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.group_off_rounded,
-                    size: 48,
-                    color: kColorWhite.withValues(alpha: 0.4),
-                  ),
-                  Spacing.v12,
-                  AppText(
-                    text: 'Share your recruit link to invite hosts.',
-                    fontSize: TextStyles.k14FontSize,
-                    color: kColorWhite.withValues(alpha: 0.65),
-                    align: TextAlign.center,
-                  ),
-                ],
+          ? const Padding(
+              padding: EdgeInsets.fromLTRB(20, 32, 20, 32),
+              child: Center(
+                child: SemiBoldText(
+                  text: 'No host found',
+                  fontSize: TextStyles.k16FontSize,
+                  color: kColorWhite,
+                ),
               ),
             )
           : Padding(
@@ -498,6 +512,10 @@ class _MapUserNode extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (host.isPlaceholder) {
+      return _blankTreeSlot();
+    }
+
     return SizedBox(
       width: 88,
       child: Column(
@@ -513,7 +531,7 @@ class _MapUserNode extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: host.isAgencyHost ? kColorPrimary : kColorWhite,
+                    color: kColorPrimary,
                     width: 1.5,
                   ),
                   boxShadow: [
@@ -525,23 +543,31 @@ class _MapUserNode extends StatelessWidget {
                   ],
                 ),
                 child: ClipOval(
-                  child: Image.asset(host.imageAsset, fit: BoxFit.cover),
+                  child: host.avatarUrl != null && host.avatarUrl!.isNotEmpty
+                      ? SafeNetworkAvatar(
+                          url: host.avatarUrl,
+                          size: 54,
+                          fallback: Image.asset(
+                            host.imageAsset,
+                            fit: BoxFit.cover,
+                          ),
+                        )
+                      : Image.asset(host.imageAsset, fit: BoxFit.cover),
                 ),
               ),
-              if (host.isAgencyHost)
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  child: Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: Colors.greenAccent,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: kColorWhite, width: 1),
-                    ),
+              Positioned(
+                right: 0,
+                top: 0,
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: Colors.greenAccent,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: kColorWhite, width: 1),
                   ),
                 ),
+              ),
             ],
           ),
           Spacing.v4,
@@ -559,29 +585,49 @@ class _MapUserNode extends StatelessWidget {
             decoration: BoxDecoration(
               color: const Color(0xFF2D0D58).withValues(alpha: 0.92),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: host.isAgencyHost
-                    ? kColorPrimary
-                    : LiveActionColors.diamondGold,
-              ),
+              border: Border.all(color: kColorPrimary),
             ),
             child: SemiBoldText(
               text: host.levelBadge,
               fontSize: 7,
-              color:
-                  host.isAgencyHost ? kColorWhite : LiveActionColors.diamondGold,
+              color: kColorWhite,
             ),
           ),
         ],
       ),
     );
   }
+
+  /// Empty tree node — dashed ring only, no label (fills sparse layouts).
+  Widget _blankTreeSlot() {
+    return SizedBox(
+      width: 58,
+      height: 58,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: kColorWhite.withValues(alpha: 0.04),
+          border: Border.all(
+            color: kColorWhite.withValues(alpha: 0.22),
+            width: 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFB875FF).withValues(alpha: 0.12),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _SuggestionAvatar extends StatelessWidget {
-  const _SuggestionAvatar({required this.imageAsset});
+class _OverflowHostAvatar extends StatelessWidget {
+  const _OverflowHostAvatar({required this.host});
 
-  final String imageAsset;
+  final AgencyHostModel host;
 
   @override
   Widget build(BuildContext context) {
@@ -593,7 +639,28 @@ class _SuggestionAvatar extends StatelessWidget {
         shape: BoxShape.circle,
         border: Border.all(color: kColorWhite.withValues(alpha: 0.85)),
       ),
-      child: ClipOval(child: Image.asset(imageAsset, fit: BoxFit.cover)),
+      child: ClipOval(
+        child: host.avatarUrl.isNotEmpty
+            ? SafeNetworkAvatar(
+                url: host.avatarUrl,
+                size: 27,
+                fallback: _initialFallback(),
+              )
+            : _initialFallback(),
+      ),
+    );
+  }
+
+  Widget _initialFallback() {
+    return ColoredBox(
+      color: kColorPrimary.withValues(alpha: 0.45),
+      child: Center(
+        child: SemiBoldText(
+          text: host.name.isNotEmpty ? host.name[0] : '?',
+          fontSize: TextStyles.k10FontSize,
+          color: kColorWhite,
+        ),
+      ),
     );
   }
 }

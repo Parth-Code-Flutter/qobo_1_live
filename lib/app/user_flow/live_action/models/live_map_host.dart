@@ -8,6 +8,10 @@ class LiveMapHost {
     required this.imageAsset,
     required this.alignment,
     this.isAgencyHost = false,
+    this.isPlaceholder = false,
+    this.avatarUrl,
+    this.hostId,
+    this.level = 0,
   });
 
   final String name;
@@ -15,4 +19,14 @@ class LiveMapHost {
   final String imageAsset;
   final Alignment alignment;
   final bool isAgencyHost;
+
+  /// Decorative empty slot — keeps the tree layout visible with few hosts.
+  final bool isPlaceholder;
+
+  /// Network avatar when available (agency host list).
+  final String? avatarUrl;
+  final String? hostId;
+
+  /// Sort key — higher value = higher rank in agency tree.
+  final int level;
 }

@@ -55,6 +55,11 @@ class AgencyHostModel {
 }
 
 class AgencyHostListController extends GetxController {
+  static const maxTreeHosts = 10;
+
+  /// Minimum nodes drawn on the tree so 1–2 hosts still show the full network.
+  static const minTreeVisualSlots = 8;
+
   final AgencyRepo _agencyRepo = AgencyRepo();
 
   final isLoading = true.obs;
@@ -62,10 +67,17 @@ class AgencyHostListController extends GetxController {
   final hostList = <AgencyHostModel>[].obs;
   final highlightHostId = RxnString();
 
+  /// Top-ranked hosts rendered on the constellation tree (max 10).
   List<LiveMapHost> mapHosts = [];
-  List<String> suggestionAssets = [];
+
+  /// Hosts beyond [maxTreeHosts], shown in the bottom horizontal strip.
+  List<AgencyHostModel> overflowHosts = [];
 
   AgencySessionController get _session => Get.find<AgencySessionController>();
+
+  bool get hasHosts => hostList.isNotEmpty;
+
+  bool get hasOverflowHosts => overflowHosts.isNotEmpty;
 
   String get agencyDisplayName {
     final name = _session.agencyName.value.trim();
@@ -73,15 +85,18 @@ class AgencyHostListController extends GetxController {
     return AgencyRevenueDemo.agencyName;
   }
 
-  static const _agencyAlignments = <Alignment>[
-    Alignment(-0.35, -0.55),
-    Alignment(0.42, -0.35),
-    Alignment(-0.55, 0.05),
-    Alignment(0.28, 0.22),
-    Alignment(-0.12, -0.15),
-    Alignment(0.62, 0.48),
-    Alignment(-0.72, 0.42),
-    Alignment(0.05, 0.72),
+  /// Tree slots ordered top → bottom. Index 0 = highest level (top center).
+  static const _treeAlignmentsByRank = <Alignment>[
+    Alignment(0, -0.72),
+    Alignment(-0.42, -0.48),
+    Alignment(0.42, -0.48),
+    Alignment(-0.62, -0.18),
+    Alignment(0.08, -0.22),
+    Alignment(0.58, -0.12),
+    Alignment(-0.32, 0.12),
+    Alignment(0.34, 0.18),
+    Alignment(-0.58, 0.42),
+    Alignment(0.48, 0.48),
   ];
 
   static const _suggestionPool = <String>[
@@ -92,57 +107,6 @@ class AgencyHostListController extends GetxController {
     kImgTemp2,
     kImgTemp3,
     kImgTemp4,
-  ];
-
-  static const _defaultDiscoverHosts = <LiveMapHost>[
-    LiveMapHost(
-      name: 'Afrin Sabila',
-      levelBadge: 'LV.10',
-      imageAsset: kImgTemp2,
-      alignment: Alignment(-0.68, -0.82),
-    ),
-    LiveMapHost(
-      name: 'Afrin Sabila',
-      levelBadge: 'LV.08',
-      imageAsset: kImgTemp3,
-      alignment: Alignment(0.54, -0.84),
-    ),
-    LiveMapHost(
-      name: 'Afrin Sabila',
-      levelBadge: 'LV.09',
-      imageAsset: kImgTemp4,
-      alignment: Alignment(-0.10, -0.42),
-    ),
-    LiveMapHost(
-      name: 'Afrin Sabila',
-      levelBadge: 'LV.12',
-      imageAsset: kImgTemp5,
-      alignment: Alignment(0.62, -0.30),
-    ),
-    LiveMapHost(
-      name: 'Afrin Sabila',
-      levelBadge: 'LV.07',
-      imageAsset: kImgTemp3,
-      alignment: Alignment(-0.78, 0.10),
-    ),
-    LiveMapHost(
-      name: 'Afrin Sabila',
-      levelBadge: 'LV.14',
-      imageAsset: kImgTemp2,
-      alignment: Alignment(0.10, 0.10),
-    ),
-    LiveMapHost(
-      name: 'Afrin Sabila',
-      levelBadge: 'LV.11',
-      imageAsset: kImgTemp4,
-      alignment: Alignment(0.56, 0.46),
-    ),
-    LiveMapHost(
-      name: 'Afrin Sabila',
-      levelBadge: 'LV.06',
-      imageAsset: kImgTemp5,
-      alignment: Alignment(0.08, 0.78),
-    ),
   ];
 
   @override
@@ -161,12 +125,12 @@ class AgencyHostListController extends GetxController {
 
     final agencyId = _session.agencyId.value;
     if (agencyId.isEmpty) {
-      hostList.assignAll(AgencyRevenueDemo.hosts.map(AgencyHostModel.fromDemo));
-      _buildMapHosts();
+      _applyHosts(_hostsWithoutAgencyId());
       isLoading.value = false;
       return;
     }
 
+    var loadedFromApi = false;
     try {
       final response = await _agencyRepo.getAgencyHostsList(
         agencyId: agencyId,
@@ -174,13 +138,13 @@ class AgencyHostListController extends GetxController {
       );
       final data = response?['data'];
       if (isAgencyApiSuccess(response) && data is List) {
-        hostList.assignAll(
+        loadedFromApi = true;
+        _applyHosts(
           data
               .whereType<Map>()
               .map((e) => AgencyHostModel.fromApi(Map<String, dynamic>.from(e)))
               .toList(),
         );
-        _buildMapHosts();
         isLoading.value = false;
         return;
       }
@@ -189,47 +153,92 @@ class AgencyHostListController extends GetxController {
       loadError.value = 'Network error.';
     }
 
-    if (hostList.isEmpty) {
-      final cached = _session.cachedHosts;
-      if (cached.isNotEmpty) {
-        hostList.assignAll(cached.map(AgencyHostModel.fromDemo));
-      } else {
-        hostList.assignAll(AgencyRevenueDemo.hosts.map(AgencyHostModel.fromDemo));
-      }
+    // Only fall back when the API call failed — not when it returned [].
+    if (!loadedFromApi) {
+      _applyHosts(_hostsWithoutAgencyId());
     }
-    _buildMapHosts();
     isLoading.value = false;
   }
 
+  /// Session cache used when agency id is missing or host-list request fails.
+  List<AgencyHostModel> _hostsWithoutAgencyId() {
+    final cached = _session.cachedHosts;
+    if (cached.isNotEmpty) {
+      return cached.map(AgencyHostModel.fromDemo).toList();
+    }
+    return [];
+  }
+
+  void _applyHosts(List<AgencyHostModel> hosts) {
+    hostList.assignAll(hosts);
+    _buildMapHosts();
+  }
+
+  /// Builds tree + overflow lists from API data.
+  ///
+  /// - Sort by level (`coinsPerSecond`) descending — highest first.
+  /// - Place up to [maxTreeHosts] on the tree; remainder in [overflowHosts].
+  /// - Highest-level host uses tree slot 0 (top center).
+  /// - Blank placeholder slots pad the tree when host count < [minTreeVisualSlots].
   void _buildMapHosts() {
-    final hosts = hostList;
-    final mapped = <LiveMapHost>[];
-    for (var i = 0; i < hosts.length; i++) {
-      final host = hosts[i];
-      mapped.add(
-        LiveMapHost(
-          name: host.name,
-          levelBadge: 'LV.${host.coinsPerSecond}',
-          imageAsset: _suggestionPool[i % _suggestionPool.length],
-          alignment: _agencyAlignments[i % _agencyAlignments.length],
-          isAgencyHost: true,
-        ),
-      );
+    final sorted = List<AgencyHostModel>.from(hostList)
+      ..sort((a, b) {
+        final byLevel = b.coinsPerSecond.compareTo(a.coinsPerSecond);
+        if (byLevel != 0) return byLevel;
+        return a.name.compareTo(b.name);
+      });
+
+    final treeSources = sorted.take(maxTreeHosts).toList();
+    overflowHosts = sorted.length > maxTreeHosts
+        ? sorted.sublist(maxTreeHosts)
+        : [];
+
+    if (treeSources.isEmpty) {
+      mapHosts = [];
+      update();
+      return;
     }
-    for (var i = hosts.length; i < _agencyAlignments.length; i++) {
-      final template = _defaultDiscoverHosts[i % _defaultDiscoverHosts.length];
-      mapped.add(
-        LiveMapHost(
-          name: template.name,
-          levelBadge: template.levelBadge,
-          imageAsset: template.imageAsset,
-          alignment: _agencyAlignments[i],
-        ),
-      );
+
+    final mapped = <LiveMapHost>[
+      for (var i = 0; i < treeSources.length; i++)
+        _toMapNode(treeSources[i], i),
+    ];
+
+    // Pad with empty nodes so dashed lines / rings always form a full tree.
+    final visualSlots = treeSources.length >= minTreeVisualSlots
+        ? treeSources.length
+        : minTreeVisualSlots;
+    for (var slot = treeSources.length; slot < visualSlots; slot++) {
+      mapped.add(_placeholderNode(slot));
     }
+
     mapHosts = mapped;
-    suggestionAssets = mapped.take(7).map((h) => h.imageAsset).toList();
     update();
+  }
+
+  LiveMapHost _toMapNode(AgencyHostModel host, int rankIndex) {
+    return LiveMapHost(
+      name: host.name,
+      levelBadge: 'LV.${host.coinsPerSecond}',
+      imageAsset: _suggestionPool[rankIndex % _suggestionPool.length],
+      alignment: _treeAlignmentsByRank[
+          rankIndex.clamp(0, _treeAlignmentsByRank.length - 1)],
+      isAgencyHost: true,
+      avatarUrl: host.avatarUrl.isNotEmpty ? host.avatarUrl : null,
+      hostId: host.id,
+      level: host.coinsPerSecond,
+    );
+  }
+
+  LiveMapHost _placeholderNode(int slotIndex) {
+    return LiveMapHost(
+      name: '',
+      levelBadge: '',
+      imageAsset: _suggestionPool[slotIndex % _suggestionPool.length],
+      alignment: _treeAlignmentsByRank[
+          slotIndex.clamp(0, _treeAlignmentsByRank.length - 1)],
+      isPlaceholder: true,
+    );
   }
 
   void refreshList() {
