@@ -57,3 +57,18 @@ bool isAgencyStatusPending(String? status) {
       value == 'under review' ||
       value == 'submitted';
 }
+
+/// Backend `dob` field format (`yyyy-MM-dd`).
+String formatAgencyHostDob(DateTime date) {
+  final month = date.month.toString().padLeft(2, '0');
+  final day = date.day.toString().padLeft(2, '0');
+  return '${date.year}-$month-$day';
+}
+
+String? parseHostApplicationId(Map<String, dynamic>? data) {
+  if (data == null) return null;
+  final id = data['id'] ?? data['_id'] ?? data['applicationId'];
+  final value = id?.toString().trim();
+  if (value == null || value.isEmpty) return null;
+  return value;
+}

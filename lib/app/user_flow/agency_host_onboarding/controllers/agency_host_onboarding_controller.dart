@@ -10,6 +10,7 @@ import 'package:qobo_one_live/utils/app_widgets/common_media_picker.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/validations/text_field_validations.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/repo/agency/agency_api_utils.dart';
 import 'package:qobo_one_live/repo/agency/agency_repo.dart';
 
 import '../models/agency_host_category.dart';
@@ -158,6 +159,12 @@ class AgencyHostOnboardingController extends GetxController {
       return;
     }
 
+    final birthday = selectedBirthday.value;
+    if (birthday == null) {
+      AppToast.showError(context, 'Birthday is required');
+      return;
+    }
+
     isSubmitLoading.value = true;
     final whatsapp = whatsAppController.text.trim();
     final response = await _agencyRepo.hostOnboarding(
@@ -167,43 +174,49 @@ class AgencyHostOnboardingController extends GetxController {
       whatsapp: whatsapp,
       category: selectedCategory.value!.apiValue,
       hostRealPhoto: hostPhoto.value!,
-      birthday: selectedBirthday.value?.toIso8601String(),
-      hostIdNumber: hostIdController.text.trim(),
+      dob: formatAgencyHostDob(birthday),
+      idNo: hostIdController.text.trim(),
       isShowLoader: false,
     );
     isSubmitLoading.value = false;
 
     if (!context.mounted) return;
 
-    if (response != null &&
-        (response['statusCode'] == 1 ||
-            response['statusCode'] == 200 ||
-            response['statusCode'] == 201)) {
-      final appData = response['data'];
-      final appId = appData != null && appData is Map
-          ? (appData['_id'] ?? appData['id'] ?? 'APP-90210')
-          : 'APP-90210';
+    if (isAgencyApiSuccess(response)) {
+      final appData = response?['data'];
+      final appId = appData is Map<String, dynamic>
+          ? parseHostApplicationId(appData)
+          : appData is Map
+          ? parseHostApplicationId(Map<String, dynamic>.from(appData))
+          : null;
+      if (appId == null) {
+        AppToast.showError(
+          context,
+          'Application submitted but no application ID was returned.',
+        );
+        return;
+      }
       await CommonGiffyDialog.showSuccess(
         context,
         title: 'Application Submitted',
         subtitle:
-            response['message'] ??
+            agencyApiMessage(response) ??
             'Your host application has been submitted successfully!',
         buttonText: 'Check Status',
         gifAssetPath: kGifCongratulation,
         onPressed: () {
-          Get.back<void>(); // Dismiss dialog
+          Get.back<void>();
           Get.offNamed(
             Routes.AGENCY_HOST_STATUS,
-            arguments: {'application_id': appId.toString(), 'phone': whatsapp},
+            arguments: {'application_id': appId, 'phone': whatsapp},
           );
         },
       );
     } else {
       final msg =
-          response?['message'] ??
+          agencyApiMessage(response) ??
           'Failed to submit host onboarding application';
-      AppToast.showError(context, msg.toString());
+      AppToast.showError(context, msg);
     }
   }
 }

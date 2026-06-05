@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/repo/agency/agency_api_utils.dart';
 import 'package:qobo_one_live/repo/agency/agency_repo.dart';
 
-enum AgencyStatusLookupType { applicationId, hostId, agencyId, phone }
+enum AgencyStatusLookupType { applicationId, phone }
 
 class AgencyHostStatusController extends GetxController {
   final AgencyRepo _agencyRepo = AgencyRepo();
@@ -13,9 +14,12 @@ class AgencyHostStatusController extends GetxController {
   final status = ''.obs;
   final applicationId = ''.obs;
   final hostId = ''.obs;
+  final hostName = ''.obs;
   final agencyId = ''.obs;
+  final agencyCode = ''.obs;
   final phone = ''.obs;
   final reason = ''.obs;
+  final createdAt = ''.obs;
   final isLoading = false.obs;
   final hasSearched = false.obs;
 
@@ -38,19 +42,11 @@ class AgencyHostStatusController extends GetxController {
     if (args is! Map) return;
 
     applicationId.value = args['application_id']?.toString().trim() ?? '';
-    hostId.value = args['host_id']?.toString().trim() ?? '';
-    agencyId.value = args['agency_id']?.toString().trim() ?? '';
     phone.value = args['phone']?.toString().trim() ?? '';
 
     if (applicationId.value.isNotEmpty) {
       lookupType.value = AgencyStatusLookupType.applicationId;
       lookupController.text = applicationId.value;
-    } else if (hostId.value.isNotEmpty) {
-      lookupType.value = AgencyStatusLookupType.hostId;
-      lookupController.text = hostId.value;
-    } else if (agencyId.value.isNotEmpty) {
-      lookupType.value = AgencyStatusLookupType.agencyId;
-      lookupController.text = agencyId.value;
     } else if (phone.value.isNotEmpty) {
       lookupType.value = AgencyStatusLookupType.phone;
       lookupController.text = phone.value;
@@ -73,10 +69,6 @@ class AgencyHostStatusController extends GetxController {
     switch (lookupType.value) {
       case AgencyStatusLookupType.applicationId:
         return 'Application ID';
-      case AgencyStatusLookupType.hostId:
-        return 'Host ID';
-      case AgencyStatusLookupType.agencyId:
-        return 'Agency ID';
       case AgencyStatusLookupType.phone:
         return 'Phone number';
     }
@@ -86,10 +78,6 @@ class AgencyHostStatusController extends GetxController {
     switch (lookupType.value) {
       case AgencyStatusLookupType.applicationId:
         return 'Enter application ID';
-      case AgencyStatusLookupType.hostId:
-        return 'Enter host ID';
-      case AgencyStatusLookupType.agencyId:
-        return 'Enter agency ID';
       case AgencyStatusLookupType.phone:
         return 'Enter WhatsApp number';
     }
@@ -113,24 +101,21 @@ class AgencyHostStatusController extends GetxController {
         applicationId: lookupType.value == AgencyStatusLookupType.applicationId
             ? lookup
             : null,
-        hostId: lookupType.value == AgencyStatusLookupType.hostId
-            ? lookup
-            : null,
-        agencyId: lookupType.value == AgencyStatusLookupType.agencyId
-            ? lookup
-            : null,
         phone: lookupType.value == AgencyStatusLookupType.phone ? lookup : null,
         isShowLoader: false,
       );
 
       final data = response?['data'];
-      if (response != null && response['statusCode'] == 1 && data is Map) {
-        _applyStatusData(data);
+      if (isAgencyApiSuccess(response) && data is Map) {
+        _applyStatusData(Map<String, dynamic>.from(data));
       } else {
         status.value = 'Not Found';
         reason.value =
-            response?['message']?.toString() ??
+            agencyApiMessage(response) ??
             'No host application was found for this lookup.';
+        hostName.value = '';
+        agencyCode.value = '';
+        createdAt.value = '';
       }
     } catch (_) {
       status.value = 'Unable to Check';
@@ -140,25 +125,20 @@ class AgencyHostStatusController extends GetxController {
     }
   }
 
-  void _applyStatusData(Map data) {
-    status.value = data['status']?.toString() ?? 'Under Review';
+  void _applyStatusData(Map<String, dynamic> data) {
+    status.value = data['status']?.toString() ?? 'pending';
     applicationId.value =
-        data['application_id']?.toString() ??
         data['applicationId']?.toString() ??
+        data['application_id']?.toString() ??
         data['id']?.toString() ??
         applicationId.value;
-    hostId.value =
-        data['host_id']?.toString() ??
-        data['hostId']?.toString() ??
-        data['host']?['id']?.toString() ??
-        hostId.value;
-    agencyId.value =
-        data['agency_id']?.toString() ??
-        data['agencyId']?.toString() ??
-        agencyId.value;
+    hostId.value = data['hostId']?.toString() ?? '';
+    hostName.value = data['hostName']?.toString() ?? '';
+    agencyId.value = data['agencyId']?.toString() ?? '';
+    agencyCode.value = data['agencyCode']?.toString() ?? '';
     phone.value = data['phone']?.toString() ?? phone.value;
-    reason.value =
-        data['reason']?.toString() ?? data['message']?.toString() ?? '';
+    createdAt.value = data['createdAt']?.toString() ?? '';
+    reason.value = data['reason']?.toString() ?? '';
   }
 
   void refreshStatus() {

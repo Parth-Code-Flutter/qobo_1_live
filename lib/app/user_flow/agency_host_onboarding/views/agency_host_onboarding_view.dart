@@ -12,7 +12,7 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import '../controllers/agency_host_onboarding_controller.dart';
 import '../models/agency_host_category.dart';
 
-/// Agency host onboarding form (AGENCY-01) — UI only.
+/// Agency host onboarding form — `POST /api/agency/host-onboarding`.
 class AgencyHostOnboardingView extends GetView<AgencyHostOnboardingController> {
   const AgencyHostOnboardingView({super.key});
 

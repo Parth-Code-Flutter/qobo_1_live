@@ -219,10 +219,12 @@ class AgencyHostStatusView extends GetView<AgencyHostStatusController> {
             ),
           ],
           Spacing.v16,
+          _metaRow('Host name', controller.hostName.value),
+          _metaRow('Agency code', controller.agencyCode.value),
           _metaRow('Application ID', controller.applicationId.value),
           _metaRow('Host ID', controller.hostId.value),
-          _metaRow('Agency ID', controller.agencyId.value),
           _metaRow('Phone', controller.phone.value),
+          _metaRow('Submitted', controller.createdAt.value),
         ],
       ),
     );
@@ -260,10 +262,6 @@ class AgencyHostStatusView extends GetView<AgencyHostStatusController> {
     switch (type) {
       case AgencyStatusLookupType.applicationId:
         return Icons.confirmation_number_outlined;
-      case AgencyStatusLookupType.hostId:
-        return Icons.badge_outlined;
-      case AgencyStatusLookupType.agencyId:
-        return Icons.business_outlined;
       case AgencyStatusLookupType.phone:
         return Icons.phone_android_outlined;
     }
@@ -273,19 +271,22 @@ class AgencyHostStatusView extends GetView<AgencyHostStatusController> {
     if (_isApproved(status)) return 'Application Approved';
     if (_isRejected(status)) return 'Application Rejected';
     if (status.toLowerCase().contains('not')) return 'Application Not Found';
+    if (status.toLowerCase() == 'pending') return 'Application Pending';
     return 'Application Submitted';
   }
 
   Color _statusColor(String status) {
     final normalized = status.toLowerCase();
-    if (normalized.contains('approved')) return Colors.green;
-    if (normalized.contains('rejected') || normalized.contains('not')) {
-      return Colors.redAccent;
-    }
+    if (_isApproved(status)) return Colors.green;
+    if (_isRejected(status)) return Colors.redAccent;
+    if (normalized == 'pending') return Colors.orange;
     return kColorPrimary;
   }
 
-  bool _isApproved(String status) => status.toLowerCase().contains('approved');
+  bool _isApproved(String status) {
+    final normalized = status.toLowerCase();
+    return normalized.contains('approved') || normalized == 'active';
+  }
 
   bool _isRejected(String status) {
     final normalized = status.toLowerCase();

@@ -22,31 +22,31 @@ class AgencyRepo {
     required String whatsapp,
     required String category,
     required File hostRealPhoto,
-    String? birthday,
-    String? hostIdNumber,
+    String? dob,
+    String? idNo,
     bool isShowLoader = true,
   }) async {
     final fields = <String, String>{
-      // Documented backend fields from Qobo1live_API_Documentation.docx.
-      'agencyCode': agencyCode,
-      'hostName': hostName,
-      'gmail': gmail,
-      'whatsapp': whatsapp,
-      'category': category,
-      // Compatibility aliases required by the currently deployed backend.
-      'agency_code': agencyCode,
-      'name': hostName,
-      'phone': whatsapp,
-      if (birthday != null && birthday.trim().isNotEmpty)
-        'birthday': birthday.trim(),
-      if (hostIdNumber != null && hostIdNumber.trim().isNotEmpty)
-        'hostIdNumber': hostIdNumber.trim(),
+      'agency_code': agencyCode.trim(),
+      'name': hostName.trim(),
+      'phone': whatsapp.trim(),
+      'gmail': gmail.trim(),
+      'category': category.trim(),
+      if (dob != null && dob.trim().isNotEmpty) 'dob': dob.trim(),
+      if (idNo != null && idNo.trim().isNotEmpty) 'id_no': idNo.trim(),
+      // Compatibility aliases from API_Agency_Host_Mobile.md.
+      'agencyCode': agencyCode.trim(),
+      'hostName': hostName.trim(),
+      'whatsapp': whatsapp.trim(),
+      if (dob != null && dob.trim().isNotEmpty) 'birthday': dob.trim(),
+      if (idNo != null && idNo.trim().isNotEmpty) 'hostIdNumber': idNo.trim(),
     };
 
     final response = await _apiService.multipartFormRequest(
       endPoint: AgencyEndpoints.hostOnboarding,
       fields: fields,
       files: [hostRealPhoto],
+      // Deployed backend accepts `host_real_photo` (alias for `real_photo`).
       fileFieldName: 'host_real_photo',
       method: 'POST',
       isShowLoader: isShowLoader,
@@ -59,23 +59,15 @@ class AgencyRepo {
   /// Calls `GET /api/agency/host-verify-status` with one lookup key.
   Future<Map<String, dynamic>?> hostVerifyStatus({
     String? applicationId,
-    String? hostId,
-    String? agencyId,
     String? phone,
     bool isShowLoader = true,
   }) async {
     final params = <String, String>{};
     final id = applicationId?.trim();
-    final host = hostId?.trim();
-    final agency = agencyId?.trim();
     final phoneValue = phone?.trim();
 
     if (id != null && id.isNotEmpty) {
       params['application_id'] = id;
-    } else if (host != null && host.isNotEmpty) {
-      params['host_id'] = host;
-    } else if (agency != null && agency.isNotEmpty) {
-      params['agency_id'] = agency;
     } else if (phoneValue != null && phoneValue.isNotEmpty) {
       params['phone'] = phoneValue;
     }
