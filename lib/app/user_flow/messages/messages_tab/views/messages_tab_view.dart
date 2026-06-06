@@ -4,111 +4,78 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 import '../controllers/messages_tab_controller.dart';
+import '../widgets/match_user_sheet.dart';
 import '../widgets/messages_common_widgets.dart';
 
-class MessagesTabView extends StatelessWidget {
+class MessagesTabView extends GetView<MessagesTabController> {
   const MessagesTabView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final userSession = _resolveUserSession();
-    final messagesController = _resolveController();
-    const messages = <MessageListItemModel>[];
-
-    return GetBuilder<MessagesTabController>(
-      init: messagesController,
-      builder: (messagesController) {
-        return Container(
-          decoration: const BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage(kImgBG),
-              fit: BoxFit.cover,
-            ),
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _topHeader(userSession),
-                  Spacing.v16,
-                  const SemiBoldText(
-                    text: 'New Match',
-                    fontSize: TextStyles.k18FontSize,
-                    color: kColorWhite,
+    return Container(
+      decoration: const BoxDecoration(
+        image: DecorationImage(
+          image: AssetImage(kImgBG),
+          fit: BoxFit.cover,
+        ),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _topHeader(),
+              Spacing.v16,
+              Obx(() {
+                if (controller.isSearchMode.value) {
+                  return Expanded(child: _searchResults(context));
+                }
+                return Expanded(
+                  child: RefreshIndicator(
+                    color: kColorPrimary,
+                    backgroundColor: kColorWhite,
+                    onRefresh: controller.refreshAll,
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(
+                        parent: BouncingScrollPhysics(),
+                      ),
+                      children: [
+                        const SemiBoldText(
+                          text: 'New Match',
+                          fontSize: TextStyles.k18FontSize,
+                          color: kColorWhite,
+                        ),
+                        Spacing.v12,
+                        _newMatchRow(context),
+                        Spacing.v20,
+                        const SemiBoldText(
+                          text: 'Message',
+                          fontSize: TextStyles.k18FontSize,
+                          color: kColorWhite,
+                        ),
+                        Spacing.v8,
+                        _inboxSection(context),
+                        const SizedBox(height: 16),
+                      ],
+                    ),
                   ),
-                  Spacing.v12,
-                  Obx(() => _newMatchRow(messagesController)),
-                  Spacing.v20,
-                  const SemiBoldText(
-                    text: 'Message',
-                    fontSize: TextStyles.k18FontSize,
-                    color: kColorWhite,
-                  ),
-                  Spacing.v8,
-                  Expanded(
-                    child: messages.isEmpty
-                        ? const _MessagesEmptyState()
-                        : ListView.builder(
-                            padding: const EdgeInsets.only(bottom: 16),
-                            itemCount: messages.length,
-                            itemBuilder: (_, index) =>
-                                MessageListTileItem(item: messages[index]),
-                          ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _newMatchRow(MessagesTabController messagesController) {
-    if (messagesController.isNewMatchesLoading.value) {
-      return const SizedBox(
-        height: 86,
-        child: Center(
-          child: CircularProgressIndicator(
-            color: kColorWhite,
-            strokeWidth: 2,
+                );
+              }),
+            ],
           ),
         ),
-      );
-    }
-
-    final matches = messagesController.newMatches;
-    if (matches.isEmpty) {
-      return const SizedBox(
-        height: 86,
-        child: _InlineEmptyState(
-          icon: Icons.favorite_border_rounded,
-          text: 'New matches will appear here',
-        ),
-      );
-    }
-
-    return SizedBox(
-      height: 86,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        itemCount: matches.length,
-        separatorBuilder: (_, __) => Spacing.h10,
-        itemBuilder: (_, index) => MessageMatchAvatarItem(user: matches[index]),
       ),
     );
   }
 
-  Widget _topHeader(UserSessionController userSession) {
+  Widget _topHeader() {
     return GetBuilder<UserSessionController>(
-      init: userSession,
       builder: (session) {
         final avatarUrl = session.displayPictureUrl;
         return Row(
@@ -121,16 +88,15 @@ class MessagesTabView extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: kColorWhite, width: 1),
               ),
-              child: ClipOval(
-                child: avatarUrl == null
-                    ? _initialsAvatar(session.initials)
-                    : Image.network(
-                        avatarUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                            _initialsAvatar(session.initials),
-                      ),
+            child: ClipOval(
+              child: AppUserAvatar(
+                name: session.displayName,
+                imageUrl: avatarUrl,
+                size: 34,
+                fontSize: TextStyles.k10FontSize,
+                backgroundColor: kColorAvatarFallbackBg,
               ),
+            ),
             ),
             Spacing.h10,
             Expanded(child: _searchBar()),
@@ -148,6 +114,7 @@ class MessagesTabView extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
       ),
       child: TextField(
+        controller: controller.searchController,
         textInputAction: TextInputAction.search,
         style: TextStyles.kRegularPoppins(
           fontSize: TextStyles.k12FontSize,
@@ -156,7 +123,7 @@ class MessagesTabView extends StatelessWidget {
         decoration: InputDecoration(
           isDense: true,
           border: InputBorder.none,
-          hintText: 'Search',
+          hintText: 'Search users',
           hintStyle: TextStyles.kRegularPoppins(
             fontSize: TextStyles.k12FontSize,
             colors: kColorHint,
@@ -176,31 +143,111 @@ class MessagesTabView extends StatelessWidget {
     );
   }
 
-  Widget _initialsAvatar(String initials) {
-    return ColoredBox(
-      color: kColorAvatarFallbackBg,
-      child: Center(
-        child: SemiBoldText(
-          text: initials,
-          fontSize: TextStyles.k12FontSize,
-          color: kColorWhite,
+  Widget _newMatchRow(BuildContext context) {
+    if (controller.isNewMatchesLoading.value) {
+      return const SizedBox(
+        height: 86,
+        child: Center(
+          child: CircularProgressIndicator(
+            color: kColorWhite,
+            strokeWidth: 2,
+          ),
         ),
+      );
+    }
+
+    final matches = controller.newMatches;
+    if (matches.isEmpty) {
+      return const SizedBox(
+        height: 86,
+        child: _InlineEmptyState(
+          icon: Icons.favorite_border_rounded,
+          text: 'New matches will appear here',
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 86,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: matches.length,
+        separatorBuilder: (_, __) => Spacing.h10,
+        itemBuilder: (_, index) {
+          final user = matches[index];
+          return MessageMatchAvatarItem(
+            user: user,
+            onTap: () => showMatchUserSheet(context, controller, user),
+          );
+        },
       ),
     );
   }
 
-  UserSessionController _resolveUserSession() {
-    if (Get.isRegistered<UserSessionController>()) {
-      return Get.find<UserSessionController>();
+  Widget _searchResults(BuildContext context) {
+    if (controller.isSearchLoading.value) {
+      return const Center(
+        child: CircularProgressIndicator(color: kColorWhite, strokeWidth: 2),
+      );
     }
-    return Get.put(UserSessionController(), permanent: true);
+
+    if (controller.searchResults.isEmpty) {
+      return Center(
+        child: AppText(
+          text: controller.searchQuery.value.isEmpty
+              ? 'Type to search users'
+              : 'No users found for "${controller.searchQuery.value}"',
+          fontSize: TextStyles.k14FontSize,
+          color: kColorWhite.withValues(alpha: 0.75),
+          align: TextAlign.center,
+        ),
+      );
+    }
+
+    return ListView.separated(
+      itemCount: controller.searchResults.length,
+      separatorBuilder: (_, __) =>
+          Divider(color: kColorWhite.withValues(alpha: 0.12), height: 1),
+      itemBuilder: (_, index) {
+        final user = controller.searchResults[index];
+        return MessageSearchUserTile(
+          user: user,
+          isProcessing: controller.processingFollowId.value == user.id,
+          onFollowTap: () => controller.toggleFollow(context, user),
+          onAvatarTap: () => showMatchUserSheet(context, controller, user),
+        );
+      },
+    );
   }
 
-  MessagesTabController _resolveController() {
-    if (Get.isRegistered<MessagesTabController>()) {
-      return Get.find<MessagesTabController>();
+  Widget _inboxSection(BuildContext context) {
+    if (controller.isInboxLoading.value) {
+      return const SizedBox(
+        height: 120,
+        child: Center(
+          child: CircularProgressIndicator(color: kColorWhite, strokeWidth: 2),
+        ),
+      );
     }
-    return Get.put(MessagesTabController());
+
+    if (controller.inboxThreads.isEmpty) {
+      return const SizedBox(
+        height: 160,
+        child: _MessagesEmptyState(),
+      );
+    }
+
+    return Column(
+      children: controller.inboxThreads
+          .map(
+            (thread) => MessageListTileItem(
+              item: thread,
+              onTap: () => controller.openChatFromInbox(context, thread),
+            ),
+          )
+          .toList(),
+    );
   }
 }
 
@@ -252,14 +299,14 @@ class _MessagesEmptyState extends StatelessWidget {
           ),
           Spacing.v12,
           const SemiBoldText(
-            text: 'No data found',
+            text: 'No conversations yet',
             fontSize: TextStyles.k16FontSize,
             color: kColorWhite,
             align: TextAlign.center,
           ),
           Spacing.v6,
           AppText(
-            text: 'Messages will appear here when available.',
+            text: 'Follow someone from New Match to start chatting.',
             fontSize: TextStyles.k12FontSize,
             color: kColorWhite.withValues(alpha: 0.72),
             align: TextAlign.center,

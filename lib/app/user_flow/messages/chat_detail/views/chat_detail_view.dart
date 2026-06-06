@@ -40,20 +40,28 @@ class ChatDetailView extends GetView<ChatDetailController> {
         children: [
           Expanded(
             child: Obx(
-              () => controller.messages.isEmpty
-                  ? const _ChatEmptyState()
-                  : ListView.separated(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 20,
-                      ),
-                      itemCount: controller.messages.length,
-                      separatorBuilder: (_, __) => Spacing.v16,
-                      itemBuilder: (context, index) {
-                        final msg = controller.messages[index];
-                        return _buildMessageBubble(msg);
-                      },
-                    ),
+              () {
+                if (controller.isLoading.value) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: kColorPrimary),
+                  );
+                }
+                if (controller.messages.isEmpty) {
+                  return const _ChatEmptyState();
+                }
+                return ListView.separated(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 20,
+                  ),
+                  itemCount: controller.messages.length,
+                  separatorBuilder: (_, __) => Spacing.v16,
+                  itemBuilder: (context, index) {
+                    final msg = controller.messages[index];
+                    return _buildMessageBubble(msg);
+                  },
+                );
+              },
             ),
           ),
           _buildMessageInput(context),

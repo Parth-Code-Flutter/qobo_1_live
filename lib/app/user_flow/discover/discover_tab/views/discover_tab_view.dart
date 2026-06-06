@@ -4,8 +4,8 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
-import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/ui_utils/app_ui_utils.dart';
@@ -325,37 +325,22 @@ class DiscoverTabView extends StatelessWidget {
       itemBuilder: (context, index) {
         final user = controller.searchResults[index];
         final String name = user['name']?.toString() ?? 'User';
-        final String? avatar = user['displayPicture']?.toString();
         final String id = user['id']?.toString() ?? '';
 
-        final isFollowing = controller.followingUserIds.contains(id);
+        final isFollowing = user['isFollowing'] == true ||
+            controller.followingUserIds.contains(id);
 
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: kColorWhite.withValues(alpha: 0.15),
-                    width: 1,
-                  ),
-                ),
-                child: ClipOval(
-                  child: avatar == null || avatar.isEmpty
-                      ? _initialsAvatar(
-                          name.isNotEmpty ? name[0].toUpperCase() : 'U',
-                        )
-                      : Image.network(
-                          ApiImageUtils.normalize(avatar) ?? avatar,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _initialsAvatar(
-                            name.isNotEmpty ? name[0].toUpperCase() : 'U',
-                          ),
-                        ),
+              AppUserAvatar(
+                name: name,
+                imageUrl: user['displayPicture']?.toString(),
+                size: 44,
+                border: Border.all(
+                  color: kColorWhite.withValues(alpha: 0.15),
+                  width: 1,
                 ),
               ),
               Spacing.h12,

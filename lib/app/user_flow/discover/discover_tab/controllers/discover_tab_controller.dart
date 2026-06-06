@@ -55,6 +55,16 @@ class DiscoverTabController extends GetxController {
         final list = response['data'];
         if (list is List) {
           searchResults.value = list;
+          for (final raw in list) {
+            if (raw is! Map) continue;
+            final id = raw['id']?.toString() ?? '';
+            if (id.isEmpty) continue;
+            if (raw['isFollowing'] == true) {
+              followingUserIds.add(id);
+            } else {
+              followingUserIds.remove(id);
+            }
+          }
         } else {
           searchResults.clear();
         }
@@ -135,12 +145,16 @@ class DiscoverTabController extends GetxController {
       );
       if (!context.mounted) return;
       if (response != null && response['statusCode'] == 1) {
+        final data = response['data'];
+        final isFollowing = data is Map
+            ? data['isFollowing'] == true
+            : action == 'follow';
         if (isFollowing) {
-          followingUserIds.remove(targetId);
-          AppToast.showSuccess(context, 'Unfollowed successfully');
-        } else {
           followingUserIds.add(targetId);
           AppToast.showSuccess(context, 'Followed successfully');
+        } else {
+          followingUserIds.remove(targetId);
+          AppToast.showSuccess(context, 'Unfollowed successfully');
         }
       } else {
         final msg = response?['message']?.toString() ?? 'Action failed';

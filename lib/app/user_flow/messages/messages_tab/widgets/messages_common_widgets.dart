@@ -1,123 +1,220 @@
 import 'package:flutter/material.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
-import 'package:get/get.dart';
 
-/// Reusable model for "new match" horizontal list.
-class MessageMatchUser {
-  const MessageMatchUser({
-    required this.name,
-    required this.imagePath,
-    this.imageUrl,
-    this.hasStoryRing = false,
-  });
+import '../models/social_user_card.dart';
 
-  final String name;
-  final String imagePath;
-  final String? imageUrl;
-  final bool hasStoryRing;
-}
-
-/// Reusable model for message listing rows.
+/// Reusable model for message listing rows (chat inbox).
 class MessageListItemModel {
   const MessageListItemModel({
+    required this.targetId,
     required this.name,
     required this.message,
     required this.time,
-    required this.imagePath,
+    this.imageUrl,
     this.unreadCount = 0,
   });
 
+  final String targetId;
   final String name;
   final String message;
   final String time;
-  final String imagePath;
+  final String? imageUrl;
   final int unreadCount;
 }
 
-/// Common reusable avatar tile for the "New Match" horizontal list.
+/// Horizontal New Match avatar — tap opens profile sheet.
 class MessageMatchAvatarItem extends StatelessWidget {
-  const MessageMatchAvatarItem({super.key, required this.user});
+  const MessageMatchAvatarItem({
+    super.key,
+    required this.user,
+    this.onTap,
+  });
 
-  final MessageMatchUser user;
+  final SocialUserCard user;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 66,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            padding: EdgeInsets.all(user.hasStoryRing ? 2 : 0),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: user.hasStoryRing
-                  ? Border.all(color: kColorWhite, width: 1.2)
-                  : null,
+    return GestureDetector(
+      onTap: onTap,
+      child: SizedBox(
+        width: 66,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                AppUserAvatar(
+                  name: user.name,
+                  imageUrl: user.displayPicture,
+                  size: 50,
+                  border: Border.all(
+                    color: user.isMutual
+                        ? kColorBottomNavHeart
+                        : kColorWhite.withValues(alpha: 0.85),
+                    width: user.isMutual ? 2 : 1.2,
+                  ),
+                ),
+                if (user.isFollowing)
+                  Positioned(
+                    right: -1,
+                    bottom: -1,
+                    child: Container(
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: Colors.greenAccent.shade400,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFF1A1230)),
+                      ),
+                      child: const Icon(
+                        Icons.check_rounded,
+                        size: 10,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+              ],
             ),
-            child: ClipOval(
-              child: _matchAvatar(user),
+            Spacing.v6,
+            AppText(
+              text: user.name,
+              color: kColorWhite,
+              fontSize: TextStyles.k12FontSize,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              align: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Search result row with Follow button (Messages tab search mode).
+class MessageSearchUserTile extends StatelessWidget {
+  const MessageSearchUserTile({
+    super.key,
+    required this.user,
+    required this.isProcessing,
+    required this.onFollowTap,
+    required this.onAvatarTap,
+  });
+
+  final SocialUserCard user;
+  final bool isProcessing;
+  final VoidCallback onFollowTap;
+  final VoidCallback onAvatarTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: onAvatarTap,
+            child: AppUserAvatar(
+              name: user.name,
+              imageUrl: user.displayPicture,
+              size: 44,
             ),
           ),
-          Spacing.v6,
-          AppText(
-            text: user.name,
-            color: kColorWhite,
-            fontSize: TextStyles.k12FontSize,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            align: TextAlign.center,
+          Spacing.h12,
+          Expanded(
+            child: GestureDetector(
+              onTap: onAvatarTap,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SemiBoldText(
+                    text: user.name,
+                    fontSize: TextStyles.k14FontSize,
+                    color: kColorWhite,
+                  ),
+                  if (user.level > 0) ...[
+                    Spacing.v2,
+                    AppText(
+                      text: 'Level ${user.level}',
+                      fontSize: TextStyles.k10FontSize,
+                      color: kColorWhite.withValues(alpha: 0.6),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          GestureDetector(
+            onTap: isProcessing ? null : onFollowTap,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                gradient: user.isFollowing
+                    ? null
+                    : const LinearGradient(
+                        colors: [
+                          kColorProfileActionPinkStart,
+                          kColorProfileActionOrangeEnd,
+                        ],
+                      ),
+                color: user.isFollowing ? Colors.transparent : null,
+                borderRadius: BorderRadius.circular(20),
+                border: user.isFollowing
+                    ? Border.all(color: kColorWhite.withValues(alpha: 0.45))
+                    : null,
+              ),
+              child: isProcessing
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: kColorWhite,
+                      ),
+                    )
+                  : SemiBoldText(
+                      text: user.isFollowing ? 'Following' : 'Follow',
+                      fontSize: TextStyles.k12FontSize,
+                      color: kColorWhite,
+                    ),
+            ),
           ),
         ],
       ),
     );
   }
-
-  Widget _matchAvatar(MessageMatchUser user) {
-    final url = user.imageUrl;
-    if (url != null && url.isNotEmpty) {
-      return Image.network(
-        url,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) =>
-            Image.asset(user.imagePath, fit: BoxFit.cover),
-      );
-    }
-    return Image.asset(user.imagePath, fit: BoxFit.cover);
-  }
 }
 
-/// Common reusable message row tile used by the listing screen.
+/// Inbox message row tile.
 class MessageListTileItem extends StatelessWidget {
-  const MessageListTileItem({super.key, required this.item});
+  const MessageListTileItem({
+    super.key,
+    required this.item,
+    required this.onTap,
+  });
 
   final MessageListItemModel item;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        Get.toNamed(
-          '/chat-detail',
-          arguments: {'name': item.name, 'image': item.imagePath},
-        );
-      },
+      onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
           children: [
-            ClipOval(
-              child: Image.asset(
-                item.imagePath,
-                width: 50,
-                height: 50,
-                fit: BoxFit.cover,
-              ),
+            AppUserAvatar(
+              name: item.name,
+              imageUrl: item.imageUrl,
+              size: 50,
             ),
             Spacing.h12,
             Expanded(
@@ -131,7 +228,9 @@ class MessageListTileItem extends StatelessWidget {
                   ),
                   Spacing.v2,
                   AppText(
-                    text: item.message,
+                    text: item.message.isNotEmpty
+                        ? item.message
+                        : 'Start a conversation',
                     color: kColorWhite.withValues(alpha: 0.9),
                     fontSize: TextStyles.k10FontSize,
                     maxLines: 1,

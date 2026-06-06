@@ -9,10 +9,64 @@ class UserRepo {
   final ApiService _apiService;
 
   Future<Map<String, dynamic>?> getFollowList({
+    String? userId,
     bool isShowLoader = true,
   }) async {
+    final params = <String, String>{};
+    final id = userId?.trim();
+    if (id != null && id.isNotEmpty) {
+      params['user_id'] = id;
+    }
+    final query = params.isEmpty
+        ? ''
+        : '?${Uri(queryParameters: params).query}';
     final response = await _apiService.getRequest(
-      endPoint: UserEndpoints.followList,
+      endPoint: '${UserEndpoints.followList}$query',
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// `GET /api/user/discover` — paginated users for Messages New Match.
+  Future<Map<String, dynamic>?> discoverUsers({
+    int page = 1,
+    int limit = 20,
+    String? country,
+    String? gender,
+    bool excludeFollowing = false,
+    bool isShowLoader = false,
+  }) async {
+    final params = <String, String>{
+      'page': '$page',
+      'limit': '$limit',
+    };
+    if (country != null && country.trim().isNotEmpty) {
+      params['country'] = country.trim();
+    }
+    if (gender != null && gender.trim().isNotEmpty) {
+      params['gender'] = gender.trim();
+    }
+    if (excludeFollowing) {
+      params['exclude_following'] = 'true';
+    }
+    final response = await _apiService.getRequest(
+      endPoint:
+          '${UserEndpoints.discover}?${Uri(queryParameters: params).query}',
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// `GET /api/user/public/:id` — sanitized profile for match sheet.
+  Future<Map<String, dynamic>?> getPublicProfile({
+    required String userId,
+    bool isShowLoader = false,
+  }) async {
+    final response = await _apiService.getRequest(
+      endPoint:
+          '${UserEndpoints.publicProfile}/${Uri.encodeComponent(userId)}',
       isShowLoader: isShowLoader,
     );
     if (response == null) return null;

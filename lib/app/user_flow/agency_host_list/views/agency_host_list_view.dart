@@ -5,41 +5,13 @@ import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/agency_host_review_actions.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_bottom_sheet.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
-import 'package:qobo_one_live/utils/app_widgets/safe_network_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 import '../../live_action/models/live_map_host.dart';
 import '../controllers/agency_host_list_controller.dart';
 
-String _hostNameInitials(String name) {
-  final source = name.trim();
-  if (source.isEmpty) return '?';
-  final parts = source.split(RegExp(r'\s+')).where((part) => part.isNotEmpty);
-  final words = parts.toList();
-  if (words.length >= 2) {
-    return '${words[0][0]}${words[1][0]}'.toUpperCase();
-  }
-  return source.substring(0, source.length >= 2 ? 2 : 1).toUpperCase();
-}
-
-Widget _hostInitialsAvatar(
-  String name, {
-  required double fontSize,
-}) {
-  return ColoredBox(
-    color: kColorPrimary.withValues(alpha: 0.45),
-    child: Center(
-      child: SemiBoldText(
-        text: _hostNameInitials(name),
-        fontSize: fontSize,
-        color: kColorWhite,
-      ),
-    ),
-  );
-}
-
-/// Agency host constellation map (standalone route or bottom-nav heart tab).
 class AgencyHostListView extends GetView<AgencyHostListController> {
   AgencyHostListView({
     super.key,
@@ -481,18 +453,10 @@ class _HostSheetCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              SafeNetworkAvatar(
-                url: host.avatarUrl,
+              AppUserAvatar(
+                name: host.name,
+                imageUrl: host.avatarUrl,
                 size: 48,
-                fallback: CircleAvatar(
-                  radius: 24,
-                  backgroundColor: kColorPrimary.withValues(alpha: 0.35),
-                  child: SemiBoldText(
-                    text: _hostNameInitials(host.name),
-                    fontSize: TextStyles.k16FontSize,
-                    color: kColorWhite,
-                  ),
-                ),
               ),
               Spacing.h12,
               Expanded(
@@ -667,20 +631,11 @@ class _MapUserNode extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: ClipOval(
-                  child: host.avatarUrl != null && host.avatarUrl!.isNotEmpty
-                      ? SafeNetworkAvatar(
-                          url: host.avatarUrl,
-                          size: 54,
-                          fallback: _hostInitialsAvatar(
-                            host.name,
-                            fontSize: TextStyles.k12FontSize,
-                          ),
-                        )
-                      : _hostInitialsAvatar(
-                          host.name,
-                          fontSize: TextStyles.k12FontSize,
-                        ),
+                child: AppUserAvatar(
+                  name: host.name,
+                  imageUrl: host.avatarUrl,
+                  size: 54,
+                  fontSize: TextStyles.k12FontSize,
                 ),
               ),
               Positioned(
@@ -779,24 +734,17 @@ class _OverflowHostAvatar extends StatelessWidget {
         shape: BoxShape.circle,
         border: Border.all(color: kColorWhite.withValues(alpha: 0.85)),
       ),
-      child: ClipOval(
-        child: host.avatarUrl.isNotEmpty
-            ? SafeNetworkAvatar(
-                url: host.avatarUrl,
-                size: 27,
-                fallback: _initialFallback(),
-              )
-            : _initialFallback(),
+      child: AppUserAvatar(
+        name: host.name,
+        imageUrl: host.avatarUrl,
+        size: 27,
+        fontSize: TextStyles.k8FontSize,
       ),
     );
 
     if (onTap == null) return avatar;
 
     return GestureDetector(onTap: onTap, child: avatar);
-  }
-
-  Widget _initialFallback() {
-    return _hostInitialsAvatar(host.name, fontSize: TextStyles.k10FontSize);
   }
 }
 

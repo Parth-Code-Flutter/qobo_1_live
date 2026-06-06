@@ -19,11 +19,26 @@ class ChatRepo {
 
   Future<Map<String, dynamic>?> getConversation({
     required String targetId,
+    int page = 1,
     bool isShowLoader = true,
   }) async {
     final response = await _apiService.getRequest(
       endPoint:
-          '${ChatEndpoints.detail}?target_id=${Uri.encodeComponent(targetId)}',
+          '${ChatEndpoints.detail}?target_id=${Uri.encodeComponent(targetId)}&page=$page',
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// `POST /api/chat/room` — create/bootstrap chat room before messaging.
+  Future<Map<String, dynamic>?> createRoom({
+    required String targetId,
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: ChatEndpoints.createRoom,
+      requestModel: <String, dynamic>{'target_id': targetId},
       isShowLoader: isShowLoader,
     );
     if (response == null) return null;

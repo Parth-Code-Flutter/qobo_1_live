@@ -3,11 +3,13 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 import '../controllers/follow_list_controller.dart';
+import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
 
 class FollowListView extends GetView<FollowListController> {
   const FollowListView({super.key});
@@ -27,11 +29,21 @@ class FollowListView extends GetView<FollowListController> {
           Spacing.v12,
           Expanded(
             child: Obx(() {
-              if (controller.tabIndex.value == 0) {
-                return _buildList(controller.followingList, isFollowingTab: true);
-              } else {
-                return _buildList(controller.followersList, isFollowingTab: false);
+              if (controller.isLoading.value) {
+                return const Center(
+                  child: CircularProgressIndicator(color: kColorPrimary),
+                );
               }
+              if (controller.tabIndex.value == 0) {
+                return _buildList(
+                  controller.followingList,
+                  isFollowingTab: true,
+                );
+              }
+              return _buildList(
+                controller.followersList,
+                isFollowingTab: false,
+              );
             }),
           ),
         ],
@@ -75,8 +87,8 @@ class FollowListView extends GetView<FollowListController> {
     );
   }
 
-  Widget _buildList(List<Map<String, dynamic>> dataList, {required bool isFollowingTab}) {
-    if (dataList.isEmpty) {
+  Widget _buildList(List<SocialUserCard> users, {required bool isFollowingTab}) {
+    if (users.isEmpty) {
       return Center(
         child: AppText(
           text: 'No users found',
@@ -86,54 +98,71 @@ class FollowListView extends GetView<FollowListController> {
       );
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      itemCount: dataList.length,
-      separatorBuilder: (_, __) => const Divider(color: kColorBackground, height: 24),
-      itemBuilder: (context, index) {
-        final user = dataList[index];
-        final bool isFollowing = user['isFollowing'];
-        
-        return Row(
-          children: [
-            CircleAvatar(
-              radius: 26,
-              backgroundImage: AssetImage(user['image']),
-            ),
-            Spacing.h16,
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SemiBoldText(
-                    text: user['name'],
-                    fontSize: TextStyles.k14FontSize,
-                    color: kColorText,
-                  ),
-                  Spacing.v4,
-                  AppText(
-                    text: 'ID: 8374921',
-                    fontSize: TextStyles.k12FontSize,
-                    color: kColorHint,
-                  ),
-                ],
+    return RefreshIndicator(
+      color: kColorPrimary,
+      onRefresh: controller.loadFollowLists,
+      child: ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        itemCount: users.length,
+        separatorBuilder: (_, __) =>
+            const Divider(color: kColorBackground, height: 24),
+        itemBuilder: (context, index) {
+          final user = users[index];
+          final isProcessing = controller.processingFollowId.value == user.id;
+
+          return Row(
+            children: [
+              AppUserAvatar(
+                name: user.name,
+                imageUrl: user.displayPicture,
+                size: 52,
               ),
-            ),
-            Spacing.h8,
-            SizedBox(
-              width: 90,
-              height: 32,
-              child: appButton(
-                onPressed: () => controller.toggleFollow(index, isFollowingTab),
-                buttonText: isFollowing ? 'Following' : 'Follow',
-                buttonColor: isFollowing ? kColorBackground : kColorPrimary,
-                textColor: isFollowing ? kColorText : kColorWhite,
-                borderRadius: 16,
+              Spacing.h16,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SemiBoldText(
+                      text: user.name,
+                      fontSize: TextStyles.k14FontSize,
+                      color: kColorText,
+                    ),
+                    if (user.level > 0) ...[
+                      Spacing.v4,
+                      AppText(
+                        text: 'Level ${user.level}',
+                        fontSize: TextStyles.k12FontSize,
+                        color: kColorHint,
+                      ),
+                    ],
+                  ],
+                ),
               ),
-            ),
-          ],
-        );
-      },
+              Spacing.h8,
+              SizedBox(
+                width: 96,
+                height: 32,
+                child: appButton(
+                  onPressed: isProcessing
+                      ? () {}
+                      : () => controller.toggleFollow(
+                          user,
+                          isFollowingTab: isFollowingTab,
+                        ),
+                  buttonText: isProcessing
+                      ? '...'
+                      : (user.isFollowing ? 'Following' : 'Follow'),
+                  buttonColor:
+                      user.isFollowing ? kColorBackground : kColorPrimary,
+                  textColor: user.isFollowing ? kColorText : kColorWhite,
+                  borderRadius: 16,
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }

@@ -209,6 +209,9 @@ class ChatEndpoints {
 
   /// GET /api/chat/detail
   static const String detail = '/api/chat/detail';
+
+  /// POST /api/chat/room — bootstrap chat room (Firebase)
+  static const String createRoom = '/api/chat/room';
 }
 
 /// Central place for user, social, and backpack related API endpoints.
@@ -217,6 +220,12 @@ class UserEndpoints {
 
   /// GET /api/user/follow-list
   static const String followList = '/api/user/follow-list';
+
+  /// GET /api/user/discover — New Match feed
+  static const String discover = '/api/user/discover';
+
+  /// GET /api/user/public/:id — public profile card
+  static const String publicProfile = '/api/user/public';
 
   /// GET /api/user/patti-style/:user_id
   static const String pattiStyle = '/api/user/patti-style';
