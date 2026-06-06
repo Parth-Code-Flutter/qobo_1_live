@@ -8,72 +8,104 @@ import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 /// Reject-reason dialog for agency host review flows.
-Future<String?> showAgencyHostRejectReasonDialog(BuildContext context) async {
-  final controller = TextEditingController();
-  final result = await showDialog<String>(
+Future<String?> showAgencyHostRejectReasonDialog(BuildContext context) {
+  return showDialog<String>(
     context: context,
     barrierDismissible: false,
-    builder: (ctx) {
-      return AlertDialog(
-        backgroundColor: const Color(0xFF1A1230),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const SemiBoldText(
-          text: 'Reject host application',
-          fontSize: TextStyles.k16FontSize,
-          color: kColorWhite,
-        ),
-        content: Column(
+    builder: (ctx) => const _RejectReasonDialog(),
+  );
+}
+
+class _RejectReasonDialog extends StatefulWidget {
+  const _RejectReasonDialog();
+
+  @override
+  State<_RejectReasonDialog> createState() => _RejectReasonDialogState();
+}
+
+class _RejectReasonDialogState extends State<_RejectReasonDialog> {
+  late final TextEditingController _reasonController;
+
+  @override
+  void initState() {
+    super.initState();
+    _reasonController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _reasonController.dispose();
+    super.dispose();
+  }
+
+  void _submitReject() {
+    final reason = _reasonController.text.trim();
+    if (reason.isEmpty) {
+      Get.snackbar(
+        'Required',
+        'Please enter a rejection reason.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+    Navigator.of(context).pop(reason);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+
+    return AlertDialog(
+      backgroundColor: const Color(0xFF1A1230),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      insetPadding: EdgeInsets.fromLTRB(24, 24, 24, 24 + bottomInset),
+      title: const SemiBoldText(
+        text: 'Reject host application',
+        fontSize: TextStyles.k16FontSize,
+        color: kColorWhite,
+      ),
+      content: SingleChildScrollView(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const AppText(
-              text: 'Please provide a reason. The applicant will see this message.',
+              text:
+                  'Please provide a reason. The applicant will see this message.',
               fontSize: TextStyles.k12FontSize,
               color: kColorWhite,
             ),
             Spacing.v12,
             AppTextField(
-              controller: controller,
+              controller: _reasonController,
               hintText: 'Rejection reason',
               maxLines: 3,
+              minLines: 3,
               textInputAction: TextInputAction.done,
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const AppText(
-              text: 'Cancel',
-              fontSize: TextStyles.k14FontSize,
-              color: kColorHint,
-            ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const AppText(
+            text: 'Cancel',
+            fontSize: TextStyles.k14FontSize,
+            color: kColorHint,
           ),
-          TextButton(
-            onPressed: () {
-              final reason = controller.text.trim();
-              if (reason.isEmpty) {
-                Get.snackbar(
-                  'Required',
-                  'Please enter a rejection reason.',
-                  snackPosition: SnackPosition.BOTTOM,
-                );
-                return;
-              }
-              Navigator.of(ctx).pop(reason);
-            },
-            child: const SemiBoldText(
-              text: 'Reject',
-              fontSize: TextStyles.k14FontSize,
-              color: Colors.orangeAccent,
-            ),
+        ),
+        TextButton(
+          onPressed: _submitReject,
+          child: const SemiBoldText(
+            text: 'Reject',
+            fontSize: TextStyles.k14FontSize,
+            color: Colors.orangeAccent,
           ),
-        ],
-      );
-    },
-  );
-  controller.dispose();
-  return result;
+        ),
+      ],
+    );
+  }
 }
 
 /// Accept / Reject row for pending host cards and bottom sheets.

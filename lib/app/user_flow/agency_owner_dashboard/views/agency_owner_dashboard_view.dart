@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/agency_owner_dashboard/models/agency_revenue_demo.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/repo/agency/agency_api_utils.dart';
 import 'package:qobo_one_live/services/agency_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -162,63 +163,153 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
       return _pendingApplicationBody();
     }
 
+    if (!controller.hasDashboard) {
+      return _loadErrorBody();
+    }
+
     final session = Get.find<AgencySessionController>();
 
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (controller.loadError.value.isNotEmpty) ...[
-            _apiMessageChip(controller.loadError.value),
+    return RefreshIndicator(
+      color: kColorPrimary,
+      onRefresh: () => controller.loadDashboard(showLoader: false),
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _agencyHeroCard(session),
+            Spacing.v20,
+            _featuredEarningsCard(),
+            Spacing.v12,
+            _secondaryMetricsRow(),
+            Spacing.v20,
+            _sectionLabel('Revenue breakdown', Icons.pie_chart_outline_rounded),
             Spacing.v10,
+            _revenueSplitCard(),
+            if (controller.latestCall != null) ...[
+              Spacing.v16,
+              _latestCallCard(controller.latestCall!),
+            ],
+            Spacing.v20,
+            if (controller.pendingHostApplicationsCount > 0) ...[
+              _pendingHostsBanner(),
+              Spacing.v16,
+            ],
+            _sectionHeader(
+              title: 'Top hosts',
+              action: controller.hosts.isNotEmpty ? 'View all' : '',
+              onAction: controller.hosts.isNotEmpty
+                  ? controller.openHostList
+                  : () {},
+            ),
+            Spacing.v12,
+            if (controller.hosts.isEmpty)
+              _emptyHostsCard()
+            else
+              SizedBox(
+                height: 172,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: controller.hosts.length,
+                  separatorBuilder: (_, __) => Spacing.h12,
+                  itemBuilder: (_, i) => _hostSlideCard(controller.hosts[i]),
+                ),
+              ),
+            Spacing.v20,
+            _sectionLabel('Quick actions', Icons.bolt_rounded),
+            Spacing.v12,
+            _quickActionsGrid(),
+            Spacing.v8,
           ],
-          if (controller.isDemoPreview) ...[
-            _demoChip(),
-            Spacing.v16,
-          ],
-          _agencyHeroCard(session),
-          Spacing.v20,
-          _featuredEarningsCard(),
-          Spacing.v12,
-          _secondaryMetricsRow(),
-          Spacing.v20,
-          _sectionLabel('Revenue breakdown', Icons.pie_chart_outline_rounded),
-          Spacing.v10,
-          _revenueSplitCard(),
-          Spacing.v16,
-          _sampleCallCard(),
-          Spacing.v20,
-          if (controller.pendingHostApplicationsCount > 0) ...[
-            _pendingHostsBanner(),
-            Spacing.v16,
-          ],
-          _sectionHeader(
-            title: 'Top hosts',
-            action: 'View all',
-            onAction: controller.openHostList,
+        ),
+      ),
+    );
+  }
+
+  Widget _loadErrorBody() {
+    final message = controller.loadError.value.isNotEmpty
+        ? controller.loadError.value
+        : 'Unable to load agency dashboard.';
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 28),
+        child: _glass(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          radius: _DashUi.radiusMd,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.cloud_off_rounded,
+                size: 56,
+                color: kColorWhite.withValues(alpha: 0.55),
+              ),
+              Spacing.v16,
+              const SemiBoldText(
+                text: 'Dashboard unavailable',
+                fontSize: TextStyles.k18FontSize,
+                color: kColorWhite,
+                align: TextAlign.center,
+              ),
+              Spacing.v8,
+              AppText(
+                text: message,
+                fontSize: TextStyles.k14FontSize,
+                color: _DashUi.textSoft,
+                align: TextAlign.center,
+              ),
+              Spacing.v20,
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: controller.loadDashboard,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kColorPrimary,
+                    foregroundColor: kColorWhite,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  icon: const Icon(Icons.refresh_rounded, size: 20),
+                  label: const SemiBoldText(
+                    text: 'Retry',
+                    fontSize: TextStyles.k14FontSize,
+                    color: kColorWhite,
+                  ),
+                ),
+              ),
+            ],
           ),
-          Spacing.v12,
-          SizedBox(
-            height: 168,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              itemCount: controller.hosts.length,
-              separatorBuilder: (_, __) => Spacing.h12,
-              itemBuilder: (_, i) => _hostSlideCard(controller.hosts[i]),
+        ),
+      ),
+    );
+  }
+
+  Widget _emptyHostsCard() {
+    return _glass(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      radius: _DashUi.radiusMd,
+      child: Row(
+        children: [
+          Icon(
+            Icons.groups_outlined,
+            color: kColorWhite.withValues(alpha: 0.45),
+            size: 28,
+          ),
+          Spacing.h12,
+          const Expanded(
+            child: AppText(
+              text: 'No hosts yet. Share your recruit link to onboard hosts.',
+              fontSize: TextStyles.k12FontSize,
+              color: _DashUi.textMuted,
             ),
           ),
-          Spacing.v20,
-          _sectionLabel('Quick actions', Icons.bolt_rounded),
-          Spacing.v12,
-          _quickActionsGrid(),
-          if (controller.isDemoPreview) ...[
-            Spacing.v20,
-            _registerOutlineButton(),
-          ],
-          Spacing.v8,
         ],
       ),
     );
@@ -315,65 +406,6 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
     );
   }
 
-  Widget _apiMessageChip(String message) {
-    return _glass(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      radius: _DashUi.radiusSm,
-      child: Row(
-        children: [
-          const Icon(Icons.info_outline_rounded, color: _DashUi.accentCyan, size: 18),
-          Spacing.h10,
-          Expanded(
-            child: AppText(
-              text: message,
-              fontSize: TextStyles.k12FontSize,
-              color: _DashUi.textSoft,
-            ),
-          ),
-          TextButton(
-            onPressed: controller.loadDashboard,
-            child: const SemiBoldText(
-              text: 'Retry',
-              fontSize: TextStyles.k12FontSize,
-              color: kColorWhite,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _demoChip() {
-    return _glass(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      radius: _DashUi.radiusSm,
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: _DashUi.accentGold.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(
-              Icons.auto_awesome_rounded,
-              color: _DashUi.accentGold,
-              size: 16,
-            ),
-          ),
-          Spacing.h10,
-          const Expanded(
-            child: AppText(
-              text: 'Client preview · Fun Call revenue model',
-              fontSize: TextStyles.k12FontSize,
-              color: _DashUi.textMuted,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _agencyHeroCard(AgencySessionController session) {
     return _glass(
       radius: _DashUi.radiusLg,
@@ -436,6 +468,8 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
                             text: controller.displayAgencyName,
                             fontSize: TextStyles.k22FontSize,
                             color: kColorWhite,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           Spacing.v4,
                           _chip(
@@ -456,11 +490,12 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
                       controller.displayOwnerName,
                       icon: Icons.person_outline_rounded,
                     ),
-                    _chip(
-                      '${controller.ownerCoinsPerSecond} coins/sec',
-                      icon: Icons.speed_rounded,
-                      accent: _DashUi.accentCyan,
-                    ),
+                    if (controller.ownerCoinsPerSecond > 0)
+                      _chip(
+                        '${controller.ownerCoinsPerSecond} coins/sec',
+                        icon: Icons.speed_rounded,
+                        accent: _DashUi.accentCyan,
+                      ),
                     if (session.hasAgency.value)
                       _chip(
                         session.commissionPercentLabel,
@@ -543,7 +578,9 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
                 ),
                 Spacing.v4,
                 AppText(
-                  text: 'coins this month',
+                  text: controller.displayMonth.isNotEmpty
+                      ? 'coins · ${controller.displayMonth}'
+                      : 'coins this month',
                   fontSize: TextStyles.k12FontSize,
                   color: _DashUi.textSoft,
                 ),
@@ -723,8 +760,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
     );
   }
 
-  Widget _sampleCallCard() {
-    final call = controller.sampleCall;
+  Widget _latestCallCard(AgencyCallSample call) {
     return _glass(
       radius: _DashUi.radiusMd,
       child: Column(
@@ -923,6 +959,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _callAvatar(host.name, _DashUi.accentViolet),
                 Spacing.h10,
@@ -934,40 +971,41 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
                         text: host.name,
                         fontSize: TextStyles.k16FontSize,
                         color: kColorWhite,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
+                      Spacing.v2,
                       AppText(
                         text: '${host.coinsPerSecond} coins/sec',
                         fontSize: TextStyles.k12FontSize,
                         color: _DashUi.textMuted,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const AppText(
-                    text: 'Active',
-                    fontSize: TextStyles.k10FontSize,
-                    color: Colors.greenAccent,
-                  ),
-                ),
+                Spacing.h6,
+                _hostStatusBadge(host.status),
               ],
             ),
             const Spacer(),
             Row(
               children: [
-                _hostMetricChip(Icons.payments_rounded, _formatCoins(host.totalEarnings)),
+                _hostMetricChip(
+                  Icons.payments_rounded,
+                  _formatCoins(host.totalEarnings),
+                ),
                 Spacing.h6,
-                _hostMetricChip(Icons.card_giftcard_rounded, _formatCoins(host.totalGifts)),
+                _hostMetricChip(
+                  Icons.card_giftcard_rounded,
+                  _formatCoins(host.totalGifts),
+                ),
               ],
             ),
             Spacing.v6,
             AppText(
-              text: 'Calls ${_formatCoins(host.totalCallingSpend)} · ${host.callingMinutes}m · ${host.lastViewer}',
+              text: _hostCallsLine(host),
               fontSize: TextStyles.k10FontSize,
               color: _DashUi.textSoft,
               maxLines: 1,
@@ -975,6 +1013,51 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  String _hostCallsLine(AgencyHostRevenueDemo host) {
+    final viewer = host.lastViewer.trim();
+    final viewerPart = viewer.isNotEmpty ? ' · $viewer' : '';
+    return 'Calls ${_formatCoins(host.totalCallingSpend)} · ${host.callingMinutes}m$viewerPart';
+  }
+
+  Widget _hostStatusBadge(String status) {
+    Color bgColor;
+    Color textColor;
+    final normalized = status.trim().toLowerCase();
+
+    if (isHostStatusActive(status)) {
+      bgColor = Colors.green.withValues(alpha: 0.15);
+      textColor = Colors.greenAccent;
+    } else if (isHostStatusPending(status)) {
+      bgColor = Colors.orange.withValues(alpha: 0.15);
+      textColor = Colors.orangeAccent;
+    } else if (isHostStatusRejected(status)) {
+      bgColor = Colors.red.withValues(alpha: 0.15);
+      textColor = Colors.redAccent;
+    } else {
+      bgColor = kColorWhite.withValues(alpha: 0.1);
+      textColor = kColorWhite.withValues(alpha: 0.7);
+    }
+
+    final label = normalized.isEmpty
+        ? '—'
+        : normalized[0].toUpperCase() + normalized.substring(1);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: AppText(
+        text: label,
+        fontSize: TextStyles.k10FontSize,
+        color: textColor,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }
@@ -1170,36 +1253,6 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
     );
   }
 
-  Widget _registerOutlineButton() {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: controller.openRegisterAgency,
-        borderRadius: BorderRadius.circular(_DashUi.radiusMd),
-        child: Ink(
-          height: 52,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(_DashUi.radiusMd),
-            border: Border.all(color: _DashUi.glassHighlight, width: 1.2),
-            color: _DashUi.glassFill,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.add_business_rounded, color: kColorWhite, size: 20),
-              Spacing.h8,
-              const SemiBoldText(
-                text: 'Register your agency',
-                fontSize: TextStyles.k14FontSize,
-                color: kColorWhite,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _sectionLabel(String title, IconData icon) {
     return Row(
       children: [
@@ -1226,33 +1279,27 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
           fontSize: TextStyles.k18FontSize,
           color: kColorWhite,
         ),
-        const Spacer(),
-        GestureDetector(
-          onTap: onAction,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: _DashUi.accentPink.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: _DashUi.accentPink.withValues(alpha: 0.35)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AppText(
-                  text: action,
-                  fontSize: TextStyles.k12FontSize,
-                  color: _DashUi.accentPink,
+        if (action.isNotEmpty) ...[
+          const Spacer(),
+          GestureDetector(
+            onTap: onAction,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: _DashUi.accentPink.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: _DashUi.accentPink.withValues(alpha: 0.35),
                 ),
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  size: 16,
-                  color: _DashUi.accentPink,
-                ),
-              ],
+              ),
+              child: SemiBoldText(
+                text: action,
+                fontSize: TextStyles.k12FontSize,
+                color: _DashUi.accentPink,
+              ),
             ),
           ),
-        ),
+        ],
       ],
     );
   }

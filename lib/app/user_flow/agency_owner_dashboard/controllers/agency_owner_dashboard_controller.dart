@@ -71,7 +71,7 @@ class AgencyOwnerDashboardController extends GetxController {
       dashboard.value = null;
       loadError.value =
           agencyApiMessage(response) ??
-          'Unable to load agency dashboard. Showing demo preview.';
+          'Unable to load agency dashboard.';
     } catch (_) {
       if (_session.isApplicationPending) {
         isApplicationPending.value = true;
@@ -81,64 +81,55 @@ class AgencyOwnerDashboardController extends GetxController {
         dashboard.value = null;
       } else {
         dashboard.value = null;
-        loadError.value = 'Network error. Showing demo preview.';
+        loadError.value = 'Network error. Please try again.';
       }
     } finally {
       isLoading.value = false;
     }
   }
 
-  bool get isDemoPreview =>
-      !isApplicationPending.value && dashboard.value == null && !isLoading.value;
+  bool get hasDashboard => dashboard.value != null;
 
-  String get displayAgencyName =>
-      dashboard.value?.agencyName ??
-      (_session.agencyName.value.isNotEmpty
-          ? _session.agencyName.value
-          : AgencyRevenueDemo.agencyName);
+  String get displayAgencyName {
+    final fromApi = dashboard.value?.agencyName.trim();
+    if (fromApi != null && fromApi.isNotEmpty) return fromApi;
+    final cached = _session.agencyName.value.trim();
+    return cached.isNotEmpty ? cached : '—';
+  }
 
-  String get displayAgencyCode =>
-      dashboard.value?.agencyCode ??
-      (_session.agencyCode.value.isNotEmpty
-          ? _session.agencyCode.value
-          : AgencyRevenueDemo.agencyCode);
+  String get displayAgencyCode {
+    final fromApi = dashboard.value?.agencyCode.trim();
+    if (fromApi != null && fromApi.isNotEmpty) return fromApi;
+    final cached = _session.agencyCode.value.trim();
+    return cached.isNotEmpty ? cached : '—';
+  }
 
-  String get displayOwnerName =>
-      dashboard.value?.ownerName.isNotEmpty == true
-          ? dashboard.value!.ownerName
-          : AgencyRevenueDemo.ownerName;
+  String get displayOwnerName {
+    final name = dashboard.value?.ownerName.trim();
+    return (name != null && name.isNotEmpty) ? name : '—';
+  }
 
-  int get ownerCoinsPerSecond =>
-      dashboard.value?.ownerCoinsPerSecond ?? AgencyRevenueDemo.ownerCoinsPerSecond;
+  String get displayMonth => dashboard.value?.month.trim() ?? '';
 
-  AgencyCallSample get sampleCall =>
-      dashboard.value?.latestCall ?? AgencyRevenueDemo.sampleCall;
+  int get ownerCoinsPerSecond => dashboard.value?.ownerCoinsPerSecond ?? 0;
 
-  List<AgencyHostRevenueDemo> get hosts =>
-      dashboard.value?.hosts.isNotEmpty == true
-          ? dashboard.value!.hosts
-          : AgencyRevenueDemo.hosts;
+  AgencyCallSample? get latestCall => dashboard.value?.latestCall;
 
-  int get totalAgencyEarnings =>
-      dashboard.value?.totalAgencyEarnings ?? AgencyRevenueDemo.totalAgencyEarnings;
+  List<AgencyHostRevenueDemo> get hosts => dashboard.value?.hosts ?? const [];
 
-  int get companyShare =>
-      dashboard.value?.companyShare ?? AgencyRevenueDemo.companyShare;
+  int get totalAgencyEarnings => dashboard.value?.totalAgencyEarnings ?? 0;
 
-  int get hostCallShare =>
-      dashboard.value?.hostCallShare ?? AgencyRevenueDemo.hostCallShare;
+  int get companyShare => dashboard.value?.companyShare ?? 0;
 
-  int get ownerCommission =>
-      dashboard.value?.ownerCommissionCoins ?? AgencyRevenueDemo.ownerCommissionCoins;
+  int get hostCallShare => dashboard.value?.hostCallShare ?? 0;
 
-  int get totalGifts =>
-      dashboard.value?.totalGiftsVolume ?? AgencyRevenueDemo.totalGiftsVolume;
+  int get ownerCommission => dashboard.value?.ownerCommissionCoins ?? 0;
 
-  int get availableForPayout =>
-      dashboard.value?.availableForPayout ?? AgencyRevenueDemo.availableForPayout;
+  int get totalGifts => dashboard.value?.totalGiftsVolume ?? 0;
 
-  int get activeHostsCount =>
-      dashboard.value?.activeHosts ?? AgencyRevenueDemo.activeHosts;
+  int get availableForPayout => dashboard.value?.availableForPayout ?? 0;
+
+  int get activeHostsCount => dashboard.value?.activeHosts ?? 0;
 
   void openRecruitLink() {
     Get.toNamed(Routes.AGENCY_RECRUIT_LINK);

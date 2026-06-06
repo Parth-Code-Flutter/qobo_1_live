@@ -12,6 +12,33 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import '../../live_action/models/live_map_host.dart';
 import '../controllers/agency_host_list_controller.dart';
 
+String _hostNameInitials(String name) {
+  final source = name.trim();
+  if (source.isEmpty) return '?';
+  final parts = source.split(RegExp(r'\s+')).where((part) => part.isNotEmpty);
+  final words = parts.toList();
+  if (words.length >= 2) {
+    return '${words[0][0]}${words[1][0]}'.toUpperCase();
+  }
+  return source.substring(0, source.length >= 2 ? 2 : 1).toUpperCase();
+}
+
+Widget _hostInitialsAvatar(
+  String name, {
+  required double fontSize,
+}) {
+  return ColoredBox(
+    color: kColorPrimary.withValues(alpha: 0.45),
+    child: Center(
+      child: SemiBoldText(
+        text: _hostNameInitials(name),
+        fontSize: fontSize,
+        color: kColorWhite,
+      ),
+    ),
+  );
+}
+
 /// Agency host constellation map (same layout as heart tab, standalone route).
 class AgencyHostListView extends GetView<AgencyHostListController> {
   const AgencyHostListView({super.key});
@@ -441,7 +468,7 @@ class _HostSheetCard extends StatelessWidget {
                   radius: 24,
                   backgroundColor: kColorPrimary.withValues(alpha: 0.35),
                   child: SemiBoldText(
-                    text: host.name.isNotEmpty ? host.name[0] : '?',
+                    text: _hostNameInitials(host.name),
                     fontSize: TextStyles.k16FontSize,
                     color: kColorWhite,
                   ),
@@ -625,12 +652,15 @@ class _MapUserNode extends StatelessWidget {
                       ? SafeNetworkAvatar(
                           url: host.avatarUrl,
                           size: 54,
-                          fallback: Image.asset(
-                            host.imageAsset,
-                            fit: BoxFit.cover,
+                          fallback: _hostInitialsAvatar(
+                            host.name,
+                            fontSize: TextStyles.k12FontSize,
                           ),
                         )
-                      : Image.asset(host.imageAsset, fit: BoxFit.cover),
+                      : _hostInitialsAvatar(
+                          host.name,
+                          fontSize: TextStyles.k12FontSize,
+                        ),
                 ),
               ),
               Positioned(
@@ -746,16 +776,7 @@ class _OverflowHostAvatar extends StatelessWidget {
   }
 
   Widget _initialFallback() {
-    return ColoredBox(
-      color: kColorPrimary.withValues(alpha: 0.45),
-      child: Center(
-        child: SemiBoldText(
-          text: host.name.isNotEmpty ? host.name[0] : '?',
-          fontSize: TextStyles.k10FontSize,
-          color: kColorWhite,
-        ),
-      ),
-    );
+    return _hostInitialsAvatar(host.name, fontSize: TextStyles.k10FontSize);
   }
 }
 
