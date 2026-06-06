@@ -63,7 +63,14 @@ class AgencyAccessController extends GetxController {
   }
 
   void openHostApplication() {
-    Get.toNamed(Routes.AGENCY_HOST_ONBOARDING);
+    final session = _agencySession;
+    final code = session.hasApprovedAgency ? session.agencyCode.value.trim() : '';
+    Get.toNamed(
+      Routes.AGENCY_HOST_ONBOARDING,
+      arguments: code.isNotEmpty
+          ? {'agencyCode': code, 'lockAgencyCode': true}
+          : null,
+    );
   }
 
   void openHostStatus() {

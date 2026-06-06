@@ -12,6 +12,7 @@ import 'package:qobo_one_live/utils/validations/text_field_validations.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/repo/agency/agency_api_utils.dart';
 import 'package:qobo_one_live/repo/agency/agency_repo.dart';
+import 'package:qobo_one_live/services/agency_session_controller.dart';
 
 import '../models/agency_host_interest.dart';
 import '../models/agency_host_type.dart';
@@ -32,18 +33,44 @@ class AgencyHostOnboardingController extends GetxController {
   final selectedInterest = Rxn<AgencyHostInterest>();
   final hostPhoto = Rxn<File>();
   final isSubmitLoading = false.obs;
+  final isAgencyCodeLocked = false.obs;
+  final isAgencyCodePrefilling = false.obs;
 
   final ImagePicker _imagePicker = ImagePicker();
 
   @override
   void onInit() {
     super.onInit();
+    _prefillAgencyCode();
+  }
+
+  Future<void> _prefillAgencyCode() async {
     final args = Get.arguments;
     if (args is Map) {
       final code = args['agencyCode']?.toString().trim();
       if (code != null && code.isNotEmpty) {
         agencyCodeController.text = code;
+        if (args['lockAgencyCode'] == true) {
+          isAgencyCodeLocked.value = true;
+        }
+        return;
       }
+    }
+
+    isAgencyCodePrefilling.value = true;
+    try {
+      if (!Get.isRegistered<AgencySessionController>()) {
+        Get.put(AgencySessionController(), permanent: true);
+      }
+      final session = Get.find<AgencySessionController>();
+      await session.loadFromStorage();
+      final code = await session.resolveApprovedAgencyCode();
+      if (code != null && code.isNotEmpty) {
+        agencyCodeController.text = code;
+        isAgencyCodeLocked.value = true;
+      }
+    } finally {
+      isAgencyCodePrefilling.value = false;
     }
   }
 

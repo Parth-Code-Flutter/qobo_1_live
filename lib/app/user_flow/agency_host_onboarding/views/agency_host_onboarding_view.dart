@@ -305,16 +305,35 @@ class AgencyHostOnboardingView extends GetView<AgencyHostOnboardingController> {
   }
 
   Widget _agencyCodeField(BuildContext context) {
-    return _labeledField(
-      label: 'Agency code',
-      child: AppTextField(
-        controller: controller.agencyCodeController,
-        validator: (v) => controller.validateAgencyCode(context, v),
-        hintText: 'Enter agency code',
-        borderColor: kColorHint,
-        textInputAction: TextInputAction.done,
-        textCapitalization: TextCapitalization.characters,
-        prefix: _fieldIcon(Icons.vpn_key_outlined),
+    return Obx(
+      () => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _labeledField(
+            label: 'Agency code',
+            child: AppTextField(
+              controller: controller.agencyCodeController,
+              validator: (v) => controller.validateAgencyCode(context, v),
+              hintText: controller.isAgencyCodePrefilling.value
+                  ? 'Loading your agency code…'
+                  : 'Enter agency code',
+              borderColor: kColorHint,
+              textInputAction: TextInputAction.done,
+              textCapitalization: TextCapitalization.characters,
+              readOnly: controller.isAgencyCodeLocked.value ||
+                  controller.isAgencyCodePrefilling.value,
+              prefix: _fieldIcon(Icons.vpn_key_outlined),
+            ),
+          ),
+          if (controller.isAgencyCodeLocked.value) ...[
+            Spacing.v6,
+            AppText(
+              text: 'Using your approved agency code',
+              fontSize: TextStyles.k12FontSize,
+              color: kColorPrimary,
+            ),
+          ],
+        ],
       ),
     );
   }

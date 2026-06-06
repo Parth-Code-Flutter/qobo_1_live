@@ -14,3 +14,6 @@ const String kStorageCachedOrganizationUserList = 'cached_organization_user_list
 
 /// Pending / last agency owner application (until approved and agency session is set).
 const String kStorageAgencyOwnerApplication = 'agency_owner_application';
+
+/// Approved agency owner session (id, code, commission) for cold-start restore.
+const String kStorageApprovedAgency = 'agency_approved_session';

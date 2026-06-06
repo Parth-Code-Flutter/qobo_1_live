@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/agency_owner_dashboard/models/agency_dashboard_data.dart';
 import 'package:qobo_one_live/app/user_flow/agency_owner_dashboard/models/agency_revenue_demo.dart';
@@ -55,8 +57,27 @@ class AgencySessionController extends GetxController {
 
   Future<void> loadFromStorage() async {
     final json = await _storage.getJsonFromStorage(kStorageAgencyOwnerApplication);
-    if (json == null || json.isEmpty) return;
-    _applyApplicationJson(json, persist: false);
+    if (json != null && json.isNotEmpty) {
+      _applyApplicationJson(json, persist: false);
+    }
+    final agencyJson = await _storage.getJsonFromStorage(kStorageApprovedAgency);
+    if (agencyJson != null && agencyJson.isNotEmpty) {
+      _applyApprovedAgencyJson(agencyJson);
+    }
+  }
+
+  /// Agency code for host onboarding when the logged-in user owns an approved agency.
+  Future<String?> resolveApprovedAgencyCode() async {
+    if (hasApprovedAgency && agencyCode.value.trim().isNotEmpty) {
+      return agencyCode.value.trim();
+    }
+
+    await ensureHydratedFromDashboard();
+
+    if (hasApprovedAgency && agencyCode.value.trim().isNotEmpty) {
+      return agencyCode.value.trim();
+    }
+    return null;
   }
 
   /// Loads agency id/name/hosts from dashboard when memory session is empty (cold start).
@@ -199,6 +220,7 @@ class AgencySessionController extends GetxController {
     agencyCode.value = '';
     recruitLink.value = '';
     cachedHosts.clear();
+    await _clearApprovedAgencyStorage();
     await _persistApplication();
     update();
   }
@@ -302,6 +324,7 @@ class AgencySessionController extends GetxController {
         link ?? 'https://qobo1.live/invite/${code.trim().toUpperCase()}';
     hasAgency.value = id.isNotEmpty;
     applicationState.value = AgencyOwnerApplicationState.approved;
+    unawaited(_persistApprovedAgency());
   }
 
   Future<void> clearAgency() async {
@@ -320,6 +343,7 @@ class AgencySessionController extends GetxController {
     appliedPhone.value = '';
     applicationReason.value = '';
     applicationSubmittedAt.value = '';
+    await _clearApprovedAgencyStorage();
     await _clearApplicationStorage();
     update();
   }
@@ -353,6 +377,40 @@ class AgencySessionController extends GetxController {
     if (applicationState.value != AgencyOwnerApplicationState.approved) {
       hasAgency.value = false;
     }
+  }
+
+  void _applyApprovedAgencyJson(Map<String, dynamic> json) {
+    final id = json['agencyId']?.toString().trim() ?? '';
+    final code = json['agencyCode']?.toString().trim() ?? '';
+    if (id.isEmpty || code.isEmpty) return;
+
+    agencyId.value = id;
+    agencyName.value = json['agencyName']?.toString() ?? '';
+    agencyCode.value = code;
+    commissionRate.value = _parseCommission(json['commissionRate']);
+    status.value = json['status']?.toString() ?? 'active';
+    final link = json['recruitLink']?.toString() ?? '';
+    recruitLink.value = link.isNotEmpty
+        ? link
+        : 'https://qobo1.live/invite/${code.toUpperCase()}';
+    hasAgency.value = true;
+    applicationState.value = AgencyOwnerApplicationState.approved;
+  }
+
+  Future<void> _persistApprovedAgency() async {
+    if (!hasAgency.value || agencyId.value.trim().isEmpty) return;
+    await _storage.writeJsonStorage(kStorageApprovedAgency, {
+      'agencyId': agencyId.value,
+      'agencyName': agencyName.value,
+      'agencyCode': agencyCode.value,
+      'commissionRate': commissionRate.value,
+      'status': status.value,
+      'recruitLink': recruitLink.value,
+    });
+  }
+
+  Future<void> _clearApprovedAgencyStorage() async {
+    await _storage.writeStringStorage(kStorageApprovedAgency, '');
   }
 
   double _parseCommission(dynamic raw) {
