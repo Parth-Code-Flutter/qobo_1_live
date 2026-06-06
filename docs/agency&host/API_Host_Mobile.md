@@ -57,7 +57,8 @@ This file describes request/response contracts for the **Host applicant** flow. 
 | `name` | string | Yes | Full host name. Aliases: `hostName` |
 | `phone` | string | Yes | WhatsApp number. Aliases: `whatsapp` |
 | `gmail` | string | Yes | Email |
-| `category` | string | Yes | Mobile values: `audio`, `video` |
+| `type` | string | Yes | Stream type: `audio`, `video`. Aliases: `hostType` |
+| `category` | string | Yes | Host interest/talent: `singing`, `dancing`, `gaming`, `chatting`. Aliases: `interests`, `interest` |
 | `dob` | string | Yes | Prefer `yyyy-MM-dd`. Aliases: `birthday` |
 | `id_no` | string | Yes | Government / host ID number. Aliases: `hostIdNumber` |
 | `real_photo` | file | Yes | Portrait photo (JPEG/PNG). **Deployed alias:** `host_real_photo` |

@@ -13,7 +13,8 @@ import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/repo/agency/agency_api_utils.dart';
 import 'package:qobo_one_live/repo/agency/agency_repo.dart';
 
-import '../models/agency_host_category.dart';
+import '../models/agency_host_interest.dart';
+import '../models/agency_host_type.dart';
 
 class AgencyHostOnboardingController extends GetxController {
   final formKey = GlobalKey<FormState>();
@@ -27,7 +28,8 @@ class AgencyHostOnboardingController extends GetxController {
   final agencyCodeController = TextEditingController();
 
   final selectedBirthday = Rxn<DateTime>();
-  final selectedCategory = Rxn<AgencyHostCategory>();
+  final selectedType = Rxn<AgencyHostType>();
+  final selectedInterest = Rxn<AgencyHostInterest>();
   final hostPhoto = Rxn<File>();
   final isSubmitLoading = false.obs;
 
@@ -82,8 +84,12 @@ class AgencyHostOnboardingController extends GetxController {
         '${picked.year}';
   }
 
-  void selectCategory(AgencyHostCategory category) {
-    selectedCategory.value = category;
+  void selectType(AgencyHostType type) {
+    selectedType.value = type;
+  }
+
+  void selectInterest(AgencyHostInterest? interest) {
+    selectedInterest.value = interest;
   }
 
   Future<void> onHostPhotoTap(BuildContext context) async {
@@ -130,8 +136,15 @@ class AgencyHostOnboardingController extends GetxController {
     return null;
   }
 
-  String? validateCategory() {
-    if (selectedCategory.value == null) {
+  String? validateType() {
+    if (selectedType.value == null) {
+      return 'Please select a type (Audio or Video)';
+    }
+    return null;
+  }
+
+  String? validateInterest() {
+    if (selectedInterest.value == null) {
       return 'Please select a category';
     }
     return null;
@@ -147,12 +160,18 @@ class AgencyHostOnboardingController extends GetxController {
   Future<void> onSubmitPressed(BuildContext context) async {
     FocusScope.of(context).unfocus();
     final isFormValid = formKey.currentState?.validate() ?? false;
-    final categoryError = validateCategory();
+    final typeError = validateType();
+    final interestError = validateInterest();
     final photoError = validatePhoto();
 
-    if (!isFormValid || categoryError != null || photoError != null) {
-      if (categoryError != null) {
-        AppToast.showError(context, categoryError);
+    if (!isFormValid ||
+        typeError != null ||
+        interestError != null ||
+        photoError != null) {
+      if (typeError != null) {
+        AppToast.showError(context, typeError);
+      } else if (interestError != null) {
+        AppToast.showError(context, interestError);
       } else if (photoError != null) {
         AppToast.showError(context, photoError);
       }
@@ -172,7 +191,8 @@ class AgencyHostOnboardingController extends GetxController {
       hostName: hostNameController.text.trim(),
       gmail: gmailController.text.trim(),
       whatsapp: whatsapp,
-      category: selectedCategory.value!.apiValue,
+      type: selectedType.value!.apiValue,
+      category: selectedInterest.value!.apiValue,
       hostRealPhoto: hostPhoto.value!,
       dob: formatAgencyHostDob(birthday),
       idNo: hostIdController.text.trim(),

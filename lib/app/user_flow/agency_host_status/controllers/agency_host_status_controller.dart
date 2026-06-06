@@ -19,6 +19,8 @@ class AgencyHostStatusController extends GetxController {
   final agencyCode = ''.obs;
   final phone = ''.obs;
   final reason = ''.obs;
+  final hostType = ''.obs;
+  final hostInterest = ''.obs;
   final createdAt = ''.obs;
   final isLoading = false.obs;
   final hasSearched = false.obs;
@@ -137,6 +139,13 @@ class AgencyHostStatusController extends GetxController {
     agencyId.value = data['agencyId']?.toString() ?? '';
     agencyCode.value = data['agencyCode']?.toString() ?? '';
     phone.value = data['phone']?.toString() ?? phone.value;
+    hostType.value =
+        data['type']?.toString() ?? data['hostType']?.toString() ?? '';
+    hostInterest.value =
+        data['category']?.toString() ??
+        data['interests']?.toString() ??
+        data['interest']?.toString() ??
+        '';
     createdAt.value = data['createdAt']?.toString() ?? '';
     reason.value = data['reason']?.toString() ?? '';
   }

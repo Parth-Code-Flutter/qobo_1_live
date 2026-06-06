@@ -221,6 +221,8 @@ class AgencyHostStatusView extends GetView<AgencyHostStatusController> {
           Spacing.v16,
           _metaRow('Host name', controller.hostName.value),
           _metaRow('Agency code', controller.agencyCode.value),
+          _metaRow('Type', controller.hostType.value),
+          _metaRow('Category', controller.hostInterest.value),
           _metaRow('Application ID', controller.applicationId.value),
           _metaRow('Host ID', controller.hostId.value),
           _metaRow('Phone', controller.phone.value),

@@ -10,7 +10,8 @@ import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 import '../controllers/agency_host_onboarding_controller.dart';
-import '../models/agency_host_category.dart';
+import '../models/agency_host_interest.dart';
+import '../models/agency_host_type.dart';
 
 /// Agency host onboarding form — `POST /api/agency/host-onboarding`.
 class AgencyHostOnboardingView extends GetView<AgencyHostOnboardingController> {
@@ -77,7 +78,9 @@ class AgencyHostOnboardingView extends GetView<AgencyHostOnboardingController> {
                                     Spacing.v10,
                                     _agencyCodeField(context),
                                     Spacing.v16,
-                                    _categorySection(),
+                                    _typeSection(),
+                                    Spacing.v16,
+                                    _categoryDropdown(context),
                                     Spacing.v28,
                                     Obx(
                                       () => appButton(
@@ -316,12 +319,12 @@ class AgencyHostOnboardingView extends GetView<AgencyHostOnboardingController> {
     );
   }
 
-  Widget _categorySection() {
+  Widget _typeSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const AppText(
-          text: 'Category',
+          text: 'Type',
           fontSize: TextStyles.k14FontSize,
           color: kColorText,
         ),
@@ -330,12 +333,12 @@ class AgencyHostOnboardingView extends GetView<AgencyHostOnboardingController> {
           () => Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: AgencyHostCategory.values
+            children: AgencyHostType.values
                 .map(
-                  (category) => _categoryChip(
-                    category: category,
-                    selected: controller.selectedCategory.value == category,
-                    onTap: () => controller.selectCategory(category),
+                  (type) => _typeChip(
+                    type: type,
+                    selected: controller.selectedType.value == type,
+                    onTap: () => controller.selectType(type),
                   ),
                 )
                 .toList(),
@@ -345,8 +348,8 @@ class AgencyHostOnboardingView extends GetView<AgencyHostOnboardingController> {
     );
   }
 
-  Widget _categoryChip({
-    required AgencyHostCategory category,
+  Widget _typeChip({
+    required AgencyHostType type,
     required bool selected,
     required VoidCallback onTap,
   }) {
@@ -363,9 +366,59 @@ class AgencyHostOnboardingView extends GetView<AgencyHostOnboardingController> {
           ),
         ),
         child: SemiBoldText(
-          text: category.label,
+          text: type.label,
           fontSize: TextStyles.k12FontSize,
           color: selected ? kColorWhite : kColorText,
+        ),
+      ),
+    );
+  }
+
+  Widget _categoryDropdown(BuildContext context) {
+    return _labeledField(
+      label: 'Category',
+      child: Obx(
+        () => DropdownButtonFormField<AgencyHostInterest>(
+          value: controller.selectedInterest.value,
+          isExpanded: true,
+          hint: AppText(
+            text: 'Select interest',
+            fontSize: TextStyles.k14FontSize,
+            color: kColorHint.withValues(alpha: 0.9),
+          ),
+          decoration: InputDecoration(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 12,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: kColorHint.withValues(alpha: 0.5)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: kColorHint.withValues(alpha: 0.5)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: kColorPrimary, width: 1.2),
+            ),
+          ),
+          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: kColorHint),
+          items: AgencyHostInterest.values
+              .map(
+                (interest) => DropdownMenuItem(
+                  value: interest,
+                  child: AppText(
+                    text: interest.label,
+                    fontSize: TextStyles.k14FontSize,
+                    color: kColorText,
+                  ),
+                ),
+              )
+              .toList(),
+          onChanged: controller.selectInterest,
+          validator: (_) => controller.validateInterest(),
         ),
       ),
     );

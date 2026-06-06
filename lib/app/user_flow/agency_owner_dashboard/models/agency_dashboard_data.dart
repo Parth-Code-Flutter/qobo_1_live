@@ -179,7 +179,10 @@ AgencyHostRevenueDemo parseHostFromApi(Map<String, dynamic> json) {
         '',
     phone: json['phone']?.toString() ?? '',
     gmail: json['gmail']?.toString() ?? '',
-    category: json['category']?.toString() ?? '',
+    category: json['category']?.toString() ??
+        json['interests']?.toString() ??
+        json['interest']?.toString() ??
+        '',
     reason: json['reason']?.toString(),
   );
 }
