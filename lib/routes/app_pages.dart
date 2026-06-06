@@ -177,7 +177,7 @@ class AppPages {
     ),
     GetPage(
       name: _Paths.AGENCY_HOST_LIST,
-      page: () => const AgencyHostListView(),
+      page: () => AgencyHostListView(),
       binding: AgencyHostListBinding(),
     ),
     GetPage(

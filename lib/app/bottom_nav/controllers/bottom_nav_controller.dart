@@ -1,10 +1,11 @@
 import 'package:get/get.dart';
+import 'package:qobo_one_live/app/user_flow/agency_host_list/controllers/agency_host_list_controller.dart';
 import 'package:qobo_one_live/app/user_flow/discover/discover_tab/controllers/discover_tab_controller.dart';
-import 'package:qobo_one_live/app/user_flow/live_action/controllers/live_action_controller.dart';
 import 'package:qobo_one_live/constants/status_code_constants.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
+import 'package:qobo_one_live/services/agency_session_controller.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 
@@ -21,8 +22,11 @@ class BottomNavController extends GetxController {
   final selectedIndex = 0.obs;
   Map<String, dynamic>? profileData;
 
-  /// Center heart tab — live host map ([LiveActionView]).
+  /// Center heart tab — embedded [AgencyHostListView] with real API hosts.
   static const int heartTabIndex = 2;
+
+  /// GetX tag for the heart-tab host list controller (separate from route instance).
+  static const String heartHostListTag = 'bottom_nav_heart_hosts';
 
   /// Bottom-nav tabs (Figma-style labels + centered heart action).
   final items =
@@ -55,6 +59,12 @@ class BottomNavController extends GetxController {
     super.onInit();
     _userSession.loadFromStorage();
     _fetchProfileOnInit();
+    _prefetchAgencySession();
+  }
+
+  Future<void> _prefetchAgencySession() async {
+    if (!Get.isRegistered<AgencySessionController>()) return;
+    await Get.find<AgencySessionController>().ensureHydratedFromDashboard();
   }
 
   void onNavBarTabSelected(int index) {
@@ -77,18 +87,21 @@ class BottomNavController extends GetxController {
     if (index == 0 && Get.isRegistered<DiscoverTabController>()) {
       Get.find<DiscoverTabController>().clearRoomMode();
     }
-    if (index != heartTabIndex &&
-        Get.isRegistered<LiveActionController>() &&
-        Get.find<LiveActionController>().isAgencyHostsView) {
-      Get.find<LiveActionController>().configureDiscoverHosts();
+    if (index == heartTabIndex &&
+        Get.isRegistered<AgencyHostListController>(tag: heartHostListTag)) {
+      final hostListCtrl =
+          Get.find<AgencyHostListController>(tag: heartHostListTag);
+      final needsReload =
+          hostListCtrl.hostList.isEmpty ||
+          !hostListCtrl.fetchedWithAgencyContext;
+      hostListCtrl.refreshList(showLoading: needsReload);
     }
   }
 
-  /// Opens the heart-tab host map with agency hosts (from owner dashboard).
+  /// Opens heart tab with agency host map (from owner dashboard).
   void openHeartTabForAgencyHosts() {
-    final popped = _popToBottomNavIfNeeded();
+    _popToBottomNavIfNeeded();
     onNavBarTabSelected(heartTabIndex);
-    _applyAgencyHostsOnLiveAction(afterPop: popped);
   }
 
   bool _popToBottomNavIfNeeded() {
@@ -102,21 +115,6 @@ class BottomNavController extends GetxController {
       if (Get.currentRoute == Routes.BOTTOM_NAV) break;
     }
     return popped;
-  }
-
-  void _applyAgencyHostsOnLiveAction({required bool afterPop}) {
-    void apply() {
-      if (!Get.isRegistered<LiveActionController>()) {
-        Get.put(LiveActionController());
-      }
-      Get.find<LiveActionController>().configureAgencyHosts();
-    }
-
-    if (afterPop) {
-      Future.microtask(apply);
-      return;
-    }
-    apply();
   }
 
   Future<void> onLogoutPressed() async {

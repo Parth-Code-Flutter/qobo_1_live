@@ -39,46 +39,64 @@ Widget _hostInitialsAvatar(
   );
 }
 
-/// Agency host constellation map (same layout as heart tab, standalone route).
+/// Agency host constellation map (standalone route or bottom-nav heart tab).
 class AgencyHostListView extends GetView<AgencyHostListController> {
-  const AgencyHostListView({super.key});
+  AgencyHostListView({
+    super.key,
+    this.embeddedInBottomNav = false,
+    String? controllerTag,
+  }) : tag = controllerTag;
+
+  final bool embeddedInBottomNav;
+
+  @override
+  final String? tag;
+
+  static const double _bottomNavClearance = 94;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
+    final body = _screenBody(context);
+    if (embeddedInBottomNav) return body;
+    return Scaffold(body: body);
+  }
+
+  Widget _screenBody(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
+      ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              const Color(0xFF5C0A68).withValues(alpha: 0.52),
+              const Color(0xFF170D59).withValues(alpha: 0.72),
+            ],
+          ),
         ),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                const Color(0xFF5C0A68).withValues(alpha: 0.52),
-                const Color(0xFF170D59).withValues(alpha: 0.72),
-              ],
-            ),
-          ),
-          child: SafeArea(
-            child: Obx(() {
-              if (controller.isLoading.value) {
-                return const Center(
-                  child: CircularProgressIndicator(color: kColorPrimary),
-                );
-              }
-              return Column(
-                children: [
-                  _topBar(),
-                  Expanded(child: _mapStage(context)),
-                  if (controller.hasOverflowHosts)
-                    _overflowHostStrip(context),
-                  SizedBox(height: MediaQuery.paddingOf(context).bottom + 16),
-                ],
+        child: SafeArea(
+          bottom: !embeddedInBottomNav,
+          child: Obx(() {
+            if (controller.isLoading.value) {
+              return const Center(
+                child: CircularProgressIndicator(color: kColorPrimary),
               );
-            }),
-          ),
+            }
+            final bottomPad = embeddedInBottomNav
+                ? MediaQuery.paddingOf(context).bottom + _bottomNavClearance
+                : MediaQuery.paddingOf(context).bottom + 16;
+            return Column(
+              children: [
+                _topBar(),
+                Expanded(child: _mapStage(context)),
+                if (controller.hasOverflowHosts) _overflowHostStrip(context),
+                SizedBox(height: bottomPad),
+              ],
+            );
+          }),
         ),
       ),
     );
@@ -163,6 +181,7 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
 
   Widget _mapStage(BuildContext context) {
     return GetBuilder<AgencyHostListController>(
+      tag: tag,
       builder: (ctrl) {
         if (!ctrl.hasHosts) {
           return const Center(
@@ -255,6 +274,7 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
   /// Horizontal strip for hosts ranked below the top 10 tree slots.
   Widget _overflowHostStrip(BuildContext context) {
     return GetBuilder<AgencyHostListController>(
+      tag: tag,
       builder: (ctrl) {
         final overflow = ctrl.overflowHosts;
         if (overflow.isEmpty) return const SizedBox.shrink();

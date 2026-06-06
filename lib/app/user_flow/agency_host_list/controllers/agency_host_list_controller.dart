@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:qobo_one_live/app/user_flow/agency_owner_dashboard/models/agency_dashboard_data.dart';
-import 'package:qobo_one_live/app/user_flow/agency_owner_dashboard/models/agency_revenue_demo.dart';
+import 'package:qobo_one_live/app/bottom_nav/controllers/bottom_nav_controller.dart';
 import 'package:qobo_one_live/app/user_flow/live_action/models/live_map_host.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/repo/agency/agency_api_utils.dart';
 import 'package:qobo_one_live/repo/agency/agency_repo.dart';
 import 'package:qobo_one_live/services/agency_session_controller.dart';
+
+import '../../agency_owner_dashboard/models/agency_dashboard_data.dart';
+import '../../agency_owner_dashboard/models/agency_revenue_demo.dart';
 
 class AgencyHostModel {
   AgencyHostModel({
@@ -88,10 +90,17 @@ class AgencyHostModel {
 }
 
 class AgencyHostListController extends GetxController {
+  AgencyHostListController({this.embeddedInBottomNav = false});
+
+  final bool embeddedInBottomNav;
+
   static const maxTreeHosts = 10;
 
   /// Minimum nodes drawn on the tree so 1–2 hosts still show the full network.
   static const minTreeVisualSlots = 8;
+
+  /// Host-list API filter — active/approved hosts only (matches dashboard View all).
+  static const String hostListStatus = 'active';
 
   final AgencyRepo _agencyRepo = AgencyRepo();
 
@@ -101,22 +110,33 @@ class AgencyHostListController extends GetxController {
   final highlightHostId = RxnString();
   final processingReviewId = ''.obs;
 
+  bool _fetchedWithAgencyContext = false;
+  int _fetchSeq = 0;
+
+  /// Whether the last host-list fetch ran after agency id was known.
+  bool get fetchedWithAgencyContext => _fetchedWithAgencyContext;
+
   /// Top-ranked hosts rendered on the constellation tree (max 10).
   List<LiveMapHost> mapHosts = [];
 
   /// Hosts beyond [maxTreeHosts], shown in the bottom horizontal strip.
   List<AgencyHostModel> overflowHosts = [];
 
-  AgencySessionController get _session => Get.find<AgencySessionController>();
+  AgencySessionController? get _session =>
+      Get.isRegistered<AgencySessionController>()
+      ? Get.find<AgencySessionController>()
+      : null;
 
   bool get hasHosts => hostList.isNotEmpty;
 
   bool get hasOverflowHosts => overflowHosts.isNotEmpty;
 
   String get agencyDisplayName {
-    final name = _session.agencyName.value.trim();
+    final name = _session?.agencyName.value.trim() ?? '';
     if (name.isNotEmpty) return name;
-    return AgencyRevenueDemo.agencyName;
+    final applied = _session?.appliedAgencyName.value.trim() ?? '';
+    if (applied.isNotEmpty) return applied;
+    return 'Agency';
   }
 
   /// Tree slots ordered top → bottom. Index 0 = highest level (top center).
@@ -153,22 +173,24 @@ class AgencyHostListController extends GetxController {
     _fetchHosts();
   }
 
-  Future<void> _fetchHosts() async {
-    isLoading.value = true;
+  Future<void> _fetchHosts({bool showLoading = true}) async {
+    final seq = ++_fetchSeq;
+    if (showLoading) {
+      isLoading.value = true;
+    }
     loadError.value = '';
 
-    final agencyId = _session.agencyId.value;
-    if (agencyId.isEmpty) {
-      _applyHosts(_hostsWithoutAgencyId());
-      isLoading.value = false;
-      return;
-    }
+    await _session?.ensureHydratedFromDashboard();
+    if (seq != _fetchSeq) return;
+
+    final agencyId = _session?.agencyId.value.trim() ?? '';
+    _fetchedWithAgencyContext = agencyId.isNotEmpty;
 
     var loadedFromApi = false;
     try {
       final response = await _agencyRepo.getAgencyHostsList(
-        agencyId: agencyId,
-        status: 'all',
+        agencyId: agencyId.isNotEmpty ? agencyId : null,
+        status: hostListStatus,
         isShowLoader: false,
       );
       final data = response?['data'];
@@ -180,13 +202,17 @@ class AgencyHostListController extends GetxController {
               .map((e) => AgencyHostModel.fromApi(Map<String, dynamic>.from(e)))
               .toList(),
         );
-        isLoading.value = false;
+        if (seq == _fetchSeq) {
+          isLoading.value = false;
+        }
         return;
       }
       loadError.value = agencyApiMessage(response) ?? 'Could not load hosts.';
     } catch (_) {
       loadError.value = 'Network error.';
     }
+
+    if (seq != _fetchSeq) return;
 
     // Only fall back when the API call failed — not when it returned [].
     if (!loadedFromApi) {
@@ -197,15 +223,18 @@ class AgencyHostListController extends GetxController {
 
   /// Session cache used when agency id is missing or host-list request fails.
   List<AgencyHostModel> _hostsWithoutAgencyId() {
-    final cached = _session.cachedHosts;
-    if (cached.isNotEmpty) {
-      return cached.map(AgencyHostModel.fromDemo).toList();
+    final cached = _session?.cachedHosts;
+    if (cached != null && cached.isNotEmpty) {
+      return cached
+          .map(AgencyHostModel.fromDemo)
+          .where((h) => h.isActive)
+          .toList();
     }
     return [];
   }
 
   void _applyHosts(List<AgencyHostModel> hosts) {
-    hostList.assignAll(hosts);
+    hostList.assignAll(hosts.where((h) => h.isActive));
     _buildMapHosts();
   }
 
@@ -217,7 +246,7 @@ class AgencyHostListController extends GetxController {
   /// - Blank placeholder slots pad the tree when host count < [minTreeVisualSlots].
   void _buildMapHosts() {
     final sorted = List<AgencyHostModel>.from(
-      hostList.where((h) => !h.isRejected),
+      hostList.where((h) => h.isActive),
     )
       ..sort((a, b) {
         final byLevel = b.coinsPerSecond.compareTo(a.coinsPerSecond);
@@ -279,11 +308,17 @@ class AgencyHostListController extends GetxController {
     );
   }
 
-  void refreshList() {
-    _fetchHosts();
+  void refreshList({bool showLoading = true}) {
+    _fetchHosts(showLoading: showLoading);
   }
 
   void onBackPressed() {
+    if (embeddedInBottomNav) {
+      if (Get.isRegistered<BottomNavController>()) {
+        Get.find<BottomNavController>().onNavBarTabSelected(0);
+      }
+      return;
+    }
     Get.back<void>();
   }
 

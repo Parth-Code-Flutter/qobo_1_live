@@ -2,8 +2,9 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/agency_owner_dashboard/models/agency_dashboard_data.dart';
 import 'package:qobo_one_live/app/user_flow/agency_owner_dashboard/models/agency_revenue_demo.dart';
 import 'package:qobo_one_live/app/user_flow/agency_owner_status/models/agency_owner_application_state.dart';
-import 'package:qobo_one_live/repo/agency/agency_api_utils.dart';
 import 'package:qobo_one_live/constants/local_storage_constants.dart';
+import 'package:qobo_one_live/repo/agency/agency_api_utils.dart';
+import 'package:qobo_one_live/repo/agency/agency_repo.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 
 /// Agency owner session: application review state + approved agency context.
@@ -26,6 +27,8 @@ class AgencySessionController extends GetxController {
 
   /// Hosts from last successful dashboard API (for heart-tab map).
   final cachedHosts = <AgencyHostRevenueDemo>[].obs;
+
+  Future<void>? _hydrateInFlight;
 
   bool get hasApprovedAgency =>
       hasAgency.value &&
@@ -54,6 +57,46 @@ class AgencySessionController extends GetxController {
     final json = await _storage.getJsonFromStorage(kStorageAgencyOwnerApplication);
     if (json == null || json.isEmpty) return;
     _applyApplicationJson(json, persist: false);
+  }
+
+  /// Loads agency id/name/hosts from dashboard when memory session is empty (cold start).
+  Future<void> ensureHydratedFromDashboard({bool forceRefresh = false}) async {
+    await loadFromStorage();
+
+    if (!forceRefresh &&
+        agencyId.value.trim().isNotEmpty &&
+        hasApprovedAgency) {
+      return;
+    }
+
+    if (_hydrateInFlight != null) {
+      await _hydrateInFlight;
+      return;
+    }
+
+    _hydrateInFlight = _fetchDashboardIntoSession();
+    try {
+      await _hydrateInFlight;
+    } finally {
+      _hydrateInFlight = null;
+    }
+  }
+
+  Future<void> _fetchDashboardIntoSession() async {
+    try {
+      final response = await AgencyRepo().getAgencyDashboard(
+        isShowLoader: false,
+      );
+      final data = response?['data'];
+      if (!isAgencyApiSuccess(response) || data is! Map) return;
+
+      final parsed = AgencyDashboardData.fromJson(
+        Map<String, dynamic>.from(data),
+      );
+      await applyDashboardResponse(parsed);
+    } catch (_) {
+      // Non-agency users or offline — host-list may still work via auth token.
+    }
   }
 
   Future<void> setPendingApplication({
