@@ -12,6 +12,7 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import '../controllers/agency_host_onboarding_controller.dart';
 import '../models/agency_host_interest.dart';
 import '../models/agency_host_type.dart';
+import '../widgets/agency_host_category_picker.dart';
 
 /// Agency host onboarding form — `POST /api/agency/host-onboarding`.
 class AgencyHostOnboardingView extends GetView<AgencyHostOnboardingController> {
@@ -394,52 +395,24 @@ class AgencyHostOnboardingView extends GetView<AgencyHostOnboardingController> {
   }
 
   Widget _categoryDropdown(BuildContext context) {
-    return _labeledField(
-      label: 'Category',
-      child: Obx(
-        () => DropdownButtonFormField<AgencyHostInterest>(
-          value: controller.selectedInterest.value,
-          isExpanded: true,
-          hint: AppText(
-            text: 'Select interest',
-            fontSize: TextStyles.k14FontSize,
-            color: kColorHint.withValues(alpha: 0.9),
-          ),
-          decoration: InputDecoration(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 12,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: kColorHint.withValues(alpha: 0.5)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: kColorHint.withValues(alpha: 0.5)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: kColorPrimary, width: 1.2),
+    return FormField<AgencyHostInterest>(
+      validator: (_) => controller.validateInterest(),
+      builder: (field) {
+        return Obx(
+          () => _labeledField(
+            label: 'Category',
+            child: AgencyHostCategoryField(
+              selected: controller.selectedInterest.value,
+              errorText: field.errorText,
+              onTap: () async {
+                await controller.pickCategory(context);
+                field.didChange(controller.selectedInterest.value);
+                field.validate();
+              },
             ),
           ),
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: kColorHint),
-          items: AgencyHostInterest.values
-              .map(
-                (interest) => DropdownMenuItem(
-                  value: interest,
-                  child: AppText(
-                    text: interest.label,
-                    fontSize: TextStyles.k14FontSize,
-                    color: kColorText,
-                  ),
-                ),
-              )
-              .toList(),
-          onChanged: controller.selectInterest,
-          validator: (_) => controller.validateInterest(),
-        ),
-      ),
+        );
+      },
     );
   }
 

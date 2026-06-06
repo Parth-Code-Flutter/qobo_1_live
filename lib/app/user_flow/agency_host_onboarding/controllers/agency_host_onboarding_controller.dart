@@ -16,6 +16,7 @@ import 'package:qobo_one_live/services/agency_session_controller.dart';
 
 import '../models/agency_host_interest.dart';
 import '../models/agency_host_type.dart';
+import '../widgets/agency_host_category_picker.dart';
 
 class AgencyHostOnboardingController extends GetxController {
   final formKey = GlobalKey<FormState>();
@@ -113,6 +114,17 @@ class AgencyHostOnboardingController extends GetxController {
 
   void selectType(AgencyHostType type) {
     selectedType.value = type;
+  }
+
+  Future<void> pickCategory(BuildContext context) async {
+    FocusScope.of(context).unfocus();
+    final picked = await showAgencyHostCategoryPicker(
+      context,
+      selected: selectedInterest.value,
+    );
+    if (picked != null) {
+      selectInterest(picked);
+    }
   }
 
   void selectInterest(AgencyHostInterest? interest) {
