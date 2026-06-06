@@ -133,6 +133,11 @@ class AgencyHostRevenueDemo {
     required this.callingMinutes,
     required this.lastViewer,
     this.photoUrl,
+    this.applicationId = '',
+    this.phone = '',
+    this.gmail = '',
+    this.category = '',
+    this.reason,
   });
 
   final String id;
@@ -145,6 +150,11 @@ class AgencyHostRevenueDemo {
   final int callingMinutes;
   final String lastViewer;
   final String? photoUrl;
+  final String applicationId;
+  final String phone;
+  final String gmail;
+  final String category;
+  final String? reason;
 }
 
 class AgencyRevenueHistoryDemo {

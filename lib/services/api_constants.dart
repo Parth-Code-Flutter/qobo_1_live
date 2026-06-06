@@ -117,6 +117,9 @@ class AgencyEndpoints {
   /// GET /api/agency/generate-link
   static const String generateLink = '/api/agency/generate-link';
 
+  /// GET /api/agency/host-applications
+  static const String hostApplications = '/api/agency/host-applications';
+
   /// GET /api/agency/host-list
   static const String hostList = '/api/agency/host-list';
 

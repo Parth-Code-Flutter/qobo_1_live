@@ -20,6 +20,11 @@ class AgencyHostModel {
     required this.callingMinutes,
     required this.coinsPerSecond,
     required this.lastViewer,
+    this.applicationId = '',
+    this.phone = '',
+    this.gmail = '',
+    this.category = '',
+    this.reason,
   });
 
   final String id;
@@ -32,6 +37,18 @@ class AgencyHostModel {
   final int callingMinutes;
   final int coinsPerSecond;
   final String lastViewer;
+  final String applicationId;
+  final String phone;
+  final String gmail;
+  final String category;
+  final String? reason;
+
+  bool get isPending => isHostStatusPending(status);
+  bool get isActive => isHostStatusActive(status);
+  bool get isRejected => isHostStatusRejected(status);
+
+  String get reviewApplicationId =>
+      applicationId.isNotEmpty ? applicationId : id;
 
   factory AgencyHostModel.fromDemo(AgencyHostRevenueDemo demo) {
     return AgencyHostModel(
@@ -45,12 +62,28 @@ class AgencyHostModel {
       callingMinutes: demo.callingMinutes,
       coinsPerSecond: demo.coinsPerSecond,
       lastViewer: demo.lastViewer,
+      applicationId: demo.applicationId,
+      phone: demo.phone,
+      gmail: demo.gmail,
+      category: demo.category,
+      reason: demo.reason,
     );
   }
 
   factory AgencyHostModel.fromApi(Map<String, dynamic> json) {
     final host = parseHostFromApi(json);
     return AgencyHostModel.fromDemo(host);
+  }
+
+  /// Maps `GET /api/agency/host-applications` item shape.
+  factory AgencyHostModel.fromApplicationJson(Map<String, dynamic> json) {
+    final demo = parseHostFromApi({
+      ...json,
+      'id': json['hostId']?.toString() ?? json['applicationId']?.toString(),
+      'name': json['hostName']?.toString() ?? json['name']?.toString(),
+      'applicationId': json['applicationId']?.toString(),
+    });
+    return AgencyHostModel.fromDemo(demo);
   }
 }
 
@@ -66,6 +99,7 @@ class AgencyHostListController extends GetxController {
   final loadError = ''.obs;
   final hostList = <AgencyHostModel>[].obs;
   final highlightHostId = RxnString();
+  final processingReviewId = ''.obs;
 
   /// Top-ranked hosts rendered on the constellation tree (max 10).
   List<LiveMapHost> mapHosts = [];
@@ -134,6 +168,7 @@ class AgencyHostListController extends GetxController {
     try {
       final response = await _agencyRepo.getAgencyHostsList(
         agencyId: agencyId,
+        status: 'all',
         isShowLoader: false,
       );
       final data = response?['data'];
@@ -181,7 +216,9 @@ class AgencyHostListController extends GetxController {
   /// - Highest-level host uses tree slot 0 (top center).
   /// - Blank placeholder slots pad the tree when host count < [minTreeVisualSlots].
   void _buildMapHosts() {
-    final sorted = List<AgencyHostModel>.from(hostList)
+    final sorted = List<AgencyHostModel>.from(
+      hostList.where((h) => !h.isRejected),
+    )
       ..sort((a, b) {
         final byLevel = b.coinsPerSecond.compareTo(a.coinsPerSecond);
         if (byLevel != 0) return byLevel;
@@ -225,8 +262,9 @@ class AgencyHostListController extends GetxController {
           rankIndex.clamp(0, _treeAlignmentsByRank.length - 1)],
       isAgencyHost: true,
       avatarUrl: host.avatarUrl.isNotEmpty ? host.avatarUrl : null,
-      hostId: host.id,
+      hostId: host.id.isNotEmpty ? host.id : host.reviewApplicationId,
       level: host.coinsPerSecond,
+      isPending: host.isPending,
     );
   }
 
@@ -253,9 +291,92 @@ class AgencyHostListController extends GetxController {
   AgencyHostModel? hostById(String? hostId) {
     if (hostId == null || hostId.isEmpty) return null;
     for (final host in hostList) {
-      if (host.id == hostId) return host;
+      if (host.id == hostId ||
+          host.reviewApplicationId == hostId ||
+          host.applicationId == hostId) {
+        return host;
+      }
     }
     return null;
+  }
+
+  Future<bool> approveHostApplication(AgencyHostModel host) async {
+    final id = host.reviewApplicationId;
+    if (id.isEmpty) return false;
+
+    processingReviewId.value = id;
+    try {
+      final response = await _agencyRepo.approveHostApplication(
+        applicationId: id,
+        coinsPerSecond: host.coinsPerSecond > 0 ? host.coinsPerSecond : 5,
+      );
+      if (isAgencyApiSuccess(response)) {
+        hostList.removeWhere((h) => h.reviewApplicationId == id);
+        _buildMapHosts();
+        Get.snackbar(
+          'Approved',
+          agencyApiMessage(response) ?? '${host.name} is now active.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green.withValues(alpha: 0.85),
+          colorText: Colors.white,
+        );
+        return true;
+      }
+      Get.snackbar(
+        'Failed',
+        agencyApiMessage(response) ?? 'Could not approve host.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (_) {
+      Get.snackbar(
+        'Error',
+        'Network error while approving.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } finally {
+      processingReviewId.value = '';
+    }
+    return false;
+  }
+
+  Future<bool> rejectHostApplication(
+    AgencyHostModel host,
+    String reason,
+  ) async {
+    final id = host.reviewApplicationId;
+    if (id.isEmpty) return false;
+
+    processingReviewId.value = id;
+    try {
+      final response = await _agencyRepo.rejectHostApplication(
+        applicationId: id,
+        reason: reason,
+      );
+      if (isAgencyApiSuccess(response)) {
+        hostList.removeWhere((h) => h.reviewApplicationId == id);
+        _buildMapHosts();
+        Get.snackbar(
+          'Rejected',
+          agencyApiMessage(response) ?? '${host.name} was rejected.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return true;
+      }
+      Get.snackbar(
+        'Failed',
+        agencyApiMessage(response) ?? 'Could not reject host.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (_) {
+      Get.snackbar(
+        'Error',
+        'Network error while rejecting.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } finally {
+      processingReviewId.value = '';
+    }
+    return false;
   }
 
   String formatCoins(int value) {

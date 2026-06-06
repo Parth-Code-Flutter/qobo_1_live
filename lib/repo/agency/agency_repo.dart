@@ -152,17 +152,94 @@ class AgencyRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
-  /// Calls `GET /api/agency/host-list?agency_id=...` to fetch hosts registered under an agency.
+  /// Calls `GET /api/agency/host-list` — hosts under the logged-in agency.
   Future<Map<String, dynamic>?> getAgencyHostsList({
-    required String agencyId,
+    String? agencyId,
+    String status = 'all',
     bool isShowLoader = true,
   }) async {
+    final params = <String, String>{'status': status.trim()};
+    final id = agencyId?.trim();
+    if (id != null && id.isNotEmpty) {
+      params['agency_id'] = id;
+    }
     final response = await _apiService.getRequest(
-      endPoint:
-          '${AgencyEndpoints.hostList}?agency_id=${Uri.encodeComponent(agencyId)}',
+      endPoint: '${AgencyEndpoints.hostList}?${Uri(queryParameters: params).query}',
       isShowLoader: isShowLoader,
     );
 
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// `GET /api/agency/host-applications?status=pending`
+  Future<Map<String, dynamic>?> getHostApplications({
+    String status = 'pending',
+    int page = 1,
+    int limit = 20,
+    bool isShowLoader = true,
+  }) async {
+    final params = <String, String>{
+      'status': status.trim(),
+      'page': '$page',
+      'limit': '$limit',
+    };
+    final response = await _apiService.getRequest(
+      endPoint:
+          '${AgencyEndpoints.hostApplications}?${Uri(queryParameters: params).query}',
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// `GET /api/agency/host-applications/{id}`
+  Future<Map<String, dynamic>?> getHostApplicationDetail({
+    required String applicationId,
+    bool isShowLoader = true,
+  }) async {
+    final id = applicationId.trim();
+    final response = await _apiService.getRequest(
+      endPoint: '${AgencyEndpoints.hostApplications}/$id',
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// `POST /api/agency/host-applications/{id}/approve`
+  Future<Map<String, dynamic>?> approveHostApplication({
+    required String applicationId,
+    int? coinsPerSecond,
+    String? note,
+    bool isShowLoader = true,
+  }) async {
+    final body = <String, dynamic>{
+      if (coinsPerSecond != null) 'coins_per_second': coinsPerSecond,
+      if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+    };
+    final response = await _apiService.postRequest(
+      endPoint:
+          '${AgencyEndpoints.hostApplications}/${applicationId.trim()}/approve',
+      requestModel: body,
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// `POST /api/agency/host-applications/{id}/reject`
+  Future<Map<String, dynamic>?> rejectHostApplication({
+    required String applicationId,
+    required String reason,
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint:
+          '${AgencyEndpoints.hostApplications}/${applicationId.trim()}/reject',
+      requestModel: {'reason': reason.trim()},
+      isShowLoader: isShowLoader,
+    );
     if (response == null) return null;
     return ApiResponseUtils.tryDecodeMap(response.body);
   }

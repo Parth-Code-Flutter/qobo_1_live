@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/utils/app_widgets/agency_host_review_actions.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_bottom_sheet.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/safe_network_avatar.dart';
@@ -329,10 +330,25 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
       theme: AppBottomSheetTheme.dark,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-        child: _HostSheetCard(
-          host: host,
-          formatCoins: controller.formatCoins,
-          showHostId: true,
+        child: Obx(
+          () => _HostSheetCard(
+            host: host,
+            formatCoins: controller.formatCoins,
+            showHostId: true,
+            showReviewActions: host.isPending,
+            isProcessing: controller.processingReviewId.value ==
+                host.reviewApplicationId,
+            onApprove: () async {
+              final ok = await controller.approveHostApplication(host);
+              if (ok && context.mounted) Navigator.of(context).pop();
+            },
+            onReject: () async {
+              final reason = await showAgencyHostRejectReasonDialog(context);
+              if (reason == null || reason.isEmpty) return;
+              final ok = await controller.rejectHostApplication(host, reason);
+              if (ok && context.mounted) Navigator.of(context).pop();
+            },
+          ),
         ),
       ),
     );
@@ -385,12 +401,20 @@ class _HostSheetCard extends StatelessWidget {
     required this.formatCoins,
     this.highlighted = false,
     this.showHostId = false,
+    this.showReviewActions = false,
+    this.isProcessing = false,
+    this.onApprove,
+    this.onReject,
   });
 
   final AgencyHostModel host;
   final String Function(int) formatCoins;
   final bool highlighted;
   final bool showHostId;
+  final bool showReviewActions;
+  final bool isProcessing;
+  final VoidCallback? onApprove;
+  final VoidCallback? onReject;
 
   @override
   Widget build(BuildContext context) {
@@ -482,6 +506,17 @@ class _HostSheetCard extends StatelessWidget {
               text: 'Host ID: ${host.id}',
               fontSize: TextStyles.k10FontSize,
               color: kColorWhite.withValues(alpha: 0.45),
+            ),
+          ],
+          if (showReviewActions &&
+              onApprove != null &&
+              onReject != null) ...[
+            Spacing.v12,
+            AgencyHostReviewActions(
+              onApprove: onApprove!,
+              onReject: onReject!,
+              isProcessing: isProcessing,
+              compact: true,
             ),
           ],
         ],
@@ -605,7 +640,7 @@ class _MapUserNode extends StatelessWidget {
                   width: 10,
                   height: 10,
                   decoration: BoxDecoration(
-                    color: Colors.greenAccent,
+                    color: host.isPending ? Colors.orangeAccent : Colors.greenAccent,
                     shape: BoxShape.circle,
                     border: Border.all(color: kColorWhite, width: 1),
                   ),

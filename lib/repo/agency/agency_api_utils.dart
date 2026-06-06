@@ -58,6 +58,19 @@ bool isAgencyStatusPending(String? status) {
       value == 'submitted';
 }
 
+bool isHostStatusPending(String? status) =>
+    isAgencyStatusPending(status);
+
+bool isHostStatusActive(String? status) {
+  final value = status?.trim().toLowerCase() ?? '';
+  return value == 'active' || value == 'approved';
+}
+
+bool isHostStatusRejected(String? status) {
+  final value = status?.trim().toLowerCase() ?? '';
+  return value == 'rejected';
+}
+
 /// Backend `dob` field format (`yyyy-MM-dd`).
 String formatAgencyHostDob(DateTime date) {
   final month = date.month.toString().padLeft(2, '0');

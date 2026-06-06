@@ -148,6 +148,16 @@ class AgencyOwnerDashboardController extends GetxController {
     Get.toNamed(Routes.AGENCY_HOST_LIST);
   }
 
+  void openPendingHosts() {
+    Get.toNamed(Routes.AGENCY_PENDING_HOSTS);
+  }
+
+  int get pendingHostApplicationsCount =>
+      dashboard.value?.pendingHostApplications ?? 0;
+
+  List<AgencyPendingApplicationPreview> get pendingApplicationsPreview =>
+      dashboard.value?.pendingApplications ?? const [];
+
   void openRevenue() {
     Get.toNamed(Routes.AGENCY_REVENUE);
   }

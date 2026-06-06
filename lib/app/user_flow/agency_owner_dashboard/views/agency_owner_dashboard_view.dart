@@ -190,6 +190,10 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
           Spacing.v16,
           _sampleCallCard(),
           Spacing.v20,
+          if (controller.pendingHostApplicationsCount > 0) ...[
+            _pendingHostsBanner(),
+            Spacing.v16,
+          ],
           _sectionHeader(
             title: 'Top hosts',
             action: 'View all',
@@ -1040,6 +1044,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
     required String label,
     required Color color,
     required VoidCallback onTap,
+    int badgeCount = 0,
   }) {
     return Material(
       color: Colors.transparent,
@@ -1047,20 +1052,116 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(_DashUi.radiusMd),
         child: Ink(
-          padding: const EdgeInsets.symmetric(vertical: 18),
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(_DashUi.radiusMd),
-            border: Border.all(color: color.withValues(alpha: 0.28)),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                color.withValues(alpha: 0.22),
+                color.withValues(alpha: 0.08),
+              ],
+            ),
+            border: Border.all(color: color.withValues(alpha: 0.35)),
           ),
-          child: Column(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+          child: Stack(
+            clipBehavior: Clip.none,
             children: [
-              Icon(icon, color: color, size: 26),
-              Spacing.v8,
-              SemiBoldText(
-                text: label,
-                fontSize: TextStyles.k14FontSize,
-                color: kColorWhite,
+              Column(
+                children: [
+                  Icon(icon, color: color, size: 26),
+                  Spacing.v8,
+                  SemiBoldText(
+                    text: label,
+                    fontSize: TextStyles.k12FontSize,
+                    color: kColorWhite,
+                    align: TextAlign.center,
+                  ),
+                ],
+              ),
+              if (badgeCount > 0)
+                Positioned(
+                  right: -2,
+                  top: -4,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.orangeAccent,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: SemiBoldText(
+                      text: '$badgeCount',
+                      fontSize: TextStyles.k10FontSize,
+                      color: kColorWhite,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _pendingHostsBanner() {
+    final count = controller.pendingHostApplicationsCount;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: controller.openPendingHosts,
+        borderRadius: BorderRadius.circular(_DashUi.radiusMd),
+        child: Ink(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(_DashUi.radiusMd),
+            gradient: LinearGradient(
+              colors: [
+                Colors.orange.withValues(alpha: 0.28),
+                Colors.orange.withValues(alpha: 0.12),
+              ],
+            ),
+            border: Border.all(color: Colors.orangeAccent.withValues(alpha: 0.45)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.pending_actions_rounded,
+                  color: Colors.orangeAccent,
+                ),
+              ),
+              Spacing.h12,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SemiBoldText(
+                      text: '$count host${count == 1 ? '' : 's'} awaiting review',
+                      fontSize: TextStyles.k14FontSize,
+                      color: kColorWhite,
+                    ),
+                    Spacing.v2,
+                    AppText(
+                      text: 'Tap to review pending applications',
+                      fontSize: TextStyles.k10FontSize,
+                      color: _DashUi.textMuted,
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: kColorWhite.withValues(alpha: 0.7),
               ),
             ],
           ),

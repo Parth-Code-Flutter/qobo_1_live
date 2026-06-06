@@ -27,6 +27,8 @@ class AgencyDashboardData {
     required this.recruitLink,
     required this.hosts,
     this.latestCall,
+    this.pendingHostApplications = 0,
+    this.pendingApplications = const [],
     this.applicationState = AgencyOwnerApplicationState.none,
   });
 
@@ -52,6 +54,8 @@ class AgencyDashboardData {
   final String recruitLink;
   final List<AgencyHostRevenueDemo> hosts;
   final AgencyCallSample? latestCall;
+  final int pendingHostApplications;
+  final List<AgencyPendingApplicationPreview> pendingApplications;
 
   bool get isApproved => isAgencyStatusApproved(agencyStatus);
 
@@ -94,6 +98,8 @@ class AgencyDashboardData {
       payoutStatus: summary['payoutStatus']?.toString() ?? '',
       recruitLink: json['recruitLink']?.toString() ?? '',
       hosts: _parseHosts(json['hosts']),
+      pendingHostApplications: _toInt(summary['pendingHostApplications']),
+      pendingApplications: _parsePendingApplications(json['pendingApplications']),
       latestCall: latestRaw is Map
           ? _parseLatestCall(Map<String, dynamic>.from(latestRaw))
           : null,
@@ -105,6 +111,20 @@ class AgencyDashboardData {
     return raw
         .whereType<Map>()
         .map((e) => parseHostFromApi(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
+  static List<AgencyPendingApplicationPreview> _parsePendingApplications(
+    dynamic raw,
+  ) {
+    if (raw is! List) return [];
+    return raw
+        .whereType<Map>()
+        .map(
+          (e) => AgencyPendingApplicationPreview.fromJson(
+            Map<String, dynamic>.from(e),
+          ),
+        )
         .toList();
   }
 
@@ -141,8 +161,11 @@ AgencyCallSample _parseLatestCall(Map<String, dynamic> json) {
 
 AgencyHostRevenueDemo parseHostFromApi(Map<String, dynamic> json) {
   return AgencyHostRevenueDemo(
-    id: json['id']?.toString() ?? '',
-    name: json['name']?.toString() ?? '',
+    id: json['id']?.toString() ??
+        json['applicationId']?.toString() ??
+        json['hostId']?.toString() ??
+        '',
+    name: json['name']?.toString() ?? json['hostName']?.toString() ?? '',
     status: json['status']?.toString() ?? 'active',
     coinsPerSecond: _toInt(json['coinsPerSecond']),
     totalEarnings: _toInt(json['totalEarnings']),
@@ -151,6 +174,13 @@ AgencyHostRevenueDemo parseHostFromApi(Map<String, dynamic> json) {
     callingMinutes: _toInt(json['callingMinutes']),
     lastViewer: json['lastViewer']?.toString() ?? '',
     photoUrl: json['photo']?.toString(),
+    applicationId: json['applicationId']?.toString() ??
+        json['application_id']?.toString() ??
+        '',
+    phone: json['phone']?.toString() ?? '',
+    gmail: json['gmail']?.toString() ?? '',
+    category: json['category']?.toString() ?? '',
+    reason: json['reason']?.toString(),
   );
 }
 
@@ -158,4 +188,33 @@ int _toInt(dynamic value) {
   if (value is int) return value;
   if (value is num) return value.round();
   return int.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+/// Quick preview item from dashboard `pendingApplications`.
+class AgencyPendingApplicationPreview {
+  const AgencyPendingApplicationPreview({
+    required this.applicationId,
+    required this.hostName,
+    required this.status,
+    this.photo,
+    this.createdAt,
+  });
+
+  final String applicationId;
+  final String hostName;
+  final String status;
+  final String? photo;
+  final String? createdAt;
+
+  factory AgencyPendingApplicationPreview.fromJson(Map<String, dynamic> json) {
+    return AgencyPendingApplicationPreview(
+      applicationId: json['applicationId']?.toString() ??
+          json['application_id']?.toString() ??
+          '',
+      hostName: json['hostName']?.toString() ?? json['name']?.toString() ?? '',
+      status: json['status']?.toString() ?? 'pending',
+      photo: json['photo']?.toString(),
+      createdAt: json['createdAt']?.toString(),
+    );
+  }
 }

@@ -31,6 +31,8 @@ import '../app/user_flow/agency_recruit_link/bindings/agency_recruit_link_bindin
 import '../app/user_flow/agency_recruit_link/views/agency_recruit_link_view.dart';
 import '../app/user_flow/agency_host_list/bindings/agency_host_list_binding.dart';
 import '../app/user_flow/agency_host_list/views/agency_host_list_view.dart';
+import '../app/user_flow/agency_pending_hosts/bindings/agency_pending_hosts_binding.dart';
+import '../app/user_flow/agency_pending_hosts/views/agency_pending_hosts_view.dart';
 import '../app/user_flow/agency_revenue/bindings/agency_revenue_binding.dart';
 import '../app/user_flow/agency_revenue/views/agency_revenue_view.dart';
 import '../app/user_flow/live_action/bindings/live_action_binding.dart';
@@ -177,6 +179,11 @@ class AppPages {
       name: _Paths.AGENCY_HOST_LIST,
       page: () => const AgencyHostListView(),
       binding: AgencyHostListBinding(),
+    ),
+    GetPage(
+      name: _Paths.AGENCY_PENDING_HOSTS,
+      page: () => const AgencyPendingHostsView(),
+      binding: AgencyPendingHostsBinding(),
     ),
     GetPage(
       name: _Paths.AGENCY_REVENUE,

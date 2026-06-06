@@ -12,6 +12,7 @@ class LiveMapHost {
     this.avatarUrl,
     this.hostId,
     this.level = 0,
+    this.isPending = false,
   });
 
   final String name;
@@ -29,4 +30,7 @@ class LiveMapHost {
 
   /// Sort key — higher value = higher rank in agency tree.
   final int level;
+
+  /// Pending review — shows orange status dot on agency tree.
+  final bool isPending;
 }

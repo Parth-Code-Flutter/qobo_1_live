@@ -20,6 +20,7 @@ abstract class Routes {
   static const AGENCY_OWNER_STATUS = _Paths.AGENCY_OWNER_STATUS;
   static const AGENCY_RECRUIT_LINK = _Paths.AGENCY_RECRUIT_LINK;
   static const AGENCY_HOST_LIST = _Paths.AGENCY_HOST_LIST;
+  static const AGENCY_PENDING_HOSTS = _Paths.AGENCY_PENDING_HOSTS;
   static const AGENCY_REVENUE = _Paths.AGENCY_REVENUE;
   static const LIVE_ACTION = _Paths.LIVE_ACTION;
   static const JOIN_LIVE = _Paths.JOIN_LIVE;
@@ -70,6 +71,7 @@ abstract class _Paths {
   static const AGENCY_OWNER_STATUS = '/agency-owner-status';
   static const AGENCY_RECRUIT_LINK = '/agency-recruit-link';
   static const AGENCY_HOST_LIST = '/agency-host-list';
+  static const AGENCY_PENDING_HOSTS = '/agency-pending-hosts';
   static const AGENCY_REVENUE = '/agency-revenue';
   static const LIVE_ACTION = '/live-action';
   static const JOIN_LIVE = '/join-live';
