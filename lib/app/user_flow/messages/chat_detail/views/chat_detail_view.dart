@@ -34,16 +34,22 @@ class ChatDetailView extends GetView<ChatDetailController> {
                 if (controller.messages.isEmpty) {
                   return const _ChatEmptyState();
                 }
-                return ListView.separated(
+                final entries = controller.timelineEntries;
+                return ListView.builder(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 20,
                   ),
-                  itemCount: controller.messages.length,
-                  separatorBuilder: (_, __) => Spacing.v16,
+                  itemCount: entries.length,
                   itemBuilder: (context, index) {
-                    final msg = controller.messages[index];
-                    return _buildMessageBubble(msg);
+                    final entry = entries[index];
+                    if (entry.isDateHeader) {
+                      return _buildDateHeader(entry.dateLabel!);
+                    }
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: _buildMessageBubble(entry.message!),
+                    );
                   },
                 );
               },
@@ -114,6 +120,26 @@ class ChatDetailView extends GetView<ChatDetailController> {
           text: '${controller.chatName.value} is typing...',
           fontSize: TextStyles.k12FontSize,
           color: kColorPrimary,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDateHeader(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: kColorAppBackground,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: AppText(
+            text: label,
+            fontSize: TextStyles.k12FontSize,
+            color: kColorHint,
+          ),
         ),
       ),
     );

@@ -12,9 +12,22 @@ import 'package:qobo_one_live/services/chat/chat_firebase_service.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
+import 'package:intl/intl.dart';
 
 /// WhatsApp-style delivery state for outgoing messages.
 enum ChatDeliveryStatus { sent, delivered, read }
+
+/// One row in the chat list — either a date separator or a message bubble.
+class ChatTimelineEntry {
+  const ChatTimelineEntry.dateHeader(this.dateLabel) : message = null;
+
+  const ChatTimelineEntry.message(this.message) : dateLabel = null;
+
+  final String? dateLabel;
+  final ChatMessageModel? message;
+
+  bool get isDateHeader => dateLabel != null;
+}
 
 class ChatMessageModel {
   ChatMessageModel({
@@ -93,6 +106,22 @@ class ChatDetailController extends GetxController {
   Color get presenceStatusColor {
     if (peerIsTyping.value) return kColorPrimary;
     return peerIsOnline.value ? kColorLiveLocation : kColorHint;
+  }
+
+  /// Messages grouped with WhatsApp-style date headers (Today, Yesterday, …).
+  List<ChatTimelineEntry> get timelineEntries {
+    final entries = <ChatTimelineEntry>[];
+    DateTime? lastDay;
+
+    for (final msg in messages) {
+      final day = _messageDay(msg);
+      if (lastDay == null || day != lastDay) {
+        entries.add(ChatTimelineEntry.dateHeader(_formatDateGroupLabel(day)));
+        lastDay = day;
+      }
+      entries.add(ChatTimelineEntry.message(msg));
+    }
+    return entries;
   }
 
   @override
@@ -287,11 +316,12 @@ class ChatDetailController extends GetxController {
       ),
     );
 
+    final now = DateTime.now();
     final optimistic = ChatMessageModel(
       text: text,
       isMe: true,
-      time: 'Now',
-      createdAt: DateTime.now(),
+      time: _formatTime(now),
+      createdAt: now,
       clientMessageId: clientMessageId,
       deliveryStatus: ChatDeliveryStatus.sent,
     );
@@ -365,14 +395,13 @@ class ChatDetailController extends GetxController {
       final fallback = json['clientCreatedAt'];
       createdAt = _parseTimestamp(fallback);
     }
-    final createdAtIso = createdAt?.toIso8601String();
     final isMe = myId.isNotEmpty && senderId == myId;
 
     return ChatMessageModel(
       id: json['id']?.toString() ?? json['messageId']?.toString(),
       text: _extractContent(json['content']),
       isMe: isMe,
-      time: _formatTime(createdAtIso),
+      time: _formatTime(createdAt),
       createdAt: createdAt,
       clientMessageId: json['clientMessageId']?.toString(),
       deliveryStatus: isMe
@@ -438,16 +467,26 @@ class ChatDetailController extends GetxController {
     return merged;
   }
 
-  static String _formatTime(String? raw) {
-    if (raw == null || raw.isEmpty) return '';
-    try {
-      final dt = DateTime.parse(raw).toLocal();
-      final h = dt.hour.toString().padLeft(2, '0');
-      final m = dt.minute.toString().padLeft(2, '0');
-      return '$h:$m';
-    } catch (_) {
-      return raw;
+  static DateTime _messageDay(ChatMessageModel msg) {
+    final dt = msg.createdAt?.toLocal() ?? DateTime.now();
+    return DateTime(dt.year, dt.month, dt.day);
+  }
+
+  static String _formatDateGroupLabel(DateTime day) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    if (day == today) return 'Today';
+    if (day == yesterday) return 'Yesterday';
+    if (day.year == now.year) {
+      return DateFormat('d MMMM').format(day);
     }
+    return DateFormat('d MMMM yyyy').format(day);
+  }
+
+  static String _formatTime(DateTime? dt) {
+    if (dt == null) return '';
+    return DateFormat('h:mm a').format(dt.toLocal());
   }
 
   @override
