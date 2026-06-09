@@ -1,0 +1,37 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isMember(roomId) {
+      return request.auth != null
+        && request.auth.uid in get(/databases/$(database)/documents/chatRooms/$(roomId)).data.memberIds;
+    }
+
+    match /chatRooms/{roomId} {
+      allow read: if isMember(roomId);
+      allow create, update: if false; // Admin SDK only
+
+      match /messages/{messageId} {
+        allow read: if isMember(roomId);
+        allow create: if isMember(roomId)
+          && request.resource.data.senderId == request.auth.uid;
+        allow update: if isMember(roomId);
+      }
+
+      match /typing/{userId} {
+        allow read: if isMember(roomId);
+        allow write: if request.auth.uid == userId && isMember(roomId);
+      }
+    }
+
+    match /userChats/{userId}/rooms/{roomId} {
+      allow read, update: if request.auth.uid == userId;
+      allow create: if false; // Admin SDK only
+    }
+
+    match /users/{userId}/presence/{doc} {
+      allow read: if request.auth != null;
+      allow write: if request.auth.uid == userId;
+    }
+  }
+}

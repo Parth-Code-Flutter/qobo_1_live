@@ -8,6 +8,22 @@ import 'package:get/get.dart';
 class LocalStorage extends GetxController {
   late final FlutterSecureStorage _mEncryptedStorage;
 
+  /// Single app-wide registration — call from [main] only.
+  static LocalStorage ensureRegistered() {
+    if (Get.isRegistered<LocalStorage>()) {
+      return Get.find<LocalStorage>();
+    }
+    return Get.put(LocalStorage(), permanent: true);
+  }
+
+  /// Read the singleton after [ensureRegistered] in main.
+  static LocalStorage get shared {
+    if (Get.isRegistered<LocalStorage>()) {
+      return Get.find<LocalStorage>();
+    }
+    return ensureRegistered();
+  }
+
   @override
   void onInit() {
     super.onInit();

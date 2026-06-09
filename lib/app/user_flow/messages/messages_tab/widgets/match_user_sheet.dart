@@ -5,6 +5,7 @@ import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 
 import '../controllers/messages_tab_controller.dart';
 import '../models/social_user_card.dart';
@@ -41,12 +42,12 @@ Future<void> showMatchUserSheet(
             user: live,
             isProcessing: isProcessing,
             onFollowTap: () => controller.toggleFollow(ctx, live),
-            onMessageTap: live.canMessage
-                ? () {
-                    Navigator.of(ctx).pop();
-                    controller.openChat(context, live);
-                  }
-                : null,
+            onMessageTap: () => _onMessagePressed(
+              sheetContext: ctx,
+              hostContext: context,
+              controller: controller,
+              user: live,
+            ),
           ),
         );
       });
@@ -54,18 +55,40 @@ Future<void> showMatchUserSheet(
   );
 }
 
+Future<void> _onMessagePressed({
+  required BuildContext sheetContext,
+  required BuildContext hostContext,
+  required MessagesTabController controller,
+  required SocialUserCard user,
+}) async {
+  if (!user.canMessage) {
+    AppToast.showError(
+      sheetContext,
+      user.isFollowing
+          ? 'Waiting for them to follow you back'
+          : 'Follow to connect — message when either follows',
+    );
+    return;
+  }
+
+  Navigator.of(sheetContext).pop();
+  await Future<void>.delayed(Duration.zero);
+  if (!hostContext.mounted) return;
+  await controller.openChat(hostContext, user);
+}
+
 class _MatchUserSheetBody extends StatelessWidget {
   const _MatchUserSheetBody({
     required this.user,
     required this.isProcessing,
     required this.onFollowTap,
-    this.onMessageTap,
+    required this.onMessageTap,
   });
 
   final SocialUserCard user;
   final bool isProcessing;
   final VoidCallback onFollowTap;
-  final VoidCallback? onMessageTap;
+  final VoidCallback onMessageTap;
 
   @override
   Widget build(BuildContext context) {
@@ -489,18 +512,18 @@ class _FollowButton extends StatelessWidget {
 class _MessageButton extends StatelessWidget {
   const _MessageButton({
     required this.enabled,
-    this.onTap,
+    required this.onTap,
   });
 
   final bool enabled;
-  final VoidCallback? onTap;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: enabled ? onTap : null,
+        onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Ink(
           height: 50,

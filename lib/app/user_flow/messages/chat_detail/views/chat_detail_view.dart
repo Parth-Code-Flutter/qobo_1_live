@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
-import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -18,23 +19,7 @@ class ChatDetailView extends GetView<ChatDetailController> {
       backgroundColor: kColorWhite,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(kToolbarHeight),
-        child: Obx(
-          () => CommonAppBarWidget(
-            title: controller.chatName.value,
-            useMaterialAppBar: true,
-            actions: [
-              IconButton(
-                onPressed: () {},
-                icon: const Icon(Icons.call_rounded, color: kColorText),
-              ),
-              IconButton(
-                onPressed: () {},
-                icon: const Icon(Icons.videocam_rounded, color: kColorText),
-              ),
-              const SizedBox(width: 8),
-            ],
-          ),
-        ),
+        child: Obx(() => _buildChatAppBar()),
       ),
       body: Column(
         children: [
@@ -64,8 +49,72 @@ class ChatDetailView extends GetView<ChatDetailController> {
               },
             ),
           ),
+          Obx(() => _buildTypingBanner()),
           _buildMessageInput(context),
         ],
+      ),
+    );
+  }
+
+  Widget _buildChatAppBar() {
+    return AppBar(
+      backgroundColor: kColorWhite,
+      elevation: 0,
+      centerTitle: true,
+      automaticallyImplyLeading: false,
+      leadingWidth: 60,
+      leading: Padding(
+        padding: const EdgeInsets.only(left: 10),
+        child: IconButton(
+          onPressed: () => Get.back(),
+          icon: SvgPicture.asset(kIconArrowBack),
+        ),
+      ),
+      title: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            controller.chatName.value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyles.kBoldPoppins(
+              fontSize: TextStyles.k18FontSize,
+              colors: kColorText,
+            ),
+          ),
+          const SizedBox(height: 2),
+          AppText(
+            text: controller.presenceStatusLabel,
+            fontSize: TextStyles.k12FontSize,
+            color: controller.presenceStatusColor,
+          ),
+        ],
+      ),
+      actions: [
+        IconButton(
+          onPressed: () {},
+          icon: const Icon(Icons.call_rounded, color: kColorText),
+        ),
+        IconButton(
+          onPressed: () {},
+          icon: const Icon(Icons.videocam_rounded, color: kColorText),
+        ),
+        const SizedBox(width: 8),
+      ],
+    );
+  }
+
+  Widget _buildTypingBanner() {
+    if (!controller.peerIsTyping.value) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: AppText(
+          text: '${controller.chatName.value} is typing...',
+          fontSize: TextStyles.k12FontSize,
+          color: kColorPrimary,
+        ),
       ),
     );
   }
@@ -97,10 +146,36 @@ class ChatDetailView extends GetView<ChatDetailController> {
             ),
           ),
           Spacing.v4,
-          AppText(text: msg.time, fontSize: 10, color: kColorHint),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppText(text: msg.time, fontSize: 10, color: kColorHint),
+              if (msg.isMe) ...[
+                const SizedBox(width: 4),
+                _buildDeliveryIcon(msg.deliveryStatus),
+              ],
+            ],
+          ),
         ],
       ),
     );
+  }
+
+  Widget _buildDeliveryIcon(ChatDeliveryStatus status) {
+    final Color color;
+    final IconData icon;
+    switch (status) {
+      case ChatDeliveryStatus.read:
+        color = Colors.lightBlueAccent;
+        icon = Icons.done_all_rounded;
+      case ChatDeliveryStatus.delivered:
+        color = kColorHint;
+        icon = Icons.done_all_rounded;
+      case ChatDeliveryStatus.sent:
+        color = kColorHint;
+        icon = Icons.done_rounded;
+    }
+    return Icon(icon, size: 14, color: color);
   }
 
   Widget _buildMessageInput(BuildContext context) {
@@ -125,7 +200,7 @@ class ChatDetailView extends GetView<ChatDetailController> {
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: kColorBackground,
               shape: BoxShape.circle,
             ),
@@ -142,17 +217,30 @@ class ChatDetailView extends GetView<ChatDetailController> {
           ),
           Spacing.h12,
           GestureDetector(
-            onTap: controller.sendMessage,
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: const BoxDecoration(
-                color: kColorPrimary,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.send_rounded,
-                color: kColorWhite,
-                size: 20,
+            onTap: controller.isSending.value ? null : controller.sendMessage,
+            child: Obx(
+              () => Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: controller.isSending.value
+                      ? kColorPrimary.withValues(alpha: 0.5)
+                      : kColorPrimary,
+                  shape: BoxShape.circle,
+                ),
+                child: controller.isSending.value
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: kColorWhite,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.send_rounded,
+                        color: kColorWhite,
+                        size: 20,
+                      ),
               ),
             ),
           ),

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
+import 'package:qobo_one_live/repo/chat/chat_local_store.dart';
+import 'package:qobo_one_live/repo/chat/chat_navigation_helper.dart';
 import 'package:qobo_one_live/repo/chat/chat_repo.dart';
 import 'package:qobo_one_live/repo/user/user_repo.dart';
-import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 
 import '../models/social_user_card.dart';
@@ -15,13 +16,16 @@ class MessagesTabController extends GetxController {
     AuthRepo? authRepo,
     UserRepo? userRepo,
     ChatRepo? chatRepo,
+    ChatLocalStore? localStore,
   })  : _authRepo = authRepo ?? AuthRepo(),
         _userRepo = userRepo ?? UserRepo(),
-        _chatRepo = chatRepo ?? ChatRepo();
+        _chatRepo = chatRepo ?? ChatRepo(),
+        _localStore = localStore ?? ChatLocalStore();
 
   final AuthRepo _authRepo;
   final UserRepo _userRepo;
   final ChatRepo _chatRepo;
+  final ChatLocalStore _localStore;
 
   final searchController = TextEditingController();
 
@@ -106,15 +110,16 @@ class MessagesTabController extends GetxController {
     }
   }
 
-  /// `GET /api/chat/list` for Message section.
+  /// `GET /api/chat/list` for Message section (+ local cache until send API live).
   Future<void> fetchInbox() async {
     try {
       isInboxLoading.value = true;
+      final apiThreads = <MessageListItemModel>[];
       final response = await _chatRepo.getInbox(isShowLoader: false);
       if (isSocialApiSuccess(response)) {
         final list = response!['data'];
         if (list is List) {
-          inboxThreads.assignAll(
+          apiThreads.addAll(
             list.whereType<Map>().toList().asMap().entries.map((entry) {
               return _mapInboxThread(
                 Map<String, dynamic>.from(entry.value),
@@ -122,15 +127,52 @@ class MessagesTabController extends GetxController {
               );
             }),
           );
-          return;
         }
       }
-      inboxThreads.clear();
+
+      final localRaw = await _localStore.readInboxThreads();
+      final localThreads = localRaw
+          .where((t) => (t['lastMessage']?.toString().trim().isNotEmpty ?? false))
+          .map((json) => _mapInboxThread(json, 0))
+          .toList();
+
+      inboxThreads.assignAll(_mergeInboxThreads(apiThreads, localThreads));
     } catch (_) {
       inboxThreads.clear();
     } finally {
       isInboxLoading.value = false;
     }
+  }
+
+  List<MessageListItemModel> _mergeInboxThreads(
+    List<MessageListItemModel> api,
+    List<MessageListItemModel> local,
+  ) {
+    final byId = <String, MessageListItemModel>{};
+    for (final thread in api) {
+      if (thread.targetId.isNotEmpty) {
+        byId[thread.targetId] = thread;
+      }
+    }
+    for (final thread in local) {
+      if (thread.targetId.isEmpty) continue;
+      final existing = byId[thread.targetId];
+      if (existing == null || thread.message.isNotEmpty) {
+        byId[thread.targetId] = existing == null
+            ? thread
+            : MessageListItemModel(
+                targetId: thread.targetId,
+                name: existing.name.isNotEmpty ? existing.name : thread.name,
+                message: thread.message.isNotEmpty
+                    ? thread.message
+                    : existing.message,
+                time: thread.time.isNotEmpty ? thread.time : existing.time,
+                imageUrl: existing.imageUrl ?? thread.imageUrl,
+                unreadCount: existing.unreadCount,
+              );
+      }
+    }
+    return byId.values.toList();
   }
 
   MessageListItemModel _mapInboxThread(Map<String, dynamic> json, int index) {
@@ -174,10 +216,28 @@ class MessagesTabController extends GetxController {
       if (!context.mounted) return;
       if (isSocialApiSuccess(response)) {
         final data = response?['data'];
-        final isFollowing = data is Map
-            ? data['isFollowing'] == true
-            : action == 'follow';
-        _applyFollowState(user.id, isFollowing: isFollowing);
+        final Map<String, dynamic>? dataMap =
+            data is Map ? Map<String, dynamic>.from(data) : null;
+        final isFollowing = dataMap?['isFollowing'] == true ||
+            (action == 'follow' && dataMap == null);
+        final isFollower = dataMap?['isFollower'] == true ||
+            user.isFollower;
+        final isMutual = dataMap?['isMutual'] == true ||
+            (isFollowing && isFollower);
+        final canMessage = dataMap?['canMessage'] == true ||
+            isFollowing ||
+            isFollower ||
+            isMutual;
+
+        _applyFollowState(
+          user.id,
+          isFollowing: isFollowing,
+          isFollower: isFollower,
+          isMutual: isMutual,
+          canMessage: canMessage,
+          followersCount: _toInt(dataMap?['followersCount']),
+          followingCount: _toInt(dataMap?['followingCount']),
+        );
         AppToast.showSuccess(
           context,
           isFollowing ? 'Followed successfully' : 'Unfollowed successfully',
@@ -196,29 +256,35 @@ class MessagesTabController extends GetxController {
     }
   }
 
-  void _applyFollowState(String userId, {required bool isFollowing}) {
-    newMatches.value = newMatches
-        .map(
-          (u) => u.id == userId
-              ? u.copyWith(
-                  isFollowing: isFollowing,
-                  canMessage: isFollowing || u.isFollower,
-                  isMutual: isFollowing && u.isFollower,
-                )
-              : u,
-        )
-        .toList();
-    searchResults.value = searchResults
-        .map(
-          (u) => u.id == userId
-              ? u.copyWith(
-                  isFollowing: isFollowing,
-                  canMessage: isFollowing || u.isFollower,
-                  isMutual: isFollowing && u.isFollower,
-                )
-              : u,
-        )
-        .toList();
+  void _applyFollowState(
+    String userId, {
+    required bool isFollowing,
+    bool? isFollower,
+    bool? isMutual,
+    bool? canMessage,
+    int? followersCount,
+    int? followingCount,
+  }) {
+    SocialUserCard merge(SocialUserCard u) {
+      if (u.id != userId) return u;
+      final nextFollower = isFollower ?? u.isFollower;
+      final nextFollowing = isFollowing;
+      final nextMutual =
+          isMutual ?? ((nextFollowing && nextFollower) || u.isMutual);
+      final nextCanMessage = canMessage ??
+          (nextFollowing || nextFollower || nextMutual || u.canMessage);
+      return u.copyWith(
+        isFollowing: nextFollowing,
+        isFollower: nextFollower,
+        isMutual: nextMutual,
+        canMessage: nextCanMessage,
+        followersCount: followersCount ?? u.followersCount,
+        followingCount: followingCount ?? u.followingCount,
+      );
+    }
+
+    newMatches.value = newMatches.map(merge).toList();
+    searchResults.value = searchResults.map(merge).toList();
   }
 
   SocialUserCard? userById(String id) {
@@ -245,34 +311,13 @@ class MessagesTabController extends GetxController {
       return;
     }
 
-    try {
-      final roomResponse = await _chatRepo.createRoom(
-        targetId: user.id,
-        isShowLoader: true,
-      );
-      if (!isSocialApiSuccess(roomResponse)) {
-        if (!context.mounted) return;
-        AppToast.showError(
-          context,
-          roomResponse?['message']?.toString() ?? 'Cannot open chat',
-        );
-        return;
-      }
-
-      if (!context.mounted) return;
-      await Get.toNamed(
-        Routes.CHAT_DETAIL,
-        arguments: {
-          'targetId': user.id,
-          'name': user.name,
-          'imageUrl': user.displayPicture,
-        },
-      );
-      fetchInbox();
-    } catch (e) {
-      if (!context.mounted) return;
-      AppToast.showError(context, 'Error opening chat: $e');
-    }
+    await ChatNavigationHelper.openDirectChat(
+      context,
+      targetId: user.id,
+      name: user.name,
+      imageUrl: user.displayPicture,
+    );
+    fetchInbox();
   }
 
   Future<void> openChatFromInbox(
@@ -283,13 +328,11 @@ class MessagesTabController extends GetxController {
       AppToast.showError(context, 'Invalid chat partner');
       return;
     }
-    await Get.toNamed(
-      Routes.CHAT_DETAIL,
-      arguments: {
-        'targetId': thread.targetId,
-        'name': thread.name,
-        'imageUrl': thread.imageUrl,
-      },
+    await ChatNavigationHelper.openDirectChat(
+      context,
+      targetId: thread.targetId,
+      name: thread.name,
+      imageUrl: thread.imageUrl,
     );
     fetchInbox();
   }
@@ -303,9 +346,18 @@ class MessagesTabController extends GetxController {
         isShowLoader: false,
       );
       if (isSocialApiSuccess(response) && response?['data'] is Map) {
-        return SocialUserCard.fromJson(
+        final fresh = SocialUserCard.fromJson(
           Map<String, dynamic>.from(response!['data'] as Map),
         );
+        if (cached != null) {
+          return fresh.copyWith(
+            isFollowing: cached.isFollowing || fresh.isFollowing,
+            isFollower: cached.isFollower || fresh.isFollower,
+            isMutual: cached.isMutual || fresh.isMutual,
+            canMessage: cached.canMessage || fresh.canMessage,
+          );
+        }
+        return fresh;
       }
     } catch (_) {}
     return cached;

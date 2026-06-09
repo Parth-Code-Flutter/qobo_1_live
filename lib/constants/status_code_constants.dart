@@ -6,10 +6,11 @@ class StatusCodeConstants {
   // =========================
   //
   // This backend uses:
-  // - HTTP statusCode: 200 (transport success)
-  // - JSON body statusCode: 201 (application success)
-  //
-  // Keep both centrally so callers don’t hardcode magic numbers.
+  // - HTTP statusCode: 200 or 201 (transport success)
+  // - JSON body statusCode: 1 (legacy) or 201 (canonical)
+
+  /// Legacy API JSON body success (most social/auth/chat endpoints).
+  static const int legacySuccess = 1;
 
   /// HTTP transport success
   static const int httpSuccess = 200;
@@ -50,9 +51,10 @@ class StatusCodeConstants {
     return statusCode == httpSuccess || statusCode == success;
   }
 
-  /// API JSON-body success (must be 201)
+  /// API JSON-body success (`1` legacy or `201` canonical).
   static bool isApiSuccess(int? statusCode) {
-    return statusCode == success;
+    if (statusCode == null) return false;
+    return statusCode == legacySuccess || statusCode == success;
   }
 
   /// Check if status code indicates success (2xx range)

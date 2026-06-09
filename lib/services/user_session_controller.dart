@@ -66,8 +66,5 @@ class UserSessionController extends GetxController {
     return value.toString().trim();
   }
 
-  LocalStorage get _storage {
-    if (Get.isRegistered<LocalStorage>()) return Get.find<LocalStorage>();
-    return Get.put(LocalStorage(), permanent: true);
-  }
+  LocalStorage get _storage => LocalStorage.shared;
 }

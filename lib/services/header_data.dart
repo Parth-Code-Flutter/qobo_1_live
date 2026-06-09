@@ -5,9 +5,7 @@ import 'package:get/get.dart';
 class HeaderData {
   Future<Map<String, String>> headers() async {
     try {
-      final storage = Get.isRegistered<LocalStorage>()
-          ? Get.find<LocalStorage>()
-          : Get.put(LocalStorage(), permanent: true);
+      final storage = LocalStorage.shared;
       final token = await storage.getToken();
       
       var headers = {

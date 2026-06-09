@@ -50,10 +50,7 @@ class AgencySessionController extends GetxController {
     loadFromStorage();
   }
 
-  LocalStorage get _storage {
-    if (Get.isRegistered<LocalStorage>()) return Get.find<LocalStorage>();
-    return Get.put(LocalStorage(), permanent: true);
-  }
+  LocalStorage get _storage => LocalStorage.shared;
 
   Future<void> loadFromStorage() async {
     final json = await _storage.getJsonFromStorage(kStorageAgencyOwnerApplication);

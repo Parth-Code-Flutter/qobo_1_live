@@ -61,6 +61,12 @@ class SocialUserCard {
   }
 
   factory SocialUserCard.fromJson(Map<String, dynamic> json) {
+    final isFollowing = json['isFollowing'] == true;
+    final isFollower = json['isFollower'] == true;
+    final isMutual =
+        json['isMutual'] == true || (isFollowing && isFollower);
+    final apiCanMessage = json['canMessage'] == true;
+
     return SocialUserCard(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString().trim().isNotEmpty == true
@@ -73,10 +79,10 @@ class SocialUserCard {
       country: json['country']?.toString() ?? '',
       level: _toInt(json['level']),
       bio: json['bio']?.toString() ?? '',
-      isFollowing: json['isFollowing'] == true,
-      isFollower: json['isFollower'] == true,
-      isMutual: json['isMutual'] == true,
-      canMessage: json['canMessage'] == true,
+      isFollowing: isFollowing,
+      isFollower: isFollower,
+      isMutual: isMutual,
+      canMessage: apiCanMessage || isFollowing || isFollower || isMutual,
       isVip: json['isVip'] == true,
       followersCount: _toInt(json['followersCount']),
       followingCount: _toInt(json['followingCount']),

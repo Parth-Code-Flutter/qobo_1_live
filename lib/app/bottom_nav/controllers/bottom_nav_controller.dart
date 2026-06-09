@@ -1,11 +1,15 @@
+import 'dart:async';
+
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/agency_host_list/controllers/agency_host_list_controller.dart';
 import 'package:qobo_one_live/app/user_flow/discover/discover_tab/controllers/discover_tab_controller.dart';
+import 'package:qobo_one_live/app/user_flow/messages/messages_tab/controllers/messages_tab_controller.dart';
 import 'package:qobo_one_live/constants/status_code_constants.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/services/agency_session_controller.dart';
+import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 
@@ -37,7 +41,7 @@ class BottomNavController extends GetxController {
           selectedIconPath: kIconDiscoverEnable,
         ),
         (
-          label: 'Live Rooms',
+          label: 'Go Live',
           iconPath: kIconLiveRoom,
           selectedIconPath: kIconLiveRoomEnable,
         ),
@@ -96,6 +100,9 @@ class BottomNavController extends GetxController {
           !hostListCtrl.fetchedWithAgencyContext;
       hostListCtrl.refreshList(showLoading: needsReload);
     }
+    if (index == 3 && Get.isRegistered<MessagesTabController>()) {
+      Get.find<MessagesTabController>().fetchInbox();
+    }
   }
 
   /// Opens heart tab with agency host map (from owner dashboard).
@@ -118,9 +125,10 @@ class BottomNavController extends GetxController {
   }
 
   Future<void> onLogoutPressed() async {
-    final storage = Get.isRegistered<LocalStorage>()
-        ? Get.find<LocalStorage>()
-        : Get.put(LocalStorage(), permanent: true);
+    final storage = LocalStorage.shared;
+    if (Get.isRegistered<ChatSessionService>()) {
+      await Get.find<ChatSessionService>().signOut();
+    }
     await _userSession.clearSession();
     await storage.clearAllData();
     Get.offAllNamed(Routes.AUTH_LOGIN);
@@ -147,6 +155,11 @@ class BottomNavController extends GetxController {
 
     profileData = data;
     await _userSession.saveProfile(data);
+    if (!Get.isRegistered<ChatSessionService>()) {
+      Get.put(ChatSessionService(), permanent: true);
+    }
+    // Non-blocking; fails softly if Firebase config files are not on device yet.
+    unawaited(Get.find<ChatSessionService>().ensureSignedIn());
     update();
   }
 }

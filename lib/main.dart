@@ -3,11 +3,17 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/services/firebase/firebase_bootstrap.dart';
+import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/alert_message_utils/alert_message_utils.dart';
+import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
 import 'package:toastification/toastification.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await FirebaseBootstrap.tryInitialize();
+
   runApp(
     ResponsiveSizer(
       builder: (context, orientation, screenType) {
@@ -19,6 +25,10 @@ void main() {
               initialRoute: AppPages.INITIAL,
               initialBinding: BindingsBuilder(() {
                 Get.put(AlertMessageUtils(), permanent: true);
+                LocalStorage.ensureRegistered();
+                if (!Get.isRegistered<UserSessionController>()) {
+                  Get.put(UserSessionController(), permanent: true);
+                }
               }),
               getPages: AppPages.routes,
               // Localization setup aligned with reference project style.

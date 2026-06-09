@@ -17,3 +17,9 @@ const String kStorageAgencyOwnerApplication = 'agency_owner_application';
 
 /// Approved agency owner session (id, code, commission) for cold-start restore.
 const String kStorageApprovedAgency = 'agency_approved_session';
+
+/// Local chat message cache (until POST /api/chat/send is available).
+const String kStorageChatMessages = 'chat_messages_cache';
+
+/// Local inbox thread previews from unsynced sends.
+const String kStorageChatInboxThreads = 'chat_inbox_threads_cache';

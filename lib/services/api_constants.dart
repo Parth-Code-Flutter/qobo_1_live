@@ -212,6 +212,15 @@ class ChatEndpoints {
 
   /// POST /api/chat/room — bootstrap chat room (Firebase)
   static const String createRoom = '/api/chat/room';
+
+  /// POST /api/chat/firebase-token — Firebase custom token for Firestore
+  static const String firebaseToken = '/api/chat/firebase-token';
+
+  /// POST /api/chat/report — report abusive message
+  static const String report = '/api/chat/report';
+
+  /// POST /api/chat/send — send text message (backend must implement)
+  static const String send = '/api/chat/send';
 }
 
 /// Central place for user, social, and backpack related API endpoints.
@@ -259,6 +268,9 @@ class UserEndpoints {
 
   /// DELETE /api/user/delete
   static const String delete = '/api/user/delete';
+
+  /// POST /api/user/fcm-token — register device for chat push
+  static const String fcmToken = '/api/user/fcm-token';
 }
 
 /// Central place for family related API endpoints.

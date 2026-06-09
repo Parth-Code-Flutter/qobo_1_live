@@ -6,8 +6,8 @@ import 'package:http/http.dart' as http;
 /// Centralized API success validation.
 ///
 /// Backend convention:
-/// - HTTP statusCode must be 200
-/// - Decoded response body `statusCode` must be 201
+/// - HTTP statusCode: 200 or 201
+/// - JSON body `statusCode`: 1 (legacy) or 201 (canonical)
 class ApiResponseUtils {
   /// Try to decode a response body as JSON map.
   static Map<String, dynamic>? tryDecodeMap(String body) {
@@ -37,11 +37,16 @@ class ApiResponseUtils {
     return msg is String ? msg : null;
   }
 
-  /// True when HTTP == 200 and body.statusCode == 201.
+  /// True when HTTP is 2xx and body.statusCode is 1 or 201.
   static bool isApiSuccessResponse(http.Response response) {
     if (!StatusCodeConstants.isHttpSuccess(response.statusCode)) return false;
     final jsonMap = tryDecodeMap(response.body);
     final bodyStatusCode = tryGetBodyStatusCode(jsonMap);
     return StatusCodeConstants.isApiSuccess(bodyStatusCode);
+  }
+
+  /// True when decoded body uses legacy or canonical success code.
+  static bool isBodySuccess(Map<String, dynamic>? jsonMap) {
+    return StatusCodeConstants.isApiSuccess(tryGetBodyStatusCode(jsonMap));
   }
 }

@@ -139,8 +139,10 @@ class AgencyOwnerDashboardController extends GetxController {
     Get.toNamed(Routes.AGENCY_HOST_LIST);
   }
 
-  void openPendingHosts() {
-    Get.toNamed(Routes.AGENCY_PENDING_HOSTS);
+  Future<void> openPendingHosts() async {
+    await Get.toNamed<void>(Routes.AGENCY_PENDING_HOSTS);
+    if (isClosed) return;
+    await loadDashboard(showLoader: false);
   }
 
   int get pendingHostApplicationsCount =>

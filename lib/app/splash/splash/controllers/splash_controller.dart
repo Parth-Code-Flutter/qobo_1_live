@@ -7,9 +7,7 @@ class SplashController extends GetxController {
   void onReady() {
     super.onReady();
     Future.delayed(const Duration(seconds: 3), () async {
-      final storage = Get.isRegistered<LocalStorage>()
-          ? Get.find<LocalStorage>()
-          : Get.put(LocalStorage(), permanent: true);
+      final storage = LocalStorage.shared;
       final isLoggedIn = await storage.isLoggedIn();
       if (isLoggedIn) {
         Get.offNamed(Routes.BOTTOM_NAV);

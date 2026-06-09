@@ -57,6 +57,9 @@ dependencies:
   giffy_dialog: ^2.3.0
   google_sign_in: ^7.2.0
   flutter_facebook_auth: ^7.1.6
+  firebase_core: ^3.15.1
+  firebase_auth: ^5.6.2
+  cloud_firestore: ^5.6.11
   zego_uikit_prebuilt_live_streaming: ^3.15.6
   zego_uikit_signaling_plugin: ^2.8.21
 
