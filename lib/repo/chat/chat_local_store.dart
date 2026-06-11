@@ -112,6 +112,38 @@ class ChatLocalStore {
     );
   }
 
+  /// Removes a partner thread from the local inbox cache.
+  Future<void> removeInboxThread(String targetId) async {
+    if (targetId.isEmpty) return;
+    final map = await _storage.getJsonFromStorage(kStorageChatInboxThreads);
+    if (map == null) return;
+    final data = Map<String, dynamic>.from(map);
+    final threads = List<Map<String, dynamic>>.from(
+      (data['threads'] as List?)?.whereType<Map>().map(
+            (e) => Map<String, dynamic>.from(e),
+          ) ??
+          [],
+    );
+    threads.removeWhere((t) {
+      final topId = t['id']?.toString() ?? '';
+      final recipient = t['recipient'];
+      final peerId = recipient is Map
+          ? recipient['id']?.toString() ?? ''
+          : '';
+      return topId == targetId || peerId == targetId;
+    });
+    data['threads'] = threads;
+    await _storage.writeJsonStorage(kStorageChatInboxThreads, data);
+  }
+
+  /// Clears cached messages for a partner thread.
+  Future<void> clearMessagesForTarget(String targetId) async {
+    if (targetId.isEmpty) return;
+    final all = await _readAll();
+    all.remove(targetId);
+    await _storage.writeJsonStorage(kStorageChatMessages, all);
+  }
+
   Future<Map<String, dynamic>> _readAll() async {
     final map = await _storage.getJsonFromStorage(kStorageChatMessages);
     if (map == null) return {};

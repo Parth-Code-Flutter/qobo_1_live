@@ -19,7 +19,7 @@ class ChatDetailView extends GetView<ChatDetailController> {
       backgroundColor: kColorWhite,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(kToolbarHeight),
-        child: Obx(() => _buildChatAppBar()),
+        child: Obx(() => _buildChatAppBar(context)),
       ),
       body: Column(
         children: [
@@ -64,7 +64,7 @@ class ChatDetailView extends GetView<ChatDetailController> {
     );
   }
 
-  Widget _buildChatAppBar() {
+  Widget _buildChatAppBar(BuildContext context) {
     return AppBar(
       backgroundColor: kColorWhite,
       elevation: 0,
@@ -99,6 +99,25 @@ class ChatDetailView extends GetView<ChatDetailController> {
         ],
       ),
       actions: [
+        PopupMenuButton<String>(
+          icon: const Icon(Icons.more_vert_rounded, color: kColorText),
+          color: kColorWhite,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          onSelected: (value) {
+            switch (value) {
+              case 'delete':
+                controller.deleteChat(context);
+              case 'block':
+                controller.blockUser(context);
+            }
+          },
+          itemBuilder: (_) => const [
+            PopupMenuItem(value: 'delete', child: Text('Delete chat')),
+            PopupMenuItem(value: 'block', child: Text('Block user')),
+          ],
+        ),
         IconButton(
           onPressed: () {},
           icon: const Icon(Icons.call_rounded, color: kColorText),

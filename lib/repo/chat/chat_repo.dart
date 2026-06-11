@@ -122,4 +122,92 @@ class ChatRepo {
     if (response == null) return null;
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
+
+  /// `POST /api/chat/delete` — remove conversation from inbox (for me).
+  Future<Map<String, dynamic>?> deleteChat({
+    required String targetId,
+    String? roomId,
+    bool isShowLoader = false,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: ChatEndpoints.deleteChat,
+      requestModel: <String, dynamic>{
+        'target_id': targetId,
+        if (roomId != null && roomId.isNotEmpty) 'room_id': roomId,
+      },
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// `POST /api/chat/block` — block user and optionally delete chat.
+  Future<Map<String, dynamic>?> blockUserFromChat({
+    required String targetId,
+    String? roomId,
+    bool deleteChat = true,
+    bool isShowLoader = false,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: ChatEndpoints.blockFromChat,
+      requestModel: <String, dynamic>{
+        'target_id': targetId,
+        if (roomId != null && roomId.isNotEmpty) 'room_id': roomId,
+        'delete_chat': deleteChat,
+      },
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// `POST /api/chat/read` — reset unread count for a thread.
+  Future<Map<String, dynamic>?> markThreadRead({
+    required String targetId,
+    String? roomId,
+    bool isShowLoader = false,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: ChatEndpoints.markRead,
+      requestModel: <String, dynamic>{
+        'target_id': targetId,
+        if (roomId != null && roomId.isNotEmpty) 'room_id': roomId,
+      },
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// `POST /api/chat/mute` — mute or unmute a thread.
+  Future<Map<String, dynamic>?> setThreadMuted({
+    required String roomId,
+    required bool muted,
+    bool isShowLoader = false,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: ChatEndpoints.mute,
+      requestModel: <String, dynamic>{
+        'room_id': roomId,
+        'muted': muted,
+      },
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// `GET /api/chat/can-message` — check if chat is allowed.
+  Future<Map<String, dynamic>?> canMessage({
+    required String targetId,
+    bool isShowLoader = false,
+  }) async {
+    final response = await _apiService.getRequest(
+      endPoint:
+          '${ChatEndpoints.canMessage}?target_id=${Uri.encodeComponent(targetId)}',
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
 }

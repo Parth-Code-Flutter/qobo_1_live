@@ -244,6 +244,8 @@ class MessagesTabView extends GetView<MessagesTabController> {
             (thread) => MessageListTileItem(
               item: thread,
               onTap: () => controller.openChatFromInbox(context, thread),
+              onDeleteChat: () => controller.deleteChatThread(context, thread),
+              onBlockUser: () => controller.blockChatUser(context, thread),
             ),
           )
           .toList(),

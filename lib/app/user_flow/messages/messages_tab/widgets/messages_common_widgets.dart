@@ -200,87 +200,128 @@ class MessageListTileItem extends StatelessWidget {
     super.key,
     required this.item,
     required this.onTap,
+    this.onDeleteChat,
+    this.onBlockUser,
   });
 
   final MessageListItemModel item;
   final VoidCallback onTap;
+  final VoidCallback? onDeleteChat;
+  final VoidCallback? onBlockUser;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          children: [
-            AppUserAvatar(
-              name: item.name,
-              imageUrl: item.imageUrl,
-              size: 50,
-            ),
-            Spacing.h12,
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: onTap,
+              behavior: HitTestBehavior.opaque,
+              child: Row(
                 children: [
-                  SemiBoldText(
-                    text: item.name,
-                    color: kColorWhite,
-                    fontSize: TextStyles.k14FontSize,
+                  AppUserAvatar(
+                    name: item.name,
+                    imageUrl: item.imageUrl,
+                    size: 50,
                   ),
-                  Spacing.v2,
-                  AppText(
-                    text: item.message.isNotEmpty
-                        ? item.message
-                        : 'Start a conversation',
-                    color: kColorWhite.withValues(alpha: 0.9),
-                    fontSize: TextStyles.k10FontSize,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  Spacing.h12,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SemiBoldText(
+                          text: item.name,
+                          color: kColorWhite,
+                          fontSize: TextStyles.k14FontSize,
+                        ),
+                        Spacing.v2,
+                        AppText(
+                          text: item.message.isNotEmpty
+                              ? item.message
+                              : 'Start a conversation',
+                          color: kColorWhite.withValues(alpha: 0.9),
+                          fontSize: TextStyles.k10FontSize,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Spacing.h8,
+                  SizedBox(
+                    width: 42,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        AppText(
+                          text: item.time,
+                          color: kColorWhite,
+                          fontSize: TextStyles.k10FontSize,
+                        ),
+                        Spacing.v6,
+                        if (item.unreadCount > 0)
+                          Container(
+                            width: 14,
+                            height: 14,
+                            decoration: const BoxDecoration(
+                              color: kColorBottomNavHeart,
+                              shape: BoxShape.circle,
+                            ),
+                            alignment: Alignment.center,
+                            child: AppText(
+                              text: '${item.unreadCount}',
+                              color: kColorWhite,
+                              fontSize: TextStyles.k8FontSize,
+                            ),
+                          )
+                        else
+                          const SizedBox(height: 18),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-            Spacing.h8,
-            SizedBox(
-              width: 42,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  AppText(
-                    text: item.time,
-                    color: kColorWhite,
-                    fontSize: TextStyles.k10FontSize,
-                  ),
-                  Spacing.v6,
-                  if (item.unreadCount > 0)
-                    Container(
-                      width: 14,
-                      height: 14,
-                      decoration: const BoxDecoration(
-                        color: kColorBottomNavHeart,
-                        shape: BoxShape.circle,
-                      ),
-                      alignment: Alignment.center,
-                      child: AppText(
-                        text: '${item.unreadCount}',
-                        color: kColorWhite,
-                        fontSize: TextStyles.k8FontSize,
-                      ),
-                    )
-                  else
-                    const SizedBox(height: 18),
-                ],
-              ),
-            ),
-            Spacing.h6,
-            Icon(
+          ),
+          PopupMenuButton<String>(
+            padding: EdgeInsets.zero,
+            icon: Icon(
               Icons.more_vert,
               size: 18,
               color: kColorWhite.withValues(alpha: 0.65),
             ),
-          ],
-        ),
+            color: kColorWhite,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            onSelected: (value) {
+              switch (value) {
+                case 'delete':
+                  onDeleteChat?.call();
+                case 'block':
+                  onBlockUser?.call();
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'delete',
+                child: Text(
+                  'Delete chat',
+                  style: TextStyle(color: kColorText),
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'block',
+                child: Text(
+                  'Block user',
+                  style: TextStyle(color: kColorText),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

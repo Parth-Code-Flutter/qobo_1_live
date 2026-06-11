@@ -221,6 +221,27 @@ class ChatEndpoints {
 
   /// POST /api/chat/send — send text message (backend must implement)
   static const String send = '/api/chat/send';
+
+  /// POST /api/chat/delete — remove thread from inbox (for me)
+  static const String deleteChat = '/api/chat/delete';
+
+  /// POST /api/chat/clear — clear message history (for me)
+  static const String clearChat = '/api/chat/clear';
+
+  /// POST /api/chat/block — block user from chat + optional delete
+  static const String blockFromChat = '/api/chat/block';
+
+  /// POST /api/chat/read — mark thread read
+  static const String markRead = '/api/chat/read';
+
+  /// POST /api/chat/mute — mute / unmute thread
+  static const String mute = '/api/chat/mute';
+
+  /// POST /api/chat/archive — archive / unarchive thread
+  static const String archive = '/api/chat/archive';
+
+  /// GET /api/chat/can-message — pre-check before opening chat
+  static const String canMessage = '/api/chat/can-message';
 }
 
 /// Central place for user, social, and backpack related API endpoints.

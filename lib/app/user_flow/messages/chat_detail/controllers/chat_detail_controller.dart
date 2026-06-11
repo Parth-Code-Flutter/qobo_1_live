@@ -15,6 +15,7 @@ import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
+import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:intl/intl.dart';
 
 /// WhatsApp-style delivery state for outgoing messages.
@@ -629,6 +630,91 @@ class ChatDetailController extends GetxController {
   static String _formatTime(DateTime? dt) {
     if (dt == null) return '';
     return DateFormat('h:mm a').format(dt.toLocal());
+  }
+
+  Future<void> deleteChat(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete chat?'),
+        content: Text(
+          'This removes the conversation from your inbox. '
+          '${chatName.value} can still message you.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    final response = await _chatRepo.deleteChat(
+      targetId: targetId.value,
+      roomId: _effectiveRoomId.isNotEmpty ? _effectiveRoomId : null,
+    );
+    if (!context.mounted) return;
+
+    if (isSocialApiSuccess(response)) {
+      await _localStore.removeInboxThread(targetId.value);
+      await _localStore.clearMessagesForTarget(targetId.value);
+      Get.back();
+      return;
+    }
+
+    AppToast.showError(
+      context,
+      response?['message']?.toString() ?? 'Could not delete chat',
+    );
+  }
+
+  Future<void> blockUser(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Block ${chatName.value}?'),
+        content: const Text(
+          'They will no longer be able to message you. '
+          'You can unblock them from Settings > Block List.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Block'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    final response = await _chatRepo.blockUserFromChat(
+      targetId: targetId.value,
+      roomId: _effectiveRoomId.isNotEmpty ? _effectiveRoomId : null,
+      deleteChat: true,
+    );
+    if (!context.mounted) return;
+
+    if (isSocialApiSuccess(response)) {
+      await _localStore.removeInboxThread(targetId.value);
+      await _localStore.clearMessagesForTarget(targetId.value);
+      Get.back();
+      return;
+    }
+
+    AppToast.showError(
+      context,
+      response?['message']?.toString() ?? 'Could not block user',
+    );
   }
 
   @override

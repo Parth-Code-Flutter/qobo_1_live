@@ -16,6 +16,7 @@ abstract final class ChatNavigationHelper {
     required String targetId,
     required String name,
     String? imageUrl,
+    String? roomId,
     bool showLoader = true,
     ChatRepo? chatRepo,
   }) async {
@@ -25,29 +26,34 @@ abstract final class ChatNavigationHelper {
     }
 
     try {
-      // Best-effort — REST chat still works if Firebase config is missing.
       await _ensureFirebaseSession();
 
       final repo = chatRepo ?? ChatRepo();
-      var roomId = '';
+      var resolvedRoomId = roomId?.trim() ?? '';
       var firestorePath = '';
 
-      final roomResponse = await repo.createRoom(
-        targetId: targetId,
-        isShowLoader: showLoader,
-      );
-
-      if (isSocialApiSuccess(roomResponse)) {
-        final room = ChatRoomModel.fromResponseData(roomResponse?['data']);
-        roomId = room.roomId;
-        firestorePath = room.firestorePath;
-      } else if (context.mounted) {
-        AppToast.showError(
-          context,
-          roomResponse?['message']?.toString() ??
-              'Could not open chat. Check follow status or try again.',
+      if (resolvedRoomId.isNotEmpty) {
+        firestorePath = 'chatRooms/$resolvedRoomId';
+      } else {
+        final roomResponse = await repo.createRoom(
+          targetId: targetId,
+          isShowLoader: showLoader,
         );
-        return;
+
+        if (isSocialApiSuccess(roomResponse)) {
+          final room = ChatRoomModel.fromResponseData(roomResponse?['data']);
+          resolvedRoomId = room.roomId;
+          firestorePath = room.firestorePath.isNotEmpty
+              ? room.firestorePath
+              : 'chatRooms/${room.roomId}';
+        } else if (context.mounted) {
+          AppToast.showError(
+            context,
+            roomResponse?['message']?.toString() ??
+                'Could not open chat. Check follow status or try again.',
+          );
+          return;
+        }
       }
 
       if (!context.mounted) return;
@@ -55,7 +61,7 @@ abstract final class ChatNavigationHelper {
         Routes.CHAT_DETAIL,
         arguments: {
           'targetId': targetId,
-          'roomId': roomId,
+          'roomId': resolvedRoomId,
           'firestorePath': firestorePath,
           'name': name,
           'imageUrl': imageUrl,

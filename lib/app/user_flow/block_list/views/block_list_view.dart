@@ -4,6 +4,7 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -21,6 +22,12 @@ class BlockListView extends GetView<BlockListController> {
         useMaterialAppBar: true,
       ),
       body: Obx(() {
+        if (controller.isLoading.value) {
+          return const Center(
+            child: CircularProgressIndicator(color: kColorPrimary),
+          );
+        }
+
         if (controller.blockedUsers.isEmpty) {
           return Center(
             child: AppText(
@@ -37,11 +44,14 @@ class BlockListView extends GetView<BlockListController> {
           separatorBuilder: (_, __) => const Divider(color: kColorBackground, height: 24),
           itemBuilder: (context, index) {
             final user = controller.blockedUsers[index];
+            final userId = user['id']?.toString() ?? '';
+            final isProcessing = controller.processingUserId.value == userId;
             return Row(
               children: [
-                CircleAvatar(
-                  radius: 26,
-                  backgroundImage: AssetImage(user['image']),
+                AppUserAvatar(
+                  name: user['name']?.toString() ?? 'User',
+                  imageUrl: user['displayPicture']?.toString(),
+                  size: 52,
                 ),
                 Spacing.h16,
                 Expanded(
@@ -49,7 +59,7 @@ class BlockListView extends GetView<BlockListController> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       SemiBoldText(
-                        text: user['name'],
+                        text: user['name']?.toString() ?? 'User',
                         fontSize: TextStyles.k14FontSize,
                         color: kColorText,
                       ),
@@ -67,8 +77,11 @@ class BlockListView extends GetView<BlockListController> {
                   width: 90,
                   height: 32,
                   child: appButton(
-                    onPressed: () => controller.unblockUser(index),
-                    buttonText: 'Unblock',
+                    onPressed: () {
+                      if (isProcessing) return;
+                      controller.unblockUser(index);
+                    },
+                    buttonText: isProcessing ? '...' : 'Unblock',
                     buttonColor: Colors.transparent,
                     textColor: kColorPrimary,
                     buttonBorderColor: kColorPrimary,
