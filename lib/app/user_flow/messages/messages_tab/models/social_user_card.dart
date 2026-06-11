@@ -123,5 +123,7 @@ bool isSocialApiSuccess(Map<String, dynamic>? response) {
   if (code is String) {
     return code == '1' || code == '200' || code == '201';
   }
+  // Legacy envelope (`success: true`) used by some chat/user endpoints.
+  if (response['success'] == true) return true;
   return false;
 }

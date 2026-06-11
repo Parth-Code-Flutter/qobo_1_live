@@ -14,12 +14,10 @@ class ChatSessionService extends GetxController {
 
   final ChatRepo _chatRepo;
 
-  bool _isSigningIn = false;
+  Future<bool>? _signInFuture;
 
   /// Call after REST login or when opening chat.
   Future<bool> ensureSignedIn({bool isShowLoader = false}) async {
-    if (_isSigningIn) return false;
-
     if (!FirebaseBootstrap.isAvailable) {
       return false;
     }
@@ -29,10 +27,33 @@ class ChatSessionService extends GetxController {
       return false;
     }
 
-    _isSigningIn = true;
-    try {
-      if (FirebaseAuth.instance.currentUser != null) return true;
+    final current = FirebaseAuth.instance.currentUser;
+    if (current != null) {
+      if (current.uid == appUserId) return true;
+      LoggerUtils.logWarning(
+        'ChatSessionService: Firebase uid ${current.uid} != app $appUserId — re-signing in',
+      );
+      await FirebaseAuth.instance.signOut();
+    }
 
+    // Wait for an in-flight sign-in instead of returning false (fixes send race).
+    if (_signInFuture != null) {
+      return _signInFuture!;
+    }
+
+    _signInFuture = _signIn(appUserId: appUserId, isShowLoader: isShowLoader);
+    try {
+      return await _signInFuture!;
+    } finally {
+      _signInFuture = null;
+    }
+  }
+
+  Future<bool> _signIn({
+    required String appUserId,
+    required bool isShowLoader,
+  }) async {
+    try {
       final response = await _chatRepo.getFirebaseToken(
         isShowLoader: isShowLoader,
       );
@@ -59,13 +80,13 @@ class ChatSessionService extends GetxController {
       await FirebaseAuth.instance.signInWithCustomToken(
         tokenModel.firebaseCustomToken,
       );
-      LoggerUtils.logInfo('ChatSessionService: Firebase signed in');
+      LoggerUtils.logInfo(
+        'ChatSessionService: Firebase signed in as ${FirebaseAuth.instance.currentUser?.uid}',
+      );
       return true;
     } catch (e) {
       LoggerUtils.logException('ChatSessionService.ensureSignedIn', e);
       return false;
-    } finally {
-      _isSigningIn = false;
     }
   }
 

@@ -5,6 +5,9 @@ import 'package:qobo_one_live/repo/chat/chat_local_store.dart';
 import 'package:qobo_one_live/repo/chat/chat_navigation_helper.dart';
 import 'package:qobo_one_live/repo/chat/chat_repo.dart';
 import 'package:qobo_one_live/repo/user/user_repo.dart';
+import 'package:qobo_one_live/services/chat/chat_firebase_service.dart';
+import 'package:qobo_one_live/services/chat/chat_session_service.dart';
+import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 
 import '../models/social_user_card.dart';
@@ -17,15 +20,18 @@ class MessagesTabController extends GetxController {
     UserRepo? userRepo,
     ChatRepo? chatRepo,
     ChatLocalStore? localStore,
+    ChatFirebaseService? firebaseService,
   })  : _authRepo = authRepo ?? AuthRepo(),
         _userRepo = userRepo ?? UserRepo(),
         _chatRepo = chatRepo ?? ChatRepo(),
-        _localStore = localStore ?? ChatLocalStore();
+        _localStore = localStore ?? ChatLocalStore(),
+        _firebaseService = firebaseService ?? ChatFirebaseService();
 
   final AuthRepo _authRepo;
   final UserRepo _userRepo;
   final ChatRepo _chatRepo;
   final ChatLocalStore _localStore;
+  final ChatFirebaseService _firebaseService;
 
   final searchController = TextEditingController();
 
@@ -136,7 +142,17 @@ class MessagesTabController extends GetxController {
           .map((json) => _mapInboxThread(json, 0))
           .toList();
 
-      inboxThreads.assignAll(_mergeInboxThreads(apiThreads, localThreads));
+      var firestoreThreads = <MessageListItemModel>[];
+      if (_firebaseService.isAvailable) {
+        firestoreThreads = await _fetchInboxFromFirestore();
+      }
+
+      inboxThreads.assignAll(
+        _mergeInboxThreads(
+          _mergeInboxThreads(apiThreads, firestoreThreads),
+          localThreads,
+        ),
+      );
     } catch (_) {
       inboxThreads.clear();
     } finally {
@@ -175,6 +191,30 @@ class MessagesTabController extends GetxController {
     return byId.values.toList();
   }
 
+  Future<List<MessageListItemModel>> _fetchInboxFromFirestore() async {
+    final myId = _myUserId;
+    if (myId == null || myId.isEmpty) return [];
+
+    if (!Get.isRegistered<ChatSessionService>()) {
+      Get.put(ChatSessionService(), permanent: true);
+    }
+    final signedIn =
+        await Get.find<ChatSessionService>().ensureSignedIn(isShowLoader: false);
+    if (!signedIn) return [];
+
+    final rows = await _firebaseService.fetchInboxRoomsForUser(myId);
+    return rows
+        .whereType<Map>()
+        .map((raw) => _mapInboxThread(Map<String, dynamic>.from(raw), 0))
+        .where((t) => t.targetId.isNotEmpty && t.message.isNotEmpty)
+        .toList();
+  }
+
+  String? get _myUserId {
+    if (!Get.isRegistered<UserSessionController>()) return null;
+    return Get.find<UserSessionController>().userId;
+  }
+
   MessageListItemModel _mapInboxThread(Map<String, dynamic> json, int index) {
     final recipient = json['recipient'];
     final Map<String, dynamic>? recipientMap = recipient is Map
@@ -197,6 +237,7 @@ class MessagesTabController extends GetxController {
       time: _formatThreadTime(json['lastMessageTime']?.toString()),
       imageUrl: picture,
       unreadCount: _toInt(json['unreadCount']),
+      roomId: json['roomId']?.toString() ?? '',
     );
   }
 

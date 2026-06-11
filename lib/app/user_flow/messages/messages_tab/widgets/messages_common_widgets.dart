@@ -16,6 +16,7 @@ class MessageListItemModel {
     required this.time,
     this.imageUrl,
     this.unreadCount = 0,
+    this.roomId = '',
   });
 
   final String targetId;
@@ -24,6 +25,7 @@ class MessageListItemModel {
   final String time;
   final String? imageUrl;
   final int unreadCount;
+  final String roomId;
 }
 
 /// Horizontal New Match avatar — tap opens profile sheet.

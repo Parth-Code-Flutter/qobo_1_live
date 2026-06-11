@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
@@ -8,10 +9,12 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
 import 'package:qobo_one_live/repo/chat/chat_local_store.dart';
 import 'package:qobo_one_live/repo/chat/chat_repo.dart';
+import 'package:qobo_one_live/repo/chat/models/chat_room_model.dart';
 import 'package:qobo_one_live/services/chat/chat_firebase_service.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
+import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 import 'package:intl/intl.dart';
 
 /// WhatsApp-style delivery state for outgoing messages.
@@ -54,9 +57,9 @@ class ChatDetailController extends GetxController {
     ChatRepo? chatRepo,
     ChatLocalStore? localStore,
     ChatFirebaseService? firebaseService,
-  })  : _chatRepo = chatRepo ?? ChatRepo(),
-        _localStore = localStore ?? ChatLocalStore(),
-        _firebaseService = firebaseService ?? ChatFirebaseService();
+  }) : _chatRepo = chatRepo ?? ChatRepo(),
+       _localStore = localStore ?? ChatLocalStore(),
+       _firebaseService = firebaseService ?? ChatFirebaseService();
 
   final ChatRepo _chatRepo;
   final ChatLocalStore _localStore;
@@ -69,8 +72,8 @@ class ChatDetailController extends GetxController {
   final firestorePath = ''.obs;
 
   final messages = <ChatMessageModel>[].obs;
+  final timelineEntries = <ChatTimelineEntry>[].obs;
   final isLoading = false.obs;
-  final isSending = false.obs;
   final isFirebaseLive = false.obs;
   final peerIsTyping = false.obs;
   final peerIsOnline = false.obs;
@@ -82,6 +85,7 @@ class ChatDetailController extends GetxController {
   StreamSubscription<Map<String, dynamic>>? _presenceSub;
   Timer? _typingDebounce;
   Timer? _typingClearTimer;
+  bool _sendInFlight = false;
   List<ChatMessageModel> _restBootstrap = [];
 
   String? get _myUserId {
@@ -108,25 +112,12 @@ class ChatDetailController extends GetxController {
     return peerIsOnline.value ? kColorLiveLocation : kColorHint;
   }
 
-  /// Messages grouped with WhatsApp-style date headers (Today, Yesterday, …).
-  List<ChatTimelineEntry> get timelineEntries {
-    final entries = <ChatTimelineEntry>[];
-    DateTime? lastDay;
-
-    for (final msg in messages) {
-      final day = _messageDay(msg);
-      if (lastDay == null || day != lastDay) {
-        entries.add(ChatTimelineEntry.dateHeader(_formatDateGroupLabel(day)));
-        lastDay = day;
-      }
-      entries.add(ChatTimelineEntry.message(msg));
-    }
-    return entries;
-  }
+  final ScrollController scrollController = ScrollController();
 
   @override
   void onInit() {
     super.onInit();
+    ever(messages, (_) => _refreshTimeline());
     final args = Get.arguments;
     if (args is Map) {
       if (args['name'] != null) chatName.value = args['name'].toString();
@@ -157,8 +148,38 @@ class ChatDetailController extends GetxController {
   }
 
   Future<void> _bootstrapChat() async {
+    await _ensureRoomReady();
+    await _ensureFirebaseSession();
     await loadHistory();
     await _startFirebaseIfReady();
+  }
+
+  Future<bool> _ensureFirebaseSession() async {
+    if (!_firebaseService.isAvailable) return false;
+    if (!Get.isRegistered<ChatSessionService>()) {
+      Get.put(ChatSessionService(), permanent: true);
+    }
+    return Get.find<ChatSessionService>().ensureSignedIn(isShowLoader: false);
+  }
+
+  Future<bool> _ensureRoomReady() async {
+    if (targetId.value.isEmpty) return false;
+    if (roomId.value.isNotEmpty || firestorePath.value.isNotEmpty) return true;
+
+    final response = await _chatRepo.createRoom(
+      targetId: targetId.value,
+      isShowLoader: false,
+    );
+    if (!isSocialApiSuccess(response)) return false;
+
+    final room = ChatRoomModel.fromResponseData(response?['data']);
+    if (room.roomId.isNotEmpty) {
+      roomId.value = room.roomId;
+    }
+    if (room.firestorePath.isNotEmpty) {
+      firestorePath.value = room.firestorePath;
+    }
+    return roomId.value.isNotEmpty || firestorePath.value.isNotEmpty;
   }
 
   Future<void> loadHistory() async {
@@ -186,18 +207,31 @@ class ChatDetailController extends GetxController {
         cached.map((raw) => _mapMessage(raw, myId)).toList(),
       );
       _restBootstrap = merged;
+
+      // Firestore bootstrap when REST/local are empty but messages exist in Firebase.
+      if (_firebaseService.isAvailable && _effectiveRoomId.isNotEmpty) {
+        final signedIn = await _ensureFirebaseSession();
+        if (signedIn) {
+          final firestoreRaw = await _firebaseService.fetchMessagesOnce(
+            _effectiveRoomId,
+          );
+          if (firestoreRaw.isNotEmpty) {
+            final fromFirestore =
+                firestoreRaw.map((raw) => _mapMessage(raw, myId)).toList();
+            _restBootstrap = _mergeMessages(_restBootstrap, fromFirestore);
+          }
+        }
+      }
+
       if (!isFirebaseLive.value) {
-        messages.assignAll(merged);
+        messages.assignAll(_restBootstrap);
       } else {
-        messages.assignAll(
-          _mergeMessages(_restBootstrap, messages.toList()),
-        );
+        messages.assignAll(_mergeMessages(_restBootstrap, messages.toList()));
       }
     } catch (_) {
       final cached = await _localStore.readMessages(targetId.value);
       final myId = _myUserId ?? '';
-      _restBootstrap =
-          cached.map((raw) => _mapMessage(raw, myId)).toList();
+      _restBootstrap = cached.map((raw) => _mapMessage(raw, myId)).toList();
       if (!isFirebaseLive.value) {
         messages.assignAll(_restBootstrap);
       }
@@ -210,12 +244,13 @@ class ChatDetailController extends GetxController {
     final effectiveRoomId = _effectiveRoomId;
     if (!_firebaseService.isAvailable || effectiveRoomId.isEmpty) return;
 
-    if (!Get.isRegistered<ChatSessionService>()) {
-      Get.put(ChatSessionService(), permanent: true);
+    final signedIn = await _ensureFirebaseSession();
+    if (!signedIn) {
+      LoggerUtils.logWarning(
+        'ChatDetailController: Firestore listener skipped — not signed in',
+      );
+      return;
     }
-    final signedIn =
-        await Get.find<ChatSessionService>().ensureSignedIn(isShowLoader: false);
-    if (!signedIn) return;
 
     final myId = _myUserId ?? '';
     if (myId.isEmpty) return;
@@ -230,10 +265,7 @@ class ChatDetailController extends GetxController {
 
     _presenceSub = _firebaseService
         .watchPeerPresence(targetId.value)
-        .listen(
-          _applyPeerPresence,
-          onError: (_) {},
-        );
+        .listen(_applyPeerPresence, onError: (_) {});
 
     _typingSub = _firebaseService
         .watchPeerTyping(roomId: effectiveRoomId, myUserId: myId)
@@ -242,23 +274,72 @@ class ChatDetailController extends GetxController {
           onError: (_) => peerIsTyping.value = false,
         );
 
-    _firebaseSub = _firebaseService.watchMessages(effectiveRoomId).listen(
-      (rawMessages) async {
-        final live =
-            rawMessages.map((raw) => _mapMessage(raw, myId)).toList();
-        messages.assignAll(_mergeMessages(_restBootstrap, live));
+    _firebaseSub = _firebaseService
+        .watchMessages(effectiveRoomId)
+        .listen(
+          (rawMessages) {
+            _applyFirestoreMessages(rawMessages, myId);
+            _scrollToBottom();
 
-        await _firebaseService.ackIncomingMessages(
-          roomId: effectiveRoomId,
-          myUserId: myId,
-          rawMessages: rawMessages,
-          markRead: true,
+            unawaited(
+              _firebaseService.ackIncomingMessages(
+                roomId: effectiveRoomId,
+                myUserId: myId,
+                rawMessages: rawMessages,
+                markRead: true,
+              ),
+            );
+          },
+          onError: (e) {
+            LoggerUtils.logWarning(
+              'ChatDetailController: Firestore listener error — $e',
+            );
+            isFirebaseLive.value = false;
+          },
         );
-      },
-      onError: (_) {
-        isFirebaseLive.value = false;
-      },
+  }
+
+  /// Merges REST/local bootstrap + in-flight optimistic + Firestore live data.
+  /// Firestore wins on duplicate keys (last in merge order).
+  void _applyFirestoreMessages(
+    List<Map<String, dynamic>> rawMessages,
+    String myId,
+  ) {
+    final live =
+        rawMessages.map((raw) => _mapMessage(raw, myId)).toList();
+    final merged = _mergeMessages(
+      _mergeMessages(_restBootstrap, messages.toList()),
+      live,
     );
+    messages.assignAll(merged);
+  }
+
+  void _refreshTimeline() {
+    final entries = <ChatTimelineEntry>[];
+    int? lastDayKey;
+
+    for (final msg in messages) {
+      final dayKey = _messageDayKey(msg);
+      if (lastDayKey == null || dayKey != lastDayKey) {
+        entries.add(
+          ChatTimelineEntry.dateHeader(_formatDateGroupLabel(_dayFromKey(dayKey))),
+        );
+        lastDayKey = dayKey;
+      }
+      entries.add(ChatTimelineEntry.message(msg));
+    }
+    timelineEntries.assignAll(entries);
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!scrollController.hasClients) return;
+      scrollController.animateTo(
+        scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   void _applyPeerPresence(Map<String, dynamic> data) {
@@ -299,91 +380,143 @@ class ChatDetailController extends GetxController {
 
   Future<void> sendMessage() async {
     final text = messageController.text.trim();
-    if (text.isEmpty || targetId.value.isEmpty || isSending.value) return;
+    if (text.isEmpty || targetId.value.isEmpty || _sendInFlight) return;
 
     final myId = _myUserId ?? '';
-    final effectiveRoomId = _effectiveRoomId;
-    final clientMessageId =
-        '${DateTime.now().millisecondsSinceEpoch}_$myId';
+    final clientMessageId = '${DateTime.now().millisecondsSinceEpoch}_$myId';
 
-    isSending.value = true;
+    _sendInFlight = true;
     messageController.clear();
-    unawaited(
-      _firebaseService.setTyping(
-        roomId: effectiveRoomId,
-        userId: myId,
-        isTyping: false,
-      ),
-    );
 
     final now = DateTime.now();
-    final optimistic = ChatMessageModel(
+    messages.add(
+      ChatMessageModel(
+        text: text,
+        isMe: true,
+        time: _formatTime(now),
+        createdAt: now,
+        clientMessageId: clientMessageId,
+        deliveryStatus: ChatDeliveryStatus.sent,
+      ),
+    );
+    _scrollToBottom();
+
+    // Fire-and-forget — UI stays responsive; no spinner blocking send button.
+    unawaited(_dispatchSend(text: text, myId: myId, clientMessageId: clientMessageId));
+  }
+
+  Future<void> _dispatchSend({
+    required String text,
+    required String myId,
+    required String clientMessageId,
+  }) async {
+    try {
+      final sentViaFirestore = await _performSend(
+        text: text,
+        myId: myId,
+        clientMessageId: clientMessageId,
+      );
+      if (sentViaFirestore && !isFirebaseLive.value) {
+        await _startFirebaseIfReady();
+      }
+    } catch (e) {
+      LoggerUtils.logWarning('ChatDetailController: send failed — $e');
+      await _persistLocalFallback(
+        text: text,
+        myId: myId,
+        clientMessageId: clientMessageId,
+      );
+    } finally {
+      _sendInFlight = false;
+    }
+  }
+
+  /// Returns true when message was written to Firestore.
+  Future<bool> _performSend({
+    required String text,
+    required String myId,
+    required String clientMessageId,
+  }) async {
+    var effectiveRoomId = _effectiveRoomId;
+    if (effectiveRoomId.isEmpty) {
+      await _ensureRoomReady();
+      effectiveRoomId = _effectiveRoomId;
+    }
+
+    if (_firebaseService.isAvailable &&
+        effectiveRoomId.isNotEmpty &&
+        myId.isNotEmpty) {
+      final signedIn = await _ensureFirebaseSession();
+      if (signedIn) {
+        final authUid = FirebaseAuth.instance.currentUser?.uid ?? myId;
+        if (authUid != myId) {
+          LoggerUtils.logWarning(
+            'ChatDetailController: auth uid $authUid != app user $myId',
+          );
+        }
+        await _firebaseService.sendTextMessage(
+          roomId: effectiveRoomId,
+          senderId: authUid,
+          text: text,
+          clientMessageId: clientMessageId,
+          recipientId: targetId.value,
+        );
+        await _localStore.saveThreadMeta(
+          targetId: targetId.value,
+          name: chatName.value,
+          imageUrl: chatImageUrl.value,
+        );
+        return true;
+      }
+      LoggerUtils.logWarning(
+        'ChatDetailController: Firebase sign-in failed — using REST/local fallback',
+      );
+    }
+
+    final response = await _chatRepo.sendMessage(
+      targetId: targetId.value,
+      content: text,
+      roomId: effectiveRoomId.isNotEmpty ? effectiveRoomId : null,
+    );
+
+    if (isSocialApiSuccess(response)) {
+      await loadHistory();
+      return false;
+    }
+
+    await _persistLocalFallback(
+      text: text,
+      myId: myId,
+      clientMessageId: clientMessageId,
+    );
+    return false;
+  }
+
+  Future<void> _persistLocalFallback({
+    required String text,
+    required String myId,
+    required String clientMessageId,
+  }) async {
+    await _localStore.appendMessage(
+      targetId: targetId.value,
+      text: text,
+      senderId: myId,
+      clientMessageId: clientMessageId,
+    );
+    await _localStore.saveThreadMeta(
+      targetId: targetId.value,
+      name: chatName.value,
+      imageUrl: chatImageUrl.value,
+    );
+    final localMsg = ChatMessageModel(
       text: text,
       isMe: true,
-      time: _formatTime(now),
-      createdAt: now,
+      time: _formatTime(DateTime.now()),
+      createdAt: DateTime.now(),
       clientMessageId: clientMessageId,
       deliveryStatus: ChatDeliveryStatus.sent,
     );
-    messages.add(optimistic);
-
-    try {
-      if (_firebaseService.isAvailable &&
-          effectiveRoomId.isNotEmpty &&
-          myId.isNotEmpty) {
-        if (!Get.isRegistered<ChatSessionService>()) {
-          Get.put(ChatSessionService(), permanent: true);
-        }
-        final signedIn = await Get.find<ChatSessionService>().ensureSignedIn(
-          isShowLoader: false,
-        );
-        if (signedIn) {
-          await _firebaseService.sendTextMessage(
-            roomId: effectiveRoomId,
-            senderId: myId,
-            text: text,
-            clientMessageId: clientMessageId,
-            recipientId: targetId.value,
-          );
-          await _localStore.saveThreadMeta(
-            targetId: targetId.value,
-            name: chatName.value,
-            imageUrl: chatImageUrl.value,
-          );
-          return;
-        }
-      }
-
-      final response = await _chatRepo.sendMessage(
-        targetId: targetId.value,
-        content: text,
-        roomId: effectiveRoomId.isNotEmpty ? effectiveRoomId : null,
-      );
-
-      if (isSocialApiSuccess(response)) {
-        await loadHistory();
-        return;
-      }
-
-      await _localStore.appendMessage(
-        targetId: targetId.value,
-        text: text,
-        senderId: myId,
-      );
-      await _localStore.saveThreadMeta(
-        targetId: targetId.value,
-        name: chatName.value,
-        imageUrl: chatImageUrl.value,
-      );
-    } catch (_) {
-      await _localStore.appendMessage(
-        targetId: targetId.value,
-        text: text,
-        senderId: myId,
-      );
-    } finally {
-      isSending.value = false;
-    }
+    _restBootstrap = _mergeMessages(_restBootstrap, [localMsg]);
   }
 
   ChatMessageModel _mapMessage(Map<dynamic, dynamic> raw, String myId) {
@@ -395,7 +528,9 @@ class ChatDetailController extends GetxController {
       final fallback = json['clientCreatedAt'];
       createdAt = _parseTimestamp(fallback);
     }
-    final isMe = myId.isNotEmpty && senderId == myId;
+    final authUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final isMe = myId.isNotEmpty &&
+        (senderId == myId || (authUid.isNotEmpty && senderId == authUid));
 
     return ChatMessageModel(
       id: json['id']?.toString() ?? json['messageId']?.toString(),
@@ -451,11 +586,11 @@ class ChatDetailController extends GetxController {
   ) {
     final byKey = <String, ChatMessageModel>{};
     for (final msg in [...a, ...b]) {
-      final key = msg.id?.isNotEmpty == true
+      final key = msg.clientMessageId?.isNotEmpty == true
+          ? msg.clientMessageId!
+          : msg.id?.isNotEmpty == true
           ? msg.id!
-          : msg.clientMessageId?.isNotEmpty == true
-              ? msg.clientMessageId!
-              : '${msg.text}_${msg.createdAt?.toIso8601String() ?? msg.time}';
+          : '${msg.text}_${msg.createdAt?.toIso8601String() ?? msg.time}';
       byKey[key] = msg;
     }
     final merged = byKey.values.toList();
@@ -467,9 +602,16 @@ class ChatDetailController extends GetxController {
     return merged;
   }
 
-  static DateTime _messageDay(ChatMessageModel msg) {
+  static int _messageDayKey(ChatMessageModel msg) {
     final dt = msg.createdAt?.toLocal() ?? DateTime.now();
-    return DateTime(dt.year, dt.month, dt.day);
+    return dt.year * 10000 + dt.month * 100 + dt.day;
+  }
+
+  static DateTime _dayFromKey(int key) {
+    final year = key ~/ 10000;
+    final month = (key % 10000) ~/ 100;
+    final day = key % 100;
+    return DateTime(year, month, day);
   }
 
   static String _formatDateGroupLabel(DateTime day) {
@@ -512,6 +654,7 @@ class ChatDetailController extends GetxController {
     _typingClearTimer?.cancel();
     messageController.removeListener(_onMessageTextChanged);
     messageController.dispose();
+    scrollController.dispose();
     super.onClose();
   }
 }

@@ -31,11 +31,13 @@ class ChatDetailView extends GetView<ChatDetailController> {
                     child: CircularProgressIndicator(color: kColorPrimary),
                   );
                 }
-                if (controller.messages.isEmpty) {
+                if (controller.timelineEntries.isEmpty &&
+                    controller.messages.isEmpty) {
                   return const _ChatEmptyState();
                 }
                 final entries = controller.timelineEntries;
                 return ListView.builder(
+                  controller: controller.scrollController,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 20,
@@ -243,30 +245,17 @@ class ChatDetailView extends GetView<ChatDetailController> {
           ),
           Spacing.h12,
           GestureDetector(
-            onTap: controller.isSending.value ? null : controller.sendMessage,
-            child: Obx(
-              () => Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: controller.isSending.value
-                      ? kColorPrimary.withValues(alpha: 0.5)
-                      : kColorPrimary,
-                  shape: BoxShape.circle,
-                ),
-                child: controller.isSending.value
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: kColorWhite,
-                        ),
-                      )
-                    : const Icon(
-                        Icons.send_rounded,
-                        color: kColorWhite,
-                        size: 20,
-                      ),
+            onTap: controller.sendMessage,
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: const BoxDecoration(
+                color: kColorPrimary,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.send_rounded,
+                color: kColorWhite,
+                size: 20,
               ),
             ),
           ),
