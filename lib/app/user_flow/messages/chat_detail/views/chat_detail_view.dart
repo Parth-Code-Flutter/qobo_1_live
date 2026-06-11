@@ -78,46 +78,34 @@ class ChatDetailView extends GetView<ChatDetailController> {
           icon: SvgPicture.asset(kIconArrowBack),
         ),
       ),
-      title: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            controller.chatName.value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyles.kBoldPoppins(
-              fontSize: TextStyles.k18FontSize,
-              colors: kColorText,
-            ),
+      title: GestureDetector(
+        onTap: controller.openContactProfile,
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                controller.chatName.value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyles.kBoldPoppins(
+                  fontSize: TextStyles.k18FontSize,
+                  colors: kColorText,
+                ),
+              ),
+              const SizedBox(height: 2),
+              AppText(
+                text: controller.presenceStatusLabel,
+                fontSize: TextStyles.k12FontSize,
+                color: controller.presenceStatusColor,
+              ),
+            ],
           ),
-          const SizedBox(height: 2),
-          AppText(
-            text: controller.presenceStatusLabel,
-            fontSize: TextStyles.k12FontSize,
-            color: controller.presenceStatusColor,
-          ),
-        ],
+        ),
       ),
       actions: [
-        PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert_rounded, color: kColorText),
-          color: kColorWhite,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          onSelected: (value) {
-            switch (value) {
-              case 'delete':
-                controller.deleteChat(context);
-              case 'block':
-                controller.blockUser(context);
-            }
-          },
-          itemBuilder: (_) => const [
-            PopupMenuItem(value: 'delete', child: Text('Delete chat')),
-            PopupMenuItem(value: 'block', child: Text('Block user')),
-          ],
-        ),
         IconButton(
           onPressed: () {},
           icon: const Icon(Icons.call_rounded, color: kColorText),

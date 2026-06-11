@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/repo/chat/chat_local_store.dart';
 import 'package:qobo_one_live/repo/chat/chat_navigation_helper.dart';
@@ -12,7 +11,6 @@ import 'package:qobo_one_live/services/chat/chat_firebase_service.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
-import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 import '../models/social_user_card.dart';
 import '../widgets/messages_common_widgets.dart';
@@ -391,126 +389,6 @@ class MessagesTabController extends GetxController {
       roomId: thread.roomId.isNotEmpty ? thread.roomId : null,
     );
     fetchInbox();
-  }
-
-  /// Soft-delete thread from inbox via `POST /api/chat/delete`.
-  Future<void> deleteChatThread(
-    BuildContext context,
-    MessageListItemModel thread,
-  ) async {
-    if (thread.targetId.isEmpty) return;
-
-    final confirmed = await _confirmChatAction(
-      context,
-      title: 'Delete chat?',
-      message:
-          'This removes the conversation from your inbox. ${thread.name} can still message you.',
-    );
-    if (!confirmed || !context.mounted) return;
-
-    try {
-      final response = await _chatRepo.deleteChat(
-        targetId: thread.targetId,
-        roomId: thread.roomId.isNotEmpty ? thread.roomId : null,
-      );
-      if (!context.mounted) return;
-
-      if (isSocialApiSuccess(response)) {
-        await _localStore.removeInboxThread(thread.targetId);
-        await _localStore.clearMessagesForTarget(thread.targetId);
-        inboxThreads.removeWhere((t) => t.targetId == thread.targetId);
-        AppToast.showSuccess(context, 'Chat deleted');
-        return;
-      }
-
-      AppToast.showError(
-        context,
-        response?['message']?.toString() ?? 'Could not delete chat',
-      );
-    } catch (e) {
-      if (!context.mounted) return;
-      AppToast.showError(context, 'Error deleting chat: $e');
-    }
-  }
-
-  /// Block user via `POST /api/chat/block` (atomic block + delete).
-  Future<void> blockChatUser(
-    BuildContext context,
-    MessageListItemModel thread,
-  ) async {
-    if (thread.targetId.isEmpty) return;
-
-    final confirmed = await _confirmChatAction(
-      context,
-      title: 'Block ${thread.name}?',
-      message:
-          'They will no longer be able to message you. You can unblock them from Settings > Block List.',
-    );
-    if (!confirmed || !context.mounted) return;
-
-    try {
-      final response = await _chatRepo.blockUserFromChat(
-        targetId: thread.targetId,
-        roomId: thread.roomId.isNotEmpty ? thread.roomId : null,
-        deleteChat: true,
-      );
-      if (!context.mounted) return;
-
-      if (isSocialApiSuccess(response)) {
-        await _localStore.removeInboxThread(thread.targetId);
-        await _localStore.clearMessagesForTarget(thread.targetId);
-        inboxThreads.removeWhere((t) => t.targetId == thread.targetId);
-        AppToast.showSuccess(context, '${thread.name} blocked');
-        return;
-      }
-
-      AppToast.showError(
-        context,
-        response?['message']?.toString() ?? 'Could not block user',
-      );
-    } catch (e) {
-      if (!context.mounted) return;
-      AppToast.showError(context, 'Error blocking user: $e');
-    }
-  }
-
-  static Future<bool> _confirmChatAction(
-    BuildContext context, {
-    required String title,
-    required String message,
-  }) async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: kColorWhite,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          title,
-          style: TextStyles.kSemiBoldPoppins(
-            fontSize: TextStyles.k16FontSize,
-            colors: kColorText,
-          ),
-        ),
-        content: Text(
-          message,
-          style: TextStyles.kRegularPoppins(
-            fontSize: TextStyles.k14FontSize,
-            colors: kColorHint,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Confirm'),
-          ),
-        ],
-      ),
-    );
-    return result == true;
   }
 
   Future<SocialUserCard?> fetchPublicProfile(String userId) async {
