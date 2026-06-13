@@ -67,7 +67,7 @@ class ChatVoiceCallView extends GetView<ChatVoiceCallController> {
                 },
               ),
               onCallEnd: (event, defaultAction) async {
-                await controller.onCallEnded(refreshInbox: false);
+                await controller.finishCall(refreshInbox: false);
                 defaultAction.call();
                 await controller.onCallScreenDisposed();
                 ChatVoiceCallController.refreshMessagesInbox();

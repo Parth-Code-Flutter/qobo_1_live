@@ -51,9 +51,16 @@ class ChatDetailView extends GetView<ChatDetailController> {
                     if (entry.isDateHeader) {
                       return _buildDateHeader(entry.dateLabel!);
                     }
+                    final msg = entry.message!;
+                    if (msg.isCallEntry) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: _buildCallLogEntry(msg),
+                      );
+                    }
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 16),
-                      child: _buildMessageBubble(entry.message!),
+                      child: _buildMessageBubble(msg),
                     );
                   },
                 );
@@ -153,6 +160,77 @@ class ChatDetailView extends GetView<ChatDetailController> {
             color: kColorHint,
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildCallLogEntry(ChatMessageModel msg) {
+    final accentColor = msg.isMissedCall
+        ? Colors.redAccent.shade400
+        : msg.isUnansweredCall
+        ? Colors.orange.shade700
+        : (msg.isMe ? kColorPrimary : kColorText);
+    final icon = msg.isVideoCall ? Icons.videocam_rounded : Icons.call_rounded;
+    final directionIcon = msg.isMe
+        ? Icons.call_made_rounded
+        : Icons.call_received_rounded;
+    final bubbleColor = msg.isMe
+        ? kColorPrimary.withValues(alpha: 0.12)
+        : kColorBackground;
+
+    return Align(
+      alignment: msg.isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Column(
+        crossAxisAlignment: msg.isMe
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            constraints: const BoxConstraints(maxWidth: 260),
+            decoration: BoxDecoration(
+              color: bubbleColor,
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(14),
+                topRight: const Radius.circular(14),
+                bottomLeft: Radius.circular(msg.isMe ? 14 : 4),
+                bottomRight: Radius.circular(msg.isMe ? 4 : 14),
+              ),
+              border: Border.all(
+                color: msg.isMissedCall
+                    ? Colors.redAccent.withValues(alpha: 0.35)
+                    : msg.isUnansweredCall
+                    ? Colors.orange.withValues(alpha: 0.35)
+                    : kColorHint.withValues(alpha: 0.15),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 18, color: accentColor),
+                const SizedBox(width: 6),
+                Icon(directionIcon, size: 14, color: accentColor),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: AppText(
+                    text: msg.text,
+                    fontSize: TextStyles.k12FontSize,
+                    color: accentColor,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Spacing.v4,
+          AppText(
+            text: msg.time,
+            fontSize: 10,
+            color: kColorHint,
+          ),
+        ],
       ),
     );
   }

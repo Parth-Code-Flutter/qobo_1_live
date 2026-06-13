@@ -38,9 +38,13 @@ class MessageListItemModel {
 
   bool get isMissedCall => ChatInboxPreviewType.isMissedCall(lastMessageType);
 
+  bool get isUnansweredCall =>
+      ChatInboxPreviewType.isUnansweredCall(lastMessageType);
+
   bool get isVideoCall =>
       lastMessageType == ChatInboxPreviewType.videoCall ||
-      lastMessageType == ChatInboxPreviewType.missedVideoCall;
+      lastMessageType == ChatInboxPreviewType.missedVideoCall ||
+      lastMessageType == ChatInboxPreviewType.unansweredVideoCall;
 
   bool get isIncomingCall => lastCallDirection == 'incoming';
 }
@@ -295,6 +299,8 @@ class MessageListTileItem extends StatelessWidget {
         : 'Start a conversation';
     final previewColor = item.isMissedCall
         ? Colors.redAccent.shade200
+        : item.isUnansweredCall
+        ? Colors.orange.shade300
         : kColorWhite.withValues(alpha: 0.9);
 
     if (!item.isCallPreview) {

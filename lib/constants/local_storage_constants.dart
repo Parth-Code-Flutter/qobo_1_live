@@ -23,3 +23,6 @@ const String kStorageChatMessages = 'chat_messages_cache';
 
 /// Local inbox thread previews from unsynced sends.
 const String kStorageChatInboxThreads = 'chat_inbox_threads_cache';
+
+/// Local call log cache per room (shows in chat thread immediately).
+const String kStorageChatCallHistory = 'chat_call_history_cache';

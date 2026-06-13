@@ -12,6 +12,7 @@ import 'package:qobo_one_live/repo/chat/models/chat_room_model.dart';
 import 'package:qobo_one_live/services/chat/chat_firebase_service.dart';
 import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
 import 'package:qobo_one_live/services/chat/chat_call_launcher.dart';
+import 'package:qobo_one_live/services/chat/chat_inbox_preview.dart';
 import 'package:qobo_one_live/services/chat/chat_call_service.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
@@ -44,6 +45,11 @@ class ChatMessageModel {
     this.createdAt,
     this.clientMessageId,
     this.deliveryStatus = ChatDeliveryStatus.sent,
+    this.isCallEntry = false,
+    this.isVideoCall = false,
+    this.isMissedCall = false,
+    this.isUnansweredCall = false,
+    this.callDurationSeconds,
   });
 
   final String text;
@@ -53,6 +59,11 @@ class ChatMessageModel {
   final DateTime? createdAt;
   final String? clientMessageId;
   final ChatDeliveryStatus deliveryStatus;
+  final bool isCallEntry;
+  final bool isVideoCall;
+  final bool isMissedCall;
+  final bool isUnansweredCall;
+  final int? callDurationSeconds;
 }
 
 class ChatDetailController extends GetxController {
@@ -84,6 +95,7 @@ class ChatDetailController extends GetxController {
   final messageController = TextEditingController();
 
   StreamSubscription<List<Map<String, dynamic>>>? _firebaseSub;
+  StreamSubscription<List<Map<String, dynamic>>>? _callHistorySub;
   StreamSubscription<bool>? _typingSub;
   StreamSubscription<Map<String, dynamic>>? _presenceSub;
   Timer? _typingDebounce;
@@ -93,6 +105,7 @@ class ChatDetailController extends GetxController {
   bool _isOnVoiceCallScreen = false;
   bool _pendingScrollToBottom = true;
   List<ChatMessageModel> _restBootstrap = [];
+  List<ChatMessageModel> _callBootstrap = [];
 
   String? get _myUserId {
     if (!Get.isRegistered<UserSessionController>()) return null;
@@ -231,19 +244,25 @@ class ChatDetailController extends GetxController {
       }
 
       if (!isFirebaseLive.value) {
-        messages.assignAll(_restBootstrap);
+        messages.assignAll(_mergeMessages(_restBootstrap, _callBootstrap));
       } else {
-        messages.assignAll(_mergeMessages(_restBootstrap, messages.toList()));
+        messages.assignAll(
+          _mergeMessages(
+            _mergeMessages(_restBootstrap, _callBootstrap),
+            messages.toList(),
+          ),
+        );
       }
     } catch (_) {
       final cached = await _localStore.readMessages(targetId.value);
       final myId = _myUserId ?? '';
       _restBootstrap = cached.map((raw) => _mapMessage(raw, myId)).toList();
       if (!isFirebaseLive.value) {
-        messages.assignAll(_restBootstrap);
+        messages.assignAll(_mergeMessages(_restBootstrap, _callBootstrap));
       }
     } finally {
       isLoading.value = false;
+      await _loadCallHistoryWithRetry();
       if (messages.isNotEmpty) {
         _scrollToBottom(jump: true);
       }
@@ -266,6 +285,7 @@ class ChatDetailController extends GetxController {
     if (myId.isEmpty) return;
 
     await _firebaseSub?.cancel();
+    await _callHistorySub?.cancel();
     await _typingSub?.cancel();
     await _presenceSub?.cancel();
 
@@ -300,7 +320,69 @@ class ChatDetailController extends GetxController {
           },
         );
 
+    _callHistorySub = _firebaseService
+        .watchCallHistory(effectiveRoomId)
+        .listen(
+          (rawCalls) => _applyCallHistorySnapshot(rawCalls, myId),
+          onError: (_) {},
+        );
+
     _syncIncomingCallWatcher(effectiveRoomId);
+  }
+
+  Future<void> _loadCallHistory() async {
+    final myId = _myUserId ?? '';
+    final effectiveRoomId = _effectiveRoomId;
+    if (myId.isEmpty || effectiveRoomId.isEmpty) return;
+
+    final localRaw = await _localStore.readCallHistory(effectiveRoomId);
+    if (localRaw.isNotEmpty) {
+      _applyCallHistorySnapshot(localRaw, myId);
+    }
+
+    if (!_firebaseService.isAvailable) return;
+
+    final signedIn = await _ensureFirebaseSession();
+    if (!signedIn) return;
+
+    final raw = await _firebaseService.fetchCallHistoryOnce(effectiveRoomId);
+    if (raw.isNotEmpty) {
+      _applyCallHistorySnapshot(raw, myId);
+    }
+  }
+
+  /// Firestore server timestamps can lag — retry once after a short delay.
+  Future<void> _loadCallHistoryWithRetry() async {
+    await _loadCallHistory();
+    await Future<void>.delayed(const Duration(milliseconds: 900));
+    await _loadCallHistory();
+  }
+
+  /// Immediate WhatsApp-style row when returning from the call screen.
+  void ingestCallSummary(Map<String, dynamic> summary) {
+    final myId = _myUserId ?? '';
+    if (myId.isEmpty) return;
+    _pendingScrollToBottom = true;
+    final entry = _mapCallEntry(summary, myId);
+    _callBootstrap = _mergeMessages(_callBootstrap, [entry]);
+    _publishTimelineWithCalls();
+    _scrollToBottom(jump: true);
+  }
+
+  void _applyCallHistorySnapshot(
+    List<Map<String, dynamic>> rawCalls,
+    String myId,
+  ) {
+    if (rawCalls.isEmpty) return;
+    _callBootstrap =
+        rawCalls.map((raw) => _mapCallEntry(raw, myId)).toList();
+    _publishTimelineWithCalls();
+  }
+
+  void _publishTimelineWithCalls() {
+    final textOnly = messages.where((m) => !m.isCallEntry).toList();
+    final textBase = textOnly.isNotEmpty ? textOnly : _restBootstrap;
+    messages.assignAll(_mergeMessages(textBase, _callBootstrap));
   }
 
   void _scheduleAck(
@@ -342,6 +424,8 @@ class ChatDetailController extends GetxController {
       );
     } finally {
       _isOnVoiceCallScreen = false;
+      await _loadCallHistoryWithRetry();
+      _scrollToBottom();
     }
   }
 
@@ -361,6 +445,8 @@ class ChatDetailController extends GetxController {
       );
     } finally {
       _isOnVoiceCallScreen = false;
+      await _loadCallHistoryWithRetry();
+      _scrollToBottom();
     }
   }
 
@@ -372,11 +458,11 @@ class ChatDetailController extends GetxController {
   ) {
     final live =
         rawMessages.map((raw) => _mapMessage(raw, myId)).toList();
-    final merged = _mergeMessages(
-      _mergeMessages(_restBootstrap, messages.toList()),
+    final textMerged = _mergeMessages(
+      _mergeMessages(_restBootstrap, messages.where((m) => !m.isCallEntry).toList()),
       live,
     );
-    messages.assignAll(merged);
+    messages.assignAll(_mergeMessages(textMerged, _callBootstrap));
   }
 
   void _refreshTimeline() {
@@ -609,6 +695,86 @@ class ChatDetailController extends GetxController {
     _restBootstrap = _mergeMessages(_restBootstrap, [localMsg]);
   }
 
+  ChatMessageModel _mapCallEntry(Map<dynamic, dynamic> raw, String myId) {
+    final json = Map<String, dynamic>.from(raw);
+    final callerId = json['callerId']?.toString() ?? '';
+    final calleeId = json['calleeId']?.toString() ?? '';
+    final isVideo = json['type']?.toString() == 'video';
+    final outcome = json['status']?.toString() ?? 'completed';
+    final isCallee = calleeId.isNotEmpty && calleeId == myId;
+    final isMe = callerId.isNotEmpty && callerId == myId;
+
+    final endedAt =
+        _parseTimestamp(json['endedAt']) ??
+        _parseTimestamp(json['clientEndedAt']);
+    final durationRaw = json['durationSeconds'];
+    final durationSeconds = durationRaw is int
+        ? durationRaw
+        : int.tryParse(durationRaw?.toString() ?? '');
+
+    final isCompleted = ChatInboxPreviewType.isCompletedCall(
+      outcome: outcome,
+      durationSeconds: durationSeconds,
+    );
+
+    return ChatMessageModel(
+      id: json['callId']?.toString() ?? json['id']?.toString(),
+      text: _callEntryLabel(
+        isVideo: isVideo,
+        outcome: outcome,
+        isCallee: isCallee,
+        durationSeconds: durationSeconds,
+        isCompleted: isCompleted,
+      ),
+      isMe: isMe,
+      time: _formatTime(endedAt ?? DateTime.now()),
+      createdAt: endedAt ?? DateTime.now(),
+      isCallEntry: true,
+      isVideoCall: isVideo,
+      isMissedCall: ChatInboxPreviewType.isMissedForUser(
+        outcome: outcome,
+        isCallee: isCallee,
+        durationSeconds: durationSeconds,
+      ),
+      isUnansweredCall: ChatInboxPreviewType.isUnansweredForUser(
+        outcome: outcome,
+        isCallee: isCallee,
+        durationSeconds: durationSeconds,
+      ),
+      callDurationSeconds: durationSeconds,
+    );
+  }
+
+  static String _callEntryLabel({
+    required bool isVideo,
+    required String outcome,
+    required bool isCallee,
+    int? durationSeconds,
+    required bool isCompleted,
+  }) {
+    final base = ChatInboxPreviewType.chatLabelForUser(
+      isVideo: isVideo,
+      outcome: outcome,
+      isCallee: isCallee,
+      durationSeconds: durationSeconds,
+    );
+    if (!isCompleted) return base;
+    final duration = _formatCallDuration(durationSeconds);
+    if (duration.isEmpty) return base;
+    return '$base · $duration';
+  }
+
+  static String _formatCallDuration(int? seconds) {
+    if (seconds == null || seconds <= 0) return '';
+    if (seconds < 60) return '$seconds sec';
+    final minutes = seconds ~/ 60;
+    if (minutes < 60) return '$minutes min';
+    final hours = minutes ~/ 60;
+    final remMin = minutes % 60;
+    if (remMin == 0) return '$hours hr';
+    return '$hours hr $remMin min';
+  }
+
   ChatMessageModel _mapMessage(Map<dynamic, dynamic> raw, String myId) {
     final json = Map<String, dynamic>.from(raw);
     final senderId = json['senderId']?.toString() ?? '';
@@ -676,7 +842,9 @@ class ChatDetailController extends GetxController {
   ) {
     final byKey = <String, ChatMessageModel>{};
     for (final msg in [...a, ...b]) {
-      final key = msg.clientMessageId?.isNotEmpty == true
+      final key = msg.isCallEntry
+          ? 'call_${msg.id?.isNotEmpty == true ? msg.id : msg.createdAt?.toIso8601String() ?? msg.time}'
+          : msg.clientMessageId?.isNotEmpty == true
           ? msg.clientMessageId!
           : msg.id?.isNotEmpty == true
           ? msg.id!
@@ -753,6 +921,7 @@ class ChatDetailController extends GetxController {
       unawaited(_firebaseService.setMyPresence(userId: myId, isOnline: false));
     }
     _firebaseSub?.cancel();
+    _callHistorySub?.cancel();
     _typingSub?.cancel();
     _presenceSub?.cancel();
     _typingDebounce?.cancel();

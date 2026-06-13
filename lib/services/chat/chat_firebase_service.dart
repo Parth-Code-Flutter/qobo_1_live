@@ -507,22 +507,64 @@ class ChatFirebaseService {
     FirebaseFirestore firestore,
     String roomId,
   ) async {
+    final list = await _fetchCallHistoryDocs(firestore, roomId);
+    if (list.isEmpty) return null;
+    return list.last;
+  }
+
+  /// All call log rows for a room, oldest → newest.
+  Future<List<Map<String, dynamic>>> fetchCallHistoryOnce(String roomId) async {
+    final firestore = _firestore;
+    if (roomId.isEmpty || firestore == null) return [];
+    return _fetchCallHistoryDocs(firestore, roomId);
+  }
+
+  Stream<List<Map<String, dynamic>>> watchCallHistory(String roomId) {
+    final firestore = _firestore;
+    if (roomId.isEmpty || firestore == null) {
+      return const Stream.empty();
+    }
+
+    return firestore
+        .collection('chatRooms')
+        .doc(roomId)
+        .collection('callHistory')
+        .snapshots()
+        .map((snapshot) {
+          final list = snapshot.docs
+              .map(
+                (doc) => {
+                  ...Map<String, dynamic>.from(doc.data()),
+                  'id': doc.id,
+                },
+              )
+              .toList();
+          return _sortCallHistoryAsc(list);
+        });
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchCallHistoryDocs(
+    FirebaseFirestore firestore,
+    String roomId,
+  ) async {
     try {
       final snap = await firestore
           .collection('chatRooms')
           .doc(roomId)
           .collection('callHistory')
-          .orderBy('endedAt', descending: true)
-          .limit(1)
+          .orderBy('endedAt', descending: false)
           .get();
-      if (snap.docs.isEmpty) return null;
-      return {
-        ...Map<String, dynamic>.from(snap.docs.first.data()),
-        'id': snap.docs.first.id,
-      };
+      return snap.docs
+          .map(
+            (doc) => {
+              ...Map<String, dynamic>.from(doc.data()),
+              'id': doc.id,
+            },
+          )
+          .toList();
     } catch (e) {
       LoggerUtils.logWarning(
-        'ChatFirebaseService: callHistory orderBy failed — $e (fallback)',
+        'ChatFirebaseService: callHistory fetch failed — $e (fallback)',
       );
       try {
         final snap = await firestore
@@ -530,25 +572,39 @@ class ChatFirebaseService {
             .doc(roomId)
             .collection('callHistory')
             .get();
-        if (snap.docs.isEmpty) return null;
-        final docs = snap.docs.toList()
-          ..sort((a, b) {
-            final ad = _toDateTime(a.data()['endedAt']);
-            final bd = _toDateTime(b.data()['endedAt']);
-            if (ad == null && bd == null) return 0;
-            if (ad == null) return 1;
-            if (bd == null) return -1;
-            return bd.compareTo(ad);
-          });
-        final latest = docs.first;
-        return {
-          ...Map<String, dynamic>.from(latest.data()),
-          'id': latest.id,
-        };
+        return _sortCallHistoryAsc(
+          snap.docs
+              .map(
+                (doc) => {
+                  ...Map<String, dynamic>.from(doc.data()),
+                  'id': doc.id,
+                },
+              )
+              .toList(),
+        );
       } catch (_) {
-        return null;
+        return [];
       }
     }
+  }
+
+  static List<Map<String, dynamic>> _sortCallHistoryAsc(
+    List<Map<String, dynamic>> list,
+  ) {
+    final sorted = List<Map<String, dynamic>>.from(list)
+      ..sort((a, b) {
+        final ad = _callHistorySortTime(a);
+        final bd = _callHistorySortTime(b);
+        if (ad == null && bd == null) return 0;
+        if (ad == null) return -1;
+        if (bd == null) return 1;
+        return ad.compareTo(bd);
+      });
+    return sorted;
+  }
+
+  static DateTime? _callHistorySortTime(Map<String, dynamic> raw) {
+    return _toDateTime(raw['endedAt']) ?? _toDateTime(raw['clientEndedAt']);
   }
 
   static String _extractMessagePreview(Map<String, dynamic> raw) {

@@ -154,6 +154,50 @@ class ChatLocalStore {
     await _storage.writeJsonStorage(kStorageChatInboxThreads, data);
   }
 
+  Future<void> appendCallEntry({
+    required String roomId,
+    required Map<String, dynamic> entry,
+  }) async {
+    if (roomId.isEmpty) return;
+    final map = await _storage.getJsonFromStorage(kStorageChatCallHistory);
+    final all = map != null ? Map<String, dynamic>.from(map) : <String, dynamic>{};
+    final list = List<Map<String, dynamic>>.from(
+      (all[roomId] as List?)?.whereType<Map>().map(
+            (e) => Map<String, dynamic>.from(e),
+          ) ??
+          [],
+    );
+    final callId = entry['callId']?.toString() ?? entry['id']?.toString() ?? '';
+    if (callId.isNotEmpty) {
+      list.removeWhere(
+        (e) =>
+            e['callId']?.toString() == callId || e['id']?.toString() == callId,
+      );
+    }
+    list.add(entry);
+    list.sort((a, b) {
+      final ad = DateTime.tryParse(a['clientEndedAt']?.toString() ?? '') ??
+          DateTime.tryParse(a['endedAt']?.toString() ?? '');
+      final bd = DateTime.tryParse(b['clientEndedAt']?.toString() ?? '') ??
+          DateTime.tryParse(b['endedAt']?.toString() ?? '');
+      if (ad == null && bd == null) return 0;
+      if (ad == null) return -1;
+      if (bd == null) return 1;
+      return ad.compareTo(bd);
+    });
+    all[roomId] = list;
+    await _storage.writeJsonStorage(kStorageChatCallHistory, all);
+  }
+
+  Future<List<Map<String, dynamic>>> readCallHistory(String roomId) async {
+    if (roomId.isEmpty) return [];
+    final map = await _storage.getJsonFromStorage(kStorageChatCallHistory);
+    if (map == null) return [];
+    final list = map[roomId];
+    if (list is! List) return [];
+    return list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+  }
+
   Future<void> saveThreadMeta({
     required String targetId,
     required String name,

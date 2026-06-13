@@ -214,7 +214,9 @@ class MessagesTabController extends GetxController {
       roomId: newer.roomId.isNotEmpty ? newer.roomId : older.roomId,
       lastMessageType: newer.lastMessageType != ChatInboxPreviewType.text
           ? newer.lastMessageType
-          : older.lastMessageType,
+          : (ChatInboxPreviewType.isCallType(older.lastMessageType)
+              ? older.lastMessageType
+              : newer.lastMessageType),
       lastCallDirection: newer.lastCallDirection ?? older.lastCallDirection,
       lastActivityAt: newer.lastActivityAt ?? older.lastActivityAt,
     );
@@ -309,12 +311,27 @@ class MessagesTabController extends GetxController {
         '';
     final picture = recipientMap?['displayPicture']?.toString();
 
-    final lastMessageType =
+    var lastMessageType =
         json['lastMessageType']?.toString() ?? ChatInboxPreviewType.text;
     final previewRaw =
         json['lastMessage']?.toString() ??
         json['lastMessagePreview']?.toString() ??
         '';
+
+    final callStatus = json['lastCallStatus']?.toString();
+    final callDirection = json['lastCallDirection']?.toString();
+    final callMediaType = json['lastCallType']?.toString();
+    if (callStatus != null &&
+        callStatus.isNotEmpty &&
+        callMediaType != null &&
+        callMediaType.isNotEmpty) {
+      lastMessageType = ChatInboxPreviewType.inboxTypeForUser(
+        isVideo: callMediaType == 'video',
+        outcome: callStatus,
+        isCallee: callDirection == 'incoming',
+      );
+    }
+
     final preview = ChatInboxPreviewType.displayLabel(
       lastMessageType,
       fallbackPreview: previewRaw,

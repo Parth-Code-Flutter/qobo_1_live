@@ -229,22 +229,21 @@ class ChatCallService {
     required String calleeId,
     int? durationSeconds,
   }) {
-    if (status == 'accepted' ||
-        (durationSeconds != null && durationSeconds >= 2)) {
+    if (status == 'accepted') {
       return ChatCallOutcome.completed;
     }
 
     final endedBy = endedByUserId?.trim() ?? '';
-    if (endedBy.isEmpty || endedBy == callerId) {
-      return ChatCallOutcome.cancelled;
-    }
     if (endedBy == calleeId) {
       return ChatCallOutcome.missed;
+    }
+    if (endedBy.isEmpty || endedBy == callerId) {
+      return ChatCallOutcome.cancelled;
     }
     return ChatCallOutcome.missed;
   }
 
-  Future<void> _recordCallHistory({
+  Future<bool> _recordCallHistory({
     required String roomId,
     required String callerId,
     required String calleeId,
@@ -254,7 +253,7 @@ class ChatCallService {
     String? callId,
   }) async {
     final firestore = _firestore;
-    if (firestore == null) return;
+    if (firestore == null) return false;
 
     try {
       final docId =
@@ -262,24 +261,38 @@ class ChatCallService {
               ? callId!.trim()
               : firestore.collection('chatRooms').doc().id;
 
-      await firestore
+      final ref = firestore
           .collection('chatRooms')
           .doc(roomId)
           .collection('callHistory')
-          .doc(docId)
-          .set({
+          .doc(docId);
+
+      final existing = await ref.get();
+      if (existing.exists) {
+        LoggerUtils.logInfo(
+          'ChatCallService: callHistory/$docId already exists — skip duplicate',
+        );
+        return true;
+      }
+
+      await ref.set({
         'callId': docId,
         'roomId': roomId,
         'callerId': callerId,
         'calleeId': calleeId,
         'type': isVideo ? 'video' : 'voice',
         'status': outcome.name,
-        if (durationSeconds != null && durationSeconds > 0)
+        'clientEndedAt': DateTime.now().toUtc().toIso8601String(),
+        if (durationSeconds != null &&
+            durationSeconds > 0 &&
+            outcome == ChatCallOutcome.completed)
           'durationSeconds': durationSeconds,
         'endedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      });
+      return true;
     } catch (e) {
       LoggerUtils.logWarning('ChatCallService: callHistory write failed — $e');
+      return false;
     }
   }
 

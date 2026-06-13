@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:get/get.dart';
+import 'package:qobo_one_live/app/user_flow/messages/chat_detail/controllers/chat_detail_controller.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/controllers/messages_tab_controller.dart';
 import 'package:qobo_one_live/repo/calling/calling_repo.dart';
 import 'package:qobo_one_live/repo/chat/chat_local_store.dart';
@@ -80,15 +81,20 @@ class ChatVoiceCallController extends GetxController {
     LoggerUtils.logWarning('ChatVoiceCallController: $error');
   }
 
-  Future<void> onCallEnded({bool refreshInbox = true}) async {
-    await _recordCallIfNeeded();
+  /// Records call + returns summary for chat thread (WhatsApp-style log row).
+  Future<Map<String, dynamic>?> finishCall({bool refreshInbox = true}) async {
+    final summary = await _recordCallIfNeeded();
     await _chargeCallIfNeeded();
     if (Get.isRegistered<ChatIncomingCallCoordinator>()) {
       Get.find<ChatIncomingCallCoordinator>().setOnCallScreen(false);
     }
+    if (summary != null && Get.isRegistered<ChatDetailController>()) {
+      Get.find<ChatDetailController>().ingestCallSummary(summary);
+    }
     if (refreshInbox) {
       refreshMessagesInbox();
     }
+    return summary;
   }
 
   Future<void> onCallScreenDisposed() async {
@@ -107,22 +113,26 @@ class ChatVoiceCallController extends GetxController {
     super.onClose();
   }
 
-  Future<void> _recordCallIfNeeded() async {
-    if (_callRecorded || roomId.value.isEmpty) return;
+  Future<Map<String, dynamic>?> _recordCallIfNeeded() async {
+    if (_callRecorded || roomId.value.isEmpty) return null;
 
     final myId = _rawUserId;
-    if (myId.isEmpty) return;
+    if (myId.isEmpty) return null;
 
     final startedAt = _startedAt;
+    final endedAt = DateTime.now().toUtc();
     final durationSeconds = startedAt == null
         ? null
-        : DateTime.now().difference(startedAt).inSeconds;
+        : endedAt.difference(startedAt).inSeconds;
 
     final callerId = isCaller.value ? myId : hostId.value.trim();
     final calleeId = isCaller.value ? hostId.value.trim() : myId;
-    if (callerId.isEmpty || calleeId.isEmpty) return;
+    if (callerId.isEmpty || calleeId.isEmpty) return null;
 
-    final wasAccepted = _peerJoined || (durationSeconds ?? 0) >= 2;
+    final wasAccepted = _peerJoined;
+    final outcome = wasAccepted
+        ? 'completed'
+        : (isCaller.value ? 'cancelled' : 'missed');
 
     var recorded = await _callService.endCall(
       roomId.value,
@@ -144,18 +154,39 @@ class ChatVoiceCallController extends GetxController {
       recorded = true;
     }
 
-    if (recorded) {
-      _callRecorded = true;
-      final outcome = wasAccepted ? 'completed' : 'cancelled';
-      await _localStore.upsertCallPreview(
-        targetId: hostId.value.trim(),
-        roomId: roomId.value,
-        isVideo: isVideo.value,
-        outcome: outcome,
-        isIncoming: !isCaller.value,
-        name: peerName.value,
-      );
-    }
+    if (!recorded) return null;
+
+    _callRecorded = true;
+
+    final summary = {
+      'callId': callId.value,
+      'id': callId.value,
+      'roomId': roomId.value,
+      'callerId': callerId,
+      'calleeId': calleeId,
+      'type': isVideo.value ? 'video' : 'voice',
+      'status': outcome,
+      'clientEndedAt': endedAt.toIso8601String(),
+      if (durationSeconds != null &&
+          durationSeconds > 0 &&
+          outcome == 'completed')
+        'durationSeconds': durationSeconds,
+    };
+
+    await _localStore.appendCallEntry(roomId: roomId.value, entry: summary);
+    await _localStore.upsertCallPreview(
+      targetId: hostId.value.trim(),
+      roomId: roomId.value,
+      isVideo: isVideo.value,
+      outcome: outcome,
+      isIncoming: !isCaller.value,
+      name: peerName.value,
+    );
+
+    LoggerUtils.logInfo(
+      'ChatVoiceCallController: call logged outcome=$outcome room=${roomId.value}',
+    );
+    return summary;
   }
 
   String get _rawUserId {
@@ -165,6 +196,7 @@ class ChatVoiceCallController extends GetxController {
 
   Future<void> _chargeCallIfNeeded() async {
     if (_charged || !isCaller.value || hostId.value.trim().isEmpty) return;
+    if (!_peerJoined) return;
     _charged = true;
     final startedAt = _startedAt;
     if (startedAt == null) return;
