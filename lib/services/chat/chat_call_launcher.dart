@@ -70,6 +70,8 @@ abstract final class ChatCallLauncher {
       }
 
       var callId = ZegoCallIdUtils.fromRoomId(chatRoomId);
+      var historyDocId = 'call_${DateTime.now().microsecondsSinceEpoch}';
+      final callStartedAt = DateTime.now().toUtc().toIso8601String();
 
       if (signaling.isAvailable) {
         final signedIn = await _ensureFirebaseSession();
@@ -83,13 +85,15 @@ abstract final class ChatCallLauncher {
         }
 
         try {
-          callId = await signaling.ringOutgoingCall(
+          final ringResult = await signaling.ringOutgoingCall(
             roomId: chatRoomId,
             callerId: myId,
             callerName: _myDisplayName,
             calleeId: targetId,
             callType: callType,
           );
+          callId = ringResult.zegoCallId;
+          historyDocId = ringResult.historyDocId;
         } catch (e) {
           LoggerUtils.logWarning(
             'ChatCallLauncher: Firestore ring failed — $e (joining Zego anyway)',
@@ -121,6 +125,8 @@ abstract final class ChatCallLauncher {
         arguments: {
           'roomId': chatRoomId,
           'callId': callId,
+          'historyDocId': historyDocId,
+          'callStartedAt': callStartedAt,
           'hostId': targetId,
           'peerName': peerName,
           'isCaller': true,

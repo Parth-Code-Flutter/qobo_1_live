@@ -624,6 +624,10 @@ class ChatFirebaseService {
         return 'Video';
       case 'audio':
         return 'Voice message';
+      case 'voice_call':
+        return 'Voice call';
+      case 'video_call':
+        return 'Video call';
       default:
         return '';
     }
@@ -708,6 +712,102 @@ class ChatFirebaseService {
     );
 
     return messageId;
+  }
+
+  /// WhatsApp-style call row in `messages` (same collection as text).
+  Future<String?> recordCallLogMessage({
+    required String roomId,
+    required String senderId,
+    required String callerId,
+    required String calleeId,
+    required bool isVideo,
+    required String outcome,
+    int? durationSeconds,
+    String? historyDocId,
+    String? zegoCallId,
+    String? callStartedAt,
+  }) async {
+    if (roomId.isEmpty || senderId.isEmpty || callerId.isEmpty) {
+      return null;
+    }
+
+    final firestore = _firestore;
+    if (firestore == null) return null;
+
+    final authUid = FirebaseAuth.instance.currentUser?.uid ?? senderId;
+    final docId = historyDocId?.trim().isNotEmpty == true
+        ? historyDocId!.trim()
+        : firestore
+            .collection('chatRooms')
+            .doc(roomId)
+            .collection('messages')
+            .doc()
+            .id;
+
+    final ref = firestore
+        .collection('chatRooms')
+        .doc(roomId)
+        .collection('messages')
+        .doc(docId);
+
+    try {
+      final existing = await ref.get();
+      if (existing.exists) {
+        LoggerUtils.logInfo(
+          'ChatFirebaseService: call message $docId already exists — skip',
+        );
+        return docId;
+      }
+
+      final durationMinutes =
+          ChatInboxPreviewType.durationMinutesFromSeconds(durationSeconds);
+      final messageType = isVideo ? 'video_call' : 'voice_call';
+      final initialStatus = <String, dynamic>{};
+      if (calleeId.isNotEmpty) {
+        initialStatus[calleeId] = <String, dynamic>{};
+      }
+      if (callerId.isNotEmpty && callerId != calleeId) {
+        initialStatus[callerId] = <String, dynamic>{};
+      }
+
+      await ref.set({
+        'messageId': docId,
+        'roomId': roomId,
+        'senderId': authUid,
+        'type': messageType,
+        'content': {
+          'callId': docId,
+          'callerId': callerId,
+          'calleeId': calleeId,
+          'status': outcome,
+          if (zegoCallId != null && zegoCallId.isNotEmpty) 'zegoCallId': zegoCallId,
+          if (callStartedAt != null && callStartedAt.isNotEmpty)
+            'callStartedAt': callStartedAt,
+          if (durationSeconds != null && durationSeconds > 0)
+            'durationSeconds': durationSeconds,
+          if (durationMinutes != null) 'durationMinutes': durationMinutes,
+        },
+        'deliveryState': 'sent',
+        'status': initialStatus,
+        'createdAt': FieldValue.serverTimestamp(),
+        'clientCreatedAt': FieldValue.serverTimestamp(),
+        'clientMessageId': docId,
+      });
+      LoggerUtils.logInfo(
+        'ChatFirebaseService: call log message chatRooms/$roomId/messages/$docId',
+      );
+      return docId;
+    } on FirebaseException catch (e) {
+      LoggerUtils.logWarning(
+        'ChatFirebaseService: call log message failed — ${e.code}: ${e.message}',
+      );
+      return null;
+    } catch (e) {
+      LoggerUtils.logWarning(
+        'ChatFirebaseService: call log message failed — $e',
+      );
+      return null;
+    }
   }
 
   Future<void> _touchInboxPreview({

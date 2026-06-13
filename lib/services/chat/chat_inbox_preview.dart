@@ -143,6 +143,21 @@ abstract final class ChatInboxPreviewType {
     return '$hours hr $remMin min';
   }
 
+  /// Nullable minutes spent on the call (from button tap until hang up).
+  static double? durationMinutesFromSeconds(int? seconds) {
+    if (seconds == null || seconds <= 0) return null;
+    return double.parse((seconds / 60).toStringAsFixed(2));
+  }
+
+  static int? durationSecondsFromMinutes(dynamic rawMinutes) {
+    if (rawMinutes == null) return null;
+    final minutes = rawMinutes is num
+        ? rawMinutes.toDouble()
+        : double.tryParse(rawMinutes.toString());
+    if (minutes == null || minutes <= 0) return null;
+    return (minutes * 60).round();
+  }
+
   static String? callSubtitleForUser({
     required String outcome,
     required bool isCallee,

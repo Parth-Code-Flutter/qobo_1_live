@@ -6,6 +6,7 @@ import 'package:qobo_one_live/app/user_flow/messages/messages_tab/controllers/me
 import 'package:qobo_one_live/repo/calling/calling_repo.dart';
 import 'package:qobo_one_live/repo/chat/chat_local_store.dart';
 import 'package:qobo_one_live/services/chat/chat_call_service.dart';
+import 'package:qobo_one_live/services/chat/chat_inbox_preview.dart';
 import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
@@ -27,6 +28,7 @@ class ChatVoiceCallController extends GetxController {
   final ChatLocalStore _localStore;
 
   final callId = ''.obs;
+  final historyDocId = ''.obs;
   final roomId = ''.obs;
   final hostId = ''.obs;
   final peerName = 'User'.obs;
@@ -34,6 +36,7 @@ class ChatVoiceCallController extends GetxController {
   final isVideo = false.obs;
 
   DateTime? _startedAt;
+  String? _callStartedAtIso;
   bool _charged = false;
   bool _callRecorded = false;
   bool _peerJoined = false;
@@ -67,8 +70,11 @@ class ChatVoiceCallController extends GetxController {
       callId.value = passedCallId.isNotEmpty
           ? passedCallId
           : ZegoCallIdUtils.fromRoomId(roomId.value);
+      historyDocId.value = args['historyDocId']?.toString() ?? '';
+      _callStartedAtIso = args['callStartedAt']?.toString();
     }
     _startedAt = DateTime.now();
+    _callStartedAtIso ??= _startedAt!.toUtc().toIso8601String();
     LoggerUtils.logInfo(
       'ChatVoiceCallController: Zego join callId=${callId.value} '
       'room=${roomId.value} video=${isVideo.value}',
@@ -133,13 +139,16 @@ class ChatVoiceCallController extends GetxController {
     final outcome = wasAccepted
         ? 'completed'
         : (isCaller.value ? 'cancelled' : 'missed');
-    final historyId = 'call_${endedAt.microsecondsSinceEpoch}';
+    final historyId = historyDocId.value.trim().isNotEmpty
+        ? historyDocId.value.trim()
+        : 'call_${endedAt.microsecondsSinceEpoch}';
 
     var recorded = await _callService.endCall(
       roomId.value,
       endedByUserId: myId,
       durationSeconds: durationSeconds,
       historyDocId: historyId,
+      callStartedAt: _callStartedAtIso,
     );
 
     if (!recorded) {
@@ -153,6 +162,7 @@ class ChatVoiceCallController extends GetxController {
         wasAccepted: wasAccepted,
         zegoCallId: callId.value,
         historyDocId: historyId,
+        callStartedAt: _callStartedAtIso,
       );
       recorded = true;
     }
@@ -160,6 +170,9 @@ class ChatVoiceCallController extends GetxController {
     if (!recorded) return null;
 
     _callRecorded = true;
+
+    final durationMinutes =
+        ChatInboxPreviewType.durationMinutesFromSeconds(durationSeconds);
 
     final summary = {
       'callId': historyId,
@@ -170,11 +183,14 @@ class ChatVoiceCallController extends GetxController {
       'calleeId': calleeId,
       'type': isVideo.value ? 'video' : 'voice',
       'status': outcome,
+      if (_callStartedAtIso != null && _callStartedAtIso!.isNotEmpty)
+        'callStartedAt': _callStartedAtIso,
       'clientEndedAt': endedAt.toIso8601String(),
       if (durationSeconds != null &&
           durationSeconds > 0 &&
           outcome == 'completed')
         'durationSeconds': durationSeconds,
+      if (durationMinutes != null) 'durationMinutes': durationMinutes,
     };
 
     await _localStore.appendCallEntry(roomId: roomId.value, entry: summary);

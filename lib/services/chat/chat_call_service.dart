@@ -1,8 +1,22 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:qobo_one_live/services/chat/chat_firebase_service.dart';
 import 'package:qobo_one_live/services/chat/chat_inbox_preview.dart';
 import 'package:qobo_one_live/services/firebase/firebase_bootstrap.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 import 'package:qobo_one_live/utils/zego_call_id_utils.dart';
+
+/// Zego channel id + stable Firestore history / message document id.
+class ChatOutgoingCallIds {
+  const ChatOutgoingCallIds({
+    required this.zegoCallId,
+    required this.historyDocId,
+    this.callStartedAt,
+  });
+
+  final String zegoCallId;
+  final String historyDocId;
+  final String? callStartedAt;
+}
 
 /// 1:1 chat call type for Firestore signaling + Zego UI config.
 enum ChatCallType { voice, video }
@@ -15,10 +29,14 @@ enum ChatCallOutcome { completed, missed, cancelled }
 /// Zego RTC uses [ZegoCallIdUtils.fromRoomId] — both peers must join the same
 /// `callID`.
 class ChatCallService {
-  ChatCallService({FirebaseFirestore? firestore})
-      : _firestoreOverride = firestore;
+  ChatCallService({
+    FirebaseFirestore? firestore,
+    ChatFirebaseService? firebaseService,
+  })  : _firestoreOverride = firestore,
+        _firebaseService = firebaseService ?? ChatFirebaseService();
 
   final FirebaseFirestore? _firestoreOverride;
+  final ChatFirebaseService _firebaseService;
 
   bool get isAvailable => FirebaseBootstrap.isAvailable;
 
@@ -52,8 +70,8 @@ class ChatCallService {
     });
   }
 
-  /// Writes ringing state; returns Zego `callID`.
-  Future<String> ringOutgoingCall({
+  /// Writes ringing state; returns Zego `callID` + shared history/message doc id.
+  Future<ChatOutgoingCallIds> ringOutgoingCall({
     required String roomId,
     required String callerId,
     required String callerName,
@@ -66,8 +84,12 @@ class ChatCallService {
     }
 
     final callId = ZegoCallIdUtils.fromRoomId(roomId);
+    final historyDocId = 'call_${DateTime.now().microsecondsSinceEpoch}';
+    final callStartedAt = DateTime.now().toUtc().toIso8601String();
     await ref.set({
       'callId': callId,
+      'historyDocId': historyDocId,
+      'callStartedAt': callStartedAt,
       'roomId': roomId,
       'callerId': callerId,
       'callerName': callerName,
@@ -79,9 +101,13 @@ class ChatCallService {
     });
     LoggerUtils.logInfo(
       'ChatCallService: ring chatRooms/$roomId/calls/$activeDocId '
-      'type=${callType.name} callId=$callId',
+      'type=${callType.name} callId=$callId history=$historyDocId',
     );
-    return callId;
+    return ChatOutgoingCallIds(
+      zegoCallId: callId,
+      historyDocId: historyDocId,
+      callStartedAt: callStartedAt,
+    );
   }
 
   Future<void> markAccepted({
@@ -112,6 +138,7 @@ class ChatCallService {
     ChatCallOutcome? outcomeOverride,
     int? durationSeconds,
     String? historyDocId,
+    String? callStartedAt,
   }) async {
     final ref = _activeRef(roomId);
     if (ref == null) return false;
@@ -145,7 +172,10 @@ class ChatCallService {
       outcomeOverride: outcomeOverride,
       durationSeconds: durationSeconds,
       zegoCallId: active['callId']?.toString(),
-      historyDocId: historyDocId,
+      historyDocId:
+          historyDocId ?? active['historyDocId']?.toString(),
+      callStartedAt:
+          callStartedAt ?? active['callStartedAt']?.toString(),
     );
     return true;
   }
@@ -162,6 +192,7 @@ class ChatCallService {
     bool wasAccepted = false,
     String? zegoCallId,
     String? historyDocId,
+    String? callStartedAt,
   }) async {
     if (roomId.isEmpty || callerId.isEmpty || calleeId.isEmpty) return;
 
@@ -176,6 +207,7 @@ class ChatCallService {
       durationSeconds: durationSeconds,
       zegoCallId: zegoCallId,
       historyDocId: historyDocId,
+      callStartedAt: callStartedAt,
     );
   }
 
@@ -190,6 +222,7 @@ class ChatCallService {
     int? durationSeconds,
     String? zegoCallId,
     String? historyDocId,
+    String? callStartedAt,
   }) async {
     if (callerId.isEmpty || calleeId.isEmpty) return;
 
@@ -202,6 +235,10 @@ class ChatCallService {
           durationSeconds: durationSeconds,
         );
 
+    final resolvedHistoryId = historyDocId?.trim().isNotEmpty == true
+        ? historyDocId!.trim()
+        : null;
+
     await _recordCallHistory(
       roomId: roomId,
       callerId: callerId,
@@ -210,7 +247,25 @@ class ChatCallService {
       outcome: outcome,
       durationSeconds: durationSeconds,
       zegoCallId: zegoCallId,
-      historyDocId: historyDocId,
+      historyDocId: resolvedHistoryId,
+      callStartedAt: callStartedAt,
+    );
+
+    final recorderId = endedByUserId?.trim().isNotEmpty == true
+        ? endedByUserId!.trim()
+        : callerId;
+
+    await _firebaseService.recordCallLogMessage(
+      roomId: roomId,
+      senderId: recorderId,
+      callerId: callerId,
+      calleeId: calleeId,
+      isVideo: isVideo,
+      outcome: outcome.name,
+      durationSeconds: durationSeconds,
+      historyDocId: resolvedHistoryId,
+      zegoCallId: zegoCallId,
+      callStartedAt: callStartedAt,
     );
 
     await _updateInboxForCall(
@@ -258,6 +313,7 @@ class ChatCallService {
     int? durationSeconds,
     String? zegoCallId,
     String? historyDocId,
+    String? callStartedAt,
   }) async {
     final firestore = _firestore;
     if (firestore == null) return false;
@@ -266,6 +322,8 @@ class ChatCallService {
       final docId = historyDocId?.trim().isNotEmpty == true
           ? historyDocId!.trim()
           : firestore.collection('chatRooms').doc().id;
+      final durationMinutes =
+          ChatInboxPreviewType.durationMinutesFromSeconds(durationSeconds);
 
       final ref = firestore
           .collection('chatRooms')
@@ -281,11 +339,14 @@ class ChatCallService {
         'type': isVideo ? 'video' : 'voice',
         'status': outcome.name,
         if (zegoCallId != null && zegoCallId.isNotEmpty) 'zegoCallId': zegoCallId,
+        if (callStartedAt != null && callStartedAt.isNotEmpty)
+          'callStartedAt': callStartedAt,
         'clientEndedAt': DateTime.now().toUtc().toIso8601String(),
         if (durationSeconds != null &&
             durationSeconds > 0 &&
             outcome == ChatCallOutcome.completed)
           'durationSeconds': durationSeconds,
+        if (durationMinutes != null) 'durationMinutes': durationMinutes,
         'endedAt': FieldValue.serverTimestamp(),
       });
       return true;

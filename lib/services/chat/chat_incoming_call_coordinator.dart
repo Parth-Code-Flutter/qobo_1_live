@@ -81,6 +81,8 @@ class ChatIncomingCallCoordinator extends GetxService {
     final callerName = data['callerName']?.toString() ?? 'Someone';
     final callId =
         data['callId']?.toString() ?? ZegoCallIdUtils.fromRoomId(roomId);
+    final historyDocId = data['historyDocId']?.toString() ?? '';
+    final callStartedAt = data['callStartedAt']?.toString() ?? '';
     final isVideo = data['type']?.toString() == 'video';
 
     Get.dialog<void>(
@@ -111,6 +113,8 @@ class ChatIncomingCallCoordinator extends GetxService {
               await _acceptCall(
                 roomId: roomId,
                 callId: callId,
+                historyDocId: historyDocId,
+                callStartedAt: callStartedAt,
                 callerId: callerId,
                 callerName: callerName,
                 isVideo: isVideo,
@@ -127,6 +131,8 @@ class ChatIncomingCallCoordinator extends GetxService {
   Future<void> _acceptCall({
     required String roomId,
     required String callId,
+    required String historyDocId,
+    required String callStartedAt,
     required String callerId,
     required String callerName,
     required bool isVideo,
@@ -150,6 +156,8 @@ class ChatIncomingCallCoordinator extends GetxService {
       arguments: {
         'roomId': roomId,
         'callId': callId,
+        if (historyDocId.isNotEmpty) 'historyDocId': historyDocId,
+        if (callStartedAt.isNotEmpty) 'callStartedAt': callStartedAt,
         'hostId': callerId,
         'peerName': callerName,
         'isCaller': false,

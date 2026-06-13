@@ -480,11 +480,17 @@ class ChatDetailController extends GetxController {
   ) {
     final live =
         rawMessages.map((raw) => _mapMessage(raw, myId)).toList();
+    final liveTexts = live.where((m) => !m.isCallEntry).toList();
+    final liveCalls = live.where((m) => m.isCallEntry).toList();
     final textMerged = _mergeMessages(
-      _mergeMessages(_restBootstrap, messages.where((m) => !m.isCallEntry).toList()),
-      live,
+      _mergeMessages(
+        _restBootstrap,
+        messages.where((m) => !m.isCallEntry).toList(),
+      ),
+      liveTexts,
     );
-    messages.assignAll(_mergeMessages(textMerged, _callBootstrap));
+    final callsMerged = _mergeMessages(_callBootstrap, liveCalls);
+    messages.assignAll(_mergeMessages(textMerged, callsMerged));
   }
 
   void _refreshTimeline() {
@@ -780,9 +786,10 @@ class ChatDetailController extends GetxController {
         _parseTimestamp(json['endedAt']) ??
         _parseTimestamp(json['clientEndedAt']);
     final durationRaw = json['durationSeconds'];
-    final durationSeconds = durationRaw is int
-        ? durationRaw
-        : int.tryParse(durationRaw?.toString() ?? '');
+    final durationSeconds = _parseCallDurationSeconds(
+      durationRaw: durationRaw,
+      durationMinutes: json['durationMinutes'],
+    );
 
     final isCompleted = ChatInboxPreviewType.isCompletedCall(
       outcome: outcome,
@@ -816,8 +823,83 @@ class ChatDetailController extends GetxController {
     );
   }
 
+  ChatMessageModel _mapCallMessageFromFirestore(
+    Map<String, dynamic> json,
+    String myId, {
+    required bool isVideo,
+  }) {
+    final content = json['content'];
+    final contentMap = content is Map
+        ? Map<String, dynamic>.from(content)
+        : <String, dynamic>{};
+
+    final callerId =
+        contentMap['callerId']?.toString() ??
+        json['senderId']?.toString() ??
+        '';
+    final calleeId = contentMap['calleeId']?.toString() ?? '';
+    final outcome = contentMap['status']?.toString() ?? 'completed';
+    final isCallee = calleeId.isNotEmpty && calleeId == myId;
+    final isMe = callerId.isNotEmpty && callerId == myId;
+
+    final createdAt =
+        _parseTimestamp(json['createdAt']) ??
+        _parseTimestamp(json['clientCreatedAt']);
+    final durationSeconds = _parseCallDurationSeconds(
+      durationRaw: contentMap['durationSeconds'],
+      durationMinutes: contentMap['durationMinutes'],
+    );
+    final isCompleted = ChatInboxPreviewType.isCompletedCall(
+      outcome: outcome,
+      durationSeconds: durationSeconds,
+    );
+
+    return ChatMessageModel(
+      id: contentMap['callId']?.toString() ??
+          json['id']?.toString() ??
+          json['messageId']?.toString(),
+      text: ChatInboxPreviewType.chatLabelForUser(
+        isVideo: isVideo,
+        outcome: outcome,
+        isCallee: isCallee,
+        durationSeconds: durationSeconds,
+      ),
+      isMe: isMe,
+      time: _formatTime(createdAt ?? DateTime.now()),
+      createdAt: createdAt ?? DateTime.now(),
+      isCallEntry: true,
+      isVideoCall: isVideo,
+      isMissedCall: ChatInboxPreviewType.isMissedForUser(
+        outcome: outcome,
+        isCallee: isCallee,
+        durationSeconds: durationSeconds,
+      ),
+      isUnansweredCall: ChatInboxPreviewType.isUnansweredForUser(
+        outcome: outcome,
+        isCallee: isCallee,
+        durationSeconds: durationSeconds,
+      ),
+      callDurationSeconds: isCompleted ? durationSeconds : null,
+    );
+  }
+
+  static int? _parseCallDurationSeconds({
+    dynamic durationRaw,
+    dynamic durationMinutes,
+  }) {
+    if (durationRaw is int) return durationRaw > 0 ? durationRaw : null;
+    final parsedSeconds = int.tryParse(durationRaw?.toString() ?? '');
+    if (parsedSeconds != null && parsedSeconds > 0) return parsedSeconds;
+    return ChatInboxPreviewType.durationSecondsFromMinutes(durationMinutes);
+  }
+
   ChatMessageModel _mapMessage(Map<dynamic, dynamic> raw, String myId) {
     final json = Map<String, dynamic>.from(raw);
+    final type = json['type']?.toString() ?? 'text';
+    if (type == 'voice_call' || type == 'video_call') {
+      return _mapCallMessageFromFirestore(json, myId, isVideo: type == 'video_call');
+    }
+
     final senderId = json['senderId']?.toString() ?? '';
     final createdAtRaw = json['createdAt'];
     DateTime? createdAt = _parseTimestamp(createdAtRaw);
