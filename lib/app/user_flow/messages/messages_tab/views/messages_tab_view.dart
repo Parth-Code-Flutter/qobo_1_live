@@ -10,6 +10,7 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 import '../controllers/messages_tab_controller.dart';
 import '../widgets/match_user_sheet.dart';
+import '../widgets/message_inbox_tile_widget.dart';
 import '../widgets/messages_common_widgets.dart';
 
 class MessagesTabView extends GetView<MessagesTabController> {
@@ -238,15 +239,18 @@ class MessagesTabView extends GetView<MessagesTabController> {
       );
     }
 
-    return Column(
-      children: controller.inboxThreads
-          .map(
-            (thread) => MessageListTileItem(
-              item: thread,
-              onTap: () => controller.openChatFromInbox(context, thread),
-            ),
-          )
-          .toList(),
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: controller.inboxThreads.length,
+      separatorBuilder: (_, __) => Spacing.v8,
+      itemBuilder: (_, index) {
+        final thread = controller.inboxThreads[index];
+        return MessageInboxTileWidget(
+          item: thread,
+          onTap: () => controller.openChatFromInbox(context, thread),
+        );
+      },
     );
   }
 }

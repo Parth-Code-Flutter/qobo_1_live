@@ -6,6 +6,7 @@ import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
+import 'message_inbox_tile_widget.dart';
 import '../models/social_user_card.dart';
 
 /// Reusable model for message listing rows (chat inbox).
@@ -228,118 +229,6 @@ class MessageListTileItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          children: [
-            AppUserAvatar(
-              name: item.name,
-              imageUrl: item.imageUrl,
-              size: 50,
-            ),
-            Spacing.h12,
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SemiBoldText(
-                    text: item.name,
-                    color: kColorWhite,
-                    fontSize: TextStyles.k14FontSize,
-                  ),
-                  Spacing.v2,
-                  _buildPreviewLine(),
-                ],
-              ),
-            ),
-            Spacing.h8,
-            SizedBox(
-              width: 42,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  AppText(
-                    text: item.time,
-                    color: kColorWhite,
-                    fontSize: TextStyles.k10FontSize,
-                  ),
-                  Spacing.v6,
-                  if (item.unreadCount > 0)
-                    Container(
-                      width: 14,
-                      height: 14,
-                      decoration: const BoxDecoration(
-                        color: kColorBottomNavHeart,
-                        shape: BoxShape.circle,
-                      ),
-                      alignment: Alignment.center,
-                      child: AppText(
-                        text: '${item.unreadCount}',
-                        color: kColorWhite,
-                        fontSize: TextStyles.k8FontSize,
-                      ),
-                    )
-                  else
-                    const SizedBox(height: 18),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPreviewLine() {
-    final previewText = item.message.isNotEmpty
-        ? item.message
-        : 'Start a conversation';
-    final previewColor = item.isMissedCall
-        ? Colors.redAccent.shade200
-        : item.isUnansweredCall
-        ? Colors.orange.shade300
-        : kColorWhite.withValues(alpha: 0.9);
-
-    if (!item.isCallPreview) {
-      return AppText(
-        text: previewText,
-        color: previewColor,
-        fontSize: TextStyles.k10FontSize,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      );
-    }
-
-    return Row(
-      children: [
-        Icon(
-          _callPreviewIcon(),
-          size: 14,
-          color: previewColor,
-        ),
-        Spacing.h4,
-        Expanded(
-          child: AppText(
-            text: previewText,
-            color: previewColor,
-            fontSize: TextStyles.k10FontSize,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-  }
-
-  IconData _callPreviewIcon() {
-    if (item.isVideoCall) {
-      return Icons.videocam_rounded;
-    }
-    return item.isIncomingCall
-        ? Icons.call_received_rounded
-        : Icons.call_made_rounded;
+    return MessageInboxTileWidget(item: item, onTap: onTap);
   }
 }
