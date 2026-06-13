@@ -11,7 +11,8 @@ import 'package:qobo_one_live/repo/chat/chat_repo.dart';
 import 'package:qobo_one_live/repo/chat/models/chat_room_model.dart';
 import 'package:qobo_one_live/services/chat/chat_firebase_service.dart';
 import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
-import 'package:qobo_one_live/services/chat/chat_outgoing_call_helper.dart';
+import 'package:qobo_one_live/services/chat/chat_call_launcher.dart';
+import 'package:qobo_one_live/services/chat/chat_call_service.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
@@ -331,12 +332,12 @@ class ChatDetailController extends GetxController {
     if (!context.mounted) return;
     _isOnVoiceCallScreen = true;
     try {
-      await ChatOutgoingCallHelper.startCall(
-        context,
+      await ChatCallLauncher.start(
+        context: context,
         targetId: targetId.value,
         peerName: chatName.value,
         roomId: _effectiveRoomId.isNotEmpty ? _effectiveRoomId : null,
-        isVideo: false,
+        callType: ChatCallType.voice,
         chatRepo: _chatRepo,
       );
     } finally {
@@ -350,12 +351,12 @@ class ChatDetailController extends GetxController {
     if (!context.mounted) return;
     _isOnVoiceCallScreen = true;
     try {
-      await ChatOutgoingCallHelper.startCall(
-        context,
+      await ChatCallLauncher.start(
+        context: context,
         targetId: targetId.value,
         peerName: chatName.value,
         roomId: _effectiveRoomId.isNotEmpty ? _effectiveRoomId : null,
-        isVideo: true,
+        callType: ChatCallType.video,
         chatRepo: _chatRepo,
       );
     } finally {

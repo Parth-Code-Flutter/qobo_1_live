@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-06-11  
 **Mobile package:** `zego_uikit_prebuilt_call`  
-**Call project App ID:** `1417441758` (`ZegoConfig.callAppId`)  
+**Call project App ID:** `1575915803` (`ZegoConfig.callAppId`)  
 **Live streaming App ID:** `1291066184` (`ZegoConfig.liveAppId`) — separate Zego console project
 
 ---
@@ -13,8 +13,8 @@ Share this with whoever manages the [ZEGOCLOUD Console](https://console.zegoclou
 
 | # | Item | Where in console | Status / notes |
 | --- | --- | --- | --- |
-| 1 | **App ID + App Sign** | Project → Basic Information | **Call project:** `1417441758` + AppSign in `ZegoConfig.callAppId` / `callAppSign` |
-| 2 | **Voice & Video Call** product enabled | Project → All products → **Call Kit** | Must be **activated** on AppID **1417441758** (not the live streaming project) |
+| 1 | **App ID + App Sign** | Project → Basic Information | **Call project:** `1575915803` + AppSign in `ZegoConfig.callAppId` / `callAppSign` |
+| 2 | **Voice & Video Call** product enabled | Project → All products → **Call Kit** | Must be **activated** on AppID **1575915803** (not the live streaming project) |
 | 3 | **Bundle ID registered** | Project → App settings → Native platforms | `com.qobo1live.live` on **Android + iOS** (same as live) |
 | 4 | **Microphone permission** | Mobile project (not console) | Android `RECORD_AUDIO` ✅ · iOS `NSMicrophoneUsageDescription` ✅ |
 | 5 | **Firestore rules** | Firebase Console → Rules | Publish `docs/chat/firestore.rules` — includes `chatRooms/{roomId}/calls/{callDoc}` |
@@ -23,7 +23,7 @@ Share this with whoever manages the [ZEGOCLOUD Console](https://console.zegoclou
 
 ### Not required for v1 (in-chat audio call)
 
-- Same AppID as live streaming — we use a **dedicated Call Kit project** (`1417441758`)
+- Same AppID as live streaming — we use a **dedicated Call Kit project** (`1575915803`)
 - ZIM / Signaling plugin — v1 uses **Firestore ring** + direct `ZegoUIKitPrebuiltCall` join
 - Video call — UI shows “coming soon”; voice is implemented first
 
@@ -132,6 +132,7 @@ Ask Zego to enable + mobile to integrate:
 | --- | --- |
 | `lib/constants/zego_config.dart` | `liveAppId` / `liveAppSign` (Go Live) · `callAppId` / `callAppSign` (chat calls) |
 | `lib/utils/zego_call_id_utils.dart` | `callID` from `roomId` |
-| `lib/services/chat/chat_voice_call_service.dart` | Firestore ring/accept/end |
+| `lib/services/chat/chat_call_service.dart` | Firestore ring/accept/end |
+| `lib/services/chat/chat_call_launcher.dart` | Permissions, room, Zego navigation |
 | `lib/app/user_flow/messages/chat_voice_call/` | Zego call UI |
 | `lib/app/user_flow/messages/chat_detail/` | Phone button + incoming dialog |

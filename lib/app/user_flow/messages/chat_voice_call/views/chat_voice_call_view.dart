@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/zego_config.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
-import 'package:zego_uikit/zego_uikit.dart';
 import 'package:zego_uikit_prebuilt_call/zego_uikit_prebuilt_call.dart';
 
 import '../controllers/chat_voice_call_controller.dart';
 
+/// Zego Call Kit screen — 1:1 voice or video (quick-start pattern).
 class ChatVoiceCallView extends GetView<ChatVoiceCallController> {
   const ChatVoiceCallView({super.key});
 
@@ -17,78 +18,79 @@ class ChatVoiceCallView extends GetView<ChatVoiceCallController> {
       final callId = controller.callId.value;
       if (callId.isEmpty) {
         return const Scaffold(
-          body: Center(child: CircularProgressIndicator()),
+          backgroundColor: Colors.black,
+          body: Center(
+            child: CircularProgressIndicator(color: kColorPrimary),
+          ),
         );
       }
 
       final isVideo = controller.isVideo.value;
-      final config = isVideo
-          ? (ZegoUIKitPrebuiltCallConfig.oneOnOneVideoCall()
-            ..turnOnCameraWhenJoining = true
-            ..turnOnMicrophoneWhenJoining = true
-            ..useSpeakerWhenJoining = true)
-          : (ZegoUIKitPrebuiltCallConfig.oneOnOneVoiceCall()
-            ..turnOnCameraWhenJoining = false
-            ..useSpeakerWhenJoining = true);
+      final config = _buildConfig(isVideo);
 
-      config
-        ..duration.isVisible = true
-        ..user.requiredUsers.enabled = false;
-
-      return ZegoUIKitPrebuiltCall(
-        appID: ZegoConfig.callAppId,
-        appSign: ZegoConfig.callAppSign,
-        userID: controller.zegoUserId,
-        userName: controller.zegoUserName,
-        callID: callId,
-        config: config,
-        events: ZegoUIKitPrebuiltCallEvents(
-          onError: (error) {
-            controller.onZegoError(error);
-            if (context.mounted) {
-              AppToast.showError(
-                context,
-                _zegoErrorMessage(error),
-                title: 'Call failed',
-              );
-            }
-          },
-          room: ZegoCallRoomEvents(
-            onStateChanged: (state) {
-              LoggerUtils.logInfo(
-                'ChatVoiceCallView: room ${state.reason} code=${state.errorCode}',
-              );
-              if (state.reason == ZegoRoomStateChangedReason.Logined &&
-                  state.errorCode != 0 &&
-                  context.mounted) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: SafeArea(
+          child: ZegoUIKitPrebuiltCall(
+            appID: ZegoConfig.callAppId,
+            appSign: ZegoConfig.callAppSign,
+            userID: controller.zegoUserId,
+            userName: controller.zegoUserName,
+            callID: callId,
+            config: config,
+            events: ZegoUIKitPrebuiltCallEvents(
+              onError: (error) {
+                controller.onZegoError(error);
+                if (!context.mounted) return;
                 AppToast.showError(
                   context,
-                  'Could not join call (code ${state.errorCode})',
+                  error.message.isNotEmpty
+                      ? error.message
+                      : 'Call error (code ${error.code})',
                   title: 'Call failed',
                 );
-              }
-            },
+              },
+              room: ZegoCallRoomEvents(
+                onStateChanged: (state) {
+                  LoggerUtils.logInfo(
+                    'ChatVoiceCallView: room ${state.reason} '
+                    'error=${state.errorCode}',
+                  );
+                },
+              ),
+              user: ZegoCallUserEvents(
+                onEnter: (user) {
+                  LoggerUtils.logInfo(
+                    'ChatVoiceCallView: peer joined ${user.id}',
+                  );
+                },
+              ),
+              onCallEnd: (event, defaultAction) async {
+                await controller.onCallEnded();
+                defaultAction.call();
+              },
+            ),
           ),
-          user: ZegoCallUserEvents(
-            onEnter: (user) {
-              LoggerUtils.logInfo(
-                'ChatVoiceCallView: user joined — ${user.id}',
-              );
-            },
-          ),
-          onCallEnd: (event, defaultAction) async {
-            await controller.onCallEnded();
-            defaultAction.call();
-          },
         ),
       );
     });
   }
 
-  String _zegoErrorMessage(ZegoUIKitError error) {
-    if (error.message.isNotEmpty) return error.message;
-    return 'Could not connect (code ${error.code}). '
-        'Check Zego Call Kit project ${ZegoConfig.callAppId} '
-        'and bundle ID com.qobo1live.live.';
+  ZegoUIKitPrebuiltCallConfig _buildConfig(bool isVideo) {
+    if (isVideo) {
+      return ZegoUIKitPrebuiltCallConfig.oneOnOneVideoCall()
+        ..turnOnCameraWhenJoining = true
+        ..turnOnMicrophoneWhenJoining = true
+        ..useSpeakerWhenJoining = true
+        ..duration.isVisible = true
+        ..user.requiredUsers.enabled = false;
+    }
+
+    return ZegoUIKitPrebuiltCallConfig.oneOnOneVoiceCall()
+      ..turnOnCameraWhenJoining = false
+      ..turnOnMicrophoneWhenJoining = true
+      ..useSpeakerWhenJoining = true
+      ..duration.isVisible = true
+      ..user.requiredUsers.enabled = false;
   }
 }

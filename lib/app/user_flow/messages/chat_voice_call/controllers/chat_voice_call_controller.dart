@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:get/get.dart';
 import 'package:qobo_one_live/repo/calling/calling_repo.dart';
+import 'package:qobo_one_live/services/chat/chat_call_service.dart';
 import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
-import 'package:qobo_one_live/services/chat/chat_voice_call_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 import 'package:qobo_one_live/utils/zego_call_id_utils.dart';
@@ -12,12 +12,12 @@ import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 
 class ChatVoiceCallController extends GetxController {
   ChatVoiceCallController({
-    ChatVoiceCallService? voiceCallService,
+    ChatCallService? callService,
     CallingRepo? callingRepo,
-  }) : _voiceCallService = voiceCallService ?? ChatVoiceCallService(),
+  }) : _callService = callService ?? ChatCallService(),
        _callingRepo = callingRepo ?? CallingRepo();
 
-  final ChatVoiceCallService _voiceCallService;
+  final ChatCallService _callService;
   final CallingRepo _callingRepo;
 
   final callId = ''.obs;
@@ -26,6 +26,7 @@ class ChatVoiceCallController extends GetxController {
   final peerName = 'User'.obs;
   final isCaller = true.obs;
   final isVideo = false.obs;
+
   DateTime? _startedAt;
   bool _charged = false;
 
@@ -61,18 +62,19 @@ class ChatVoiceCallController extends GetxController {
     }
     _startedAt = DateTime.now();
     LoggerUtils.logInfo(
-      'ChatVoiceCallController: joining callId=$callId room=${roomId.value} '
-      'user=$zegoUserId caller=${isCaller.value} video=${isVideo.value}',
+      'ChatVoiceCallController: Zego join callId=${callId.value} '
+      'room=${roomId.value} video=${isVideo.value}',
     );
   }
 
   void onZegoError(Object error) {
-    LoggerUtils.logWarning('ChatVoiceCallController: Zego error — $error');
+    LoggerUtils.logWarning('ChatVoiceCallController: $error');
   }
 
   Future<void> onCallEnded() async {
-    if (roomId.value.isEmpty) return;
-    await _voiceCallService.endCall(roomId.value);
+    if (roomId.value.isNotEmpty) {
+      await _callService.endCall(roomId.value);
+    }
     await _chargeCallIfNeeded();
     if (Get.isRegistered<ChatIncomingCallCoordinator>()) {
       Get.find<ChatIncomingCallCoordinator>().setOnCallScreen(false);
@@ -95,7 +97,7 @@ class ChatVoiceCallController extends GetxController {
         isShowLoader: false,
       );
     } catch (e) {
-      LoggerUtils.logWarning('ChatVoiceCallController: call charge failed — $e');
+      LoggerUtils.logWarning('ChatVoiceCallController: charge failed — $e');
     }
   }
 }

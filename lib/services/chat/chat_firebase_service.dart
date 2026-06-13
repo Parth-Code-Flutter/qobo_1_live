@@ -236,26 +236,26 @@ class ChatFirebaseService {
 
     for (final entry in pendingUpdates.entries) {
       final ref = entry.key;
-      final messageId = ref.id;
+      final payload = entry.value;
+      final messageId = payload['messageId']?.toString() ?? '';
+      if (messageId.isEmpty) continue;
+
       final key = '$roomId:$messageId';
       if (_ackedMessageKeys.contains(key) || _failedAckKeys.contains(key)) {
         continue;
       }
 
       try {
-        await ref.set(entry.value, SetOptions(merge: true));
+        await ref.set(payload, SetOptions(merge: true));
         _ackedMessageKeys.add(key);
       } on FirebaseException catch (e) {
-        if (e.code == 'not-found') {
-          _failedAckKeys.add(key);
-        } else {
-          LoggerUtils.logWarning(
-            'ChatFirebaseService: ack $messageId skipped — ${e.code}',
-          );
-        }
+        _failedAckKeys.add(key);
+        LoggerUtils.logWarning(
+          'ChatFirebaseService: receipt $messageId skipped — ${e.code}',
+        );
       } catch (e) {
         LoggerUtils.logWarning(
-          'ChatFirebaseService: ack $messageId skipped — $e',
+          'ChatFirebaseService: receipt $messageId skipped — $e',
         );
       }
     }

@@ -3,19 +3,18 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/services/chat/chat_call_service.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
-import 'package:qobo_one_live/services/chat/chat_voice_call_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
-import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 import 'package:qobo_one_live/utils/zego_call_id_utils.dart';
 import 'package:qobo_one_live/utils/zego_engine_utils.dart';
 
-/// Listens for Firestore `calls/active` on inbox chat rooms and shows ring UI.
+/// Listens for Firestore `calls/active` and shows incoming call UI.
 class ChatIncomingCallCoordinator extends GetxService {
-  ChatIncomingCallCoordinator({ChatVoiceCallService? voiceCallService})
-      : _voiceCallService = voiceCallService ?? ChatVoiceCallService();
+  ChatIncomingCallCoordinator({ChatCallService? callService})
+      : _callService = callService ?? ChatCallService();
 
-  final ChatVoiceCallService _voiceCallService;
+  final ChatCallService _callService;
 
   final Map<String, StreamSubscription<Map<String, dynamic>>> _subscriptions =
       {};
@@ -23,13 +22,10 @@ class ChatIncomingCallCoordinator extends GetxService {
   bool _dialogOpen = false;
   bool _onCallScreen = false;
 
-  void setOnCallScreen(bool value) {
-    _onCallScreen = value;
-  }
+  void setOnCallScreen(bool value) => _onCallScreen = value;
 
-  /// Add or refresh Firestore listeners for the given chat room ids.
   void syncWatchedRooms(Iterable<String> roomIds, {bool replace = false}) {
-    if (!_voiceCallService.isAvailable) return;
+    if (!_callService.isAvailable) return;
 
     final normalized = roomIds
         .map((id) => id.trim())
@@ -55,7 +51,7 @@ class ChatIncomingCallCoordinator extends GetxService {
 
     for (final roomId in _watchedRooms) {
       if (_subscriptions.containsKey(roomId)) continue;
-      _subscriptions[roomId] = _voiceCallService
+      _subscriptions[roomId] = _callService
           .watchActiveCall(roomId)
           .listen(
             (data) => _onActiveCallSnapshot(roomId: roomId, data: data),
@@ -85,12 +81,6 @@ class ChatIncomingCallCoordinator extends GetxService {
     final callId =
         data['callId']?.toString() ?? ZegoCallIdUtils.fromRoomId(roomId);
     final isVideo = data['type']?.toString() == 'video';
-    final peerTargetId = callerId;
-
-    LoggerUtils.logInfo(
-      'ChatIncomingCallCoordinator: incoming ${isVideo ? 'video' : 'voice'} '
-      'call room=$roomId from $callerName',
-    );
 
     Get.dialog<void>(
       AlertDialog(
@@ -105,7 +95,7 @@ class ChatIncomingCallCoordinator extends GetxService {
             onPressed: () async {
               Get.back();
               _dialogOpen = false;
-              await _voiceCallService.endCall(roomId);
+              await _callService.endCall(roomId);
             },
             child: const Text('Decline'),
           ),
@@ -116,7 +106,7 @@ class ChatIncomingCallCoordinator extends GetxService {
               await _acceptCall(
                 roomId: roomId,
                 callId: callId,
-                callerId: peerTargetId,
+                callerId: callerId,
                 callerName: callerName,
                 isVideo: isVideo,
               );
@@ -144,14 +134,9 @@ class ChatIncomingCallCoordinator extends GetxService {
     }
     final signedIn =
         await Get.find<ChatSessionService>().ensureSignedIn(isShowLoader: false);
-    if (!signedIn) {
-      LoggerUtils.logWarning(
-        'ChatIncomingCallCoordinator: Firebase sign-in failed on accept',
-      );
-      return;
-    }
+    if (!signedIn) return;
 
-    await _voiceCallService.markAccepted(roomId: roomId, userId: myId);
+    await _callService.markAccepted(roomId: roomId, userId: myId);
     await ZegoEngineUtils.resetForCallProject();
     _onCallScreen = true;
 

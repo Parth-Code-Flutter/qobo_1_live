@@ -7,85 +7,69 @@ import 'package:qobo_one_live/constants/zego_config.dart';
 import 'package:qobo_one_live/repo/chat/chat_repo.dart';
 import 'package:qobo_one_live/repo/chat/models/chat_room_model.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/services/chat/chat_call_service.dart';
 import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
-import 'package:qobo_one_live/services/chat/chat_voice_call_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/zego_call_id_utils.dart';
 import 'package:qobo_one_live/utils/zego_engine_utils.dart';
 
-/// Starts a 1:1 voice or video call from chat detail or messages inbox.
-abstract final class ChatOutgoingCallHelper {
-  ChatOutgoingCallHelper._();
+/// Launches ZegoUIKitPrebuiltCall for 1:1 voice or video from chat.
+///
+/// Follows [Zego Call Kit quick start](https://www.zegocloud.com/docs/uikit/callkit-flutter/quick-start):
+/// reset engine → join room with shared `callID`.
+abstract final class ChatCallLauncher {
+  ChatCallLauncher._();
 
-  static bool _callInFlight = false;
+  static bool _inFlight = false;
 
-  static Future<void> startCall(
-    BuildContext context, {
+  static Future<void> start({
+    required BuildContext context,
     required String targetId,
     required String peerName,
     String? roomId,
-    required bool isVideo,
+    required ChatCallType callType,
     ChatRepo? chatRepo,
-    ChatVoiceCallService? voiceCallService,
+    ChatCallService? callService,
   }) async {
-    if (_callInFlight) return;
+    if (_inFlight) return;
 
-    if (!ZegoConfig.voiceCallEnabled) {
+    if (!ZegoConfig.callEnabled) {
       AppToast.showError(context, 'Calling is not enabled');
       return;
     }
-
     if (targetId.trim().isEmpty) {
       AppToast.showError(context, 'Invalid chat partner');
       return;
     }
 
-    _callInFlight = true;
+    _inFlight = true;
     try {
-      final mic = await Permission.microphone.request();
-      if (!mic.isGranted) {
-        if (!context.mounted) return;
-        AppToast.showError(
-          context,
-          'Microphone permission is required for calls',
-        );
-        return;
-      }
-
-      if (isVideo) {
-        final camera = await Permission.camera.request();
-        if (!camera.isGranted) {
-          if (!context.mounted) return;
-          AppToast.showError(
-            context,
-            'Camera permission is required for video calls',
-          );
-          return;
-        }
-      }
-
+      if (!await _ensurePermissions(context, callType)) return;
       if (!context.mounted) return;
 
       final repo = chatRepo ?? ChatRepo();
-      final callService = voiceCallService ?? ChatVoiceCallService();
-      final room = await _resolveRoomId(
+      final signaling = callService ?? ChatCallService();
+      final chatRoomId = await _resolveChatRoomId(
         context,
         targetId: targetId,
         roomId: roomId,
         chatRepo: repo,
       );
-      if (room.isEmpty) return;
+      if (chatRoomId.isEmpty || !context.mounted) return;
 
-      if (callService.isAvailable) {
-        if (!Get.isRegistered<ChatSessionService>()) {
-          Get.put(ChatSessionService(), permanent: true);
-        }
-        final signedIn = await Get.find<ChatSessionService>().ensureSignedIn(
-          isShowLoader: false,
-        );
+      final myId = _myUserId;
+      if (myId.isEmpty) {
+        AppToast.showError(context, 'You must be logged in to call');
+        return;
+      }
+
+      var callId = ZegoCallIdUtils.fromRoomId(chatRoomId);
+
+      if (signaling.isAvailable) {
+        final signedIn = await _ensureFirebaseSession();
         if (!signedIn) {
           if (!context.mounted) return;
           AppToast.showError(
@@ -94,57 +78,50 @@ abstract final class ChatOutgoingCallHelper {
           );
           return;
         }
-      }
 
-      final myId = _myUserId;
-      if (myId.isEmpty) {
-        if (!context.mounted) return;
-        AppToast.showError(context, 'You must be logged in to call');
-        return;
-      }
-
-      final callerName = _myDisplayName;
-      var callId = ZegoCallIdUtils.fromRoomId(room);
-      if (callService.isAvailable) {
         try {
-          callId = await callService.startOutgoingCall(
-            roomId: room,
+          callId = await signaling.ringOutgoingCall(
+            roomId: chatRoomId,
             callerId: myId,
-            callerName: callerName,
+            callerName: _myDisplayName,
             calleeId: targetId,
-            callType: isVideo ? ChatCallType.video : ChatCallType.voice,
+            callType: callType,
           );
         } catch (e) {
-          LoggerUtils.logWarning('ChatOutgoingCallHelper: start failed — $e');
-          if (!context.mounted) return;
-          final message = e is FirebaseException && e.code == 'permission-denied'
-              ? 'Calling blocked — publish Firestore rules for chatRooms/.../calls'
-              : 'Could not start call';
-          AppToast.showError(context, message);
-          return;
+          LoggerUtils.logWarning(
+            'ChatCallLauncher: Firestore ring failed — $e (joining Zego anyway)',
+          );
+          if (context.mounted && e is FirebaseException) {
+            if (e.code == 'permission-denied') {
+              AppToast.showWarning(
+                context,
+                'Ring signal blocked — publish Firestore rules. Joining call…',
+              );
+            }
+          }
         }
       }
 
       if (!context.mounted) return;
-      LoggerUtils.logInfo(
-        'ChatOutgoingCallHelper: opening ${isVideo ? 'video' : 'voice'} '
-        'callId=$callId room=$room',
-      );
 
       await ZegoEngineUtils.resetForCallProject();
       if (Get.isRegistered<ChatIncomingCallCoordinator>()) {
         Get.find<ChatIncomingCallCoordinator>().setOnCallScreen(true);
       }
 
+      LoggerUtils.logInfo(
+        'ChatCallLauncher: ${callType.name} callId=$callId room=$chatRoomId',
+      );
+
       await Get.toNamed(
         Routes.CHAT_VOICE_CALL,
         arguments: {
-          'roomId': room,
+          'roomId': chatRoomId,
           'callId': callId,
           'hostId': targetId,
           'peerName': peerName,
           'isCaller': true,
-          'isVideo': isVideo,
+          'isVideo': callType == ChatCallType.video,
         },
       );
 
@@ -152,11 +129,47 @@ abstract final class ChatOutgoingCallHelper {
         Get.find<ChatIncomingCallCoordinator>().setOnCallScreen(false);
       }
     } finally {
-      _callInFlight = false;
+      _inFlight = false;
     }
   }
 
-  static Future<String> _resolveRoomId(
+  static Future<bool> _ensurePermissions(
+    BuildContext context,
+    ChatCallType callType,
+  ) async {
+    final mic = await Permission.microphone.request();
+    if (!mic.isGranted) {
+      if (context.mounted) {
+        AppToast.showError(
+          context,
+          'Microphone permission is required for calls',
+        );
+      }
+      return false;
+    }
+    if (callType == ChatCallType.video) {
+      final camera = await Permission.camera.request();
+      if (!camera.isGranted) {
+        if (context.mounted) {
+          AppToast.showError(
+            context,
+            'Camera permission is required for video calls',
+          );
+        }
+        return false;
+      }
+    }
+    return true;
+  }
+
+  static Future<bool> _ensureFirebaseSession() async {
+    if (!Get.isRegistered<ChatSessionService>()) {
+      Get.put(ChatSessionService(), permanent: true);
+    }
+    return Get.find<ChatSessionService>().ensureSignedIn(isShowLoader: false);
+  }
+
+  static Future<String> _resolveChatRoomId(
     BuildContext context, {
     required String targetId,
     String? roomId,

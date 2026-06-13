@@ -3,13 +3,15 @@ import 'package:qobo_one_live/services/firebase/firebase_bootstrap.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 import 'package:qobo_one_live/utils/zego_call_id_utils.dart';
 
-/// Firestore signaling for 1:1 voice/video calls inside a chat room.
-///
-/// Zego media runs on `callId`; this doc coordinates ring / accept / end.
+/// 1:1 chat call type for Firestore signaling + Zego UI config.
 enum ChatCallType { voice, video }
 
-class ChatVoiceCallService {
-  ChatVoiceCallService({FirebaseFirestore? firestore})
+/// Firestore ring / accept / end at `chatRooms/{roomId}/calls/active`.
+///
+/// Zego RTC uses [ZegoCallIdUtils.fromRoomId] — both peers must join the same
+/// `callID`.
+class ChatCallService {
+  ChatCallService({FirebaseFirestore? firestore})
       : _firestoreOverride = firestore;
 
   final FirebaseFirestore? _firestoreOverride;
@@ -21,7 +23,7 @@ class ChatVoiceCallService {
     return _firestoreOverride ?? FirebaseFirestore.instance;
   }
 
-  static const String _activeDocId = 'active';
+  static const String activeDocId = 'active';
 
   DocumentReference<Map<String, dynamic>>? _activeRef(String roomId) {
     final firestore = _firestore;
@@ -30,7 +32,7 @@ class ChatVoiceCallService {
         .collection('chatRooms')
         .doc(roomId)
         .collection('calls')
-        .doc(_activeDocId);
+        .doc(activeDocId);
   }
 
   Stream<Map<String, dynamic>> watchActiveCall(String roomId) {
@@ -46,12 +48,13 @@ class ChatVoiceCallService {
     });
   }
 
-  Future<String> startOutgoingCall({
+  /// Writes ringing state; returns Zego `callID`.
+  Future<String> ringOutgoingCall({
     required String roomId,
     required String callerId,
     required String callerName,
-    String? calleeId,
-    ChatCallType callType = ChatCallType.voice,
+    required String calleeId,
+    required ChatCallType callType,
   }) async {
     final ref = _activeRef(roomId);
     if (ref == null) {
@@ -64,14 +67,15 @@ class ChatVoiceCallService {
       'roomId': roomId,
       'callerId': callerId,
       'callerName': callerName,
-      if (calleeId != null && calleeId.isNotEmpty) 'calleeId': calleeId,
+      'calleeId': calleeId,
       'type': callType == ChatCallType.video ? 'video' : 'voice',
       'status': 'ringing',
       'startedAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
     LoggerUtils.logInfo(
-      'ChatVoiceCallService: ringing chatRooms/$roomId/calls/active',
+      'ChatCallService: ring chatRooms/$roomId/calls/$activeDocId '
+      'type=${callType.name} callId=$callId',
     );
     return callId;
   }
@@ -90,7 +94,7 @@ class ChatVoiceCallService {
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
-      LoggerUtils.logWarning('ChatVoiceCallService: markAccepted failed — $e');
+      LoggerUtils.logWarning('ChatCallService: markAccepted failed — $e');
     }
   }
 
@@ -100,7 +104,7 @@ class ChatVoiceCallService {
     try {
       await ref.delete();
     } catch (e) {
-      LoggerUtils.logWarning('ChatVoiceCallService: endCall failed — $e');
+      LoggerUtils.logWarning('ChatCallService: endCall failed — $e');
     }
   }
 }
