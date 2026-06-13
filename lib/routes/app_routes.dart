@@ -28,6 +28,7 @@ abstract class Routes {
   static const LIVE_BROADCAST = _Paths.LIVE_BROADCAST;
   static const CHAT_DETAIL = _Paths.CHAT_DETAIL;
   static const CHAT_CONTACT_PROFILE = _Paths.CHAT_CONTACT_PROFILE;
+  static const CHAT_VOICE_CALL = _Paths.CHAT_VOICE_CALL;
   static const FOLLOW_LIST = _Paths.FOLLOW_LIST;
   static const SETTINGS = _Paths.SETTINGS;
   static const BLOCK_LIST = _Paths.BLOCK_LIST;
@@ -80,6 +81,7 @@ abstract class _Paths {
   static const LIVE_BROADCAST = '/live-broadcast';
   static const CHAT_DETAIL = '/chat-detail';
   static const CHAT_CONTACT_PROFILE = '/chat-contact-profile';
+  static const CHAT_VOICE_CALL = '/chat-voice-call';
   static const FOLLOW_LIST = '/follow-list';
   static const SETTINGS = '/settings';
   static const BLOCK_LIST = '/block-list';

@@ -2,14 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/repo/economy/economy_repo.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
+import 'package:zego_uikit_prebuilt_live_streaming/zego_uikit_prebuilt_live_streaming.dart';
 
 class LiveBroadcastController extends GetxController {
+  LiveBroadcastController({EconomyRepo? economyRepo})
+    : _economyRepo = economyRepo ?? EconomyRepo();
+
+  final EconomyRepo _economyRepo;
+
   final isHost = false.obs;
   final roomType = 'VIDEO'.obs;
   final roomId = ''.obs;
+  final receiverId = ''.obs;
   final hasExplicitStreamingId = false.obs;
   final connectionIssue = ''.obs;
 
@@ -20,6 +28,8 @@ class LiveBroadcastController extends GetxController {
   final isCameraOff = false.obs;
 
   final coinsBalance = 1200.obs;
+  final giftCatalog = <Map<String, String>>[].obs;
+  final isLoadingGifts = false.obs;
 
   @override
   void onInit() {
@@ -31,6 +41,7 @@ class LiveBroadcastController extends GetxController {
       if (args.containsKey('roomData') && args['roomData'] != null) {
         final roomData = args['roomData'];
         final normalizedRoomData = Map<String, dynamic>.from(roomData);
+        receiverId.value = _extractReceiverId(normalizedRoomData) ?? '';
         final streamingId = _extractStreamingId(normalizedRoomData);
         hasExplicitStreamingId.value = streamingId != null;
         final rawId =
@@ -39,6 +50,7 @@ class LiveBroadcastController extends GetxController {
       }
     }
     _validateStreamingInput();
+    loadGiftCatalog();
     chatMessages.clear();
   }
 
@@ -50,6 +62,22 @@ class LiveBroadcastController extends GetxController {
 
   void clearConnectionIssue() {
     connectionIssue.value = '';
+  }
+
+  bool get isVideoRoom => roomType.value.toUpperCase() != 'AUDIO';
+
+  /// Called after Zego room login — ensures host camera publishes for video rooms.
+  void onZegoRoomLogined() {
+    if (!isHost.value || !isVideoRoom) return;
+    try {
+      final av = ZegoUIKitPrebuiltLiveStreamingController().audioVideo;
+      av.camera.turnOn(true);
+      av.microphone.turnOn(true);
+      isCameraOff.value = false;
+      isMicMuted.value = false;
+    } catch (_) {
+      // Zego controller not ready yet — turnOnCameraWhenJoining handles it.
+    }
   }
 
   void handleZegoLoginFailed(int errorCode) {
@@ -107,6 +135,23 @@ class LiveBroadcastController extends GetxController {
 
   String? _extractBackendRoomId(Map<String, dynamic> roomData) {
     const keys = ['room_id', 'roomId', '_id', 'id'];
+
+    return _firstNonEmpty(roomData, keys);
+  }
+
+  String? _extractReceiverId(Map<String, dynamic> roomData) {
+    const keys = [
+      'hostId',
+      'host_id',
+      'userId',
+      'user_id',
+      'ownerId',
+      'owner_id',
+      'createdBy',
+      'created_by',
+      'receiverId',
+      'receiver_id',
+    ];
 
     return _firstNonEmpty(roomData, keys);
   }
@@ -182,9 +227,77 @@ class LiveBroadcastController extends GetxController {
     }
   }
 
-  void sendGift(Map<String, String> gift) {
+  Future<void> loadGiftCatalog() async {
+    isLoadingGifts.value = true;
+    try {
+      final response = await _economyRepo.getGiftList(isShowLoader: false);
+      final data = response?['data'];
+      if (_isSuccess(response) && data is List) {
+        giftCatalog.assignAll(
+          data
+              .whereType<Map>()
+              .map((raw) => _mapGift(Map<String, dynamic>.from(raw)))
+              .where((gift) => (gift['id'] ?? '').isNotEmpty)
+              .toList(),
+        );
+      }
+    } finally {
+      isLoadingGifts.value = false;
+    }
+  }
+
+  Map<String, String> _mapGift(Map<String, dynamic> raw) {
+    final name = raw['name']?.toString() ?? raw['title']?.toString() ?? 'Gift';
+    final price = raw['price'] ?? raw['coins'] ?? raw['amount'] ?? 0;
+    final icon = raw['icon']?.toString() ??
+        raw['emoji']?.toString() ??
+        raw['image']?.toString() ??
+        '🎁';
+    final category = raw['category']?.toString() ?? raw['type']?.toString() ?? 'Popular';
+    return {
+      'id': raw['id']?.toString() ?? raw['_id']?.toString() ?? '',
+      'name': name,
+      'price': price.toString(),
+      'icon': icon,
+      'category': category,
+    };
+  }
+
+  Future<void> sendGift(Map<String, String> gift) async {
     final int price = int.tryParse(gift['price'] ?? '0') ?? 0;
-    if (coinsBalance.value >= price) {
+    if (coinsBalance.value < price) {
+      Get.snackbar(
+        'Insufficient Coins',
+        'You need ${price - coinsBalance.value} more coins to send this gift.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFFD32F2F),
+        colorText: const Color(0xFFFFFFFF),
+      );
+      return;
+    }
+
+    final giftId = gift['id']?.trim() ?? '';
+    final currentRoomId = roomId.value.trim();
+    final currentReceiverId = receiverId.value.trim();
+    if (giftId.isEmpty || currentRoomId.isEmpty || currentReceiverId.isEmpty) {
+      Get.snackbar(
+        'Gift not sent',
+        'Gift, host, or room id is missing from live room data.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFFD32F2F),
+        colorText: const Color(0xFFFFFFFF),
+      );
+      return;
+    }
+
+    final response = await _economyRepo.sendGift(
+      receiverId: currentReceiverId,
+      giftId: giftId,
+      roomId: currentRoomId,
+      isShowLoader: true,
+    );
+
+    if (_isSuccess(response)) {
       coinsBalance.value -= price;
 
       chatMessages.add({
@@ -211,13 +324,23 @@ class LiveBroadcastController extends GetxController {
       );
     } else {
       Get.snackbar(
-        'Insufficient Coins',
-        'You need ${price - coinsBalance.value} more coins to send this gift.',
+        'Gift not sent',
+        response?['message']?.toString() ?? 'Unable to send this gift.',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: const Color(0xFFD32F2F),
         colorText: const Color(0xFFFFFFFF),
       );
     }
+  }
+
+  bool _isSuccess(Map<String, dynamic>? response) {
+    if (response == null) return false;
+    if (response['success'] == true) return true;
+    final code = response['statusCode'];
+    if (code is int) return code == 1 || code == 200 || code == 201;
+    return code?.toString() == '1' ||
+        code?.toString() == '200' ||
+        code?.toString() == '201';
   }
 
   void shareRoom() {
@@ -336,11 +459,24 @@ class LiveBroadcastController extends GetxController {
   }
 
   void toggleMic() {
-    isMicMuted.value = !isMicMuted.value;
+    try {
+      final mic = ZegoUIKitPrebuiltLiveStreamingController().audioVideo.microphone;
+      mic.switchState();
+      isMicMuted.value = !mic.localState;
+    } catch (_) {
+      isMicMuted.value = !isMicMuted.value;
+    }
   }
 
   void toggleCamera() {
-    isCameraOff.value = !isCameraOff.value;
+    if (!isVideoRoom) return;
+    try {
+      final camera = ZegoUIKitPrebuiltLiveStreamingController().audioVideo.camera;
+      camera.switchState();
+      isCameraOff.value = !camera.localState;
+    } catch (_) {
+      isCameraOff.value = !isCameraOff.value;
+    }
   }
 
   void leaveRoom() {

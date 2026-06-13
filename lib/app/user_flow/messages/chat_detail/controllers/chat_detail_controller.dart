@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
@@ -11,6 +10,8 @@ import 'package:qobo_one_live/repo/chat/chat_local_store.dart';
 import 'package:qobo_one_live/repo/chat/chat_repo.dart';
 import 'package:qobo_one_live/repo/chat/models/chat_room_model.dart';
 import 'package:qobo_one_live/services/chat/chat_firebase_service.dart';
+import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
+import 'package:qobo_one_live/services/chat/chat_outgoing_call_helper.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
@@ -86,7 +87,10 @@ class ChatDetailController extends GetxController {
   StreamSubscription<Map<String, dynamic>>? _presenceSub;
   Timer? _typingDebounce;
   Timer? _typingClearTimer;
+  Timer? _ackDebounce;
   bool _sendInFlight = false;
+  bool _isOnVoiceCallScreen = false;
+  bool _pendingScrollToBottom = true;
   List<ChatMessageModel> _restBootstrap = [];
 
   String? get _myUserId {
@@ -185,6 +189,7 @@ class ChatDetailController extends GetxController {
 
   Future<void> loadHistory() async {
     if (targetId.value.isEmpty) return;
+    _pendingScrollToBottom = true;
     try {
       isLoading.value = true;
       final myId = _myUserId ?? '';
@@ -238,6 +243,9 @@ class ChatDetailController extends GetxController {
       }
     } finally {
       isLoading.value = false;
+      if (messages.isNotEmpty) {
+        _scrollToBottom(jump: true);
+      }
     }
   }
 
@@ -281,15 +289,7 @@ class ChatDetailController extends GetxController {
           (rawMessages) {
             _applyFirestoreMessages(rawMessages, myId);
             _scrollToBottom();
-
-            unawaited(
-              _firebaseService.ackIncomingMessages(
-                roomId: effectiveRoomId,
-                myUserId: myId,
-                rawMessages: rawMessages,
-                markRead: true,
-              ),
-            );
+            _scheduleAck(effectiveRoomId, myId, rawMessages);
           },
           onError: (e) {
             LoggerUtils.logWarning(
@@ -298,6 +298,69 @@ class ChatDetailController extends GetxController {
             isFirebaseLive.value = false;
           },
         );
+
+    _syncIncomingCallWatcher(effectiveRoomId);
+  }
+
+  void _scheduleAck(
+    String roomId,
+    String myId,
+    List<Map<String, dynamic>> rawMessages,
+  ) {
+    _ackDebounce?.cancel();
+    _ackDebounce = Timer(const Duration(milliseconds: 800), () {
+      unawaited(
+        _firebaseService.ackIncomingMessages(
+          roomId: roomId,
+          myUserId: myId,
+          rawMessages: rawMessages,
+          markRead: true,
+        ),
+      );
+    });
+  }
+
+  void _syncIncomingCallWatcher(String effectiveRoomId) {
+    if (!Get.isRegistered<ChatIncomingCallCoordinator>()) return;
+    Get.find<ChatIncomingCallCoordinator>().syncWatchedRooms([effectiveRoomId]);
+  }
+
+  Future<void> startVoiceCall(BuildContext context) async {
+    if (_isOnVoiceCallScreen || targetId.value.isEmpty) return;
+    await _ensureRoomReady();
+    if (!context.mounted) return;
+    _isOnVoiceCallScreen = true;
+    try {
+      await ChatOutgoingCallHelper.startCall(
+        context,
+        targetId: targetId.value,
+        peerName: chatName.value,
+        roomId: _effectiveRoomId.isNotEmpty ? _effectiveRoomId : null,
+        isVideo: false,
+        chatRepo: _chatRepo,
+      );
+    } finally {
+      _isOnVoiceCallScreen = false;
+    }
+  }
+
+  Future<void> startVideoCall(BuildContext context) async {
+    if (_isOnVoiceCallScreen || targetId.value.isEmpty) return;
+    await _ensureRoomReady();
+    if (!context.mounted) return;
+    _isOnVoiceCallScreen = true;
+    try {
+      await ChatOutgoingCallHelper.startCall(
+        context,
+        targetId: targetId.value,
+        peerName: chatName.value,
+        roomId: _effectiveRoomId.isNotEmpty ? _effectiveRoomId : null,
+        isVideo: true,
+        chatRepo: _chatRepo,
+      );
+    } finally {
+      _isOnVoiceCallScreen = false;
+    }
   }
 
   /// Merges REST/local bootstrap + in-flight optimistic + Firestore live data.
@@ -330,16 +393,41 @@ class ChatDetailController extends GetxController {
       entries.add(ChatTimelineEntry.message(msg));
     }
     timelineEntries.assignAll(entries);
+    if (_pendingScrollToBottom && entries.isNotEmpty) {
+      _scrollToBottom(jump: true);
+    }
   }
 
-  void _scrollToBottom() {
+  /// Scrolls to the newest message. Retries until the list has laid out.
+  void _scrollToBottom({bool jump = false, int attempt = 0}) {
+    if (timelineEntries.isEmpty && messages.isEmpty) return;
+    if (attempt > 8) {
+      _pendingScrollToBottom = false;
+      return;
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!scrollController.hasClients) return;
-      scrollController.animateTo(
-        scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOut,
-      );
+      if (!scrollController.hasClients) {
+        _scrollToBottom(jump: jump, attempt: attempt + 1);
+        return;
+      }
+
+      final maxExtent = scrollController.position.maxScrollExtent;
+      if (maxExtent <= 0 && attempt < 8) {
+        _scrollToBottom(jump: jump, attempt: attempt + 1);
+        return;
+      }
+
+      if (jump) {
+        scrollController.jumpTo(maxExtent);
+      } else {
+        scrollController.animateTo(
+          maxExtent,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
+      }
+      _pendingScrollToBottom = false;
     });
   }
 
@@ -668,6 +756,7 @@ class ChatDetailController extends GetxController {
     _presenceSub?.cancel();
     _typingDebounce?.cancel();
     _typingClearTimer?.cancel();
+    _ackDebounce?.cancel();
     messageController.removeListener(_onMessageTextChanged);
     messageController.dispose();
     scrollController.dispose();

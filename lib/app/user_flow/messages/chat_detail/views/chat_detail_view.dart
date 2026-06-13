@@ -38,6 +38,9 @@ class ChatDetailView extends GetView<ChatDetailController> {
                 final entries = controller.timelineEntries;
                 return ListView.builder(
                   controller: controller.scrollController,
+                  physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics(),
+                  ),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 20,
@@ -107,11 +110,11 @@ class ChatDetailView extends GetView<ChatDetailController> {
       ),
       actions: [
         IconButton(
-          onPressed: () {},
+          onPressed: () => controller.startVoiceCall(context),
           icon: const Icon(Icons.call_rounded, color: kColorText),
         ),
         IconButton(
-          onPressed: () {},
+          onPressed: () => controller.startVideoCall(context),
           icon: const Icon(Icons.videocam_rounded, color: kColorText),
         ),
         const SizedBox(width: 8),

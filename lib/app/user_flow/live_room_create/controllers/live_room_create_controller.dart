@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/repo/room/room_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/utils/live_streaming_permissions.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 
@@ -96,6 +97,10 @@ class LiveRoomCreateController extends GetxController {
 
     if (_isSuccess(response)) {
       final data = _normalizeStreamPayload(response!['data'], name);
+      final granted = await LiveStreamingPermissions.ensureHostVideoPermissions(
+        context,
+      );
+      if (!context.mounted || !granted) return;
       AppToast.showSuccess(
         context,
         response['message']?.toString() ?? 'Live streaming started',
@@ -105,6 +110,10 @@ class LiveRoomCreateController extends GetxController {
     }
 
     // API not ready yet — still open Zego with client-generated channel id.
+    final granted = await LiveStreamingPermissions.ensureHostVideoPermissions(
+      context,
+    );
+    if (!context.mounted || !granted) return;
     final localData = _buildLocalStreamPayload(name);
     AppToast.showSuccess(context, 'Starting live stream');
     _openZegoHost(localData);
@@ -152,6 +161,11 @@ class LiveRoomCreateController extends GetxController {
     if (!context.mounted) return;
 
     if (_isSuccess(response)) {
+      final isVideo = roomType.value.toUpperCase() == 'VIDEO';
+      final granted = isVideo
+          ? await LiveStreamingPermissions.ensureHostVideoPermissions(context)
+          : await LiveStreamingPermissions.ensureHostAudioPermissions(context);
+      if (!context.mounted || !granted) return;
       AppToast.showSuccess(
         context,
         response!['message']?.toString() ?? 'Room created successfully!',

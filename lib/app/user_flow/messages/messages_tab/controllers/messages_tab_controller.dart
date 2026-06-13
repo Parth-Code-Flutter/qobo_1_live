@@ -8,6 +8,7 @@ import 'package:qobo_one_live/repo/chat/chat_navigation_helper.dart';
 import 'package:qobo_one_live/repo/chat/chat_repo.dart';
 import 'package:qobo_one_live/repo/user/user_repo.dart';
 import 'package:qobo_one_live/services/chat/chat_firebase_service.dart';
+import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
@@ -155,6 +156,7 @@ class MessagesTabController extends GetxController {
           localThreads,
         ),
       );
+      _syncIncomingCallWatchers();
     } catch (_) {
       inboxThreads.clear();
     } finally {
@@ -187,10 +189,24 @@ class MessagesTabController extends GetxController {
                 time: thread.time.isNotEmpty ? thread.time : existing.time,
                 imageUrl: existing.imageUrl ?? thread.imageUrl,
                 unreadCount: existing.unreadCount,
+                roomId: thread.roomId.isNotEmpty
+                    ? thread.roomId
+                    : existing.roomId,
               );
       }
     }
     return byId.values.toList();
+  }
+
+  void _syncIncomingCallWatchers() {
+    if (!Get.isRegistered<ChatIncomingCallCoordinator>()) return;
+    final roomIds = inboxThreads
+        .map((thread) => thread.roomId)
+        .where((id) => id.isNotEmpty);
+    Get.find<ChatIncomingCallCoordinator>().syncWatchedRooms(
+      roomIds,
+      replace: true,
+    );
   }
 
   Future<List<MessageListItemModel>> _fetchInboxFromFirestore() async {

@@ -63,8 +63,17 @@ class _GiftsBottomSheetState extends State<GiftsBottomSheet> {
     ],
   };
 
-  List<Map<String, String>> get _visibleGifts =>
-      _giftsByTab[_tabs[_selectedTabIndex]] ?? const [];
+  List<Map<String, String>> get _visibleGifts {
+    final controller = Get.find<LiveBroadcastController>();
+    final remote = controller.giftCatalog;
+    if (remote.isEmpty) return _giftsByTab[_tabs[_selectedTabIndex]] ?? const [];
+    final tab = _tabs[_selectedTabIndex].toLowerCase();
+    if (tab == 'backpack') return const [];
+    final filtered = remote
+        .where((gift) => (gift['category'] ?? '').toLowerCase() == tab)
+        .toList();
+    return filtered.isNotEmpty ? filtered : remote.toList();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -91,7 +100,15 @@ class _GiftsBottomSheetState extends State<GiftsBottomSheet> {
           Spacing.v16,
           _buildTabBar(),
           Spacing.v12,
-          Expanded(child: _buildGiftsGrid()),
+          Expanded(
+            child: Obx(
+              () => Get.find<LiveBroadcastController>().isLoadingGifts.value
+                  ? const Center(
+                      child: CircularProgressIndicator(color: Colors.pinkAccent),
+                    )
+                  : _buildGiftsGrid(),
+            ),
+          ),
           _buildBottomBar(),
         ],
       ),
@@ -136,6 +153,15 @@ class _GiftsBottomSheetState extends State<GiftsBottomSheet> {
 
   Widget _buildGiftsGrid() {
     final gifts = _visibleGifts;
+    if (gifts.isEmpty) {
+      return const Center(
+        child: AppText(
+          text: 'No gifts found',
+          fontSize: TextStyles.k14FontSize,
+          color: kColorHint,
+        ),
+      );
+    }
     return GridView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -164,10 +190,10 @@ class _GiftsBottomSheetState extends State<GiftsBottomSheet> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(gift['icon']!, style: const TextStyle(fontSize: 32)),
+                Text(gift['icon'] ?? '🎁', style: const TextStyle(fontSize: 32)),
                 Spacing.v4,
                 AppText(
-                  text: gift['name']!,
+                  text: gift['name'] ?? 'Gift',
                   fontSize: TextStyles.k10FontSize,
                   color: kColorWhite,
                   maxLines: 1,

@@ -14,6 +14,10 @@ class ChatFirebaseService {
 
   final FirebaseFirestore? _firestoreOverride;
 
+  /// Skip repeated ack attempts for missing or already-acked messages.
+  static final Set<String> _ackedMessageKeys = <String>{};
+  static final Set<String> _failedAckKeys = <String>{};
+
   bool get isAvailable => FirebaseBootstrap.isAvailable;
 
   FirebaseFirestore? get _firestore {
@@ -175,14 +179,19 @@ class ChatFirebaseService {
     final firestore = _firestore;
     if (roomId.isEmpty || myUserId.isEmpty || firestore == null) return;
 
-    final batch = firestore.batch();
-    var hasWrites = false;
+    final ackUserId =
+        FirebaseAuth.instance.currentUser?.uid ?? myUserId;
+    final pendingUpdates = <DocumentReference<Map<String, dynamic>>,
+        Map<String, dynamic>>{};
 
     for (final raw in rawMessages) {
       final messageId =
           raw['id']?.toString() ?? raw['messageId']?.toString() ?? '';
       final senderId = raw['senderId']?.toString() ?? '';
-      if (messageId.isEmpty || senderId.isEmpty || senderId == myUserId) {
+      if (messageId.isEmpty ||
+          senderId.isEmpty ||
+          senderId == myUserId ||
+          senderId == ackUserId) {
         continue;
       }
 
@@ -190,7 +199,7 @@ class ChatFirebaseService {
       final statusMap = status is Map
           ? Map<String, dynamic>.from(status)
           : <String, dynamic>{};
-      final mine = statusMap[myUserId];
+      final mine = statusMap[ackUserId] ?? statusMap[myUserId];
       final mineMap =
           mine is Map ? Map<String, dynamic>.from(mine) : <String, dynamic>{};
 
@@ -201,29 +210,52 @@ class ChatFirebaseService {
       final ref = firestore
           .collection('chatRooms')
           .doc(roomId)
-          .collection('messages')
-          .doc(messageId);
+          .collection('messageReceipts')
+          .doc('$messageId-$ackUserId');
 
       if (markRead && !hasDelivered) {
-        batch.update(ref, {
-          'status.$myUserId.deliveredAt': FieldValue.serverTimestamp(),
-          'status.$myUserId.readAt': FieldValue.serverTimestamp(),
-        });
+        pendingUpdates[ref] = {
+          'messageId': messageId,
+          'userId': ackUserId,
+          'deliveredAt': FieldValue.serverTimestamp(),
+          'readAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        };
       } else {
-        batch.update(ref, {
-          'status.$myUserId.${markRead ? 'readAt' : 'deliveredAt'}':
-              FieldValue.serverTimestamp(),
-        });
+        pendingUpdates[ref] = {
+          'messageId': messageId,
+          'userId': ackUserId,
+          if (markRead) 'readAt': FieldValue.serverTimestamp(),
+          if (!markRead) 'deliveredAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        };
       }
-      hasWrites = true;
     }
 
-    if (hasWrites) {
+    if (pendingUpdates.isEmpty) return;
+
+    for (final entry in pendingUpdates.entries) {
+      final ref = entry.key;
+      final messageId = ref.id;
+      final key = '$roomId:$messageId';
+      if (_ackedMessageKeys.contains(key) || _failedAckKeys.contains(key)) {
+        continue;
+      }
+
       try {
-        await batch.commit();
+        await ref.set(entry.value, SetOptions(merge: true));
+        _ackedMessageKeys.add(key);
+      } on FirebaseException catch (e) {
+        if (e.code == 'not-found') {
+          _failedAckKeys.add(key);
+        } else {
+          LoggerUtils.logWarning(
+            'ChatFirebaseService: ack $messageId skipped — ${e.code}',
+          );
+        }
       } catch (e) {
         LoggerUtils.logWarning(
-          'ChatFirebaseService: ack messages skipped — $e',
+          'ChatFirebaseService: ack $messageId skipped — $e',
         );
       }
     }

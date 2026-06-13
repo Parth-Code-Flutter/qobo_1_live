@@ -22,6 +22,7 @@ This folder contains the architecture, schema, and implementation plan for **1-o
 | [10 — Firestore inbox list handover](./10-backend-firestore-inbox-list-handover.md) | **List chats by roomId for logged-in user — backend spec** |
 | [11 — Typing, presence, read receipts](./11-phase5-typing-presence-read-receipts.md) | **Phase 5 WhatsApp signals — Firestore + mobile** |
 | [12 — Complete API handover (share with backend)](./12-backend-chat-complete-api-handover.md) | **Full chat API spec: delete chat, block user, inbox, P0–P3** |
+| [13 — Zego voice call setup](./13-zego-voice-call-setup.md) | **Audio calling in chat — Zego console checklist + flow** |
 
 ---
 

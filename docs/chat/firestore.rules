@@ -18,9 +18,20 @@ service cloud.firestore {
         allow update: if isMember(roomId);
       }
 
+      match /messageReceipts/{receiptId} {
+        allow read: if isMember(roomId);
+        allow write: if isMember(roomId)
+          && request.resource.data.userId == request.auth.uid;
+      }
+
       match /typing/{userId} {
         allow read: if isMember(roomId);
         allow write: if request.auth.uid == userId && isMember(roomId);
+      }
+
+      match /calls/{callDoc} {
+        allow read: if isMember(roomId);
+        allow write: if isMember(roomId);
       }
     }
 

@@ -9,6 +9,7 @@ import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 import 'package:qobo_one_live/routes/app_pages.dart';
+import '../controllers/wallet_controller.dart';
 
 class WalletView extends StatefulWidget {
   const WalletView({super.key});
@@ -18,15 +19,7 @@ class WalletView extends StatefulWidget {
 }
 
 class _WalletViewState extends State<WalletView> {
-  int _selectedPlanIndex = 0;
-
-  final plans = <({String coins, String price, bool hasExtra})>[
-    (coins: '100 Coins', price: 'PKR 120', hasExtra: false),
-    (coins: '500 Coins', price: 'PKR 600', hasExtra: false),
-    (coins: '1000 Coins', price: 'PKR 1,150', hasExtra: true),
-    (coins: '2000 Coins', price: 'PKR 2,300', hasExtra: true),
-    (coins: '5000 Coins', price: 'PKR 5,750', hasExtra: true),
-  ];
+  final WalletController controller = Get.find<WalletController>();
 
   @override
   Widget build(BuildContext context) {
@@ -45,22 +38,28 @@ class _WalletViewState extends State<WalletView> {
                 Row(
                   children: [
                     Expanded(
-                      child: _balanceCard(
-                        title: 'Coin',
-                        amount: '12,450',
-                        icon: kIconCoin2,
+                      child: Obx(
+                        () => _balanceCard(
+                          title: 'Coin',
+                          amount: controller.coinBalance.value,
+                          icon: kIconCoin2,
+                        ),
                       ),
                     ),
                     Spacing.h12,
                     Expanded(
-                      child: _balanceCard(
-                        title: 'Diamonds',
-                        amount: '8,680',
-                        iconData: Icons.diamond_rounded,
+                      child: Obx(
+                        () => _balanceCard(
+                          title: 'Diamonds',
+                          amount: controller.diamondBalance.value,
+                          iconData: Icons.diamond_rounded,
+                        ),
                       ),
                     ),
                   ],
                 ),
+                Spacing.v12,
+                Obx(() => _withdrawalLimitCard()),
                 Spacing.v12,
                 // VIP Store Promo Banner
                 GestureDetector(
@@ -75,7 +74,7 @@ class _WalletViewState extends State<WalletView> {
                         end: Alignment.centerRight,
                       ),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white.withOpacity(0.15)),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
                     ),
                     child: Row(
                       children: [
@@ -94,7 +93,7 @@ class _WalletViewState extends State<WalletView> {
                               AppText(
                                 text: 'Get elite entrances, avatars, & chat bubbles!',
                                 fontSize: 11,
-                                color: kColorWhite.withOpacity(0.8),
+                                color: kColorWhite.withValues(alpha: 0.8),
                               ),
                             ],
                           ),
@@ -118,7 +117,7 @@ class _WalletViewState extends State<WalletView> {
                         end: Alignment.centerRight,
                       ),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white.withOpacity(0.15)),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
                     ),
                     child: Row(
                       children: [
@@ -137,7 +136,7 @@ class _WalletViewState extends State<WalletView> {
                               AppText(
                                 text: 'Manage transfers, buyer requests, & transaction ledger!',
                                 fontSize: 11,
-                                color: kColorWhite.withOpacity(0.8),
+                                color: kColorWhite.withValues(alpha: 0.8),
                               ),
                             ],
                           ),
@@ -157,49 +156,27 @@ class _WalletViewState extends State<WalletView> {
                   ),
                 ),
                 Spacing.v12,
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: kColorWalletCardBorder.withValues(alpha: 0.6),
-                        width: 1,
-                      ),
-                      gradient: const LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [kColorWalletCardBgTop, kColorWalletCardBgBottom],
-                      ),
-                    ),
-                    child: ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      itemCount: plans.length,
-                      separatorBuilder: (_, __) => Divider(
-                        color: kColorWhite.withValues(alpha: 0.12),
-                        height: 10,
-                      ),
-                      itemBuilder: (_, index) => GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _selectedPlanIndex = index;
-                          });
-                        },
-                        child: _coinPlanRow(
-                          coins: plans[index].coins,
-                          price: plans[index].price,
-                          hasExtra: plans[index].hasExtra,
-                          isSelected: _selectedPlanIndex == index,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                Expanded(child: _coinPackagesPanel()),
                 Spacing.v20,
                 SizedBox(
                   width: double.infinity,
                   height: 48,
                   child: appButton(
-                    onPressed: () => _openCheckoutBottomSheet(plans[_selectedPlanIndex]),
+                    onPressed: () {
+                      if (controller.packages.isEmpty) {
+                        Get.snackbar(
+                          'Wallet',
+                          'No coin package available right now.',
+                          snackPosition: SnackPosition.BOTTOM,
+                          backgroundColor: Colors.black87,
+                          colorText: kColorWhite,
+                        );
+                        return;
+                      }
+                      _openCheckoutBottomSheet(
+                        controller.packages[controller.selectedPlanIndex.value],
+                      );
+                    },
                     buttonText: 'Buy Now',
                     isGradient: false,
                     buttonColor: kColorPrimary,
@@ -214,7 +191,70 @@ class _WalletViewState extends State<WalletView> {
     );
   }
 
-  void _openCheckoutBottomSheet(({String coins, String price, bool hasExtra}) plan) {
+  Widget _coinPackagesPanel() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: kColorWalletCardBorder.withValues(alpha: 0.6),
+          width: 1,
+        ),
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [kColorWalletCardBgTop, kColorWalletCardBgBottom],
+        ),
+      ),
+      child: Obx(() {
+        if (controller.isLoadingPackages.value) {
+          return const Center(
+            child: CircularProgressIndicator(color: kColorPrimary),
+          );
+        }
+        if (controller.packages.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text(
+                controller.packageError.value.isNotEmpty
+                    ? controller.packageError.value
+                    : 'No coin packages found.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: kColorHint,
+                ),
+              ),
+            ),
+          );
+        }
+        return ListView.separated(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          itemCount: controller.packages.length,
+          separatorBuilder: (_, __) => Divider(
+            color: kColorWhite.withValues(alpha: 0.12),
+            height: 10,
+          ),
+          itemBuilder: (_, index) {
+            final plan = controller.packages[index];
+            return GestureDetector(
+              onTap: () => controller.selectedPlanIndex.value = index,
+              child: Obx(
+                () => _coinPlanRow(
+                  coins: plan.coinsLabel,
+                  price: plan.priceLabel,
+                  hasExtra: false,
+                  isSelected: controller.selectedPlanIndex.value == index,
+                ),
+              ),
+            );
+          },
+        );
+      }),
+    );
+  }
+
+  void _openCheckoutBottomSheet(CoinPackage plan) {
     Get.bottomSheet(
       Container(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
@@ -250,7 +290,7 @@ class _WalletViewState extends State<WalletView> {
             Spacing.v12,
             Center(
               child: AppText(
-                text: 'Total Amount: ${plan.price} (${plan.coins})',
+                text: 'Total Amount: ${plan.priceLabel} (${plan.coinsLabel})',
                 fontSize: 13,
                 color: Colors.amber,
               ),
@@ -260,21 +300,21 @@ class _WalletViewState extends State<WalletView> {
               logoIcon: Icons.account_balance_wallet_rounded,
               title: 'Google Pay',
               color: Colors.blue,
-              onTap: () => _simulatePayment('Google Pay', plan.coins),
+              onTap: () => _submitPayment('Google Pay', plan),
             ),
             const Divider(color: Colors.white10, height: 16),
             _paymentMethodTile(
               logoIcon: Icons.payment_rounded,
               title: 'PayPal Gateway',
               color: Colors.indigo,
-              onTap: () => _simulatePayment('PayPal', plan.coins),
+              onTap: () => _submitPayment('PayPal', plan),
             ),
             const Divider(color: Colors.white10, height: 16),
             _paymentMethodTile(
               logoIcon: Icons.credit_card_rounded,
               title: 'Razorpay Instant',
               color: Colors.deepOrange,
-              onTap: () => _simulatePayment('Razorpay', plan.coins),
+              onTap: () => _submitPayment('Razorpay', plan),
             ),
             const Divider(color: Colors.white10, height: 16),
             _paymentMethodTile(
@@ -321,44 +361,10 @@ class _WalletViewState extends State<WalletView> {
     );
   }
 
-  void _simulatePayment(String method, String coins) {
+  void _submitPayment(String method, CoinPackage plan) async {
     Get.back(); // close payment methods
-    Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        backgroundColor: const Color(0xFF1E1E2D),
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(
-                width: 48,
-                height: 48,
-                child: CircularProgressIndicator(
-                  strokeWidth: 3,
-                  valueColor: AlwaysStoppedAnimation<Color>(kColorPrimary),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Connecting to $method...',
-                style: const TextStyle(color: kColorWhite, fontSize: 13, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Please do not close this window.',
-                style: TextStyle(color: Colors.white38, fontSize: 11),
-              ),
-            ],
-          ),
-        ),
-      ),
-      barrierDismissible: false,
-    );
-
-    Future.delayed(const Duration(seconds: 2), () {
-      Get.back(); // close loading dialog
+    final ok = await controller.buySelectedPackage(method.toLowerCase());
+    if (ok) {
       Get.dialog(
         Dialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -376,7 +382,7 @@ class _WalletViewState extends State<WalletView> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Added $coins to your account via $method.',
+                  'Added ${plan.coinsLabel} to your account via $method.',
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: Colors.white70, fontSize: 13),
                 ),
@@ -398,7 +404,17 @@ class _WalletViewState extends State<WalletView> {
           ),
         ),
       );
-    });
+    } else {
+      Get.snackbar(
+        'Payment Failed',
+        controller.packageError.value.isNotEmpty
+            ? controller.packageError.value
+            : 'Unable to complete this purchase.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.black87,
+        colorText: kColorWhite,
+      );
+    }
   }
 
   Widget _walletHeader() {
@@ -451,6 +467,79 @@ class _WalletViewState extends State<WalletView> {
           size: 14,
           color: kColorWhite,
         ),
+      ),
+    );
+  }
+
+  Widget _withdrawalLimitCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: kColorWalletCardBorder.withValues(alpha: 0.6),
+        ),
+        gradient: LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [
+            kColorWalletCardBgTop.withValues(alpha: 0.95),
+            kColorWalletCardBgBottom.withValues(alpha: 0.85),
+          ],
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: kColorWalletAmount.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.savings_outlined,
+              size: 20,
+              color: kColorWalletAmount,
+            ),
+          ),
+          Spacing.h12,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SemiBoldText(
+                  text: 'Withdrawal limit',
+                  fontSize: TextStyles.k14FontSize,
+                  color: kColorWhite,
+                ),
+                Spacing.v2,
+                AppText(
+                  text: 'Minimum diamonds required to withdraw',
+                  fontSize: TextStyles.k10FontSize,
+                  color: kColorWhite.withValues(alpha: 0.65),
+                ),
+              ],
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.diamond_rounded,
+                size: 16,
+                color: kColorWalletAmount,
+              ),
+              Spacing.h6,
+              SemiBoldText(
+                text: controller.withdrawalLimit.value,
+                fontSize: TextStyles.k18FontSize,
+                color: kColorWalletAmount,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

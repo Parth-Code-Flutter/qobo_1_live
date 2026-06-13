@@ -140,14 +140,23 @@ class EconomyEndpoints {
   /// POST /api/economy/recharge
   static const String recharge = '/api/economy/recharge';
 
+  /// GET /api/admin/package-list
+  static const String packageList = '/api/admin/package-list';
+
   /// GET /api/economy/history
   static const String history = '/api/economy/history';
 
   /// GET /api/economy/gift-list
   static const String giftList = '/api/economy/gift-list';
 
-  /// POST /api/economy/send-gift
-  static const String sendGift = '/api/economy/send-gift';
+  /// POST /api/send-gift
+  static const String sendGift = '/api/send-gift';
+
+  /// Legacy deployed route kept as fallback until `/api/send-gift` is live.
+  static const String sendGiftLegacy = '/api/economy/send-gift';
+
+  /// POST /api/withdraw
+  static const String withdraw = '/api/withdraw';
 
   /// POST /api/economy/seller/transfer
   static const String sellerTransfer = '/api/economy/seller/transfer';
@@ -198,6 +207,14 @@ class PkEndpoints {
 
   /// POST /api/pk/dating-action
   static const String datingAction = '/api/pk/dating-action';
+}
+
+/// Central place for paid calling related API endpoints.
+class CallingEndpoints {
+  CallingEndpoints._();
+
+  /// POST /api/calling/charge
+  static const String charge = '/api/calling/charge';
 }
 
 /// Central place for chat related API endpoints.

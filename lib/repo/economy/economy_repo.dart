@@ -38,6 +38,19 @@ class EconomyRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
+  /// Calls `GET /api/admin/package-list` to fetch active coin packages.
+  Future<Map<String, dynamic>?> getCoinPackages({
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.getRequest(
+      endPoint: EconomyEndpoints.packageList,
+      isShowLoader: isShowLoader,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
   /// Calls `GET /api/economy/history` to fetch the transaction history log.
   Future<Map<String, dynamic>?> getTransactionHistory({
     bool isShowLoader = true,
@@ -62,7 +75,7 @@ class EconomyRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
-  /// Calls `POST /api/economy/send-gift` to send a gift in a room.
+  /// Calls `POST /api/send-gift` to send a gift in a room.
   Future<Map<String, dynamic>?> sendGift({
     required String receiverId,
     required String giftId,
@@ -75,6 +88,48 @@ class EconomyRepo {
         'receiver_id': receiverId,
         'gift_id': giftId,
         'room_id': roomId,
+      },
+      isShowLoader: isShowLoader,
+    );
+
+    if (response?.statusCode == 404) {
+      final legacyResponse = await _apiService.postRequest(
+        endPoint: EconomyEndpoints.sendGiftLegacy,
+        requestModel: <String, dynamic>{
+          'receiver_id': receiverId,
+          'gift_id': giftId,
+          'room_id': roomId,
+        },
+        isShowLoader: isShowLoader,
+      );
+      if (legacyResponse == null) return null;
+      return ApiResponseUtils.tryDecodeMap(legacyResponse.body);
+    }
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// Calls `POST /api/withdraw` to submit a host withdrawal request.
+  Future<Map<String, dynamic>?> requestWithdrawal({
+    required int amount,
+    String? accountNumber,
+    String? ifscCode,
+    String? upiId,
+    bool isShowLoader = true,
+  }) async {
+    final bankDetails = <String, dynamic>{
+      if ((accountNumber ?? '').trim().isNotEmpty)
+        'account_number': accountNumber!.trim(),
+      if ((ifscCode ?? '').trim().isNotEmpty) 'ifsc_code': ifscCode!.trim(),
+      if ((upiId ?? '').trim().isNotEmpty) 'upi_id': upiId!.trim(),
+    };
+
+    final response = await _apiService.postRequest(
+      endPoint: EconomyEndpoints.withdraw,
+      requestModel: <String, dynamic>{
+        'amount': amount,
+        'bank_details': bankDetails,
       },
       isShowLoader: isShowLoader,
     );

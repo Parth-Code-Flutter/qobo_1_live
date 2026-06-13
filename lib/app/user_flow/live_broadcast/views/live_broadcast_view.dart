@@ -82,7 +82,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
               plugins: signalingPlugins,
             );
 
-      // Customize Zego controls so they do not conflict with our custom styled overlays
+      // Custom overlay replaces Zego chrome — hide built-in bars.
       config.bottomMenuBar = ZegoLiveStreamingBottomMenuBarConfig(
         hostButtons: [],
         audienceButtons: [],
@@ -99,21 +99,27 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
         visible: false,
       );
 
-      if (controller.roomType.value == 'AUDIO') {
+      // Preview page has its own "Start Live" button — our overlay covers it.
+      // Skip preview so hosts join live immediately with camera on.
+      config.preview.showPreviewForHost = false;
+
+      final isVideoRoom = controller.isVideoRoom;
+      if (isVideoRoom) {
+        config.turnOnCameraWhenJoining = controller.isHost.value;
+        config.turnOnMicrophoneWhenJoining = controller.isHost.value;
+        config.useFrontFacingCamera = true;
+      } else {
         config.turnOnCameraWhenJoining = false;
-        config.turnOnMicrophoneWhenJoining = true;
+        config.turnOnMicrophoneWhenJoining = controller.isHost.value;
         config.audioVideoView.showAvatarInAudioMode = true;
         config.audioVideoView.showSoundWavesInAudioMode = true;
-      } else {
-        config.turnOnCameraWhenJoining = controller.isHost.value;
-        config.turnOnMicrophoneWhenJoining = true;
       }
 
       return Positioned.fill(
         key: ValueKey('zego_$liveId'),
         child: ZegoUIKitPrebuiltLiveStreaming(
-          appID: ZegoConfig.appId,
-          appSign: ZegoConfig.appSign,
+          appID: ZegoConfig.liveAppId,
+          appSign: ZegoConfig.liveAppSign,
           userID: currentUserId,
           userName: currentUserName,
           liveID: liveId,
@@ -124,6 +130,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                 if (state.reason == ZegoRoomStateChangedReason.Logined &&
                     state.errorCode == 0) {
                   controller.clearConnectionIssue();
+                  controller.onZegoRoomLogined();
                 }
               },
               onLoginFailed: (event, defaultAction) {
@@ -548,6 +555,18 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                   onTap: controller.toggleMic,
                 ),
               ),
+              if (controller.isHost.value && controller.isVideoRoom) ...[
+                Spacing.h8,
+                Obx(
+                  () => _bottomActionIcon(
+                    controller.isCameraOff.value
+                        ? Icons.videocam_off_rounded
+                        : Icons.videocam_rounded,
+                    active: !controller.isCameraOff.value,
+                    onTap: controller.toggleCamera,
+                  ),
+                ),
+              ],
               Spacing.h8,
               _bottomActionIcon(
                 Icons.card_giftcard_rounded,
