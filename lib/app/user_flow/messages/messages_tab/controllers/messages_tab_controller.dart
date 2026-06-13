@@ -8,6 +8,7 @@ import 'package:qobo_one_live/repo/chat/chat_navigation_helper.dart';
 import 'package:qobo_one_live/repo/chat/chat_repo.dart';
 import 'package:qobo_one_live/repo/user/user_repo.dart';
 import 'package:qobo_one_live/services/chat/chat_firebase_service.dart';
+import 'package:qobo_one_live/services/chat/chat_inbox_preview.dart';
 import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
@@ -141,7 +142,12 @@ class MessagesTabController extends GetxController {
 
       final localRaw = await _localStore.readInboxThreads();
       final localThreads = localRaw
-          .where((t) => (t['lastMessage']?.toString().trim().isNotEmpty ?? false))
+          .where((t) {
+            final message = t['lastMessage']?.toString().trim() ?? '';
+            final type = t['lastMessageType']?.toString();
+            return message.isNotEmpty ||
+                ChatInboxPreviewType.isCallType(type);
+          })
           .map((json) => _mapInboxThread(json, 0))
           .toList();
 
@@ -151,8 +157,9 @@ class MessagesTabController extends GetxController {
       }
 
       inboxThreads.assignAll(
-        _mergeInboxThreads(
-          _mergeInboxThreads(apiThreads, firestoreThreads),
+        _mergeAllInboxSources(
+          apiThreads,
+          firestoreThreads,
           localThreads,
         ),
       );
@@ -164,38 +171,85 @@ class MessagesTabController extends GetxController {
     }
   }
 
-  List<MessageListItemModel> _mergeInboxThreads(
+  List<MessageListItemModel> _mergeAllInboxSources(
     List<MessageListItemModel> api,
+    List<MessageListItemModel> firestore,
     List<MessageListItemModel> local,
   ) {
     final byId = <String, MessageListItemModel>{};
-    for (final thread in api) {
-      if (thread.targetId.isNotEmpty) {
-        byId[thread.targetId] = thread;
-      }
-    }
-    for (final thread in local) {
+    for (final thread in [...api, ...firestore, ...local]) {
       if (thread.targetId.isEmpty) continue;
       final existing = byId[thread.targetId];
-      if (existing == null || thread.message.isNotEmpty) {
-        byId[thread.targetId] = existing == null
-            ? thread
-            : MessageListItemModel(
-                targetId: thread.targetId,
-                name: existing.name.isNotEmpty ? existing.name : thread.name,
-                message: thread.message.isNotEmpty
-                    ? thread.message
-                    : existing.message,
-                time: thread.time.isNotEmpty ? thread.time : existing.time,
-                imageUrl: existing.imageUrl ?? thread.imageUrl,
-                unreadCount: existing.unreadCount,
-                roomId: thread.roomId.isNotEmpty
-                    ? thread.roomId
-                    : existing.roomId,
-              );
-      }
+      byId[thread.targetId] = existing == null
+          ? thread
+          : _mergeTwoInboxThreads(existing, thread);
     }
-    return byId.values.toList();
+
+    final merged = byId.values.toList()
+      ..sort((a, b) {
+        final ad = a.lastActivityAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final bd = b.lastActivityAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        return bd.compareTo(ad);
+      });
+    return merged;
+  }
+
+  MessageListItemModel _mergeTwoInboxThreads(
+    MessageListItemModel a,
+    MessageListItemModel b,
+  ) {
+    final aTime = a.lastActivityAt;
+    final bTime = b.lastActivityAt;
+    final pickB = bTime != null && (aTime == null || !bTime.isBefore(aTime));
+    final newer = pickB ? b : a;
+    final older = pickB ? a : b;
+
+    return MessageListItemModel(
+      targetId: newer.targetId,
+      name: _resolveInboxName(newer.name, older.name),
+      message: newer.message.isNotEmpty ? newer.message : older.message,
+      time: newer.time.isNotEmpty ? newer.time : older.time,
+      imageUrl: _resolveInboxImageUrl(newer, older),
+      unreadCount: newer.unreadCount > 0 ? newer.unreadCount : older.unreadCount,
+      roomId: newer.roomId.isNotEmpty ? newer.roomId : older.roomId,
+      lastMessageType: newer.lastMessageType != ChatInboxPreviewType.text
+          ? newer.lastMessageType
+          : older.lastMessageType,
+      lastCallDirection: newer.lastCallDirection ?? older.lastCallDirection,
+      lastActivityAt: newer.lastActivityAt ?? older.lastActivityAt,
+    );
+  }
+
+  /// Prefers real profile names from API over Firestore/local placeholder "User".
+  static String _resolveInboxName(String primary, String fallback) {
+    final primaryGeneric = _isGenericInboxName(primary);
+    final fallbackGeneric = _isGenericInboxName(fallback);
+    if (!primaryGeneric && fallbackGeneric) return primary;
+    if (primaryGeneric && !fallbackGeneric) return fallback;
+    if (!primaryGeneric) return primary;
+    return fallback.isNotEmpty ? fallback : primary;
+  }
+
+  static String? _resolveInboxImageUrl(
+    MessageListItemModel primary,
+    MessageListItemModel fallback,
+  ) {
+    if (!_isGenericInboxName(primary.name) &&
+        primary.imageUrl != null &&
+        primary.imageUrl!.isNotEmpty) {
+      return primary.imageUrl;
+    }
+    if (!_isGenericInboxName(fallback.name) &&
+        fallback.imageUrl != null &&
+        fallback.imageUrl!.isNotEmpty) {
+      return fallback.imageUrl;
+    }
+    return primary.imageUrl ?? fallback.imageUrl;
+  }
+
+  static bool _isGenericInboxName(String name) {
+    final trimmed = name.trim().toLowerCase();
+    return trimmed.isEmpty || trimmed == 'user';
   }
 
   void _syncIncomingCallWatchers() {
@@ -224,8 +278,14 @@ class MessagesTabController extends GetxController {
     return rows
         .whereType<Map>()
         .map((raw) => _mapInboxThread(Map<String, dynamic>.from(raw), 0))
-        .where((t) => t.targetId.isNotEmpty && t.message.isNotEmpty)
+        .where(_hasInboxPreview)
         .toList();
+  }
+
+  bool _hasInboxPreview(MessageListItemModel thread) {
+    if (thread.targetId.isEmpty) return false;
+    if (thread.message.trim().isNotEmpty) return true;
+    return ChatInboxPreviewType.isCallType(thread.lastMessageType);
   }
 
   String? get _myUserId {
@@ -244,18 +304,36 @@ class MessagesTabController extends GetxController {
         'User';
     final targetId =
         json['id']?.toString() ??
+        json['peerId']?.toString() ??
         recipientMap?['id']?.toString() ??
         '';
     final picture = recipientMap?['displayPicture']?.toString();
 
+    final lastMessageType =
+        json['lastMessageType']?.toString() ?? ChatInboxPreviewType.text;
+    final previewRaw =
+        json['lastMessage']?.toString() ??
+        json['lastMessagePreview']?.toString() ??
+        '';
+    final preview = ChatInboxPreviewType.displayLabel(
+      lastMessageType,
+      fallbackPreview: previewRaw,
+    );
+    final activityRaw =
+        json['lastMessageTime']?.toString() ??
+        json['lastMessageAt']?.toString();
+
     return MessageListItemModel(
       targetId: targetId,
       name: name.isNotEmpty ? name : 'User',
-      message: json['lastMessage']?.toString() ?? '',
-      time: _formatThreadTime(json['lastMessageTime']?.toString()),
+      message: preview,
+      time: _formatThreadTime(activityRaw),
       imageUrl: picture,
       unreadCount: _toInt(json['unreadCount']),
       roomId: json['roomId']?.toString() ?? '',
+      lastMessageType: lastMessageType,
+      lastCallDirection: json['lastCallDirection']?.toString(),
+      lastActivityAt: _parseThreadDateTime(activityRaw),
     );
   }
 
@@ -431,6 +509,15 @@ class MessagesTabController extends GetxController {
       }
     } catch (_) {}
     return cached;
+  }
+
+  static DateTime? _parseThreadDateTime(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      return DateTime.parse(raw).toLocal();
+    } catch (_) {
+      return null;
+    }
   }
 
   static String _formatThreadTime(String? raw) {

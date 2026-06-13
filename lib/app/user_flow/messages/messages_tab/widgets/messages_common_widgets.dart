@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/services/chat/chat_inbox_preview.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -17,6 +18,9 @@ class MessageListItemModel {
     this.imageUrl,
     this.unreadCount = 0,
     this.roomId = '',
+    this.lastMessageType = ChatInboxPreviewType.text,
+    this.lastCallDirection,
+    this.lastActivityAt,
   });
 
   final String targetId;
@@ -26,6 +30,19 @@ class MessageListItemModel {
   final String? imageUrl;
   final int unreadCount;
   final String roomId;
+  final String lastMessageType;
+  final String? lastCallDirection;
+  final DateTime? lastActivityAt;
+
+  bool get isCallPreview => ChatInboxPreviewType.isCallType(lastMessageType);
+
+  bool get isMissedCall => ChatInboxPreviewType.isMissedCall(lastMessageType);
+
+  bool get isVideoCall =>
+      lastMessageType == ChatInboxPreviewType.videoCall ||
+      lastMessageType == ChatInboxPreviewType.missedVideoCall;
+
+  bool get isIncomingCall => lastCallDirection == 'incoming';
 }
 
 /// Horizontal New Match avatar — tap opens profile sheet.
@@ -230,15 +247,7 @@ class MessageListTileItem extends StatelessWidget {
                     fontSize: TextStyles.k14FontSize,
                   ),
                   Spacing.v2,
-                  AppText(
-                    text: item.message.isNotEmpty
-                        ? item.message
-                        : 'Start a conversation',
-                    color: kColorWhite.withValues(alpha: 0.9),
-                    fontSize: TextStyles.k10FontSize,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  _buildPreviewLine(),
                 ],
               ),
             ),
@@ -278,5 +287,53 @@ class MessageListTileItem extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildPreviewLine() {
+    final previewText = item.message.isNotEmpty
+        ? item.message
+        : 'Start a conversation';
+    final previewColor = item.isMissedCall
+        ? Colors.redAccent.shade200
+        : kColorWhite.withValues(alpha: 0.9);
+
+    if (!item.isCallPreview) {
+      return AppText(
+        text: previewText,
+        color: previewColor,
+        fontSize: TextStyles.k10FontSize,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      );
+    }
+
+    return Row(
+      children: [
+        Icon(
+          _callPreviewIcon(),
+          size: 14,
+          color: previewColor,
+        ),
+        Spacing.h4,
+        Expanded(
+          child: AppText(
+            text: previewText,
+            color: previewColor,
+            fontSize: TextStyles.k10FontSize,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
+  IconData _callPreviewIcon() {
+    if (item.isVideoCall) {
+      return Icons.videocam_rounded;
+    }
+    return item.isIncomingCall
+        ? Icons.call_received_rounded
+        : Icons.call_made_rounded;
   }
 }

@@ -33,6 +33,12 @@ service cloud.firestore {
         allow read: if isMember(roomId);
         allow write: if isMember(roomId);
       }
+
+      match /callHistory/{callId} {
+        allow read: if isMember(roomId);
+        allow create: if isMember(roomId);
+        allow update: if isMember(roomId);
+      }
     }
 
     match /userChats/{userId}/rooms/{roomId} {

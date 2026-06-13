@@ -60,14 +60,17 @@ class ChatVoiceCallView extends GetView<ChatVoiceCallController> {
               ),
               user: ZegoCallUserEvents(
                 onEnter: (user) {
+                  controller.onPeerJoined();
                   LoggerUtils.logInfo(
                     'ChatVoiceCallView: peer joined ${user.id}',
                   );
                 },
               ),
               onCallEnd: (event, defaultAction) async {
-                await controller.onCallEnded();
+                await controller.onCallEnded(refreshInbox: false);
                 defaultAction.call();
+                await controller.onCallScreenDisposed();
+                ChatVoiceCallController.refreshMessagesInbox();
               },
             ),
           ),

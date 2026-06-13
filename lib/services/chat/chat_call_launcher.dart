@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:qobo_one_live/app/user_flow/messages/chat_voice_call/controllers/chat_voice_call_controller.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
 import 'package:qobo_one_live/constants/zego_config.dart';
 import 'package:qobo_one_live/repo/chat/chat_repo.dart';
@@ -128,9 +131,14 @@ abstract final class ChatCallLauncher {
       if (Get.isRegistered<ChatIncomingCallCoordinator>()) {
         Get.find<ChatIncomingCallCoordinator>().setOnCallScreen(false);
       }
+      _refreshInboxIfVisible();
     } finally {
       _inFlight = false;
     }
+  }
+
+  static void _refreshInboxIfVisible() {
+    ChatVoiceCallController.refreshMessagesInbox();
   }
 
   static Future<bool> _ensurePermissions(

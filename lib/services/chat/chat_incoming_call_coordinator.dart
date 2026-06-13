@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/app/user_flow/messages/chat_voice_call/controllers/chat_voice_call_controller.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/chat/chat_call_service.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
@@ -95,7 +96,11 @@ class ChatIncomingCallCoordinator extends GetxService {
             onPressed: () async {
               Get.back();
               _dialogOpen = false;
-              await _callService.endCall(roomId);
+              await _callService.endCall(
+                roomId,
+                endedByUserId: myId,
+              );
+              ChatVoiceCallController.refreshMessagesInbox();
             },
             child: const Text('Decline'),
           ),

@@ -1,4 +1,5 @@
 import 'package:qobo_one_live/constants/local_storage_constants.dart';
+import 'package:qobo_one_live/services/chat/chat_inbox_preview.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 
 /// Offline cache for chat until `POST /api/chat/send` is live on backend.
@@ -80,6 +81,61 @@ class ChatLocalStore {
       'lastMessage': lastMessage,
       'lastMessageTime': lastMessageAt,
       'lastMessageType': 'text',
+      'unreadCount': 0,
+      'recipient': {
+        'id': targetId,
+        'name': name ?? existing['recipient']?['name'] ?? 'User',
+        'displayPicture':
+            imageUrl ?? existing['recipient']?['displayPicture'],
+      },
+      'localOnly': true,
+    };
+    if (index >= 0) {
+      threads[index] = updated;
+    } else {
+      threads.insert(0, updated);
+    }
+    data['threads'] = threads;
+    await _storage.writeJsonStorage(kStorageChatInboxThreads, data);
+  }
+
+  Future<void> upsertCallPreview({
+    required String targetId,
+    required String roomId,
+    required bool isVideo,
+    required String outcome,
+    required bool isIncoming,
+    String? name,
+    String? imageUrl,
+  }) async {
+    if (targetId.isEmpty) return;
+
+    final inboxType = ChatInboxPreviewType.inboxTypeForUser(
+      isVideo: isVideo,
+      outcome: outcome,
+      isCallee: isIncoming,
+    );
+    final preview = ChatInboxPreviewType.displayLabel(inboxType);
+    final now = DateTime.now().toUtc().toIso8601String();
+
+    final map = await _storage.getJsonFromStorage(kStorageChatInboxThreads);
+    final data = map != null ? Map<String, dynamic>.from(map) : <String, dynamic>{};
+    final threads = List<Map<String, dynamic>>.from(
+      (data['threads'] as List?)?.whereType<Map>().map(
+            (e) => Map<String, dynamic>.from(e),
+          ) ??
+          [],
+    );
+
+    final index = threads.indexWhere((t) => t['id']?.toString() == targetId);
+    final existing = index >= 0 ? threads[index] : <String, dynamic>{};
+    final updated = {
+      'id': targetId,
+      'roomId': roomId.isNotEmpty ? roomId : existing['roomId']?.toString() ?? '',
+      'lastMessage': preview,
+      'lastMessageTime': now,
+      'lastMessageType': inboxType,
+      'lastCallDirection': isIncoming ? 'incoming' : 'outgoing',
       'unreadCount': 0,
       'recipient': {
         'id': targetId,

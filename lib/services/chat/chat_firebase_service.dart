@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:qobo_one_live/services/chat/chat_inbox_preview.dart';
 import 'package:qobo_one_live/services/firebase/firebase_bootstrap.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 
@@ -302,56 +303,251 @@ class ChatFirebaseService {
     if (userId.isEmpty || firestore == null) return [];
 
     try {
-      final roomsSnap = await firestore
-          .collection('chatRooms')
-          .where('memberIds', arrayContains: userId)
-          .get();
+      final fromUserChats = await _fetchInboxFromUserChats(firestore, userId);
+      if (fromUserChats.isNotEmpty) return fromUserChats;
 
-      final rows = <Map<String, dynamic>>[];
-      for (final roomDoc in roomsSnap.docs) {
-        final roomData = Map<String, dynamic>.from(roomDoc.data());
-        if (roomData['isActive'] == false) continue;
-
-        final memberIds = (roomData['memberIds'] as List?)
-                ?.map((e) => e.toString())
-                .where((id) => id.isNotEmpty)
-                .toList() ??
-            <String>[];
-        final peerId =
-            memberIds.firstWhere((id) => id != userId, orElse: () => '');
-        if (peerId.isEmpty) continue;
-
-        final messages = await fetchMessagesOnce(roomDoc.id);
-        if (messages.isEmpty) continue;
-
-        final latest = messages.last;
-        final preview = _extractMessagePreview(latest);
-        if (preview.isEmpty) continue;
-
-        rows.add({
-          'id': peerId,
-          'roomId': roomDoc.id,
-          'lastMessage': preview,
-          'lastMessageTime': _formatFirestoreTime(
-            latest['createdAt'] ?? latest['clientCreatedAt'],
-          ),
-          'lastMessageType': latest['type']?.toString() ?? 'text',
-          'unreadCount': 0,
-          'recipient': {'id': peerId},
-        });
-      }
-
-      rows.sort((a, b) {
-        final at = a['lastMessageTime']?.toString() ?? '';
-        final bt = b['lastMessageTime']?.toString() ?? '';
-        return bt.compareTo(at);
-      });
-      return rows;
+      return _fetchInboxFromChatRooms(firestore, userId);
     } catch (e) {
       LoggerUtils.logWarning(
         'ChatFirebaseService: fetchInboxRoomsForUser failed — $e',
       );
       return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchInboxFromUserChats(
+    FirebaseFirestore firestore,
+    String userId,
+  ) async {
+    QuerySnapshot<Map<String, dynamic>> roomsSnap;
+    try {
+      roomsSnap = await firestore
+          .collection('userChats')
+          .doc(userId)
+          .collection('rooms')
+          .orderBy('lastMessageAt', descending: true)
+          .get();
+    } catch (e) {
+      LoggerUtils.logWarning(
+        'ChatFirebaseService: userChats orderBy failed — $e (fallback get)',
+      );
+      roomsSnap = await firestore
+          .collection('userChats')
+          .doc(userId)
+          .collection('rooms')
+          .get();
+    }
+
+    if (roomsSnap.docs.isEmpty) return [];
+
+    final rows = <Map<String, dynamic>>[];
+    for (final doc in roomsSnap.docs) {
+      final data = Map<String, dynamic>.from(doc.data());
+      final peerId = data['peerId']?.toString() ?? '';
+      if (peerId.isEmpty) continue;
+
+      final roomId = data['roomId']?.toString() ?? doc.id;
+      var type = data['lastMessageType']?.toString();
+      var previewRaw = data['lastMessagePreview']?.toString() ?? '';
+      var activityAt = _toDateTime(data['lastMessageAt']);
+      var lastCallDirection = data['lastCallDirection']?.toString();
+
+      final latestCall = await _fetchLatestCallHistory(firestore, roomId);
+      if (latestCall != null) {
+        final callAt = _toDateTime(latestCall['endedAt']);
+        if (callAt != null &&
+            (activityAt == null || callAt.isAfter(activityAt))) {
+          final isVideo = latestCall['type']?.toString() == 'video';
+          final outcome = latestCall['status']?.toString() ?? 'completed';
+          final isCallee = latestCall['calleeId']?.toString() == userId;
+          type = ChatInboxPreviewType.inboxTypeForUser(
+            isVideo: isVideo,
+            outcome: outcome,
+            isCallee: isCallee,
+          );
+          previewRaw = ChatInboxPreviewType.displayLabel(type);
+          activityAt = callAt;
+          lastCallDirection = isCallee ? 'incoming' : 'outgoing';
+        }
+      }
+
+      final preview = ChatInboxPreviewType.displayLabel(
+        type,
+        fallbackPreview: previewRaw,
+      );
+      if (preview.isEmpty &&
+          !ChatInboxPreviewType.isCallType(type) &&
+          type != ChatInboxPreviewType.text) {
+        continue;
+      }
+
+      rows.add({
+        'id': peerId,
+        'roomId': roomId,
+        'lastMessage': preview,
+        'lastMessageTime': _formatFirestoreTime(activityAt),
+        'lastMessageType': type ?? ChatInboxPreviewType.text,
+        'lastCallType': data['lastCallType'] ?? latestCall?['type'],
+        'lastCallStatus': data['lastCallStatus'] ?? latestCall?['status'],
+        'lastCallDirection': lastCallDirection,
+        'unreadCount': data['unreadCount'] ?? 0,
+        'recipient': {
+          'id': peerId,
+          if (data['title']?.toString().trim().isNotEmpty == true)
+            'name': data['title']?.toString().trim(),
+          if (data['photoUrl']?.toString().trim().isNotEmpty == true)
+            'displayPicture': data['photoUrl']?.toString().trim(),
+        },
+      });
+    }
+
+    rows.sort((a, b) {
+      final at = a['lastMessageTime']?.toString() ?? '';
+      final bt = b['lastMessageTime']?.toString() ?? '';
+      return bt.compareTo(at);
+    });
+    return rows;
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchInboxFromChatRooms(
+    FirebaseFirestore firestore,
+    String userId,
+  ) async {
+    final roomsSnap = await firestore
+        .collection('chatRooms')
+        .where('memberIds', arrayContains: userId)
+        .get();
+
+    final rows = <Map<String, dynamic>>[];
+    for (final roomDoc in roomsSnap.docs) {
+      final roomData = Map<String, dynamic>.from(roomDoc.data());
+      if (roomData['isActive'] == false) continue;
+
+      final memberIds = (roomData['memberIds'] as List?)
+              ?.map((e) => e.toString())
+              .where((id) => id.isNotEmpty)
+              .toList() ??
+          <String>[];
+      final peerId =
+          memberIds.firstWhere((id) => id != userId, orElse: () => '');
+      if (peerId.isEmpty) continue;
+
+      final messages = await fetchMessagesOnce(roomDoc.id);
+      final latestCall = await _fetchLatestCallHistory(firestore, roomDoc.id);
+
+      Map<String, dynamic>? latestMessage;
+      if (messages.isNotEmpty) {
+        latestMessage = messages.last;
+      }
+
+      final messageAt = latestMessage != null
+          ? _toDateTime(
+              latestMessage['createdAt'] ?? latestMessage['clientCreatedAt'],
+            )
+          : null;
+      final callAt = _toDateTime(latestCall?['endedAt']);
+
+      final useCall = callAt != null &&
+          (messageAt == null || callAt.isAfter(messageAt));
+
+      if (useCall && latestCall != null) {
+        final isVideo = latestCall['type']?.toString() == 'video';
+        final outcome = latestCall['status']?.toString() ?? 'completed';
+        final isCallee = latestCall['calleeId']?.toString() == userId;
+        final inboxType = ChatInboxPreviewType.inboxTypeForUser(
+          isVideo: isVideo,
+          outcome: outcome,
+          isCallee: isCallee,
+        );
+        rows.add({
+          'id': peerId,
+          'roomId': roomDoc.id,
+          'lastMessage': ChatInboxPreviewType.displayLabel(inboxType),
+          'lastMessageTime': _formatFirestoreTime(latestCall['endedAt']),
+          'lastMessageType': inboxType,
+          'lastCallType': isVideo ? 'video' : 'voice',
+          'lastCallStatus': outcome,
+          'lastCallDirection': isCallee ? 'incoming' : 'outgoing',
+          'unreadCount': 0,
+          'recipient': {'id': peerId},
+        });
+        continue;
+      }
+
+      if (latestMessage == null) continue;
+
+      final preview = _extractMessagePreview(latestMessage);
+      if (preview.isEmpty) continue;
+
+      rows.add({
+        'id': peerId,
+        'roomId': roomDoc.id,
+        'lastMessage': preview,
+        'lastMessageTime': _formatFirestoreTime(
+          latestMessage['createdAt'] ?? latestMessage['clientCreatedAt'],
+        ),
+        'lastMessageType': latestMessage['type']?.toString() ?? 'text',
+        'lastCallType': null,
+        'lastCallStatus': null,
+        'lastCallDirection': null,
+        'unreadCount': 0,
+        'recipient': {'id': peerId},
+      });
+    }
+
+    rows.sort((a, b) {
+      final at = a['lastMessageTime']?.toString() ?? '';
+      final bt = b['lastMessageTime']?.toString() ?? '';
+      return bt.compareTo(at);
+    });
+    return rows;
+  }
+
+  Future<Map<String, dynamic>?> _fetchLatestCallHistory(
+    FirebaseFirestore firestore,
+    String roomId,
+  ) async {
+    try {
+      final snap = await firestore
+          .collection('chatRooms')
+          .doc(roomId)
+          .collection('callHistory')
+          .orderBy('endedAt', descending: true)
+          .limit(1)
+          .get();
+      if (snap.docs.isEmpty) return null;
+      return {
+        ...Map<String, dynamic>.from(snap.docs.first.data()),
+        'id': snap.docs.first.id,
+      };
+    } catch (e) {
+      LoggerUtils.logWarning(
+        'ChatFirebaseService: callHistory orderBy failed — $e (fallback)',
+      );
+      try {
+        final snap = await firestore
+            .collection('chatRooms')
+            .doc(roomId)
+            .collection('callHistory')
+            .get();
+        if (snap.docs.isEmpty) return null;
+        final docs = snap.docs.toList()
+          ..sort((a, b) {
+            final ad = _toDateTime(a.data()['endedAt']);
+            final bd = _toDateTime(b.data()['endedAt']);
+            if (ad == null && bd == null) return 0;
+            if (ad == null) return 1;
+            if (bd == null) return -1;
+            return bd.compareTo(ad);
+          });
+        final latest = docs.first;
+        return {
+          ...Map<String, dynamic>.from(latest.data()),
+          'id': latest.id,
+        };
+      } catch (_) {
+        return null;
+      }
     }
   }
 
@@ -476,7 +672,7 @@ class ChatFirebaseService {
         'lastMessagePreview': preview,
         'lastMessageAt': FieldValue.serverTimestamp(),
         'lastMessageSenderId': senderId,
-        'lastMessageType': 'text',
+        'lastMessageType': ChatInboxPreviewType.text,
         'updatedAt': FieldValue.serverTimestamp(),
         'roomId': roomId,
         if (peerId != null && peerId.isNotEmpty) 'peerId': peerId,
