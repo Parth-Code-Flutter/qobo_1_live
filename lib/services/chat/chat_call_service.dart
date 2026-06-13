@@ -111,6 +111,7 @@ class ChatCallService {
     String? endedByUserId,
     ChatCallOutcome? outcomeOverride,
     int? durationSeconds,
+    String? historyDocId,
   }) async {
     final ref = _activeRef(roomId);
     if (ref == null) return false;
@@ -143,7 +144,8 @@ class ChatCallService {
       endedByUserId: endedByUserId,
       outcomeOverride: outcomeOverride,
       durationSeconds: durationSeconds,
-      callId: active['callId']?.toString(),
+      zegoCallId: active['callId']?.toString(),
+      historyDocId: historyDocId,
     );
     return true;
   }
@@ -158,7 +160,8 @@ class ChatCallService {
     ChatCallOutcome? outcomeOverride,
     int? durationSeconds,
     bool wasAccepted = false,
-    String? callId,
+    String? zegoCallId,
+    String? historyDocId,
   }) async {
     if (roomId.isEmpty || callerId.isEmpty || calleeId.isEmpty) return;
 
@@ -171,7 +174,8 @@ class ChatCallService {
       endedByUserId: endedByUserId,
       outcomeOverride: outcomeOverride,
       durationSeconds: durationSeconds,
-      callId: callId,
+      zegoCallId: zegoCallId,
+      historyDocId: historyDocId,
     );
   }
 
@@ -184,7 +188,8 @@ class ChatCallService {
     required String? endedByUserId,
     ChatCallOutcome? outcomeOverride,
     int? durationSeconds,
-    String? callId,
+    String? zegoCallId,
+    String? historyDocId,
   }) async {
     if (callerId.isEmpty || calleeId.isEmpty) return;
 
@@ -204,7 +209,8 @@ class ChatCallService {
       isVideo: isVideo,
       outcome: outcome,
       durationSeconds: durationSeconds,
-      callId: callId,
+      zegoCallId: zegoCallId,
+      historyDocId: historyDocId,
     );
 
     await _updateInboxForCall(
@@ -250,30 +256,22 @@ class ChatCallService {
     required bool isVideo,
     required ChatCallOutcome outcome,
     int? durationSeconds,
-    String? callId,
+    String? zegoCallId,
+    String? historyDocId,
   }) async {
     final firestore = _firestore;
     if (firestore == null) return false;
 
     try {
-      final docId =
-          callId?.trim().isNotEmpty == true
-              ? callId!.trim()
-              : firestore.collection('chatRooms').doc().id;
+      final docId = historyDocId?.trim().isNotEmpty == true
+          ? historyDocId!.trim()
+          : firestore.collection('chatRooms').doc().id;
 
       final ref = firestore
           .collection('chatRooms')
           .doc(roomId)
           .collection('callHistory')
           .doc(docId);
-
-      final existing = await ref.get();
-      if (existing.exists) {
-        LoggerUtils.logInfo(
-          'ChatCallService: callHistory/$docId already exists — skip duplicate',
-        );
-        return true;
-      }
 
       await ref.set({
         'callId': docId,
@@ -282,6 +280,7 @@ class ChatCallService {
         'calleeId': calleeId,
         'type': isVideo ? 'video' : 'voice',
         'status': outcome.name,
+        if (zegoCallId != null && zegoCallId.isNotEmpty) 'zegoCallId': zegoCallId,
         'clientEndedAt': DateTime.now().toUtc().toIso8601String(),
         if (durationSeconds != null &&
             durationSeconds > 0 &&

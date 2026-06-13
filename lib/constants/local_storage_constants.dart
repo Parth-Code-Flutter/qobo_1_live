@@ -26,3 +26,6 @@ const String kStorageChatInboxThreads = 'chat_inbox_threads_cache';
 
 /// Local call log cache per room (shows in chat thread immediately).
 const String kStorageChatCallHistory = 'chat_call_history_cache';
+
+/// Partners for whom `POST /api/chat/send` succeeded (one-time thread bootstrap).
+const String kStorageChatSendInit = 'chat_send_init_targets';

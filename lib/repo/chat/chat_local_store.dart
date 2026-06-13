@@ -249,4 +249,30 @@ class ChatLocalStore {
     if (map == null) return {};
     return Map<String, dynamic>.from(map);
   }
+
+  /// Whether [POST /api/chat/send] already succeeded for this partner.
+  Future<bool> hasChatSendInit(String targetId) async {
+    if (targetId.isEmpty) return false;
+    final set = await _readChatSendInitSet();
+    return set.contains(targetId);
+  }
+
+  Future<void> markChatSendInit(String targetId) async {
+    if (targetId.isEmpty) return;
+    final set = await _readChatSendInitSet();
+    if (set.contains(targetId)) return;
+    set.add(targetId);
+    await _storage.writeJsonStorage(
+      kStorageChatSendInit,
+      {'targets': set.toList()},
+    );
+  }
+
+  Future<Set<String>> _readChatSendInitSet() async {
+    final map = await _storage.getJsonFromStorage(kStorageChatSendInit);
+    if (map == null) return {};
+    final list = map['targets'];
+    if (list is! List) return {};
+    return list.map((e) => e.toString()).where((id) => id.isNotEmpty).toSet();
+  }
 }

@@ -253,6 +253,14 @@ class ChatDetailController extends GetxController {
           ),
         );
       }
+
+      if (apiMessages.isNotEmpty) {
+        await _localStore.markChatSendInit(targetId.value);
+      } else if (_hasTextMessages()) {
+        await _localStore.markChatSendInit(targetId.value);
+      } else {
+        unawaited(_tryChatSendApiOnce(content: ''));
+      }
     } catch (_) {
       final cached = await _localStore.readMessages(targetId.value);
       final myId = _myUserId ?? '';
@@ -323,7 +331,7 @@ class ChatDetailController extends GetxController {
     _callHistorySub = _firebaseService
         .watchCallHistory(effectiveRoomId)
         .listen(
-          (rawCalls) => _applyCallHistorySnapshot(rawCalls, myId),
+          (rawCalls) => _applyCallHistorySnapshot(rawCalls, myId, merge: true),
           onError: (_) {},
         );
 
@@ -335,19 +343,29 @@ class ChatDetailController extends GetxController {
     final effectiveRoomId = _effectiveRoomId;
     if (myId.isEmpty || effectiveRoomId.isEmpty) return;
 
-    final localRaw = await _localStore.readCallHistory(effectiveRoomId);
-    if (localRaw.isNotEmpty) {
-      _applyCallHistorySnapshot(localRaw, myId);
+    final combined = <String, Map<String, dynamic>>{};
+
+    for (final raw in await _localStore.readCallHistory(effectiveRoomId)) {
+      final id =
+          raw['callId']?.toString() ?? raw['id']?.toString() ?? '';
+      if (id.isNotEmpty) combined[id] = raw;
     }
 
-    if (!_firebaseService.isAvailable) return;
+    if (_firebaseService.isAvailable) {
+      final signedIn = await _ensureFirebaseSession();
+      if (signedIn) {
+        final remote =
+            await _firebaseService.fetchCallHistoryOnce(effectiveRoomId);
+        for (final raw in remote) {
+          final id =
+              raw['callId']?.toString() ?? raw['id']?.toString() ?? '';
+          if (id.isNotEmpty) combined[id] = raw;
+        }
+      }
+    }
 
-    final signedIn = await _ensureFirebaseSession();
-    if (!signedIn) return;
-
-    final raw = await _firebaseService.fetchCallHistoryOnce(effectiveRoomId);
-    if (raw.isNotEmpty) {
-      _applyCallHistorySnapshot(raw, myId);
+    if (combined.isNotEmpty) {
+      _applyCallHistorySnapshot(combined.values.toList(), myId, merge: true);
     }
   }
 
@@ -371,11 +389,15 @@ class ChatDetailController extends GetxController {
 
   void _applyCallHistorySnapshot(
     List<Map<String, dynamic>> rawCalls,
-    String myId,
-  ) {
+    String myId, {
+    bool merge = true,
+  }) {
     if (rawCalls.isEmpty) return;
-    _callBootstrap =
+    final incoming =
         rawCalls.map((raw) => _mapCallEntry(raw, myId)).toList();
+    _callBootstrap = merge
+        ? _mergeMessages(_callBootstrap, incoming)
+        : incoming;
     _publishTimelineWithCalls();
   }
 
@@ -619,6 +641,7 @@ class ChatDetailController extends GetxController {
       effectiveRoomId = _effectiveRoomId;
     }
 
+    var sentViaFirestore = false;
     if (_firebaseService.isAvailable &&
         effectiveRoomId.isNotEmpty &&
         myId.isNotEmpty) {
@@ -630,42 +653,91 @@ class ChatDetailController extends GetxController {
             'ChatDetailController: auth uid $authUid != app user $myId',
           );
         }
-        await _firebaseService.sendTextMessage(
-          roomId: effectiveRoomId,
-          senderId: authUid,
-          text: text,
-          clientMessageId: clientMessageId,
-          recipientId: targetId.value,
+        try {
+          await _firebaseService.sendTextMessage(
+            roomId: effectiveRoomId,
+            senderId: authUid,
+            text: text,
+            clientMessageId: clientMessageId,
+            recipientId: targetId.value,
+          );
+          await _localStore.saveThreadMeta(
+            targetId: targetId.value,
+            name: chatName.value,
+            imageUrl: chatImageUrl.value,
+          );
+          sentViaFirestore = true;
+        } on FirebaseException catch (e) {
+          LoggerUtils.logWarning(
+            'ChatDetailController: Firestore send failed — ${e.code}: ${e.message}',
+          );
+        }
+      } else {
+        LoggerUtils.logWarning(
+          'ChatDetailController: Firebase sign-in failed — using REST/local fallback',
         );
-        await _localStore.saveThreadMeta(
-          targetId: targetId.value,
-          name: chatName.value,
-          imageUrl: chatImageUrl.value,
-        );
-        return true;
       }
-      LoggerUtils.logWarning(
-        'ChatDetailController: Firebase sign-in failed — using REST/local fallback',
-      );
     }
 
-    final response = await _chatRepo.sendMessage(
-      targetId: targetId.value,
-      content: text,
-      roomId: effectiveRoomId.isNotEmpty ? effectiveRoomId : null,
-    );
+    if (!await _localStore.hasChatSendInit(targetId.value)) {
+      final sentViaRest = await _tryChatSendApiOnce(
+        content: text,
+        roomId: effectiveRoomId,
+      );
+      if (sentViaRest) {
+        if (!sentViaFirestore) {
+          await loadHistory();
+        }
+        return sentViaFirestore;
+      }
+      if (!sentViaFirestore) {
+        await _persistLocalFallback(
+          text: text,
+          myId: myId,
+          clientMessageId: clientMessageId,
+        );
+        return false;
+      }
+    }
 
-    if (isSocialApiSuccess(response)) {
-      await loadHistory();
+    return sentViaFirestore;
+  }
+
+  bool _hasTextMessages() {
+    return messages.any((m) => !m.isCallEntry) ||
+        _restBootstrap.any((m) => !m.isCallEntry);
+  }
+
+  /// One-time `POST /api/chat/send` per partner (empty thread bootstrap or first text).
+  Future<bool> _tryChatSendApiOnce({
+    required String content,
+    String? roomId,
+  }) async {
+    if (targetId.value.isEmpty) return false;
+    if (await _localStore.hasChatSendInit(targetId.value)) return false;
+
+    await _ensureRoomReady();
+    final effectiveRoomId = roomId ?? _effectiveRoomId;
+
+    try {
+      final response = await _chatRepo.sendMessage(
+        targetId: targetId.value,
+        content: content,
+        roomId: effectiveRoomId.isNotEmpty ? effectiveRoomId : null,
+      );
+      if (!isSocialApiSuccess(response)) return false;
+
+      await _localStore.markChatSendInit(targetId.value);
+      LoggerUtils.logInfo(
+        'ChatDetailController: POST /api/chat/send ok for ${targetId.value}',
+      );
+      return true;
+    } catch (e) {
+      LoggerUtils.logWarning(
+        'ChatDetailController: POST /api/chat/send failed — $e',
+      );
       return false;
     }
-
-    await _persistLocalFallback(
-      text: text,
-      myId: myId,
-      clientMessageId: clientMessageId,
-    );
-    return false;
   }
 
   Future<void> _persistLocalFallback({
@@ -719,12 +791,11 @@ class ChatDetailController extends GetxController {
 
     return ChatMessageModel(
       id: json['callId']?.toString() ?? json['id']?.toString(),
-      text: _callEntryLabel(
+      text: ChatInboxPreviewType.chatLabelForUser(
         isVideo: isVideo,
         outcome: outcome,
         isCallee: isCallee,
         durationSeconds: durationSeconds,
-        isCompleted: isCompleted,
       ),
       isMe: isMe,
       time: _formatTime(endedAt ?? DateTime.now()),
@@ -741,38 +812,8 @@ class ChatDetailController extends GetxController {
         isCallee: isCallee,
         durationSeconds: durationSeconds,
       ),
-      callDurationSeconds: durationSeconds,
+      callDurationSeconds: isCompleted ? durationSeconds : null,
     );
-  }
-
-  static String _callEntryLabel({
-    required bool isVideo,
-    required String outcome,
-    required bool isCallee,
-    int? durationSeconds,
-    required bool isCompleted,
-  }) {
-    final base = ChatInboxPreviewType.chatLabelForUser(
-      isVideo: isVideo,
-      outcome: outcome,
-      isCallee: isCallee,
-      durationSeconds: durationSeconds,
-    );
-    if (!isCompleted) return base;
-    final duration = _formatCallDuration(durationSeconds);
-    if (duration.isEmpty) return base;
-    return '$base · $duration';
-  }
-
-  static String _formatCallDuration(int? seconds) {
-    if (seconds == null || seconds <= 0) return '';
-    if (seconds < 60) return '$seconds sec';
-    final minutes = seconds ~/ 60;
-    if (minutes < 60) return '$minutes min';
-    final hours = minutes ~/ 60;
-    final remMin = minutes % 60;
-    if (remMin == 0) return '$hours hr';
-    return '$hours hr $remMin min';
   }
 
   ChatMessageModel _mapMessage(Map<dynamic, dynamic> raw, String myId) {

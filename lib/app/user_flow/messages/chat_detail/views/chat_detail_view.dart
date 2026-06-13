@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/services/chat/chat_inbox_preview.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -166,17 +167,25 @@ class ChatDetailView extends GetView<ChatDetailController> {
 
   Widget _buildCallLogEntry(ChatMessageModel msg) {
     final accentColor = msg.isMissedCall
-        ? Colors.redAccent.shade400
+        ? const Color(0xFFE53935)
         : msg.isUnansweredCall
-        ? Colors.orange.shade700
+        ? const Color(0xFFE65100)
         : (msg.isMe ? kColorPrimary : kColorText);
-    final icon = msg.isVideoCall ? Icons.videocam_rounded : Icons.call_rounded;
-    final directionIcon = msg.isMe
-        ? Icons.call_made_rounded
-        : Icons.call_received_rounded;
-    final bubbleColor = msg.isMe
-        ? kColorPrimary.withValues(alpha: 0.12)
-        : kColorBackground;
+
+    final bubbleFill = msg.isMe
+        ? kColorPrimary.withValues(alpha: 0.14)
+        : const Color(0xFFF3F4F8);
+
+    final iconData = _callLogIcon(msg);
+
+    String? subtitle;
+    if (msg.isMissedCall) {
+      subtitle = 'Missed call';
+    } else if (msg.isUnansweredCall) {
+      subtitle = 'No answer';
+    } else {
+      subtitle = ChatInboxPreviewType.callDurationLabel(msg.callDurationSeconds);
+    }
 
     return Align(
       alignment: msg.isMe ? Alignment.centerRight : Alignment.centerLeft,
@@ -187,38 +196,53 @@ class ChatDetailView extends GetView<ChatDetailController> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            constraints: const BoxConstraints(maxWidth: 260),
+            constraints: const BoxConstraints(maxWidth: 240, minWidth: 168),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: bubbleColor,
+              color: bubbleFill,
               borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(14),
-                topRight: const Radius.circular(14),
-                bottomLeft: Radius.circular(msg.isMe ? 14 : 4),
-                bottomRight: Radius.circular(msg.isMe ? 4 : 14),
-              ),
-              border: Border.all(
-                color: msg.isMissedCall
-                    ? Colors.redAccent.withValues(alpha: 0.35)
-                    : msg.isUnansweredCall
-                    ? Colors.orange.withValues(alpha: 0.35)
-                    : kColorHint.withValues(alpha: 0.15),
+                topLeft: const Radius.circular(16),
+                topRight: const Radius.circular(16),
+                bottomLeft: Radius.circular(msg.isMe ? 16 : 4),
+                bottomRight: Radius.circular(msg.isMe ? 4 : 16),
               ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: 18, color: accentColor),
-                const SizedBox(width: 6),
-                Icon(directionIcon, size: 14, color: accentColor),
-                const SizedBox(width: 8),
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: accentColor.withValues(alpha: 0.16),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(iconData, size: 18, color: accentColor),
+                ),
+                const SizedBox(width: 10),
                 Flexible(
-                  child: AppText(
-                    text: msg.text,
-                    fontSize: TextStyles.k12FontSize,
-                    color: accentColor,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SemiBoldText(
+                        text: msg.text,
+                        fontSize: TextStyles.k12FontSize,
+                        color: accentColor,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (subtitle != null && subtitle.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        AppText(
+                          text: subtitle,
+                          fontSize: TextStyles.k10FontSize,
+                          color: kColorHint,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ],
@@ -233,6 +257,13 @@ class ChatDetailView extends GetView<ChatDetailController> {
         ],
       ),
     );
+  }
+
+  IconData _callLogIcon(ChatMessageModel msg) {
+    if (msg.isVideoCall) return Icons.videocam_rounded;
+    if (msg.isMissedCall) return Icons.phone_missed_rounded;
+    if (msg.isUnansweredCall) return Icons.phone_callback_rounded;
+    return msg.isMe ? Icons.call_made_rounded : Icons.call_received_rounded;
   }
 
   Widget _buildMessageBubble(ChatMessageModel msg) {

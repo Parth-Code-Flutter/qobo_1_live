@@ -35,9 +35,7 @@ abstract final class ChatInboxPreviewType {
     int? durationSeconds,
     bool peerJoined = false,
   }) {
-    if (outcome == 'completed') return true;
-    if (peerJoined && (durationSeconds ?? 0) > 0) return true;
-    return false;
+    return outcome == 'completed';
   }
 
   static String displayLabel(String? type, {String? fallbackPreview}) {
@@ -132,5 +130,41 @@ abstract final class ChatInboxPreviewType {
       return false;
     }
     return !isCallee;
+  }
+
+  static String? callDurationLabel(int? seconds) {
+    if (seconds == null || seconds <= 0) return null;
+    if (seconds < 60) return '$seconds sec';
+    final minutes = seconds ~/ 60;
+    if (minutes < 60) return '$minutes min';
+    final hours = minutes ~/ 60;
+    final remMin = minutes % 60;
+    if (remMin == 0) return '$hours hr';
+    return '$hours hr $remMin min';
+  }
+
+  static String? callSubtitleForUser({
+    required String outcome,
+    required bool isCallee,
+    int? durationSeconds,
+  }) {
+    if (isCompletedCall(outcome: outcome, durationSeconds: durationSeconds)) {
+      return callDurationLabel(durationSeconds);
+    }
+    if (isMissedForUser(
+      outcome: outcome,
+      isCallee: isCallee,
+      durationSeconds: durationSeconds,
+    )) {
+      return 'Missed call';
+    }
+    if (isUnansweredForUser(
+      outcome: outcome,
+      isCallee: isCallee,
+      durationSeconds: durationSeconds,
+    )) {
+      return 'No answer';
+    }
+    return null;
   }
 }

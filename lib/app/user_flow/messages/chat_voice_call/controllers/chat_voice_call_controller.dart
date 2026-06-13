@@ -133,11 +133,13 @@ class ChatVoiceCallController extends GetxController {
     final outcome = wasAccepted
         ? 'completed'
         : (isCaller.value ? 'cancelled' : 'missed');
+    final historyId = 'call_${endedAt.microsecondsSinceEpoch}';
 
     var recorded = await _callService.endCall(
       roomId.value,
       endedByUserId: myId,
       durationSeconds: durationSeconds,
+      historyDocId: historyId,
     );
 
     if (!recorded) {
@@ -149,7 +151,8 @@ class ChatVoiceCallController extends GetxController {
         endedByUserId: myId,
         durationSeconds: durationSeconds,
         wasAccepted: wasAccepted,
-        callId: callId.value,
+        zegoCallId: callId.value,
+        historyDocId: historyId,
       );
       recorded = true;
     }
@@ -159,8 +162,9 @@ class ChatVoiceCallController extends GetxController {
     _callRecorded = true;
 
     final summary = {
-      'callId': callId.value,
-      'id': callId.value,
+      'callId': historyId,
+      'id': historyId,
+      'zegoCallId': callId.value,
       'roomId': roomId.value,
       'callerId': callerId,
       'calleeId': calleeId,
