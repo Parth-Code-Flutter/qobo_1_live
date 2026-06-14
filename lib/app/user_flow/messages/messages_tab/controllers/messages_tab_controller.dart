@@ -10,6 +10,7 @@ import 'package:qobo_one_live/repo/user/user_repo.dart';
 import 'package:qobo_one_live/services/chat/chat_firebase_service.dart';
 import 'package:qobo_one_live/services/chat/chat_inbox_preview.dart';
 import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
+import 'package:qobo_one_live/services/chat/chat_logger.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
@@ -124,6 +125,7 @@ class MessagesTabController extends GetxController {
   Future<void> fetchInbox() async {
     try {
       isInboxLoading.value = true;
+      ChatLogger.inbox('fetch start');
       final apiThreads = <MessageListItemModel>[];
       final response = await _chatRepo.getInbox(isShowLoader: false);
       if (isSocialApiSuccess(response)) {
@@ -138,6 +140,12 @@ class MessagesTabController extends GetxController {
             }),
           );
         }
+      } else {
+        ChatLogger.apiWarn(
+          'GET /api/chat/list',
+          'failed',
+          {'message': response?['message']?.toString() ?? 'unknown'},
+        );
       }
 
       final localRaw = await _localStore.readInboxThreads();
@@ -163,8 +171,18 @@ class MessagesTabController extends GetxController {
           localThreads,
         ),
       );
+      ChatLogger.inbox(
+        'fetch merged',
+        {
+          'api': apiThreads.length,
+          'firestore': firestoreThreads.length,
+          'local': localThreads.length,
+          'total': inboxThreads.length,
+        },
+      );
       _syncIncomingCallWatchers();
-    } catch (_) {
+    } catch (e) {
+      ChatLogger.inboxWarn('fetch failed', {'error': e});
       inboxThreads.clear();
     } finally {
       isInboxLoading.value = false;

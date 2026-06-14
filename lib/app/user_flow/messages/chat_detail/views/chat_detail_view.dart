@@ -39,6 +39,7 @@ class ChatDetailView extends GetView<ChatDetailController> {
                 final entries = controller.timelineEntries;
                 return ListView.builder(
                   controller: controller.scrollController,
+                  reverse: true,
                   physics: const AlwaysScrollableScrollPhysics(
                     parent: BouncingScrollPhysics(),
                   ),
@@ -48,7 +49,8 @@ class ChatDetailView extends GetView<ChatDetailController> {
                   ),
                   itemCount: entries.length,
                   itemBuilder: (context, index) {
-                    return ChatTimelineMessageWidget(entry: entries[index]);
+                    final entry = entries[entries.length - 1 - index];
+                    return ChatTimelineMessageWidget(entry: entry);
                   },
                 );
               },

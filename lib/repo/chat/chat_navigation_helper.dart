@@ -4,6 +4,7 @@ import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_
 import 'package:qobo_one_live/repo/chat/chat_repo.dart';
 import 'package:qobo_one_live/repo/chat/models/chat_room_model.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/services/chat/chat_logger.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 
@@ -26,6 +27,11 @@ abstract final class ChatNavigationHelper {
     }
 
     try {
+      ChatLogger.bootstrap('navigate openDirectChat', {
+        'targetId': targetId,
+        'roomId': roomId ?? '',
+        'name': name,
+      });
       await _ensureFirebaseSession();
 
       final repo = chatRepo ?? ChatRepo();

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:qobo_one_live/services/chat/chat_inbox_preview.dart';
+import 'package:qobo_one_live/services/chat/chat_logger.dart';
 import 'package:qobo_one_live/services/firebase/firebase_bootstrap.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 
@@ -693,7 +694,20 @@ class ChatFirebaseService {
       LoggerUtils.logInfo(
         'ChatFirebaseService: message written chatRooms/$roomId/messages/$messageId',
       );
+      ChatLogger.firestore(
+        'message written',
+        {
+          'roomId': roomId,
+          'messageId': messageId,
+          'clientMessageId': dedupeId,
+          'senderId': authUid,
+        },
+      );
     } on FirebaseException catch (e) {
+      ChatLogger.firestoreWarn(
+        'message write failed',
+        {'code': e.code, 'message': e.message, 'roomId': roomId},
+      );
       LoggerUtils.logWarning(
         'ChatFirebaseService: message write failed — ${e.code}: ${e.message}',
       );

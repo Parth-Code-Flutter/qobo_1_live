@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
 import 'package:qobo_one_live/repo/chat/chat_repo.dart';
 import 'package:qobo_one_live/repo/chat/models/chat_room_model.dart';
+import 'package:qobo_one_live/services/chat/chat_logger.dart';
 import 'package:qobo_one_live/services/firebase/firebase_bootstrap.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
@@ -19,19 +20,25 @@ class ChatSessionService extends GetxController {
   /// Call after REST login or when opening chat.
   Future<bool> ensureSignedIn({bool isShowLoader = false}) async {
     if (!FirebaseBootstrap.isAvailable) {
+      ChatLogger.sessionWarn('Firebase not available on this platform');
       return false;
     }
 
     final appUserId = _appUserId;
     if (appUserId.isEmpty) {
+      ChatLogger.sessionWarn('skipped — empty app userId');
       return false;
     }
 
     final current = FirebaseAuth.instance.currentUser;
     if (current != null) {
-      if (current.uid == appUserId) return true;
-      LoggerUtils.logWarning(
-        'ChatSessionService: Firebase uid ${current.uid} != app $appUserId — re-signing in',
+      if (current.uid == appUserId) {
+        ChatLogger.session('already signed in', {'uid': current.uid});
+        return true;
+      }
+      ChatLogger.sessionWarn(
+        'uid mismatch — re-signing in',
+        {'firebaseUid': current.uid, 'appUserId': appUserId},
       );
       await FirebaseAuth.instance.signOut();
     }
@@ -58,33 +65,38 @@ class ChatSessionService extends GetxController {
         isShowLoader: isShowLoader,
       );
       if (!isSocialApiSuccess(response)) {
-        LoggerUtils.logWarning(
-          'ChatSessionService: firebase-token failed — ${response?['message']}',
+        ChatLogger.apiWarn(
+          'POST /api/chat/firebase-token',
+          'failed',
+          {'message': response?['message']?.toString() ?? 'unknown'},
         );
         return false;
       }
 
       final tokenModel = FirebaseTokenModel.fromResponseData(response?['data']);
       if (tokenModel.firebaseCustomToken.isEmpty) {
-        LoggerUtils.logWarning('ChatSessionService: empty custom token');
+        ChatLogger.sessionWarn('empty custom token from API');
         return false;
       }
 
       if (tokenModel.firebaseUid.isNotEmpty &&
           tokenModel.firebaseUid != appUserId) {
-        LoggerUtils.logWarning(
-          'ChatSessionService: firebaseUid mismatch app user id',
+        ChatLogger.sessionWarn(
+          'firebaseUid mismatch in token response',
+          {'tokenUid': tokenModel.firebaseUid, 'appUserId': appUserId},
         );
       }
 
       await FirebaseAuth.instance.signInWithCustomToken(
         tokenModel.firebaseCustomToken,
       );
-      LoggerUtils.logInfo(
-        'ChatSessionService: Firebase signed in as ${FirebaseAuth.instance.currentUser?.uid}',
+      ChatLogger.session(
+        'signed in',
+        {'uid': FirebaseAuth.instance.currentUser?.uid ?? appUserId},
       );
       return true;
     } catch (e) {
+      ChatLogger.sessionWarn('sign-in exception', {'error': e});
       LoggerUtils.logException('ChatSessionService.ensureSignedIn', e);
       return false;
     }

@@ -1,5 +1,6 @@
 import 'package:qobo_one_live/constants/local_storage_constants.dart';
 import 'package:qobo_one_live/services/chat/chat_inbox_preview.dart';
+import 'package:qobo_one_live/services/chat/chat_logger.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 
 /// Offline cache for chat until `POST /api/chat/send` is live on backend.
@@ -43,6 +44,11 @@ class ChatLocalStore {
     });
     all[targetId] = thread;
     await _storage.writeJsonStorage(kStorageChatMessages, all);
+    ChatLogger.cache('appendMessage', {
+      'targetId': targetId,
+      'clientMessageId': id,
+      'threadSize': thread.length,
+    });
     await _upsertThreadPreview(
       targetId: targetId,
       lastMessage: text,
@@ -266,6 +272,7 @@ class ChatLocalStore {
       kStorageChatSendInit,
       {'targets': set.toList()},
     );
+    ChatLogger.cache('markChatSendInit', {'targetId': targetId});
   }
 
   Future<Set<String>> _readChatSendInitSet() async {

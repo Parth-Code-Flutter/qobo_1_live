@@ -14,10 +14,10 @@ import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart'
 import 'package:qobo_one_live/services/chat/chat_call_launcher.dart';
 import 'package:qobo_one_live/services/chat/chat_inbox_preview.dart';
 import 'package:qobo_one_live/services/chat/chat_call_service.dart';
+import 'package:qobo_one_live/services/chat/chat_logger.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
-import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:intl/intl.dart';
 
@@ -157,6 +157,14 @@ class ChatDetailController extends GetxController {
     }
     messageController.addListener(_onMessageTextChanged);
     if (targetId.value.isNotEmpty) {
+      ChatLogger.bootstrap(
+        'open chat',
+        {
+          'targetId': targetId.value,
+          'roomId': roomId.value,
+          'name': chatName.value,
+        },
+      );
       _localStore.saveThreadMeta(
         targetId: targetId.value,
         name: chatName.value,
@@ -167,10 +175,26 @@ class ChatDetailController extends GetxController {
   }
 
   Future<void> _bootstrapChat() async {
-    await _ensureRoomReady();
-    await _ensureFirebaseSession();
+    ChatLogger.bootstrap('starting');
+    final roomReady = await _ensureRoomReady();
+    final signedIn = await _ensureFirebaseSession();
+    ChatLogger.bootstrap(
+      'pre-load',
+      {
+        'roomReady': roomReady,
+        'firebaseSignedIn': signedIn,
+        'roomId': _effectiveRoomId,
+      },
+    );
     await loadHistory();
     await _startFirebaseIfReady();
+    ChatLogger.bootstrap(
+      'ready',
+      {
+        'firebaseLive': isFirebaseLive.value,
+        'messageCount': messages.where((m) => !m.isCallEntry).length,
+      },
+    );
   }
 
   Future<bool> _ensureFirebaseSession() async {
@@ -182,14 +206,30 @@ class ChatDetailController extends GetxController {
   }
 
   Future<bool> _ensureRoomReady() async {
-    if (targetId.value.isEmpty) return false;
-    if (roomId.value.isNotEmpty || firestorePath.value.isNotEmpty) return true;
+    if (targetId.value.isEmpty) {
+      ChatLogger.roomWarn('skipped — empty targetId');
+      return false;
+    }
+    if (roomId.value.isNotEmpty || firestorePath.value.isNotEmpty) {
+      ChatLogger.room('already ready', {'roomId': _effectiveRoomId});
+      return true;
+    }
 
+    ChatLogger.api('POST /api/chat/room', 'creating', {
+      'targetId': targetId.value,
+    });
     final response = await _chatRepo.createRoom(
       targetId: targetId.value,
       isShowLoader: false,
     );
-    if (!isSocialApiSuccess(response)) return false;
+    if (!isSocialApiSuccess(response)) {
+      ChatLogger.apiWarn(
+        'POST /api/chat/room',
+        'failed',
+        {'message': response?['message']?.toString() ?? 'unknown'},
+      );
+      return false;
+    }
 
     final room = ChatRoomModel.fromResponseData(response?['data']);
     if (room.roomId.isNotEmpty) {
@@ -198,12 +238,25 @@ class ChatDetailController extends GetxController {
     if (room.firestorePath.isNotEmpty) {
       firestorePath.value = room.firestorePath;
     }
-    return roomId.value.isNotEmpty || firestorePath.value.isNotEmpty;
+    final ready = roomId.value.isNotEmpty || firestorePath.value.isNotEmpty;
+    ChatLogger.room(
+      ready ? 'created' : 'missing roomId in response',
+      {
+        'roomId': roomId.value,
+        'firestorePath': firestorePath.value,
+        'isNew': room.isNew,
+      },
+    );
+    return ready;
   }
 
   Future<void> loadHistory() async {
     if (targetId.value.isEmpty) return;
     _pendingScrollToBottom = true;
+    ChatLogger.load('start', {
+      'targetId': targetId.value,
+      'roomId': _effectiveRoomId,
+    });
     try {
       isLoading.value = true;
       final myId = _myUserId ?? '';
@@ -212,22 +265,29 @@ class ChatDetailController extends GetxController {
         targetId: targetId.value,
         isShowLoader: false,
       );
-      if (isSocialApiSuccess(response)) {
+      final apiOk = isSocialApiSuccess(response);
+      if (apiOk) {
         final list = response?['data'];
         if (list is List) {
           apiMessages.addAll(
             list.whereType<Map>().map((raw) => _mapMessage(raw, myId)),
           );
         }
+      } else {
+        ChatLogger.apiWarn(
+          'GET /api/chat/detail',
+          'failed',
+          {'message': response?['message']?.toString() ?? 'unknown'},
+        );
       }
 
       final cached = await _localStore.readMessages(targetId.value);
-      final merged = _mergeMessages(
-        apiMessages,
-        cached.map((raw) => _mapMessage(raw, myId)).toList(),
-      );
+      final cachedModels =
+          cached.map((raw) => _mapMessage(raw, myId)).toList();
+      final merged = _mergeMessages(apiMessages, cachedModels);
       _restBootstrap = merged;
 
+      var firestoreCount = 0;
       // Firestore bootstrap when REST/local are empty but messages exist in Firebase.
       if (_firebaseService.isAvailable && _effectiveRoomId.isNotEmpty) {
         final signedIn = await _ensureFirebaseSession();
@@ -235,11 +295,14 @@ class ChatDetailController extends GetxController {
           final firestoreRaw = await _firebaseService.fetchMessagesOnce(
             _effectiveRoomId,
           );
+          firestoreCount = firestoreRaw.length;
           if (firestoreRaw.isNotEmpty) {
             final fromFirestore =
                 firestoreRaw.map((raw) => _mapMessage(raw, myId)).toList();
             _restBootstrap = _mergeMessages(_restBootstrap, fromFirestore);
           }
+        } else {
+          ChatLogger.loadWarn('Firestore fetch skipped — not signed in');
         }
       }
 
@@ -254,14 +317,27 @@ class ChatDetailController extends GetxController {
         );
       }
 
+      ChatLogger.load(
+        'merged',
+        {
+          'api': apiMessages.length,
+          'cache': cachedModels.length,
+          'firestoreOnce': firestoreCount,
+          'totalText': messages.where((m) => !m.isCallEntry).length,
+          'totalCalls': messages.where((m) => m.isCallEntry).length,
+        },
+      );
+
       if (apiMessages.isNotEmpty) {
         await _localStore.markChatSendInit(targetId.value);
       } else if (_hasTextMessages()) {
         await _localStore.markChatSendInit(targetId.value);
       } else {
+        ChatLogger.send('empty thread — attempting REST bootstrap');
         unawaited(_tryChatSendApiOnce(content: ''));
       }
-    } catch (_) {
+    } catch (e) {
+      ChatLogger.loadWarn('error — using cache only', {'error': e});
       final cached = await _localStore.readMessages(targetId.value);
       final myId = _myUserId ?? '';
       _restBootstrap = cached.map((raw) => _mapMessage(raw, myId)).toList();
@@ -279,13 +355,20 @@ class ChatDetailController extends GetxController {
 
   Future<void> _startFirebaseIfReady() async {
     final effectiveRoomId = _effectiveRoomId;
-    if (!_firebaseService.isAvailable || effectiveRoomId.isEmpty) return;
+    if (!_firebaseService.isAvailable || effectiveRoomId.isEmpty) {
+      ChatLogger.liveWarn(
+        'listener skipped',
+        {
+          'firebaseAvailable': _firebaseService.isAvailable,
+          'roomId': effectiveRoomId,
+        },
+      );
+      return;
+    }
 
     final signedIn = await _ensureFirebaseSession();
     if (!signedIn) {
-      LoggerUtils.logWarning(
-        'ChatDetailController: Firestore listener skipped — not signed in',
-      );
+      ChatLogger.liveWarn('listener skipped — not signed in');
       return;
     }
 
@@ -298,6 +381,7 @@ class ChatDetailController extends GetxController {
     await _presenceSub?.cancel();
 
     isFirebaseLive.value = true;
+    ChatLogger.live('listener attached', {'roomId': effectiveRoomId});
 
     await _firebaseService.setMyPresence(userId: myId, isOnline: true);
 
@@ -316,14 +400,19 @@ class ChatDetailController extends GetxController {
         .watchMessages(effectiveRoomId)
         .listen(
           (rawMessages) {
+            ChatLogger.live(
+              'snapshot',
+              {
+                'roomId': effectiveRoomId,
+                'count': rawMessages.length,
+              },
+            );
             _applyFirestoreMessages(rawMessages, myId);
             _scrollToBottom();
             _scheduleAck(effectiveRoomId, myId, rawMessages);
           },
           onError: (e) {
-            LoggerUtils.logWarning(
-              'ChatDetailController: Firestore listener error — $e',
-            );
+            ChatLogger.liveWarn('listener error', {'error': e});
             isFirebaseLive.value = false;
           },
         );
@@ -513,7 +602,7 @@ class ChatDetailController extends GetxController {
     }
   }
 
-  /// Scrolls to the newest message. Retries until the list has laid out.
+  /// Scrolls to the newest message (offset 0 when [ListView.reverse] is true).
   void _scrollToBottom({bool jump = false, int attempt = 0}) {
     if (timelineEntries.isEmpty && messages.isEmpty) return;
     if (attempt > 8) {
@@ -527,17 +616,12 @@ class ChatDetailController extends GetxController {
         return;
       }
 
-      final maxExtent = scrollController.position.maxScrollExtent;
-      if (maxExtent <= 0 && attempt < 8) {
-        _scrollToBottom(jump: jump, attempt: attempt + 1);
-        return;
-      }
-
+      const bottomOffset = 0.0;
       if (jump) {
-        scrollController.jumpTo(maxExtent);
+        scrollController.jumpTo(bottomOffset);
       } else {
         scrollController.animateTo(
-          maxExtent,
+          bottomOffset,
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeOut,
         );
@@ -592,6 +676,16 @@ class ChatDetailController extends GetxController {
     _sendInFlight = true;
     messageController.clear();
 
+    ChatLogger.send(
+      'tap',
+      {
+        'targetId': targetId.value,
+        'roomId': _effectiveRoomId,
+        'clientMessageId': clientMessageId,
+        'text': text,
+      },
+    );
+
     final now = DateTime.now();
     messages.add(
       ChatMessageModel(
@@ -614,23 +708,38 @@ class ChatDetailController extends GetxController {
     required String myId,
     required String clientMessageId,
   }) async {
+    var firestoreOk = false;
+    var restOk = false;
+    var localFallback = false;
     try {
-      final sentViaFirestore = await _performSend(
+      firestoreOk = await _performSend(
         text: text,
         myId: myId,
         clientMessageId: clientMessageId,
+        restOkOut: (v) => restOk = v,
+        localFallbackOut: (v) => localFallback = v,
       );
-      if (sentViaFirestore && !isFirebaseLive.value) {
+      if (firestoreOk && !isFirebaseLive.value) {
         await _startFirebaseIfReady();
       }
     } catch (e) {
-      LoggerUtils.logWarning('ChatDetailController: send failed — $e');
+      ChatLogger.sendWarn('dispatch failed', {'error': e});
       await _persistLocalFallback(
         text: text,
         myId: myId,
         clientMessageId: clientMessageId,
       );
+      localFallback = true;
     } finally {
+      ChatLogger.sendResult(
+        targetId: targetId.value,
+        roomId: _effectiveRoomId,
+        clientMessageId: clientMessageId,
+        firestoreOk: firestoreOk,
+        restOk: restOk,
+        localFallback: localFallback,
+        preview: text,
+      );
       _sendInFlight = false;
     }
   }
@@ -640,6 +749,8 @@ class ChatDetailController extends GetxController {
     required String text,
     required String myId,
     required String clientMessageId,
+    void Function(bool)? restOkOut,
+    void Function(bool)? localFallbackOut,
   }) async {
     var effectiveRoomId = _effectiveRoomId;
     if (effectiveRoomId.isEmpty) {
@@ -655,8 +766,9 @@ class ChatDetailController extends GetxController {
       if (signedIn) {
         final authUid = FirebaseAuth.instance.currentUser?.uid ?? myId;
         if (authUid != myId) {
-          LoggerUtils.logWarning(
-            'ChatDetailController: auth uid $authUid != app user $myId',
+          ChatLogger.sendWarn(
+            'auth uid mismatch',
+            {'authUid': authUid, 'appUserId': myId},
           );
         }
         try {
@@ -673,16 +785,25 @@ class ChatDetailController extends GetxController {
             imageUrl: chatImageUrl.value,
           );
           sentViaFirestore = true;
+          ChatLogger.send('firestore ok', {'roomId': effectiveRoomId});
         } on FirebaseException catch (e) {
-          LoggerUtils.logWarning(
-            'ChatDetailController: Firestore send failed — ${e.code}: ${e.message}',
+          ChatLogger.sendWarn(
+            'firestore failed',
+            {'code': e.code, 'message': e.message},
           );
         }
       } else {
-        LoggerUtils.logWarning(
-          'ChatDetailController: Firebase sign-in failed — using REST/local fallback',
-        );
+        ChatLogger.sendWarn('firebase sign-in failed before send');
       }
+    } else {
+      ChatLogger.sendWarn(
+        'firestore skipped',
+        {
+          'firebaseAvailable': _firebaseService.isAvailable,
+          'roomId': effectiveRoomId,
+          'myIdEmpty': myId.isEmpty,
+        },
+      );
     }
 
     if (!await _localStore.hasChatSendInit(targetId.value)) {
@@ -690,6 +811,7 @@ class ChatDetailController extends GetxController {
         content: text,
         roomId: effectiveRoomId,
       );
+      restOkOut?.call(sentViaRest);
       if (sentViaRest) {
         if (!sentViaFirestore) {
           await loadHistory();
@@ -702,6 +824,7 @@ class ChatDetailController extends GetxController {
           myId: myId,
           clientMessageId: clientMessageId,
         );
+        localFallbackOut?.call(true);
         return false;
       }
     }
@@ -726,22 +849,30 @@ class ChatDetailController extends GetxController {
     final effectiveRoomId = roomId ?? _effectiveRoomId;
 
     try {
+      ChatLogger.api('POST /api/chat/send', 'attempt', {
+        'targetId': targetId.value,
+        'roomId': effectiveRoomId,
+        'contentEmpty': content.isEmpty,
+      });
       final response = await _chatRepo.sendMessage(
         targetId: targetId.value,
         content: content,
         roomId: effectiveRoomId.isNotEmpty ? effectiveRoomId : null,
       );
-      if (!isSocialApiSuccess(response)) return false;
+      if (!isSocialApiSuccess(response)) {
+        ChatLogger.apiWarn(
+          'POST /api/chat/send',
+          'failed',
+          {'message': response?['message']?.toString() ?? 'unknown'},
+        );
+        return false;
+      }
 
       await _localStore.markChatSendInit(targetId.value);
-      LoggerUtils.logInfo(
-        'ChatDetailController: POST /api/chat/send ok for ${targetId.value}',
-      );
+      ChatLogger.send('rest ok', {'targetId': targetId.value});
       return true;
     } catch (e) {
-      LoggerUtils.logWarning(
-        'ChatDetailController: POST /api/chat/send failed — $e',
-      );
+      ChatLogger.sendWarn('rest exception', {'error': e});
       return false;
     }
   }
@@ -757,6 +888,10 @@ class ChatDetailController extends GetxController {
       senderId: myId,
       clientMessageId: clientMessageId,
     );
+    ChatLogger.cache('message saved locally', {
+      'targetId': targetId.value,
+      'clientMessageId': clientMessageId,
+    });
     await _localStore.saveThreadMeta(
       targetId: targetId.value,
       name: chatName.value,
