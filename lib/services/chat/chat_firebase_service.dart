@@ -18,7 +18,6 @@ class ChatFirebaseService {
 
   /// Skip repeated ack attempts for missing or already-acked messages.
   static final Set<String> _ackedMessageKeys = <String>{};
-  static final Set<String> _failedAckKeys = <String>{};
 
   bool get isAvailable => FirebaseBootstrap.isAvailable;
 
@@ -183,8 +182,7 @@ class ChatFirebaseService {
 
     final ackUserId =
         FirebaseAuth.instance.currentUser?.uid ?? myUserId;
-    final pendingUpdates = <DocumentReference<Map<String, dynamic>>,
-        Map<String, dynamic>>{};
+    final pendingUpdates = <String, Map<String, dynamic>>{};
 
     for (final raw in rawMessages) {
       final messageId =
@@ -201,66 +199,125 @@ class ChatFirebaseService {
       final statusMap = status is Map
           ? Map<String, dynamic>.from(status)
           : <String, dynamic>{};
-      final mine = statusMap[ackUserId] ?? statusMap[myUserId];
-      final mineMap =
-          mine is Map ? Map<String, dynamic>.from(mine) : <String, dynamic>{};
 
-      final hasDelivered = mineMap['deliveredAt'] != null;
-      final hasRead = mineMap['readAt'] != null;
-      if (hasRead || (markRead == false && hasDelivered)) continue;
+      final statusKeys = _statusKeysForAck(
+        statusMap: statusMap,
+        senderId: senderId,
+        ackUserId: ackUserId,
+        myUserId: myUserId,
+      );
 
-      final ref = firestore
-          .collection('chatRooms')
-          .doc(roomId)
-          .collection('messageReceipts')
-          .doc('$messageId-$ackUserId');
-
-      if (markRead && !hasDelivered) {
-        pendingUpdates[ref] = {
-          'messageId': messageId,
-          'userId': ackUserId,
-          'deliveredAt': FieldValue.serverTimestamp(),
-          'readAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        };
-      } else {
-        pendingUpdates[ref] = {
-          'messageId': messageId,
-          'userId': ackUserId,
-          if (markRead) 'readAt': FieldValue.serverTimestamp(),
-          if (!markRead) 'deliveredAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        };
+      if (_isAlreadyAcked(
+        statusMap: statusMap,
+        statusKeys: statusKeys,
+        markRead: markRead,
+      )) {
+        continue;
       }
+
+      final updates = <String, dynamic>{};
+      for (final statusKey in statusKeys) {
+        final statusPrefix = 'status.$statusKey';
+        final entry = statusMap[statusKey];
+        final entryMap = entry is Map
+            ? Map<String, dynamic>.from(entry)
+            : <String, dynamic>{};
+        final keyHasDelivered = entryMap['deliveredAt'] != null;
+
+        if (markRead && !keyHasDelivered) {
+          updates['$statusPrefix.deliveredAt'] = FieldValue.serverTimestamp();
+          updates['$statusPrefix.readAt'] = FieldValue.serverTimestamp();
+        } else if (markRead) {
+          updates['$statusPrefix.readAt'] = FieldValue.serverTimestamp();
+        } else {
+          updates['$statusPrefix.deliveredAt'] = FieldValue.serverTimestamp();
+        }
+      }
+      pendingUpdates[messageId] = updates;
     }
 
     if (pendingUpdates.isEmpty) return;
 
     for (final entry in pendingUpdates.entries) {
-      final ref = entry.key;
-      final payload = entry.value;
-      final messageId = payload['messageId']?.toString() ?? '';
-      if (messageId.isEmpty) continue;
+      final messageId = entry.key;
+      final updates = entry.value;
+      final key = '$roomId:$messageId:$ackUserId';
+      if (_ackedMessageKeys.contains(key)) continue;
 
-      final key = '$roomId:$messageId';
-      if (_ackedMessageKeys.contains(key) || _failedAckKeys.contains(key)) {
-        continue;
-      }
+      final ref = firestore
+          .collection('chatRooms')
+          .doc(roomId)
+          .collection('messages')
+          .doc(messageId);
 
       try {
-        await ref.set(payload, SetOptions(merge: true));
+        await ref.update(updates);
         _ackedMessageKeys.add(key);
+        ChatLogger.firestore(
+          'read receipt',
+          {
+            'roomId': roomId,
+            'messageId': messageId,
+            'userId': ackUserId,
+            'markRead': markRead,
+          },
+        );
       } on FirebaseException catch (e) {
-        _failedAckKeys.add(key);
+        ChatLogger.firestoreWarn(
+          'read receipt failed',
+          {
+            'code': e.code,
+            'messageId': messageId,
+            'roomId': roomId,
+          },
+        );
         LoggerUtils.logWarning(
-          'ChatFirebaseService: receipt $messageId skipped — ${e.code}',
+          'ChatFirebaseService: read receipt $messageId skipped — ${e.code}',
         );
       } catch (e) {
+        ChatLogger.firestoreWarn(
+          'read receipt failed',
+          {'messageId': messageId, 'error': e.toString()},
+        );
         LoggerUtils.logWarning(
-          'ChatFirebaseService: receipt $messageId skipped — $e',
+          'ChatFirebaseService: read receipt $messageId skipped — $e',
         );
       }
     }
+  }
+
+  /// Writes read/delivered under every plausible recipient key so sender and
+  /// receiver UIDs stay in sync (app user id vs Firebase Auth uid).
+  static Set<String> _statusKeysForAck({
+    required Map<String, dynamic> statusMap,
+    required String senderId,
+    required String ackUserId,
+    required String myUserId,
+  }) {
+    final keys = <String>{};
+    for (final key in statusMap.keys) {
+      final k = key.toString();
+      if (k.isNotEmpty && k != senderId) keys.add(k);
+    }
+    if (ackUserId.isNotEmpty) keys.add(ackUserId);
+    if (myUserId.isNotEmpty) keys.add(myUserId);
+    keys.remove(senderId);
+    keys.removeWhere((k) => k.isEmpty);
+    return keys;
+  }
+
+  static bool _isAlreadyAcked({
+    required Map<String, dynamic> statusMap,
+    required Set<String> statusKeys,
+    required bool markRead,
+  }) {
+    for (final key in statusKeys) {
+      final entry = statusMap[key];
+      if (entry is! Map) continue;
+      if (entry['readAt'] != null) return true;
+      if (!markRead && entry['deliveredAt'] != null) return true;
+    }
+    return false;
   }
 
   /// One-shot fetch when REST history is empty (bootstrap / iOS fallback).

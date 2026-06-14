@@ -1,0 +1,53 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isMember(roomId) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/chatRooms/$(roomId))
+        && request.auth.uid in get(/databases/$(database)/documents/chatRooms/$(roomId)).data.memberIds;
+    }
+
+    match /chatRooms/{roomId} {
+      allow read: if isMember(roomId);
+
+      // For testing: allow authenticated users to create/update chat rooms
+      allow create, update: if isSignedIn();
+
+      match /messages/{messageId} {
+        allow read: if isMember(roomId);
+
+        // For testing: allow any room member to send/update/delete messages
+        allow create, update, delete: if isMember(roomId);
+      }
+
+      match /typing/{userId} {
+        allow read: if isMember(roomId);
+
+        // For testing: user can update their own typing status
+        allow write: if isSignedIn()
+          && request.auth.uid == userId
+          && isMember(roomId);
+      }
+    }
+
+    match /userChats/{userId}/rooms/{roomId} {
+      // For testing: user can manage only their own chat list
+      allow read, create, update, delete: if isSignedIn()
+        && request.auth.uid == userId;
+    }
+
+    match /users/{userId}/presence/{doc} {
+      allow read: if isSignedIn();
+
+      // For testing: user can update only their own presence
+      allow write: if isSignedIn()
+        && request.auth.uid == userId;
+    }
+  }
+}

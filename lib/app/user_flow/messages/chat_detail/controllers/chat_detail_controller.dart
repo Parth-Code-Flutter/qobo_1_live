@@ -1054,25 +1054,51 @@ class ChatDetailController extends GetxController {
       createdAt: createdAt,
       clientMessageId: json['clientMessageId']?.toString(),
       deliveryStatus: isMe
-          ? _parseDeliveryStatus(json['status'], targetId.value)
+          ? _parseDeliveryStatus(
+              json['status'],
+              peerId: targetId.value,
+              myUserId: myId,
+              authUid: authUid,
+            )
           : ChatDeliveryStatus.sent,
     );
   }
 
   static ChatDeliveryStatus _parseDeliveryStatus(
-    dynamic status,
-    String recipientId,
-  ) {
-    if (recipientId.isEmpty || status is! Map) {
-      return ChatDeliveryStatus.sent;
+    dynamic status, {
+    required String peerId,
+    required String myUserId,
+    String authUid = '',
+  }) {
+    if (status is! Map || status.isEmpty) return ChatDeliveryStatus.sent;
+
+    var best = ChatDeliveryStatus.sent;
+
+    bool isSelfKey(String key) {
+      return key == myUserId || (authUid.isNotEmpty && key == authUid);
     }
-    final recipientStatus = status[recipientId];
-    if (recipientStatus is! Map) return ChatDeliveryStatus.sent;
-    if (recipientStatus['readAt'] != null) return ChatDeliveryStatus.read;
-    if (recipientStatus['deliveredAt'] != null) {
-      return ChatDeliveryStatus.delivered;
+
+    void considerEntry(dynamic entry) {
+      if (entry is! Map) return;
+      if (entry['readAt'] != null) {
+        best = ChatDeliveryStatus.read;
+        return;
+      }
+      if (entry['deliveredAt'] != null && best != ChatDeliveryStatus.read) {
+        best = ChatDeliveryStatus.delivered;
+      }
     }
-    return ChatDeliveryStatus.sent;
+
+    if (peerId.isNotEmpty) considerEntry(status[peerId]);
+    if (best == ChatDeliveryStatus.read) return best;
+
+    for (final key in status.keys) {
+      final k = key.toString();
+      if (isSelfKey(k)) continue;
+      considerEntry(status[key]);
+      if (best == ChatDeliveryStatus.read) return best;
+    }
+    return best;
   }
 
   static DateTime? _parseTimestamp(dynamic raw) {
@@ -1107,7 +1133,10 @@ class ChatDetailController extends GetxController {
           : msg.id?.isNotEmpty == true
           ? msg.id!
           : '${msg.text}_${msg.createdAt?.toIso8601String() ?? msg.time}';
-      byKey[key] = msg;
+      final existing = byKey[key];
+      byKey[key] = existing == null
+          ? msg
+          : _preferNewerWithBestStatus(existing, msg);
     }
     final merged = byKey.values.toList();
     merged.sort((x, y) {
@@ -1116,6 +1145,41 @@ class ChatDetailController extends GetxController {
       return xd.compareTo(yd);
     });
     return merged;
+  }
+
+  static ChatMessageModel _preferNewerWithBestStatus(
+    ChatMessageModel a,
+    ChatMessageModel b,
+  ) {
+    final primary = b;
+    final secondary = a;
+    return ChatMessageModel(
+      text: primary.text.isNotEmpty ? primary.text : secondary.text,
+      isMe: primary.isMe,
+      time: primary.time.isNotEmpty ? primary.time : secondary.time,
+      id: primary.id ?? secondary.id,
+      createdAt: primary.createdAt ?? secondary.createdAt,
+      clientMessageId: primary.clientMessageId ?? secondary.clientMessageId,
+      deliveryStatus: _bestDeliveryStatus(a.deliveryStatus, b.deliveryStatus),
+      isCallEntry: primary.isCallEntry,
+      isVideoCall: primary.isVideoCall,
+      isMissedCall: primary.isMissedCall,
+      isUnansweredCall: primary.isUnansweredCall,
+      callDurationSeconds:
+          primary.callDurationSeconds ?? secondary.callDurationSeconds,
+    );
+  }
+
+  static ChatDeliveryStatus _bestDeliveryStatus(
+    ChatDeliveryStatus a,
+    ChatDeliveryStatus b,
+  ) {
+    const rank = {
+      ChatDeliveryStatus.sent: 1,
+      ChatDeliveryStatus.delivered: 2,
+      ChatDeliveryStatus.read: 3,
+    };
+    return rank[a]! >= rank[b]! ? a : b;
   }
 
   static int _messageDayKey(ChatMessageModel msg) {
