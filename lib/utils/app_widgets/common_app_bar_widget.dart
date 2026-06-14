@@ -45,6 +45,7 @@ class CommonAppBarWidget extends StatelessWidget
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       backgroundColor: backgroundColor,
+      surfaceTintColor: backgroundColor,
       elevation: 0,
       centerTitle: true,
       automaticallyImplyLeading: false,

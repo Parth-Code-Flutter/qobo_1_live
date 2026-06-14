@@ -66,6 +66,7 @@ class ChatDetailView extends GetView<ChatDetailController> {
   Widget _buildChatAppBar(BuildContext context) {
     return AppBar(
       backgroundColor: kColorWhite,
+      surfaceTintColor: kColorWhite,
       elevation: 0,
       centerTitle: true,
       automaticallyImplyLeading: false,
