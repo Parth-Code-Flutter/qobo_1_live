@@ -75,35 +75,31 @@ class EconomyRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
-  /// Calls `POST /api/send-gift` to send a gift in a room.
+  /// Calls `POST /api/economy/send-gift` to send a gift in a room.
   Future<Map<String, dynamic>?> sendGift({
     required String receiverId,
     required String giftId,
     required String roomId,
     bool isShowLoader = true,
   }) async {
-    final response = await _apiService.postRequest(
+    final body = <String, dynamic>{
+      'receiver_id': receiverId,
+      'gift_id': giftId,
+      'room_id': roomId,
+    };
+
+    var response = await _apiService.postRequest(
       endPoint: EconomyEndpoints.sendGift,
-      requestModel: <String, dynamic>{
-        'receiver_id': receiverId,
-        'gift_id': giftId,
-        'room_id': roomId,
-      },
+      requestModel: body,
       isShowLoader: isShowLoader,
     );
 
     if (response?.statusCode == 404) {
-      final legacyResponse = await _apiService.postRequest(
+      response = await _apiService.postRequest(
         endPoint: EconomyEndpoints.sendGiftLegacy,
-        requestModel: <String, dynamic>{
-          'receiver_id': receiverId,
-          'gift_id': giftId,
-          'room_id': roomId,
-        },
+        requestModel: body,
         isShowLoader: isShowLoader,
       );
-      if (legacyResponse == null) return null;
-      return ApiResponseUtils.tryDecodeMap(legacyResponse.body);
     }
 
     if (response == null) return null;

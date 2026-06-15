@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/repo/economy/economy_repo.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -27,7 +28,7 @@ class LiveBroadcastController extends GetxController {
   final isMicMuted = false.obs;
   final isCameraOff = false.obs;
 
-  final coinsBalance = 1200.obs;
+  final coinsBalance = 0.obs;
   final giftCatalog = <Map<String, String>>[].obs;
   final isLoadingGifts = false.obs;
 
@@ -50,8 +51,19 @@ class LiveBroadcastController extends GetxController {
       }
     }
     _validateStreamingInput();
+    loadWalletBalance();
     loadGiftCatalog();
     chatMessages.clear();
+  }
+
+  Future<void> loadWalletBalance() async {
+    final response = await _economyRepo.getWalletBalances(isShowLoader: false);
+    final data = response?['data'];
+    if (isEconomyApiSuccess(response) && data is Map) {
+      coinsBalance.value = parseWalletAmount(
+        data['coins'] ?? data['coin'] ?? data['balance'] ?? data['coinBalance'],
+      );
+    }
   }
 
   bool get canOpenZego => connectionIssue.value.isEmpty;
@@ -232,7 +244,7 @@ class LiveBroadcastController extends GetxController {
     try {
       final response = await _economyRepo.getGiftList(isShowLoader: false);
       final data = response?['data'];
-      if (_isSuccess(response) && data is List) {
+      if (isEconomyApiSuccess(response) && data is List) {
         giftCatalog.assignAll(
           data
               .whereType<Map>()
@@ -297,8 +309,8 @@ class LiveBroadcastController extends GetxController {
       isShowLoader: true,
     );
 
-    if (_isSuccess(response)) {
-      coinsBalance.value -= price;
+    if (isEconomyApiSuccess(response)) {
+      await loadWalletBalance();
 
       chatMessages.add({
         'sender': 'You',
@@ -331,16 +343,6 @@ class LiveBroadcastController extends GetxController {
         colorText: const Color(0xFFFFFFFF),
       );
     }
-  }
-
-  bool _isSuccess(Map<String, dynamic>? response) {
-    if (response == null) return false;
-    if (response['success'] == true) return true;
-    final code = response['statusCode'];
-    if (code is int) return code == 1 || code == 200 || code == 201;
-    return code?.toString() == '1' ||
-        code?.toString() == '200' ||
-        code?.toString() == '201';
   }
 
   void shareRoom() {

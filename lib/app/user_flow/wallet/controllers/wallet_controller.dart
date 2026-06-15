@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/repo/economy/economy_repo.dart';
 
 class CoinPackage {
@@ -64,17 +65,23 @@ class WalletController extends GetxController {
   Future<void> loadWallet() async {
     final response = await _economyRepo.getWalletBalances(isShowLoader: false);
     final data = response?['data'];
-    if (_isSuccess(response) && data is Map) {
+    if (isEconomyApiSuccess(response) && data is Map) {
       coinBalance.value = _formatAmount(
-        data['coins'] ?? data['coin'] ?? data['balance'] ?? data['coinBalance'],
+        parseWalletAmount(
+          data['coins'] ?? data['coin'] ?? data['balance'] ?? data['coinBalance'],
+        ),
       );
       diamondBalance.value = _formatAmount(
-        data['diamonds'] ?? data['diamond'] ?? data['diamondBalance'],
+        parseWalletAmount(
+          data['diamonds'] ?? data['diamond'] ?? data['diamondBalance'],
+        ),
       );
       withdrawalLimit.value = _formatAmount(
-        data['withdrawalLimit'] ??
-            data['withdrawlimit'] ??
-            data['withdraw_limit'],
+        parseWalletAmount(
+          data['withdrawalLimit'] ??
+              data['withdrawlimit'] ??
+              data['withdraw_limit'],
+        ),
       );
     }
   }
@@ -85,7 +92,7 @@ class WalletController extends GetxController {
     try {
       final response = await _economyRepo.getCoinPackages(isShowLoader: false);
       final data = response?['data'];
-      if (_isSuccess(response) && data is List) {
+      if (isEconomyApiSuccess(response) && data is List) {
         final parsed = data
             .whereType<Map>()
             .map((e) => CoinPackage.fromJson(Map<String, dynamic>.from(e)))
@@ -120,7 +127,7 @@ class WalletController extends GetxController {
         method: method,
         isShowLoader: true,
       );
-      if (_isSuccess(response)) {
+      if (isEconomyApiSuccess(response)) {
         await loadWallet();
         return true;
       }
@@ -129,16 +136,6 @@ class WalletController extends GetxController {
     } finally {
       isBuying.value = false;
     }
-  }
-
-  bool _isSuccess(Map<String, dynamic>? response) {
-    if (response == null) return false;
-    if (response['success'] == true) return true;
-    final code = response['statusCode'];
-    if (code is int) return code == 1 || code == 200 || code == 201;
-    return code?.toString() == '1' ||
-        code?.toString() == '200' ||
-        code?.toString() == '201';
   }
 
   String _formatAmount(dynamic value) {

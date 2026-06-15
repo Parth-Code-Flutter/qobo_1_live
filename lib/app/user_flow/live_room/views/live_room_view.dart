@@ -215,6 +215,7 @@ class LiveRoomView extends StatelessWidget {
   /// Small "x rooms live now" strip above the listing grid.
   Widget _liveCountStrip(int count) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
           width: 8,
@@ -229,12 +230,19 @@ class LiveRoomView extends StatelessWidget {
           text: '$count ${LocaleKeys.liveRoomActiveNow.tr}',
           fontSize: TextStyles.k12FontSize,
           color: kColorWhite,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
-        const Spacer(),
-        AppText(
-          text: LocaleKeys.liveRoomJoinHint.tr,
-          fontSize: TextStyles.k12FontSize,
-          color: kColorHint,
+        Spacing.h8,
+        Expanded(
+          child: AppText(
+            text: LocaleKeys.liveRoomJoinHint.tr,
+            fontSize: TextStyles.k12FontSize,
+            color: kColorHint,
+            align: TextAlign.end,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ],
     );

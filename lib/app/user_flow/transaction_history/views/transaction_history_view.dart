@@ -38,7 +38,14 @@ class TransactionHistoryView extends GetView<TransactionHistoryController> {
                   : controller.diamondTransactions;
 
               if (list.isEmpty) {
-                return _buildEmptyState();
+                return _buildEmptyState(
+                  message: controller.loadError.value.isNotEmpty
+                      ? controller.loadError.value
+                      : null,
+                  onRetry: controller.loadError.value.isNotEmpty
+                      ? controller.fetchTransactionHistory
+                      : null,
+                );
               }
 
               return _buildTransactionList(list, isCoinSelected);
@@ -105,7 +112,7 @@ class TransactionHistoryView extends GetView<TransactionHistoryController> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState({String? message, VoidCallback? onRetry}) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -116,25 +123,38 @@ class TransactionHistoryView extends GetView<TransactionHistoryController> {
               color: kColorPrimary.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.receipt_long_rounded,
+            child: Icon(
+              onRetry != null
+                  ? Icons.cloud_off_rounded
+                  : Icons.receipt_long_rounded,
               color: kColorPrimary,
               size: 64,
             ),
           ),
           Spacing.v24,
-          const SemiBoldText(
-            text: 'No Transactions',
+          SemiBoldText(
+            text: onRetry != null ? 'Unable to Load' : 'No Transactions',
             fontSize: TextStyles.k18FontSize,
             color: kColorText,
           ),
           Spacing.v8,
-          const AppText(
-            text: 'Your balance records will appear here.',
+          AppText(
+            text: message ?? 'Your balance records will appear here.',
             fontSize: TextStyles.k14FontSize,
             color: kColorHint,
             align: TextAlign.center,
           ),
+          if (onRetry != null) ...[
+            Spacing.v16,
+            TextButton(
+              onPressed: onRetry,
+              child: const SemiBoldText(
+                text: 'Try Again',
+                fontSize: TextStyles.k14FontSize,
+                color: kColorPrimary,
+              ),
+            ),
+          ],
         ],
       ),
     );

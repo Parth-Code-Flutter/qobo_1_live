@@ -149,11 +149,11 @@ class EconomyEndpoints {
   /// GET /api/economy/gift-list
   static const String giftList = '/api/economy/gift-list';
 
-  /// POST /api/send-gift
-  static const String sendGift = '/api/send-gift';
+  /// POST /api/economy/send-gift
+  static const String sendGift = '/api/economy/send-gift';
 
-  /// Legacy deployed route kept as fallback until `/api/send-gift` is live.
-  static const String sendGiftLegacy = '/api/economy/send-gift';
+  /// Legacy route kept as fallback.
+  static const String sendGiftLegacy = '/api/send-gift';
 
   /// POST /api/withdraw
   static const String withdraw = '/api/withdraw';
@@ -213,8 +213,11 @@ class PkEndpoints {
 class CallingEndpoints {
   CallingEndpoints._();
 
-  /// POST /api/calling/charge
-  static const String charge = '/api/calling/charge';
+  /// POST /api/economy/calling/charge
+  static const String charge = '/api/economy/calling/charge';
+
+  /// Legacy route kept as fallback.
+  static const String chargeLegacy = '/api/calling/charge';
 }
 
 /// Central place for chat related API endpoints.
