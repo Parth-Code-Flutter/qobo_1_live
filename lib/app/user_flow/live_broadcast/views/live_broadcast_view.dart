@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:zego_uikit_prebuilt_live_streaming/zego_uikit_prebuilt_live_streaming.dart';
@@ -100,7 +100,6 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
       );
 
       // Preview page has its own "Start Live" button — our overlay covers it.
-      // Skip preview so hosts join live immediately with camera on.
       config.preview.showPreviewForHost = false;
 
       final isVideoRoom = controller.isVideoRoom;
@@ -231,96 +230,122 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
   }
 
   Widget _hostSummaryCard({bool compact = false}) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(compact ? 20 : 24),
-      child: Container(
-        constraints: BoxConstraints(maxWidth: compact ? 170 : 238),
-        padding: EdgeInsets.all(compact ? 6 : 8),
-        decoration: BoxDecoration(
-          color: _surface,
-          borderRadius: BorderRadius.circular(compact ? 20 : 24),
-          border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Stack(
-              children: [
-                CircleAvatar(
-                  radius: compact ? 19 : 24,
-                  backgroundImage: const AssetImage(kImgTemp2),
-                ),
-                Positioned(
-                  right: 0,
-                  bottom: 1,
-                  child: Container(
-                    width: 11,
-                    height: 11,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF35F27A),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: _surface, width: 2),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(width: compact ? 7 : 10),
-            Flexible(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+    return Obx(() {
+      final subtitle = compact
+          ? controller.likesLabel.value
+          : '${controller.likesLabel.value}  •  ${controller.roomType.value}';
+
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(compact ? 20 : 24),
+        child: Container(
+          constraints: BoxConstraints(maxWidth: compact ? 170 : 238),
+          padding: EdgeInsets.all(compact ? 6 : 8),
+          decoration: BoxDecoration(
+            color: _surface,
+            borderRadius: BorderRadius.circular(compact ? 20 : 24),
+            border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Stack(
                 children: [
-                  SemiBoldText(
-                    text: 'Star Host',
-                    fontSize: compact
-                        ? TextStyles.k14FontSize
-                        : TextStyles.k16FontSize,
-                    color: kColorWhite,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  AppUserAvatar(
+                    name: controller.hostName.value,
+                    imageUrl: controller.hostAvatarUrl.value,
+                    size: compact ? 38 : 48,
                   ),
-                  Spacing.v2,
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.favorite, color: _accent, size: 14),
-                      Spacing.h4,
-                      AppText(
-                        text: compact
-                            ? '1.2k'
-                            : '1.2k  •  ${controller.roomType.value}',
-                        fontSize: compact ? 9 : TextStyles.k10FontSize,
-                        color: kColorWhite.withValues(alpha: 0.72),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                  Positioned(
+                    right: 0,
+                    bottom: 1,
+                    child: Container(
+                      width: 11,
+                      height: 11,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF35F27A),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: _surface, width: 2),
                       ),
-                    ],
+                    ),
                   ),
                 ],
               ),
-            ),
-            if (!compact) ...[Spacing.h8, _followButton()],
-          ],
+              SizedBox(width: compact ? 7 : 10),
+              Flexible(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SemiBoldText(
+                      text: controller.hostName.value,
+                      fontSize: compact
+                          ? TextStyles.k14FontSize
+                          : TextStyles.k16FontSize,
+                      color: kColorWhite,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Spacing.v2,
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.favorite, color: _accent, size: 14),
+                        Spacing.h4,
+                        Flexible(
+                          child: AppText(
+                            text: subtitle,
+                            fontSize: compact ? 9 : TextStyles.k10FontSize,
+                            color: kColorWhite.withValues(alpha: 0.72),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              if (!compact && !controller.isHost.value) ...[
+                Spacing.h8,
+                _followButton(),
+              ],
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   Widget _followButton() {
-    return Container(
-      width: 38,
-      height: 38,
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFE12BC5), _accentPurple],
+    return Obx(() {
+      final following = controller.isFollowingHost.value;
+      return GestureDetector(
+        onTap: controller.toggleFollowHost,
+        child: Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: following
+                ? null
+                : const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFE12BC5), _accentPurple],
+                  ),
+            color: following ? Colors.white12 : null,
+            border: following
+                ? Border.all(color: kColorWhite.withValues(alpha: 0.2))
+                : null,
+          ),
+          child: Icon(
+            following ? Icons.check_rounded : Icons.add_rounded,
+            color: kColorWhite,
+            size: 22,
+          ),
         ),
-      ),
-      child: const Icon(Icons.add_rounded, color: kColorWhite, size: 22),
-    );
+      );
+    });
   }
 
   Widget _topActions({bool compact = false}) {
@@ -345,29 +370,35 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
   }
 
   Widget _viewerCountPill({bool compact = false}) {
-    return Container(
-      height: compact ? 36 : 42,
-      padding: EdgeInsets.symmetric(horizontal: compact ? 9 : 12),
-      decoration: BoxDecoration(
-        color: const Color(0xCC1A2233),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.person_rounded,
-            color: kColorWhite,
-            size: compact ? 17 : 20,
+    return Obx(
+      () => GestureDetector(
+        onTap: controller.openViewersSheet,
+        child: Container(
+          height: compact ? 36 : 42,
+          padding: EdgeInsets.symmetric(horizontal: compact ? 9 : 12),
+          decoration: BoxDecoration(
+            color: const Color(0xCC1A2233),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
           ),
-          SizedBox(width: compact ? 3 : 5),
-          SemiBoldText(
-            text: '1',
-            fontSize: compact ? TextStyles.k12FontSize : TextStyles.k14FontSize,
-            color: kColorWhite,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.person_rounded,
+                color: kColorWhite,
+                size: compact ? 17 : 20,
+              ),
+              SizedBox(width: compact ? 3 : 5),
+              SemiBoldText(
+                text: controller.viewerCount.value.toString(),
+                fontSize:
+                    compact ? TextStyles.k12FontSize : TextStyles.k14FontSize,
+                color: kColorWhite,
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -410,10 +441,12 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                       color: _surfaceSoft,
                       borderRadius: BorderRadius.circular(18),
                     ),
-                    child: const AppText(
-                      text: 'No data found',
+                    child: AppText(
+                      text: controller.isZegoConnected.value
+                          ? 'Say hi to everyone...'
+                          : 'Connecting to live room...',
                       fontSize: TextStyles.k12FontSize,
-                      color: kColorWhite,
+                      color: kColorWhite.withValues(alpha: 0.72),
                     ),
                   ),
                 )

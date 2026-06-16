@@ -1,19 +1,34 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/repo/economy/economy_repo.dart';
+import 'package:qobo_one_live/repo/room/room_repo.dart';
+import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 import 'package:zego_uikit_prebuilt_live_streaming/zego_uikit_prebuilt_live_streaming.dart';
 
+import '../utils/live_room_profile_utils.dart';
+import '../widgets/live_viewers_sheet.dart';
+
 class LiveBroadcastController extends GetxController {
-  LiveBroadcastController({EconomyRepo? economyRepo})
-    : _economyRepo = economyRepo ?? EconomyRepo();
+  LiveBroadcastController({
+    EconomyRepo? economyRepo,
+    AuthRepo? authRepo,
+    RoomRepo? roomRepo,
+  }) : _economyRepo = economyRepo ?? EconomyRepo(),
+       _authRepo = authRepo ?? AuthRepo(),
+       _roomRepo = roomRepo ?? RoomRepo();
 
   final EconomyRepo _economyRepo;
+  final AuthRepo _authRepo;
+  final RoomRepo _roomRepo;
 
   final isHost = false.obs;
   final roomType = 'VIDEO'.obs;
@@ -21,6 +36,15 @@ class LiveBroadcastController extends GetxController {
   final receiverId = ''.obs;
   final hasExplicitStreamingId = false.obs;
   final connectionIssue = ''.obs;
+
+  final streamTitle = ''.obs;
+  final hostName = 'Live Host'.obs;
+  final hostAvatarUrl = RxnString();
+  final likesLabel = '0'.obs;
+  final viewerCount = 0.obs;
+  final liveViewers = <Map<String, dynamic>>[].obs;
+  final isFollowingHost = false.obs;
+  final isZegoConnected = false.obs;
 
   final chatMessages = <Map<String, dynamic>>[].obs;
   final chatTextController = TextEditingController();
@@ -32,6 +56,11 @@ class LiveBroadcastController extends GetxController {
   final giftCatalog = <Map<String, String>>[].obs;
   final isLoadingGifts = false.obs;
 
+  Map<String, dynamic> _roomData = {};
+  StreamSubscription<List<ZegoInRoomMessage>>? _messageSub;
+  StreamSubscription<List<ZegoUIKitUser>>? _userSub;
+  VoidCallback? _viewerCountListener;
+
   @override
   void onInit() {
     super.onInit();
@@ -40,20 +69,56 @@ class LiveBroadcastController extends GetxController {
       if (args.containsKey('isHost')) isHost.value = args['isHost'];
       if (args.containsKey('roomType')) roomType.value = args['roomType'];
       if (args.containsKey('roomData') && args['roomData'] != null) {
-        final roomData = args['roomData'];
-        final normalizedRoomData = Map<String, dynamic>.from(roomData);
-        receiverId.value = _extractReceiverId(normalizedRoomData) ?? '';
-        final streamingId = _extractStreamingId(normalizedRoomData);
+        _roomData = Map<String, dynamic>.from(args['roomData']);
+        receiverId.value = _extractReceiverId(_roomData) ?? '';
+        final streamingId = _extractStreamingId(_roomData);
         hasExplicitStreamingId.value = streamingId != null;
         final rawId =
-            streamingId ?? _extractBackendRoomId(normalizedRoomData) ?? '';
+            streamingId ?? _extractBackendRoomId(_roomData) ?? '';
         roomId.value = ZegoLiveIdUtils.sanitize(rawId);
       }
     }
+    _hydrateHostProfile();
     _validateStreamingInput();
     loadWalletBalance();
     loadGiftCatalog();
     chatMessages.clear();
+  }
+
+  void _hydrateHostProfile() {
+    final session = Get.isRegistered<UserSessionController>()
+        ? Get.find<UserSessionController>()
+        : null;
+
+    hostName.value = resolveHostName(
+      isHost: isHost.value,
+      sessionName: session?.displayName ?? '',
+      roomData: _roomData,
+    );
+    hostAvatarUrl.value = resolveHostAvatarUrl(
+      isHost: isHost.value,
+      sessionAvatarUrl: session?.displayPictureUrl,
+      roomData: _roomData,
+    );
+    streamTitle.value =
+        readRoomField(_roomData, ['name', 'title', 'streamName']) ??
+        hostName.value;
+
+    final engagement = readEngagementCount(_roomData);
+    likesLabel.value = formatCompactCount(engagement);
+
+    if (receiverId.value.trim().isEmpty) {
+      final hostId = resolveHostId(_roomData);
+      if (hostId != null) receiverId.value = hostId;
+    }
+    if (isHost.value && session != null && receiverId.value.trim().isEmpty) {
+      receiverId.value = session.userId;
+    }
+
+    final following = _roomData['isFollowing'] == true ||
+        _roomData['isFollowed'] == true ||
+        readNestedHost(_roomData)?['isFollowing'] == true;
+    isFollowingHost.value = following;
   }
 
   Future<void> loadWalletBalance() async {
@@ -64,6 +129,31 @@ class LiveBroadcastController extends GetxController {
         data['coins'] ?? data['coin'] ?? data['balance'] ?? data['coinBalance'],
       );
     }
+  }
+
+  List<String> get giftCategories {
+    if (giftCatalog.isEmpty) return const [];
+    final categories = <String>{};
+    for (final gift in giftCatalog) {
+      final category = gift['category']?.trim();
+      if (category != null && category.isNotEmpty) {
+        categories.add(category);
+      }
+    }
+    final sorted = categories.toList()..sort();
+    return sorted.isEmpty ? const ['Gifts'] : sorted;
+  }
+
+  List<Map<String, String>> giftsForCategory(String category) {
+    if (giftCatalog.isEmpty) return const [];
+    final normalized = category.trim().toLowerCase();
+    if (normalized == 'gifts' || normalized == 'all') {
+      return giftCatalog.toList();
+    }
+    final filtered = giftCatalog
+        .where((gift) => (gift['category'] ?? '').toLowerCase() == normalized)
+        .toList();
+    return filtered.isNotEmpty ? filtered : giftCatalog.toList();
   }
 
   bool get canOpenZego => connectionIssue.value.isEmpty;
@@ -78,8 +168,11 @@ class LiveBroadcastController extends GetxController {
 
   bool get isVideoRoom => roomType.value.toUpperCase() != 'AUDIO';
 
-  /// Called after Zego room login — ensures host camera publishes for video rooms.
+  /// Called after Zego room login — ensures host camera publishes and binds chat/users.
   void onZegoRoomLogined() {
+    isZegoConnected.value = true;
+    _bindZegoListeners();
+
     if (!isHost.value || !isVideoRoom) return;
     try {
       final av = ZegoUIKitPrebuiltLiveStreamingController().audioVideo;
@@ -92,7 +185,88 @@ class LiveBroadcastController extends GetxController {
     }
   }
 
+  void _bindZegoListeners() {
+    final zego = ZegoUIKitPrebuiltLiveStreamingController();
+
+    _messageSub?.cancel();
+    _messageSub = zego.message.stream().listen(_syncChatFromZego);
+    _syncChatFromZego(zego.message.list());
+
+    _userSub?.cancel();
+    _userSub = zego.user.stream(includeFakeUser: false).listen(_syncViewers);
+
+    if (_viewerCountListener != null) {
+      zego.user.countNotifier.removeListener(_viewerCountListener!);
+    }
+    _viewerCountListener = _onViewerCountChanged;
+    zego.user.countNotifier.addListener(_viewerCountListener!);
+    _onViewerCountChanged();
+
+    Future.microtask(() {
+      try {
+        _syncViewers(ZegoUIKit().getAllUsers());
+      } catch (_) {}
+    });
+  }
+
+  void _onViewerCountChanged() {
+    viewerCount.value =
+        ZegoUIKitPrebuiltLiveStreamingController().user.countNotifier.value;
+  }
+
+  void _syncViewers(List<ZegoUIKitUser> users) {
+    final normalizedHostId = ZegoLiveIdUtils.sanitizeUserId(receiverId.value);
+    liveViewers.assignAll(
+      users.map((user) {
+        final normalizedUserId = ZegoLiveIdUtils.sanitizeUserId(user.id);
+        return <String, dynamic>{
+          'id': user.id,
+          'name': user.name.isNotEmpty ? user.name : 'Viewer',
+          'avatarUrl': null,
+          'isHost': normalizedHostId.isNotEmpty &&
+              normalizedUserId == normalizedHostId,
+        };
+      }),
+    );
+  }
+
+  void _syncChatFromZego(List<ZegoInRoomMessage> messages) {
+    final session = Get.isRegistered<UserSessionController>()
+        ? Get.find<UserSessionController>()
+        : null;
+    final myId = ZegoLiveIdUtils.sanitizeUserId(
+      session?.userId.isNotEmpty == true
+          ? session!.userId
+          : 'user_${session?.hashCode ?? 0}',
+    );
+
+    chatMessages.assignAll(
+      messages.map((message) => _mapZegoMessage(message, myId)),
+    );
+  }
+
+  Map<String, dynamic> _mapZegoMessage(
+    ZegoInRoomMessage message,
+    String myUserId,
+  ) {
+    final senderName = message.user.name.isNotEmpty
+        ? message.user.name
+        : 'Viewer';
+    final isMine = message.user.id == myUserId;
+    final text = message.message;
+    final isGift = text.startsWith('🎁 ');
+
+    return {
+      'sender': isMine ? 'You' : senderName,
+      'message': text,
+      'translation': '',
+      'isTranslated': false,
+      'isSystem': isGift,
+    };
+  }
+
   void handleZegoLoginFailed(int errorCode) {
+    isZegoConnected.value = false;
     connectionIssue.value =
         'Could not join live room (error $errorCode). '
         'Verify Zego App ID / App Sign in the console.';
@@ -152,38 +326,20 @@ class LiveBroadcastController extends GetxController {
   }
 
   String? _extractReceiverId(Map<String, dynamic> roomData) {
-    const keys = [
-      'hostId',
-      'host_id',
-      'userId',
-      'user_id',
-      'ownerId',
-      'owner_id',
-      'createdBy',
-      'created_by',
-      'receiverId',
-      'receiver_id',
-    ];
-
-    return _firstNonEmpty(roomData, keys);
+    return resolveHostId(roomData);
   }
 
   String? _firstNonEmpty(Map<String, dynamic> roomData, List<String> keys) {
-    for (final key in keys) {
-      final value = roomData[key]?.toString().trim();
-      if (value != null && value.isNotEmpty && value != 'null') return value;
-    }
-    return null;
+    return readRoomField(roomData, keys);
   }
 
-  void sendMessage() {
+  Future<void> sendMessage() async {
     final text = chatTextController.text.trim();
     if (text.isEmpty) return;
 
-    // Bad comment moderation filter (case insensitive)
     final badWords = ['bad', 'scam', 'spam', 'abuse', 'hate', 'cheat', 'fraud'];
-    String moderatedText = text;
-    bool containsBadWord = false;
+    var moderatedText = text;
+    var containsBadWord = false;
 
     for (final word in badWords) {
       if (moderatedText.toLowerCase().contains(word)) {
@@ -196,15 +352,41 @@ class LiveBroadcastController extends GetxController {
       }
     }
 
-    chatMessages.add({
-      'sender': 'You',
-      'message': moderatedText,
-      'translation': text != moderatedText
-          ? 'Original message contained flagged words.'
-          : '',
-      'isTranslated': false,
-      'isSystem': false,
-    });
+    chatTextController.clear();
+
+    if (!isZegoConnected.value) {
+      chatMessages.add({
+        'sender': 'You',
+        'message': moderatedText,
+        'translation': '',
+        'isTranslated': false,
+        'isSystem': false,
+      });
+      return;
+    }
+
+    try {
+      final sent = await ZegoUIKitPrebuiltLiveStreamingController().message.send(
+        moderatedText,
+      );
+      if (!sent) {
+        Get.snackbar(
+          'Message not sent',
+          'Unable to send message to the room.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.black87,
+          colorText: kColorWhite,
+        );
+      }
+    } catch (_) {
+      Get.snackbar(
+        'Message not sent',
+        'Chat is not ready yet. Please try again.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.black87,
+        colorText: kColorWhite,
+      );
+    }
 
     if (containsBadWord) {
       Get.snackbar(
@@ -216,27 +398,46 @@ class LiveBroadcastController extends GetxController {
         duration: const Duration(seconds: 3),
       );
     }
-
-    chatTextController.clear();
   }
 
-  void translateMessage(int index) {
-    if (index >= 0 && index < chatMessages.length) {
-      final msg = chatMessages[index];
-      if (msg['translation'] != null &&
-          msg['translation'].toString().isNotEmpty) {
-        final currentVal = msg['isTranslated'] ?? false;
-        chatMessages[index] = {...msg, 'isTranslated': !currentVal};
-      } else {
-        Get.snackbar(
-          'Translation',
-          'This message is already in your native language.',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.black26,
-          colorText: kColorWhite,
-        );
-      }
+  Future<void> translateMessage(int index) async {
+    if (index < 0 || index >= chatMessages.length) return;
+    final msg = chatMessages[index];
+    final text = msg['message']?.toString() ?? '';
+    if (text.isEmpty || msg['isSystem'] == true) return;
+
+    if (msg['translation'] != null &&
+        msg['translation'].toString().isNotEmpty) {
+      final currentVal = msg['isTranslated'] ?? false;
+      chatMessages[index] = {...msg, 'isTranslated': !currentVal};
+      return;
     }
+
+    try {
+      final response = await _roomRepo.translateText(
+        text: text,
+        targetLang: 'en',
+        isShowLoader: false,
+      );
+      final translated = response?['data']?['translatedText']?.toString() ??
+          response?['data']?['text']?.toString();
+      if (translated != null && translated.isNotEmpty) {
+        chatMessages[index] = {
+          ...msg,
+          'translation': translated,
+          'isTranslated': true,
+        };
+        return;
+      }
+    } catch (_) {}
+
+    Get.snackbar(
+      'Translation',
+      'This message is already in your native language.',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.black26,
+      colorText: kColorWhite,
+    );
   }
 
   Future<void> loadGiftCatalog() async {
@@ -264,8 +465,10 @@ class LiveBroadcastController extends GetxController {
     final icon = raw['icon']?.toString() ??
         raw['emoji']?.toString() ??
         raw['image']?.toString() ??
+        raw['imageUrl']?.toString() ??
         '🎁';
-    final category = raw['category']?.toString() ?? raw['type']?.toString() ?? 'Popular';
+    final category =
+        raw['category']?.toString() ?? raw['type']?.toString() ?? 'Popular';
     return {
       'id': raw['id']?.toString() ?? raw['_id']?.toString() ?? '',
       'name': name,
@@ -312,27 +515,32 @@ class LiveBroadcastController extends GetxController {
     if (isEconomyApiSuccess(response)) {
       await loadWalletBalance();
 
-      chatMessages.add({
-        'sender': 'You',
-        'message': 'sent a ${gift['name']} ${gift['icon']}',
-        'translation': '',
-        'isTranslated': false,
-        'isSystem': false,
-      });
+      final giftLabel =
+          '🎁 sent ${gift['name']} ${isNetworkGiftIcon(gift['icon']) ? '' : gift['icon'] ?? ''}'
+              .trim();
+      if (isZegoConnected.value) {
+        await ZegoUIKitPrebuiltLiveStreamingController().message.send(
+          giftLabel,
+        );
+      } else {
+        chatMessages.add({
+          'sender': 'You',
+          'message': giftLabel,
+          'translation': '',
+          'isTranslated': false,
+          'isSystem': true,
+        });
+      }
 
-      Get.back(); // close the bottom sheet
+      Get.back();
 
       Get.snackbar(
         '🎁 Gift Sent! 🎁',
-        'You sent ${gift['name']} ${gift['icon']} to the Host!',
+        'You sent ${gift['name']} to ${hostName.value}!',
         snackPosition: SnackPosition.TOP,
         backgroundColor: const Color(0xFFFF4081),
         colorText: const Color(0xFFFFFFFF),
         duration: const Duration(seconds: 3),
-        icon: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Text(gift['icon'] ?? '', style: const TextStyle(fontSize: 24)),
-        ),
       );
     } else {
       Get.snackbar(
@@ -345,9 +553,67 @@ class LiveBroadcastController extends GetxController {
     }
   }
 
+  void openViewersSheet() {
+    Get.bottomSheet(
+      const LiveViewersSheet(),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+    );
+  }
+
+  Future<void> toggleFollowHost() async {
+    if (isHost.value) return;
+    final targetId = receiverId.value.trim();
+    if (targetId.isEmpty) {
+      Get.snackbar(
+        'Follow',
+        'Host profile is not available for this room.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.black87,
+        colorText: kColorWhite,
+      );
+      return;
+    }
+
+    final action = isFollowingHost.value ? 'unfollow' : 'follow';
+    final response = await _authRepo.followUnfollow(
+      targetId: targetId,
+      action: action,
+      isShowLoader: true,
+    );
+
+    if (response != null && response['statusCode'] == 1) {
+      final data = response['data'];
+      final following = data is Map
+          ? data['isFollowing'] == true
+          : action == 'follow';
+      isFollowingHost.value = following;
+      Get.snackbar(
+        following ? 'Following' : 'Unfollowed',
+        following
+            ? 'You are now following ${hostName.value}.'
+            : 'You unfollowed ${hostName.value}.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.black87,
+        colorText: kColorWhite,
+      );
+      return;
+    }
+
+    Get.snackbar(
+      'Follow',
+      response?['message']?.toString() ?? 'Unable to update follow status.',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.black87,
+      colorText: kColorWhite,
+    );
+  }
+
   void shareRoom() {
-    final String roomUrl =
-        'https://qobo.live/room/${roomType.value.toLowerCase()}_${hashCode.toString().substring(0, 4)}';
+    final shareId = roomId.value.trim().isNotEmpty
+        ? roomId.value.trim()
+        : _extractBackendRoomId(_roomData) ?? 'room';
+    final String roomUrl = 'https://qobo.live/room/$shareId';
 
     Get.bottomSheet(
       Container(
@@ -462,7 +728,8 @@ class LiveBroadcastController extends GetxController {
 
   void toggleMic() {
     try {
-      final mic = ZegoUIKitPrebuiltLiveStreamingController().audioVideo.microphone;
+      final mic =
+          ZegoUIKitPrebuiltLiveStreamingController().audioVideo.microphone;
       mic.switchState();
       isMicMuted.value = !mic.localState;
     } catch (_) {
@@ -473,7 +740,8 @@ class LiveBroadcastController extends GetxController {
   void toggleCamera() {
     if (!isVideoRoom) return;
     try {
-      final camera = ZegoUIKitPrebuiltLiveStreamingController().audioVideo.camera;
+      final camera =
+          ZegoUIKitPrebuiltLiveStreamingController().audioVideo.camera;
       camera.switchState();
       isCameraOff.value = !camera.localState;
     } catch (_) {
@@ -487,6 +755,14 @@ class LiveBroadcastController extends GetxController {
 
   @override
   void onClose() {
+    _messageSub?.cancel();
+    _userSub?.cancel();
+    if (_viewerCountListener != null) {
+      try {
+        ZegoUIKitPrebuiltLiveStreamingController().user.countNotifier
+            .removeListener(_viewerCountListener!);
+      } catch (_) {}
+    }
     chatTextController.dispose();
     super.onClose();
   }

@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/repo/room/room_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/live_streaming_permissions.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
@@ -133,12 +134,21 @@ class LiveRoomCreateController extends GetxController {
   Map<String, dynamic> _buildLocalStreamPayload(String name) {
     final id = ZegoLiveIdUtils.sanitize(liveStreamingId.value);
     liveStreamingId.value = id;
+    final session = Get.isRegistered<UserSessionController>()
+        ? Get.find<UserSessionController>()
+        : null;
     return {
       'name': name,
       'liveStreamingId': id,
       'zegoLiveId': id,
       'onlyFollows': onlyFollows.value,
       'isLive': true,
+      if (session != null) ...{
+        'hostId': session.userId,
+        'hostName': session.displayName,
+        'hostAvatar': session.displayPicturePath,
+        'displayPicture': session.displayPicturePath,
+      },
     };
   }
 
@@ -210,6 +220,16 @@ class LiveRoomCreateController extends GetxController {
     map['liveStreamingId'] = zegoId;
     map['zegoLiveId'] = zegoId;
     map['onlyFollows'] = map['onlyFollows'] ?? onlyFollows.value;
+
+    final session = Get.isRegistered<UserSessionController>()
+        ? Get.find<UserSessionController>()
+        : null;
+    if (session != null) {
+      map.putIfAbsent('hostId', () => session.userId);
+      map.putIfAbsent('hostName', () => session.displayName);
+      map.putIfAbsent('hostAvatar', () => session.displayPicturePath);
+      map.putIfAbsent('displayPicture', () => session.displayPicturePath);
+    }
     return map;
   }
 

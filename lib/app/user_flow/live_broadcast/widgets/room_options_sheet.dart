@@ -65,6 +65,10 @@ class RoomOptionsSheet extends StatelessWidget {
                       if (Get.isRegistered<LiveBroadcastController>()) {
                         Get.find<LiveBroadcastController>().shareRoom();
                       }
+                    } else if (opt['label'] == 'Follow') {
+                      if (Get.isRegistered<LiveBroadcastController>()) {
+                        Get.find<LiveBroadcastController>().toggleFollowHost();
+                      }
                     } else {
                       Get.snackbar(
                         'Action',
