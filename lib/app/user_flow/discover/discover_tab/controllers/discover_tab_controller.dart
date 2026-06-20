@@ -7,6 +7,9 @@ import 'package:qobo_one_live/app/user_flow/messages/messages_tab/widgets/match_
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/repo/chat/chat_navigation_helper.dart';
 import 'package:qobo_one_live/repo/user/user_repo.dart';
+import 'package:qobo_one_live/services/chat/chat_call_launcher.dart';
+import 'package:qobo_one_live/services/chat/chat_call_service.dart';
+import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 
 /// Controller for Discover tab — user feed from `GET /api/user/discover`.
@@ -288,6 +291,26 @@ class DiscoverTabController extends GetxController {
     );
   }
 
+  /// Direct Zego call from Discover — rings peer but skips chat call history.
+  Future<void> startDirectCall(
+    BuildContext context,
+    SocialUserCard user,
+    ChatCallType callType,
+  ) async {
+    if (user.id.isEmpty) {
+      AppToast.showError(context, 'Invalid user');
+      return;
+    }
+
+    await ChatCallLauncher.start(
+      context: context,
+      targetId: user.id,
+      peerName: user.name,
+      callType: callType,
+      recordCallHistory: false,
+    );
+  }
+
   MatchUserSheetActions get matchSheetActions => MatchUserSheetActions(
         processingFollowId: processingFollowId,
         userById: userById,
@@ -300,6 +323,12 @@ class DiscoverTabController extends GetxController {
   void refreshOnTabSelected() {
     if (!isDiscoverUsersLoading.value) {
       fetchDiscoverUsers();
+    }
+    if (Get.isRegistered<ChatIncomingCallCoordinator>()) {
+      unawaited(
+        Get.find<ChatIncomingCallCoordinator>()
+            .syncWatchedRoomsFromFirestore(),
+      );
     }
   }
 

@@ -9,6 +9,7 @@ import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/services/agency_session_controller.dart';
+import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
@@ -64,6 +65,14 @@ class BottomNavController extends GetxController {
     _userSession.loadFromStorage();
     _fetchProfileOnInit();
     _prefetchAgencySession();
+    _syncIncomingCallWatchers();
+  }
+
+  void _syncIncomingCallWatchers() {
+    if (!Get.isRegistered<ChatIncomingCallCoordinator>()) return;
+    unawaited(
+      Get.find<ChatIncomingCallCoordinator>().syncWatchedRoomsFromFirestore(),
+    );
   }
 
   Future<void> _prefetchAgencySession() async {

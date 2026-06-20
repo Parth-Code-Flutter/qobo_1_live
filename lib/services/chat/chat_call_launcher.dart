@@ -34,6 +34,7 @@ abstract final class ChatCallLauncher {
     required String peerName,
     String? roomId,
     required ChatCallType callType,
+    bool recordCallHistory = true,
     ChatRepo? chatRepo,
     ChatCallService? callService,
   }) async {
@@ -76,34 +77,45 @@ abstract final class ChatCallLauncher {
       if (signaling.isAvailable) {
         final signedIn = await _ensureFirebaseSession();
         if (!signedIn) {
-          if (!context.mounted) return;
-          AppToast.showError(
-            context,
-            'Could not connect to calling service. Try again.',
-          );
-          return;
-        }
-
-        try {
-          final ringResult = await signaling.ringOutgoingCall(
-            roomId: chatRoomId,
-            callerId: myId,
-            callerName: _myDisplayName,
-            calleeId: targetId,
-            callType: callType,
-          );
-          callId = ringResult.zegoCallId;
-          historyDocId = ringResult.historyDocId;
-        } catch (e) {
           LoggerUtils.logWarning(
-            'ChatCallLauncher: Firestore ring failed — $e (joining Zego anyway)',
+            'ChatCallLauncher: Firebase sign-in failed — joining Zego without ring',
           );
-          if (context.mounted && e is FirebaseException) {
-            if (e.code == 'permission-denied') {
-              AppToast.showWarning(
-                context,
-                'Ring signal blocked — publish Firestore rules. Joining call…',
-              );
+          if (context.mounted) {
+            AppToast.showWarning(
+              context,
+              'Could not ring the other person — opening call anyway.',
+            );
+          }
+        } else {
+          if (Get.isRegistered<ChatIncomingCallCoordinator>()) {
+            Get.find<ChatIncomingCallCoordinator>()
+                .syncWatchedRooms([chatRoomId], replace: false);
+          }
+
+          try {
+            final ringResult = await signaling.ringOutgoingCall(
+              roomId: chatRoomId,
+              callerId: myId,
+              callerName: _myDisplayName,
+              calleeId: targetId,
+              callType: callType,
+              recordCallHistory: recordCallHistory,
+            );
+            callId = ringResult.zegoCallId;
+            if (recordCallHistory) {
+              historyDocId = ringResult.historyDocId;
+            }
+          } catch (e) {
+            LoggerUtils.logWarning(
+              'ChatCallLauncher: Firestore ring failed — $e (joining Zego anyway)',
+            );
+            if (context.mounted && e is FirebaseException) {
+              if (e.code == 'permission-denied') {
+                AppToast.showWarning(
+                  context,
+                  'Ring signal blocked — publish Firestore rules. Joining call…',
+                );
+              }
             }
           }
         }
@@ -125,12 +137,14 @@ abstract final class ChatCallLauncher {
         arguments: {
           'roomId': chatRoomId,
           'callId': callId,
-          'historyDocId': historyDocId,
+          if (recordCallHistory && historyDocId.isNotEmpty)
+            'historyDocId': historyDocId,
           'callStartedAt': callStartedAt,
           'hostId': targetId,
           'peerName': peerName,
           'isCaller': true,
           'isVideo': callType == ChatCallType.video,
+          'recordCallHistory': recordCallHistory,
         },
       );
 

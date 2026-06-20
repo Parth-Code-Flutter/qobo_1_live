@@ -34,12 +34,25 @@ service cloud.firestore {
           && request.auth.uid == userId
           && isMember(roomId);
       }
+
+      match /calls/{callDoc} {
+        allow read, write: if isMember(roomId);
+      }
     }
 
     match /userChats/{userId}/rooms/{roomId} {
       // For testing: user can manage only their own chat list
       allow read, create, update, delete: if isSignedIn()
         && request.auth.uid == userId;
+    }
+
+    match /userIncomingCalls/{userId} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow create, update: if isSignedIn()
+        && request.resource.data.callerId == request.auth.uid;
+      allow delete: if isSignedIn()
+        && (request.auth.uid == userId
+          || request.auth.uid == resource.data.callerId);
     }
 
     match /users/{userId}/presence/{doc} {

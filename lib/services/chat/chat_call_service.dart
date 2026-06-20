@@ -57,6 +57,34 @@ class ChatCallService {
         .doc(activeDocId);
   }
 
+  DocumentReference<Map<String, dynamic>>? _userIncomingCallRef(String userId) {
+    final firestore = _firestore;
+    if (userId.isEmpty || firestore == null) return null;
+    return firestore.collection('userIncomingCalls').doc(userId);
+  }
+
+  Future<void> _clearUserIncomingCall({
+    required String calleeId,
+    String? roomId,
+  }) async {
+    final ref = _userIncomingCallRef(calleeId);
+    if (ref == null) return;
+
+    try {
+      if (roomId != null && roomId.isNotEmpty) {
+        final snap = await ref.get();
+        if (!snap.exists) return;
+        final activeRoom = snap.data()?['roomId']?.toString() ?? '';
+        if (activeRoom.isNotEmpty && activeRoom != roomId) return;
+      }
+      await ref.delete();
+    } catch (e) {
+      LoggerUtils.logWarning(
+        'ChatCallService: clear userIncomingCalls/$calleeId failed — $e',
+      );
+    }
+  }
+
   Stream<Map<String, dynamic>> watchActiveCall(String roomId) {
     final ref = _activeRef(roomId);
     if (ref == null) return const Stream.empty();
@@ -77,6 +105,7 @@ class ChatCallService {
     required String callerName,
     required String calleeId,
     required ChatCallType callType,
+    bool recordCallHistory = true,
   }) async {
     final ref = _activeRef(roomId);
     if (ref == null) {
@@ -88,7 +117,7 @@ class ChatCallService {
     final callStartedAt = DateTime.now().toUtc().toIso8601String();
     await ref.set({
       'callId': callId,
-      'historyDocId': historyDocId,
+      if (recordCallHistory) 'historyDocId': historyDocId,
       'callStartedAt': callStartedAt,
       'roomId': roomId,
       'callerId': callerId,
@@ -96,18 +125,67 @@ class ChatCallService {
       'calleeId': calleeId,
       'type': callType == ChatCallType.video ? 'video' : 'voice',
       'status': 'ringing',
+      'recordCallHistory': recordCallHistory,
       'startedAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
+
+    final userRingRef = _userIncomingCallRef(calleeId);
+    if (userRingRef != null) {
+      try {
+        await userRingRef.set({
+          'callId': callId,
+          if (recordCallHistory) 'historyDocId': historyDocId,
+          'callStartedAt': callStartedAt,
+          'roomId': roomId,
+          'callerId': callerId,
+          'callerName': callerName,
+          'calleeId': calleeId,
+          'type': callType == ChatCallType.video ? 'video' : 'voice',
+          'status': 'ringing',
+          'recordCallHistory': recordCallHistory,
+          'startedAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      } catch (e) {
+        LoggerUtils.logWarning(
+          'ChatCallService: userIncomingCalls/$calleeId write failed — $e',
+        );
+      }
+    }
     LoggerUtils.logInfo(
       'ChatCallService: ring chatRooms/$roomId/calls/$activeDocId '
       'type=${callType.name} callId=$callId history=$historyDocId',
     );
     return ChatOutgoingCallIds(
       zegoCallId: callId,
-      historyDocId: historyDocId,
+      historyDocId: recordCallHistory ? historyDocId : '',
       callStartedAt: callStartedAt,
     );
+  }
+
+  /// Removes ephemeral `calls/active` only — no call history or chat log writes.
+  Future<void> clearActiveCall(
+    String roomId, {
+    String? endedByUserId,
+  }) async {
+    final ref = _activeRef(roomId);
+    if (ref == null) return;
+
+    try {
+      final snap = await ref.get();
+      final calleeId = snap.data()?['calleeId']?.toString() ?? '';
+      await ref.delete();
+      if (calleeId.isNotEmpty) {
+        await _clearUserIncomingCall(calleeId: calleeId, roomId: roomId);
+      }
+      LoggerUtils.logInfo(
+        'ChatCallService: cleared active call for $roomId '
+        '(endedBy=${endedByUserId ?? 'unknown'})',
+      );
+    } catch (e) {
+      LoggerUtils.logWarning('ChatCallService: clearActiveCall failed — $e');
+    }
   }
 
   Future<void> markAccepted({
@@ -123,6 +201,7 @@ class ChatCallService {
         'acceptedAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
+      await _clearUserIncomingCall(calleeId: userId, roomId: roomId);
     } catch (e) {
       LoggerUtils.logWarning('ChatCallService: markAccepted failed — $e');
     }
@@ -150,6 +229,10 @@ class ChatCallService {
         active = Map<String, dynamic>.from(snap.data() ?? {});
       }
       await ref.delete();
+      final calleeId = active?['calleeId']?.toString() ?? '';
+      if (calleeId.isNotEmpty) {
+        await _clearUserIncomingCall(calleeId: calleeId, roomId: roomId);
+      }
     } catch (e) {
       LoggerUtils.logWarning('ChatCallService: endCall failed — $e');
       return false;
@@ -158,6 +241,14 @@ class ChatCallService {
     if (active == null || active.isEmpty) {
       LoggerUtils.logInfo(
         'ChatCallService: no active call doc for $roomId (already cleared)',
+      );
+      return false;
+    }
+
+    final recordCallHistory = active['recordCallHistory'] != false;
+    if (!recordCallHistory) {
+      LoggerUtils.logInfo(
+        'ChatCallService: skipped call history for $roomId (direct call)',
       );
       return false;
     }

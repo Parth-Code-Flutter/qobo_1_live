@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/services/chat/chat_call_service.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -22,14 +24,26 @@ Future<void> showDiscoverUserCallDialog(
   await showDialog<void>(
     context: context,
     barrierColor: Colors.black.withValues(alpha: 0.6),
-    builder: (ctx) => DiscoverUserCallDialog(user: profile),
+    builder: (ctx) => DiscoverUserCallDialog(
+      hostContext: context,
+      user: profile,
+      controller: controller,
+    ),
   );
 }
 
 class DiscoverUserCallDialog extends StatelessWidget {
-  const DiscoverUserCallDialog({super.key, required this.user});
+  const DiscoverUserCallDialog({
+    super.key,
+    required this.hostContext,
+    required this.user,
+    required this.controller,
+  });
 
+  /// Feed/root context — stays mounted after the dialog is popped.
+  final BuildContext hostContext;
   final SocialUserCard user;
+  final DiscoverTabController controller;
 
   @override
   Widget build(BuildContext context) {
@@ -290,7 +304,10 @@ class DiscoverUserCallDialog extends StatelessWidget {
                 kColorProfileChipPurpleEnd,
               ],
             ),
-            onTap: () => Navigator.of(context).pop(),
+            onTap: () => _startCall(
+              context,
+              ChatCallType.voice,
+            ),
           ),
         ),
         Spacing.h12,
@@ -304,11 +321,22 @@ class DiscoverUserCallDialog extends StatelessWidget {
                 kColorProfileActionPinkEnd,
               ],
             ),
-            onTap: () => Navigator.of(context).pop(),
+            onTap: () => _startCall(
+              context,
+              ChatCallType.video,
+            ),
           ),
         ),
       ],
     );
+  }
+
+  Future<void> _startCall(BuildContext dialogContext, ChatCallType callType) async {
+    Navigator.of(dialogContext).pop();
+    await Future<void>.delayed(Duration.zero);
+    final launchContext = hostContext.mounted ? hostContext : Get.context;
+    if (launchContext == null || !launchContext.mounted) return;
+    await controller.startDirectCall(launchContext, user, callType);
   }
 }
 

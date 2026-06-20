@@ -1,11 +1,14 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/messages/chat_voice_call/controllers/chat_voice_call_controller.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/chat/chat_call_service.dart';
+import 'package:qobo_one_live/services/chat/chat_firebase_service.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
+import 'package:qobo_one_live/services/firebase/firebase_bootstrap.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/zego_call_id_utils.dart';
 import 'package:qobo_one_live/utils/zego_engine_utils.dart';
@@ -20,10 +23,28 @@ class ChatIncomingCallCoordinator extends GetxService {
   final Map<String, StreamSubscription<Map<String, dynamic>>> _subscriptions =
       {};
   final Set<String> _watchedRooms = {};
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _userChatsSub;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userRingSub;
   bool _dialogOpen = false;
   bool _onCallScreen = false;
+  bool _bootstrapStarted = false;
+  String? _lastHandledRingKey;
+
+  @override
+  void onInit() {
+    super.onInit();
+    unawaited(_bootstrap());
+  }
 
   void setOnCallScreen(bool value) => _onCallScreen = value;
+
+  Future<void> _bootstrap() async {
+    if (_bootstrapStarted) return;
+    _bootstrapStarted = true;
+
+    await syncWatchedRoomsFromFirestore();
+    await _startLiveListeners();
+  }
 
   void syncWatchedRooms(Iterable<String> roomIds, {bool replace = false}) {
     if (!_callService.isAvailable) return;
@@ -40,6 +61,76 @@ class ChatIncomingCallCoordinator extends GetxService {
       _watchedRooms.addAll(normalized);
     }
     _applyWatchers();
+  }
+
+  /// Merges Firestore inbox/chat rooms so discover calls can ring peers.
+  Future<void> syncWatchedRoomsFromFirestore() async {
+    if (!_callService.isAvailable) return;
+
+    final myId = _myUserId;
+    if (myId.isEmpty) return;
+
+    if (!Get.isRegistered<ChatSessionService>()) {
+      Get.put(ChatSessionService(), permanent: true);
+    }
+    final signedIn =
+        await Get.find<ChatSessionService>().ensureSignedIn(isShowLoader: false);
+    if (!signedIn) return;
+
+    final rows = await ChatFirebaseService().fetchInboxRoomsForUser(myId);
+    final roomIds = rows
+        .map((row) => row['roomId']?.toString() ?? '')
+        .where((id) => id.isNotEmpty);
+    syncWatchedRooms(roomIds, replace: false);
+  }
+
+  Future<void> _startLiveListeners() async {
+    if (!FirebaseBootstrap.isAvailable) return;
+
+    final myId = _myUserId;
+    if (myId.isEmpty) return;
+
+    if (!Get.isRegistered<ChatSessionService>()) {
+      Get.put(ChatSessionService(), permanent: true);
+    }
+    final signedIn =
+        await Get.find<ChatSessionService>().ensureSignedIn(isShowLoader: false);
+    if (!signedIn) return;
+
+    await _userChatsSub?.cancel();
+    _userChatsSub = FirebaseFirestore.instance
+        .collection('userChats')
+        .doc(myId)
+        .collection('rooms')
+        .snapshots()
+        .listen(
+          (snapshot) {
+            final roomIds = snapshot.docs
+                .map((doc) => doc.data()['roomId']?.toString() ?? doc.id)
+                .where((id) => id.isNotEmpty);
+            syncWatchedRooms(roomIds, replace: false);
+          },
+          onError: (_) {},
+        );
+
+    await _userRingSub?.cancel();
+    _userRingSub = FirebaseFirestore.instance
+        .collection('userIncomingCalls')
+        .doc(myId)
+        .snapshots()
+        .listen(
+          (snapshot) {
+            if (!snapshot.exists) {
+              _lastHandledRingKey = null;
+              return;
+            }
+            final data = Map<String, dynamic>.from(snapshot.data() ?? {});
+            final roomId = data['roomId']?.toString() ?? '';
+            if (roomId.isEmpty) return;
+            _onActiveCallSnapshot(roomId: roomId, data: data);
+          },
+          onError: (_) {},
+        );
   }
 
   void _applyWatchers() {
@@ -77,12 +168,17 @@ class ChatIncomingCallCoordinator extends GetxService {
     final calleeId = data['calleeId']?.toString() ?? '';
     if (calleeId.isNotEmpty && calleeId != myId) return;
 
-    _dialogOpen = true;
-    final callerName = data['callerName']?.toString() ?? 'Someone';
     final callId =
         data['callId']?.toString() ?? ZegoCallIdUtils.fromRoomId(roomId);
+    final ringKey = '$roomId:$callId:ringing';
+    if (_lastHandledRingKey == ringKey) return;
+    _lastHandledRingKey = ringKey;
+
+    _dialogOpen = true;
+    final callerName = data['callerName']?.toString() ?? 'Someone';
     final historyDocId = data['historyDocId']?.toString() ?? '';
     final callStartedAt = data['callStartedAt']?.toString() ?? '';
+    final recordCallHistory = data['recordCallHistory'] != false;
     final isVideo = data['type']?.toString() == 'video';
 
     Get.dialog<void>(
@@ -98,6 +194,7 @@ class ChatIncomingCallCoordinator extends GetxService {
             onPressed: () async {
               Get.back();
               _dialogOpen = false;
+              _lastHandledRingKey = null;
               await _callService.endCall(
                 roomId,
                 endedByUserId: myId,
@@ -110,6 +207,7 @@ class ChatIncomingCallCoordinator extends GetxService {
             onPressed: () async {
               Get.back();
               _dialogOpen = false;
+              _lastHandledRingKey = null;
               await _acceptCall(
                 roomId: roomId,
                 callId: callId,
@@ -118,6 +216,7 @@ class ChatIncomingCallCoordinator extends GetxService {
                 callerId: callerId,
                 callerName: callerName,
                 isVideo: isVideo,
+                recordCallHistory: recordCallHistory,
               );
             },
             child: const Text('Accept'),
@@ -125,7 +224,10 @@ class ChatIncomingCallCoordinator extends GetxService {
         ],
       ),
       barrierDismissible: false,
-    ).whenComplete(() => _dialogOpen = false);
+    ).whenComplete(() {
+      _dialogOpen = false;
+      _lastHandledRingKey = null;
+    });
   }
 
   Future<void> _acceptCall({
@@ -136,6 +238,7 @@ class ChatIncomingCallCoordinator extends GetxService {
     required String callerId,
     required String callerName,
     required bool isVideo,
+    bool recordCallHistory = true,
   }) async {
     final myId = _myUserId;
     if (myId.isEmpty) return;
@@ -162,6 +265,7 @@ class ChatIncomingCallCoordinator extends GetxService {
         'peerName': callerName,
         'isCaller': false,
         'isVideo': isVideo,
+        'recordCallHistory': recordCallHistory,
       },
     );
     _onCallScreen = false;
@@ -174,6 +278,8 @@ class ChatIncomingCallCoordinator extends GetxService {
 
   @override
   void onClose() {
+    unawaited(_userChatsSub?.cancel());
+    unawaited(_userRingSub?.cancel());
     for (final sub in _subscriptions.values) {
       unawaited(sub.cancel());
     }

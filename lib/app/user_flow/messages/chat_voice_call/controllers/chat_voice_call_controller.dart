@@ -40,6 +40,7 @@ class ChatVoiceCallController extends GetxController {
   bool _charged = false;
   bool _callRecorded = false;
   bool _peerJoined = false;
+  bool _recordCallHistory = true;
 
   String get zegoUserId {
     if (!Get.isRegistered<UserSessionController>()) {
@@ -72,6 +73,7 @@ class ChatVoiceCallController extends GetxController {
           : ZegoCallIdUtils.fromRoomId(roomId.value);
       historyDocId.value = args['historyDocId']?.toString() ?? '';
       _callStartedAtIso = args['callStartedAt']?.toString();
+      _recordCallHistory = args['recordCallHistory'] != false;
     }
     _startedAt = DateTime.now();
     _callStartedAtIso ??= _startedAt!.toUtc().toIso8601String();
@@ -124,6 +126,18 @@ class ChatVoiceCallController extends GetxController {
 
     final myId = _rawUserId;
     if (myId.isEmpty) return null;
+
+    if (!_recordCallHistory) {
+      await _callService.clearActiveCall(
+        roomId.value,
+        endedByUserId: myId,
+      );
+      _callRecorded = true;
+      LoggerUtils.logInfo(
+        'ChatVoiceCallController: direct call ended — no history stored',
+      );
+      return null;
+    }
 
     final startedAt = _startedAt;
     final endedAt = DateTime.now().toUtc();
