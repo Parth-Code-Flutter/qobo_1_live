@@ -12,6 +12,7 @@ import 'package:qobo_one_live/services/agency_session_controller.dart';
 import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
+import 'package:qobo_one_live/utils/app_media_permissions.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 
 /// Controller for bottom-nav state.
@@ -62,6 +63,7 @@ class BottomNavController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    unawaited(_guardMediaPermissions());
     _userSession.loadFromStorage();
     _fetchProfileOnInit();
     _prefetchAgencySession();
@@ -73,6 +75,11 @@ class BottomNavController extends GetxController {
     unawaited(
       Get.find<ChatIncomingCallCoordinator>().syncWatchedRoomsFromFirestore(),
     );
+  }
+
+  Future<void> _guardMediaPermissions() async {
+    if (await AppMediaPermissions.areGranted()) return;
+    Get.offAllNamed(Routes.SPLASH);
   }
 
   Future<void> _prefetchAgencySession() async {
