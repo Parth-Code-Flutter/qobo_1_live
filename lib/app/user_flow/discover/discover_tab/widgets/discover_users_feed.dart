@@ -56,27 +56,6 @@ class DiscoverUsersFeed extends StatelessWidget {
                 padding: const EdgeInsets.only(left: 2, right: 2, bottom: 8),
                 child: Row(
                   children: [
-                    SemiBoldText(
-                      text: 'New Matches',
-                      fontSize: TextStyles.k14FontSize,
-                      color: kColorWhite,
-                    ),
-                    Spacing.h8,
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 7,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: kColorDiscoverChip.withValues(alpha: 0.7),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: SemiBoldText(
-                        text: '${users.length}',
-                        fontSize: TextStyles.k10FontSize,
-                        color: kColorWhite,
-                      ),
-                    ),
                   ],
                 ),
               );
@@ -151,10 +130,10 @@ class _DiscoverUserRow extends StatelessWidget {
                     ),
                   ),
                 ),
-                _CompactCallActions(
-                  onVoiceCall: onVoiceCall,
-                  onVideoCall: onVideoCall,
-                ),
+                // _CompactCallActions(
+                //   onVoiceCall: onVoiceCall,
+                //   onVideoCall: onVideoCall,
+                // ),
               ],
             ),
           ),
@@ -177,7 +156,7 @@ class _CompactAvatar extends StatelessWidget {
         AppUserAvatar(
           name: user.name,
           imageUrl: user.displayPicture,
-          size: 38,
+          size: 36,
           border: Border.all(
             color: user.isMutual
                 ? kColorBottomNavHeart
@@ -225,12 +204,12 @@ class _CompactInfo extends StatelessWidget {
         if (user.level > 0) ...[
           AppText(
             text: ' · ',
-            fontSize: TextStyles.k12FontSize,
+            fontSize: TextStyles.k10FontSize,
             color: kColorWhite.withValues(alpha: 0.35),
           ),
           AppText(
             text: 'Lv ${user.level}',
-            fontSize: TextStyles.k10FontSize,
+            fontSize: TextStyles.k8FontSize,
             color: kColorWhite.withValues(alpha: 0.55),
           ),
         ],
