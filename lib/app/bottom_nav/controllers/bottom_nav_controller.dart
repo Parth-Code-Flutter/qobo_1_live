@@ -89,7 +89,7 @@ class BottomNavController extends GetxController {
   void _applyTabSelection(int index) {
     selectedIndex.value = index;
     if (index == 0 && Get.isRegistered<DiscoverTabController>()) {
-      Get.find<DiscoverTabController>().clearRoomMode();
+      Get.find<DiscoverTabController>().refreshOnTabSelected();
     }
     if (index == heartTabIndex &&
         Get.isRegistered<AgencyHostListController>(tag: heartHostListTag)) {

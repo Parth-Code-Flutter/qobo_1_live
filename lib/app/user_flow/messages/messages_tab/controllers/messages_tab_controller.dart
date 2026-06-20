@@ -16,6 +16,7 @@ import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 
 import '../models/social_user_card.dart';
+import '../widgets/match_user_sheet.dart';
 import '../widgets/messages_common_widgets.dart';
 
 /// Messages tab: New Match discover feed + chat inbox.
@@ -577,6 +578,14 @@ class MessagesTabController extends GetxController {
     if (raw is int) return raw;
     return int.tryParse(raw?.toString() ?? '') ?? 0;
   }
+
+  MatchUserSheetActions get matchSheetActions => MatchUserSheetActions(
+        processingFollowId: processingFollowId,
+        userById: userById,
+        fetchPublicProfile: fetchPublicProfile,
+        toggleFollow: toggleFollow,
+        openChat: openChat,
+      );
 
   @override
   void onClose() {

@@ -179,7 +179,11 @@ class MessagesTabView extends GetView<MessagesTabController> {
           final user = matches[index];
           return MessageMatchAvatarItem(
             user: user,
-            onTap: () => showMatchUserSheet(context, controller, user),
+            onTap: () => showMatchUserSheet(
+              context,
+              controller.matchSheetActions,
+              user,
+            ),
           );
         },
       ),
@@ -216,7 +220,11 @@ class MessagesTabView extends GetView<MessagesTabController> {
           user: user,
           isProcessing: controller.processingFollowId.value == user.id,
           onFollowTap: () => controller.toggleFollow(context, user),
-          onAvatarTap: () => showMatchUserSheet(context, controller, user),
+          onAvatarTap: () => showMatchUserSheet(
+            context,
+            controller.matchSheetActions,
+            user,
+          ),
         );
       },
     );

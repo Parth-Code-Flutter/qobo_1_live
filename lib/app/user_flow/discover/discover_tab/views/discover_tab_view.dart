@@ -11,9 +11,7 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/ui_utils/app_ui_utils.dart';
 
 import '../controllers/discover_tab_controller.dart';
-import '../models/discover_room_selection.dart';
-import '../widgets/discover_audio_room_view.dart';
-import '../widgets/discover_video_room_view.dart';
+import '../widgets/discover_users_feed.dart';
 
 class DiscoverTabView extends StatelessWidget {
   const DiscoverTabView({super.key});
@@ -37,38 +35,12 @@ class DiscoverTabView extends StatelessWidget {
               Spacing.v16,
               _searchBar(discoverController),
               Spacing.v12,
-              Obx(() {
-                if (discoverController.searchQuery.value.isNotEmpty) {
-                  return const SizedBox.shrink();
-                }
-                return Column(
-                  children: [_roomModeRow(discoverController), Spacing.v16],
-                );
-              }),
               Expanded(
                 child: Obx(() {
                   if (discoverController.searchQuery.value.isNotEmpty) {
                     return _searchResultsList(context, discoverController);
                   }
-
-                  switch (discoverController.roomSelection.value) {
-                    case DiscoverRoomSelection.video:
-                      return DiscoverVideoRoomView(
-                        rooms: discoverController.videoRooms,
-                        isLoading: discoverController.isVideoRoomsLoading.value,
-                        onJoinLive: (room) =>
-                            discoverController.joinLiveRoom(context, room),
-                      );
-                    case DiscoverRoomSelection.audio:
-                      return DiscoverAudioRoomView(
-                        rooms: discoverController.audioRooms,
-                        isLoading: discoverController.isAudioRoomsLoading.value,
-                      );
-                    case DiscoverRoomSelection.none:
-                      return _defaultDiscoverFeed(
-                        controller: discoverController,
-                      );
-                  }
+                  return DiscoverUsersFeed(controller: discoverController);
                 }),
               ),
             ],
@@ -183,76 +155,6 @@ class DiscoverTabView extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _roomModeRow(DiscoverTabController controller) {
-    return Obx(
-      () => Row(
-        children: [
-          Expanded(
-            child: _modeChip(
-              icon: Icons.videocam_outlined,
-              label: DiscoverVideoRoomView.roomLabel,
-              isSelected:
-                  controller.roomSelection.value == DiscoverRoomSelection.video,
-              onTap: controller.selectVideoRoom,
-            ),
-          ),
-          Spacing.h12,
-          Expanded(
-            child: _modeChip(
-              icon: Icons.graphic_eq_rounded,
-              label: DiscoverAudioRoomView.roomLabel,
-              isSelected:
-                  controller.roomSelection.value == DiscoverRoomSelection.audio,
-              onTap: controller.selectAudioRoom,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _defaultDiscoverFeed({required DiscoverTabController controller}) {
-    return const SizedBox.shrink();
-  }
-
-  Widget _modeChip({
-    required IconData icon,
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
-        height: 40,
-        decoration: BoxDecoration(
-          color: isSelected ? kColorDiscoverChip : Colors.transparent,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(
-            color: isSelected
-                ? kColorDiscoverModeBorder.withValues(alpha: 0.75)
-                : kColorWhite.withValues(alpha: 0.9),
-            width: 1,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 15, color: kColorWhite),
-            Spacing.h8,
-            SemiBoldText(
-              text: label,
-              fontSize: TextStyles.k24FontSize - 11,
-              color: kColorWhite,
-            ),
-          ],
-        ),
       ),
     );
   }

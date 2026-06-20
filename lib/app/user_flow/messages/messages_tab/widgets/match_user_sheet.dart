@@ -7,17 +7,35 @@ import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 
-import '../controllers/messages_tab_controller.dart';
 import '../models/social_user_card.dart';
+
+/// Follow / profile / message actions for the match user bottom sheet.
+class MatchUserSheetActions {
+  MatchUserSheetActions({
+    required this.processingFollowId,
+    required this.userById,
+    required this.fetchPublicProfile,
+    required this.toggleFollow,
+    required this.openChat,
+  });
+
+  final RxString processingFollowId;
+  final SocialUserCard? Function(String id) userById;
+  final Future<SocialUserCard?> Function(String id) fetchPublicProfile;
+  final Future<void> Function(BuildContext context, SocialUserCard user)
+      toggleFollow;
+  final Future<void> Function(BuildContext context, SocialUserCard user)
+      openChat;
+}
 
 /// Bottom sheet when tapping a New Match avatar.
 Future<void> showMatchUserSheet(
   BuildContext context,
-  MessagesTabController controller,
+  MatchUserSheetActions actions,
   SocialUserCard user,
 ) async {
   SocialUserCard profile = user;
-  final refreshed = await controller.fetchPublicProfile(user.id);
+  final refreshed = await actions.fetchPublicProfile(user.id);
   if (refreshed != null) profile = refreshed;
 
   if (!context.mounted) return;
@@ -29,8 +47,8 @@ Future<void> showMatchUserSheet(
     barrierColor: Colors.black.withValues(alpha: 0.55),
     builder: (ctx) {
       return Obx(() {
-        final live = controller.userById(profile.id) ?? profile;
-        final isProcessing = controller.processingFollowId.value == live.id;
+        final live = actions.userById(profile.id) ?? profile;
+        final isProcessing = actions.processingFollowId.value == live.id;
 
         return Padding(
           padding: EdgeInsets.only(
@@ -41,11 +59,11 @@ Future<void> showMatchUserSheet(
           child: _MatchUserSheetBody(
             user: live,
             isProcessing: isProcessing,
-            onFollowTap: () => controller.toggleFollow(ctx, live),
+            onFollowTap: () => actions.toggleFollow(ctx, live),
             onMessageTap: () => _onMessagePressed(
               sheetContext: ctx,
               hostContext: context,
-              controller: controller,
+              actions: actions,
               user: live,
             ),
           ),
@@ -58,7 +76,7 @@ Future<void> showMatchUserSheet(
 Future<void> _onMessagePressed({
   required BuildContext sheetContext,
   required BuildContext hostContext,
-  required MessagesTabController controller,
+  required MatchUserSheetActions actions,
   required SocialUserCard user,
 }) async {
   if (!user.canMessage) {
@@ -74,7 +92,7 @@ Future<void> _onMessagePressed({
   Navigator.of(sheetContext).pop();
   await Future<void>.delayed(Duration.zero);
   if (!hostContext.mounted) return;
-  await controller.openChat(hostContext, user);
+  await actions.openChat(hostContext, user);
 }
 
 class _MatchUserSheetBody extends StatelessWidget {

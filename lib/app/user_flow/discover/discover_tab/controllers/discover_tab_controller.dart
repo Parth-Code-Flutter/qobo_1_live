@@ -1,29 +1,34 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
+import 'package:qobo_one_live/app/user_flow/messages/messages_tab/widgets/match_user_sheet.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
-import 'package:qobo_one_live/repo/room/room_repo.dart';
-import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/repo/chat/chat_navigation_helper.dart';
+import 'package:qobo_one_live/repo/user/user_repo.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 
-import '../models/discover_room_selection.dart';
-
-/// Controller for discover tab local UI state.
+/// Controller for Discover tab — user feed from `GET /api/user/discover`.
 class DiscoverTabController extends GetxController {
-  final roomSelection = DiscoverRoomSelection.video.obs;
+  DiscoverTabController({
+    AuthRepo? authRepo,
+    UserRepo? userRepo,
+  })  : _authRepo = authRepo ?? AuthRepo(),
+        _userRepo = userRepo ?? UserRepo();
+
+  final AuthRepo _authRepo;
+  final UserRepo _userRepo;
 
   final searchController = TextEditingController();
 
-  final AuthRepo _authRepo = AuthRepo();
-  final RoomRepo _roomRepo = RoomRepo();
+  final discoverUsers = <SocialUserCard>[].obs;
   final searchResults = <dynamic>[].obs;
-  final videoRooms = <Map<String, dynamic>>[].obs;
-  final audioRooms = <Map<String, dynamic>>[].obs;
+  final isDiscoverUsersLoading = false.obs;
   final isSearchLoading = false.obs;
-  final isVideoRoomsLoading = false.obs;
-  final isAudioRoomsLoading = false.obs;
   final followingUserIds = <String>{}.obs;
   final searchQuery = ''.obs;
+  final processingFollowId = ''.obs;
 
   Timer? _debounceTimer;
 
@@ -31,7 +36,7 @@ class DiscoverTabController extends GetxController {
   void onInit() {
     super.onInit();
     searchController.addListener(_onSearchChanged);
-    fetchVideoRooms();
+    fetchDiscoverUsers();
   }
 
   void _onSearchChanged() {
@@ -45,6 +50,29 @@ class DiscoverTabController extends GetxController {
         searchResults.clear();
       }
     });
+  }
+
+  /// Same feed as Messages tab "New Match" row.
+  Future<void> fetchDiscoverUsers() async {
+    try {
+      isDiscoverUsersLoading.value = true;
+      final response = await _userRepo.discoverUsers(
+        page: 1,
+        limit: 30,
+        isShowLoader: false,
+      );
+      if (isSocialApiSuccess(response)) {
+        discoverUsers.assignAll(
+          SocialUserCard.listFromResponseData(response!['data']),
+        );
+        return;
+      }
+      discoverUsers.clear();
+    } catch (_) {
+      discoverUsers.clear();
+    } finally {
+      isDiscoverUsersLoading.value = false;
+    }
   }
 
   Future<void> performSearch(String query) async {
@@ -76,64 +104,6 @@ class DiscoverTabController extends GetxController {
     }
   }
 
-  Future<void> fetchVideoRooms() async {
-    try {
-      isVideoRoomsLoading.value = true;
-      var response = await _roomRepo.getVideoSwiper(isShowLoader: false);
-      if (response == null ||
-          response['statusCode'] != 1 ||
-          response['data'] is! List ||
-          (response['data'] as List).isEmpty) {
-        response = await _roomRepo.listActiveRooms(
-          type: 'video',
-          isShowLoader: false,
-        );
-      }
-      if (response != null && response['statusCode'] == 1) {
-        final list = response['data'];
-        if (list is List) {
-          videoRooms.assignAll(
-            list.whereType<Map>().map(
-              (item) => Map<String, dynamic>.from(item),
-            ),
-          );
-          return;
-        }
-      }
-      videoRooms.clear();
-    } catch (_) {
-      videoRooms.clear();
-    } finally {
-      isVideoRoomsLoading.value = false;
-    }
-  }
-
-  Future<void> fetchAudioRooms() async {
-    try {
-      isAudioRoomsLoading.value = true;
-      final response = await _roomRepo.listActiveRooms(
-        type: 'audio',
-        isShowLoader: false,
-      );
-      if (response != null && response['statusCode'] == 1) {
-        final list = response['data'];
-        if (list is List) {
-          audioRooms.assignAll(
-            list.whereType<Map>().map(
-              (item) => Map<String, dynamic>.from(item),
-            ),
-          );
-          return;
-        }
-      }
-      audioRooms.clear();
-    } catch (_) {
-      audioRooms.clear();
-    } finally {
-      isAudioRoomsLoading.value = false;
-    }
-  }
-
   Future<void> toggleFollow(BuildContext context, String targetId) async {
     final isFollowing = followingUserIds.contains(targetId);
     final action = isFollowing ? 'unfollow' : 'follow';
@@ -156,6 +126,7 @@ class DiscoverTabController extends GetxController {
           followingUserIds.remove(targetId);
           AppToast.showSuccess(context, 'Unfollowed successfully');
         }
+        _syncDiscoverUserFollowState(targetId, isFollowing: isFollowing);
       } else {
         final msg = response?['message']?.toString() ?? 'Action failed';
         AppToast.showError(context, msg);
@@ -166,102 +137,175 @@ class DiscoverTabController extends GetxController {
     }
   }
 
-  void selectVideoRoom() {
-    roomSelection.value = DiscoverRoomSelection.video;
-    if (videoRooms.isEmpty && !isVideoRoomsLoading.value) {
-      fetchVideoRooms();
-    }
-  }
-
-  void selectAudioRoom() {
-    roomSelection.value = DiscoverRoomSelection.audio;
-    if (audioRooms.isEmpty && !isAudioRoomsLoading.value) {
-      fetchAudioRooms();
-    }
-  }
-
-  Future<void> joinLiveRoom(
+  Future<void> toggleFollowUser(
     BuildContext context,
-    Map<String, dynamic> room,
+    SocialUserCard user,
   ) async {
-    final roomId = _extractRoomId(room);
-    if (roomId == null) {
-      AppToast.showError(
-        context,
-        'Cannot join this live room because room id is missing.',
-      );
-      return;
-    }
-
+    final action = user.isFollowing ? 'unfollow' : 'follow';
+    processingFollowId.value = user.id;
     try {
-      final response = await _roomRepo.joinRoom(roomId: roomId);
+      final response = await _authRepo.followUnfollow(
+        targetId: user.id,
+        action: action,
+        isShowLoader: false,
+      );
       if (!context.mounted) return;
+      if (isSocialApiSuccess(response)) {
+        final data = response?['data'];
+        final Map<String, dynamic>? dataMap =
+            data is Map ? Map<String, dynamic>.from(data) : null;
+        final isFollowing = dataMap?['isFollowing'] == true ||
+            (action == 'follow' && dataMap == null);
+        final isFollower = dataMap?['isFollower'] == true || user.isFollower;
+        final isMutual =
+            dataMap?['isMutual'] == true || (isFollowing && isFollower);
+        final canMessage = dataMap?['canMessage'] == true ||
+            isFollowing ||
+            isFollower ||
+            isMutual;
 
-      if (response != null && response['statusCode'] == 1) {
-        final responseData = response['data'];
-        final mergedRoomData = <String, dynamic>{
-          ...room,
-          if (responseData is Map) ...Map<String, dynamic>.from(responseData),
-          'room_id': roomId,
-        };
-
-        Get.toNamed(
-          Routes.LIVE_BROADCAST,
-          arguments: {
-            'isHost': false,
-            'roomType': _extractRoomType(mergedRoomData),
-            'roomData': mergedRoomData,
-          },
+        _applyFollowState(
+          user.id,
+          isFollowing: isFollowing,
+          isFollower: isFollower,
+          isMutual: isMutual,
+          canMessage: canMessage,
+          followersCount: _toInt(dataMap?['followersCount']),
+          followingCount: _toInt(dataMap?['followingCount']),
+        );
+        if (isFollowing) {
+          followingUserIds.add(user.id);
+        } else {
+          followingUserIds.remove(user.id);
+        }
+        AppToast.showSuccess(
+          context,
+          isFollowing ? 'Followed successfully' : 'Unfollowed successfully',
         );
         return;
       }
-
       AppToast.showError(
         context,
-        response?['message']?.toString() ?? 'Unable to join live room.',
+        response?['message']?.toString() ?? 'Action failed',
       );
     } catch (e) {
       if (!context.mounted) return;
-      AppToast.showError(context, 'Unable to join live room: $e');
+      AppToast.showError(context, 'Error: $e');
+    } finally {
+      processingFollowId.value = '';
     }
   }
 
-  String? _extractRoomId(Map<String, dynamic> room) {
-    const keys = [
-      'room_id',
-      'roomId',
-      'zegoLiveId',
-      'zego_live_id',
-      'zegoRoomId',
-      'zego_room_id',
-      'channelName',
-      'channel_name',
-      'liveStreamingId',
-      'livestreamingId',
-      'live_streaming_id',
-      'liveStreamId',
-      'live_id',
-      'liveId',
-      '_id',
-      'id',
-    ];
+  void _syncDiscoverUserFollowState(
+    String userId, {
+    required bool isFollowing,
+  }) {
+    discoverUsers.value = discoverUsers
+        .map(
+          (u) => u.id == userId ? u.copyWith(isFollowing: isFollowing) : u,
+        )
+        .toList();
+  }
 
-    for (final key in keys) {
-      final value = room[key]?.toString().trim();
-      if (value != null && value.isNotEmpty && value != 'null') return value;
+  void _applyFollowState(
+    String userId, {
+    required bool isFollowing,
+    bool? isFollower,
+    bool? isMutual,
+    bool? canMessage,
+    int? followersCount,
+    int? followingCount,
+  }) {
+    SocialUserCard merge(SocialUserCard u) {
+      if (u.id != userId) return u;
+      final nextFollower = isFollower ?? u.isFollower;
+      final nextFollowing = isFollowing;
+      final nextMutual =
+          isMutual ?? ((nextFollowing && nextFollower) || u.isMutual);
+      final nextCanMessage = canMessage ??
+          (nextFollowing || nextFollower || nextMutual || u.canMessage);
+      return u.copyWith(
+        isFollowing: nextFollowing,
+        isFollower: nextFollower,
+        isMutual: nextMutual,
+        canMessage: nextCanMessage,
+        followersCount: followersCount ?? u.followersCount,
+        followingCount: followingCount ?? u.followingCount,
+      );
+    }
+
+    discoverUsers.value = discoverUsers.map(merge).toList();
+  }
+
+  SocialUserCard? userById(String id) {
+    for (final u in discoverUsers) {
+      if (u.id == id) return u;
     }
     return null;
   }
 
-  String _extractRoomType(Map<String, dynamic> room) {
-    final type = room['type']?.toString().trim().toUpperCase();
-    if (type == 'AUDIO') return 'AUDIO';
-    return 'VIDEO';
+  Future<SocialUserCard?> fetchPublicProfile(String userId) async {
+    if (userId.isEmpty) return null;
+    final cached = userById(userId);
+    try {
+      final response = await _userRepo.getPublicProfile(
+        userId: userId,
+        isShowLoader: false,
+      );
+      if (isSocialApiSuccess(response) && response?['data'] is Map) {
+        final fresh = SocialUserCard.fromJson(
+          Map<String, dynamic>.from(response!['data'] as Map),
+        );
+        if (cached != null) {
+          return fresh.copyWith(
+            isFollowing: cached.isFollowing || fresh.isFollowing,
+            isFollower: cached.isFollower || fresh.isFollower,
+            isMutual: cached.isMutual || fresh.isMutual,
+            canMessage: cached.canMessage || fresh.canMessage,
+          );
+        }
+        return fresh;
+      }
+    } catch (_) {}
+    return cached;
   }
 
-  /// Resets Discover to the default Video Room tab when user returns to this nav item.
-  void clearRoomMode() {
-    selectVideoRoom();
+  Future<void> openChat(BuildContext context, SocialUserCard user) async {
+    if (user.id.isEmpty) return;
+    if (!user.canMessage) {
+      AppToast.showError(
+        context,
+        'Follow each other to start messaging',
+      );
+      return;
+    }
+
+    await ChatNavigationHelper.openDirectChat(
+      context,
+      targetId: user.id,
+      name: user.name,
+      imageUrl: user.displayPicture,
+    );
+  }
+
+  MatchUserSheetActions get matchSheetActions => MatchUserSheetActions(
+        processingFollowId: processingFollowId,
+        userById: userById,
+        fetchPublicProfile: fetchPublicProfile,
+        toggleFollow: toggleFollowUser,
+        openChat: openChat,
+      );
+
+  /// Refresh discover users when user returns to this nav item.
+  void refreshOnTabSelected() {
+    if (!isDiscoverUsersLoading.value) {
+      fetchDiscoverUsers();
+    }
+  }
+
+  static int _toInt(dynamic raw) {
+    if (raw is int) return raw;
+    return int.tryParse(raw?.toString() ?? '') ?? 0;
   }
 
   @override
