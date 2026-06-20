@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
-import 'package:qobo_one_live/app/user_flow/messages/messages_tab/widgets/match_user_sheet.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
@@ -9,6 +8,7 @@ import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 import '../controllers/discover_tab_controller.dart';
+import 'discover_user_call_dialog.dart';
 
 /// Discover tab — same users as Messages "New Match" (`GET /api/user/discover`).
 class DiscoverUsersFeed extends StatelessWidget {
@@ -68,9 +68,9 @@ class DiscoverUsersFeed extends StatelessWidget {
             final user = users[index];
             return _DiscoverUserListTile(
               user: user,
-              onTap: () => showMatchUserSheet(
+              onTap: () => showDiscoverUserCallDialog(
                 context,
-                controller.matchSheetActions,
+                controller,
                 user,
               ),
             );
