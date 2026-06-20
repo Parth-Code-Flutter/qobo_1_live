@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -18,6 +19,8 @@ class CommonLiveRoomWidget extends StatelessWidget {
     this.isFavorite = false,
   });
 
+  static const _radius = 16.0;
+
   final String imageUrl;
   final String userNameAge;
   final String badgeText;
@@ -27,26 +30,29 @@ class CommonLiveRoomWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF302A5C), width: 1),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(_radius),
+      clipBehavior: Clip.antiAlias,
+      child: ColoredBox(
+        color: LiveRoomUiColors.cardSurface,
         child: Stack(
+          fit: StackFit.expand,
           children: [
             Positioned.fill(
               child: imageUrl.startsWith('http')
                   ? Image.network(
                       imageUrl,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(color: const Color(0xFF241D4D)),
+                      errorBuilder: (_, __, ___) => const ColoredBox(
+                        color: LiveRoomUiColors.cardSurface,
+                      ),
                     )
                   : Image.asset(
                       imageUrl,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(color: const Color(0xFF241D4D)),
+                      errorBuilder: (_, __, ___) => const ColoredBox(
+                        color: LiveRoomUiColors.cardSurface,
+                      ),
                     ),
             ),
             Positioned.fill(
@@ -72,13 +78,29 @@ class CommonLiveRoomWidget extends StatelessWidget {
               const Positioned(
                 right: 10,
                 top: 56,
-                child: Icon(Icons.favorite, color: Colors.pinkAccent, size: 14),
+                child: Icon(
+                  Icons.favorite,
+                  color: Colors.pinkAccent,
+                  size: 14,
+                ),
               ),
             Positioned(
               left: 10,
               right: 10,
               bottom: 10,
               child: _bottomInfo(),
+            ),
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: LiveRoomUiColors.cardBorder,
+                      width: 1,
+                    ),
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -92,7 +114,7 @@ class CommonLiveRoomWidget extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF541878).withValues(alpha: 0.92),
         borderRadius: const BorderRadius.only(
-          topRight: Radius.circular(16),
+          topRight: Radius.circular(_radius),
           bottomLeft: Radius.circular(14),
         ),
       ),
@@ -127,10 +149,14 @@ class CommonLiveRoomWidget extends StatelessWidget {
               fontSize: TextStyles.k14FontSize,
               color: kColorWhite,
             ),
-        Spacing.v4,
+            Spacing.v4,
             Row(
               children: [
-                const Icon(Icons.location_on_outlined, color: Color(0xFF00E676), size: 14),
+                const Icon(
+                  Icons.location_on_outlined,
+                  color: Color(0xFF00E676),
+                  size: 14,
+                ),
                 Spacing.h2,
                 AppText(
                   text: locationText,

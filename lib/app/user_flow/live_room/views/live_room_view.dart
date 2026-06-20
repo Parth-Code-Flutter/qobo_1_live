@@ -92,30 +92,34 @@ class LiveRoomView extends StatelessWidget {
                                   width: 1.5,
                                 ),
                               ),
-                              child: GridView.builder(
-                                physics: const BouncingScrollPhysics(),
-                                itemCount: controller.rooms.length,
-                                gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 2,
-                                      mainAxisSpacing: 12,
-                                      crossAxisSpacing: 12,
-                                      childAspectRatio: 0.8,
-                                    ),
-                                itemBuilder: (context, index) {
-                                  final room = controller.rooms[index];
-                                  return GestureDetector(
-                                    onTap: () => controller.joinRoom(room),
-                                    child: CommonLiveRoomWidget(
-                                      imageUrl: room['image'] as String,
-                                      userNameAge: room['nameAge'] as String,
-                                      badgeText: room['badge'] as String,
-                                      locationText: room['location'] as String,
-                                      pointsText: room['points'] as String,
-                                      isFavorite: room['favorite'] as bool,
-                                    ),
-                                  );
-                                },
+                              child: ColoredBox(
+                                color: LiveRoomUiColors.screenGradientBottom,
+                                child: GridView.builder(
+                                  physics: const BouncingScrollPhysics(),
+                                  itemCount: controller.rooms.length,
+                                  gridDelegate:
+                                      const SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: 2,
+                                        mainAxisSpacing: 12,
+                                        crossAxisSpacing: 12,
+                                        childAspectRatio: 0.8,
+                                      ),
+                                  itemBuilder: (context, index) {
+                                    final room = controller.rooms[index];
+                                    return GestureDetector(
+                                      onTap: () => controller.joinRoom(room),
+                                      child: CommonLiveRoomWidget(
+                                        imageUrl: room['image'] as String,
+                                        userNameAge: room['nameAge'] as String,
+                                        badgeText: room['badge'] as String,
+                                        locationText:
+                                            room['location'] as String,
+                                        pointsText: room['points'] as String,
+                                        isFavorite: room['favorite'] as bool,
+                                      ),
+                                    );
+                                  },
+                                ),
                               ),
                             ),
                           ),
