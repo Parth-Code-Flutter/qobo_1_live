@@ -7,8 +7,10 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/repo/economy/economy_repo.dart';
+import 'package:qobo_one_live/repo/chat/chat_navigation_helper.dart';
 import 'package:qobo_one_live/repo/room/room_repo.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
+import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
@@ -216,15 +218,30 @@ class LiveBroadcastController extends GetxController {
 
   void _syncViewers(List<ZegoUIKitUser> users) {
     final normalizedHostId = ZegoLiveIdUtils.sanitizeUserId(receiverId.value);
+    final hostTargetId = receiverId.value.trim();
+    final session = Get.isRegistered<UserSessionController>()
+        ? Get.find<UserSessionController>()
+        : null;
+    final mySanitized = ZegoLiveIdUtils.sanitizeUserId(
+      session?.userId.isNotEmpty == true ? session!.userId : '',
+    );
+
     liveViewers.assignAll(
       users.map((user) {
         final normalizedUserId = ZegoLiveIdUtils.sanitizeUserId(user.id);
+        final isHost = normalizedHostId.isNotEmpty &&
+            normalizedUserId == normalizedHostId;
+        final isCurrentUser =
+            mySanitized.isNotEmpty && normalizedUserId == mySanitized;
         return <String, dynamic>{
           'id': user.id,
+          'targetId': isHost && hostTargetId.isNotEmpty
+              ? hostTargetId
+              : user.id,
           'name': user.name.isNotEmpty ? user.name : 'Viewer',
-          'avatarUrl': null,
-          'isHost': normalizedHostId.isNotEmpty &&
-              normalizedUserId == normalizedHostId,
+          'avatarUrl': isHost ? hostAvatarUrl.value : null,
+          'isHost': isHost,
+          'isCurrentUser': isCurrentUser,
         };
       }),
     );
@@ -559,6 +576,58 @@ class LiveBroadcastController extends GetxController {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
     );
+  }
+
+  /// Opens 1:1 chat with a viewer/host from the live room list.
+  Future<void> openChatWithViewer(
+    BuildContext context,
+    Map<String, dynamic> viewer,
+  ) async {
+    if (viewer['isCurrentUser'] == true) return;
+
+    final targetId = viewer['targetId']?.toString().trim() ??
+        viewer['id']?.toString().trim() ??
+        '';
+    if (targetId.isEmpty) {
+      _showToast(context, 'User profile is not available', isError: true);
+      return;
+    }
+
+    if (_isViewerCurrentUser(targetId)) return;
+
+    if (Get.isBottomSheetOpen == true) {
+      Get.back();
+    }
+
+    final launchContext = Get.context ?? context;
+    await ChatNavigationHelper.openDirectChat(
+      launchContext,
+      targetId: targetId,
+      name: viewer['name']?.toString() ?? 'User',
+      imageUrl: viewer['avatarUrl']?.toString(),
+    );
+  }
+
+  void _showToast(
+    BuildContext context,
+    String message, {
+    bool isError = false,
+  }) {
+    if (!context.mounted) return;
+    if (isError) {
+      AppToast.showError(context, message);
+    } else {
+      AppToast.showSuccess(context, message);
+    }
+  }
+
+  bool _isViewerCurrentUser(String targetId) {
+    if (!Get.isRegistered<UserSessionController>()) return false;
+    final myId = Get.find<UserSessionController>().userId.trim();
+    if (myId.isEmpty) return false;
+    return myId == targetId ||
+        ZegoLiveIdUtils.sanitizeUserId(myId) ==
+            ZegoLiveIdUtils.sanitizeUserId(targetId);
   }
 
   Future<void> toggleFollowHost() async {

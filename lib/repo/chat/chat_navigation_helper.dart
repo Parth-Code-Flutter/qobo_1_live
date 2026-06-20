@@ -22,7 +22,7 @@ abstract final class ChatNavigationHelper {
     ChatRepo? chatRepo,
   }) async {
     if (targetId.isEmpty) {
-      AppToast.showError(context, 'Invalid chat partner');
+      _toastError(context, 'Invalid chat partner');
       return;
     }
 
@@ -52,8 +52,8 @@ abstract final class ChatNavigationHelper {
           firestorePath = room.firestorePath.isNotEmpty
               ? room.firestorePath
               : 'chatRooms/${room.roomId}';
-        } else if (context.mounted) {
-          AppToast.showError(
+        } else {
+          _toastError(
             context,
             roomResponse?['message']?.toString() ??
                 'Could not open chat. Check follow status or try again.',
@@ -62,7 +62,11 @@ abstract final class ChatNavigationHelper {
         }
       }
 
-      if (!context.mounted) return;
+      if (resolvedRoomId.isEmpty) {
+        _toastError(context, 'Chat room is not ready yet');
+        return;
+      }
+
       await Get.toNamed(
         Routes.CHAT_DETAIL,
         arguments: {
@@ -74,9 +78,21 @@ abstract final class ChatNavigationHelper {
         },
       );
     } catch (e) {
-      if (!context.mounted) return;
-      AppToast.showError(context, 'Error opening chat: $e');
+      _toastError(context, 'Error opening chat: $e');
     }
+  }
+
+  static void _toastError(BuildContext context, String message) {
+    final ctx = _activeContext(context);
+    if (ctx == null) return;
+    AppToast.showError(ctx, message);
+  }
+
+  static BuildContext? _activeContext(BuildContext context) {
+    if (context.mounted) return context;
+    final root = Get.context;
+    if (root != null && root.mounted) return root;
+    return null;
   }
 
   static Future<void> _ensureFirebaseSession() async {
