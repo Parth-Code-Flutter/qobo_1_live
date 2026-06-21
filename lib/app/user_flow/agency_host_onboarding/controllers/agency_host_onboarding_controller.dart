@@ -27,6 +27,9 @@ class AgencyHostOnboardingController extends GetxController {
   final hostIdController = TextEditingController();
   final whatsAppController = TextEditingController();
   final gmailController = TextEditingController();
+  final countryRegionController = TextEditingController();
+  final stateController = TextEditingController();
+  final addressController = TextEditingController();
   final agencyCodeController = TextEditingController();
 
   final selectedBirthday = Rxn<DateTime>();
@@ -82,6 +85,9 @@ class AgencyHostOnboardingController extends GetxController {
     hostIdController.dispose();
     whatsAppController.dispose();
     gmailController.dispose();
+    countryRegionController.dispose();
+    stateController.dispose();
+    addressController.dispose();
     agencyCodeController.dispose();
     super.onClose();
   }
@@ -169,6 +175,25 @@ class AgencyHostOnboardingController extends GetxController {
     return Validate.emailValidation(context, value ?? '');
   }
 
+  String? validateRequiredField(String? value, String label) {
+    if ((value ?? '').trim().isEmpty) {
+      return '$label is required';
+    }
+    return null;
+  }
+
+  String? validateCountryRegion(String? value) {
+    return validateRequiredField(value, 'Country');
+  }
+
+  String? validateState(String? value) {
+    return validateRequiredField(value, 'State');
+  }
+
+  String? validateAddress(String? value) {
+    return validateRequiredField(value, 'Address');
+  }
+
   String? validateAgencyCode(BuildContext context, String? value) {
     final code = (value ?? '').trim();
     if (code.isEmpty) return 'Agency code is required';
@@ -232,6 +257,9 @@ class AgencyHostOnboardingController extends GetxController {
       whatsapp: whatsapp,
       type: selectedType.value!.apiValue,
       category: selectedInterest.value!.apiValue,
+      countryRegion: countryRegionController.text.trim(),
+      state: stateController.text.trim(),
+      address: addressController.text.trim(),
       hostRealPhoto: hostPhoto.value!,
       dob: formatAgencyHostDob(birthday),
       idNo: hostIdController.text.trim(),

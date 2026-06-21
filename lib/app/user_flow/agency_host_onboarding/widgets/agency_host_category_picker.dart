@@ -14,7 +14,7 @@ Future<AgencyHostInterest?> showAgencyHostCategoryPicker(
   return showAppBottomSheet<AgencyHostInterest>(
     context: context,
     title: 'Select category',
-    subtitle: 'Choose your main talent or interest as a host',
+    subtitle: 'Choose your host category',
     child: Column(
       children: [
         for (var i = 0; i < AgencyHostInterest.values.length; i++) ...[
@@ -78,7 +78,7 @@ class AgencyHostCategoryField extends StatelessWidget {
                     Expanded(
                       child: selected == null
                           ? AppText(
-                              text: 'Select interest',
+                              text: 'Select category',
                               fontSize: TextStyles.k14FontSize,
                               color: kColorHint.withValues(alpha: 0.9),
                             )

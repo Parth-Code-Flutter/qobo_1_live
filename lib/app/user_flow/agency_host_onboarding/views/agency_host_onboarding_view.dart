@@ -77,6 +77,12 @@ class AgencyHostOnboardingView extends GetView<AgencyHostOnboardingController> {
                                     Spacing.v10,
                                     _gmailField(context),
                                     Spacing.v10,
+                                    _countryField(context),
+                                    Spacing.v10,
+                                    _stateField(context),
+                                    Spacing.v10,
+                                    _addressField(context),
+                                    Spacing.v10,
                                     _agencyCodeField(context),
                                     Spacing.v16,
                                     _typeSection(),
@@ -301,6 +307,53 @@ class AgencyHostOnboardingView extends GetView<AgencyHostOnboardingController> {
             colorFilter: const ColorFilter.mode(kColorHint, BlendMode.srcIn),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _countryField(BuildContext context) {
+    return _labeledField(
+      label: 'Country',
+      child: AppTextField(
+        controller: controller.countryRegionController,
+        validator: controller.validateCountryRegion,
+        hintText: 'Enter country',
+        borderColor: kColorHint,
+        textInputAction: TextInputAction.next,
+        textCapitalization: TextCapitalization.words,
+        prefix: _fieldIcon(Icons.public_outlined),
+      ),
+    );
+  }
+
+  Widget _stateField(BuildContext context) {
+    return _labeledField(
+      label: 'State',
+      child: AppTextField(
+        controller: controller.stateController,
+        validator: controller.validateState,
+        hintText: 'Enter state',
+        borderColor: kColorHint,
+        textInputAction: TextInputAction.next,
+        textCapitalization: TextCapitalization.words,
+        prefix: _fieldIcon(Icons.map_outlined),
+      ),
+    );
+  }
+
+  Widget _addressField(BuildContext context) {
+    return _labeledField(
+      label: 'Address',
+      child: AppTextField(
+        controller: controller.addressController,
+        validator: controller.validateAddress,
+        hintText: 'Enter full address',
+        borderColor: kColorHint,
+        textInputAction: TextInputAction.next,
+        textCapitalization: TextCapitalization.sentences,
+        maxLines: 2,
+        minLines: 2,
+        prefix: _fieldIcon(Icons.home_outlined),
       ),
     );
   }
