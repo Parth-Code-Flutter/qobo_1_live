@@ -12,7 +12,7 @@ import 'package:qobo_one_live/services/chat/chat_call_service.dart';
 import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 
-/// Controller for Discover tab — user feed from `GET /api/user/discover`.
+/// Controller for Discover tab — user feed from `GET /api/discover`.
 class DiscoverTabController extends GetxController {
   DiscoverTabController({
     AuthRepo? authRepo,
@@ -31,7 +31,9 @@ class DiscoverTabController extends GetxController {
   final isSearchLoading = false.obs;
   final followingUserIds = <String>{}.obs;
   final searchQuery = ''.obs;
+  final selectedCountry = RxnString();
   final processingFollowId = ''.obs;
+  final processingFavouriteId = ''.obs;
 
   Timer? _debounceTimer;
 
@@ -55,13 +57,14 @@ class DiscoverTabController extends GetxController {
     });
   }
 
-  /// Same feed as Messages tab "New Match" row.
+  /// Explore grid feed — `GET /api/discover` (separate from Messages New Match).
   Future<void> fetchDiscoverUsers() async {
     try {
       isDiscoverUsersLoading.value = true;
-      final response = await _userRepo.discoverUsers(
+      final response = await _userRepo.exploreDiscover(
         page: 1,
         limit: 30,
+        country: selectedCountry.value,
         isShowLoader: false,
       );
       if (isSocialApiSuccess(response)) {
@@ -105,6 +108,63 @@ class DiscoverTabController extends GetxController {
     } finally {
       isSearchLoading.value = false;
     }
+  }
+
+  Future<void> applyCountryFilter(String? country) async {
+    final normalized = country?.trim();
+    selectedCountry.value =
+        normalized == null || normalized.isEmpty ? null : normalized;
+    await fetchDiscoverUsers();
+  }
+
+  Future<void> toggleFavourite(
+    BuildContext context,
+    SocialUserCard user,
+  ) async {
+    if (user.id.isEmpty) return;
+
+    final nextFavourite = !user.isFavourite;
+    processingFavouriteId.value = user.id;
+    _applyFavouriteState(user.id, isFavourite: nextFavourite);
+
+    try {
+      final response = nextFavourite
+          ? await _userRepo.favouriteUser(targetId: user.id, isShowLoader: false)
+          : await _userRepo.unfavouriteUser(
+              targetId: user.id,
+              isShowLoader: false,
+            );
+      if (!context.mounted) return;
+
+      if (isSocialApiSuccess(response)) {
+        final data = response?['data'];
+        final resolved = data is Map
+            ? data['isFavourite'] == true || data['isFavorite'] == true
+            : nextFavourite;
+        _applyFavouriteState(user.id, isFavourite: resolved);
+        return;
+      }
+
+      _applyFavouriteState(user.id, isFavourite: !nextFavourite);
+      AppToast.showError(
+        context,
+        response?['message']?.toString() ?? 'Could not update favourite',
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      _applyFavouriteState(user.id, isFavourite: !nextFavourite);
+      AppToast.showError(context, 'Error: $e');
+    } finally {
+      processingFavouriteId.value = '';
+    }
+  }
+
+  void _applyFavouriteState(String userId, {required bool isFavourite}) {
+    discoverUsers.value = discoverUsers
+        .map(
+          (u) => u.id == userId ? u.copyWith(isFavourite: isFavourite) : u,
+        )
+        .toList();
   }
 
   Future<void> toggleFollow(BuildContext context, String targetId) async {

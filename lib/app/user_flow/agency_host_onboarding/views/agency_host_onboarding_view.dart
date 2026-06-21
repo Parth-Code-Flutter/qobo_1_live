@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
@@ -88,6 +90,8 @@ class AgencyHostOnboardingView extends GetView<AgencyHostOnboardingController> {
                                     _typeSection(),
                                     Spacing.v16,
                                     _categoryDropdown(context),
+                                    Spacing.v20,
+                                    _governmentDocsSection(context),
                                     Spacing.v28,
                                     Obx(
                                       () => appButton(
@@ -445,6 +449,107 @@ class AgencyHostOnboardingView extends GetView<AgencyHostOnboardingController> {
         ),
       ),
     );
+  }
+
+  Widget _governmentDocsSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const AppText(
+          text: 'Upload government document photos',
+          fontSize: TextStyles.k14FontSize,
+          color: kColorText,
+        ),
+        Spacing.v6,
+        const AppText(
+          text: 'Upload clear photos of your ID document (front and back).',
+          fontSize: TextStyles.k12FontSize,
+          color: kColorHint,
+        ),
+        Spacing.v10,
+        Row(
+          children: [
+            Expanded(
+              child: _docPhotoTile(
+                context,
+                label: 'Front photo',
+                file: controller.docPhotoFront,
+                onTap: () => controller.onDocPhotoFrontTap(context),
+              ),
+            ),
+            Spacing.h10,
+            Expanded(
+              child: _docPhotoTile(
+                context,
+                label: 'Back photo',
+                file: controller.docPhotoBack,
+                onTap: () => controller.onDocPhotoBackTap(context),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _docPhotoTile(
+    BuildContext context, {
+    required String label,
+    required Rxn<File> file,
+    required VoidCallback onTap,
+  }) {
+    return Obx(() {
+      final picked = file.value;
+      return GestureDetector(
+        onTap: onTap,
+        child: Column(
+          children: [
+            AspectRatio(
+              aspectRatio: 1.35,
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: kColorAvatarFallbackBg.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: kColorHint.withValues(alpha: 0.35),
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(13),
+                  child: picked != null
+                      ? Image.file(picked, fit: BoxFit.cover)
+                      : Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.upload_file_outlined,
+                              size: 28,
+                              color: kColorHint.withValues(alpha: 0.85),
+                            ),
+                            Spacing.v6,
+                            AppText(
+                              text: 'Tap to upload',
+                              fontSize: TextStyles.k10FontSize,
+                              color: kColorHint.withValues(alpha: 0.9),
+                              align: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+            ),
+            Spacing.v6,
+            AppText(
+              text: label,
+              fontSize: TextStyles.k12FontSize,
+              color: kColorHint,
+              align: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    });
   }
 
   Widget _categoryDropdown(BuildContext context) {

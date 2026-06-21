@@ -11,6 +11,7 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/ui_utils/app_ui_utils.dart';
 
 import '../controllers/discover_tab_controller.dart';
+import '../widgets/discover_country_filter_sheet.dart';
 import '../widgets/discover_users_feed.dart';
 
 class DiscoverTabView extends StatelessWidget {
@@ -19,7 +20,6 @@ class DiscoverTabView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final discoverController = _resolveController();
-    final userSession = _resolveUserSession();
 
     return Container(
       decoration: const BoxDecoration(
@@ -31,7 +31,7 @@ class DiscoverTabView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _topHeader(userSession),
+              _topHeader(context, discoverController),
               Spacing.v16,
               _searchBar(discoverController),
               Spacing.v12,
@@ -51,7 +51,11 @@ class DiscoverTabView extends StatelessWidget {
   }
 
   /// Header row (real profile image/name + location) matching Figma.
-  Widget _topHeader(UserSessionController userSession) {
+  Widget _topHeader(
+    BuildContext context,
+    DiscoverTabController discoverController,
+  ) {
+    final userSession = _resolveUserSession();
     return GetBuilder<UserSessionController>(
       init: userSession,
       builder: (session) {
@@ -104,21 +108,67 @@ class DiscoverTabView extends StatelessWidget {
                 borderRadius: BorderRadius.circular(22),
               ),
               child: Center(
-                child: SvgPicture.asset(
-                  kIconFilter,
-                  width: 20,
-                  height: 20,
-                  colorFilter: const ColorFilter.mode(
-                    kColorPrimary,
-                    BlendMode.srcIn,
-                  ),
-                ),
+                child: Obx(() {
+                  final hasFilter =
+                      discoverController.selectedCountry.value?.isNotEmpty ==
+                          true;
+                  return Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      IconButton(
+                        onPressed: () => _openCountryFilter(
+                          context,
+                          discoverController,
+                        ),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 30,
+                          minHeight: 30,
+                        ),
+                        icon: SvgPicture.asset(
+                          kIconFilter,
+                          width: 20,
+                          height: 20,
+                          colorFilter: const ColorFilter.mode(
+                            kColorPrimary,
+                            BlendMode.srcIn,
+                          ),
+                        ),
+                      ),
+                      if (hasFilter)
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: Container(
+                            width: 7,
+                            height: 7,
+                            decoration: const BoxDecoration(
+                              color: kColorBottomNavHeart,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                }),
               ),
             ),
           ],
         );
       },
     );
+  }
+
+  Future<void> _openCountryFilter(
+    BuildContext context,
+    DiscoverTabController controller,
+  ) async {
+    final result = await showDiscoverCountryFilterSheet(
+      context: context,
+      initialCountry: controller.selectedCountry.value,
+    );
+    if (result == null) return;
+    await controller.applyCountryFilter(result.isEmpty ? null : result);
   }
 
   Widget _searchBar(DiscoverTabController discoverController) {

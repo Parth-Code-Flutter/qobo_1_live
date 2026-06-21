@@ -15,6 +15,7 @@ class SocialUserCard {
     this.isMutual = false,
     this.canMessage = false,
     this.isVip = false,
+    this.isFavourite = false,
     this.followersCount = 0,
     this.followingCount = 0,
   });
@@ -31,6 +32,7 @@ class SocialUserCard {
   final bool isMutual;
   final bool canMessage;
   final bool isVip;
+  final bool isFavourite;
   final int followersCount;
   final int followingCount;
 
@@ -39,6 +41,7 @@ class SocialUserCard {
     bool? isFollower,
     bool? isMutual,
     bool? canMessage,
+    bool? isFavourite,
     int? followersCount,
     int? followingCount,
   }) {
@@ -55,6 +58,7 @@ class SocialUserCard {
       isMutual: isMutual ?? this.isMutual,
       canMessage: canMessage ?? this.canMessage,
       isVip: isVip,
+      isFavourite: isFavourite ?? this.isFavourite,
       followersCount: followersCount ?? this.followersCount,
       followingCount: followingCount ?? this.followingCount,
     );
@@ -84,6 +88,8 @@ class SocialUserCard {
       isMutual: isMutual,
       canMessage: apiCanMessage || isFollowing || isFollower || isMutual,
       isVip: json['isVip'] == true,
+      isFavourite:
+          json['isFavourite'] == true || json['isFavorite'] == true,
       followersCount: _toInt(json['followersCount']),
       followingCount: _toInt(json['followingCount']),
     );

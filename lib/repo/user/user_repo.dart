@@ -37,6 +37,46 @@ class UserRepo {
     bool excludeFollowing = false,
     bool isShowLoader = false,
   }) async {
+    return _fetchDiscoverFeed(
+      endPoint: UserEndpoints.discover,
+      page: page,
+      limit: limit,
+      country: country,
+      gender: gender,
+      excludeFollowing: excludeFollowing,
+      isShowLoader: isShowLoader,
+    );
+  }
+
+  /// `GET /api/discover` — Explore tab grid (same params + `country` filter).
+  Future<Map<String, dynamic>?> exploreDiscover({
+    int page = 1,
+    int limit = 20,
+    String? country,
+    String? gender,
+    bool excludeFollowing = false,
+    bool isShowLoader = false,
+  }) async {
+    return _fetchDiscoverFeed(
+      endPoint: UserEndpoints.exploreDiscover,
+      page: page,
+      limit: limit,
+      country: country,
+      gender: gender,
+      excludeFollowing: excludeFollowing,
+      isShowLoader: isShowLoader,
+    );
+  }
+
+  Future<Map<String, dynamic>?> _fetchDiscoverFeed({
+    required String endPoint,
+    int page = 1,
+    int limit = 20,
+    String? country,
+    String? gender,
+    bool excludeFollowing = false,
+    bool isShowLoader = false,
+  }) async {
     final params = <String, String>{
       'page': '$page',
       'limit': '$limit',
@@ -51,8 +91,35 @@ class UserRepo {
       params['exclude_following'] = 'true';
     }
     final response = await _apiService.getRequest(
-      endPoint:
-          '${UserEndpoints.discover}?${Uri(queryParameters: params).query}',
+      endPoint: '$endPoint?${Uri(queryParameters: params).query}',
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// `POST /api/user/favourite`
+  Future<Map<String, dynamic>?> favouriteUser({
+    required String targetId,
+    bool isShowLoader = false,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: UserEndpoints.favourite,
+      requestModel: {'target_id': targetId.trim()},
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// `POST /api/user/unfavourite`
+  Future<Map<String, dynamic>?> unfavouriteUser({
+    required String targetId,
+    bool isShowLoader = false,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: UserEndpoints.unfavourite,
+      requestModel: {'target_id': targetId.trim()},
       isShowLoader: isShowLoader,
     );
     if (response == null) return null;

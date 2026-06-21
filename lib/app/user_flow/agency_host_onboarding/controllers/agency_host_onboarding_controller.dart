@@ -36,6 +36,8 @@ class AgencyHostOnboardingController extends GetxController {
   final selectedType = Rxn<AgencyHostType>();
   final selectedInterest = Rxn<AgencyHostInterest>();
   final hostPhoto = Rxn<File>();
+  final docPhotoFront = Rxn<File>();
+  final docPhotoBack = Rxn<File>();
   final isSubmitLoading = false.obs;
   final isAgencyCodeLocked = false.obs;
   final isAgencyCodePrefilling = false.obs;
@@ -138,16 +140,31 @@ class AgencyHostOnboardingController extends GetxController {
   }
 
   Future<void> onHostPhotoTap(BuildContext context) async {
+    final file = await _pickImage(context);
+    if (file != null) hostPhoto.value = file;
+  }
+
+  Future<void> onDocPhotoFrontTap(BuildContext context) async {
+    final file = await _pickImage(context);
+    if (file != null) docPhotoFront.value = file;
+  }
+
+  Future<void> onDocPhotoBackTap(BuildContext context) async {
+    final file = await _pickImage(context);
+    if (file != null) docPhotoBack.value = file;
+  }
+
+  Future<File?> _pickImage(BuildContext context) async {
     final source = await CommonMediaPicker.show(context);
-    if (source == null) return;
+    if (source == null) return null;
     final file = await _imagePicker.pickImage(
       source: source,
       imageQuality: 85,
       maxWidth: 1920,
       maxHeight: 1920,
     );
-    if (file == null) return;
-    hostPhoto.value = File(file.path);
+    if (file == null) return null;
+    return File(file.path);
   }
 
   String? validateHostName(BuildContext context, String? value) {
@@ -221,23 +238,37 @@ class AgencyHostOnboardingController extends GetxController {
     return null;
   }
 
+  String? validateDocPhotos() {
+    if (docPhotoFront.value == null) {
+      return 'Government document front photo is required';
+    }
+    if (docPhotoBack.value == null) {
+      return 'Government document back photo is required';
+    }
+    return null;
+  }
+
   Future<void> onSubmitPressed(BuildContext context) async {
     FocusScope.of(context).unfocus();
     final isFormValid = formKey.currentState?.validate() ?? false;
     final typeError = validateType();
     final interestError = validateInterest();
     final photoError = validatePhoto();
+    final docPhotoError = validateDocPhotos();
 
     if (!isFormValid ||
         typeError != null ||
         interestError != null ||
-        photoError != null) {
+        photoError != null ||
+        docPhotoError != null) {
       if (typeError != null) {
         AppToast.showError(context, typeError);
       } else if (interestError != null) {
         AppToast.showError(context, interestError);
       } else if (photoError != null) {
         AppToast.showError(context, photoError);
+      } else if (docPhotoError != null) {
+        AppToast.showError(context, docPhotoError);
       }
       return;
     }
@@ -261,6 +292,8 @@ class AgencyHostOnboardingController extends GetxController {
       state: stateController.text.trim(),
       address: addressController.text.trim(),
       hostRealPhoto: hostPhoto.value!,
+      docPhotoFront: docPhotoFront.value!,
+      docPhotoBack: docPhotoBack.value!,
       dob: formatAgencyHostDob(birthday),
       idNo: hostIdController.text.trim(),
       isShowLoader: false,

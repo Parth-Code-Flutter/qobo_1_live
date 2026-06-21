@@ -10,7 +10,7 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import '../controllers/discover_tab_controller.dart';
 import 'discover_user_call_dialog.dart';
 
-/// Discover tab — photo grid with name overlay (`GET /api/user/discover`).
+/// Discover tab — photo grid with name overlay (`GET /api/discover`).
 class DiscoverUsersFeed extends StatelessWidget {
   const DiscoverUsersFeed({super.key, required this.controller});
 
@@ -63,8 +63,12 @@ class DiscoverUsersFeed extends StatelessWidget {
                 color: LiveRoomUiColors.screenGradientBottom,
                 child: _DiscoverUserCard(
                   user: user,
+                  isFavouriteLoading:
+                      controller.processingFavouriteId.value == user.id,
                   onTap: () =>
                       showDiscoverUserCallDialog(context, controller, user),
+                  onFavouriteTap: () =>
+                      controller.toggleFavourite(context, user),
                 ),
               );
             },
@@ -79,12 +83,16 @@ class _DiscoverUserCard extends StatelessWidget {
   const _DiscoverUserCard({
     required this.user,
     required this.onTap,
+    required this.onFavouriteTap,
+    this.isFavouriteLoading = false,
   });
 
   static const _radius = 20.0;
 
   final SocialUserCard user;
   final VoidCallback onTap;
+  final VoidCallback onFavouriteTap;
+  final bool isFavouriteLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -143,6 +151,15 @@ class _DiscoverUserCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: _FavouriteButton(
+                    isFavourite: user.isFavourite,
+                    isLoading: isFavouriteLoading,
+                    onTap: onFavouriteTap,
+                  ),
+                ),
               ],
             ),
           ),
@@ -161,6 +178,52 @@ class _DiscoverUserCard extends StatelessWidget {
           fontSize: TextStyles.k24FontSize,
           backgroundColor: kColorWhite.withValues(alpha: 0.1),
           textColor: kColorWhite.withValues(alpha: 0.9),
+        ),
+      ),
+    );
+  }
+}
+
+class _FavouriteButton extends StatelessWidget {
+  const _FavouriteButton({
+    required this.isFavourite,
+    required this.isLoading,
+    required this.onTap,
+  });
+
+  final bool isFavourite;
+  final bool isLoading;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: isLoading ? null : onTap,
+        customBorder: const CircleBorder(),
+        child: Ink(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.38),
+            shape: BoxShape.circle,
+          ),
+          child: isLoading
+              ? const Padding(
+                  padding: EdgeInsets.all(8),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(kColorWhite),
+                  ),
+                )
+              : Icon(
+                  isFavourite
+                      ? Icons.favorite_rounded
+                      : Icons.favorite_border_rounded,
+                  size: 18,
+                  color: isFavourite ? kColorBottomNavHeart : kColorWhite,
+                ),
         ),
       ),
     );

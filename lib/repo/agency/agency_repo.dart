@@ -26,6 +26,8 @@ class AgencyRepo {
     required String state,
     required String address,
     required File hostRealPhoto,
+    required File docPhotoFront,
+    required File docPhotoBack,
     String? dob,
     String? idNo,
     bool isShowLoader = true,
@@ -57,9 +59,12 @@ class AgencyRepo {
     final response = await _apiService.multipartFormRequest(
       endPoint: AgencyEndpoints.hostOnboarding,
       fields: fields,
-      files: [hostRealPhoto],
-      // Deployed backend accepts `host_real_photo` (alias for `real_photo`).
-      fileFieldName: 'host_real_photo',
+      namedFiles: {
+        // Deployed backend accepts `host_real_photo` (alias for `real_photo`).
+        'host_real_photo': hostRealPhoto,
+        'doc_photo_front': docPhotoFront,
+        'doc_photo_back': docPhotoBack,
+      },
       method: 'POST',
       isShowLoader: isShowLoader,
     );

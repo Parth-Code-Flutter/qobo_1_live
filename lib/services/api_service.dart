@@ -415,6 +415,7 @@ class ApiService {
     required Map<String, String> fields,
     List<File>? files,
     String fileFieldName = 'image',
+    Map<String, File>? namedFiles,
     String method = 'POST',
     bool isShowLoader = true,
   }) async {
@@ -457,8 +458,22 @@ class ApiService {
       // Add form fields
       request.fields.addAll(fields);
       
-      // Add files if provided
-      if (files != null && files.isNotEmpty) {
+      // Add files if provided (named map takes precedence over list + field name).
+      if (namedFiles != null && namedFiles.isNotEmpty) {
+        for (final entry in namedFiles.entries) {
+          final file = entry.value;
+          final fileStream = http.ByteStream(file.openRead());
+          final fileLength = await file.length();
+          request.files.add(
+            http.MultipartFile(
+              entry.key,
+              fileStream,
+              fileLength,
+              filename: file.path.split('/').last,
+            ),
+          );
+        }
+      } else if (files != null && files.isNotEmpty) {
         for (var file in files) {
           final fileStream = http.ByteStream(file.openRead());
           final fileLength = await file.length();

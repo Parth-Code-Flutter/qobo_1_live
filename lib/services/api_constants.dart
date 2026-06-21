@@ -271,8 +271,17 @@ class UserEndpoints {
   /// GET /api/user/follow-list
   static const String followList = '/api/user/follow-list';
 
-  /// GET /api/user/discover — New Match feed
+  /// GET /api/user/discover — New Match feed (Messages tab)
   static const String discover = '/api/user/discover';
+
+  /// GET /api/discover — Explore tab user grid (country filter + favourites)
+  static const String exploreDiscover = '/api/discover';
+
+  /// POST /api/user/favourite — mark user as favourite
+  static const String favourite = '/api/user/favourite';
+
+  /// POST /api/user/unfavourite — remove user from favourites
+  static const String unfavourite = '/api/user/unfavourite';
 
   /// GET /api/user/public/:id — public profile card
   static const String publicProfile = '/api/user/public';
