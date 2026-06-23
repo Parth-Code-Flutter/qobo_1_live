@@ -42,6 +42,7 @@ class UpdateProfileUser {
     this.languages,
     this.interests,
     this.currentLocation,
+    this.coinsPerSecond,
   });
 
   final String id;
@@ -62,6 +63,7 @@ class UpdateProfileUser {
   final String? languages;
   final String? interests;
   final String? currentLocation;
+  final double? coinsPerSecond;
 
   factory UpdateProfileUser.fromJson(Map<String, dynamic> json) {
     return UpdateProfileUser(
@@ -83,7 +85,14 @@ class UpdateProfileUser {
       languages: _stringOrJoinedList(json['languages']),
       interests: _stringOrJoinedList(json['interests']),
       currentLocation: json['currentLocation'] as String?,
+      coinsPerSecond: _toDouble(json['coinsPerSecond'] ?? json['coins_per_second']),
     );
+  }
+
+  static double? _toDouble(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is num) return raw.toDouble();
+    return double.tryParse(raw.toString().trim());
   }
 
   Map<String, dynamic> toProfileMap() {
@@ -106,6 +115,7 @@ class UpdateProfileUser {
       if (languages != null) 'languages': languages,
       if (interests != null) 'interests': interests,
       if (currentLocation != null) 'currentLocation': currentLocation,
+      if (coinsPerSecond != null) 'coinsPerSecond': coinsPerSecond,
     };
   }
 

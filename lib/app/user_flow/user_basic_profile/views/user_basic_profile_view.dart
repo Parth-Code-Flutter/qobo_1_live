@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
@@ -88,6 +89,8 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
                                     _userNameField(context),
                                     Spacing.v10,
                                     _ageField(context),
+                                    Spacing.v10,
+                                    _coinsPerSecondField(),
                                     Spacing.v10,
                                     _genderField(),
                                     Spacing.v24,
@@ -445,6 +448,32 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
       prefix: Padding(
         padding: const EdgeInsets.only(left: 14, right: 12),
         child: SvgPicture.asset(kIconCalendar),
+      ),
+    );
+  }
+
+  Widget _coinsPerSecondField() {
+    return AppTextField(
+      controller: controller.coinsPerSecondController,
+      validator: controller.validateCoinsPerSecond,
+      hintText: 'Coins per second',
+      borderColor: kColorHint,
+      hintStyle: TextStyles.kRegularPoppins(
+        fontSize: TextStyles.k14FontSize,
+        colors: kColorHint,
+      ),
+      textInputAction: TextInputAction.next,
+      textInputType: const TextInputType.numberWithOptions(decimal: true),
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+      ],
+      prefix: const Padding(
+        padding: EdgeInsets.only(left: 14, right: 12),
+        child: Icon(
+          Icons.monetization_on_outlined,
+          size: 20,
+          color: kColorHint,
+        ),
       ),
     );
   }

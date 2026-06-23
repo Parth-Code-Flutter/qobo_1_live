@@ -68,6 +68,47 @@ String profileListFieldToLine(dynamic raw) {
   return raw.toString().trim();
 }
 
+/// Reads host call rate from profile payloads (`GET /api/user/profile`, public profile, etc.).
+double? coinsPerSecondFromProfileMap(Map<String, dynamic> data) {
+  final raw = firstPresent(data, const [
+    'coinsPerSecond',
+    'coins_per_second',
+    'callRate',
+    'ratePerSecond',
+    'perSecondCoins',
+  ]);
+  final direct = _parseProfileDouble(raw);
+  if (direct != null) return direct;
+
+  for (final nestedKey in const [
+    'user',
+    'host',
+    'owner',
+    'profile',
+    'hostProfile',
+  ]) {
+    final nested = data[nestedKey];
+    if (nested is! Map) continue;
+    final fromNested = coinsPerSecondFromProfileMap(
+      Map<String, dynamic>.from(nested),
+    );
+    if (fromNested != null) return fromNested;
+  }
+  return null;
+}
+
+String coinsPerSecondLabel(double value) {
+  return value == value.roundToDouble()
+      ? value.toInt().toString()
+      : value.toString();
+}
+
+double? _parseProfileDouble(dynamic raw) {
+  if (raw == null) return null;
+  if (raw is num) return raw.toDouble();
+  return double.tryParse(raw.toString().trim());
+}
+
 DateTime? parseStoredDob(dynamic raw) {
   if (raw == null) return null;
   if (raw is int) {

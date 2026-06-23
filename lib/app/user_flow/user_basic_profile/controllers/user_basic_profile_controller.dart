@@ -12,6 +12,7 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/status_code_constants.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
+import 'package:qobo_one_live/repo/user/user_repo.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/country_state_picker_sheet.dart';
 import 'package:qobo_one_live/utils/app_dialogs/common_radio_choice_dialog.dart';
@@ -25,10 +26,14 @@ import 'package:qobo_one_live/utils/validations/text_field_validations.dart';
 /// Basic profile capture (photo + core fields). Wire `/api` here when ready.
 class UserBasicProfileController extends GetxController
     with CountryStateSelectionMixin {
-  UserBasicProfileController({AuthRepo? authRepo})
-    : _authRepo = authRepo ?? AuthRepo();
+  UserBasicProfileController({
+    AuthRepo? authRepo,
+    UserRepo? userRepo,
+  })  : _authRepo = authRepo ?? AuthRepo(),
+        _userRepo = userRepo ?? UserRepo();
 
   final AuthRepo _authRepo;
+  final UserRepo _userRepo;
 
   UserSessionController _ensureSession() {
     if (Get.isRegistered<UserSessionController>()) {
@@ -40,6 +45,7 @@ class UserBasicProfileController extends GetxController
   final formKey = GlobalKey<FormState>();
   final userNameController = TextEditingController();
   final birthdateController = TextEditingController();
+  final coinsPerSecondController = TextEditingController();
 
   final selectedGender = ''.obs;
   final selectedAge = Rxn<int>();
@@ -68,6 +74,7 @@ class UserBasicProfileController extends GetxController
 
   String _baselineName = '';
   String _baselineAgeText = '';
+  String _baselineCoinsPerSecond = '';
   String _baselineGender = '';
   String _baselineRelationship = '';
   String _baselineLanguages = '';
@@ -92,6 +99,7 @@ class UserBasicProfileController extends GetxController
     super.onInit();
     userNameController.addListener(_refreshProfileDirty);
     birthdateController.addListener(_refreshProfileDirty);
+    coinsPerSecondController.addListener(_refreshProfileDirty);
     ever<String>(selectedGender, (_) => _refreshProfileDirty());
     ever<File?>(selectedProfileMedia, (_) => _refreshProfileDirty());
     ever<String>(relationshipStatus, (_) => _refreshProfileDirty());
@@ -106,6 +114,7 @@ class UserBasicProfileController extends GetxController
   void captureFormBaseline() {
     _baselineName = userNameController.text.trim();
     _baselineAgeText = birthdateController.text.trim();
+    _baselineCoinsPerSecond = coinsPerSecondController.text.trim();
     _baselineGender = selectedGender.value;
     _baselineRelationship = relationshipStatus.value;
     _baselineLanguages = languagesLine.value;
@@ -122,6 +131,7 @@ class UserBasicProfileController extends GetxController
     final dirty =
         userNameController.text.trim() != _baselineName ||
         birthdateController.text.trim() != _baselineAgeText ||
+        coinsPerSecondController.text.trim() != _baselineCoinsPerSecond ||
         selectedGender.value != _baselineGender ||
         relationshipStatus.value != _baselineRelationship ||
         languagesLine.value != _baselineLanguages ||
@@ -276,6 +286,7 @@ class UserBasicProfileController extends GetxController
     if (root != null && root.isNotEmpty) {
       _populateFormFromProfile(coalesceStoredProfileMap(root));
     }
+    await _hydrateCoinsPerSecondIfMissing(session.userId);
     captureFormBaseline();
     update();
     debugPrintFullUserProfile('after fetchProfileAndPopulateForm');
@@ -355,7 +366,40 @@ class UserBasicProfileController extends GetxController
       if (age != null && age > 0) _applySelectedAge(age);
     }
 
+    final cps = coinsPerSecondFromProfileMap(data);
+    if (cps != null) {
+      _setCoinsPerSecondField(cps);
+    }
+
     _populateProfileExtrasFromMap(data);
+  }
+
+  void _setCoinsPerSecondField(double value) {
+    coinsPerSecondController.text = coinsPerSecondLabel(value);
+  }
+
+  /// Profile GET may omit rate — public profile / discover card often includes it.
+  Future<void> _hydrateCoinsPerSecondIfMissing(String userId) async {
+    if (coinsPerSecondController.text.trim().isNotEmpty) return;
+    final id = userId.trim();
+    if (id.isEmpty) return;
+
+    try {
+      final response = await _userRepo.getPublicProfile(
+        userId: id,
+        isShowLoader: false,
+      );
+      final data = response?['data'];
+      if (data is! Map) return;
+      final cps = coinsPerSecondFromProfileMap(
+        coalesceStoredProfileMap(Map<String, dynamic>.from(data)),
+      );
+      if (cps != null) {
+        _setCoinsPerSecondField(cps);
+      }
+    } catch (_) {
+      // Keep field empty when fallback fails.
+    }
   }
 
   void _populateProfileExtrasFromMap(Map<String, dynamic> data) {
@@ -512,6 +556,22 @@ class UserBasicProfileController extends GetxController
     return Validate.nameValidation(context, value?.trim() ?? '');
   }
 
+  String? validateCoinsPerSecond(String? value) {
+    final text = value?.trim() ?? '';
+    if (text.isEmpty) return null;
+    final parsed = double.tryParse(text);
+    if (parsed == null || parsed < 0) {
+      return 'Enter a valid coins per second value';
+    }
+    return null;
+  }
+
+  double? _parseCoinsPerSecondForApi() {
+    final text = coinsPerSecondController.text.trim();
+    if (text.isEmpty) return null;
+    return double.tryParse(text);
+  }
+
   /// Opens gallery/camera via shared picker (same as update profile).
   Future<void> onProfileMediaTap(BuildContext context) async {
     try {
@@ -569,6 +629,7 @@ class UserBasicProfileController extends GetxController
         countryId: selectedCountry.value?.id,
         state: selectedState.value?.name,
         stateId: selectedState.value?.id,
+        coinsPerSecond: _parseCoinsPerSecondForApi(),
       );
       if (!request.hasAnyField) {
         AppToast.showError(context, 'Nothing to update.');
@@ -665,8 +726,10 @@ class UserBasicProfileController extends GetxController
   void onClose() {
     userNameController.removeListener(_refreshProfileDirty);
     birthdateController.removeListener(_refreshProfileDirty);
+    coinsPerSecondController.removeListener(_refreshProfileDirty);
     userNameController.dispose();
     birthdateController.dispose();
+    coinsPerSecondController.dispose();
     super.onClose();
   }
 }

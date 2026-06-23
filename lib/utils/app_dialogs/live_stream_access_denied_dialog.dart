@@ -91,11 +91,24 @@ class LiveStreamAccessDeniedDialog extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: kColorHint.withValues(alpha: 0.25)),
               ),
-              child: AppText(
-                text: body,
-                fontSize: TextStyles.k14FontSize,
-                color: kColorTextGrey,
-                align: TextAlign.center,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppText(
+                    text: body,
+                    fontSize: TextStyles.k14FontSize,
+                    color: kColorTextGrey,
+                    align: TextAlign.center,
+                  ),
+                  Spacing.v8,
+                  const SemiBoldText(
+                    text:
+                        'Min. 1.5 lakh coins in wallet required for solo live.',
+                    fontSize: TextStyles.k12FontSize,
+                    color: kColorRed,
+                    align: TextAlign.center,
+                  ),
+                ],
               ),
             ),
             if (coins != null) ...[
