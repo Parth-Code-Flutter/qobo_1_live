@@ -14,9 +14,17 @@ class LiveStreamAccessResult {
 
   static LiveStreamAccessResult? fromApiResponse(Map<String, dynamic>? response) {
     if (response == null) return null;
+
     final code = response['statusCode'];
     final ok = code == 1 || code == 200 || code == '1' || code == '200';
-    if (!ok) return null;
+    if (!ok) {
+      return LiveStreamAccessResult(
+        accessAllowed: false,
+        isHost: false,
+        coins: 0,
+        message: response['message']?.toString().trim() ?? '',
+      );
+    }
 
     final data = response['data'];
     if (data is! Map) {

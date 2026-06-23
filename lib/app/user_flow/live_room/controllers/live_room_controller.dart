@@ -5,12 +5,15 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/live_room/models/live_room_filter_state.dart';
 import 'package:qobo_one_live/app/user_flow/live_room/widgets/live_room_filter_sheet.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/app/user_flow/wallet/bindings/wallet_binding.dart';
+import 'package:qobo_one_live/app/user_flow/wallet/views/wallet_view.dart';
 import 'package:qobo_one_live/models/live_streaming/live_stream_access_result.dart';
 import 'package:qobo_one_live/repo/activity/activity_repo.dart';
 import 'package:qobo_one_live/repo/room/room_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
+import 'package:qobo_one_live/utils/app_dialogs/live_stream_access_denied_dialog.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 
 /// Controller for live room flow.
@@ -265,24 +268,47 @@ class LiveRoomController extends GetxController {
     if (!context.mounted) return;
 
     if (access == null) {
-      AppToast.showError(
+      await _showLiveAccessDeniedDialog(
         context,
-        response?['message']?.toString() ??
+        message:
+            response?['message']?.toString() ??
             'Unable to verify live streaming access',
       );
       return;
     }
     if (!access.accessAllowed) {
-      AppToast.showError(
+      await _showLiveAccessDeniedDialog(
         context,
-        access.message.isNotEmpty
+        message: access.message.isNotEmpty
             ? access.message
-            : 'You can\'t access this feature. Please join an agency or recharge your wallet.',
+            : 'You can\'t access this feature. Please join an agency or add coins.',
+        coins: access.coins > 0 ? access.coins : null,
       );
       return;
     }
 
     Get.toNamed(Routes.LIVE_ROOM_CREATE, arguments: {'mode': 'live_streaming'});
+  }
+
+  Future<void> _showLiveAccessDeniedDialog(
+    BuildContext context, {
+    required String message,
+    double? coins,
+  }) {
+    return LiveStreamAccessDeniedDialog.show(
+      context,
+      message: message,
+      coins: coins,
+      onBecomeAgency: () {
+        Get.toNamed(
+          Routes.AGENCY_ACCESS,
+          arguments: {'mode': 'owner'},
+        );
+      },
+      onAddCoins: () {
+        Get.to(() => const WalletView(), binding: WalletBinding());
+      },
+    );
   }
 
   void focusJoinLive() {
