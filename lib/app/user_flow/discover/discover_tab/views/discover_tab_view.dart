@@ -12,6 +12,7 @@ import 'package:qobo_one_live/utils/ui_utils/app_ui_utils.dart';
 
 import '../controllers/discover_tab_controller.dart';
 import '../widgets/discover_country_filter_sheet.dart';
+import '../widgets/discover_filters_bar.dart';
 import '../widgets/discover_users_feed.dart';
 
 class DiscoverTabView extends StatelessWidget {
@@ -34,7 +35,14 @@ class DiscoverTabView extends StatelessWidget {
               _topHeader(context, discoverController),
               Spacing.v16,
               _searchBar(discoverController),
-              Spacing.v12,
+              Spacing.v10,
+              Obx(() {
+                if (discoverController.searchQuery.value.isNotEmpty) {
+                  return const SizedBox.shrink();
+                }
+                return DiscoverFiltersBar(controller: discoverController);
+              }),
+              Spacing.v8,
               Expanded(
                 child: Obx(() {
                   if (discoverController.searchQuery.value.isNotEmpty) {
@@ -109,9 +117,7 @@ class DiscoverTabView extends StatelessWidget {
               ),
               child: Center(
                 child: Obx(() {
-                  final hasFilter =
-                      discoverController.selectedCountry.value?.isNotEmpty ==
-                          true;
+                  final hasFilter = discoverController.hasActiveDiscoverFilters;
                   return Stack(
                     clipBehavior: Clip.none,
                     children: [
@@ -163,12 +169,12 @@ class DiscoverTabView extends StatelessWidget {
     BuildContext context,
     DiscoverTabController controller,
   ) async {
-    final result = await showDiscoverCountryFilterSheet(
+    final result = await showDiscoverFilterSheet(
       context: context,
-      initialCountry: controller.selectedCountry.value,
+      initial: controller.filters.value,
     );
     if (result == null) return;
-    await controller.applyCountryFilter(result.isEmpty ? null : result);
+    await controller.applyDiscoverFilters(result);
   }
 
   Widget _searchBar(DiscoverTabController discoverController) {

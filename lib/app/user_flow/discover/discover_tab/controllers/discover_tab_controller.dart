@@ -2,11 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/app/user_flow/discover/discover_tab/models/discover_filter_state.dart';
 import 'package:qobo_one_live/app/user_flow/discover/discover_tab/models/explore_discover_utils.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/widgets/match_user_sheet.dart';
+import 'package:qobo_one_live/models/geo/country_state_models.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/repo/chat/chat_navigation_helper.dart';
+import 'package:qobo_one_live/repo/geo/geo_repo.dart';
 import 'package:qobo_one_live/repo/user/user_repo.dart';
 import 'package:qobo_one_live/services/chat/chat_call_launcher.dart';
 import 'package:qobo_one_live/services/chat/chat_call_service.dart';
@@ -18,23 +21,33 @@ class DiscoverTabController extends GetxController {
   DiscoverTabController({
     AuthRepo? authRepo,
     UserRepo? userRepo,
+    GeoRepo? geoRepo,
   })  : _authRepo = authRepo ?? AuthRepo(),
-        _userRepo = userRepo ?? UserRepo();
+        _userRepo = userRepo ?? UserRepo(),
+        _geoRepo = geoRepo ?? GeoRepo();
 
   final AuthRepo _authRepo;
   final UserRepo _userRepo;
+  final GeoRepo _geoRepo;
 
   final searchController = TextEditingController();
 
   final discoverUsers = <SocialUserCard>[].obs;
   final searchResults = <dynamic>[].obs;
   final isDiscoverUsersLoading = false.obs;
+  final isDiscoverFiltersLoading = false.obs;
   final isSearchLoading = false.obs;
   final followingUserIds = <String>{}.obs;
   final searchQuery = ''.obs;
-  final selectedCountry = RxnString();
+  final filters = const DiscoverFilterState().obs;
+  final filterCountries = <CountryOption>[].obs;
   final processingFollowId = ''.obs;
   final processingFavouriteId = ''.obs;
+
+  /// Back-compat for header badge.
+  String? get selectedCountry => filters.value.country;
+
+  bool get hasActiveDiscoverFilters => filters.value.hasActiveFilters;
 
   var _discoverPage = 1;
   var _discoverHasMore = true;
@@ -45,7 +58,22 @@ class DiscoverTabController extends GetxController {
   void onInit() {
     super.onInit();
     searchController.addListener(_onSearchChanged);
+    unawaited(loadDiscoverFilters());
     fetchDiscoverUsers();
+  }
+
+  /// Countries for filter chips — `GET /api/auth/countries`.
+  Future<void> loadDiscoverFilters() async {
+    try {
+      isDiscoverFiltersLoading.value = true;
+      filterCountries.assignAll(
+        await _geoRepo.fetchCountries(isShowLoader: false),
+      );
+    } catch (_) {
+      filterCountries.clear();
+    } finally {
+      isDiscoverFiltersLoading.value = false;
+    }
   }
 
   void _onSearchChanged() {
@@ -75,7 +103,9 @@ class DiscoverTabController extends GetxController {
       final response = await _userRepo.exploreDiscover(
         page: _discoverPage,
         limit: 30,
-        country: selectedCountry.value,
+        country: filters.value.country,
+        gender: filters.value.gender,
+        excludeFollowing: filters.value.excludeFollowing,
         isShowLoader: false,
       );
       final page = ExploreDiscoverPage.fromApiResponse(response);
@@ -126,11 +156,55 @@ class DiscoverTabController extends GetxController {
     }
   }
 
+  Future<void> applyDiscoverFilters(DiscoverFilterState next) async {
+    filters.value = next;
+    await fetchDiscoverUsers(refresh: true);
+  }
+
+  Future<void> clearDiscoverFilters() async {
+    filters.value = const DiscoverFilterState();
+    await fetchDiscoverUsers(refresh: true);
+  }
+
+  Future<void> toggleGenderFilter(String gender) async {
+    final current = filters.value;
+    final nextGender =
+        current.gender?.toLowerCase() == gender.toLowerCase() ? null : gender;
+    await applyDiscoverFilters(current.copyWith(
+      gender: nextGender,
+      clearGender: nextGender == null,
+    ));
+  }
+
+  Future<void> toggleCountryFilter(CountryOption country) async {
+    final current = filters.value;
+    final code = country.code.trim();
+    final isSelected = current.country?.toLowerCase() == code.toLowerCase() ||
+        current.country?.toLowerCase() == country.name.toLowerCase();
+    await applyDiscoverFilters(
+      current.copyWith(
+        country: isSelected ? null : code,
+        clearCountry: isSelected,
+      ),
+    );
+  }
+
+  Future<void> toggleExcludeFollowingFilter() async {
+    final current = filters.value;
+    await applyDiscoverFilters(
+      current.copyWith(excludeFollowing: !current.excludeFollowing),
+    );
+  }
+
+  /// Legacy country-only apply from older sheet callers.
   Future<void> applyCountryFilter(String? country) async {
     final normalized = country?.trim();
-    selectedCountry.value =
-        normalized == null || normalized.isEmpty ? null : normalized;
-    await fetchDiscoverUsers(refresh: true);
+    await applyDiscoverFilters(
+      filters.value.copyWith(
+        country: normalized == null || normalized.isEmpty ? null : normalized,
+        clearCountry: normalized == null || normalized.isEmpty,
+      ),
+    );
   }
 
   Future<void> toggleFavourite(

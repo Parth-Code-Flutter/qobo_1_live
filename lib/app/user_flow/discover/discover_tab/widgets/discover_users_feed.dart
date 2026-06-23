@@ -54,7 +54,7 @@ class DiscoverUsersFeed extends StatelessWidget {
               crossAxisCount: 2,
               mainAxisSpacing: 10,
               crossAxisSpacing: 10,
-              childAspectRatio: 0.68,
+              childAspectRatio: 0.62,
             ),
             itemCount: users.length,
             itemBuilder: (context, index) {
@@ -124,7 +124,7 @@ class _DiscoverUserCard extends StatelessWidget {
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  height: 72,
+                  height: 108,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -132,23 +132,108 @@ class _DiscoverUserCard extends StatelessWidget {
                         end: Alignment.bottomCenter,
                         colors: [
                           Colors.transparent,
-                          Colors.black.withValues(alpha: 0.45),
-                          Colors.black.withValues(alpha: 0.75),
+                          Colors.black.withValues(alpha: 0.5),
+                          Colors.black.withValues(alpha: 0.82),
                         ],
                       ),
                     ),
                   ),
                 ),
                 Positioned(
-                  left: 12,
-                  right: 12,
-                  bottom: 12,
-                  child: SemiBoldText(
-                    text: user.name,
-                    fontSize: TextStyles.k16FontSize,
-                    color: kColorWhite,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  top: 8,
+                  left: 8,
+                  right: 48,
+                  child: _TopBadgesRow(user: user),
+                ),
+                Positioned(
+                  left: 10,
+                  right: 10,
+                  bottom: 10,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SemiBoldText(
+                              text: user.name,
+                              fontSize: TextStyles.k14FontSize,
+                              color: kColorWhite,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (user.gender.isNotEmpty) ...[
+                            Icon(
+                              _genderIcon(user.gender),
+                              size: 14,
+                              color: kColorWhite.withValues(alpha: 0.9),
+                            ),
+                          ],
+                        ],
+                      ),
+                      if (_locationLine(user).isNotEmpty) ...[
+                        const SizedBox(height: 3),
+                        AppText(
+                          text: _locationLine(user),
+                          fontSize: TextStyles.k10FontSize,
+                          color: kColorWhite.withValues(alpha: 0.82),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                      if (user.bio.trim().isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        AppText(
+                          text: user.bio.trim(),
+                          fontSize: TextStyles.k10FontSize,
+                          color: kColorWhite.withValues(alpha: 0.72),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          if (user.followersCount > 0) ...[
+                            _MetaIcon(
+                              icon: Icons.people_outline_rounded,
+                              label: _compactCount(user.followersCount),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          if (user.coinsPerSecond > 0)
+                            _MetaIcon(
+                              icon: Icons.monetization_on_outlined,
+                              label: '${user.coinsPerSecond.toStringAsFixed(0)}/s',
+                            )
+                          else if (user.coins > 0)
+                            _MetaIcon(
+                              icon: Icons.monetization_on_outlined,
+                              label: user.coins.toStringAsFixed(0),
+                            ),
+                          if (user.isFollowing) ...[
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: kColorPrimary.withValues(alpha: 0.85),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const AppText(
+                                text: 'Following',
+                                fontSize: TextStyles.k8FontSize,
+                                color: kColorWhite,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
                   ),
                 ),
                 Positioned(
@@ -183,6 +268,122 @@ class _DiscoverUserCard extends StatelessWidget {
           textColor: kColorWhite.withValues(alpha: 0.9),
         ),
       ),
+    );
+  }
+
+  static IconData _genderIcon(String gender) {
+    final g = gender.toLowerCase();
+    if (g.contains('female') || g == 'f') {
+      return Icons.female_rounded;
+    }
+    if (g.contains('male') || g == 'm') {
+      return Icons.male_rounded;
+    }
+    return Icons.person_outline_rounded;
+  }
+
+  static String _locationLine(SocialUserCard user) {
+    final country = user.country.trim();
+    if (country.isEmpty) return '';
+    return country;
+  }
+
+  static String _compactCount(int value) {
+    if (value >= 1000000) {
+      return '${(value / 1000000).toStringAsFixed(1)}M';
+    }
+    if (value >= 1000) {
+      return '${(value / 1000).toStringAsFixed(1)}K';
+    }
+    return '$value';
+  }
+}
+
+class _TopBadgesRow extends StatelessWidget {
+  const _TopBadgesRow({required this.user});
+
+  final SocialUserCard user;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!user.isVip && user.level <= 0) return const SizedBox.shrink();
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        if (user.isVip)
+          const _BadgeChip(
+            label: 'VIP',
+            backgroundColor: kColorWalletAmount,
+            textColor: kColorBlack,
+          ),
+        if (user.level > 0)
+          _BadgeChip(
+            label: 'Lv ${user.level}',
+            backgroundColor: kColorPrimary,
+            textColor: kColorWhite,
+          ),
+      ],
+    );
+  }
+}
+
+class _BadgeChip extends StatelessWidget {
+  const _BadgeChip({
+    required this.label,
+    required this.backgroundColor,
+    required this.textColor,
+  });
+
+  final String label;
+  final Color backgroundColor;
+  final Color textColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.35), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.4),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: SemiBoldText(
+        text: label,
+        fontSize: TextStyles.k10FontSize,
+        color: textColor,
+      ),
+    );
+  }
+}
+
+class _MetaIcon extends StatelessWidget {
+  const _MetaIcon({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: kColorWalletAmount),
+        const SizedBox(width: 3),
+        AppText(
+          text: label,
+          fontSize: TextStyles.k10FontSize,
+          color: kColorWhite.withValues(alpha: 0.88),
+        ),
+      ],
     );
   }
 }
