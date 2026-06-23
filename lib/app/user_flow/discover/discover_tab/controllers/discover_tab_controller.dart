@@ -14,6 +14,7 @@ import 'package:qobo_one_live/repo/user/user_repo.dart';
 import 'package:qobo_one_live/services/chat/chat_call_launcher.dart';
 import 'package:qobo_one_live/services/chat/chat_call_service.dart';
 import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
+import 'package:qobo_one_live/utils/app_widgets/country_state_picker_sheet.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 
 /// Controller for Discover tab — user feed from `GET /api/discover`.
@@ -187,6 +188,49 @@ class DiscoverTabController extends GetxController {
         clearCountry: isSelected,
       ),
     );
+  }
+
+  /// Country dropdown — passes ISO `country` code to `GET /api/discover`.
+  Future<void> selectCountryFilter(CountryOption? country) async {
+    await applyDiscoverFilters(
+      filters.value.copyWith(
+        country: country?.code.trim(),
+        clearCountry: country == null,
+      ),
+    );
+  }
+
+  /// Opens country filter bottom sheet — `GET /api/auth/countries`.
+  Future<void> openCountryFilterSheet(BuildContext context) async {
+    if (filterCountries.isEmpty) {
+      await loadDiscoverFilters();
+    }
+    if (!context.mounted) return;
+
+    final result = await showDiscoverCountryFilterSheet(
+      context,
+      countries: filterCountries.toList(),
+      selected: selectedCountryOption,
+    );
+    if (!context.mounted || result == null) return;
+
+    if (result.clearAll) {
+      await selectCountryFilter(null);
+      return;
+    }
+    await selectCountryFilter(result.country);
+  }
+
+  CountryOption? get selectedCountryOption {
+    final raw = filters.value.country?.trim();
+    if (raw == null || raw.isEmpty) return null;
+    for (final country in filterCountries) {
+      if (country.code.toLowerCase() == raw.toLowerCase() ||
+          country.name.toLowerCase() == raw.toLowerCase()) {
+        return country;
+      }
+    }
+    return null;
   }
 
   Future<void> toggleExcludeFollowingFilter() async {

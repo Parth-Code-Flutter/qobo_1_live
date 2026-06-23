@@ -41,6 +41,61 @@ Future<CountryOption?> showCountryPickerSheet(
   );
 }
 
+/// Result from explore country filter sheet — clear all or a specific country.
+class CountryFilterSheetResult {
+  const CountryFilterSheetResult.clearAll() : clearAll = true, country = null;
+  const CountryFilterSheetResult.selected(this.country) : clearAll = false;
+
+  final bool clearAll;
+  final CountryOption? country;
+}
+
+/// Explore discover tab — country list with "All countries" (`GET /api/auth/countries`).
+Future<CountryFilterSheetResult?> showDiscoverCountryFilterSheet(
+  BuildContext context, {
+  required List<CountryOption> countries,
+  CountryOption? selected,
+}) {
+  return showAppBottomSheet<CountryFilterSheetResult>(
+    context: context,
+    title: 'Filter by country',
+    subtitle: 'Choose a country for the Explore feed',
+    child: countries.isEmpty
+        ? const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: AppText(
+              text: 'No countries available',
+              fontSize: TextStyles.k14FontSize,
+              color: kColorHint,
+              align: TextAlign.center,
+            ),
+          )
+        : Column(
+            children: [
+              _GeoOptionTile(
+                label: 'All countries',
+                subtitle: 'Show users from every country',
+                selected: selected == null,
+                onTap: () => Navigator.of(context).pop(
+                  const CountryFilterSheetResult.clearAll(),
+                ),
+              ),
+              for (var i = 0; i < countries.length; i++) ...[
+                Spacing.v8,
+                _GeoOptionTile(
+                  label: countries[i].name,
+                  subtitle: countries[i].code,
+                  selected: selected?.id == countries[i].id,
+                  onTap: () => Navigator.of(context).pop(
+                    CountryFilterSheetResult.selected(countries[i]),
+                  ),
+                ),
+              ],
+            ],
+          ),
+  );
+}
+
 Future<StateOption?> showStatePickerSheet(
   BuildContext context, {
   required List<StateOption> states,

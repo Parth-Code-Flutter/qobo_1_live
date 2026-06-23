@@ -5,11 +5,12 @@ import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/utils/ui_utils/app_ui_utils.dart';
 
 import '../controllers/discover_tab_controller.dart';
 import '../models/discover_filter_state.dart';
 
-/// Horizontal discover filters above the Explore user grid.
+/// Discover filters — country bottom sheet + gender chips.
 class DiscoverFiltersBar extends StatelessWidget {
   const DiscoverFiltersBar({super.key, required this.controller});
 
@@ -18,71 +19,107 @@ class DiscoverFiltersBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      if (controller.isDiscoverFiltersLoading.value &&
-          controller.filterCountries.isEmpty) {
-        return const SizedBox(
-          height: 40,
-          child: Center(
-            child: SizedBox(
-              width: 22,
-              height: 22,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(kColorPrimary),
-              ),
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _countryPickerField(context),
+          Spacing.v8,
+          SizedBox(
+            height: 40,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              itemCount: 3,
+              separatorBuilder: (_, __) => Spacing.h8,
+              itemBuilder: (context, index) {
+                switch (index) {
+                  case 0:
+                    return _chip(
+                      label: 'Male',
+                      selected: controller.filters.value.gender ==
+                          DiscoverFilterState.genderMale,
+                      onTap: () => controller.toggleGenderFilter(
+                        DiscoverFilterState.genderMale,
+                      ),
+                    );
+                  case 1:
+                    return _chip(
+                      label: 'Female',
+                      selected: controller.filters.value.gender ==
+                          DiscoverFilterState.genderFemale,
+                      onTap: () => controller.toggleGenderFilter(
+                        DiscoverFilterState.genderFemale,
+                      ),
+                    );
+                  default:
+                    return _chip(
+                      label: 'Not following',
+                      selected: controller.filters.value.excludeFollowing,
+                      onTap: controller.toggleExcludeFollowingFilter,
+                    );
+                }
+              },
             ),
           ),
-        );
-      }
-
-      final chips = <Widget>[
-        _chip(
-          label: 'All',
-          selected: !controller.filters.value.hasActiveFilters,
-          onTap: controller.clearDiscoverFilters,
-        ),
-        _chip(
-          label: 'Male',
-          selected: controller.filters.value.gender ==
-              DiscoverFilterState.genderMale,
-          onTap: () => controller.toggleGenderFilter(
-            DiscoverFilterState.genderMale,
-          ),
-        ),
-        _chip(
-          label: 'Female',
-          selected: controller.filters.value.gender ==
-              DiscoverFilterState.genderFemale,
-          onTap: () => controller.toggleGenderFilter(
-            DiscoverFilterState.genderFemale,
-          ),
-        ),
-        _chip(
-          label: 'Not following',
-          selected: controller.filters.value.excludeFollowing,
-          onTap: controller.toggleExcludeFollowingFilter,
-        ),
-        for (final country in controller.filterCountries)
-          _chip(
-            label: country.name,
-            selected: controller.filters.value.country == country.code ||
-                controller.filters.value.country?.toLowerCase() ==
-                    country.name.toLowerCase(),
-            onTap: () => controller.toggleCountryFilter(country),
-          ),
-      ];
-
-      return SizedBox(
-        height: 40,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 2),
-          itemCount: chips.length,
-          separatorBuilder: (_, __) => Spacing.h8,
-          itemBuilder: (_, index) => chips[index],
-        ),
+        ],
       );
     });
+  }
+
+  Widget _countryPickerField(BuildContext context) {
+    final selected = controller.selectedCountryOption;
+    final isLoading =
+        controller.isDiscoverFiltersLoading.value &&
+        controller.filterCountries.isEmpty;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: isLoading ? null : () => controller.openCountryFilterSheet(context),
+        borderRadius: AppUIUtils.primaryBorderRadius,
+        child: Ink(
+          height: 40,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: kColorDiscoverSearchBg,
+            borderRadius: AppUIUtils.primaryBorderRadius,
+            border: Border.all(
+              color: selected != null
+                  ? kColorPrimary.withValues(alpha: 0.45)
+                  : Colors.transparent,
+            ),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.public_outlined, size: 18, color: kColorHint),
+              Spacing.h8,
+              Expanded(
+                child: isLoading
+                    ? const Center(
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : SemiBoldText(
+                        text: selected?.name ?? 'All countries',
+                        fontSize: TextStyles.k12FontSize,
+                        color: selected != null ? kColorText : kColorHint,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+              ),
+              const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: kColorHint,
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _chip({
