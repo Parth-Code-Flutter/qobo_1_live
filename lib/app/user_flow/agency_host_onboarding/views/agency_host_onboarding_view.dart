@@ -15,6 +15,8 @@ import '../controllers/agency_host_onboarding_controller.dart';
 import '../models/agency_host_interest.dart';
 import '../models/agency_host_type.dart';
 import '../widgets/agency_host_category_picker.dart';
+import 'package:qobo_one_live/utils/app_widgets/country_state_picker_sheet.dart';
+import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 
 /// Agency host onboarding form — `POST /api/agency/host-onboarding`.
 class AgencyHostOnboardingView extends GetView<AgencyHostOnboardingController> {
@@ -82,6 +84,8 @@ class AgencyHostOnboardingView extends GetView<AgencyHostOnboardingController> {
                                     _countryField(context),
                                     Spacing.v10,
                                     _stateField(context),
+                                    Spacing.v10,
+                                    _cityField(context),
                                     Spacing.v10,
                                     _addressField(context),
                                     Spacing.v10,
@@ -316,31 +320,72 @@ class AgencyHostOnboardingView extends GetView<AgencyHostOnboardingController> {
   }
 
   Widget _countryField(BuildContext context) {
-    return _labeledField(
-      label: 'Country',
-      child: AppTextField(
-        controller: controller.countryRegionController,
-        validator: controller.validateCountryRegion,
-        hintText: 'Enter country',
-        borderColor: kColorHint,
-        textInputAction: TextInputAction.next,
-        textCapitalization: TextCapitalization.words,
-        prefix: _fieldIcon(Icons.public_outlined),
+    return Obx(
+      () => CountryStatePickerField(
+        label: 'Country',
+        value: controller.selectedCountry.value?.name,
+        hint: 'Select country',
+        isLoading: controller.isCountriesLoading.value,
+        onTap: () => _pickCountry(context),
       ),
     );
   }
 
   Widget _stateField(BuildContext context) {
+    return Obx(
+      () => CountryStatePickerField(
+        label: 'State',
+        value: controller.selectedState.value?.name,
+        hint: controller.selectedCountry.value == null
+            ? 'Select country first'
+            : 'Select state',
+        isLoading: controller.isStatesLoading.value,
+        onTap: controller.selectedCountry.value == null
+            ? () {
+                AppToast.showError(context, 'Please select country first');
+              }
+            : () => _pickState(context),
+      ),
+    );
+  }
+
+  Future<void> _pickCountry(BuildContext context) async {
+    FocusScope.of(context).unfocus();
+    await controller.ensureCountriesLoaded(forceRefresh: true);
+    if (!context.mounted) return;
+    final picked = await showCountryPickerSheet(
+      context,
+      countries: controller.countries.toList(),
+      selected: controller.selectedCountry.value,
+    );
+    if (picked != null) await controller.selectCountry(picked);
+  }
+
+  Future<void> _pickState(BuildContext context) async {
+    final country = controller.selectedCountry.value;
+    if (country == null) return;
+    FocusScope.of(context).unfocus();
+    await controller.loadStatesForCountry(country.id, forceRefresh: true);
+    if (!context.mounted) return;
+    final picked = await showStatePickerSheet(
+      context,
+      states: controller.states.toList(),
+      selected: controller.selectedState.value,
+    );
+    if (picked != null) controller.selectState(picked);
+  }
+
+  Widget _cityField(BuildContext context) {
     return _labeledField(
-      label: 'State',
+      label: 'City',
       child: AppTextField(
-        controller: controller.stateController,
-        validator: controller.validateState,
-        hintText: 'Enter state',
+        controller: controller.cityController,
+        validator: controller.validateCity,
+        hintText: 'Enter city',
         borderColor: kColorHint,
         textInputAction: TextInputAction.next,
         textCapitalization: TextCapitalization.words,
-        prefix: _fieldIcon(Icons.map_outlined),
+        prefix: _fieldIcon(Icons.location_city_outlined),
       ),
     );
   }

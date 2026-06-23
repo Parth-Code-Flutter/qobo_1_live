@@ -16,6 +16,8 @@ class SocialUserCard {
     this.canMessage = false,
     this.isVip = false,
     this.isFavourite = false,
+    this.coins = 0,
+    this.coinsPerSecond = 0,
     this.followersCount = 0,
     this.followingCount = 0,
   });
@@ -33,6 +35,8 @@ class SocialUserCard {
   final bool canMessage;
   final bool isVip;
   final bool isFavourite;
+  final double coins;
+  final double coinsPerSecond;
   final int followersCount;
   final int followingCount;
 
@@ -41,7 +45,7 @@ class SocialUserCard {
     bool? isFollower,
     bool? isMutual,
     bool? canMessage,
-    bool? isFavourite,
+    Object? isFavourite = _copyWithUnset,
     int? followersCount,
     int? followingCount,
   }) {
@@ -58,11 +62,15 @@ class SocialUserCard {
       isMutual: isMutual ?? this.isMutual,
       canMessage: canMessage ?? this.canMessage,
       isVip: isVip,
-      isFavourite: isFavourite ?? this.isFavourite,
+      isFavourite: identical(isFavourite, _copyWithUnset)
+          ? this.isFavourite
+          : isFavourite as bool,
       followersCount: followersCount ?? this.followersCount,
       followingCount: followingCount ?? this.followingCount,
     );
   }
+
+  static const _copyWithUnset = Object();
 
   factory SocialUserCard.fromJson(Map<String, dynamic> json) {
     final isFollowing = json['isFollowing'] == true;
@@ -90,6 +98,8 @@ class SocialUserCard {
       isVip: json['isVip'] == true,
       isFavourite:
           json['isFavourite'] == true || json['isFavorite'] == true,
+      coins: _toDouble(json['coins']),
+      coinsPerSecond: _toDouble(json['coinsPerSecond']),
       followersCount: _toInt(json['followersCount']),
       followingCount: _toInt(json['followingCount']),
     );
@@ -119,6 +129,11 @@ class SocialUserCard {
   static int _toInt(dynamic raw) {
     if (raw is int) return raw;
     return int.tryParse(raw?.toString() ?? '') ?? 0;
+  }
+
+  static double _toDouble(dynamic raw) {
+    if (raw is num) return raw.toDouble();
+    return double.tryParse(raw?.toString() ?? '') ?? 0;
   }
 }
 

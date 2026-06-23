@@ -10,7 +10,9 @@ import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
+import 'package:qobo_one_live/utils/app_widgets/country_state_picker_sheet.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
+import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -59,6 +61,10 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
                     _confirmPasswordField(context),
                     Spacing.v10,
                     _genderField(),
+                    Spacing.v10,
+                    Obx(() => _countryStateFields(context)),
+                    Spacing.v10,
+                    _cityField(context),
                     Spacing.v16,
                     _termsAndPrivacyText(),
                     Spacing.v28,
@@ -199,6 +205,79 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
         child: SvgPicture.asset(kIconCalendar),
       ),
     );
+  }
+
+  Widget _cityField(BuildContext context) {
+    return AppTextField(
+      controller: controller.cityController,
+      validator: controller.validateCity,
+      hintText: 'Enter city',
+      borderColor: kColorHint,
+      hintStyle: TextStyles.kRegularPoppins(
+        fontSize: TextStyles.k14FontSize,
+        colors: kColorHint,
+      ),
+      textInputAction: TextInputAction.next,
+      textCapitalization: TextCapitalization.words,
+      prefix: Padding(
+        padding: const EdgeInsets.only(left: 14, right: 12),
+        child: Icon(Icons.location_city_outlined, size: 20, color: kColorHint),
+      ),
+    );
+  }
+
+  Widget _countryStateFields(BuildContext context) {
+    return Column(
+      children: [
+        CountryStatePickerField(
+          label: 'Country',
+          value: controller.selectedCountry.value?.name,
+          hint: 'Select country',
+          isLoading: controller.isCountriesLoading.value,
+          onTap: () => _pickCountry(context),
+        ),
+        Spacing.v10,
+        CountryStatePickerField(
+          label: 'State',
+          value: controller.selectedState.value?.name,
+          hint: controller.selectedCountry.value == null
+              ? 'Select country first'
+              : 'Select state',
+          isLoading: controller.isStatesLoading.value,
+          onTap: controller.selectedCountry.value == null
+              ? () {
+                  AppToast.showError(context, 'Please select country first');
+                }
+              : () => _pickState(context),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _pickCountry(BuildContext context) async {
+    FocusScope.of(context).unfocus();
+    await controller.ensureCountriesLoaded(forceRefresh: true);
+    if (!context.mounted) return;
+    final picked = await showCountryPickerSheet(
+      context,
+      countries: controller.countries.toList(),
+      selected: controller.selectedCountry.value,
+    );
+    if (picked != null) await controller.selectCountry(picked);
+  }
+
+  Future<void> _pickState(BuildContext context) async {
+    final country = controller.selectedCountry.value;
+    if (country == null) return;
+    FocusScope.of(context).unfocus();
+    await controller.loadStatesForCountry(country.id, forceRefresh: true);
+    if (!context.mounted) return;
+    final picked = await showStatePickerSheet(
+      context,
+      states: controller.states.toList(),
+      selected: controller.selectedState.value,
+    );
+    if (picked != null) controller.selectState(picked);
   }
 
   Widget _genderField() {

@@ -29,6 +29,12 @@ class AuthEndpoints {
   /// POST /api/auth/verify-otp
   static const String verifyOtp = '/api/auth/verify-otp';
 
+  /// GET /api/auth/countries — public country list
+  static const String countries = '/api/auth/countries';
+
+  /// GET /api/auth/states?countryId= — public state list
+  static const String states = '/api/auth/states';
+
   /// POST /api/auth/social
   static const String socialLogin = '/api/auth/social';
 
@@ -60,6 +66,10 @@ class RoomEndpoints {
 
   /// POST /api/live-streaming/create — host starts Zego live stream
   static const String createLiveStreaming = '/api/live-streaming/create';
+
+  /// GET /api/live-streaming/verify-access — wallet/agency gate for Go Live
+  static const String verifyLiveStreamingAccess =
+      '/api/live-streaming/verify-access';
 
   /// GET /api/room/list
   static const String listActiveRooms = '/api/room/list';

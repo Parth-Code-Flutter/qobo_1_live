@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/agency_host_list/controllers/agency_host_list_controller.dart';
 import 'package:qobo_one_live/app/user_flow/discover/discover_tab/controllers/discover_tab_controller.dart';
+import 'package:qobo_one_live/app/user_flow/live_room/controllers/live_room_controller.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/controllers/messages_tab_controller.dart';
 import 'package:qobo_one_live/constants/status_code_constants.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
@@ -96,10 +97,11 @@ class BottomNavController extends GetxController {
   }
 
   void onGoLivePressed() {
-    Get.toNamed(
-      Routes.LIVE_ROOM_CREATE,
-      arguments: {'type': 'VIDEO', 'isHost': true},
-    );
+    if (Get.isRegistered<LiveRoomController>()) {
+      Get.find<LiveRoomController>().openGoLive();
+      return;
+    }
+    Get.put(LiveRoomController()).openGoLive();
   }
 
   void _applyTabSelection(int index) {

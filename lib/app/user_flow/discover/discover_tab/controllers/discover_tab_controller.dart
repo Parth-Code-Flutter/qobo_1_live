@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/app/user_flow/discover/discover_tab/models/explore_discover_utils.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/widgets/match_user_sheet.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
@@ -35,6 +36,9 @@ class DiscoverTabController extends GetxController {
   final processingFollowId = ''.obs;
   final processingFavouriteId = ''.obs;
 
+  var _discoverPage = 1;
+  var _discoverHasMore = true;
+
   Timer? _debounceTimer;
 
   @override
@@ -58,24 +62,36 @@ class DiscoverTabController extends GetxController {
   }
 
   /// Explore grid feed — `GET /api/discover` (separate from Messages New Match).
-  Future<void> fetchDiscoverUsers() async {
+  Future<void> fetchDiscoverUsers({bool refresh = true}) async {
+    if (refresh) {
+      _discoverPage = 1;
+      _discoverHasMore = true;
+    } else if (!_discoverHasMore || isDiscoverUsersLoading.value) {
+      return;
+    }
+
     try {
       isDiscoverUsersLoading.value = true;
       final response = await _userRepo.exploreDiscover(
-        page: 1,
+        page: _discoverPage,
         limit: 30,
         country: selectedCountry.value,
         isShowLoader: false,
       );
-      if (isSocialApiSuccess(response)) {
-        discoverUsers.assignAll(
-          SocialUserCard.listFromResponseData(response!['data']),
-        );
+      final page = ExploreDiscoverPage.fromApiResponse(response);
+      if (page.users.isNotEmpty || refresh) {
+        if (refresh || _discoverPage == 1) {
+          discoverUsers.assignAll(page.users);
+        } else {
+          discoverUsers.addAll(page.users);
+        }
+        _discoverHasMore = page.hasMore;
+        if (page.users.isNotEmpty) _discoverPage++;
         return;
       }
-      discoverUsers.clear();
+      if (refresh) discoverUsers.clear();
     } catch (_) {
-      discoverUsers.clear();
+      if (refresh) discoverUsers.clear();
     } finally {
       isDiscoverUsersLoading.value = false;
     }
@@ -114,7 +130,7 @@ class DiscoverTabController extends GetxController {
     final normalized = country?.trim();
     selectedCountry.value =
         normalized == null || normalized.isEmpty ? null : normalized;
-    await fetchDiscoverUsers();
+    await fetchDiscoverUsers(refresh: true);
   }
 
   Future<void> toggleFavourite(
@@ -136,12 +152,12 @@ class DiscoverTabController extends GetxController {
             );
       if (!context.mounted) return;
 
-      if (isSocialApiSuccess(response)) {
-        final data = response?['data'];
-        final resolved = data is Map
-            ? data['isFavourite'] == true || data['isFavorite'] == true
-            : nextFavourite;
-        _applyFavouriteState(user.id, isFavourite: resolved);
+      final result = FavouriteActionResult.fromApiResponse(response);
+      if (result != null) {
+        _applyFavouriteState(result.targetId, isFavourite: result.isFavourite);
+        if (result.message != null && result.message!.isNotEmpty) {
+          AppToast.showSuccess(context, result.message!);
+        }
         return;
       }
 
@@ -382,7 +398,7 @@ class DiscoverTabController extends GetxController {
   /// Refresh discover users when user returns to this nav item.
   void refreshOnTabSelected() {
     if (!isDiscoverUsersLoading.value) {
-      fetchDiscoverUsers();
+      fetchDiscoverUsers(refresh: true);
     }
     if (Get.isRegistered<ChatIncomingCallCoordinator>()) {
       unawaited(

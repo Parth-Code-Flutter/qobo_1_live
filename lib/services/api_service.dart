@@ -141,6 +141,40 @@ class ApiService {
     return null;
   }
 
+  /// Public GET (no auth) — used for country/state dropdowns before login.
+  Future<http.Response?> getPublicRequest({
+    required String endPoint,
+    Map<String, String>? queryParams,
+    bool isShowLoader = false,
+  }) async {
+    LoggerUtils.logInfo('GET Public: $endPoint');
+
+    if (isShowLoader) {
+      Get.find<AlertMessageUtils>().showProgressDialog();
+    }
+
+    var uri = Uri.parse('${ApiConstants.baseUrl}$endPoint');
+    if (queryParams != null && queryParams.isNotEmpty) {
+      uri = uri.replace(queryParameters: queryParams);
+    }
+
+    try {
+      final response = await http.get(
+        uri,
+        headers: const {'Content-Type': 'application/json'},
+      );
+      _logApiResult('GET Public $endPoint', response);
+      return response;
+    } catch (e) {
+      LoggerUtils.logApiError('GET Public $endPoint', e);
+      return null;
+    } finally {
+      if (isShowLoader) {
+        Get.find<AlertMessageUtils>().hideProgressDialog();
+      }
+    }
+  }
+
   Future<http.Response?> getRequest({
     required String endPoint,
     Map<String, dynamic>? params,

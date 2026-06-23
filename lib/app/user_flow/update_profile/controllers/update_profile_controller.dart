@@ -1,9 +1,10 @@
+import 'dart:async';
 import 'dart:io';
 
-import 'package:get/get.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
@@ -15,13 +16,15 @@ import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_dialogs/common_giffy_dialog.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_media_picker.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
+import 'package:qobo_one_live/utils/geo/country_state_selection_mixin.dart';
 import 'package:qobo_one_live/utils/profile/stored_profile_map.dart';
 import 'package:qobo_one_live/utils/profile/update_profile_api_helper.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/validations/text_field_validations.dart';
 
 /// Controller for update profile flow (wire API + state here).
-class UpdateProfileController extends GetxController {
+class UpdateProfileController extends GetxController
+    with CountryStateSelectionMixin {
   UpdateProfileController({AuthRepo? authRepo})
     : _authRepo = authRepo ?? AuthRepo();
 
@@ -37,6 +40,7 @@ class UpdateProfileController extends GetxController {
 
   final userNameController = TextEditingController();
   final birthdateController = TextEditingController();
+  final cityController = TextEditingController();
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
 
@@ -78,6 +82,11 @@ class UpdateProfileController extends GetxController {
     ]);
     final name = nameRaw?.toString().trim() ?? '';
     if (name.isNotEmpty) userNameController.text = name;
+
+    final cityRaw = firstPresent(data, const ['city']);
+    if (cityRaw != null && cityRaw.toString().trim().isNotEmpty) {
+      cityController.text = cityRaw.toString().trim();
+    }
 
     final genderLabel = genderLabelFromStored(
       firstPresent(data, const ['gender', 'sex']),
@@ -225,6 +234,13 @@ class UpdateProfileController extends GetxController {
     return formValid;
   }
 
+  String? validateCity(String? value) {
+    if ((value ?? '').trim().isEmpty) {
+      return 'City is required';
+    }
+    return null;
+  }
+
   Future<void> onPrimaryActionPressed(BuildContext context) async {
     if (isSubmitLoading.value) return;
     if (!validateForm(context)) return;
@@ -236,14 +252,36 @@ class UpdateProfileController extends GetxController {
       AppToast.showError(context, 'Please select gender');
       return;
     }
+    if (isComeFromOtpScreen.value) {
+      final countryError = validateCountrySelection();
+      final stateError = validateStateSelection();
+      if (countryError != null) {
+        AppToast.showError(context, countryError);
+        return;
+      }
+      if (stateError != null) {
+        AppToast.showError(context, stateError);
+        return;
+      }
+    }
 
     try {
       isSubmitLoading.value = true;
+      final country = selectedCountry.value;
+      final state = selectedState.value;
       final request = UpdateProfileApiHelper.buildRequest(
         name: userNameController.text.trim(),
         genderLabel: selectedGender.value,
         dob: selectedBirthdate.value,
         displayPicture: selectedProfileMedia.value,
+        country: country?.name,
+        countryId: country?.id,
+        state: state?.name,
+        stateId: state?.id,
+        city: cityController.text.trim(),
+        currentLocation: country != null && state != null
+            ? '${country.name}, ${state.name}, ${cityController.text.trim()}'
+            : null,
       );
       final response = await _authRepo.updateProfile(
         request: request,
@@ -377,6 +415,7 @@ class UpdateProfileController extends GetxController {
   void onClose() {
     userNameController.dispose();
     birthdateController.dispose();
+    cityController.dispose();
     passwordController.dispose();
     confirmPasswordController.dispose();
     super.onClose();

@@ -1,12 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/live_room/models/live_room_filter_state.dart';
 import 'package:qobo_one_live/app/user_flow/live_room/widgets/live_room_filter_sheet.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/models/live_streaming/live_stream_access_result.dart';
 import 'package:qobo_one_live/repo/activity/activity_repo.dart';
 import 'package:qobo_one_live/repo/room/room_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
+import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 
 /// Controller for live room flow.
 class LiveRoomController extends GetxController {
@@ -235,6 +240,48 @@ class LiveRoomController extends GetxController {
   }
 
   void openGoLive() {
+    unawaited(_openGoLiveWithAccessCheck());
+  }
+
+  Future<void> _openGoLiveWithAccessCheck() async {
+    final context = Get.context;
+    if (context == null) return;
+
+    final session = Get.isRegistered<UserSessionController>()
+        ? Get.find<UserSessionController>()
+        : null;
+    await session?.loadFromStorage();
+    final userId = session?.userId ?? '';
+    if (userId.isEmpty) {
+      AppToast.showError(context, 'Please log in to go live');
+      return;
+    }
+
+    final response = await _roomRepo.verifyLiveStreamingAccess(
+      userId: userId,
+      isShowLoader: true,
+    );
+    final access = LiveStreamAccessResult.fromApiResponse(response);
+    if (!context.mounted) return;
+
+    if (access == null) {
+      AppToast.showError(
+        context,
+        response?['message']?.toString() ??
+            'Unable to verify live streaming access',
+      );
+      return;
+    }
+    if (!access.accessAllowed) {
+      AppToast.showError(
+        context,
+        access.message.isNotEmpty
+            ? access.message
+            : 'You can\'t access this feature. Please join an agency or recharge your wallet.',
+      );
+      return;
+    }
+
     Get.toNamed(Routes.LIVE_ROOM_CREATE, arguments: {'mode': 'live_streaming'});
   }
 

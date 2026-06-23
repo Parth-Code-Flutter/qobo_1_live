@@ -58,6 +58,22 @@ class RoomRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
+  /// `GET /api/live-streaming/verify-access?userId=...`
+  Future<Map<String, dynamic>?> verifyLiveStreamingAccess({
+    required String userId,
+    bool isShowLoader = false,
+  }) async {
+    final id = userId.trim();
+    if (id.isEmpty) return null;
+    final response = await _apiService.getRequest(
+      endPoint:
+          '${RoomEndpoints.verifyLiveStreamingAccess}?userId=${Uri.encodeComponent(id)}',
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
   /// Calls `GET /api/room/list` to fetch active live rooms.
   Future<Map<String, dynamic>?> listActiveRooms({
     String? type, // 'audio'/'video' or legacy 'AUDIO'/'VIDEO'

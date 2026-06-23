@@ -154,10 +154,13 @@ class _DiscoverUserCard extends StatelessWidget {
                 Positioned(
                   top: 8,
                   right: 8,
-                  child: _FavouriteButton(
-                    isFavourite: user.isFavourite,
-                    isLoading: isFavouriteLoading,
-                    onTap: onFavouriteTap,
+                  child: GestureDetector(
+                    onTap: isFavouriteLoading ? null : onFavouriteTap,
+                    behavior: HitTestBehavior.opaque,
+                    child: _FavouriteButton(
+                      isFavourite: user.isFavourite,
+                      isLoading: isFavouriteLoading,
+                    ),
                   ),
                 ),
               ],
@@ -188,44 +191,37 @@ class _FavouriteButton extends StatelessWidget {
   const _FavouriteButton({
     required this.isFavourite,
     required this.isLoading,
-    required this.onTap,
   });
 
   final bool isFavourite;
   final bool isLoading;
-  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: isLoading ? null : onTap,
-        customBorder: const CircleBorder(),
-        child: Ink(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.38),
-            shape: BoxShape.circle,
-          ),
-          child: isLoading
-              ? const Padding(
-                  padding: EdgeInsets.all(8),
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(kColorWhite),
-                  ),
-                )
-              : Icon(
-                  isFavourite
-                      ? Icons.favorite_rounded
-                      : Icons.favorite_border_rounded,
-                  size: 18,
-                  color: isFavourite ? kColorBottomNavHeart : kColorWhite,
-                ),
-        ),
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.38),
+        shape: BoxShape.circle,
       ),
+      alignment: Alignment.center,
+      child: isLoading
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(kColorWhite),
+              ),
+            )
+          : Icon(
+              isFavourite
+                  ? Icons.favorite_rounded
+                  : Icons.favorite_border_rounded,
+              size: 18,
+              color: isFavourite ? kColorBottomNavHeart : kColorWhite,
+            ),
     );
   }
 }

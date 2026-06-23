@@ -13,6 +13,12 @@ class UpdateProfileRequestModel {
     this.languages,
     this.interests,
     this.currentLocation,
+    this.country,
+    this.countryId,
+    this.state,
+    this.stateId,
+    this.city,
+    this.coinsPerSecond,
   });
 
   final String? name;
@@ -25,6 +31,12 @@ class UpdateProfileRequestModel {
   final String? languages;
   final String? interests;
   final String? currentLocation;
+  final String? country;
+  final String? countryId;
+  final String? state;
+  final String? stateId;
+  final String? city;
+  final double? coinsPerSecond;
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{
@@ -35,6 +47,12 @@ class UpdateProfileRequestModel {
       'languages': languages?.trim(),
       'interests': interests?.trim(),
       'currentLocation': currentLocation?.trim(),
+      'country': country?.trim(),
+      'countryId': countryId?.trim(),
+      'state': state?.trim(),
+      'stateId': stateId?.trim(),
+      'city': city?.trim(),
+      if (coinsPerSecond != null) 'coinsPerSecond': coinsPerSecond,
     };
     json.removeWhere(
       (key, value) => value == null || (value is String && value.isEmpty),

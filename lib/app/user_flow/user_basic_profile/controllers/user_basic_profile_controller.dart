@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -12,15 +13,18 @@ import 'package:qobo_one_live/constants/status_code_constants.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
+import 'package:qobo_one_live/utils/app_widgets/country_state_picker_sheet.dart';
 import 'package:qobo_one_live/utils/app_dialogs/common_radio_choice_dialog.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_media_picker.dart';
+import 'package:qobo_one_live/utils/geo/country_state_selection_mixin.dart';
 import 'package:qobo_one_live/utils/profile/stored_profile_map.dart';
 import 'package:qobo_one_live/utils/profile/update_profile_api_helper.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/validations/text_field_validations.dart';
 
 /// Basic profile capture (photo + core fields). Wire `/api` here when ready.
-class UserBasicProfileController extends GetxController {
+class UserBasicProfileController extends GetxController
+    with CountryStateSelectionMixin {
   UserBasicProfileController({AuthRepo? authRepo})
     : _authRepo = authRepo ?? AuthRepo();
 
@@ -162,21 +166,32 @@ class UserBasicProfileController extends GetxController {
     }
   }
 
-  /// Placeholder: only India until full location picker exists.
+  /// Country + state picker for profile location.
   Future<void> openCurrentLocationDialog(BuildContext context) async {
     lastSelectedProfileExtraIndex.value = 2;
-    const options = ['India'];
-    final cur = currentLocationsLine.value.trim();
-    final result = await CommonRadioChoiceDialog.show(
-      context,
-      title: 'Current locations',
-      options: options,
-      initialSelected: cur.isEmpty || !options.contains(cur) ? null : cur,
-    );
+    await ensureCountriesLoaded(forceRefresh: true);
     if (!context.mounted) return;
-    if (result != null && result.isNotEmpty) {
-      currentLocationsLine.value = result;
-    }
+
+    final country = await showCountryPickerSheet(
+      context,
+      countries: countries.toList(),
+      selected: selectedCountry.value,
+    );
+    if (!context.mounted || country == null) return;
+    await selectCountry(country);
+    if (!context.mounted) return;
+
+    await loadStatesForCountry(country.id, forceRefresh: true);
+    if (!context.mounted) return;
+
+    final state = await showStatePickerSheet(
+      context,
+      states: states.toList(),
+      selected: selectedState.value,
+    );
+    if (!context.mounted || state == null) return;
+    selectState(state);
+    currentLocationsLine.value = '${country.name}, ${state.name}';
   }
 
   Future<void> openInterestsDialog(BuildContext context) async {
@@ -550,6 +565,10 @@ class UserBasicProfileController extends GetxController {
         languages: languagesLine.value,
         interests: interestsLine.value,
         currentLocation: currentLocationsLine.value,
+        country: selectedCountry.value?.name,
+        countryId: selectedCountry.value?.id,
+        state: selectedState.value?.name,
+        stateId: selectedState.value?.id,
       );
       if (!request.hasAnyField) {
         AppToast.showError(context, 'Nothing to update.');

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -8,6 +10,7 @@ import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/app_dialogs/common_giffy_dialog.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_media_picker.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
+import 'package:qobo_one_live/utils/geo/country_state_selection_mixin.dart';
 import 'package:qobo_one_live/utils/validations/text_field_validations.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/repo/agency/agency_api_utils.dart';
@@ -18,7 +21,8 @@ import '../models/agency_host_interest.dart';
 import '../models/agency_host_type.dart';
 import '../widgets/agency_host_category_picker.dart';
 
-class AgencyHostOnboardingController extends GetxController {
+class AgencyHostOnboardingController extends GetxController
+    with CountryStateSelectionMixin {
   final formKey = GlobalKey<FormState>();
   final AgencyRepo _agencyRepo = AgencyRepo();
 
@@ -27,8 +31,7 @@ class AgencyHostOnboardingController extends GetxController {
   final hostIdController = TextEditingController();
   final whatsAppController = TextEditingController();
   final gmailController = TextEditingController();
-  final countryRegionController = TextEditingController();
-  final stateController = TextEditingController();
+  final cityController = TextEditingController();
   final addressController = TextEditingController();
   final agencyCodeController = TextEditingController();
 
@@ -87,8 +90,7 @@ class AgencyHostOnboardingController extends GetxController {
     hostIdController.dispose();
     whatsAppController.dispose();
     gmailController.dispose();
-    countryRegionController.dispose();
-    stateController.dispose();
+    cityController.dispose();
     addressController.dispose();
     agencyCodeController.dispose();
     super.onClose();
@@ -199,12 +201,12 @@ class AgencyHostOnboardingController extends GetxController {
     return null;
   }
 
-  String? validateCountryRegion(String? value) {
-    return validateRequiredField(value, 'Country');
-  }
+  String? validateCountryRegion(String? value) => validateCountrySelection();
 
-  String? validateState(String? value) {
-    return validateRequiredField(value, 'State');
+  String? validateState(String? value) => validateStateSelection();
+
+  String? validateCity(String? value) {
+    return validateRequiredField(value, 'City');
   }
 
   String? validateAddress(String? value) {
@@ -255,12 +257,16 @@ class AgencyHostOnboardingController extends GetxController {
     final interestError = validateInterest();
     final photoError = validatePhoto();
     final docPhotoError = validateDocPhotos();
+    final countryError = validateCountrySelection();
+    final stateError = validateStateSelection();
 
     if (!isFormValid ||
         typeError != null ||
         interestError != null ||
         photoError != null ||
-        docPhotoError != null) {
+        docPhotoError != null ||
+        countryError != null ||
+        stateError != null) {
       if (typeError != null) {
         AppToast.showError(context, typeError);
       } else if (interestError != null) {
@@ -269,6 +275,10 @@ class AgencyHostOnboardingController extends GetxController {
         AppToast.showError(context, photoError);
       } else if (docPhotoError != null) {
         AppToast.showError(context, docPhotoError);
+      } else if (countryError != null) {
+        AppToast.showError(context, countryError);
+      } else if (stateError != null) {
+        AppToast.showError(context, stateError);
       }
       return;
     }
@@ -281,6 +291,8 @@ class AgencyHostOnboardingController extends GetxController {
 
     isSubmitLoading.value = true;
     final whatsapp = whatsAppController.text.trim();
+    final country = selectedCountry.value!;
+    final state = selectedState.value!;
     final response = await _agencyRepo.hostOnboarding(
       agencyCode: agencyCodeController.text.trim(),
       hostName: hostNameController.text.trim(),
@@ -288,8 +300,11 @@ class AgencyHostOnboardingController extends GetxController {
       whatsapp: whatsapp,
       type: selectedType.value!.apiValue,
       category: selectedInterest.value!.apiValue,
-      countryRegion: countryRegionController.text.trim(),
-      state: stateController.text.trim(),
+      countryRegion: country.name,
+      state: state.name,
+      countryId: country.id,
+      stateId: state.id,
+      city: cityController.text.trim(),
       address: addressController.text.trim(),
       hostRealPhoto: hostPhoto.value!,
       docPhotoFront: docPhotoFront.value!,

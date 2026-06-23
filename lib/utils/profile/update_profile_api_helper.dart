@@ -18,6 +18,12 @@ class UpdateProfileApiHelper {
     String? languages,
     String? interests,
     String? currentLocation,
+    String? country,
+    String? countryId,
+    String? state,
+    String? stateId,
+    String? city,
+    double? coinsPerSecond,
   }) {
     return UpdateProfileRequestModel(
       name: _nonEmpty(name),
@@ -28,6 +34,12 @@ class UpdateProfileApiHelper {
       languages: _nonEmpty(languages),
       interests: _nonEmpty(interests),
       currentLocation: _nonEmpty(currentLocation),
+      country: _nonEmpty(country),
+      countryId: _nonEmpty(countryId),
+      state: _nonEmpty(state),
+      stateId: _nonEmpty(stateId),
+      city: _nonEmpty(city),
+      coinsPerSecond: coinsPerSecond,
     );
   }
 
