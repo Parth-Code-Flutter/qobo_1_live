@@ -22,9 +22,9 @@ class DiscoverFiltersBar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _countryPickerField(context),
-          Spacing.v6,
+          Spacing.v8,
           SizedBox(
-            height: 36,
+            height: 38,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 2),
@@ -35,7 +35,9 @@ class DiscoverFiltersBar extends StatelessWidget {
                   case 0:
                     return _chip(
                       label: 'Male',
-                      selected: controller.filters.value.gender ==
+                      icon: Icons.male_rounded,
+                      selected:
+                          controller.filters.value.gender ==
                           DiscoverFilterState.genderMale,
                       onTap: () => controller.toggleGenderFilter(
                         DiscoverFilterState.genderMale,
@@ -44,7 +46,9 @@ class DiscoverFiltersBar extends StatelessWidget {
                   case 1:
                     return _chip(
                       label: 'Female',
-                      selected: controller.filters.value.gender ==
+                      icon: Icons.female_rounded,
+                      selected:
+                          controller.filters.value.gender ==
                           DiscoverFilterState.genderFemale,
                       onTap: () => controller.toggleGenderFilter(
                         DiscoverFilterState.genderFemale,
@@ -53,6 +57,7 @@ class DiscoverFiltersBar extends StatelessWidget {
                   default:
                     return _chip(
                       label: 'Not following',
+                      icon: Icons.person_off_outlined,
                       selected: controller.filters.value.excludeFollowing,
                       onTap: controller.toggleExcludeFollowingFilter,
                     );
@@ -73,21 +78,31 @@ class DiscoverFiltersBar extends StatelessWidget {
     final hasValue = selected != null;
 
     return GestureDetector(
-      onTap: isLoading ? null : () => controller.openCountryFilterSheet(context),
+      onTap: isLoading
+          ? null
+          : () => controller.openCountryFilterSheet(context),
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        height: 36,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: _filterCapsuleDecoration(selected: hasValue),
+        height: 40,
+        padding: const EdgeInsets.fromLTRB(10, 4, 8, 4),
+        decoration: _countryCapsuleDecoration(selected: hasValue),
         child: Row(
           children: [
-            Icon(
-              Icons.public_outlined,
-              size: 14,
-              color: kColorWhite.withValues(alpha: hasValue ? 1 : 0.85),
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: kColorWhite.withValues(alpha: hasValue ? 0.20 : 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.public_rounded,
+                size: 15,
+                color: kColorWhite.withValues(alpha: hasValue ? 1 : 0.86),
+              ),
             ),
-            Spacing.h8,
+            Spacing.h10,
             Expanded(
               child: isLoading
                   ? Align(
@@ -104,19 +119,58 @@ class DiscoverFiltersBar extends StatelessWidget {
                   : SemiBoldText(
                       text: selected?.name ?? 'All countries',
                       fontSize: TextStyles.k12FontSize,
-                      color: kColorWhite.withValues(alpha: hasValue ? 1 : 0.85),
+                      color: kColorWhite.withValues(alpha: hasValue ? 1 : 0.9),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
             ),
-            Icon(
-              Icons.keyboard_arrow_down_rounded,
-              size: 16,
-              color: kColorWhite.withValues(alpha: 0.85),
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: kColorWhite.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 18,
+                color: kColorWhite.withValues(alpha: 0.9),
+              ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  BoxDecoration _countryCapsuleDecoration({required bool selected}) {
+    return BoxDecoration(
+      borderRadius: BorderRadius.circular(24),
+      gradient: LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: selected
+            ? const [
+                kColorLiveFilterChipGradientStart,
+                kColorLiveFilterChipGradientEnd,
+              ]
+            : [
+                kColorWhite.withValues(alpha: 0.17),
+                kColorWhite.withValues(alpha: 0.10),
+              ],
+      ),
+      border: Border.all(
+        color: selected
+            ? kColorWhite.withValues(alpha: 0.26)
+            : kColorWhite.withValues(alpha: 0.08),
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: kColorPrimary.withValues(alpha: selected ? 0.18 : 0.10),
+          blurRadius: 12,
+          offset: const Offset(0, 5),
+        ),
+      ],
     );
   }
 
@@ -134,14 +188,24 @@ class DiscoverFiltersBar extends StatelessWidget {
       color: selected ? null : LiveRoomUiColors.chipInactiveBg,
       border: Border.all(
         color: selected
-            ? kColorLiveFilterChipBorder
-            : LiveRoomUiColors.cardBorder,
+            ? kColorWhite.withValues(alpha: 0.22)
+            : kColorWhite.withValues(alpha: 0.08),
       ),
+      boxShadow: selected
+          ? [
+              BoxShadow(
+                color: kColorPrimary.withValues(alpha: 0.18),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ]
+          : null,
     );
   }
 
   Widget _chip({
     required String label,
+    required IconData icon,
     required bool selected,
     required VoidCallback onTap,
   }) {
@@ -152,16 +216,25 @@ class DiscoverFiltersBar extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: _filterCapsuleDecoration(selected: selected),
-          child: Center(
-            child: SemiBoldText(
-              text: label,
-              fontSize: TextStyles.k12FontSize,
-              color: kColorWhite,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 14,
+                color: kColorWhite.withValues(alpha: selected ? 1 : 0.84),
+              ),
+              Spacing.h6,
+              SemiBoldText(
+                text: label,
+                fontSize: TextStyles.k12FontSize,
+                color: kColorWhite.withValues(alpha: selected ? 1 : 0.9),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
         ),
       ),

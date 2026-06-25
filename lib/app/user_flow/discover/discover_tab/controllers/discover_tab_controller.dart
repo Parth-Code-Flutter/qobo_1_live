@@ -7,11 +7,13 @@ import 'package:qobo_one_live/app/user_flow/discover/discover_tab/models/discove
 import 'package:qobo_one_live/app/user_flow/discover/discover_tab/models/explore_discover_utils.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/widgets/match_user_sheet.dart';
+import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/models/geo/country_state_models.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/repo/chat/chat_navigation_helper.dart';
 import 'package:qobo_one_live/repo/geo/geo_repo.dart';
 import 'package:qobo_one_live/repo/user/user_repo.dart';
+import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/chat/chat_call_launcher.dart';
 import 'package:qobo_one_live/services/chat/chat_call_service.dart';
 import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
@@ -46,6 +48,50 @@ class DiscoverTabController extends GetxController {
   final processingFollowId = ''.obs;
   final processingFavouriteId = ''.obs;
   final selectedDiscoverMode = DiscoverRoomSelection.none.obs;
+  final demoVideoRooms = <Map<String, dynamic>>[
+    {
+      'id': 'demo_video_1',
+      'name': 'Creator Hangout',
+      'hostName': 'Ritvik',
+      'category': 'Open cam chat',
+      'type': 'VIDEO',
+      'countryName': 'India',
+      'viewerCount': '2.1k',
+      'coverImage': kImgTemp1,
+      'hostAvatar': kImgTemp1,
+      'maxSeats': 8,
+      'status': 'live',
+      'tags': ['Music', 'New friends'],
+    },
+    {
+      'id': 'demo_video_2',
+      'name': 'Late Night Live',
+      'hostName': 'Jitendra',
+      'category': 'Talk show',
+      'type': 'VIDEO',
+      'countryName': 'Global',
+      'viewerCount': '846',
+      'coverImage': kImgTemp2,
+      'hostAvatar': kImgTemp2,
+      'maxSeats': 6,
+      'status': 'live',
+      'tags': ['Trending', 'Co-host'],
+    },
+    {
+      'id': 'demo_video_3',
+      'name': 'Talent Stage',
+      'hostName': 'Alpha Host',
+      'category': 'Singing and games',
+      'type': 'VIDEO',
+      'countryName': 'Bangladesh',
+      'viewerCount': '1.4k',
+      'coverImage': kImgTemp3,
+      'hostAvatar': kImgTemp3,
+      'maxSeats': 12,
+      'status': 'live',
+      'tags': ['Talent', 'VIP'],
+    },
+  ].obs;
 
   /// Back-compat for header badge.
   String? get selectedCountry => filters.value.country;
@@ -186,6 +232,10 @@ class DiscoverTabController extends GetxController {
       searchResults.clear();
       searchQuery.value = '';
     }
+  }
+
+  void openCreateVideoRoom() {
+    Get.toNamed(Routes.LIVE_ROOM_CREATE, arguments: {'type': 'VIDEO'});
   }
 
   Future<void> toggleGenderFilter(String gender) async {
