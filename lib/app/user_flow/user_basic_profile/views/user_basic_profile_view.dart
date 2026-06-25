@@ -601,6 +601,18 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
           color: kColorHint,
         ),
       ),
+      suffix: Padding(
+        padding: const EdgeInsets.only(right: 10),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: AppText(
+            text: 'coins per second',
+            fontSize: TextStyles.k10FontSize,
+            color: kColorHint,
+            maxLines: 1,
+          ),
+        ),
+      ),
     );
   }
 
