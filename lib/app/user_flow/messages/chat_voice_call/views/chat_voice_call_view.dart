@@ -7,6 +7,7 @@ import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:zego_uikit_prebuilt_call/zego_uikit_prebuilt_call.dart';
 
 import '../controllers/chat_voice_call_controller.dart';
+import '../widgets/chat_call_control_buttons.dart';
 
 /// Zego Call Kit screen — 1:1 voice or video (quick-start pattern).
 class ChatVoiceCallView extends GetView<ChatVoiceCallController> {
@@ -80,20 +81,48 @@ class ChatVoiceCallView extends GetView<ChatVoiceCallController> {
   }
 
   ZegoUIKitPrebuiltCallConfig _buildConfig(bool isVideo) {
+    final bottomBar = ZegoCallBottomMenuBarConfig(
+      style: ZegoCallMenuBarStyle.light,
+      hideAutomatically: false,
+      buttons: isVideo
+          ? const [
+              ZegoCallMenuBarButtonName.toggleCameraButton,
+              ZegoCallMenuBarButtonName.switchCameraButton,
+              ZegoCallMenuBarButtonName.hangUpButton,
+            ]
+          : const [
+              ZegoCallMenuBarButtonName.hangUpButton,
+            ],
+      extendButtons: const [
+        ChatCallMicButton(),
+        ChatCallSpeakerButton(),
+      ],
+    );
+
+    final device = ZegoCallDeviceConfig(
+      enableSyncDeviceStatusBySEI: false,
+    );
+
     if (isVideo) {
       return ZegoUIKitPrebuiltCallConfig.oneOnOneVideoCall()
         ..turnOnCameraWhenJoining = true
         ..turnOnMicrophoneWhenJoining = true
         ..useSpeakerWhenJoining = true
+        ..enableAccidentalTouchPrevention = false
         ..duration.isVisible = true
-        ..user.requiredUsers.enabled = false;
+        ..user.requiredUsers.enabled = false
+        ..bottomMenuBar = bottomBar
+        ..device = device;
     }
 
     return ZegoUIKitPrebuiltCallConfig.oneOnOneVoiceCall()
       ..turnOnCameraWhenJoining = false
       ..turnOnMicrophoneWhenJoining = true
       ..useSpeakerWhenJoining = true
+      ..enableAccidentalTouchPrevention = false
       ..duration.isVisible = true
-      ..user.requiredUsers.enabled = false;
+      ..user.requiredUsers.enabled = false
+      ..bottomMenuBar = bottomBar
+      ..device = device;
   }
 }
