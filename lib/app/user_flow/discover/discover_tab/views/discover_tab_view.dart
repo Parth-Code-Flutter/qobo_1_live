@@ -12,8 +12,11 @@ import 'package:qobo_one_live/utils/ui_utils/app_ui_utils.dart';
 
 import '../controllers/discover_tab_controller.dart';
 import '../widgets/discover_country_filter_sheet.dart';
+import '../models/discover_room_selection.dart';
+import '../widgets/discover_audio_room_view.dart';
 import '../widgets/discover_filters_bar.dart';
 import '../widgets/discover_users_feed.dart';
+import '../widgets/discover_video_room_view.dart';
 
 class DiscoverTabView extends StatelessWidget {
   const DiscoverTabView({super.key});
@@ -36,8 +39,11 @@ class DiscoverTabView extends StatelessWidget {
               Spacing.v16,
               _searchBar(discoverController),
               Spacing.v8,
+              _discoverModeTabs(discoverController),
+              Spacing.v8,
               Obx(() {
-                if (discoverController.searchQuery.value.isNotEmpty) {
+                if (!discoverController.isPeopleMode ||
+                    discoverController.searchQuery.value.isNotEmpty) {
                   return const SizedBox.shrink();
                 }
                 return DiscoverFiltersBar(controller: discoverController);
@@ -45,6 +51,12 @@ class DiscoverTabView extends StatelessWidget {
               Spacing.v6,
               Expanded(
                 child: Obx(() {
+                  if (discoverController.isVideoRoomMode) {
+                    return const DiscoverVideoRoomView();
+                  }
+                  if (discoverController.isAudioRoomMode) {
+                    return const DiscoverAudioRoomView();
+                  }
                   if (discoverController.searchQuery.value.isNotEmpty) {
                     return _searchResultsList(context, discoverController);
                   }
@@ -52,6 +64,91 @@ class DiscoverTabView extends StatelessWidget {
                 }),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _discoverModeTabs(DiscoverTabController controller) {
+    return Obx(
+      () => Container(
+        height: 42,
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: kColorWhite.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
+          boxShadow: [
+            BoxShadow(
+              color: kColorPrimary.withValues(alpha: 0.16),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            _modeTab(
+              label: 'People',
+              mode: DiscoverRoomSelection.none,
+              controller: controller,
+            ),
+            _modeTab(
+              label: 'Video Rooms',
+              mode: DiscoverRoomSelection.video,
+              controller: controller,
+            ),
+            _modeTab(
+              label: 'Audio Rooms',
+              mode: DiscoverRoomSelection.audio,
+              controller: controller,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _modeTab({
+    required String label,
+    required DiscoverRoomSelection mode,
+    required DiscoverTabController controller,
+  }) {
+    final selected = controller.selectedDiscoverMode.value == mode;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => controller.selectDiscoverMode(mode),
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          alignment: Alignment.center,
+          margin: const EdgeInsets.symmetric(horizontal: 1),
+          decoration: BoxDecoration(
+            gradient: selected
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      kColorLiveFilterChipGradientStart,
+                      kColorLiveFilterChipGradientEnd,
+                    ],
+                  )
+                : null,
+            color: selected ? null : kColorWhite.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: selected
+                  ? kColorWhite.withValues(alpha: 0.22)
+                  : Colors.transparent,
+            ),
+          ),
+          child: SemiBoldText(
+            text: label,
+            fontSize: TextStyles.k10FontSize,
+            color: kColorWhite.withValues(alpha: selected ? 1 : 0.82),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ),
@@ -122,10 +219,8 @@ class DiscoverTabView extends StatelessWidget {
                     clipBehavior: Clip.none,
                     children: [
                       IconButton(
-                        onPressed: () => _openCountryFilter(
-                          context,
-                          discoverController,
-                        ),
+                        onPressed: () =>
+                            _openCountryFilter(context, discoverController),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(
                           minWidth: 30,
@@ -285,7 +380,8 @@ class DiscoverTabView extends StatelessWidget {
         final String name = user['name']?.toString() ?? 'User';
         final String id = user['id']?.toString() ?? '';
 
-        final isFollowing = user['isFollowing'] == true ||
+        final isFollowing =
+            user['isFollowing'] == true ||
             controller.followingUserIds.contains(id);
 
         return Padding(

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/discover/discover_tab/models/discover_filter_state.dart';
+import 'package:qobo_one_live/app/user_flow/discover/discover_tab/models/discover_room_selection.dart';
 import 'package:qobo_one_live/app/user_flow/discover/discover_tab/models/explore_discover_utils.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/widgets/match_user_sheet.dart';
@@ -23,9 +24,9 @@ class DiscoverTabController extends GetxController {
     AuthRepo? authRepo,
     UserRepo? userRepo,
     GeoRepo? geoRepo,
-  })  : _authRepo = authRepo ?? AuthRepo(),
-        _userRepo = userRepo ?? UserRepo(),
-        _geoRepo = geoRepo ?? GeoRepo();
+  }) : _authRepo = authRepo ?? AuthRepo(),
+       _userRepo = userRepo ?? UserRepo(),
+       _geoRepo = geoRepo ?? GeoRepo();
 
   final AuthRepo _authRepo;
   final UserRepo _userRepo;
@@ -44,11 +45,21 @@ class DiscoverTabController extends GetxController {
   final filterCountries = <CountryOption>[].obs;
   final processingFollowId = ''.obs;
   final processingFavouriteId = ''.obs;
+  final selectedDiscoverMode = DiscoverRoomSelection.none.obs;
 
   /// Back-compat for header badge.
   String? get selectedCountry => filters.value.country;
 
   bool get hasActiveDiscoverFilters => filters.value.hasActiveFilters;
+
+  bool get isPeopleMode =>
+      selectedDiscoverMode.value == DiscoverRoomSelection.none;
+
+  bool get isVideoRoomMode =>
+      selectedDiscoverMode.value == DiscoverRoomSelection.video;
+
+  bool get isAudioRoomMode =>
+      selectedDiscoverMode.value == DiscoverRoomSelection.audio;
 
   var _discoverPage = 1;
   var _discoverHasMore = true;
@@ -167,20 +178,31 @@ class DiscoverTabController extends GetxController {
     await fetchDiscoverUsers(refresh: true);
   }
 
+  void selectDiscoverMode(DiscoverRoomSelection mode) {
+    if (selectedDiscoverMode.value == mode) return;
+    selectedDiscoverMode.value = mode;
+    if (mode != DiscoverRoomSelection.none) {
+      searchController.clear();
+      searchResults.clear();
+      searchQuery.value = '';
+    }
+  }
+
   Future<void> toggleGenderFilter(String gender) async {
     final current = filters.value;
-    final nextGender =
-        current.gender?.toLowerCase() == gender.toLowerCase() ? null : gender;
-    await applyDiscoverFilters(current.copyWith(
-      gender: nextGender,
-      clearGender: nextGender == null,
-    ));
+    final nextGender = current.gender?.toLowerCase() == gender.toLowerCase()
+        ? null
+        : gender;
+    await applyDiscoverFilters(
+      current.copyWith(gender: nextGender, clearGender: nextGender == null),
+    );
   }
 
   Future<void> toggleCountryFilter(CountryOption country) async {
     final current = filters.value;
     final code = country.code.trim();
-    final isSelected = current.country?.toLowerCase() == code.toLowerCase() ||
+    final isSelected =
+        current.country?.toLowerCase() == code.toLowerCase() ||
         current.country?.toLowerCase() == country.name.toLowerCase();
     await applyDiscoverFilters(
       current.copyWith(
@@ -263,7 +285,10 @@ class DiscoverTabController extends GetxController {
 
     try {
       final response = nextFavourite
-          ? await _userRepo.favouriteUser(targetId: user.id, isShowLoader: false)
+          ? await _userRepo.favouriteUser(
+              targetId: user.id,
+              isShowLoader: false,
+            )
           : await _userRepo.unfavouriteUser(
               targetId: user.id,
               isShowLoader: false,
@@ -295,9 +320,7 @@ class DiscoverTabController extends GetxController {
 
   void _applyFavouriteState(String userId, {required bool isFavourite}) {
     discoverUsers.value = discoverUsers
-        .map(
-          (u) => u.id == userId ? u.copyWith(isFavourite: isFavourite) : u,
-        )
+        .map((u) => u.id == userId ? u.copyWith(isFavourite: isFavourite) : u)
         .toList();
   }
 
@@ -349,14 +372,17 @@ class DiscoverTabController extends GetxController {
       if (!context.mounted) return;
       if (isSocialApiSuccess(response)) {
         final data = response?['data'];
-        final Map<String, dynamic>? dataMap =
-            data is Map ? Map<String, dynamic>.from(data) : null;
-        final isFollowing = dataMap?['isFollowing'] == true ||
+        final Map<String, dynamic>? dataMap = data is Map
+            ? Map<String, dynamic>.from(data)
+            : null;
+        final isFollowing =
+            dataMap?['isFollowing'] == true ||
             (action == 'follow' && dataMap == null);
         final isFollower = dataMap?['isFollower'] == true || user.isFollower;
         final isMutual =
             dataMap?['isMutual'] == true || (isFollowing && isFollower);
-        final canMessage = dataMap?['canMessage'] == true ||
+        final canMessage =
+            dataMap?['canMessage'] == true ||
             isFollowing ||
             isFollower ||
             isMutual;
@@ -398,9 +424,7 @@ class DiscoverTabController extends GetxController {
     required bool isFollowing,
   }) {
     discoverUsers.value = discoverUsers
-        .map(
-          (u) => u.id == userId ? u.copyWith(isFollowing: isFollowing) : u,
-        )
+        .map((u) => u.id == userId ? u.copyWith(isFollowing: isFollowing) : u)
         .toList();
   }
 
@@ -419,7 +443,8 @@ class DiscoverTabController extends GetxController {
       final nextFollowing = isFollowing;
       final nextMutual =
           isMutual ?? ((nextFollowing && nextFollower) || u.isMutual);
-      final nextCanMessage = canMessage ??
+      final nextCanMessage =
+          canMessage ??
           (nextFollowing || nextFollower || nextMutual || u.canMessage);
       return u.copyWith(
         isFollowing: nextFollowing,
@@ -470,10 +495,7 @@ class DiscoverTabController extends GetxController {
   Future<void> openChat(BuildContext context, SocialUserCard user) async {
     if (user.id.isEmpty) return;
     if (!user.canMessage) {
-      AppToast.showError(
-        context,
-        'Follow each other to start messaging',
-      );
+      AppToast.showError(context, 'Follow each other to start messaging');
       return;
     }
 
@@ -506,12 +528,12 @@ class DiscoverTabController extends GetxController {
   }
 
   MatchUserSheetActions get matchSheetActions => MatchUserSheetActions(
-        processingFollowId: processingFollowId,
-        userById: userById,
-        fetchPublicProfile: fetchPublicProfile,
-        toggleFollow: toggleFollowUser,
-        openChat: openChat,
-      );
+    processingFollowId: processingFollowId,
+    userById: userById,
+    fetchPublicProfile: fetchPublicProfile,
+    toggleFollow: toggleFollowUser,
+    openChat: openChat,
+  );
 
   /// Refresh discover users when user returns to this nav item.
   void refreshOnTabSelected() {
@@ -520,8 +542,7 @@ class DiscoverTabController extends GetxController {
     }
     if (Get.isRegistered<ChatIncomingCallCoordinator>()) {
       unawaited(
-        Get.find<ChatIncomingCallCoordinator>()
-            .syncWatchedRoomsFromFirestore(),
+        Get.find<ChatIncomingCallCoordinator>().syncWatchedRoomsFromFirestore(),
       );
     }
   }
