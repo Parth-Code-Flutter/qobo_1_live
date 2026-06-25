@@ -9,6 +9,7 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -44,6 +45,8 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       resizeToAvoidBottomInset: true,
+      floatingActionButton: _floatingSaveButton(context),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       body: Container(
         decoration: const BoxDecoration(
           image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
@@ -72,34 +75,40 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
                                   ScrollViewKeyboardDismissBehavior.onDrag,
                               physics: const AlwaysScrollableScrollPhysics(),
                               padding: EdgeInsets.fromLTRB(
-                                20,
-                                20,
-                                20,
-                                24 + MediaQuery.of(context).viewInsets.bottom,
+                                0,
+                                0,
+                                0,
+                                88 + MediaQuery.of(context).viewInsets.bottom,
                               ),
                               child: ConstrainedBox(
                                 constraints: BoxConstraints(
                                   minHeight: constraints.maxHeight - 40,
                                 ),
                                 child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Center(child: _profileImagePicker(context)),
-                                    Spacing.v28,
-                                    _userNameField(context),
-                                    Spacing.v10,
-                                    _ageField(context),
-                                    Spacing.v10,
-                                    _coinsPerSecondField(),
-                                    Spacing.v10,
-                                    _genderField(),
-                                    Spacing.v24,
-                                    _buildPosterBackgroundPicker(context),
-                                    Spacing.v24,
-                                    _profileExtrasCard(context),
-                                    Spacing.v16,
-                                  ],
-                                ),
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  _profileCoverHeader(context),
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Spacing.v16,
+                                        _userNameField(context),
+                                        Spacing.v10,
+                                        _ageField(context),
+                                        Spacing.v10,
+                                        _coinsPerSecondField(),
+                                        Spacing.v10,
+                                        _genderField(),
+                                        Spacing.v24,
+                                        _profileExtrasCard(context),
+                                        Spacing.v16,
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                               ),
                             );
                           },
@@ -116,49 +125,38 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
     );
   }
 
-  /// Circular confirm control (replaces Save). Grey fill when form has unsaved edits.
-  Widget _confirmProfileIconButton(
-    BuildContext context, {
-    bool forHeader = false,
-  }) {
-    final diameter = forHeader ? 28.0 : 28.0;
-    final iconSize = forHeader ? 12.0 : 12.0;
-    final stroke = forHeader ? 2.0 : 2.5;
-
+  /// Floating save control at the bottom of the screen.
+  Widget _floatingSaveButton(BuildContext context) {
     return Obx(() {
       final dirty = controller.isProfileDirty.value;
       final loading = controller.isSubmitLoading.value;
-      final bg = dirty
-          ? kColorProfileConfirmIconBgDirty
-          : kColorProfileConfirmIconBgIdle;
-      final iconColor = dirty ? kColorWhite : kColorPrimary;
 
-      return Material(
-        color: bg,
-        shape: const CircleBorder(),
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: loading ? null : () => controller.onSavePressed(context),
-          child: SizedBox(
-            width: diameter,
-            height: diameter,
-            child: Center(
-              child: loading
-                  ? SizedBox(
-                      width: iconSize,
-                      height: iconSize,
-                      child: CircularProgressIndicator(
-                        strokeWidth: stroke,
-                        color: iconColor,
-                      ),
-                    )
-                  : SvgPicture.asset(
-                      kIconRight,
-                      width: iconSize,
-                      height: iconSize,
-                      colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
-                    ),
+      return IgnorePointer(
+        ignoring: loading,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: appButton(
+            onPressed: () => controller.onSavePressed(context),
+            buttonText: 'Save',
+            buttonHeight: 48,
+            buttonWidth: MediaQuery.sizeOf(context).width - 48,
+            isGradient: dirty,
+            buttonColor: dirty ? kColorPrimary : kColorHint,
+            buttonBorderColor: dirty ? kColorPrimary : kColorHint,
+            textStyle: TextStyles.kSemiBoldPoppins(
+              fontSize: TextStyles.k14FontSize,
+              colors: kColorWhite,
             ),
+            buttonIcon: loading
+                ? SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: kColorWhite.withValues(alpha: 0.9),
+                    ),
+                  )
+                : null,
           ),
         ),
       );
@@ -305,19 +303,142 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
             fontSize: TextStyles.k20FontSize,
             color: kColorWhite,
           ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 2),
-              child: _confirmProfileIconButton(context, forHeader: true),
+        ],
+      ),
+    );
+  }
+
+  /// Facebook-style cover banner with overlapping profile photo.
+  Widget _profileCoverHeader(BuildContext context) {
+    const bannerHeight = 150.0;
+    const avatarSize = 108.0;
+    const avatarOverhang = avatarSize / 2;
+
+    return Obx(() {
+      final File? localPoster = controller.selectedPosterMedia.value;
+      final String netPoster = controller.posterUrl.value;
+      final bool isUploading = controller.isPosterUploading.value;
+      final bool hasPoster =
+          localPoster != null || netPoster.trim().isNotEmpty;
+
+      return SizedBox(
+        height: bannerHeight + avatarOverhang,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            GestureDetector(
+              onTap: isUploading
+                  ? null
+                  : () => controller.pickPosterMedia(context),
+              child: SizedBox(
+                height: bannerHeight,
+                width: double.infinity,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (localPoster != null)
+                      Image.file(localPoster, fit: BoxFit.cover)
+                    else if (netPoster.isNotEmpty)
+                      Image.network(
+                        netPoster,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _emptyCoverPlaceholder(),
+                      )
+                    else
+                      _emptyCoverPlaceholder(),
+                    if (!hasPoster)
+                      Container(
+                        color: kColorBlack.withValues(alpha: 0.04),
+                      ),
+                    Positioned(
+                      right: 14,
+                      bottom: 14,
+                      child: _coverEditButton(),
+                    ),
+                    if (isUploading)
+                      ColoredBox(
+                        color: kColorBlack.withValues(alpha: 0.35),
+                        child: const Center(
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation(kColorPrimary),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
+            Positioned(
+              top: bannerHeight - avatarOverhang,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: _profileAvatarPicker(context, size: avatarSize),
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _emptyCoverPlaceholder() {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            kColorPrimary.withValues(alpha: 0.35),
+            const Color(0xFFDFE3EA),
+          ],
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.add_photo_alternate_outlined,
+              color: kColorWhite.withValues(alpha: 0.9),
+              size: 34,
+            ),
+            Spacing.v6,
+            AppText(
+              text: 'Add cover photo',
+              fontSize: TextStyles.k12FontSize,
+              color: kColorWhite.withValues(alpha: 0.92),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _coverEditButton() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: kColorBlack.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.35)),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.camera_alt_rounded, color: kColorWhite, size: 14),
+          SizedBox(width: 6),
+          AppText(
+            text: 'Edit cover',
+            fontSize: TextStyles.k10FontSize,
+            color: kColorWhite,
           ),
         ],
       ),
     );
   }
 
-  Widget _profileImagePicker(BuildContext context) {
+  Widget _profileAvatarPicker(BuildContext context, {required double size}) {
     final userSession = _resolveUserSession();
 
     return Obx(() {
@@ -329,34 +450,39 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
           return GestureDetector(
             onTap: () => controller.onProfileMediaTap(context),
             child: SizedBox(
-              width: 124,
-              height: 124,
+              width: size,
+              height: size,
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    child: Container(
-                      width: 130,
-                      height: 130,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFF5F5F5),
-                        shape: BoxShape.circle,
-                      ),
-                      child: ClipOval(
-                        child: _avatarInner(selectedMedia, session),
-                      ),
+                  Container(
+                    width: size,
+                    height: size,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: kColorWhite,
+                      border: Border.all(color: kColorWhite, width: 4),
+                      boxShadow: [
+                        BoxShadow(
+                          color: kColorBlack.withValues(alpha: 0.18),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: _avatarInner(selectedMedia, session),
                     ),
                   ),
-                  Align(
-                    alignment: Alignment.bottomRight,
+                  Positioned(
+                    right: 2,
+                    bottom: 2,
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       onTap: () => controller.onProfileMediaTap(context),
                       child: SizedBox(
-                        width: 34,
-                        height: 34,
+                        width: 32,
+                        height: 32,
                         child: SvgPicture.asset(
                           kIconEditBG,
                           fit: BoxFit.contain,
@@ -565,78 +691,6 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildPosterBackgroundPicker(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const AppText(
-          text: 'Profile Background Poster Banner',
-          fontSize: TextStyles.k14FontSize,
-          color: kColorText,
-        ),
-        Spacing.v12,
-        Obx(() {
-          final File? localPoster = controller.selectedPosterMedia.value;
-          final String netPoster = controller.posterUrl.value;
-          final bool isUploading = controller.isPosterUploading.value;
-
-          return GestureDetector(
-            onTap: isUploading ? null : () => controller.pickPosterMedia(context),
-            child: Container(
-              height: 150,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: kColorProfileExtrasCardBg,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: kColorTextFieldBorder, width: 0.5),
-                image: localPoster != null
-                    ? DecorationImage(image: FileImage(localPoster), fit: BoxFit.cover)
-                    : (netPoster.isNotEmpty
-                        ? DecorationImage(image: NetworkImage(netPoster), fit: BoxFit.cover)
-                        : null),
-              ),
-              child: Stack(
-                children: [
-                  if (localPoster == null && netPoster.isEmpty)
-                    Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.add_photo_alternate_rounded, color: Colors.grey.shade400, size: 36),
-                          Spacing.v8,
-                          AppText(text: 'Upload Custom Poster Background', fontSize: 12, color: kColorHint),
-                        ],
-                      ),
-                    )
-                  else
-                    Positioned(
-                      right: 12,
-                      bottom: 12,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                          color: kColorPrimary,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.camera_enhance_rounded, color: kColorWhite, size: 16),
-                      ),
-                    ),
-                  if (isUploading)
-                    Container(
-                      color: kColorBlack.withOpacity(0.3),
-                      child: const Center(
-                        child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(kColorPrimary)),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          );
-        }),
-      ],
     );
   }
 }
