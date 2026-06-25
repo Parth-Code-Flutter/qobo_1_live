@@ -92,6 +92,47 @@ class DiscoverTabController extends GetxController {
       'tags': ['Talent', 'VIP'],
     },
   ].obs;
+  final demoAudioRooms = <Map<String, dynamic>>[
+    {
+      'id': 'demo_audio_1',
+      'name': 'Open Mic Lounge',
+      'hostName': 'Priya Sharma',
+      'category': 'Music and talk',
+      'type': 'AUDIO',
+      'countryName': 'India',
+      'listenerCount': '1.8k',
+      'speakerCount': 5,
+      'maxSeats': 8,
+      'hostAvatar': kImgTemp4,
+      'status': 'live',
+    },
+    {
+      'id': 'demo_audio_2',
+      'name': 'Friendship Room',
+      'hostName': 'Ruby Queen',
+      'category': 'Meet new people',
+      'type': 'AUDIO',
+      'countryName': 'Bangladesh',
+      'listenerCount': '942',
+      'speakerCount': 3,
+      'maxSeats': 6,
+      'hostAvatar': kImgTemp5,
+      'status': 'live',
+    },
+    {
+      'id': 'demo_audio_3',
+      'name': 'Late Night Stories',
+      'hostName': 'Alpha Host',
+      'category': 'Stories and chill',
+      'type': 'AUDIO',
+      'countryName': 'Global',
+      'listenerCount': '2.6k',
+      'speakerCount': 7,
+      'maxSeats': 12,
+      'hostAvatar': kImgTemp3,
+      'status': 'live',
+    },
+  ].obs;
 
   /// Back-compat for header badge.
   String? get selectedCountry => filters.value.country;
@@ -236,6 +277,10 @@ class DiscoverTabController extends GetxController {
 
   void openCreateVideoRoom() {
     Get.toNamed(Routes.LIVE_ROOM_CREATE, arguments: {'type': 'VIDEO'});
+  }
+
+  void openCreateAudioRoom() {
+    Get.toNamed(Routes.LIVE_ROOM_CREATE, arguments: {'type': 'AUDIO'});
   }
 
   Future<void> toggleGenderFilter(String gender) async {

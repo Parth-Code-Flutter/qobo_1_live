@@ -60,7 +60,12 @@ class DiscoverTabView extends StatelessWidget {
                     );
                   }
                   if (discoverController.isAudioRoomMode) {
-                    return const DiscoverAudioRoomView();
+                    return DiscoverAudioRoomView(
+                      rooms: discoverController.demoAudioRooms,
+                      onCreateAudioRoom: discoverController.openCreateAudioRoom,
+                      onJoinRoom: (room) =>
+                          _showJoinAudioRoomPreview(context, room),
+                    );
                   }
                   if (discoverController.searchQuery.value.isNotEmpty) {
                     return _searchResultsList(context, discoverController);
@@ -157,6 +162,116 @@ class DiscoverTabView extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Future<void> _showJoinAudioRoomPreview(
+    BuildContext context,
+    Map<String, dynamic> room,
+  ) {
+    final roomName = room['name']?.toString() ?? 'Audio Room';
+    final hostName = room['hostName']?.toString() ?? 'Host';
+    final listeners =
+        room['listenerCount']?.toString() ??
+        room['audienceCount']?.toString() ??
+        '0';
+    final seats = '${room['speakerCount'] ?? 0}/${room['maxSeats'] ?? 8}';
+
+    return Get.bottomSheet<void>(
+      Container(
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
+        decoration: const BoxDecoration(
+          color: Color(0xFF251235),
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: kColorWhite.withValues(alpha: 0.22),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+              Spacing.v16,
+              const SemiBoldText(
+                text: 'Join Audio Room',
+                fontSize: TextStyles.k18FontSize,
+                color: kColorWhite,
+              ),
+              Spacing.v6,
+              AppText(
+                text: '$roomName • hosted by $hostName',
+                fontSize: TextStyles.k12FontSize,
+                color: kColorWhite.withValues(alpha: 0.72),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Spacing.v16,
+              Row(
+                children: [
+                  _joinPreviewStat(
+                    icon: Icons.hearing_rounded,
+                    label: 'Listeners',
+                    value: listeners,
+                  ),
+                  Spacing.h10,
+                  _joinPreviewStat(
+                    icon: Icons.mic_rounded,
+                    label: 'Seats',
+                    value: seats,
+                  ),
+                ],
+              ),
+              Spacing.v20,
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [
+                        kColorVideoJoinLivePurple,
+                        kColorVideoJoinLiveGradientEnd,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: TextButton(
+                    onPressed: () {
+                      Get.back<void>();
+                      Get.snackbar(
+                        'Audio Room',
+                        'Join room UI is ready. Zego wiring comes next.',
+                        snackPosition: SnackPosition.BOTTOM,
+                        backgroundColor: const Color(0xFF251235),
+                        colorText: kColorWhite,
+                      );
+                    },
+                    child: const SemiBoldText(
+                      text: 'Join Room',
+                      fontSize: TextStyles.k14FontSize,
+                      color: kColorWhite,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
     );
   }
 

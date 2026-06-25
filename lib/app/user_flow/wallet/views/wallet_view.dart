@@ -20,6 +20,18 @@ class WalletView extends StatefulWidget {
 
 class _WalletViewState extends State<WalletView> {
   final WalletController controller = Get.find<WalletController>();
+  final TextEditingController _withdrawUpiController = TextEditingController();
+  final TextEditingController _withdrawAccountController =
+      TextEditingController();
+  final TextEditingController _withdrawIfscController = TextEditingController();
+
+  @override
+  void dispose() {
+    _withdrawUpiController.dispose();
+    _withdrawAccountController.dispose();
+    _withdrawIfscController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,12 +73,17 @@ class _WalletViewState extends State<WalletView> {
                 Spacing.v12,
                 Obx(() => _withdrawalLimitCard()),
                 Spacing.v12,
+                Obx(() => _withdrawActionCard()),
+                Spacing.v12,
                 // VIP Store Promo Banner
                 GestureDetector(
                   onTap: () => Get.toNamed(Routes.VIP_STORE),
                   child: Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
                         colors: [Color(0xFF8E2DE2), Color(0xFF4A00E0)],
@@ -74,11 +91,17 @@ class _WalletViewState extends State<WalletView> {
                         end: Alignment.centerRight,
                       ),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.15),
+                      ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.storefront_rounded, color: kColorWhite, size: 24),
+                        const Icon(
+                          Icons.storefront_rounded,
+                          color: kColorWhite,
+                          size: 24,
+                        ),
                         Spacing.h12,
                         Expanded(
                           child: Column(
@@ -91,14 +114,19 @@ class _WalletViewState extends State<WalletView> {
                               ),
                               Spacing.v2,
                               AppText(
-                                text: 'Get elite entrances, avatars, & chat bubbles!',
+                                text:
+                                    'Get elite entrances, avatars, & chat bubbles!',
                                 fontSize: 11,
                                 color: kColorWhite.withValues(alpha: 0.8),
                               ),
                             ],
                           ),
                         ),
-                        const Icon(Icons.chevron_right_rounded, color: kColorWhite, size: 22),
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          color: kColorWhite,
+                          size: 22,
+                        ),
                       ],
                     ),
                   ),
@@ -109,7 +137,10 @@ class _WalletViewState extends State<WalletView> {
                   onTap: () => Get.toNamed(Routes.COIN_SELLER),
                   child: Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
                         colors: [Color(0xFFFF9800), Color(0xFFFF5722)],
@@ -117,11 +148,17 @@ class _WalletViewState extends State<WalletView> {
                         end: Alignment.centerRight,
                       ),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.15),
+                      ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.monetization_on_rounded, color: kColorWhite, size: 24),
+                        const Icon(
+                          Icons.monetization_on_rounded,
+                          color: kColorWhite,
+                          size: 24,
+                        ),
                         Spacing.h12,
                         Expanded(
                           child: Column(
@@ -134,14 +171,19 @@ class _WalletViewState extends State<WalletView> {
                               ),
                               Spacing.v2,
                               AppText(
-                                text: 'Manage transfers, buyer requests, & transaction ledger!',
+                                text:
+                                    'Manage transfers, buyer requests, & transaction ledger!',
                                 fontSize: 11,
                                 color: kColorWhite.withValues(alpha: 0.8),
                               ),
                             ],
                           ),
                         ),
-                        const Icon(Icons.chevron_right_rounded, color: kColorWhite, size: 22),
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          color: kColorWhite,
+                          size: 22,
+                        ),
                       ],
                     ),
                   ),
@@ -220,10 +262,7 @@ class _WalletViewState extends State<WalletView> {
                     ? controller.packageError.value
                     : 'No coin packages found.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: kColorHint,
-                ),
+                style: const TextStyle(fontSize: 13, color: kColorHint),
               ),
             ),
           );
@@ -231,10 +270,8 @@ class _WalletViewState extends State<WalletView> {
         return ListView.separated(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           itemCount: controller.packages.length,
-          separatorBuilder: (_, __) => Divider(
-            color: kColorWhite.withValues(alpha: 0.12),
-            height: 10,
-          ),
+          separatorBuilder: (_, __) =>
+              Divider(color: kColorWhite.withValues(alpha: 0.12), height: 10),
           itemBuilder: (_, index) {
             final plan = controller.packages[index];
             return GestureDetector(
@@ -356,7 +393,11 @@ class _WalletViewState extends State<WalletView> {
         child: Icon(logoIcon, color: color, size: 20),
       ),
       title: SemiBoldText(text: title, fontSize: 13, color: kColorWhite),
-      trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white24, size: 14),
+      trailing: const Icon(
+        Icons.arrow_forward_ios_rounded,
+        color: Colors.white24,
+        size: 14,
+      ),
       onTap: onTap,
     );
   }
@@ -367,18 +408,28 @@ class _WalletViewState extends State<WalletView> {
     if (ok) {
       Get.dialog(
         Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           backgroundColor: const Color(0xFF1E1E2D),
           child: Padding(
             padding: const EdgeInsets.all(24.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.check_circle_rounded, color: Colors.green, size: 64),
+                const Icon(
+                  Icons.check_circle_rounded,
+                  color: Colors.green,
+                  size: 64,
+                ),
                 const SizedBox(height: 16),
                 const Text(
                   'Payment Successful',
-                  style: TextStyle(color: kColorWhite, fontWeight: FontWeight.bold, fontSize: 18),
+                  style: TextStyle(
+                    color: kColorWhite,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -393,7 +444,9 @@ class _WalletViewState extends State<WalletView> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: kColorPrimary,
                       foregroundColor: kColorWhite,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                     onPressed: () => Get.back(),
                     child: const Text('Dismiss'),
@@ -544,6 +597,675 @@ class _WalletViewState extends State<WalletView> {
     );
   }
 
+  Widget _withdrawActionCard() {
+    final isLoading = controller.isLoadingWithdrawConfig.value;
+    final isEligible = controller.isEligibleForWithdrawThisWeek.value;
+    final hasTiers = controller.allowedWithdrawTiers.isNotEmpty;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: kColorWalletCardBorder.withValues(alpha: 0.6),
+        ),
+        gradient: const LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [Color(0xFF3F235C), Color(0xFF251A45)],
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: kColorWalletAmount.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.account_balance_wallet_outlined,
+              size: 20,
+              color: kColorWalletAmount,
+            ),
+          ),
+          Spacing.h12,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SemiBoldText(
+                  text: 'Withdraw diamonds',
+                  fontSize: TextStyles.k14FontSize,
+                  color: kColorWhite,
+                ),
+                Spacing.v2,
+                AppText(
+                  text:
+                      'Available: ${controller.withdrawCurrencySymbol.value}${controller.withdrawableBalance.value}',
+                  fontSize: TextStyles.k10FontSize,
+                  color: kColorWhite.withValues(alpha: 0.65),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            height: 34,
+            child: TextButton(
+              onPressed: isLoading || !hasTiers
+                  ? null
+                  : () => _openWithdrawBottomSheet(),
+              style: TextButton.styleFrom(
+                backgroundColor: isEligible
+                    ? kColorWalletAmount
+                    : kColorWhite.withValues(alpha: 0.12),
+                foregroundColor: isEligible ? kColorBlack : kColorWhite,
+                disabledBackgroundColor: kColorWhite.withValues(alpha: 0.08),
+                disabledForegroundColor: kColorWhite.withValues(alpha: 0.35),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
+              child: SemiBoldText(
+                text: isLoading ? 'Loading' : 'Withdraw',
+                fontSize: TextStyles.k12FontSize,
+                color: isEligible ? kColorBlack : kColorWhite,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openWithdrawBottomSheet() {
+    Get.bottomSheet(
+      StatefulBuilder(
+        builder: (context, setSheetState) {
+          return Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.86,
+            ),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            decoration: const BoxDecoration(
+              color: Color(0xFF1E1E2D),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(24),
+                topRight: Radius.circular(24),
+              ),
+            ),
+            child: SafeArea(
+              top: false,
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Obx(
+                  () => Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.white24,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      Spacing.v16,
+                      const Center(
+                        child: SemiBoldText(
+                          text: 'Withdraw',
+                          fontSize: TextStyles.k18FontSize,
+                          color: kColorWhite,
+                        ),
+                      ),
+                      Spacing.v12,
+                      _withdrawSummaryRow(),
+                      if (!controller.isEligibleForWithdrawThisWeek.value) ...[
+                        Spacing.v12,
+                        _withdrawInfoBanner(
+                          icon: Icons.event_busy_rounded,
+                          text:
+                              'You have already requested a weekly withdrawal.',
+                          color: Colors.orangeAccent,
+                        ),
+                      ],
+                      Spacing.v20,
+                      const SemiBoldText(
+                        text: 'Select amount',
+                        fontSize: TextStyles.k14FontSize,
+                        color: kColorWhite,
+                      ),
+                      Spacing.v10,
+                      _withdrawTierGrid(),
+                      Spacing.v20,
+                      const SemiBoldText(
+                        text: 'Bank details',
+                        fontSize: TextStyles.k14FontSize,
+                        color: kColorWhite,
+                      ),
+                      Spacing.v6,
+                      AppText(
+                        text: 'Enter UPI ID or bank account number with IFSC.',
+                        fontSize: TextStyles.k10FontSize,
+                        color: kColorWhite.withValues(alpha: 0.58),
+                      ),
+                      Spacing.v10,
+                      _withdrawTextField(
+                        controller: _withdrawUpiController,
+                        label: 'UPI ID',
+                        hint: 'name@upi',
+                        icon: Icons.alternate_email_rounded,
+                      ),
+                      Spacing.v10,
+                      _withdrawTextField(
+                        controller: _withdrawAccountController,
+                        label: 'Bank account number',
+                        hint: 'Optional if UPI is entered',
+                        icon: Icons.account_balance_rounded,
+                        keyboardType: TextInputType.number,
+                      ),
+                      Spacing.v10,
+                      _withdrawTextField(
+                        controller: _withdrawIfscController,
+                        label: 'IFSC code',
+                        hint: 'Optional if UPI is entered',
+                        icon: Icons.confirmation_number_outlined,
+                        textCapitalization: TextCapitalization.characters,
+                      ),
+                      Spacing.v20,
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: TextButton(
+                          onPressed:
+                              controller.isSubmittingWithdrawal.value ||
+                                  !controller
+                                      .isEligibleForWithdrawThisWeek
+                                      .value
+                              ? null
+                              : _submitWithdrawRequest,
+                          style: TextButton.styleFrom(
+                            backgroundColor: kColorPrimary,
+                            disabledBackgroundColor: kColorWhite.withValues(
+                              alpha: 0.1,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: controller.isSubmittingWithdrawal.value
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    color: kColorWhite,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const SemiBoldText(
+                                  text: 'Submit Request',
+                                  fontSize: TextStyles.k14FontSize,
+                                  color: kColorWhite,
+                                ),
+                        ),
+                      ),
+                      Spacing.v20,
+                      _withdrawHistoryPreview(),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+    );
+  }
+
+  Widget _withdrawSummaryRow() {
+    return Row(
+      children: [
+        Expanded(
+          child: _withdrawMiniStat(
+            label: 'Available',
+            value:
+                '${controller.withdrawCurrencySymbol.value}${controller.withdrawableBalance.value}',
+          ),
+        ),
+        Spacing.h10,
+        Expanded(
+          child: _withdrawMiniStat(
+            label: 'Weekly limit',
+            value:
+                '${controller.withdrawCurrencySymbol.value}${controller.withdrawalLimit.value}',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _withdrawMiniStat({required String label, required String value}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: kColorWhite.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppText(
+            text: label,
+            fontSize: TextStyles.k10FontSize,
+            color: kColorWhite.withValues(alpha: 0.62),
+          ),
+          Spacing.v4,
+          SemiBoldText(
+            text: value,
+            fontSize: TextStyles.k14FontSize,
+            color: kColorWalletAmount,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _withdrawInfoBanner({
+    required IconData icon,
+    required String text,
+    required Color color,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 18),
+          Spacing.h8,
+          Expanded(
+            child: AppText(
+              text: text,
+              fontSize: TextStyles.k12FontSize,
+              color: kColorWhite.withValues(alpha: 0.82),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _withdrawTierGrid() {
+    final tiers = controller.allowedWithdrawTiers.toList();
+    if (tiers.isEmpty) {
+      return AppText(
+        text: 'No withdrawal amount is available right now.',
+        fontSize: TextStyles.k12FontSize,
+        color: kColorWhite.withValues(alpha: 0.65),
+      );
+    }
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: tiers.map((tier) {
+        final selected = controller.selectedWithdrawTier.value == tier;
+        return GestureDetector(
+          onTap: () => controller.selectWithdrawTier(tier),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            width: 86,
+            height: 42,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: selected
+                  ? kColorWalletAmount
+                  : kColorWhite.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: selected
+                    ? kColorWalletAmount
+                    : kColorWhite.withValues(alpha: 0.1),
+              ),
+            ),
+            child: SemiBoldText(
+              text: controller.tierLabel(tier),
+              fontSize: TextStyles.k14FontSize,
+              color: selected ? kColorBlack : kColorWhite,
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _withdrawTextField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    TextInputType? keyboardType,
+    TextCapitalization textCapitalization = TextCapitalization.none,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      textCapitalization: textCapitalization,
+      style: TextStyles.kRegularPoppins(
+        fontSize: TextStyles.k12FontSize,
+        colors: kColorWhite,
+      ),
+      cursorColor: kColorWalletAmount,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        prefixIcon: Icon(icon, color: kColorWhite.withValues(alpha: 0.7)),
+        labelStyle: TextStyles.kRegularPoppins(
+          fontSize: TextStyles.k12FontSize,
+          colors: kColorWhite.withValues(alpha: 0.72),
+        ),
+        hintStyle: TextStyles.kRegularPoppins(
+          fontSize: TextStyles.k12FontSize,
+          colors: kColorWhite.withValues(alpha: 0.35),
+        ),
+        filled: true,
+        fillColor: kColorWhite.withValues(alpha: 0.06),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: kColorWhite.withValues(alpha: 0.08)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: kColorWalletAmount),
+        ),
+      ),
+    );
+  }
+
+  Widget _withdrawHistoryPreview() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: SemiBoldText(
+                text: 'Recent requests',
+                fontSize: TextStyles.k14FontSize,
+                color: kColorWhite,
+              ),
+            ),
+            if (controller.isLoadingWithdrawHistory.value)
+              const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                  color: kColorWalletAmount,
+                  strokeWidth: 2,
+                ),
+              ),
+          ],
+        ),
+        Spacing.v10,
+        if (controller.withdrawHistory.isEmpty)
+          AppText(
+            text: 'No withdrawal request yet.',
+            fontSize: TextStyles.k12FontSize,
+            color: kColorWhite.withValues(alpha: 0.62),
+          )
+        else
+          Column(
+            children: controller.withdrawHistory
+                .take(3)
+                .map(
+                  (item) => Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: kColorWhite.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SemiBoldText(
+                                text:
+                                    '${controller.withdrawCurrencySymbol.value}${item.amount % 1 == 0 ? item.amount.toInt() : item.amount}',
+                                fontSize: TextStyles.k12FontSize,
+                                color: kColorWhite,
+                              ),
+                              Spacing.v2,
+                              AppText(
+                                text: _withdrawHistorySubtitle(item),
+                                fontSize: TextStyles.k10FontSize,
+                                color: kColorWhite.withValues(alpha: 0.55),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        _withdrawStatusChip(item.status),
+                      ],
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+      ],
+    );
+  }
+
+  String _withdrawHistorySubtitle(dynamic item) {
+    final id = item.transactionId.toString();
+    final requestedAt = item.requestedAt;
+    final dateText = requestedAt == null
+        ? ''
+        : '${requestedAt.day.toString().padLeft(2, '0')}/${requestedAt.month.toString().padLeft(2, '0')}/${requestedAt.year}';
+    if (id.isEmpty) return dateText;
+    if (dateText.isEmpty) return id;
+    return '$id • $dateText';
+  }
+
+  Widget _withdrawStatusChip(String status) {
+    final normalized = status.toUpperCase();
+    final color = normalized == 'APPROVED'
+        ? Colors.green
+        : normalized == 'REJECTED'
+        ? Colors.redAccent
+        : Colors.orangeAccent;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: SemiBoldText(
+        text: normalized,
+        fontSize: TextStyles.k10FontSize,
+        color: color,
+      ),
+    );
+  }
+
+  Future<void> _submitWithdrawRequest() async {
+    final hasUpi = _withdrawUpiController.text.trim().isNotEmpty;
+    final hasBank =
+        _withdrawAccountController.text.trim().isNotEmpty &&
+        _withdrawIfscController.text.trim().isNotEmpty;
+    if (controller.selectedWithdrawTier.value == null) {
+      _showWithdrawErrorDialog('Please select a withdrawal amount.');
+      return;
+    }
+    if (!controller.isEligibleForWithdrawThisWeek.value) {
+      _showWithdrawErrorDialog(
+        'You have already requested a weekly withdrawal.',
+      );
+      return;
+    }
+    if (!hasUpi && !hasBank) {
+      controller.withdrawError.value =
+          'Enter UPI ID or bank account and IFSC details.';
+      _showWithdrawErrorDialog(controller.withdrawError.value);
+      return;
+    }
+
+    final result = await controller.submitWithdrawalRequest(
+      upiId: _withdrawUpiController.text,
+      accountNumber: _withdrawAccountController.text,
+      ifscCode: _withdrawIfscController.text,
+    );
+    if (result == null) {
+      _showWithdrawErrorDialog(
+        controller.withdrawError.value.isNotEmpty
+            ? controller.withdrawError.value
+            : 'Withdrawal request failed. Please try again.',
+      );
+      return;
+    }
+
+    _withdrawUpiController.clear();
+    _withdrawAccountController.clear();
+    _withdrawIfscController.clear();
+    Get.back();
+    Get.dialog(
+      Dialog(
+        backgroundColor: const Color(0xFF1E1E2D),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        child: Padding(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.check_circle_rounded,
+                color: Colors.green,
+                size: 58,
+              ),
+              Spacing.v16,
+              const SemiBoldText(
+                text: 'Request Submitted',
+                fontSize: TextStyles.k18FontSize,
+                color: kColorWhite,
+              ),
+              Spacing.v8,
+              AppText(
+                text:
+                    'Withdrawal request ${result.transactionId} is ${result.status.toLowerCase()}.',
+                fontSize: TextStyles.k12FontSize,
+                color: kColorWhite.withValues(alpha: 0.72),
+                align: TextAlign.center,
+              ),
+              Spacing.v20,
+              SizedBox(
+                width: double.infinity,
+                height: 42,
+                child: TextButton(
+                  onPressed: Get.back,
+                  style: TextButton.styleFrom(
+                    backgroundColor: kColorPrimary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const SemiBoldText(
+                    text: 'Done',
+                    fontSize: TextStyles.k14FontSize,
+                    color: kColorWhite,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showWithdrawErrorDialog(String message) {
+    Get.dialog(
+      Dialog(
+        backgroundColor: const Color(0xFF1E1E2D),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        child: Padding(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 58,
+                height: 58,
+                decoration: BoxDecoration(
+                  color: Colors.redAccent.withValues(alpha: 0.16),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.error_outline_rounded,
+                  color: Colors.redAccent,
+                  size: 34,
+                ),
+              ),
+              Spacing.v16,
+              const SemiBoldText(
+                text: 'Withdrawal Failed',
+                fontSize: TextStyles.k18FontSize,
+                color: kColorWhite,
+              ),
+              Spacing.v8,
+              AppText(
+                text: message,
+                fontSize: TextStyles.k12FontSize,
+                color: kColorWhite.withValues(alpha: 0.72),
+                align: TextAlign.center,
+              ),
+              Spacing.v20,
+              SizedBox(
+                width: double.infinity,
+                height: 42,
+                child: TextButton(
+                  onPressed: Get.back,
+                  style: TextButton.styleFrom(
+                    backgroundColor: kColorPrimary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const SemiBoldText(
+                    text: 'Okay',
+                    fontSize: TextStyles.k14FontSize,
+                    color: kColorWhite,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _balanceCard({
     required String title,
     required String amount,
@@ -614,9 +1336,13 @@ class _WalletViewState extends State<WalletView> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: isSelected ? kColorPrimary.withValues(alpha: 0.15) : Colors.transparent,
+        color: isSelected
+            ? kColorPrimary.withValues(alpha: 0.15)
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
-        border: isSelected ? Border.all(color: kColorPrimary, width: 1.5) : Border.all(color: Colors.transparent),
+        border: isSelected
+            ? Border.all(color: kColorPrimary, width: 1.5)
+            : Border.all(color: Colors.transparent),
       ),
       child: Row(
         children: [
