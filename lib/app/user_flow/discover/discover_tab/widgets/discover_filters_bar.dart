@@ -5,7 +5,6 @@ import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
-import 'package:qobo_one_live/utils/ui_utils/app_ui_utils.dart';
 
 import '../controllers/discover_tab_controller.dart';
 import '../models/discover_filter_state.dart';
@@ -23,9 +22,9 @@ class DiscoverFiltersBar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _countryPickerField(context),
-          Spacing.v8,
+          Spacing.v6,
           SizedBox(
-            height: 40,
+            height: 36,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 2),
@@ -71,53 +70,72 @@ class DiscoverFiltersBar extends StatelessWidget {
     final isLoading =
         controller.isDiscoverFiltersLoading.value &&
         controller.filterCountries.isEmpty;
+    final hasValue = selected != null;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: isLoading ? null : () => controller.openCountryFilterSheet(context),
-        borderRadius: AppUIUtils.primaryBorderRadius,
-        child: Ink(
-          height: 40,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: kColorDiscoverSearchBg,
-            borderRadius: AppUIUtils.primaryBorderRadius,
-            border: Border.all(
-              color: selected != null
-                  ? kColorPrimary.withValues(alpha: 0.45)
-                  : Colors.transparent,
+    return GestureDetector(
+      onTap: isLoading ? null : () => controller.openCountryFilterSheet(context),
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        height: 36,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: _filterCapsuleDecoration(selected: hasValue),
+        child: Row(
+          children: [
+            Icon(
+              Icons.public_outlined,
+              size: 14,
+              color: kColorWhite.withValues(alpha: hasValue ? 1 : 0.85),
             ),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.public_outlined, size: 18, color: kColorHint),
-              Spacing.h8,
-              Expanded(
-                child: isLoading
-                    ? const Center(
-                        child: SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+            Spacing.h8,
+            Expanded(
+              child: isLoading
+                  ? Align(
+                      alignment: Alignment.centerLeft,
+                      child: SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: kColorWhite.withValues(alpha: 0.85),
                         ),
-                      )
-                    : SemiBoldText(
-                        text: selected?.name ?? 'All countries',
-                        fontSize: TextStyles.k12FontSize,
-                        color: selected != null ? kColorText : kColorHint,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
-              ),
-              const Icon(
-                Icons.keyboard_arrow_down_rounded,
-                color: kColorHint,
-                size: 20,
-              ),
-            ],
-          ),
+                    )
+                  : SemiBoldText(
+                      text: selected?.name ?? 'All countries',
+                      fontSize: TextStyles.k12FontSize,
+                      color: kColorWhite.withValues(alpha: hasValue ? 1 : 0.85),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+            ),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 16,
+              color: kColorWhite.withValues(alpha: 0.85),
+            ),
+          ],
         ),
+      ),
+    );
+  }
+
+  BoxDecoration _filterCapsuleDecoration({required bool selected}) {
+    return BoxDecoration(
+      borderRadius: BorderRadius.circular(20),
+      gradient: selected
+          ? const LinearGradient(
+              colors: [
+                kColorLiveFilterChipGradientStart,
+                kColorLiveFilterChipGradientEnd,
+              ],
+            )
+          : null,
+      color: selected ? null : LiveRoomUiColors.chipInactiveBg,
+      border: Border.all(
+        color: selected
+            ? kColorLiveFilterChipBorder
+            : LiveRoomUiColors.cardBorder,
       ),
     );
   }
@@ -134,24 +152,8 @@ class DiscoverFiltersBar extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            gradient: selected
-                ? const LinearGradient(
-                    colors: [
-                      kColorLiveFilterChipGradientStart,
-                      kColorLiveFilterChipGradientEnd,
-                    ],
-                  )
-                : null,
-            color: selected ? null : LiveRoomUiColors.chipInactiveBg,
-            border: Border.all(
-              color: selected
-                  ? kColorLiveFilterChipBorder
-                  : LiveRoomUiColors.cardBorder,
-            ),
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          decoration: _filterCapsuleDecoration(selected: selected),
           child: Center(
             child: SemiBoldText(
               text: label,

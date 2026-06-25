@@ -150,8 +150,11 @@ class EconomyEndpoints {
   /// POST /api/economy/recharge
   static const String recharge = '/api/economy/recharge';
 
-  /// GET /api/admin/package-list
-  static const String packageList = '/api/admin/package-list';
+  /// GET /api/economy/package-list
+  static const String packageList = '/api/economy/package-list';
+
+  /// Legacy admin route kept as fallback.
+  static const String packageListLegacy = '/api/admin/package-list';
 
   /// GET /api/economy/history
   static const String history = '/api/economy/history';
@@ -165,8 +168,17 @@ class EconomyEndpoints {
   /// Legacy route kept as fallback.
   static const String sendGiftLegacy = '/api/send-gift';
 
-  /// POST /api/withdraw
+  /// POST /api/withdraw/request
+  static const String withdrawRequest = '/api/withdraw/request';
+
+  /// Legacy route kept as fallback.
   static const String withdraw = '/api/withdraw';
+
+  /// GET /api/withdraw/config
+  static const String withdrawConfig = '/api/withdraw/config';
+
+  /// GET /api/withdraw/history
+  static const String withdrawHistory = '/api/withdraw/history';
 
   /// POST /api/economy/seller/transfer
   static const String sellerTransfer = '/api/economy/seller/transfer';

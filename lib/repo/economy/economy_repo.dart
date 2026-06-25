@@ -38,14 +38,21 @@ class EconomyRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
-  /// Calls `GET /api/admin/package-list` to fetch active coin packages.
+  /// Calls `GET /api/economy/package-list` to fetch active coin packages.
   Future<Map<String, dynamic>?> getCoinPackages({
     bool isShowLoader = true,
   }) async {
-    final response = await _apiService.getRequest(
+    var response = await _apiService.getRequest(
       endPoint: EconomyEndpoints.packageList,
       isShowLoader: isShowLoader,
     );
+
+    if (response?.statusCode == 404) {
+      response = await _apiService.getRequest(
+        endPoint: EconomyEndpoints.packageListLegacy,
+        isShowLoader: isShowLoader,
+      );
+    }
 
     if (response == null) return null;
     return ApiResponseUtils.tryDecodeMap(response.body);
@@ -106,7 +113,33 @@ class EconomyRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
-  /// Calls `POST /api/withdraw` to submit a host withdrawal request.
+  /// Calls `GET /api/withdraw/config` for withdrawal tiers and eligibility.
+  Future<Map<String, dynamic>?> getWithdrawConfig({
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.getRequest(
+      endPoint: EconomyEndpoints.withdrawConfig,
+      isShowLoader: isShowLoader,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// Calls `GET /api/withdraw/history` for past withdrawal requests.
+  Future<Map<String, dynamic>?> getWithdrawHistory({
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.getRequest(
+      endPoint: EconomyEndpoints.withdrawHistory,
+      isShowLoader: isShowLoader,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// Calls `POST /api/withdraw/request` to submit a withdrawal request.
   Future<Map<String, dynamic>?> requestWithdrawal({
     required int amount,
     String? accountNumber,
@@ -121,14 +154,24 @@ class EconomyRepo {
       if ((upiId ?? '').trim().isNotEmpty) 'upi_id': upiId!.trim(),
     };
 
-    final response = await _apiService.postRequest(
-      endPoint: EconomyEndpoints.withdraw,
-      requestModel: <String, dynamic>{
-        'amount': amount,
-        'bank_details': bankDetails,
-      },
+    final requestModel = <String, dynamic>{
+      'amount': amount,
+      'bank_details': bankDetails,
+    };
+
+    var response = await _apiService.postRequest(
+      endPoint: EconomyEndpoints.withdrawRequest,
+      requestModel: requestModel,
       isShowLoader: isShowLoader,
     );
+
+    if (response?.statusCode == 404) {
+      response = await _apiService.postRequest(
+        endPoint: EconomyEndpoints.withdraw,
+        requestModel: requestModel,
+        isShowLoader: isShowLoader,
+      );
+    }
 
     if (response == null) return null;
     return ApiResponseUtils.tryDecodeMap(response.body);

@@ -35,14 +35,14 @@ class DiscoverTabView extends StatelessWidget {
               _topHeader(context, discoverController),
               Spacing.v16,
               _searchBar(discoverController),
-              Spacing.v10,
+              Spacing.v8,
               Obx(() {
                 if (discoverController.searchQuery.value.isNotEmpty) {
                   return const SizedBox.shrink();
                 }
                 return DiscoverFiltersBar(controller: discoverController);
               }),
-              Spacing.v8,
+              Spacing.v6,
               Expanded(
                 child: Obx(() {
                   if (discoverController.searchQuery.value.isNotEmpty) {

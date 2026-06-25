@@ -2,6 +2,10 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/repo/economy/economy_repo.dart';
 
+import '../models/withdraw_config.dart';
+import '../models/withdraw_history_item.dart';
+import '../models/withdraw_request_result.dart';
+
 class CoinPackage {
   const CoinPackage({
     required this.id,
@@ -49,6 +53,16 @@ class WalletController extends GetxController {
   final coinBalance = '0'.obs;
   final diamondBalance = '0'.obs;
   final withdrawalLimit = '0'.obs;
+  final withdrawableBalance = '0'.obs;
+  final withdrawCurrencySymbol = '\$'.obs;
+  final isEligibleForWithdrawThisWeek = true.obs;
+  final allowedWithdrawTiers = <int>[].obs;
+  final withdrawHistory = <WithdrawHistoryItem>[].obs;
+  final selectedWithdrawTier = RxnInt();
+  final isLoadingWithdrawConfig = false.obs;
+  final isLoadingWithdrawHistory = false.obs;
+  final isSubmittingWithdrawal = false.obs;
+  final withdrawError = ''.obs;
   final packages = <CoinPackage>[].obs;
   final selectedPlanIndex = 0.obs;
   final isLoadingPackages = false.obs;
@@ -60,6 +74,8 @@ class WalletController extends GetxController {
     super.onInit();
     loadWallet();
     loadCoinPackages();
+    loadWithdrawConfig();
+    loadWithdrawHistory();
   }
 
   Future<void> loadWallet() async {
@@ -74,13 +90,6 @@ class WalletController extends GetxController {
       diamondBalance.value = _formatAmount(
         parseWalletAmount(
           data['diamonds'] ?? data['diamond'] ?? data['diamondBalance'],
-        ),
-      );
-      withdrawalLimit.value = _formatAmount(
-        parseWalletAmount(
-          data['withdrawalLimit'] ??
-              data['withdrawlimit'] ??
-              data['withdraw_limit'],
         ),
       );
     }
@@ -114,6 +123,109 @@ class WalletController extends GetxController {
       isLoadingPackages.value = false;
     }
   }
+
+  Future<void> loadWithdrawConfig() async {
+    isLoadingWithdrawConfig.value = true;
+    withdrawError.value = '';
+    try {
+      final response = await _economyRepo.getWithdrawConfig(isShowLoader: false);
+      final data = response?['data'];
+      if (isEconomyApiSuccess(response) && data is Map) {
+        final config = WithdrawConfig.fromJson(Map<String, dynamic>.from(data));
+        allowedWithdrawTiers.assignAll(config.allowedTiers);
+        withdrawCurrencySymbol.value = config.currencySymbol;
+        isEligibleForWithdrawThisWeek.value = config.isEligibleThisWeek;
+        withdrawableBalance.value = _formatAmount(config.userBalance);
+        withdrawalLimit.value = _formatAmount(config.maxLimit);
+        if (selectedWithdrawTier.value != null &&
+            !config.allowedTiers.contains(selectedWithdrawTier.value)) {
+          selectedWithdrawTier.value = null;
+        }
+      } else {
+        withdrawError.value =
+            response?['message']?.toString() ?? 'Unable to load withdrawal config.';
+      }
+    } catch (_) {
+      withdrawError.value = 'Unable to load withdrawal config.';
+    } finally {
+      isLoadingWithdrawConfig.value = false;
+    }
+  }
+
+  Future<void> loadWithdrawHistory() async {
+    isLoadingWithdrawHistory.value = true;
+    try {
+      final response = await _economyRepo.getWithdrawHistory(isShowLoader: false);
+      final data = response?['data'];
+      if (isEconomyApiSuccess(response) && data is List) {
+        final parsed = data
+            .whereType<Map>()
+            .map((e) => WithdrawHistoryItem.fromJson(Map<String, dynamic>.from(e)))
+            .where((e) => e.transactionId.isNotEmpty)
+            .toList();
+        withdrawHistory.assignAll(parsed);
+      } else {
+        withdrawHistory.clear();
+      }
+    } catch (_) {
+      withdrawHistory.clear();
+    } finally {
+      isLoadingWithdrawHistory.value = false;
+    }
+  }
+
+  void selectWithdrawTier(int amount) {
+    if (!allowedWithdrawTiers.contains(amount)) return;
+    selectedWithdrawTier.value = amount;
+  }
+
+  Future<WithdrawRequestResult?> submitWithdrawalRequest({
+    String? accountNumber,
+    String? ifscCode,
+    String? upiId,
+  }) async {
+    final amount = selectedWithdrawTier.value;
+    if (amount == null) {
+      withdrawError.value = 'Please select a withdrawal amount.';
+      return null;
+    }
+    if (!isEligibleForWithdrawThisWeek.value) {
+      withdrawError.value = 'You have already requested a weekly withdrawal.';
+      return null;
+    }
+
+    isSubmittingWithdrawal.value = true;
+    withdrawError.value = '';
+    try {
+      final response = await _economyRepo.requestWithdrawal(
+        amount: amount,
+        accountNumber: accountNumber,
+        ifscCode: ifscCode,
+        upiId: upiId,
+        isShowLoader: true,
+      );
+      final data = response?['data'];
+      if (isEconomyApiSuccess(response) && data is Map) {
+        final result = WithdrawRequestResult.fromJson(
+          Map<String, dynamic>.from(data),
+        );
+        await Future.wait([
+          loadWallet(),
+          loadWithdrawConfig(),
+          loadWithdrawHistory(),
+        ]);
+        return result;
+      }
+      withdrawError.value =
+          response?['message']?.toString() ?? 'Withdrawal request failed.';
+      return null;
+    } finally {
+      isSubmittingWithdrawal.value = false;
+    }
+  }
+
+  String tierLabel(int amount) =>
+      '${withdrawCurrencySymbol.value}$amount';
 
   Future<bool> buySelectedPackage(String method) async {
     if (packages.isEmpty || selectedPlanIndex.value >= packages.length) {
