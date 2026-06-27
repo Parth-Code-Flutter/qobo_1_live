@@ -146,10 +146,10 @@ class _CallTopOverlay extends GetView<ChatVoiceCallController> {
             () => GestureDetector(
               onTap: () => _showProfileSheet(context),
               child: Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.46),
-                  borderRadius: BorderRadius.circular(22),
+                  color: Colors.black.withValues(alpha: 0.56),
+                  borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: kColorWhite.withValues(alpha: 0.12),
                   ),
@@ -166,10 +166,10 @@ class _CallTopOverlay extends GetView<ChatVoiceCallController> {
                     AppUserAvatar(
                       name: controller.peerName.value,
                       imageUrl: controller.peerAvatar.value,
-                      size: 46,
+                      size: 42,
                       fontSize: TextStyles.k14FontSize,
                     ),
-                    Spacing.h10,
+                    Spacing.h8,
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,17 +185,20 @@ class _CallTopOverlay extends GetView<ChatVoiceCallController> {
                           Spacing.v2,
                           Row(
                             children: [
-                              Icon(
-                                controller.isVideo.value
-                                    ? Icons.videocam_rounded
-                                    : Icons.call_rounded,
-                                color: kColorWhite.withValues(alpha: 0.68),
-                                size: 13,
+                              Container(
+                                width: 7,
+                                height: 7,
+                                decoration: BoxDecoration(
+                                  color: controller.hasPeerJoined.value
+                                      ? const Color(0xFF24C08A)
+                                      : Colors.amber,
+                                  shape: BoxShape.circle,
+                                ),
                               ),
-                              Spacing.h4,
+                              Spacing.h6,
                               AppText(
                                 text: controller.formattedDuration,
-                                fontSize: 11,
+                                fontSize: TextStyles.k10FontSize,
                                 color: kColorWhite.withValues(alpha: 0.78),
                               ),
                             ],
@@ -231,16 +234,21 @@ class _CoinsPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final earning = !controller.isCaller.value;
+    final connected = controller.hasPeerJoined.value;
     return Container(
-      constraints: const BoxConstraints(minWidth: 94),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      constraints: const BoxConstraints(minWidth: 92),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: earning
-              ? const [Color(0xFF0D8F68), Color(0xFF24C08A)]
-              : const [Color(0xFF8E1B85), Color(0xFFE62572)],
-        ),
-        borderRadius: BorderRadius.circular(16),
+        gradient: connected
+            ? LinearGradient(
+                colors: earning
+                    ? const [Color(0xFF0D8F68), Color(0xFF24C08A)]
+                    : const [Color(0xFF8E1B85), Color(0xFFE62572)],
+              )
+            : null,
+        color: connected ? null : kColorWhite.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -254,20 +262,32 @@ class _CoinsPanel extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
           Spacing.v2,
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.diamond_rounded, color: Colors.amber, size: 14),
-              Spacing.h2,
-              SemiBoldText(
-                text: controller.billingAmountLabel,
-                fontSize: TextStyles.k12FontSize,
-                color: kColorWhite,
-              ),
-            ],
-          ),
+          connected
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.diamond_rounded,
+                      color: Colors.amber,
+                      size: 14,
+                    ),
+                    Spacing.h2,
+                    SemiBoldText(
+                      text: controller.billingAmountLabel,
+                      fontSize: TextStyles.k12FontSize,
+                      color: kColorWhite,
+                    ),
+                  ],
+                )
+              : const SemiBoldText(
+                  text: 'No charge',
+                  fontSize: TextStyles.k12FontSize,
+                  color: kColorWhite,
+                ),
           AppText(
-            text: 'Wallet ${controller.walletLabel}',
+            text: connected
+                ? 'Wallet ${controller.walletLabel}'
+                : 'until answer',
             fontSize: TextStyles.k8FontSize,
             color: kColorWhite.withValues(alpha: 0.74),
             maxLines: 1,

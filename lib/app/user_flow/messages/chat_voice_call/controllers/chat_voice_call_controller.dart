@@ -42,6 +42,7 @@ class ChatVoiceCallController extends GetxController {
   final peerBio = ''.obs;
   final isCaller = true.obs;
   final isVideo = false.obs;
+  final hasPeerJoined = false.obs;
   final elapsedSeconds = 0.obs;
   final billableSeconds = 0.obs;
   final coinsBalance = 0.obs;
@@ -100,6 +101,9 @@ class ChatVoiceCallController extends GetxController {
     }
     _startedAt = DateTime.now();
     _callStartedAtIso ??= _startedAt!.toUtc().toIso8601String();
+    if (!isCaller.value) {
+      _markPeerJoined();
+    }
     _startTicker();
     unawaited(loadWalletBalance());
     unawaited(loadGiftCatalog());
@@ -109,7 +113,8 @@ class ChatVoiceCallController extends GetxController {
     );
   }
 
-  String get formattedDuration => _formatDuration(elapsedSeconds.value);
+  String get formattedDuration =>
+      hasPeerJoined.value ? _formatDuration(billableSeconds.value) : 'Ringing';
 
   int get estimatedCoinDelta =>
       (billableSeconds.value * coinsPerSecond.value).ceil();
@@ -120,10 +125,12 @@ class ChatVoiceCallController extends GetxController {
     return remaining < 0 ? 0 : remaining;
   }
 
-  String get billingRoleLabel =>
-      isCaller.value ? 'Coins spending' : 'Coins earning';
+  String get billingRoleLabel => hasPeerJoined.value
+      ? (isCaller.value ? 'Coins spending' : 'Coins earning')
+      : 'Starts after answer';
 
   String get billingAmountLabel {
+    if (!hasPeerJoined.value) return '0';
     final amount = formatLedgerAmount(estimatedCoinDelta);
     return isCaller.value ? '-$amount' : '+$amount';
   }
@@ -133,7 +140,12 @@ class ChatVoiceCallController extends GetxController {
   );
 
   void onPeerJoined() {
+    _markPeerJoined();
+  }
+
+  void _markPeerJoined() {
     _peerJoined = true;
+    hasPeerJoined.value = true;
     _billingStartedAt ??= DateTime.now();
   }
 
@@ -332,7 +344,7 @@ class ChatVoiceCallController extends GetxController {
       return null;
     }
 
-    final startedAt = _startedAt;
+    final startedAt = _peerJoined ? _billingStartedAt : _startedAt;
     final endedAt = DateTime.now().toUtc();
     final durationSeconds = startedAt == null
         ? null
@@ -426,7 +438,7 @@ class ChatVoiceCallController extends GetxController {
     if (_charged || !isCaller.value || hostId.value.trim().isEmpty) return;
     if (!_peerJoined) return;
     _charged = true;
-    final startedAt = _startedAt;
+    final startedAt = _billingStartedAt;
     if (startedAt == null) return;
     final durationSeconds = DateTime.now().difference(startedAt).inSeconds;
     if (durationSeconds <= 0) return;
