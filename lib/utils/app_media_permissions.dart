@@ -13,10 +13,8 @@ abstract final class AppMediaPermissions {
   /// Requests microphone then camera. Returns `true` only when both are granted.
   static Future<bool> requestRequired() async {
     final mic = await Permission.microphone.request();
-    if (!mic.isGranted) return false;
-
     final camera = await Permission.camera.request();
-    return camera.isGranted;
+    return mic.isGranted && camera.isGranted;
   }
 
   static Future<bool> isPermanentlyDenied() async {
