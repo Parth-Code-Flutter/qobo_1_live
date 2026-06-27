@@ -629,6 +629,10 @@ class DiscoverTabController extends GetxController {
       context: context,
       targetId: user.id,
       peerName: user.name,
+      peerAvatar: user.displayPicture,
+      peerCountry: user.country,
+      peerBio: user.bio,
+      coinsPerSecond: user.coinsPerSecond,
       callType: callType,
       recordCallHistory: false,
     );
