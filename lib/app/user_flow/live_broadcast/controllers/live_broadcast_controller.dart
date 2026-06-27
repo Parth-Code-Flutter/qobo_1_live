@@ -19,6 +19,7 @@ import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 import 'package:zego_uikit_prebuilt_live_streaming/zego_uikit_prebuilt_live_streaming.dart';
 
 import '../utils/live_room_profile_utils.dart';
+import '../widgets/gifts_bottom_sheet.dart';
 import '../widgets/live_viewers_sheet.dart';
 
 class LiveBroadcastController extends GetxController {
@@ -588,6 +589,26 @@ class LiveBroadcastController extends GetxController {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
     );
+  }
+
+  void openViewerProfile(Map<String, dynamic> viewer) {
+    Get.dialog(
+      LiveViewerProfileDialog(viewer: viewer),
+      barrierColor: Colors.black.withValues(alpha: 0.68),
+    );
+  }
+
+  void openGiftsSheet() {
+    if (Get.isDialogOpen == true) Get.back();
+    if (Get.isBottomSheetOpen == true) Get.back();
+
+    Future.delayed(const Duration(milliseconds: 140), () {
+      Get.bottomSheet(
+        const GiftsBottomSheet(),
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+      );
+    });
   }
 
   /// Opens 1:1 chat with a viewer/host from the live room list.

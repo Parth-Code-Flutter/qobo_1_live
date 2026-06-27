@@ -76,9 +76,7 @@ class LiveViewersSheet extends GetView<LiveBroadcastController> {
                     avatarUrl: viewer['avatarUrl']?.toString(),
                     isHost: isHost,
                     isCurrentUser: isCurrentUser,
-                    onTap: isCurrentUser
-                        ? null
-                        : () => controller.openChatWithViewer(context, viewer),
+                    onTap: () => controller.openViewerProfile(viewer),
                   );
                 },
               );
@@ -115,11 +113,7 @@ class _ViewerListTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          AppUserAvatar(
-            name: name,
-            imageUrl: avatarUrl,
-            size: 40,
-          ),
+          AppUserAvatar(name: name, imageUrl: avatarUrl, size: 40),
           Spacing.h12,
           Expanded(
             child: Column(
@@ -143,12 +137,19 @@ class _ViewerListTile extends StatelessWidget {
               ],
             ),
           ),
-          if (!isCurrentUser)
+          Icon(
+            Icons.account_circle_outlined,
+            size: 18,
+            color: kColorWhite.withValues(alpha: 0.45),
+          ),
+          if (!isCurrentUser) ...[
+            Spacing.h8,
             Icon(
-              Icons.chat_bubble_outline_rounded,
+              Icons.chevron_right_rounded,
               size: 18,
               color: kColorWhite.withValues(alpha: 0.45),
             ),
+          ],
         ],
       ),
     );
@@ -161,6 +162,255 @@ class _ViewerListTile extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),
         child: content,
+      ),
+    );
+  }
+}
+
+class LiveViewerProfileDialog extends GetView<LiveBroadcastController> {
+  const LiveViewerProfileDialog({super.key, required this.viewer});
+
+  final Map<String, dynamic> viewer;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = viewer['name']?.toString().trim().isNotEmpty == true
+        ? viewer['name'].toString()
+        : 'Viewer';
+    final avatarUrl = viewer['avatarUrl']?.toString();
+    final isHost = viewer['isHost'] == true;
+    final isCurrentUser = viewer['isCurrentUser'] == true;
+    final role = isHost ? 'Host' : 'Viewer';
+
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+      backgroundColor: Colors.transparent,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF251245), Color(0xFF111827)],
+          ),
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.35),
+              blurRadius: 28,
+              offset: const Offset(0, 14),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Align(
+              alignment: Alignment.centerRight,
+              child: GestureDetector(
+                onTap: Get.back,
+                child: Icon(
+                  Icons.close_rounded,
+                  color: kColorWhite.withValues(alpha: 0.72),
+                  size: 22,
+                ),
+              ),
+            ),
+            AppUserAvatar(name: name, imageUrl: avatarUrl, size: 82),
+            Spacing.v12,
+            SemiBoldText(
+              text: isCurrentUser ? '$name (You)' : name,
+              fontSize: TextStyles.k20FontSize,
+              color: kColorWhite,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              align: TextAlign.center,
+            ),
+            Spacing.v10,
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _ProfileBadge(
+                  icon: isHost
+                      ? Icons.workspace_premium_rounded
+                      : Icons.remove_red_eye_rounded,
+                  label: role,
+                  color: isHost
+                      ? const Color(0xFFFF79B4)
+                      : const Color(0xFF75C7FF),
+                ),
+                if (isCurrentUser)
+                  const _ProfileBadge(
+                    icon: Icons.person_rounded,
+                    label: 'You',
+                    color: Color(0xFF7CF2AE),
+                  ),
+              ],
+            ),
+            Spacing.v16,
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: kColorWhite.withValues(alpha: 0.07),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
+              ),
+              child: Row(
+                children: [
+                  _ProfileMetric(label: 'Room role', value: role),
+                  Container(
+                    width: 1,
+                    height: 34,
+                    color: kColorWhite.withValues(alpha: 0.10),
+                  ),
+                  _ProfileMetric(label: 'Status', value: 'Joined'),
+                ],
+              ),
+            ),
+            if (!isCurrentUser) ...[
+              Spacing.v16,
+              Row(
+                children: [
+                  Expanded(
+                    child: _ProfileActionButton(
+                      icon: Icons.chat_bubble_outline_rounded,
+                      label: 'Message',
+                      onTap: () {
+                        Get.back();
+                        controller.openChatWithViewer(context, viewer);
+                      },
+                    ),
+                  ),
+                  Spacing.h10,
+                  Expanded(
+                    child: _ProfileActionButton(
+                      icon: Icons.card_giftcard_rounded,
+                      label: 'Gift',
+                      isPrimary: true,
+                      onTap: controller.openGiftsSheet,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileBadge extends StatelessWidget {
+  const _ProfileBadge({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: color.withValues(alpha: 0.24)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 14),
+          Spacing.h4,
+          SemiBoldText(
+            text: label,
+            fontSize: TextStyles.k10FontSize,
+            color: color,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileMetric extends StatelessWidget {
+  const _ProfileMetric({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          AppText(
+            text: label,
+            fontSize: TextStyles.k10FontSize,
+            color: kColorWhite.withValues(alpha: 0.54),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          Spacing.v4,
+          SemiBoldText(
+            text: value,
+            fontSize: TextStyles.k12FontSize,
+            color: kColorWhite,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileActionButton extends StatelessWidget {
+  const _ProfileActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.isPrimary = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool isPrimary;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 46,
+      child: TextButton.icon(
+        onPressed: onTap,
+        icon: Icon(icon, size: 18),
+        label: SemiBoldText(
+          text: label,
+          fontSize: TextStyles.k12FontSize,
+          color: kColorWhite,
+        ),
+        style: TextButton.styleFrom(
+          foregroundColor: kColorWhite,
+          backgroundColor: isPrimary
+              ? const Color(0xFFE12BC5)
+              : kColorWhite.withValues(alpha: 0.10),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+            side: BorderSide(
+              color: isPrimary
+                  ? Colors.transparent
+                  : kColorWhite.withValues(alpha: 0.10),
+            ),
+          ),
+        ),
       ),
     );
   }

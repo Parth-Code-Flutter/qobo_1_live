@@ -14,7 +14,6 @@ import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 
 import '../controllers/live_broadcast_controller.dart';
-import '../widgets/gifts_bottom_sheet.dart';
 import '../widgets/room_options_sheet.dart';
 
 class LiveBroadcastView extends GetView<LiveBroadcastController> {
@@ -724,13 +723,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
               _bottomActionIcon(
                 Icons.card_giftcard_rounded,
                 color: _accent,
-                onTap: () {
-                  Get.bottomSheet(
-                    const GiftsBottomSheet(),
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                  );
-                },
+                onTap: controller.openGiftsSheet,
               ),
               Spacing.h8,
               _bottomActionIcon(
