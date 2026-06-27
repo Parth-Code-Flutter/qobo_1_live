@@ -10,6 +10,7 @@ import 'package:qobo_one_live/app/user_flow/profile_tab/views/profile_tab_view.d
 import 'package:qobo_one_live/app/user_flow/agency_host_list/views/agency_host_list_view.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -28,30 +29,46 @@ class BottomNavView extends GetView<BottomNavController> {
     return Scaffold(
       backgroundColor: kColorWhite,
       extendBody: true,
-      body: Obx(() {
-        if (controller.selectedIndex.value == 0) {
-          return const DiscoverTabView();
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Obx(() {
+            if (controller.selectedIndex.value == 0) {
+              return const DiscoverTabView();
+            }
+            if (controller.selectedIndex.value == 1) {
+              return const LiveRoomView();
+            }
+            if (controller.selectedIndex.value == 2) {
+              return AgencyHostListView(
+                embeddedInBottomNav: true,
+                controllerTag: BottomNavController.heartHostListTag,
+              );
+            }
+            if (controller.selectedIndex.value == 3) {
+              return const MessagesTabView();
+            }
+            if (controller.selectedIndex.value == 4) {
+              return ProfileTabView(
+                onLogoutPressed: controller.onLogoutPressed,
+              );
+            }
+            return Spacing.shrink;
+          }),
+          Obx(() {
+            if (!controller.permissionBlocked.value) {
+              return const SizedBox.shrink();
+            }
+            return _permissionBlockedOverlay();
+          }),
+        ],
+      ),
+      bottomNavigationBar: Obx(() {
+        if (controller.permissionBlocked.value) {
+          return const SizedBox.shrink();
         }
-        if (controller.selectedIndex.value == 1) {
-          return const LiveRoomView();
-        }
-        if (controller.selectedIndex.value == 2) {
-          return AgencyHostListView(
-            embeddedInBottomNav: true,
-            controllerTag: BottomNavController.heartHostListTag,
-          );
-        }
-        if (controller.selectedIndex.value == 3) {
-          return const MessagesTabView();
-        }
-        if (controller.selectedIndex.value == 4) {
-          return ProfileTabView(onLogoutPressed: controller.onLogoutPressed);
-        }
-        return Spacing.shrink;
-      }),
-      bottomNavigationBar: ClipRect(
-        child: Obx(
-          () => BackdropFilter(
+        return ClipRect(
+          child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -105,6 +122,67 @@ class BottomNavView extends GetView<BottomNavController> {
                 ),
               ),
             ),
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _permissionBlockedOverlay() {
+    return ColoredBox(
+      color: Colors.black.withValues(alpha: 0.82),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 28),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.mic_external_on_rounded,
+                size: 56,
+                color: kColorWhite.withValues(alpha: 0.9),
+              ),
+              Spacing.v20,
+              SemiBoldText(
+                text: 'Microphone & camera required',
+                fontSize: TextStyles.k20FontSize,
+                color: kColorWhite,
+                align: TextAlign.center,
+              ),
+              Spacing.v12,
+              AppText(
+                text:
+                    'Qobo Live needs microphone and camera access for calls and live streaming. Please allow both permissions to continue.',
+                fontSize: TextStyles.k14FontSize,
+                color: kColorWhite.withValues(alpha: 0.78),
+                align: TextAlign.center,
+                maxLines: 6,
+              ),
+              Spacing.v28,
+              appButton(
+                onPressed: controller.retryMediaPermissions,
+                buttonText: 'Allow access',
+                isGradient: true,
+              ),
+              Obx(() {
+                if (!controller.showOpenSettings.value) {
+                  return const SizedBox.shrink();
+                }
+                return Column(
+                  children: [
+                    Spacing.v12,
+                    appButton(
+                      onPressed: controller.openDeviceSettings,
+                      buttonText: 'Open Settings',
+                      isGradient: false,
+                      buttonColor: Colors.transparent,
+                      buttonBorderColor: kColorWhite.withValues(alpha: 0.45),
+                      textColor: kColorWhite,
+                    ),
+                  ],
+                );
+              }),
+            ],
           ),
         ),
       ),

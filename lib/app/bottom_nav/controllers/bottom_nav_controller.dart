@@ -27,6 +27,8 @@ class BottomNavController extends GetxController {
       ? Get.find<UserSessionController>()
       : Get.put(UserSessionController(), permanent: true);
   final selectedIndex = 0.obs;
+  final permissionBlocked = false.obs;
+  final showOpenSettings = false.obs;
   Map<String, dynamic>? profileData;
 
   /// Center heart tab — embedded [AgencyHostListView] with real API hosts.
@@ -64,11 +66,16 @@ class BottomNavController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    unawaited(_guardMediaPermissions());
     _userSession.loadFromStorage();
     _fetchProfileOnInit();
     _prefetchAgencySession();
     _syncIncomingCallWatchers();
+  }
+
+  @override
+  void onReady() {
+    super.onReady();
+    unawaited(_requestMediaPermissions());
   }
 
   void _syncIncomingCallWatchers() {
@@ -78,9 +85,30 @@ class BottomNavController extends GetxController {
     );
   }
 
-  Future<void> _guardMediaPermissions() async {
-    if (await AppMediaPermissions.areGranted()) return;
-    Get.offAllNamed(Routes.SPLASH);
+  Future<void> _requestMediaPermissions() async {
+    if (await AppMediaPermissions.areGranted()) {
+      permissionBlocked.value = false;
+      showOpenSettings.value = false;
+      return;
+    }
+
+    final granted = await AppMediaPermissions.requestRequired();
+    if (granted) {
+      permissionBlocked.value = false;
+      showOpenSettings.value = false;
+      return;
+    }
+
+    permissionBlocked.value = true;
+    showOpenSettings.value = await AppMediaPermissions.isPermanentlyDenied();
+  }
+
+  Future<void> retryMediaPermissions() async {
+    await _requestMediaPermissions();
+  }
+
+  Future<void> openDeviceSettings() async {
+    await AppMediaPermissions.openSettings();
   }
 
   Future<void> _prefetchAgencySession() async {
@@ -111,8 +139,9 @@ class BottomNavController extends GetxController {
     }
     if (index == heartTabIndex &&
         Get.isRegistered<AgencyHostListController>(tag: heartHostListTag)) {
-      final hostListCtrl =
-          Get.find<AgencyHostListController>(tag: heartHostListTag);
+      final hostListCtrl = Get.find<AgencyHostListController>(
+        tag: heartHostListTag,
+      );
       final needsReload =
           hostListCtrl.hostList.isEmpty ||
           !hostListCtrl.fetchedWithAgencyContext;
