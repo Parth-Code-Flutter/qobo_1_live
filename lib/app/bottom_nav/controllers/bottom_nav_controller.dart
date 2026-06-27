@@ -26,7 +26,7 @@ class BottomNavController extends GetxController {
       Get.isRegistered<UserSessionController>()
       ? Get.find<UserSessionController>()
       : Get.put(UserSessionController(), permanent: true);
-  final selectedIndex = 0.obs;
+  final selectedIndex = 1.obs;
   final permissionBlocked = false.obs;
   final showOpenSettings = false.obs;
   Map<String, dynamic>? profileData;
@@ -136,6 +136,9 @@ class BottomNavController extends GetxController {
     selectedIndex.value = index;
     if (index == 0 && Get.isRegistered<DiscoverTabController>()) {
       Get.find<DiscoverTabController>().refreshOnTabSelected();
+    }
+    if (index == 1 && Get.isRegistered<LiveRoomController>()) {
+      unawaited(Get.find<LiveRoomController>().fetchActiveRooms());
     }
     if (index == heartTabIndex &&
         Get.isRegistered<AgencyHostListController>(tag: heartHostListTag)) {
