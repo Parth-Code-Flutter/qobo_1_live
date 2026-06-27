@@ -77,6 +77,12 @@ class RoomEndpoints {
   /// POST /api/room/join
   static const String joinRoom = '/api/room/join';
 
+  /// POST /api/room/leave
+  static const String leaveRoom = '/api/room/leave';
+
+  /// POST /api/room/end
+  static const String endRoom = '/api/room/end';
+
   /// POST /api/room/mic-action
   static const String micAction = '/api/room/mic-action';
 

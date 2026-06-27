@@ -62,6 +62,7 @@ class LiveBroadcastController extends GetxController {
   StreamSubscription<List<ZegoInRoomMessage>>? _messageSub;
   StreamSubscription<List<ZegoUIKitUser>>? _userSub;
   VoidCallback? _viewerCountListener;
+  var _exitReported = false;
 
   @override
   void onInit() {
@@ -75,8 +76,7 @@ class LiveBroadcastController extends GetxController {
         receiverId.value = _extractReceiverId(_roomData) ?? '';
         final streamingId = _extractStreamingId(_roomData);
         hasExplicitStreamingId.value = streamingId != null;
-        final rawId =
-            streamingId ?? _extractBackendRoomId(_roomData) ?? '';
+        final rawId = streamingId ?? _extractBackendRoomId(_roomData) ?? '';
         roomId.value = ZegoLiveIdUtils.sanitize(rawId);
       }
     }
@@ -117,7 +117,8 @@ class LiveBroadcastController extends GetxController {
       receiverId.value = session.userId;
     }
 
-    final following = _roomData['isFollowing'] == true ||
+    final following =
+        _roomData['isFollowing'] == true ||
         _roomData['isFollowed'] == true ||
         readNestedHost(_roomData)?['isFollowing'] == true;
     isFollowingHost.value = following;
@@ -229,8 +230,8 @@ class LiveBroadcastController extends GetxController {
     liveViewers.assignAll(
       users.map((user) {
         final normalizedUserId = ZegoLiveIdUtils.sanitizeUserId(user.id);
-        final isHost = normalizedHostId.isNotEmpty &&
-            normalizedUserId == normalizedHostId;
+        final isHost =
+            normalizedHostId.isNotEmpty && normalizedUserId == normalizedHostId;
         final isCurrentUser =
             mySanitized.isNotEmpty && normalizedUserId == mySanitized;
         return <String, dynamic>{
@@ -383,9 +384,8 @@ class LiveBroadcastController extends GetxController {
     }
 
     try {
-      final sent = await ZegoUIKitPrebuiltLiveStreamingController().message.send(
-        moderatedText,
-      );
+      final sent = await ZegoUIKitPrebuiltLiveStreamingController().message
+          .send(moderatedText);
       if (!sent) {
         Get.snackbar(
           'Message not sent',
@@ -436,7 +436,8 @@ class LiveBroadcastController extends GetxController {
         targetLang: 'en',
         isShowLoader: false,
       );
-      final translated = response?['data']?['translatedText']?.toString() ??
+      final translated =
+          response?['data']?['translatedText']?.toString() ??
           response?['data']?['text']?.toString();
       if (translated != null && translated.isNotEmpty) {
         chatMessages[index] = {
@@ -479,7 +480,8 @@ class LiveBroadcastController extends GetxController {
   Map<String, String> _mapGift(Map<String, dynamic> raw) {
     final name = raw['name']?.toString() ?? raw['title']?.toString() ?? 'Gift';
     final price = raw['price'] ?? raw['coins'] ?? raw['amount'] ?? 0;
-    final icon = raw['icon']?.toString() ??
+    final icon =
+        raw['icon']?.toString() ??
         raw['emoji']?.toString() ??
         raw['image']?.toString() ??
         raw['imageUrl']?.toString() ??
@@ -585,7 +587,8 @@ class LiveBroadcastController extends GetxController {
   ) async {
     if (viewer['isCurrentUser'] == true) return;
 
-    final targetId = viewer['targetId']?.toString().trim() ??
+    final targetId =
+        viewer['targetId']?.toString().trim() ??
         viewer['id']?.toString().trim() ??
         '';
     if (targetId.isEmpty) {
@@ -819,7 +822,29 @@ class LiveBroadcastController extends GetxController {
   }
 
   void leaveRoom() {
+    unawaited(_reportAudioVideoRoomExit());
     Get.back();
+  }
+
+  Future<void> _reportAudioVideoRoomExit() async {
+    if (_exitReported || !_isAudioVideoRoomPayload()) return;
+    _exitReported = true;
+    final backendRoomId = _extractBackendRoomId(_roomData);
+    if (backendRoomId == null || backendRoomId.trim().isEmpty) return;
+
+    if (isHost.value) {
+      await _roomRepo.endRoom(roomId: backendRoomId, isShowLoader: false);
+    } else {
+      await _roomRepo.leaveRoom(roomId: backendRoomId, isShowLoader: false);
+    }
+  }
+
+  bool _isAudioVideoRoomPayload() {
+    final type = readRoomField(_roomData, ['type', 'roomType'])?.toLowerCase();
+    return type == 'audio' ||
+        type == 'video' ||
+        _roomData.containsKey('room_id') ||
+        _roomData.containsKey('roomId');
   }
 
   @override

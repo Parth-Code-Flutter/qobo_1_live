@@ -5,6 +5,7 @@ import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/live_streaming_permissions.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
+import 'package:qobo_one_live/utils/zego_engine_utils.dart';
 import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 
 /// Create flow: live streaming (Zego) vs audio/video party room.
@@ -123,11 +124,7 @@ class LiveRoomCreateController extends GetxController {
   void _openZegoHost(Map<String, dynamic> roomData) {
     Get.offNamed(
       Routes.LIVE_BROADCAST,
-      arguments: {
-        'isHost': true,
-        'roomType': 'VIDEO',
-        'roomData': roomData,
-      },
+      arguments: {'isHost': true, 'roomType': 'VIDEO', 'roomData': roomData},
     );
   }
 
@@ -159,27 +156,36 @@ class LiveRoomCreateController extends GetxController {
     }
 
     final maxSeats = int.tryParse(seatCount.value) ?? 8;
+    final isVideo = roomType.value.toUpperCase() == 'VIDEO';
+    bool granted;
+    if (isVideo) {
+      granted = await LiveStreamingPermissions.ensureHostVideoPermissions(
+        context,
+      );
+    } else {
+      granted = await LiveStreamingPermissions.ensureHostAudioPermissions(
+        context,
+      );
+    }
+    if (!context.mounted || !granted) return;
 
     final response = await _roomRepo.createRoom(
       name: streamNameController.text.trim(),
       type: roomType.value,
       country: selectedRegion.value,
       maxSeats: maxSeats,
+      category: categories[selectedCategoryIndex.value],
       isPrivate: isPrivate.value,
     );
 
     if (!context.mounted) return;
 
     if (_isSuccess(response)) {
-      final isVideo = roomType.value.toUpperCase() == 'VIDEO';
-      final granted = isVideo
-          ? await LiveStreamingPermissions.ensureHostVideoPermissions(context)
-          : await LiveStreamingPermissions.ensureHostAudioPermissions(context);
-      if (!context.mounted || !granted) return;
       AppToast.showSuccess(
         context,
         response!['message']?.toString() ?? 'Room created successfully!',
       );
+      await ZegoEngineUtils.resetForLiveProject();
       Get.offNamed(
         Routes.LIVE_BROADCAST,
         arguments: {

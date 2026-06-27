@@ -7,11 +7,11 @@ import 'package:qobo_one_live/app/user_flow/discover/discover_tab/models/discove
 import 'package:qobo_one_live/app/user_flow/discover/discover_tab/models/explore_discover_utils.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/widgets/match_user_sheet.dart';
-import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/models/geo/country_state_models.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/repo/chat/chat_navigation_helper.dart';
 import 'package:qobo_one_live/repo/geo/geo_repo.dart';
+import 'package:qobo_one_live/repo/room/room_repo.dart';
 import 'package:qobo_one_live/repo/user/user_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/chat/chat_call_launcher.dart';
@@ -19,6 +19,7 @@ import 'package:qobo_one_live/services/chat/chat_call_service.dart';
 import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
 import 'package:qobo_one_live/utils/app_widgets/country_state_picker_sheet.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
+import 'package:qobo_one_live/utils/zego_engine_utils.dart';
 
 /// Controller for Discover tab — user feed from `GET /api/discover`.
 class DiscoverTabController extends GetxController {
@@ -26,13 +27,16 @@ class DiscoverTabController extends GetxController {
     AuthRepo? authRepo,
     UserRepo? userRepo,
     GeoRepo? geoRepo,
+    RoomRepo? roomRepo,
   }) : _authRepo = authRepo ?? AuthRepo(),
        _userRepo = userRepo ?? UserRepo(),
-       _geoRepo = geoRepo ?? GeoRepo();
+       _geoRepo = geoRepo ?? GeoRepo(),
+       _roomRepo = roomRepo ?? RoomRepo();
 
   final AuthRepo _authRepo;
   final UserRepo _userRepo;
   final GeoRepo _geoRepo;
+  final RoomRepo _roomRepo;
 
   final searchController = TextEditingController();
 
@@ -48,91 +52,10 @@ class DiscoverTabController extends GetxController {
   final processingFollowId = ''.obs;
   final processingFavouriteId = ''.obs;
   final selectedDiscoverMode = DiscoverRoomSelection.none.obs;
-  final demoVideoRooms = <Map<String, dynamic>>[
-    {
-      'id': 'demo_video_1',
-      'name': 'Creator Hangout',
-      'hostName': 'Ritvik',
-      'category': 'Open cam chat',
-      'type': 'VIDEO',
-      'countryName': 'India',
-      'viewerCount': '2.1k',
-      'coverImage': kImgTemp1,
-      'hostAvatar': kImgTemp1,
-      'maxSeats': 8,
-      'status': 'live',
-      'tags': ['Music', 'New friends'],
-    },
-    {
-      'id': 'demo_video_2',
-      'name': 'Late Night Live',
-      'hostName': 'Jitendra',
-      'category': 'Talk show',
-      'type': 'VIDEO',
-      'countryName': 'Global',
-      'viewerCount': '846',
-      'coverImage': kImgTemp2,
-      'hostAvatar': kImgTemp2,
-      'maxSeats': 6,
-      'status': 'live',
-      'tags': ['Trending', 'Co-host'],
-    },
-    {
-      'id': 'demo_video_3',
-      'name': 'Talent Stage',
-      'hostName': 'Alpha Host',
-      'category': 'Singing and games',
-      'type': 'VIDEO',
-      'countryName': 'Bangladesh',
-      'viewerCount': '1.4k',
-      'coverImage': kImgTemp3,
-      'hostAvatar': kImgTemp3,
-      'maxSeats': 12,
-      'status': 'live',
-      'tags': ['Talent', 'VIP'],
-    },
-  ].obs;
-  final demoAudioRooms = <Map<String, dynamic>>[
-    {
-      'id': 'demo_audio_1',
-      'name': 'Open Mic Lounge',
-      'hostName': 'Priya Sharma',
-      'category': 'Music and talk',
-      'type': 'AUDIO',
-      'countryName': 'India',
-      'listenerCount': '1.8k',
-      'speakerCount': 5,
-      'maxSeats': 8,
-      'hostAvatar': kImgTemp4,
-      'status': 'live',
-    },
-    {
-      'id': 'demo_audio_2',
-      'name': 'Friendship Room',
-      'hostName': 'Ruby Queen',
-      'category': 'Meet new people',
-      'type': 'AUDIO',
-      'countryName': 'Bangladesh',
-      'listenerCount': '942',
-      'speakerCount': 3,
-      'maxSeats': 6,
-      'hostAvatar': kImgTemp5,
-      'status': 'live',
-    },
-    {
-      'id': 'demo_audio_3',
-      'name': 'Late Night Stories',
-      'hostName': 'Alpha Host',
-      'category': 'Stories and chill',
-      'type': 'AUDIO',
-      'countryName': 'Global',
-      'listenerCount': '2.6k',
-      'speakerCount': 7,
-      'maxSeats': 12,
-      'hostAvatar': kImgTemp3,
-      'status': 'live',
-    },
-  ].obs;
+  final videoRooms = <Map<String, dynamic>>[].obs;
+  final audioRooms = <Map<String, dynamic>>[].obs;
+  final isVideoRoomsLoading = false.obs;
+  final isAudioRoomsLoading = false.obs;
 
   /// Back-compat for header badge.
   String? get selectedCountry => filters.value.country;
@@ -273,6 +196,11 @@ class DiscoverTabController extends GetxController {
       searchResults.clear();
       searchQuery.value = '';
     }
+    if (mode == DiscoverRoomSelection.video) {
+      unawaited(fetchVideoRooms());
+    } else if (mode == DiscoverRoomSelection.audio) {
+      unawaited(fetchAudioRooms());
+    }
   }
 
   void openCreateVideoRoom() {
@@ -281,6 +209,90 @@ class DiscoverTabController extends GetxController {
 
   void openCreateAudioRoom() {
     Get.toNamed(Routes.LIVE_ROOM_CREATE, arguments: {'type': 'AUDIO'});
+  }
+
+  Future<void> fetchVideoRooms({bool refresh = true}) async {
+    await _fetchRooms(
+      type: 'video',
+      target: videoRooms,
+      loading: isVideoRoomsLoading,
+      refresh: refresh,
+    );
+  }
+
+  Future<void> fetchAudioRooms({bool refresh = true}) async {
+    await _fetchRooms(
+      type: 'audio',
+      target: audioRooms,
+      loading: isAudioRoomsLoading,
+      refresh: refresh,
+    );
+  }
+
+  Future<void> _fetchRooms({
+    required String type,
+    required RxList<Map<String, dynamic>> target,
+    required RxBool loading,
+    required bool refresh,
+  }) async {
+    if (loading.value) return;
+    try {
+      loading.value = true;
+      final response = await _roomRepo.listActiveRooms(
+        type: type,
+        country: filters.value.country,
+        page: 1,
+        limit: 30,
+        isShowLoader: false,
+      );
+      if (_isRoomApiSuccess(response)) {
+        final rooms = _extractRoomList(
+          response?['data'],
+        ).map((room) => _withRoomType(room, type)).toList();
+        target.assignAll(rooms);
+        return;
+      }
+      if (refresh) target.clear();
+    } catch (_) {
+      if (refresh) target.clear();
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  Future<void> joinDiscoverRoom(
+    BuildContext context,
+    Map<String, dynamic> room,
+  ) async {
+    final roomId = _roomId(room);
+    if (roomId.isEmpty) {
+      AppToast.showError(context, 'Room id is missing');
+      return;
+    }
+
+    final response = await _roomRepo.joinRoom(roomId: roomId);
+    if (!context.mounted) return;
+
+    if (!_isRoomApiSuccess(response)) {
+      AppToast.showError(
+        context,
+        response?['message']?.toString() ?? 'Could not join room',
+      );
+      return;
+    }
+
+    final payload = _normalizeJoinPayload(
+      response?['data'],
+      fallbackRoom: room,
+      fallbackRoomId: roomId,
+    );
+    final roomType = _text(payload['type'])?.toUpperCase() ?? 'VIDEO';
+    await ZegoEngineUtils.resetForLiveProject();
+    if (!context.mounted) return;
+    Get.toNamed(
+      Routes.LIVE_BROADCAST,
+      arguments: {'isHost': false, 'roomType': roomType, 'roomData': payload},
+    );
   }
 
   Future<void> toggleGenderFilter(String gender) async {
@@ -635,11 +647,97 @@ class DiscoverTabController extends GetxController {
     if (!isDiscoverUsersLoading.value) {
       fetchDiscoverUsers(refresh: true);
     }
+    if (isVideoRoomMode && !isVideoRoomsLoading.value) {
+      unawaited(fetchVideoRooms());
+    } else if (isAudioRoomMode && !isAudioRoomsLoading.value) {
+      unawaited(fetchAudioRooms());
+    }
     if (Get.isRegistered<ChatIncomingCallCoordinator>()) {
       unawaited(
         Get.find<ChatIncomingCallCoordinator>().syncWatchedRoomsFromFirestore(),
       );
     }
+  }
+
+  List<Map<String, dynamic>> _extractRoomList(dynamic raw) {
+    final list = raw is List
+        ? raw
+        : raw is Map
+        ? raw['rooms'] ?? raw['items'] ?? raw['list'] ?? raw['data']
+        : null;
+    if (list is! List) return const <Map<String, dynamic>>[];
+    return list
+        .whereType<Map>()
+        .map((room) => Map<String, dynamic>.from(room))
+        .toList();
+  }
+
+  Map<String, dynamic> _withRoomType(Map<String, dynamic> room, String type) {
+    final next = Map<String, dynamic>.from(room);
+    next.putIfAbsent('type', () => type);
+    return next;
+  }
+
+  Map<String, dynamic> _normalizeJoinPayload(
+    dynamic raw, {
+    required Map<String, dynamic> fallbackRoom,
+    required String fallbackRoomId,
+  }) {
+    final data = raw is Map ? Map<String, dynamic>.from(raw) : {};
+    final joinedRoom = data['room'] is Map
+        ? Map<String, dynamic>.from(data['room'] as Map)
+        : <String, dynamic>{};
+    final payload = <String, dynamic>{
+      ...fallbackRoom,
+      ...joinedRoom,
+      if (data['room'] is! Map) ...data,
+    };
+    final zegoStreaming = data['zegoStreaming'];
+    if (zegoStreaming is Map) {
+      payload['zegoStreaming'] = Map<String, dynamic>.from(zegoStreaming);
+      payload.putIfAbsent('zegoToken', () => zegoStreaming['token']);
+      payload.putIfAbsent('streamId', () => zegoStreaming['streamId']);
+    }
+    payload['room_id'] =
+        _text(data['room_id']) ??
+        _text(payload['room_id']) ??
+        _text(payload['roomId']) ??
+        fallbackRoomId;
+    payload['id'] = _text(payload['id']) ?? payload['room_id'];
+    payload['zegoLiveId'] =
+        _text(data['zegoLiveId']) ??
+        _text(data['channelName']) ??
+        _text(payload['zegoLiveId']) ??
+        _text(payload['channelName']) ??
+        (zegoStreaming is Map ? _text(zegoStreaming['roomId']) : null) ??
+        fallbackRoomId;
+    payload['channelName'] =
+        _text(data['channelName']) ??
+        _text(payload['channelName']) ??
+        payload['zegoLiveId'];
+    payload['type'] =
+        _text(payload['type']) ?? (isAudioRoomMode ? 'audio' : 'video');
+    return payload;
+  }
+
+  String _roomId(Map<String, dynamic> room) {
+    return _text(room['room_id']) ??
+        _text(room['roomId']) ??
+        _text(room['_id']) ??
+        _text(room['id']) ??
+        '';
+  }
+
+  bool _isRoomApiSuccess(Map<String, dynamic>? response) {
+    if (response == null) return false;
+    final code = response['statusCode'];
+    return code == 1 || code == 200 || code == 201 || code == true;
+  }
+
+  String? _text(dynamic value) {
+    final text = value?.toString().trim();
+    if (text == null || text.isEmpty || text == 'null') return null;
+    return text;
   }
 
   static int _toInt(dynamic raw) {

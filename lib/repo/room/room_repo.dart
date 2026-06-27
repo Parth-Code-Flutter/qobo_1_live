@@ -13,20 +13,28 @@ class RoomRepo {
   /// Returns decoded JSON map on success, otherwise `null`.
   Future<Map<String, dynamic>?> createRoom({
     required String name,
-    required String type, // 'AUDIO' or 'VIDEO'
+    required String type, // 'audio'/'video' or legacy 'AUDIO'/'VIDEO'
     required String country,
     required int maxSeats,
+    String? category,
+    String? coverImage,
     bool isPrivate = false,
     bool isShowLoader = true,
   }) async {
+    final trimmedCategory = category?.trim();
+    final trimmedCoverImage = coverImage?.trim();
     final response = await _apiService.postRequest(
       endPoint: RoomEndpoints.create,
       requestModel: <String, dynamic>{
         'name': name,
-        'type': type,
+        'type': type.trim().toLowerCase(),
         'country': country,
         'maxSeats': maxSeats,
         'isPrivate': isPrivate,
+        if (trimmedCategory != null && trimmedCategory.isNotEmpty)
+          'category': trimmedCategory,
+        if (trimmedCoverImage != null && trimmedCoverImage.isNotEmpty)
+          'coverImage': trimmedCoverImage,
       },
       isShowLoader: isShowLoader,
       isLoginCall: false, // assuming user is already logged in
@@ -79,12 +87,14 @@ class RoomRepo {
     String? type, // 'audio'/'video' or legacy 'AUDIO'/'VIDEO'
     String? country,
     String? category,
+    int page = 1,
+    int limit = 20,
     bool isShowLoader = true,
   }) async {
     var path = RoomEndpoints.listActiveRooms;
     final params = <String, String>{};
     if (type != null && type.trim().isNotEmpty) {
-      params['type'] = type.trim();
+      params['type'] = type.trim().toLowerCase();
     }
     if (country != null && country.isNotEmpty) {
       params['country'] = country;
@@ -92,12 +102,44 @@ class RoomRepo {
     if (category != null && category.trim().isNotEmpty) {
       params['category'] = category.trim();
     }
+    params['page'] = page.toString();
+    params['limit'] = limit.toString();
     if (params.isNotEmpty) {
       path += '?${Uri(queryParameters: params).query}';
     }
 
     final response = await _apiService.getRequest(
       endPoint: path,
+      isShowLoader: isShowLoader,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// Calls `POST /api/room/leave` to leave a room.
+  Future<Map<String, dynamic>?> leaveRoom({
+    required String roomId,
+    bool isShowLoader = false,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: RoomEndpoints.leaveRoom,
+      requestModel: <String, dynamic>{'room_id': roomId},
+      isShowLoader: isShowLoader,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// Calls `POST /api/room/end` to end a host room.
+  Future<Map<String, dynamic>?> endRoom({
+    required String roomId,
+    bool isShowLoader = false,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: RoomEndpoints.endRoom,
+      requestModel: <String, dynamic>{'room_id': roomId},
       isShowLoader: isShowLoader,
     );
 

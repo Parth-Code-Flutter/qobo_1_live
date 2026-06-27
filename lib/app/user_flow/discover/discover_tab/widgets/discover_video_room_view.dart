@@ -74,12 +74,10 @@ class _DiscoverVideoRoomViewState extends State<DiscoverVideoRoomView> {
               strokeWidth: 2,
             ),
           )
-        : tiles.isEmpty
-        ? const _VideoRoomsEmptyState()
         : ListView.separated(
             padding: const EdgeInsets.fromLTRB(14, 4, 14, 24),
             physics: const BouncingScrollPhysics(),
-            itemCount: tiles.length + 1,
+            itemCount: tiles.length + 1 + (tiles.isEmpty ? 1 : 0),
             separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               if (index == 0) {
@@ -88,6 +86,7 @@ class _DiscoverVideoRoomViewState extends State<DiscoverVideoRoomView> {
                   onTap: widget.onCreateVideoRoom,
                 );
               }
+              if (tiles.isEmpty) return const _VideoRoomsEmptyState();
               final tileIndex = index - 1;
               final data = tiles[tileIndex];
               return _VideoRoomAccordionTile(

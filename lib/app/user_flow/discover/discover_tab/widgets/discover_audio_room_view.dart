@@ -41,8 +41,6 @@ class DiscoverAudioRoomView extends StatelessWidget {
       );
     }
 
-    if (rooms.isEmpty) return const _AudioRoomsEmptyState();
-
     final tiles = List<_AudioRoomTileData>.generate(
       rooms.length,
       (index) => _tileFromRoom(rooms[index], index),
@@ -51,7 +49,7 @@ class DiscoverAudioRoomView extends StatelessWidget {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(14, 4, 14, 24),
       physics: const BouncingScrollPhysics(),
-      itemCount: tiles.length + 1,
+      itemCount: tiles.length + 1 + (tiles.isEmpty ? 1 : 0),
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         if (index == 0) {
@@ -60,6 +58,7 @@ class DiscoverAudioRoomView extends StatelessWidget {
             onTap: onCreateAudioRoom,
           );
         }
+        if (tiles.isEmpty) return const _AudioRoomsEmptyState();
         final data = tiles[index - 1];
         return _AudioRoomCard(
           data: data,
