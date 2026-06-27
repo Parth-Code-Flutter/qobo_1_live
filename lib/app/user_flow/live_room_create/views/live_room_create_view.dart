@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
@@ -21,10 +20,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
       backgroundColor: LiveRoomUiColors.screenGradientBottom,
       body: Container(
         decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage(kImgBG),
-            fit: BoxFit.cover,
-          ),
+          image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
         ),
         child: SafeArea(
           child: Obx(
@@ -56,13 +52,13 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _liveStreamingIdCard(),
-        Spacing.v24,
-        _sectionLabel('Live Streaming Name', required: true),
+        _livePreviewCard(),
+        Spacing.v20,
+        _sectionLabel('Live Title', required: true),
         Spacing.v8,
         AppTextField(
           controller: controller.streamNameController,
-          hintText: 'Enter your stream title...',
+          hintText: 'What are you going live about?',
           maxLength: 40,
           showCounter: false,
           fillColor: LiveRoomUiColors.cardSurface,
@@ -77,20 +73,16 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
             fontSize: TextStyles.k14FontSize,
           ),
         ),
-        Spacing.v20,
+        Spacing.v16,
         _onlyFollowsToggle(),
-        Spacing.v32,
+        Spacing.v24,
         appButton(
           onPressed: () => controller.startLiveStreaming(context),
-          buttonText: 'Go Live',
+          buttonText: 'Start Live',
           isGradient: true,
           buttonIcon: const Padding(
             padding: EdgeInsets.only(right: 8),
-            child: Icon(
-              Icons.live_tv_rounded,
-              color: kColorWhite,
-              size: 20,
-            ),
+            child: Icon(Icons.live_tv_rounded, color: kColorWhite, size: 20),
           ),
           gradientColors: const [
             LiveRoomUiColors.goLiveGradientStart,
@@ -136,9 +128,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
               child: _buildTypeToggle('AUDIO', Icons.graphic_eq_rounded),
             ),
             Spacing.h12,
-            Expanded(
-              child: _buildTypeToggle('VIDEO', Icons.videocam_rounded),
-            ),
+            Expanded(child: _buildTypeToggle('VIDEO', Icons.videocam_rounded)),
           ],
         ),
         Spacing.v20,
@@ -190,11 +180,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
           isGradient: true,
           buttonIcon: const Padding(
             padding: EdgeInsets.only(right: 8),
-            child: Icon(
-              Icons.live_tv_rounded,
-              color: kColorWhite,
-              size: 20,
-            ),
+            child: Icon(Icons.live_tv_rounded, color: kColorWhite, size: 20),
           ),
           gradientColors: const [
             LiveRoomUiColors.goLiveGradientStart,
@@ -206,75 +192,99 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
     );
   }
 
-  Widget _liveStreamingIdCard() {
-    return Obx(() {
-      final id = controller.liveStreamingId.value;
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: LiveRoomUiColors.cardSurface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: LiveRoomUiColors.cardBorder),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SemiBoldText(
-              text: 'Live Streaming ID',
-              fontSize: TextStyles.k14FontSize,
-              color: kColorWhite,
-            ),
-            Spacing.v4,
-            const AppText(
-              text: 'Used as Zego channel name · Auto-generated',
-              fontSize: TextStyles.k10FontSize,
-              color: kColorHint,
-            ),
-            Spacing.v12,
-            Row(
-              children: [
-                Expanded(
-                  child: AppText(
-                    text: id,
-                    fontSize: TextStyles.k12FontSize,
-                    color: kColorWhite,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                IconButton(
-                  onPressed: () {
-                    Clipboard.setData(ClipboardData(text: id));
-                    Get.snackbar(
-                      'Copied',
-                      'Live streaming ID copied',
-                      snackPosition: SnackPosition.BOTTOM,
-                      backgroundColor: LiveRoomUiColors.cardSurface,
-                      colorText: kColorWhite,
-                      margin: const EdgeInsets.all(16),
-                      duration: const Duration(seconds: 2),
-                    );
-                  },
-                  icon: const Icon(
-                    Icons.copy_rounded,
-                    color: kColorWhite,
-                    size: 20,
-                  ),
-                ),
-                IconButton(
-                  onPressed: controller.regenerateLiveStreamingId,
-                  icon: const Icon(
-                    Icons.refresh_rounded,
-                    color: kColorWhite,
-                    size: 22,
-                  ),
-                ),
-              ],
-            ),
+  Widget _livePreviewCard() {
+    return Container(
+      height: 190,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: LiveRoomUiColors.cardBorder),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            LiveRoomUiColors.goLiveGradientStart.withValues(alpha: 0.55),
+            LiveRoomUiColors.cardSurface,
+            LiveRoomUiColors.screenGradientBottom.withValues(alpha: 0.9),
           ],
         ),
-      );
-    });
+        boxShadow: [
+          BoxShadow(
+            color: kColorBlack.withValues(alpha: 0.18),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: kColorWhite.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: kColorWhite.withValues(alpha: 0.16),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.fiber_manual_record_rounded,
+                      color: kColorRed,
+                      size: 10,
+                    ),
+                    Spacing.h6,
+                    const SemiBoldText(
+                      text: 'LIVE',
+                      fontSize: TextStyles.k10FontSize,
+                      color: kColorWhite,
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: kColorWhite.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: kColorWhite.withValues(alpha: 0.18),
+                  ),
+                ),
+                child: const Icon(
+                  Icons.videocam_rounded,
+                  color: kColorWhite,
+                  size: 21,
+                ),
+              ),
+            ],
+          ),
+          const Spacer(),
+          const SemiBoldText(
+            text: 'Ready to go live?',
+            fontSize: TextStyles.k20FontSize,
+            color: kColorWhite,
+          ),
+          Spacing.v6,
+          const AppText(
+            text: 'Add a title, choose who can join, then start your stream.',
+            fontSize: TextStyles.k12FontSize,
+            color: kColorHint,
+            maxLines: 2,
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _onlyFollowsToggle() {
@@ -287,7 +297,11 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.people_outline_rounded, color: kColorWhite, size: 20),
+          const Icon(
+            Icons.people_outline_rounded,
+            color: kColorWhite,
+            size: 20,
+          ),
           Spacing.h12,
           Expanded(
             child: Column(
@@ -373,10 +387,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
         decoration: BoxDecoration(
           color: LiveRoomUiColors.cardSurface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: LiveRoomUiColors.cardBorder,
-            width: 1,
-          ),
+          border: Border.all(color: LiveRoomUiColors.cardBorder, width: 1),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -456,45 +467,39 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
       return Wrap(
         spacing: 10,
         runSpacing: 10,
-        children: List.generate(
-          LiveRoomCreateController.categories.length,
-          (index) {
-            final isSelected = controller.selectedCategoryIndex.value == index;
-            return GestureDetector(
-              onTap: () => controller.selectCategory(index),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(22),
+        children: List.generate(LiveRoomCreateController.categories.length, (
+          index,
+        ) {
+          final isSelected = controller.selectedCategoryIndex.value == index;
+          return GestureDetector(
+            onTap: () => controller.selectCategory(index),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
+                color: isSelected ? null : LiveRoomUiColors.cardSurface,
+                gradient: isSelected
+                    ? const LinearGradient(
+                        colors: [
+                          LiveRoomUiColors.goLiveGradientStart,
+                          LiveRoomUiColors.goLiveGradientEnd,
+                        ],
+                      )
+                    : null,
+                border: Border.all(
                   color: isSelected
-                      ? null
-                      : LiveRoomUiColors.cardSurface,
-                  gradient: isSelected
-                      ? const LinearGradient(
-                          colors: [
-                            LiveRoomUiColors.goLiveGradientStart,
-                            LiveRoomUiColors.goLiveGradientEnd,
-                          ],
-                        )
-                      : null,
-                  border: Border.all(
-                    color: isSelected
-                        ? Colors.transparent
-                        : LiveRoomUiColors.cardBorder,
-                  ),
-                ),
-                child: SemiBoldText(
-                  text: LiveRoomCreateController.categories[index],
-                  fontSize: TextStyles.k12FontSize,
-                  color: isSelected ? kColorWhite : kColorHint,
+                      ? Colors.transparent
+                      : LiveRoomUiColors.cardBorder,
                 ),
               ),
-            );
-          },
-        ),
+              child: SemiBoldText(
+                text: LiveRoomCreateController.categories[index],
+                fontSize: TextStyles.k12FontSize,
+                color: isSelected ? kColorWhite : kColorHint,
+              ),
+            ),
+          );
+        }),
       );
     });
   }
@@ -534,47 +539,45 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
   Widget _regionRow() {
     return Obx(() {
       return Row(
-        children: List.generate(
-          LiveRoomCreateController.regions.length,
-          (index) {
-            final region = LiveRoomCreateController.regions[index];
-            final isSelected = controller.selectedRegion.value == region.code;
-            return Expanded(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  right:
-                      index == LiveRoomCreateController.regions.length - 1
-                      ? 0
-                      : 10,
-                ),
-                child: GestureDetector(
-                  onTap: () => controller.selectRegion(region.code),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
+        children: List.generate(LiveRoomCreateController.regions.length, (
+          index,
+        ) {
+          final region = LiveRoomCreateController.regions[index];
+          final isSelected = controller.selectedRegion.value == region.code;
+          return Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(
+                right: index == LiveRoomCreateController.regions.length - 1
+                    ? 0
+                    : 10,
+              ),
+              child: GestureDetector(
+                onTap: () => controller.selectRegion(region.code),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: isSelected
+                        ? kColorPrimary.withValues(alpha: 0.35)
+                        : LiveRoomUiColors.cardSurface,
+                    border: Border.all(
                       color: isSelected
-                          ? kColorPrimary.withValues(alpha: 0.35)
-                          : LiveRoomUiColors.cardSurface,
-                      border: Border.all(
-                        color: isSelected
-                            ? LiveRoomUiColors.joinLiveBorder
-                            : LiveRoomUiColors.cardBorder,
-                        width: 1.4,
-                      ),
+                          ? LiveRoomUiColors.joinLiveBorder
+                          : LiveRoomUiColors.cardBorder,
+                      width: 1.4,
                     ),
-                    child: SemiBoldText(
-                      text: region.label,
-                      fontSize: TextStyles.k12FontSize,
-                      color: isSelected ? kColorWhite : kColorHint,
-                    ),
+                  ),
+                  child: SemiBoldText(
+                    text: region.label,
+                    fontSize: TextStyles.k12FontSize,
+                    color: isSelected ? kColorWhite : kColorHint,
                   ),
                 ),
               ),
-            );
-          },
-        ),
+            ),
+          );
+        }),
       );
     });
   }

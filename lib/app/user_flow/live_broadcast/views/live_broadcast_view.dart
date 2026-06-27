@@ -4,6 +4,7 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:zego_uikit_prebuilt_live_streaming/zego_uikit_prebuilt_live_streaming.dart';
@@ -75,9 +76,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
       }
 
       final config = controller.isHost.value
-          ? ZegoUIKitPrebuiltLiveStreamingConfig.host(
-              plugins: signalingPlugins,
-            )
+          ? ZegoUIKitPrebuiltLiveStreamingConfig.host(plugins: signalingPlugins)
           : ZegoUIKitPrebuiltLiveStreamingConfig.audience(
               plugins: signalingPlugins,
             );
@@ -216,15 +215,135 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final isCompact = constraints.maxWidth < 390;
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(child: _hostSummaryCard(compact: isCompact)),
-              SizedBox(width: isCompact ? 6 : 10),
-              _topActions(compact: isCompact),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: _hostSummaryCard(compact: isCompact)),
+                  SizedBox(width: isCompact ? 6 : 10),
+                  _topActions(compact: isCompact),
+                ],
+              ),
+              Obx(() {
+                if (!controller.isHost.value) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: _hostEarningsCard(compact: isCompact),
+                );
+              }),
             ],
           );
         },
+      ),
+    );
+  }
+
+  Widget _hostEarningsCard({bool compact = false}) {
+    return Obx(
+      () => Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 12 : 14,
+          vertical: compact ? 10 : 12,
+        ),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              const Color(0xFF2C1744).withValues(alpha: 0.92),
+              const Color(0xFF181B45).withValues(alpha: 0.88),
+            ],
+          ),
+          border: Border.all(color: kColorWalletAmount.withValues(alpha: 0.22)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.22),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: compact ? 38 : 42,
+              height: compact ? 38 : 42,
+              decoration: BoxDecoration(
+                color: kColorWalletAmount.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: kColorWalletAmount.withValues(alpha: 0.22),
+                ),
+              ),
+              child: const Icon(
+                Icons.diamond_rounded,
+                color: kColorWalletAmount,
+                size: 22,
+              ),
+            ),
+            Spacing.h10,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppText(
+                    text: 'Host earnings',
+                    fontSize: TextStyles.k10FontSize,
+                    color: kColorWhite.withValues(alpha: 0.66),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Spacing.v2,
+                  Row(
+                    children: [
+                      Flexible(
+                        child: SemiBoldText(
+                          text: formatLedgerAmount(
+                            controller.diamondsBalance.value,
+                          ),
+                          fontSize: compact
+                              ? TextStyles.k16FontSize
+                              : TextStyles.k18FontSize,
+                          color: kColorWalletAmount,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Spacing.h4,
+                      AppText(
+                        text: 'diamonds',
+                        fontSize: TextStyles.k10FontSize,
+                        color: kColorWhite.withValues(alpha: 0.70),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Spacing.h8,
+            TextButton(
+              onPressed: controller.openWithdrawalWallet,
+              style: TextButton.styleFrom(
+                minimumSize: Size(compact ? 86 : 96, compact ? 36 : 38),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                backgroundColor: kColorWalletAmount,
+                foregroundColor: kColorBlack,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
+              child: const SemiBoldText(
+                text: 'Withdraw',
+                fontSize: TextStyles.k12FontSize,
+                color: kColorBlack,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -392,8 +511,9 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
               SizedBox(width: compact ? 3 : 5),
               SemiBoldText(
                 text: controller.viewerCount.value.toString(),
-                fontSize:
-                    compact ? TextStyles.k12FontSize : TextStyles.k14FontSize,
+                fontSize: compact
+                    ? TextStyles.k12FontSize
+                    : TextStyles.k14FontSize,
                 color: kColorWhite,
               ),
             ],

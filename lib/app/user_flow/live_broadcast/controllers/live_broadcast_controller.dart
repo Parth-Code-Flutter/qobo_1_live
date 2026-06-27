@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/app/user_flow/wallet/bindings/wallet_binding.dart';
+import 'package:qobo_one_live/app/user_flow/wallet/views/wallet_view.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
@@ -55,6 +57,7 @@ class LiveBroadcastController extends GetxController {
   final isCameraOff = false.obs;
 
   final coinsBalance = 0.obs;
+  final diamondsBalance = 0.obs;
   final giftCatalog = <Map<String, String>>[].obs;
   final isLoadingGifts = false.obs;
 
@@ -131,7 +134,14 @@ class LiveBroadcastController extends GetxController {
       coinsBalance.value = parseWalletAmount(
         data['coins'] ?? data['coin'] ?? data['balance'] ?? data['coinBalance'],
       );
+      diamondsBalance.value = parseWalletAmount(
+        data['diamonds'] ?? data['diamond'] ?? data['diamondBalance'],
+      );
     }
+  }
+
+  void openWithdrawalWallet() {
+    Get.to(() => const WalletView(), binding: WalletBinding());
   }
 
   List<String> get giftCategories {
