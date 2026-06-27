@@ -20,6 +20,7 @@ import 'package:zego_uikit_prebuilt_live_streaming/zego_uikit_prebuilt_live_stre
 
 import '../utils/live_room_profile_utils.dart';
 import '../widgets/gifts_bottom_sheet.dart';
+import '../widgets/live_filters_sheet.dart';
 import '../widgets/live_viewers_sheet.dart';
 
 class LiveBroadcastController extends GetxController {
@@ -61,6 +62,11 @@ class LiveBroadcastController extends GetxController {
   final diamondsBalance = 0.obs;
   final giftCatalog = <Map<String, String>>[].obs;
   final isLoadingGifts = false.obs;
+  final liveBeautyEnabled = false.obs;
+  final liveSmooth = 35.obs;
+  final liveSkinTone = 25.obs;
+  final liveBlush = 12.obs;
+  final liveSharpen = 15.obs;
 
   Map<String, dynamic> _roomData = {};
   StreamSubscription<List<ZegoInRoomMessage>>? _messageSub;
@@ -609,6 +615,68 @@ class LiveBroadcastController extends GetxController {
         backgroundColor: Colors.transparent,
       );
     });
+  }
+
+  void openLiveFiltersSheet() {
+    if (!isHost.value || !isVideoRoom) return;
+    Get.bottomSheet(
+      const LiveFiltersSheet(),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+    );
+  }
+
+  Future<void> setLiveBeautyEnabled(bool value) async {
+    liveBeautyEnabled.value = value;
+    await _applyLiveBeauty();
+  }
+
+  Future<void> updateLiveFilter({
+    int? smooth,
+    int? skinTone,
+    int? blush,
+    int? sharpen,
+  }) async {
+    if (smooth != null) liveSmooth.value = smooth;
+    if (skinTone != null) liveSkinTone.value = skinTone;
+    if (blush != null) liveBlush.value = blush;
+    if (sharpen != null) liveSharpen.value = sharpen;
+    if (!liveBeautyEnabled.value) {
+      liveBeautyEnabled.value = true;
+    }
+    await _applyLiveBeauty();
+  }
+
+  Future<void> resetLiveFilters() async {
+    liveBeautyEnabled.value = false;
+    liveSmooth.value = 35;
+    liveSkinTone.value = 25;
+    liveBlush.value = 12;
+    liveSharpen.value = 15;
+    try {
+      await ZegoUIKit().resetBeautyEffect();
+      await ZegoUIKit().enableBeauty(false);
+    } catch (_) {}
+  }
+
+  Future<void> _applyLiveBeauty() async {
+    try {
+      await ZegoUIKit().startEffectsEnv();
+      await ZegoUIKit().enableBeauty(liveBeautyEnabled.value);
+      if (!liveBeautyEnabled.value) return;
+      ZegoUIKit().setBeautifyValue(liveSkinTone.value, BeautyEffectType.whiten);
+      ZegoUIKit().setBeautifyValue(liveBlush.value, BeautyEffectType.rosy);
+      ZegoUIKit().setBeautifyValue(liveSmooth.value, BeautyEffectType.smooth);
+      ZegoUIKit().setBeautifyValue(liveSharpen.value, BeautyEffectType.sharpen);
+    } catch (_) {
+      Get.snackbar(
+        'Filters',
+        'Unable to apply filters on this device right now.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.black87,
+        colorText: kColorWhite,
+      );
+    }
   }
 
   /// Opens 1:1 chat with a viewer/host from the live room list.

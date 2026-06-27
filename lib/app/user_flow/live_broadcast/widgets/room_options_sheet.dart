@@ -8,24 +8,71 @@ import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 
 class RoomOptionsSheet extends StatelessWidget {
   final bool isHost;
-  
-  const RoomOptionsSheet({super.key, required this.isHost});
+  final bool isVideoRoom;
+
+  const RoomOptionsSheet({
+    super.key,
+    required this.isHost,
+    this.isVideoRoom = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     final List<Map<String, dynamic>> options = isHost
         ? [
-            {'icon': Icons.mic_off_rounded, 'label': 'Mute All', 'color': kColorWhite},
-            {'icon': Icons.lock_outline_rounded, 'label': 'Lock Room', 'color': kColorWhite},
-            {'icon': Icons.pan_tool_rounded, 'label': 'Clear Seats', 'color': kColorWhite},
-            {'icon': Icons.share_rounded, 'label': 'Share', 'color': kColorWhite},
-            {'icon': Icons.bolt_rounded, 'label': 'PK Battle', 'color': Colors.amber},
-            {'icon': Icons.security_rounded, 'label': 'Security SOS', 'color': Colors.redAccent},
+            if (isVideoRoom)
+              {
+                'icon': Icons.auto_fix_high_rounded,
+                'label': 'Filters',
+                'color': const Color(0xFFE12BC5),
+              },
+            {
+              'icon': Icons.mic_off_rounded,
+              'label': 'Mute All',
+              'color': kColorWhite,
+            },
+            {
+              'icon': Icons.lock_outline_rounded,
+              'label': 'Lock Room',
+              'color': kColorWhite,
+            },
+            {
+              'icon': Icons.pan_tool_rounded,
+              'label': 'Clear Seats',
+              'color': kColorWhite,
+            },
+            {
+              'icon': Icons.share_rounded,
+              'label': 'Share',
+              'color': kColorWhite,
+            },
+            {
+              'icon': Icons.bolt_rounded,
+              'label': 'PK Battle',
+              'color': Colors.amber,
+            },
+            {
+              'icon': Icons.security_rounded,
+              'label': 'Security SOS',
+              'color': Colors.redAccent,
+            },
           ]
         : [
-            {'icon': Icons.report_problem_outlined, 'label': 'Report', 'color': Colors.redAccent},
-            {'icon': Icons.share_rounded, 'label': 'Share', 'color': kColorWhite},
-            {'icon': Icons.person_add_alt_1_rounded, 'label': 'Follow', 'color': kColorWhite},
+            {
+              'icon': Icons.report_problem_outlined,
+              'label': 'Report',
+              'color': Colors.redAccent,
+            },
+            {
+              'icon': Icons.share_rounded,
+              'label': 'Share',
+              'color': kColorWhite,
+            },
+            {
+              'icon': Icons.person_add_alt_1_rounded,
+              'label': 'Follow',
+              'color': kColorWhite,
+            },
           ];
 
     return Container(
@@ -61,6 +108,13 @@ class RoomOptionsSheet extends StatelessWidget {
                     Get.back(); // close sheet
                     if (opt['label'] == 'PK Battle') {
                       Get.toNamed(Routes.PK_BATTLE);
+                    } else if (opt['label'] == 'Filters') {
+                      if (Get.isRegistered<LiveBroadcastController>()) {
+                        Future.delayed(const Duration(milliseconds: 120), () {
+                          Get.find<LiveBroadcastController>()
+                              .openLiveFiltersSheet();
+                        });
+                      }
                     } else if (opt['label'] == 'Share') {
                       if (Get.isRegistered<LiveBroadcastController>()) {
                         Get.find<LiveBroadcastController>().shareRoom();
@@ -89,11 +143,7 @@ class RoomOptionsSheet extends StatelessWidget {
                           color: Colors.white10,
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(
-                          opt['icon'],
-                          color: opt['color'],
-                          size: 24,
-                        ),
+                        child: Icon(opt['icon'], color: opt['color'], size: 24),
                       ),
                       Spacing.v8,
                       AppText(

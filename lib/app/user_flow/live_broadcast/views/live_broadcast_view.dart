@@ -730,7 +730,10 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                 Icons.more_horiz_rounded,
                 onTap: () {
                   Get.bottomSheet(
-                    RoomOptionsSheet(isHost: controller.isHost.value),
+                    RoomOptionsSheet(
+                      isHost: controller.isHost.value,
+                      isVideoRoom: controller.isVideoRoom,
+                    ),
                     backgroundColor: Colors.transparent,
                   );
                 },
