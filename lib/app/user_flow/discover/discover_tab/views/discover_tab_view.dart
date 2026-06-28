@@ -56,6 +56,7 @@ class DiscoverTabView extends StatelessWidget {
                       rooms: discoverController.videoRooms,
                       isLoading: discoverController.isVideoRoomsLoading.value,
                       onCreateVideoRoom: discoverController.openCreateVideoRoom,
+                      onRefresh: discoverController.fetchVideoRooms,
                       onJoinLive: (room) =>
                           discoverController.joinDiscoverRoom(context, room),
                     );
@@ -65,6 +66,7 @@ class DiscoverTabView extends StatelessWidget {
                       rooms: discoverController.audioRooms,
                       isLoading: discoverController.isAudioRoomsLoading.value,
                       onCreateAudioRoom: discoverController.openCreateAudioRoom,
+                      onRefresh: discoverController.fetchAudioRooms,
                       onJoinRoom: (room) =>
                           discoverController.joinDiscoverRoom(context, room),
                     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -24,12 +25,14 @@ class DiscoverAudioRoomView extends StatelessWidget {
     this.isLoading = false,
     this.onCreateAudioRoom,
     this.onJoinRoom,
+    this.onRefresh,
   });
 
   final List<Map<String, dynamic>> rooms;
   final bool isLoading;
   final VoidCallback? onCreateAudioRoom;
   final ValueChanged<Map<String, dynamic>>? onJoinRoom;
+  final Future<void> Function()? onRefresh;
 
   static const String roomLabel = 'Audio Room';
 
@@ -46,25 +49,32 @@ class DiscoverAudioRoomView extends StatelessWidget {
       (index) => _tileFromRoom(rooms[index], index),
     );
 
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(14, 4, 14, 24),
-      physics: const BouncingScrollPhysics(),
-      itemCount: tiles.length + 1 + (tiles.isEmpty ? 1 : 0),
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return _CreateAudioRoomPanel(
-            liveCount: tiles.length,
-            onTap: onCreateAudioRoom,
+    return RefreshIndicator(
+      color: kColorPrimary,
+      backgroundColor: LiveRoomUiColors.screenGradientBottom,
+      onRefresh: onRefresh ?? () async {},
+      child: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(14, 4, 14, 24),
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        itemCount: tiles.length + 1 + (tiles.isEmpty ? 1 : 0),
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            return _CreateAudioRoomPanel(
+              liveCount: tiles.length,
+              onTap: onCreateAudioRoom,
+            );
+          }
+          if (tiles.isEmpty) return const _AudioRoomsEmptyState();
+          final data = tiles[index - 1];
+          return _AudioRoomCard(
+            data: data,
+            onJoin: onJoinRoom == null ? null : () => onJoinRoom!(data.room),
           );
-        }
-        if (tiles.isEmpty) return const _AudioRoomsEmptyState();
-        final data = tiles[index - 1];
-        return _AudioRoomCard(
-          data: data,
-          onJoin: onJoinRoom == null ? null : () => onJoinRoom!(data.room),
-        );
-      },
+        },
+      ),
     );
   }
 

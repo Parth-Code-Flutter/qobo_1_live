@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -27,12 +28,14 @@ class DiscoverVideoRoomView extends StatefulWidget {
     this.isLoading = false,
     this.onJoinLive,
     this.onCreateVideoRoom,
+    this.onRefresh,
   });
 
   final List<Map<String, dynamic>> rooms;
   final bool isLoading;
   final ValueChanged<Map<String, dynamic>>? onJoinLive;
   final VoidCallback? onCreateVideoRoom;
+  final Future<void> Function()? onRefresh;
 
   static const String roomLabel = 'Video Room';
 
@@ -74,30 +77,37 @@ class _DiscoverVideoRoomViewState extends State<DiscoverVideoRoomView> {
               strokeWidth: 2,
             ),
           )
-        : ListView.separated(
-            padding: const EdgeInsets.fromLTRB(14, 4, 14, 24),
-            physics: const BouncingScrollPhysics(),
-            itemCount: tiles.length + 1 + (tiles.isEmpty ? 1 : 0),
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              if (index == 0) {
-                return _CreateVideoRoomPanel(
-                  liveCount: tiles.length,
-                  onTap: widget.onCreateVideoRoom,
+        : RefreshIndicator(
+            color: kColorPrimary,
+            backgroundColor: LiveRoomUiColors.screenGradientBottom,
+            onRefresh: widget.onRefresh ?? () async {},
+            child: ListView.separated(
+              padding: const EdgeInsets.fromLTRB(14, 4, 14, 24),
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              itemCount: tiles.length + 1 + (tiles.isEmpty ? 1 : 0),
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  return _CreateVideoRoomPanel(
+                    liveCount: tiles.length,
+                    onTap: widget.onCreateVideoRoom,
+                  );
+                }
+                if (tiles.isEmpty) return const _VideoRoomsEmptyState();
+                final tileIndex = index - 1;
+                final data = tiles[tileIndex];
+                return _VideoRoomAccordionTile(
+                  data: data,
+                  expanded: _expandedIndex == tileIndex,
+                  onToggle: () => _onTileTap(tileIndex),
+                  onJoinLive: widget.onJoinLive == null
+                      ? null
+                      : () => widget.onJoinLive!(data.room),
                 );
-              }
-              if (tiles.isEmpty) return const _VideoRoomsEmptyState();
-              final tileIndex = index - 1;
-              final data = tiles[tileIndex];
-              return _VideoRoomAccordionTile(
-                data: data,
-                expanded: _expandedIndex == tileIndex,
-                onToggle: () => _onTileTap(tileIndex),
-                onJoinLive: widget.onJoinLive == null
-                    ? null
-                    : () => widget.onJoinLive!(data.room),
-              );
-            },
+              },
+            ),
           );
   }
 
