@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:qobo_one_live/services/api_service.dart';
 import 'package:qobo_one_live/services/api_constants.dart';
 import 'package:qobo_one_live/utils/api_response_utils.dart';
@@ -18,24 +20,45 @@ class RoomRepo {
     required int maxSeats,
     String? category,
     String? coverImage,
+    String? coverImageFilePath,
     bool isPrivate = false,
     bool isShowLoader = true,
   }) async {
     final trimmedCategory = category?.trim();
     final trimmedCoverImage = coverImage?.trim();
+    final fields = <String, dynamic>{
+      'name': name,
+      'title': name,
+      'type': type.trim().toLowerCase(),
+      'country': country,
+      'maxSeats': maxSeats,
+      'seatConfig': maxSeats,
+      'isPrivate': isPrivate,
+      if (trimmedCategory != null && trimmedCategory.isNotEmpty)
+        'category': trimmedCategory,
+      if (trimmedCoverImage != null && trimmedCoverImage.isNotEmpty)
+        'coverImage': trimmedCoverImage,
+    };
+    final coverFilePath = coverImageFilePath?.trim();
+    final coverFile = coverFilePath == null || coverFilePath.isEmpty
+        ? null
+        : File(coverFilePath);
+
+    if (coverFile != null && coverFile.existsSync()) {
+      final response = await _apiService.multipartFormRequest(
+        endPoint: RoomEndpoints.create,
+        fields: fields.map((key, value) => MapEntry(key, value.toString())),
+        namedFiles: {'coverImage': coverFile},
+        isShowLoader: isShowLoader,
+      );
+
+      if (response == null) return null;
+      return ApiResponseUtils.tryDecodeMap(response.body);
+    }
+
     final response = await _apiService.postRequest(
       endPoint: RoomEndpoints.create,
-      requestModel: <String, dynamic>{
-        'name': name,
-        'type': type.trim().toLowerCase(),
-        'country': country,
-        'maxSeats': maxSeats,
-        'isPrivate': isPrivate,
-        if (trimmedCategory != null && trimmedCategory.isNotEmpty)
-          'category': trimmedCategory,
-        if (trimmedCoverImage != null && trimmedCoverImage.isNotEmpty)
-          'coverImage': trimmedCoverImage,
-      },
+      requestModel: fields,
       isShowLoader: isShowLoader,
       isLoginCall: false, // assuming user is already logged in
     );

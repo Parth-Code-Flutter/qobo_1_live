@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:qobo_one_live/repo/room/room_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
@@ -18,6 +19,7 @@ class LiveRoomCreateController extends GetxController {
   final mode = LiveRoomCreateMode.audioVideoRoom.obs;
   final liveStreamingId = ''.obs;
   final onlyFollows = false.obs;
+  final selectedCoverPath = RxnString();
 
   final roomType = 'AUDIO'.obs;
   final seatCount = '8'.obs;
@@ -41,6 +43,7 @@ class LiveRoomCreateController extends GetxController {
   ];
 
   final RoomRepo _roomRepo = RoomRepo();
+  final ImagePicker _imagePicker = ImagePicker();
 
   bool get isLiveStreamingMode =>
       mode.value == LiveRoomCreateMode.liveStreaming;
@@ -80,6 +83,25 @@ class LiveRoomCreateController extends GetxController {
   void setPrivate(bool value) => isPrivate.value = value;
 
   void setOnlyFollows(bool value) => onlyFollows.value = value;
+
+  Future<void> pickRoomCover(BuildContext context) async {
+    try {
+      final picked = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 82,
+        maxWidth: 1280,
+      );
+      if (picked == null) return;
+      selectedCoverPath.value = picked.path;
+    } catch (_) {
+      if (!context.mounted) return;
+      AppToast.showError(context, 'Unable to open media picker');
+    }
+  }
+
+  void clearRoomCover() {
+    selectedCoverPath.value = null;
+  }
 
   /// Host starts a Zego live stream (from Live Rooms → Go Live).
   Future<void> startLiveStreaming(BuildContext context) async {
@@ -175,6 +197,7 @@ class LiveRoomCreateController extends GetxController {
       country: selectedRegion.value,
       maxSeats: maxSeats,
       category: categories[selectedCategoryIndex.value],
+      coverImageFilePath: selectedCoverPath.value,
       isPrivate: isPrivate.value,
     );
 

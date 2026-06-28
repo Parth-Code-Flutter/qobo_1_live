@@ -188,12 +188,19 @@ class LiveBroadcastController extends GetxController {
 
   bool get isVideoRoom => roomType.value.toUpperCase() != 'AUDIO';
 
+  bool get isAudioVideoRoom => _isAudioVideoRoomPayload();
+
   /// Called after Zego room login — ensures host camera publishes and binds chat/users.
   void onZegoRoomLogined() {
     isZegoConnected.value = true;
     _bindZegoListeners();
 
     if (!isHost.value || !isVideoRoom) return;
+    _turnOnHostMedia();
+    Future.delayed(const Duration(milliseconds: 700), _turnOnHostMedia);
+  }
+
+  void _turnOnHostMedia() {
     try {
       final av = ZegoUIKitPrebuiltLiveStreamingController().audioVideo;
       av.camera.turnOn(true);

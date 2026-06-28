@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
@@ -98,7 +100,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _coverPicker(),
+        _coverPicker(context),
         Spacing.v24,
         _sectionLabel('Room Name', required: true),
         Spacing.v8,
@@ -378,48 +380,121 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
     );
   }
 
-  /// Stream cover thumbnail picker (UI placeholder until upload is wired).
-  Widget _coverPicker() {
-    return GestureDetector(
-      onTap: () {},
-      child: Container(
-        height: 150,
-        decoration: BoxDecoration(
-          color: LiveRoomUiColors.cardSurface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: LiveRoomUiColors.cardBorder, width: 1),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: const BoxDecoration(
-                color: LiveRoomUiColors.chipInactiveBg,
-                shape: BoxShape.circle,
+  /// Stream cover thumbnail picker.
+  Widget _coverPicker(BuildContext context) {
+    return Obx(() {
+      final coverPath = controller.selectedCoverPath.value;
+      final hasCover = coverPath != null && coverPath.isNotEmpty;
+      return GestureDetector(
+        onTap: () => controller.pickRoomCover(context),
+        child: Container(
+          height: 150,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: LiveRoomUiColors.cardSurface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: LiveRoomUiColors.cardBorder, width: 1),
+          ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (hasCover)
+                Image.file(
+                  File(coverPath),
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => _coverPlaceholder(),
+                )
+              else
+                _coverPlaceholder(),
+              if (hasCover)
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.45),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              Positioned(
+                left: 12,
+                right: hasCover ? 54 : 12,
+                bottom: 12,
+                child: SemiBoldText(
+                  text: hasCover ? 'Tap to change cover' : 'Add Stream Cover',
+                  fontSize: TextStyles.k14FontSize,
+                  color: kColorWhite,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              child: const Icon(
-                Icons.add_a_photo_rounded,
-                color: kColorWhite,
-                size: 24,
-              ),
-            ),
-            Spacing.v10,
-            const SemiBoldText(
-              text: 'Add Stream Cover',
-              fontSize: TextStyles.k14FontSize,
-              color: kColorWhite,
-            ),
-            Spacing.v4,
-            const AppText(
-              text: 'Recommended 16:9 · Tap to upload',
-              fontSize: TextStyles.k10FontSize,
-              color: kColorHint,
-            ),
-          ],
+              if (hasCover)
+                Positioned(
+                  right: 10,
+                  top: 10,
+                  child: GestureDetector(
+                    onTap: controller.clearRoomCover,
+                    child: Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: kColorBlack.withValues(alpha: 0.48),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: kColorWhite.withValues(alpha: 0.18),
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.close_rounded,
+                        color: kColorWhite,
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                ),
+              if (!hasCover)
+                const Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 34,
+                  child: AppText(
+                    text: 'Recommended 16:9 · Tap to upload',
+                    fontSize: TextStyles.k10FontSize,
+                    color: kColorHint,
+                    align: TextAlign.center,
+                  ),
+                ),
+            ],
+          ),
         ),
-      ),
+      );
+    });
+  }
+
+  Widget _coverPlaceholder() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          width: 52,
+          height: 52,
+          decoration: const BoxDecoration(
+            color: LiveRoomUiColors.chipInactiveBg,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.add_a_photo_rounded,
+            color: kColorWhite,
+            size: 24,
+          ),
+        ),
+        Spacing.v10,
+      ],
     );
   }
 

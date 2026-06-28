@@ -26,6 +26,7 @@ class DiscoverAudioRoomView extends StatelessWidget {
     this.onCreateAudioRoom,
     this.onJoinRoom,
     this.onRefresh,
+    this.showCreatePanel = true,
   });
 
   final List<Map<String, dynamic>> rooms;
@@ -33,6 +34,7 @@ class DiscoverAudioRoomView extends StatelessWidget {
   final VoidCallback? onCreateAudioRoom;
   final ValueChanged<Map<String, dynamic>>? onJoinRoom;
   final Future<void> Function()? onRefresh;
+  final bool showCreatePanel;
 
   static const String roomLabel = 'Audio Room';
 
@@ -53,28 +55,41 @@ class DiscoverAudioRoomView extends StatelessWidget {
       color: kColorPrimary,
       backgroundColor: LiveRoomUiColors.screenGradientBottom,
       onRefresh: onRefresh ?? () async {},
-      child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(14, 4, 14, 24),
-        physics: const AlwaysScrollableScrollPhysics(
-          parent: BouncingScrollPhysics(),
-        ),
-        itemCount: tiles.length + 1 + (tiles.isEmpty ? 1 : 0),
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
-        itemBuilder: (context, index) {
-          if (index == 0) {
-            return _CreateAudioRoomPanel(
-              liveCount: tiles.length,
-              onTap: onCreateAudioRoom,
-            );
-          }
-          if (tiles.isEmpty) return const _AudioRoomsEmptyState();
-          final data = tiles[index - 1];
-          return _AudioRoomCard(
-            data: data,
-            onJoin: onJoinRoom == null ? null : () => onJoinRoom!(data.room),
-          );
-        },
-      ),
+      child: tiles.isEmpty
+          ? ListView(
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              padding: const EdgeInsets.fromLTRB(14, 64, 14, 120),
+              children: const [_AudioRoomsEmptyState()],
+            )
+          : GridView.builder(
+              padding: const EdgeInsets.fromLTRB(8, 18, 8, 104),
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              itemCount: tiles.length + (showCreatePanel ? 1 : 0),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                mainAxisSpacing: 22,
+                crossAxisSpacing: 14,
+                childAspectRatio: 0.78,
+              ),
+              itemBuilder: (context, index) {
+                if (showCreatePanel && index == tiles.length) {
+                  return _AudioRoomCreateTile(onTap: onCreateAudioRoom);
+                }
+                final data = tiles[index];
+                return _AudioRoomGridTile(
+                  data: data,
+                  roleLabel: _roleLabelForIndex(index),
+                  isSpeaking: index == 1,
+                  onTap: onJoinRoom == null
+                      ? null
+                      : () => onJoinRoom!(data.room),
+                );
+              },
+            ),
     );
   }
 
@@ -117,6 +132,12 @@ class DiscoverAudioRoomView extends StatelessWidget {
     );
   }
 
+  String _roleLabelForIndex(int index) {
+    if (index == 0) return 'Host';
+    if (index == 1) return 'Speaking';
+    return 'Member Listen...';
+  }
+
   String? _text(dynamic value) {
     final text = value?.toString().trim();
     if (text == null || text.isEmpty || text == 'null') return null;
@@ -124,207 +145,98 @@ class DiscoverAudioRoomView extends StatelessWidget {
   }
 }
 
-class _CreateAudioRoomPanel extends StatelessWidget {
-  const _CreateAudioRoomPanel({required this.liveCount, this.onTap});
+class _AudioRoomGridTile extends StatelessWidget {
+  const _AudioRoomGridTile({
+    required this.data,
+    required this.roleLabel,
+    required this.isSpeaking,
+    this.onTap,
+  });
 
-  final int liveCount;
+  final _AudioRoomTileData data;
+  final String roleLabel;
+  final bool isSpeaking;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            kColorAudioMicBadgeBg.withValues(alpha: 0.96),
-            kColorVideoPreviewGradientEnd.withValues(alpha: 0.96),
-          ],
-        ),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
-        boxShadow: [
-          BoxShadow(
-            color: kColorPrimary.withValues(alpha: 0.22),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Row(
+    final displayName = data.hostName.isNotEmpty ? data.hostName : data.title;
+
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: kColorWhite.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
-            ),
-            child: const Icon(Icons.add_rounded, color: kColorWhite, size: 28),
-          ),
-          Spacing.h12,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SemiBoldText(
-                  text: 'Start an Audio Room',
-                  fontSize: TextStyles.k14FontSize,
-                  color: kColorWhite,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Spacing.v4,
-                AppText(
-                  text: '$liveCount rooms live now',
-                  fontSize: TextStyles.k12FontSize,
-                  color: kColorWhite.withValues(alpha: 0.72),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          Spacing.h10,
-          _CreateButton(onTap: onTap),
-        ],
-      ),
-    );
-  }
-}
-
-class _AudioRoomCard extends StatelessWidget {
-  const _AudioRoomCard({required this.data, this.onJoin});
-
-  final _AudioRoomTileData data;
-  final VoidCallback? onJoin;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: kColorWhite.withValues(alpha: 0.10),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.14),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          Row(
+          Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
             children: [
-              _AudioAvatarPreview(path: data.avatar),
-              Spacing.h10,
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 72),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SemiBoldText(
-                        text: data.title,
-                        fontSize: TextStyles.k14FontSize,
-                        color: kColorWhite,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+              Container(
+                width: 70,
+                height: 70,
+                padding: EdgeInsets.all(isSpeaking ? 3 : 0),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isSpeaking
+                        ? const Color(0xFF12F287)
+                        : Colors.transparent,
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    if (isSpeaking)
+                      BoxShadow(
+                        color: const Color(0xFF12F287).withValues(alpha: 0.35),
+                        blurRadius: 16,
+                        spreadRadius: 1,
                       ),
-                      Spacing.v4,
-                      AppText(
-                        text: data.category,
-                        fontSize: TextStyles.k12FontSize,
-                        color: kColorVideoSecondaryText,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Spacing.v6,
-                      Row(
-                        children: [
-                          Expanded(
-                            child: AppText(
-                              text: data.hostName,
-                              fontSize: TextStyles.k12FontSize,
-                              color: kColorWhite.withValues(alpha: 0.84),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          Spacing.h8,
-                          AppText(
-                            text: '${data.speakerCount}/${data.maxSeats} seats',
-                            fontSize: TextStyles.k10FontSize,
-                            color: kColorWhite.withValues(alpha: 0.62),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ],
+                  ],
+                ),
+                child: ClipOval(child: _RoomImage(path: data.avatar)),
+              ),
+              Positioned(
+                right: 2,
+                bottom: -2,
+                child: Container(
+                  width: 26,
+                  height: 26,
+                  decoration: BoxDecoration(
+                    color: isSpeaking
+                        ? const Color(0xFF14D96B)
+                        : const Color(0xFF7B3B93),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFF20104A),
+                      width: 2,
+                    ),
+                  ),
+                  child: Icon(
+                    isSpeaking ? Icons.mic_rounded : Icons.mic_off_rounded,
+                    color: kColorWhite,
+                    size: 14,
                   ),
                 ),
               ),
             ],
           ),
-          Positioned(
-            right: 0,
-            top: 0,
-            child: _ListenerPill(count: data.listenerCount),
+          Spacing.v8,
+          SemiBoldText(
+            text: displayName,
+            fontSize: TextStyles.k12FontSize,
+            color: isSpeaking ? const Color(0xFF12F287) : kColorWhite,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            align: TextAlign.center,
           ),
-          Positioned(
-            right: 0,
-            bottom: 3,
-            child: _JoinAudioButton(onTap: onJoin),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AudioAvatarPreview extends StatelessWidget {
-  const _AudioAvatarPreview({required this.path});
-
-  final String path;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 64,
-      height: 64,
-      padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: kColorWhite.withValues(alpha: 0.14),
-      ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          ClipOval(child: _RoomImage(path: path)),
-          Positioned(
-            right: 2,
-            bottom: 2,
-            child: Container(
-              width: 20,
-              height: 20,
-              decoration: BoxDecoration(
-                color: kColorAudioSpeakingGreen,
-                shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFF251235), width: 2),
-              ),
-              child: const Icon(
-                Icons.mic_rounded,
-                color: kColorWhite,
-                size: 11,
-              ),
-            ),
+          Spacing.v2,
+          AppText(
+            text: roleLabel,
+            fontSize: TextStyles.k10FontSize,
+            color: kColorWhite.withValues(alpha: 0.72),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            align: TextAlign.center,
           ),
         ],
       ),
@@ -332,32 +244,8 @@ class _AudioAvatarPreview extends StatelessWidget {
   }
 }
 
-class _ListenerPill extends StatelessWidget {
-  const _ListenerPill({required this.count});
-
-  final String count;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: kColorWhite.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: AppText(
-        text: '$count listening',
-        fontSize: TextStyles.k10FontSize,
-        color: kColorWhite,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-  }
-}
-
-class _JoinAudioButton extends StatelessWidget {
-  const _JoinAudioButton({this.onTap});
+class _AudioRoomCreateTile extends StatelessWidget {
+  const _AudioRoomCreateTile({this.onTap});
 
   final VoidCallback? onTap;
 
@@ -366,52 +254,34 @@ class _JoinAudioButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Container(
-        width: 68,
-        height: 34,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [kColorVideoJoinLivePurple, kColorVideoJoinLiveGradientEnd],
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 70,
+            height: 70,
+            decoration: BoxDecoration(
+              color: kColorWhite.withValues(alpha: 0.13),
+              shape: BoxShape.circle,
+              border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
+            ),
+            child: const Icon(Icons.add_rounded, color: kColorWhite, size: 34),
           ),
-          borderRadius: BorderRadius.circular(17),
-        ),
-        child: const SemiBoldText(
-          text: 'Join',
-          fontSize: TextStyles.k12FontSize,
-          color: kColorWhite,
-        ),
-      ),
-    );
-  }
-}
-
-class _CreateButton extends StatelessWidget {
-  const _CreateButton({this.onTap});
-
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Container(
-          height: 38,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: kColorWhite,
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: const SemiBoldText(
+          Spacing.v8,
+          const SemiBoldText(
             text: 'Create',
             fontSize: TextStyles.k12FontSize,
-            color: kColorPrimary,
+            color: kColorWhite,
+            align: TextAlign.center,
           ),
-        ),
+          Spacing.v2,
+          AppText(
+            text: 'Audio Room',
+            fontSize: TextStyles.k10FontSize,
+            color: kColorWhite.withValues(alpha: 0.72),
+            align: TextAlign.center,
+          ),
+        ],
       ),
     );
   }

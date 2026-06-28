@@ -62,13 +62,25 @@ class DiscoverTabView extends StatelessWidget {
                     );
                   }
                   if (discoverController.isAudioRoomMode) {
-                    return DiscoverAudioRoomView(
-                      rooms: discoverController.audioRooms,
-                      isLoading: discoverController.isAudioRoomsLoading.value,
-                      onCreateAudioRoom: discoverController.openCreateAudioRoom,
-                      onRefresh: discoverController.fetchAudioRooms,
-                      onJoinRoom: (room) =>
-                          discoverController.joinDiscoverRoom(context, room),
+                    return Stack(
+                      children: [
+                        DiscoverAudioRoomView(
+                          rooms: discoverController.audioRooms,
+                          isLoading:
+                              discoverController.isAudioRoomsLoading.value,
+                          onCreateAudioRoom:
+                              discoverController.openCreateAudioRoom,
+                          onRefresh: discoverController.fetchAudioRooms,
+                          showCreatePanel: false,
+                          onJoinRoom: (room) => discoverController
+                              .joinDiscoverRoom(context, room),
+                        ),
+                        Positioned(
+                          right: 18,
+                          bottom: 22,
+                          child: _createAudioRoomFab(discoverController),
+                        ),
+                      ],
                     );
                   }
                   if (discoverController.searchQuery.value.isNotEmpty) {
@@ -165,6 +177,36 @@ class DiscoverTabView extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _createAudioRoomFab(DiscoverTabController controller) {
+    return GestureDetector(
+      onTap: controller.openCreateAudioRoom,
+      child: Container(
+        width: 58,
+        height: 58,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              kColorLiveFilterChipGradientStart,
+              kColorLiveFilterChipGradientEnd,
+            ],
+          ),
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.22)),
+          boxShadow: [
+            BoxShadow(
+              color: kColorPrimary.withValues(alpha: 0.38),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: const Icon(Icons.add_rounded, color: kColorWhite, size: 32),
       ),
     );
   }

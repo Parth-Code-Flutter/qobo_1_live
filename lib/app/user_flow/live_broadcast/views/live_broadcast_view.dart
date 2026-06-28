@@ -31,6 +31,12 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
       body: Stack(
         children: [
           _buildMainVideoBackground(),
+          Obx(() {
+            if (controller.isVideoRoom || !controller.canOpenZego) {
+              return const SizedBox.shrink();
+            }
+            return Positioned.fill(child: _buildAudioRoomStage());
+          }),
           const Positioned.fill(child: _LiveOverlayScrim()),
           SafeArea(
             child: Column(
@@ -79,6 +85,18 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
           : ZegoUIKitPrebuiltLiveStreamingConfig.audience(
               plugins: signalingPlugins,
             );
+      final isAudioVideoRoom = controller.isAudioVideoRoom;
+      final isVideoRoom = controller.isVideoRoom;
+
+      if (isAudioVideoRoom) {
+        config.layout = ZegoLayout.gallery(
+          margin: const EdgeInsets.fromLTRB(8, 116, 8, 120),
+          addBorderRadiusAndSpacingBetweenView: true,
+        );
+        if (!controller.isHost.value) {
+          config.role = ZegoLiveStreamingRole.coHost;
+        }
+      }
 
       // Custom overlay replaces Zego chrome — hide built-in bars.
       config.bottomMenuBar = ZegoLiveStreamingBottomMenuBarConfig(
@@ -100,14 +118,16 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
       // Preview page has its own "Start Live" button — our overlay covers it.
       config.preview.showPreviewForHost = false;
 
-      final isVideoRoom = controller.isVideoRoom;
       if (isVideoRoom) {
-        config.turnOnCameraWhenJoining = controller.isHost.value;
-        config.turnOnMicrophoneWhenJoining = controller.isHost.value;
+        config.turnOnCameraWhenJoining =
+            controller.isHost.value || isAudioVideoRoom;
+        config.turnOnMicrophoneWhenJoining =
+            controller.isHost.value || isAudioVideoRoom;
         config.useFrontFacingCamera = true;
       } else {
         config.turnOnCameraWhenJoining = false;
-        config.turnOnMicrophoneWhenJoining = controller.isHost.value;
+        config.turnOnMicrophoneWhenJoining =
+            controller.isHost.value || isAudioVideoRoom;
         config.audioVideoView.showAvatarInAudioMode = true;
         config.audioVideoView.showSoundWavesInAudioMode = true;
       }
@@ -136,6 +156,10 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
               },
             ),
             onEnded: (event, defaultAction) {
+              if (controller.isAudioVideoRoom &&
+                  event.reason == ZegoLiveStreamingEndReason.hostEnd) {
+                return;
+              }
               controller.leaveRoom();
               defaultAction.call();
             },
@@ -143,6 +167,68 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
         ),
       );
     });
+  }
+
+  Widget _buildAudioRoomStage() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF5A0D64), Color(0xFF101E69), Color(0xFF0B143F)],
+        ),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 118, 18, 150),
+          child: Obx(() {
+            final participants = _audioParticipants();
+            return GridView.builder(
+              physics: const BouncingScrollPhysics(),
+              itemCount: participants.length + 1,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                mainAxisSpacing: 22,
+                crossAxisSpacing: 14,
+                childAspectRatio: 0.78,
+              ),
+              itemBuilder: (context, index) {
+                if (index == participants.length) {
+                  return _AudioRoomPlusTile(onTap: controller.openViewersSheet);
+                }
+                final participant = participants[index];
+                return _AudioRoomParticipantTile(
+                  name: participant['name']?.toString() ?? 'Member',
+                  avatarUrl: participant['avatarUrl']?.toString(),
+                  isHost: participant['isHost'] == true,
+                  isSpeaking:
+                      index == 1 || participant['isCurrentUser'] == true,
+                  isMuted: participant['isHost'] != true && index != 1,
+                );
+              },
+            );
+          }),
+        ),
+      ),
+    );
+  }
+
+  List<Map<String, dynamic>> _audioParticipants() {
+    final participants = <Map<String, dynamic>>[];
+    participants.add({
+      'name': controller.hostName.value,
+      'avatarUrl': controller.hostAvatarUrl.value,
+      'isHost': true,
+    });
+
+    for (final viewer in controller.liveViewers) {
+      final name = viewer['name']?.toString() ?? '';
+      final isHost = viewer['isHost'] == true;
+      if (isHost || name.trim().isEmpty) continue;
+      participants.add(Map<String, dynamic>.from(viewer));
+    }
+
+    return participants.take(11).toList();
   }
 
   Widget _buildConnectionIssueState() {
@@ -812,6 +898,151 @@ class _LiveOverlayScrim extends StatelessWidget {
             stops: const [0, 0.22, 0.56, 1],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _AudioRoomParticipantTile extends StatelessWidget {
+  const _AudioRoomParticipantTile({
+    required this.name,
+    required this.avatarUrl,
+    required this.isHost,
+    required this.isSpeaking,
+    required this.isMuted,
+  });
+
+  final String name;
+  final String? avatarUrl;
+  final bool isHost;
+  final bool isSpeaking;
+  final bool isMuted;
+
+  @override
+  Widget build(BuildContext context) {
+    final badgeColor = isSpeaking
+        ? const Color(0xFF14D96B)
+        : const Color(0xFF8E1B85);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            Container(
+              width: 70,
+              height: 70,
+              padding: EdgeInsets.all(isSpeaking ? 3 : 0),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isSpeaking
+                      ? const Color(0xFF12F287)
+                      : Colors.transparent,
+                  width: 2,
+                ),
+                boxShadow: [
+                  if (isSpeaking)
+                    BoxShadow(
+                      color: const Color(0xFF12F287).withValues(alpha: 0.34),
+                      blurRadius: 16,
+                      spreadRadius: 1,
+                    ),
+                ],
+              ),
+              child: AppUserAvatar(
+                name: name,
+                imageUrl: avatarUrl,
+                size: 64,
+                backgroundColor: kColorWhite.withValues(alpha: 0.12),
+                textColor: kColorWhite,
+              ),
+            ),
+            Positioned(
+              right: 2,
+              bottom: -2,
+              child: Container(
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(
+                  color: badgeColor,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFF20104A), width: 2),
+                ),
+                child: Icon(
+                  isMuted ? Icons.mic_off_rounded : Icons.mic_rounded,
+                  color: kColorWhite,
+                  size: 14,
+                ),
+              ),
+            ),
+          ],
+        ),
+        Spacing.v8,
+        SemiBoldText(
+          text: name,
+          fontSize: TextStyles.k12FontSize,
+          color: isSpeaking ? const Color(0xFF12F287) : kColorWhite,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          align: TextAlign.center,
+        ),
+        Spacing.v2,
+        AppText(
+          text: isHost
+              ? 'Host'
+              : isSpeaking
+              ? 'Speaking'
+              : 'Member Listen...',
+          fontSize: TextStyles.k10FontSize,
+          color: kColorWhite.withValues(alpha: 0.68),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          align: TextAlign.center,
+        ),
+      ],
+    );
+  }
+}
+
+class _AudioRoomPlusTile extends StatelessWidget {
+  const _AudioRoomPlusTile({this.onTap});
+
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 70,
+            height: 70,
+            decoration: BoxDecoration(
+              color: kColorWhite.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+              border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
+            ),
+            child: const Icon(Icons.add_rounded, color: kColorWhite, size: 34),
+          ),
+          Spacing.v8,
+          const SemiBoldText(
+            text: 'Invite',
+            fontSize: TextStyles.k12FontSize,
+            color: kColorWhite,
+            align: TextAlign.center,
+          ),
+          Spacing.v2,
+          AppText(
+            text: 'Add member',
+            fontSize: TextStyles.k10FontSize,
+            color: kColorWhite.withValues(alpha: 0.68),
+            align: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
