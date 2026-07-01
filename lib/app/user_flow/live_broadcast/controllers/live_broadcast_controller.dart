@@ -190,6 +190,8 @@ class LiveBroadcastController extends GetxController {
 
   bool get isAudioVideoRoom => _isAudioVideoRoomPayload();
 
+  bool get isVideoConferenceRoom => isAudioVideoRoom && isVideoRoom;
+
   /// Called after Zego room login — ensures host camera publishes and binds chat/users.
   void onZegoRoomLogined() {
     isZegoConnected.value = true;
@@ -325,15 +327,35 @@ class LiveBroadcastController extends GetxController {
     );
   }
 
+  void handleVideoConferenceError(Object error) {
+    isZegoConnected.value = false;
+    connectionIssue.value =
+        'Could not join video room. Verify Zego Video Conference App ID / App Sign.';
+    if (Get.isSnackbarOpen) {
+      Get.closeAllSnackbars();
+    }
+    Get.snackbar(
+      'Video room',
+      connectionIssue.value,
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.black87,
+      colorText: kColorWhite,
+      duration: const Duration(seconds: 4),
+    );
+  }
+
   void _validateStreamingInput() {
     final liveId = roomId.value.trim();
     if (liveId.isEmpty || liveId == 'test_room' || liveId == 'null') {
-      connectionIssue.value =
-          'Live stream id is missing. Please ask backend to return zegoLiveId or channelName for this room.';
+      connectionIssue.value = isVideoConferenceRoom
+          ? 'Video room id is missing. Please ask backend to return room_id, roomId, zegoLiveId, or channelName.'
+          : 'Live stream id is missing. Please ask backend to return zegoLiveId or channelName for this room.';
       return;
     }
 
-    if (!isHost.value && !hasExplicitStreamingId.value) {
+    if (!isVideoConferenceRoom &&
+        !isHost.value &&
+        !hasExplicitStreamingId.value) {
       connectionIssue.value =
           'This room has only backend room id. Audience join needs zegoLiveId/channelName from API.';
       return;
@@ -955,6 +977,7 @@ class LiveBroadcastController extends GetxController {
 
   @override
   void onClose() {
+    unawaited(_reportAudioVideoRoomExit());
     _messageSub?.cancel();
     _userSub?.cancel();
     if (_viewerCountListener != null) {

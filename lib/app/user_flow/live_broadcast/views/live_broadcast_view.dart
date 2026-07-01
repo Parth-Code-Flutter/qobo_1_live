@@ -8,6 +8,8 @@ import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:zego_uikit_prebuilt_live_streaming/zego_uikit_prebuilt_live_streaming.dart';
+import 'package:zego_uikit_prebuilt_video_conference/zego_uikit_prebuilt_video_conference.dart'
+    as vc;
 import 'package:zego_uikit_signaling_plugin/zego_uikit_signaling_plugin.dart';
 import 'package:qobo_one_live/constants/zego_config.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
@@ -26,6 +28,13 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
 
   @override
   Widget build(BuildContext context) {
+    if (controller.isVideoConferenceRoom) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: _buildVideoConferenceRoom(),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
@@ -54,6 +63,73 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
         ],
       ),
     );
+  }
+
+  Widget _buildVideoConferenceRoom() {
+    final userSession = Get.find<UserSessionController>();
+    final rawUserId = userSession.userId.isNotEmpty
+        ? userSession.userId
+        : 'user_${userSession.hashCode}';
+    final currentUserId = ZegoLiveIdUtils.sanitizeUserId(rawUserId);
+    final currentUserName = userSession.displayName.isNotEmpty
+        ? userSession.displayName
+        : 'User';
+
+    return Obx(() {
+      if (!controller.canOpenZego) {
+        return _buildConnectionIssueState();
+      }
+
+      final conferenceId = controller.roomId.value;
+      if (conferenceId.isEmpty) {
+        return _buildConnectionIssueState();
+      }
+
+      final config = vc.ZegoUIKitPrebuiltVideoConferenceConfig(
+        turnOnCameraWhenJoining: true,
+        turnOnMicrophoneWhenJoining: true,
+        useFrontFacingCamera: true,
+        useSpeakerWhenJoining: true,
+        onLeave: controller.leaveRoom,
+        onError: controller.handleVideoConferenceError,
+        topMenuBarConfig: vc.ZegoTopMenuBarConfig(
+          title: controller.streamTitle.value.isNotEmpty
+              ? controller.streamTitle.value
+              : 'Video Room',
+          style: vc.ZegoMenuBarStyle.dark,
+          buttons: const [
+            vc.ZegoMenuBarButtonName.showMemberListButton,
+            vc.ZegoMenuBarButtonName.switchCameraButton,
+          ],
+        ),
+        bottomMenuBarConfig: vc.ZegoBottomMenuBarConfig(
+          style: vc.ZegoMenuBarStyle.dark,
+          maxCount: 5,
+          buttons: const [
+            vc.ZegoMenuBarButtonName.toggleCameraButton,
+            vc.ZegoMenuBarButtonName.toggleMicrophoneButton,
+            vc.ZegoMenuBarButtonName.switchAudioOutputButton,
+            vc.ZegoMenuBarButtonName.chatButton,
+            vc.ZegoMenuBarButtonName.leaveButton,
+          ],
+        ),
+      );
+
+      config.layout = vc.ZegoLayout.gallery(
+        addBorderRadiusAndSpacingBetweenView: true,
+      );
+      config.duration.isVisible = true;
+
+      return vc.ZegoUIKitPrebuiltVideoConference(
+        key: ValueKey('conference_$conferenceId'),
+        appID: ZegoConfig.videoConferenceAppId,
+        appSign: ZegoConfig.videoConferenceAppSign,
+        userID: currentUserId,
+        userName: currentUserName,
+        conferenceID: conferenceId,
+        config: config,
+      );
+    });
   }
 
   Widget _buildMainVideoBackground() {

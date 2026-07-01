@@ -208,7 +208,11 @@ class LiveRoomCreateController extends GetxController {
         context,
         response!['message']?.toString() ?? 'Room created successfully!',
       );
-      await ZegoEngineUtils.resetForLiveProject();
+      if (isVideo) {
+        await ZegoEngineUtils.resetForVideoConferenceProject();
+      } else {
+        await ZegoEngineUtils.resetForLiveProject();
+      }
       Get.offNamed(
         Routes.LIVE_BROADCAST,
         arguments: {

@@ -1,11 +1,10 @@
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 import 'package:zego_uikit/zego_uikit.dart';
 
-/// Resets the shared Zego Express engine between live streaming and voice call.
+/// Resets the shared Zego Express engine between Zego console projects.
 ///
-/// Both features use different Zego console projects (App IDs). ZegoUIKit only
-/// initializes once per process — without reset, voice call reuses the live
-/// streaming engine and room login fails silently.
+/// Features use different App IDs. ZegoUIKit only initializes once per process,
+/// so switching use cases must uninit the old engine first.
 abstract final class ZegoEngineUtils {
   static Future<void> resetForCallProject() async {
     await _resetEngine('call');
@@ -17,6 +16,10 @@ abstract final class ZegoEngineUtils {
 
   static Future<void> resetForLiveProject() async {
     await _resetEngine('live');
+  }
+
+  static Future<void> resetForVideoConferenceProject() async {
+    await _resetEngine('video-conference');
   }
 
   static Future<void> _resetEngine(String reason) async {
