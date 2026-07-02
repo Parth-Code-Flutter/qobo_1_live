@@ -287,11 +287,7 @@ class DiscoverTabController extends GetxController {
       fallbackRoomId: roomId,
     );
     final roomType = _text(payload['type'])?.toUpperCase() ?? 'VIDEO';
-    if (roomType == 'VIDEO') {
-      await ZegoEngineUtils.resetForVideoConferenceProject();
-    } else {
-      await ZegoEngineUtils.resetForLiveProject();
-    }
+    await ZegoEngineUtils.resetForRoomProject();
     if (!context.mounted) return;
     Get.toNamed(
       Routes.LIVE_BROADCAST,

@@ -18,8 +18,8 @@ abstract final class ZegoEngineUtils {
     await _resetEngine('live');
   }
 
-  static Future<void> resetForVideoConferenceProject() async {
-    await _resetEngine('video-conference');
+  static Future<void> resetForRoomProject() async {
+    await _resetEngine('room-call');
   }
 
   static Future<void> _resetEngine(String reason) async {

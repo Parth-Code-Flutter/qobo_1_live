@@ -7,9 +7,9 @@ import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import 'package:zego_uikit_prebuilt_call/zego_uikit_prebuilt_call.dart'
+    as call;
 import 'package:zego_uikit_prebuilt_live_streaming/zego_uikit_prebuilt_live_streaming.dart';
-import 'package:zego_uikit_prebuilt_video_conference/zego_uikit_prebuilt_video_conference.dart'
-    as vc;
 import 'package:zego_uikit_signaling_plugin/zego_uikit_signaling_plugin.dart';
 import 'package:qobo_one_live/constants/zego_config.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
@@ -28,10 +28,10 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
 
   @override
   Widget build(BuildContext context) {
-    if (controller.isVideoConferenceRoom) {
+    if (controller.isAudioVideoRoom) {
       return Scaffold(
         backgroundColor: Colors.black,
-        body: _buildVideoConferenceRoom(),
+        body: _buildGroupCallRoom(),
       );
     }
 
@@ -65,7 +65,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
     );
   }
 
-  Widget _buildVideoConferenceRoom() {
+  Widget _buildGroupCallRoom() {
     final userSession = Get.find<UserSessionController>();
     final rawUserId = userSession.userId.isNotEmpty
         ? userSession.userId
@@ -85,51 +85,73 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
         return _buildConnectionIssueState();
       }
 
-      final config = vc.ZegoUIKitPrebuiltVideoConferenceConfig(
-        turnOnCameraWhenJoining: true,
-        turnOnMicrophoneWhenJoining: true,
-        useFrontFacingCamera: true,
-        useSpeakerWhenJoining: true,
-        onLeave: controller.leaveRoom,
-        onError: controller.handleVideoConferenceError,
-        topMenuBarConfig: vc.ZegoTopMenuBarConfig(
-          title: controller.streamTitle.value.isNotEmpty
-              ? controller.streamTitle.value
-              : 'Video Room',
-          style: vc.ZegoMenuBarStyle.dark,
-          buttons: const [
-            vc.ZegoMenuBarButtonName.showMemberListButton,
-            vc.ZegoMenuBarButtonName.switchCameraButton,
-          ],
-        ),
-        bottomMenuBarConfig: vc.ZegoBottomMenuBarConfig(
-          style: vc.ZegoMenuBarStyle.dark,
-          maxCount: 5,
-          buttons: const [
-            vc.ZegoMenuBarButtonName.toggleCameraButton,
-            vc.ZegoMenuBarButtonName.toggleMicrophoneButton,
-            vc.ZegoMenuBarButtonName.switchAudioOutputButton,
-            vc.ZegoMenuBarButtonName.chatButton,
-            vc.ZegoMenuBarButtonName.leaveButton,
-          ],
-        ),
-      );
+      final config = _buildGroupCallConfig(controller.isVideoRoom);
 
-      config.layout = vc.ZegoLayout.gallery(
-        addBorderRadiusAndSpacingBetweenView: true,
-      );
-      config.duration.isVisible = true;
-
-      return vc.ZegoUIKitPrebuiltVideoConference(
-        key: ValueKey('conference_$conferenceId'),
-        appID: ZegoConfig.videoConferenceAppId,
-        appSign: ZegoConfig.videoConferenceAppSign,
+      return call.ZegoUIKitPrebuiltCall(
+        key: ValueKey('group_call_$conferenceId'),
+        appID: ZegoConfig.roomAppId,
+        appSign: ZegoConfig.roomAppSign,
         userID: currentUserId,
         userName: currentUserName,
-        conferenceID: conferenceId,
+        callID: conferenceId,
         config: config,
+        events: call.ZegoUIKitPrebuiltCallEvents(
+          onError: controller.handleGroupCallRoomError,
+          onCallEnd: (event, defaultAction) {
+            controller.leaveRoom();
+            defaultAction.call();
+          },
+        ),
       );
     });
+  }
+
+  call.ZegoUIKitPrebuiltCallConfig _buildGroupCallConfig(bool isVideoRoom) {
+    // Rooms are backed by the ZEGOCLOUD Voice & Video Call product in group
+    // mode. Audio rooms join without camera; video rooms join with camera.
+    final config = isVideoRoom
+        ? call.ZegoUIKitPrebuiltCallConfig.groupVideoCall()
+        : call.ZegoUIKitPrebuiltCallConfig.groupVoiceCall();
+
+    final fallbackTitle = isVideoRoom ? 'Video Room' : 'Audio Room';
+    final roomTitle = controller.streamTitle.value.isNotEmpty
+        ? controller.streamTitle.value
+        : fallbackTitle;
+
+    config
+      ..turnOnCameraWhenJoining = isVideoRoom
+      ..turnOnMicrophoneWhenJoining = true
+      ..useSpeakerWhenJoining = true
+      ..enableAccidentalTouchPrevention = false
+      ..duration.isVisible = true
+      ..user.requiredUsers.enabled = false
+      ..topMenuBar = call.ZegoCallTopMenuBarConfig(
+        title: roomTitle,
+        style: call.ZegoCallMenuBarStyle.dark,
+        hideAutomatically: false,
+        buttons: const [call.ZegoCallMenuBarButtonName.showMemberListButton],
+      )
+      ..bottomMenuBar = call.ZegoCallBottomMenuBarConfig(
+        style: call.ZegoCallMenuBarStyle.dark,
+        hideAutomatically: false,
+        maxCount: 5,
+        buttons: isVideoRoom
+            ? const [
+                call.ZegoCallMenuBarButtonName.toggleCameraButton,
+                call.ZegoCallMenuBarButtonName.toggleMicrophoneButton,
+                call.ZegoCallMenuBarButtonName.switchCameraButton,
+                call.ZegoCallMenuBarButtonName.switchAudioOutputButton,
+                call.ZegoCallMenuBarButtonName.hangUpButton,
+              ]
+            : const [
+                call.ZegoCallMenuBarButtonName.toggleMicrophoneButton,
+                call.ZegoCallMenuBarButtonName.switchAudioOutputButton,
+                call.ZegoCallMenuBarButtonName.chatButton,
+                call.ZegoCallMenuBarButtonName.hangUpButton,
+              ],
+      );
+
+    return config;
   }
 
   Widget _buildMainVideoBackground() {

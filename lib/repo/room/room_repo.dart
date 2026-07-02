@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:qobo_one_live/services/api_service.dart';
 import 'package:qobo_one_live/services/api_constants.dart';
 import 'package:qobo_one_live/utils/api_response_utils.dart';
@@ -15,6 +16,7 @@ class RoomRepo {
   /// Returns decoded JSON map on success, otherwise `null`.
   Future<Map<String, dynamic>?> createRoom({
     required String name,
+    String? title,
     required String type, // 'audio'/'video' or legacy 'AUDIO'/'VIDEO'
     required String country,
     required int maxSeats,
@@ -24,11 +26,16 @@ class RoomRepo {
     bool isPrivate = false,
     bool isShowLoader = true,
   }) async {
+    final roomTitle = (title == null || title.trim().isEmpty)
+        ? name.trim()
+        : title.trim();
     final trimmedCategory = category?.trim();
     final trimmedCoverImage = coverImage?.trim();
     final fields = <String, dynamic>{
-      'name': name,
-      'title': name,
+      'title': roomTitle,
+      'name': roomTitle,
+      'roomName': roomTitle,
+      'room_name': roomTitle,
       'type': type.trim().toLowerCase(),
       'country': country,
       'maxSeats': maxSeats,
@@ -45,6 +52,10 @@ class RoomRepo {
         : File(coverFilePath);
 
     if (coverFile != null && coverFile.existsSync()) {
+      debugPrint('POST ${RoomEndpoints.create} multipart params: $fields');
+      debugPrint(
+        'POST ${RoomEndpoints.create} multipart files: {coverImage: ${coverFile.path}}',
+      );
       final response = await _apiService.multipartFormRequest(
         endPoint: RoomEndpoints.create,
         fields: fields.map((key, value) => MapEntry(key, value.toString())),
@@ -56,6 +67,7 @@ class RoomRepo {
       return ApiResponseUtils.tryDecodeMap(response.body);
     }
 
+    debugPrint('POST ${RoomEndpoints.create} params: $fields');
     final response = await _apiService.postRequest(
       endPoint: RoomEndpoints.create,
       requestModel: fields,

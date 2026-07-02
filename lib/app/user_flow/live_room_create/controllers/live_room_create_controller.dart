@@ -172,7 +172,8 @@ class LiveRoomCreateController extends GetxController {
   }
 
   Future<void> createRoom(BuildContext context) async {
-    if (streamNameController.text.trim().isEmpty) {
+    final roomTitle = streamNameController.text.trim();
+    if (roomTitle.isEmpty) {
       AppToast.showError(context, 'Please enter a room name');
       return;
     }
@@ -192,7 +193,8 @@ class LiveRoomCreateController extends GetxController {
     if (!context.mounted || !granted) return;
 
     final response = await _roomRepo.createRoom(
-      name: streamNameController.text.trim(),
+      name: roomTitle,
+      title: roomTitle,
       type: roomType.value,
       country: selectedRegion.value,
       maxSeats: maxSeats,
@@ -208,11 +210,7 @@ class LiveRoomCreateController extends GetxController {
         context,
         response!['message']?.toString() ?? 'Room created successfully!',
       );
-      if (isVideo) {
-        await ZegoEngineUtils.resetForVideoConferenceProject();
-      } else {
-        await ZegoEngineUtils.resetForLiveProject();
-      }
+      await ZegoEngineUtils.resetForRoomProject();
       Get.offNamed(
         Routes.LIVE_BROADCAST,
         arguments: {

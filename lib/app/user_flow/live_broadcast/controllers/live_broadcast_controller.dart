@@ -190,7 +190,7 @@ class LiveBroadcastController extends GetxController {
 
   bool get isAudioVideoRoom => _isAudioVideoRoomPayload();
 
-  bool get isVideoConferenceRoom => isAudioVideoRoom && isVideoRoom;
+  bool get isGroupCallRoom => isAudioVideoRoom;
 
   /// Called after Zego room login — ensures host camera publishes and binds chat/users.
   void onZegoRoomLogined() {
@@ -327,15 +327,15 @@ class LiveBroadcastController extends GetxController {
     );
   }
 
-  void handleVideoConferenceError(Object error) {
+  void handleGroupCallRoomError(Object error) {
     isZegoConnected.value = false;
     connectionIssue.value =
-        'Could not join video room. Verify Zego Video Conference App ID / App Sign.';
+        'Could not join room. Verify Zego Voice & Video Call App ID / App Sign.';
     if (Get.isSnackbarOpen) {
       Get.closeAllSnackbars();
     }
     Get.snackbar(
-      'Video room',
+      'Room call',
       connectionIssue.value,
       snackPosition: SnackPosition.BOTTOM,
       backgroundColor: Colors.black87,
@@ -347,13 +347,13 @@ class LiveBroadcastController extends GetxController {
   void _validateStreamingInput() {
     final liveId = roomId.value.trim();
     if (liveId.isEmpty || liveId == 'test_room' || liveId == 'null') {
-      connectionIssue.value = isVideoConferenceRoom
-          ? 'Video room id is missing. Please ask backend to return room_id, roomId, zegoLiveId, or channelName.'
+      connectionIssue.value = isGroupCallRoom
+          ? 'Room id is missing. Please ask backend to return room_id, roomId, zegoLiveId, or channelName.'
           : 'Live stream id is missing. Please ask backend to return zegoLiveId or channelName for this room.';
       return;
     }
 
-    if (!isVideoConferenceRoom &&
+    if (!isGroupCallRoom &&
         !isHost.value &&
         !hasExplicitStreamingId.value) {
       connectionIssue.value =

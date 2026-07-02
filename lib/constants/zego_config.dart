@@ -8,29 +8,29 @@ class ZegoConfig {
   // Live streaming — `zego_uikit_prebuilt_live_streaming` (Go Live tab)
   // ---------------------------------------------------------------------------
 
-  static const int liveAppId = 1291066184;
+  static const int liveAppId = 1167746552;
   static const String liveAppSign =
-      'f86c80a916d5d7dbd2d853037fdb9df0fd76d0fb4787e62c157374ea4024cd0c';
+      '974cb5ac211260781bbca784bc61cecd7408905ff27e9876ed286608b7579367';
 
   static const bool useSignalingPlugin = false;
 
   // ---------------------------------------------------------------------------
-  // Video rooms — `zego_uikit_prebuilt_video_conference` (Discover video rooms)
-  // Console: Video Conference — AppID 90855422
+  // Video & audio rooms — `zego_uikit_prebuilt_call` group voice/video calls
+  // Console: Video & Audio Rooms — AppID 2115598602
   // ---------------------------------------------------------------------------
 
-  static const int videoConferenceAppId = 90855422;
-  static const String videoConferenceAppSign =
-      '6a21e8cec9688779ffbc2a4e5c3db27c786a50fbde1fef555ce5ebfd77cc88b6';
+  static const int roomAppId = 2115598602;
+  static const String roomAppSign =
+      'b91c588ac42b7ab43c18287a7992368119e4fb8f8aea856e0e1417f9e693ff9e';
 
   // ---------------------------------------------------------------------------
   // Voice & video calling — `zego_uikit_prebuilt_call` (chat phone / video)
-  // Console: Voice & Video Call / Call Kit — AppID 1575915803
+  // Console: One-to-one voice/video calling — AppID 894046429
   // ---------------------------------------------------------------------------
 
-  static const int callAppId = 1575915803;
+  static const int callAppId = 894046429;
   static const String callAppSign =
-      'b099070a91f1da8776f0b691e307c4a46c5822369b6bc3756d09a8a5b51a775a';
+      '4cc7ee106ff2cd8616f32f1abdfb73ea5d30e24938fe62dd013461b4470f8f09';
 
   static const bool callEnabled = true;
 
