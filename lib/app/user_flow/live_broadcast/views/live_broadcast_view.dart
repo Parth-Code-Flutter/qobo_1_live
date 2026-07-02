@@ -98,7 +98,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
         events: call.ZegoUIKitPrebuiltCallEvents(
           onError: controller.handleGroupCallRoomError,
           onCallEnd: (event, defaultAction) {
-            controller.leaveRoom();
+            controller.reportRoomExit();
             defaultAction.call();
           },
         ),

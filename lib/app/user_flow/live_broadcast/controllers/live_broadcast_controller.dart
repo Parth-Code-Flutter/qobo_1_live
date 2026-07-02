@@ -954,6 +954,10 @@ class LiveBroadcastController extends GetxController {
     Get.back();
   }
 
+  void reportRoomExit() {
+    unawaited(_reportAudioVideoRoomExit());
+  }
+
   Future<void> _reportAudioVideoRoomExit() async {
     if (_exitReported || !_isAudioVideoRoomPayload()) return;
     _exitReported = true;
