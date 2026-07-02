@@ -17,6 +17,12 @@ class AuthEndpoints {
   /// POST /api/auth/register
   static const String register = '/api/auth/register';
 
+  /// POST /api/auth/send-email-otp
+  static const String sendEmailOtp = '/api/auth/send-email-otp';
+
+  /// POST /api/auth/verify-email-otp
+  static const String verifyEmailOtp = '/api/auth/verify-email-otp';
+
   /// POST /api/auth/login-phone
   static const String loginPhone = '/api/auth/login-phone';
 

@@ -53,6 +53,16 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
                     Center(child: _profileImagePicker(context)),
                     Spacing.v28,
                     _userNameField(context),
+                    Obx(
+                      () => controller.isComeFromOtpScreen.value
+                          ? Column(
+                              children: [
+                                Spacing.v10,
+                                _emailField(context),
+                              ],
+                            )
+                          : const SizedBox.shrink(),
+                    ),
                     Spacing.v10,
                     _ageField(context),
                     Spacing.v10,
@@ -180,6 +190,29 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
         padding: const EdgeInsets.only(left: 14, right: 12),
         child: SvgPicture.asset(
           kIconUser,
+          colorFilter: const ColorFilter.mode(kColorHint, BlendMode.srcIn),
+        ),
+      ),
+    );
+  }
+
+  Widget _emailField(BuildContext context) {
+    return AppTextField(
+      controller: controller.emailController,
+      validator: (value) => controller.validateEmail(context, value),
+      hintText: LocaleKeys.loginEmailHint.tr,
+      borderColor: kColorHint,
+      hintStyle: TextStyles.kRegularPoppins(
+        fontSize: TextStyles.k14FontSize,
+        colors: kColorHint,
+      ),
+      textInputType: TextInputType.emailAddress,
+      textInputAction: TextInputAction.next,
+      textCapitalization: TextCapitalization.none,
+      prefix: Padding(
+        padding: const EdgeInsets.only(left: 14, right: 12),
+        child: SvgPicture.asset(
+          kIconMail,
           colorFilter: const ColorFilter.mode(kColorHint, BlendMode.srcIn),
         ),
       ),

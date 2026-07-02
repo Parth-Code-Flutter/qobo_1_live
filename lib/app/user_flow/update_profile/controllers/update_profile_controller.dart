@@ -10,9 +10,11 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/constants/local_storage_constants.dart';
+import 'package:qobo_one_live/app/auth/signUp/widgets/email_otp_dialog.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
+import 'package:qobo_one_live/utils/api_response_utils.dart';
 import 'package:qobo_one_live/utils/app_dialogs/common_giffy_dialog.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_media_picker.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
@@ -39,6 +41,7 @@ class UpdateProfileController extends GetxController
   final formKey = GlobalKey<FormState>();
 
   final userNameController = TextEditingController();
+  final emailController = TextEditingController();
   final birthdateController = TextEditingController();
   final cityController = TextEditingController();
   final passwordController = TextEditingController();
@@ -52,7 +55,9 @@ class UpdateProfileController extends GetxController
   final isPasswordHidden = true.obs;
   final isConfirmPasswordHidden = true.obs;
   final isSubmitLoading = false.obs;
+  final isEmailOtpVerified = false.obs;
   final ImagePicker _imagePicker = ImagePicker();
+  String _lastVerifiedEmail = '';
 
   @override
   void onInit() {
@@ -61,6 +66,11 @@ class UpdateProfileController extends GetxController
     if (args is Map && args['isComeFromOtpScreen'] == true) {
       isComeFromOtpScreen.value = true;
     }
+    if (args is Map) {
+      final email = args['email']?.toString().trim() ?? '';
+      if (email.isNotEmpty) emailController.text = email;
+    }
+    emailController.addListener(_resetEmailVerificationWhenChanged);
     _prefillFromStoredProfile();
   }
 
@@ -253,6 +263,11 @@ class UpdateProfileController extends GetxController
       return;
     }
     if (isComeFromOtpScreen.value) {
+      final emailError = validateEmail(context, emailController.text);
+      if (emailError != null) {
+        AppToast.showError(context, emailError);
+        return;
+      }
       final countryError = validateCountrySelection();
       final stateError = validateStateSelection();
       if (countryError != null) {
@@ -263,6 +278,8 @@ class UpdateProfileController extends GetxController
         AppToast.showError(context, stateError);
         return;
       }
+      final verified = await _ensureEmailOtpVerified(context);
+      if (!context.mounted || !verified) return;
     }
 
     try {
@@ -271,6 +288,7 @@ class UpdateProfileController extends GetxController
       final state = selectedState.value;
       final request = UpdateProfileApiHelper.buildRequest(
         name: userNameController.text.trim(),
+        email: isComeFromOtpScreen.value ? emailController.text.trim() : null,
         genderLabel: selectedGender.value,
         dob: selectedBirthdate.value,
         displayPicture: selectedProfileMedia.value,
@@ -383,6 +401,106 @@ class UpdateProfileController extends GetxController
     return Validate.nameValidation(context, value?.trim() ?? '');
   }
 
+  String? validateEmail(BuildContext context, String? value) {
+    if (!isComeFromOtpScreen.value) return null;
+    return Validate.emailValidation(context, value?.trim() ?? '');
+  }
+
+  Future<bool> _ensureEmailOtpVerified(BuildContext context) async {
+    final email = emailController.text.trim();
+    if (isEmailOtpVerified.value && _lastVerifiedEmail == email) return true;
+
+    try {
+      isSubmitLoading.value = true;
+      final otpSent = await _sendEmailOtp(context, email: email);
+      if (!context.mounted || !otpSent) return false;
+    } finally {
+      isSubmitLoading.value = false;
+    }
+
+    final verified = await Get.dialog<bool>(
+      EmailOtpDialog(
+        email: email,
+        onVerify: (otp) => _verifyEmailOtp(context, email: email, otp: otp),
+        onResend: () => _sendEmailOtp(
+          context,
+          email: email,
+          showSuccessMessage: true,
+        ),
+      ),
+      barrierDismissible: false,
+    );
+
+    if (verified == true) {
+      isEmailOtpVerified.value = true;
+      _lastVerifiedEmail = email;
+      return true;
+    }
+    return false;
+  }
+
+  Future<bool> _sendEmailOtp(
+    BuildContext context, {
+    required String email,
+    bool showSuccessMessage = false,
+  }) async {
+    try {
+      final response = await _authRepo.sendEmailOtp(
+        email: email,
+        isShowLoader: false,
+      );
+      if (!context.mounted) return false;
+
+      if (ApiResponseUtils.isBodySuccess(response)) {
+        if (showSuccessMessage) {
+          AppToast.showSuccess(context, 'OTP sent successfully.');
+        }
+        return true;
+      }
+
+      AppToast.showError(
+        context,
+        ApiResponseUtils.tryGetMessage(response) ??
+            'Unable to send OTP. Please try again.',
+      );
+      return false;
+    } catch (e) {
+      if (context.mounted) {
+        AppToast.showError(context, e.toString());
+      }
+      return false;
+    }
+  }
+
+  Future<bool> _verifyEmailOtp(
+    BuildContext context, {
+    required String email,
+    required String otp,
+  }) async {
+    try {
+      final response = await _authRepo.verifyEmailOtp(
+        email: email,
+        otp: otp,
+        isShowLoader: false,
+      );
+      if (!context.mounted) return false;
+
+      if (ApiResponseUtils.isBodySuccess(response)) return true;
+
+      AppToast.showError(
+        context,
+        ApiResponseUtils.tryGetMessage(response) ??
+            'Invalid OTP. Please try again.',
+      );
+      return false;
+    } catch (e) {
+      if (context.mounted) {
+        AppToast.showError(context, e.toString());
+      }
+      return false;
+    }
+  }
+
   String? validatePassword(BuildContext context, String? value) {
     final trimmed = value?.trim() ?? '';
     if (trimmed.isEmpty) return null;
@@ -412,9 +530,16 @@ class UpdateProfileController extends GetxController
     return DateTime(now.year - age, now.month, now.day);
   }
 
+  void _resetEmailVerificationWhenChanged() {
+    if (emailController.text.trim() == _lastVerifiedEmail) return;
+    isEmailOtpVerified.value = false;
+  }
+
   @override
   void onClose() {
+    emailController.removeListener(_resetEmailVerificationWhenChanged);
     userNameController.dispose();
+    emailController.dispose();
     birthdateController.dispose();
     cityController.dispose();
     passwordController.dispose();

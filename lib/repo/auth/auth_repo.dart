@@ -69,6 +69,42 @@ class AuthRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
+  /// Calls `POST /api/auth/send-email-otp` before registration.
+  Future<Map<String, dynamic>?> sendEmailOtp({
+    required String email,
+    bool isShowLoader = false,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: AuthEndpoints.sendEmailOtp,
+      requestModel: <String, dynamic>{'email': email.trim()},
+      isShowLoader: isShowLoader,
+      isLoginCall: true,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// Calls `POST /api/auth/verify-email-otp` to validate signup email OTP.
+  Future<Map<String, dynamic>?> verifyEmailOtp({
+    required String email,
+    required String otp,
+    bool isShowLoader = false,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: AuthEndpoints.verifyEmailOtp,
+      requestModel: <String, dynamic>{
+        'email': email.trim(),
+        'otp': otp.trim(),
+      },
+      isShowLoader: isShowLoader,
+      isLoginCall: true,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
   /// Calls `POST /api/auth/social` with OAuth profile payload (Google, etc.).
   ///
   /// Returns decoded JSON map on success, otherwise `null`.

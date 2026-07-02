@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/constants/facebook_login_config.dart';
 import 'package:qobo_one_live/constants/google_sign_in_config.dart';
@@ -9,8 +8,11 @@ import 'package:qobo_one_live/repo/auth/models/request/social_login_request_mode
 import 'package:qobo_one_live/services/social_auth/facebook_social_auth_provider.dart';
 import 'package:qobo_one_live/services/social_auth/google_social_auth_provider.dart';
 import 'package:qobo_one_live/services/social_auth/social_auth_provider.dart';
+import 'package:qobo_one_live/utils/api_response_utils.dart';
 import 'package:qobo_one_live/utils/auth/auth_session_helper.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
+
+import '../widgets/email_otp_dialog.dart';
 
 class AuthSignUpController extends GetxController {
   AuthSignUpController({
@@ -38,6 +40,34 @@ class AuthSignUpController extends GetxController {
     if (isSignUpLoading.value) return;
     if (!validateForm()) return;
 
+    final email = emailController.text.trim();
+
+    try {
+      isSignUpLoading.value = true;
+      final otpSent = await _sendEmailOtp(context, email: email);
+      if (!context.mounted || !otpSent) return;
+    } finally {
+      isSignUpLoading.value = false;
+    }
+
+    final verified = await Get.dialog<bool>(
+      EmailOtpDialog(
+        email: email,
+        onVerify: (otp) => _verifyEmailOtp(context, email: email, otp: otp),
+        onResend: () => _sendEmailOtp(
+          context,
+          email: email,
+          showSuccessMessage: true,
+        ),
+      ),
+      barrierDismissible: false,
+    );
+
+    if (!context.mounted || verified != true) return;
+    await _completeRegistration(context);
+  }
+
+  Future<void> _completeRegistration(BuildContext context) async {
     try {
       isSignUpLoading.value = true;
       final response = await _authRepo.register(
@@ -47,11 +77,14 @@ class AuthSignUpController extends GetxController {
         isShowLoader: false,
       );
       if (!context.mounted) return;
-      if (response != null) {
+      if (_isSuccessResponse(response)) {
         AppToast.showSuccess(context, 'Registration successful!');
         Get.toNamed(Routes.AUTH_VERIFY_ACCOUNT);
       } else {
-        AppToast.showError(context, 'Registration failed. Please try again.');
+        AppToast.showError(
+          context,
+          _responseMessage(response, 'Registration failed. Please try again.'),
+        );
       }
     } catch (e) {
       if (context.mounted) {
@@ -60,6 +93,78 @@ class AuthSignUpController extends GetxController {
     } finally {
       isSignUpLoading.value = false;
     }
+  }
+
+  Future<bool> _sendEmailOtp(
+    BuildContext context, {
+    required String email,
+    bool showSuccessMessage = false,
+  }) async {
+    try {
+      final response = await _authRepo.sendEmailOtp(
+        email: email,
+        isShowLoader: false,
+      );
+      if (!context.mounted) return false;
+
+      if (_isSuccessResponse(response)) {
+        if (showSuccessMessage) {
+          AppToast.showSuccess(context, 'OTP sent successfully.');
+        }
+        return true;
+      }
+
+      AppToast.showError(
+        context,
+        _responseMessage(response, 'Unable to send OTP. Please try again.'),
+      );
+      return false;
+    } catch (e) {
+      if (context.mounted) {
+        AppToast.showError(context, e.toString());
+      }
+      return false;
+    }
+  }
+
+  Future<bool> _verifyEmailOtp(
+    BuildContext context, {
+    required String email,
+    required String otp,
+  }) async {
+    try {
+      final response = await _authRepo.verifyEmailOtp(
+        email: email,
+        otp: otp,
+        isShowLoader: false,
+      );
+      if (!context.mounted) return false;
+
+      if (_isSuccessResponse(response)) return true;
+
+      AppToast.showError(
+        context,
+        _responseMessage(response, 'Invalid OTP. Please try again.'),
+      );
+      return false;
+    } catch (e) {
+      if (context.mounted) {
+        AppToast.showError(context, e.toString());
+      }
+      return false;
+    }
+  }
+
+  bool _isSuccessResponse(Map<String, dynamic>? response) {
+    if (response == null) return false;
+    return ApiResponseUtils.isBodySuccess(response);
+  }
+
+  String _responseMessage(
+    Map<String, dynamic>? response,
+    String fallback,
+  ) {
+    return ApiResponseUtils.tryGetMessage(response) ?? fallback;
   }
 
   String _friendlyGoogleError(Object error) {

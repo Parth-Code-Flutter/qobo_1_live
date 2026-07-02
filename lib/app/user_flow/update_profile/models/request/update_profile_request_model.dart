@@ -6,6 +6,7 @@ import 'dart:io';
 class UpdateProfileRequestModel {
   const UpdateProfileRequestModel({
     this.name,
+    this.email,
     this.gender,
     this.dob,
     this.displayPicture,
@@ -22,6 +23,7 @@ class UpdateProfileRequestModel {
   });
 
   final String? name;
+  final String? email;
   final String? gender;
   /// `YYYY-MM-DD`
   final String? dob;
@@ -41,6 +43,7 @@ class UpdateProfileRequestModel {
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{
       'name': name?.trim(),
+      'email': email?.trim(),
       'gender': gender?.trim(),
       'dob': dob?.trim(),
       'relationshipStatus': relationshipStatus?.trim(),

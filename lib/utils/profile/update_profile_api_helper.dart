@@ -11,6 +11,7 @@ class UpdateProfileApiHelper {
 
   static UpdateProfileRequestModel buildRequest({
     String? name,
+    String? email,
     String? genderLabel,
     DateTime? dob,
     File? displayPicture,
@@ -27,6 +28,7 @@ class UpdateProfileApiHelper {
   }) {
     return UpdateProfileRequestModel(
       name: _nonEmpty(name),
+      email: _nonEmpty(email),
       gender: genderForApi(genderLabel ?? ''),
       dob: dob != null ? formatDobForApi(dob) : null,
       displayPicture: displayPicture,

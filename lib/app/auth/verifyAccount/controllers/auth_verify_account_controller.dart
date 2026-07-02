@@ -449,6 +449,8 @@ class AuthVerifyAccountController extends GetxController {
           Routes.UPDATE_PROFILE,
           arguments: <String, dynamic>{
             'isComeFromOtpScreen': true,
+            if (!_otpSentToPhone && _otpRecipient.trim().isNotEmpty)
+              'email': _otpRecipient.trim(),
           },
         );
       } else {
