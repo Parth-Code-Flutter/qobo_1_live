@@ -87,20 +87,97 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
 
       final config = _buildGroupCallConfig(controller.isVideoRoom);
 
-      return call.ZegoUIKitPrebuiltCall(
-        key: ValueKey('group_call_$conferenceId'),
-        appID: ZegoConfig.roomAppId,
-        appSign: ZegoConfig.roomAppSign,
-        userID: currentUserId,
-        userName: currentUserName,
-        callID: conferenceId,
-        config: config,
-        events: call.ZegoUIKitPrebuiltCallEvents(
-          onError: controller.handleGroupCallRoomError,
-          onCallEnd: (event, defaultAction) {
-            controller.reportRoomExit();
-            defaultAction.call();
-          },
+      return Stack(
+        children: [
+          call.ZegoUIKitPrebuiltCall(
+            key: ValueKey('group_call_$conferenceId'),
+            appID: ZegoConfig.roomAppId,
+            appSign: ZegoConfig.roomAppSign,
+            userID: currentUserId,
+            userName: currentUserName,
+            callID: conferenceId,
+            config: config,
+            events: call.ZegoUIKitPrebuiltCallEvents(
+              onError: controller.handleGroupCallRoomError,
+              onCallEnd: (event, defaultAction) {
+                controller.reportRoomExit();
+                defaultAction.call();
+              },
+            ),
+          ),
+          _buildGroupCallGiftDock(),
+        ],
+      );
+    });
+  }
+
+  Widget _buildGroupCallGiftDock() {
+    return Obx(() {
+      if (!controller.canSendGifts) {
+        return const SizedBox.shrink();
+      }
+
+      // Keep gifts outside Zego's menu bars so call controls stay unchanged.
+      return Positioned(
+        right: 14,
+        bottom: 108,
+        child: SafeArea(
+          minimum: const EdgeInsets.only(bottom: 4),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: controller.openGiftsSheet,
+              borderRadius: BorderRadius.circular(28),
+              child: Container(
+                height: 52,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: _surface,
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(
+                    color: kColorWhite.withValues(alpha: 0.08),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.22),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.diamond_rounded,
+                      color: kColorWalletAmount,
+                      size: 18,
+                    ),
+                    Spacing.h6,
+                    SemiBoldText(
+                      text: formatLedgerAmount(controller.coinsBalance.value),
+                      fontSize: TextStyles.k12FontSize,
+                      color: kColorWhite,
+                    ),
+                    Spacing.h10,
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: const BoxDecoration(
+                        color: _accent,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.card_giftcard_rounded,
+                        color: kColorWhite,
+                        size: 18,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ),
       );
     });
@@ -903,12 +980,14 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                   ),
                 ),
               ],
-              Spacing.h8,
-              _bottomActionIcon(
-                Icons.card_giftcard_rounded,
-                color: _accent,
-                onTap: controller.openGiftsSheet,
-              ),
+              if (controller.canSendGifts) ...[
+                Spacing.h8,
+                _bottomActionIcon(
+                  Icons.card_giftcard_rounded,
+                  color: _accent,
+                  onTap: controller.openGiftsSheet,
+                ),
+              ],
               Spacing.h8,
               _bottomActionIcon(
                 Icons.more_horiz_rounded,

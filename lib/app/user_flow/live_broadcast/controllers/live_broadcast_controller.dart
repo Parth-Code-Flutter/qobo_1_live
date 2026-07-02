@@ -192,6 +192,8 @@ class LiveBroadcastController extends GetxController {
 
   bool get isGroupCallRoom => isAudioVideoRoom;
 
+  bool get canSendGifts => !isHost.value;
+
   /// Called after Zego room login — ensures host camera publishes and binds chat/users.
   void onZegoRoomLogined() {
     isZegoConnected.value = true;
@@ -544,6 +546,17 @@ class LiveBroadcastController extends GetxController {
   }
 
   Future<void> sendGift(Map<String, String> gift) async {
+    if (!canSendGifts) {
+      Get.snackbar(
+        'Gift not sent',
+        'Hosts cannot send gifts in their own room.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFFD32F2F),
+        colorText: const Color(0xFFFFFFFF),
+      );
+      return;
+    }
+
     final int price = int.tryParse(gift['price'] ?? '0') ?? 0;
     if (coinsBalance.value < price) {
       Get.snackbar(
@@ -634,6 +647,17 @@ class LiveBroadcastController extends GetxController {
   }
 
   void openGiftsSheet() {
+    if (!canSendGifts) {
+      Get.snackbar(
+        'Gift not available',
+        'Hosts cannot send gifts in their own room.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFF1E1E2D),
+        colorText: const Color(0xFFFFFFFF),
+      );
+      return;
+    }
+
     if (Get.isDialogOpen == true) Get.back();
     if (Get.isBottomSheetOpen == true) Get.back();
 
