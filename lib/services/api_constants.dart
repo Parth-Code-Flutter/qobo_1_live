@@ -67,8 +67,11 @@ class AuthEndpoints {
 class RoomEndpoints {
   RoomEndpoints._();
 
-  /// POST /api/room/create
-  static const String create = '/api/room/create';
+  /// POST /api/rooms
+  static const String create = '/api/rooms';
+
+  /// Legacy route kept as fallback.
+  static const String createLegacy = '/api/room/create';
 
   /// POST /api/live-streaming/create — host starts Zego live stream
   static const String createLiveStreaming = '/api/live-streaming/create';
@@ -80,8 +83,11 @@ class RoomEndpoints {
   /// GET /api/room/list
   static const String listActiveRooms = '/api/room/list';
 
-  /// POST /api/room/join
-  static const String joinRoom = '/api/room/join';
+  /// POST /api/rooms/join
+  static const String joinRoom = '/api/rooms/join';
+
+  /// Legacy route kept as fallback.
+  static const String joinRoomLegacy = '/api/room/join';
 
   /// POST /api/room/leave
   static const String leaveRoom = '/api/room/leave';
@@ -174,8 +180,11 @@ class EconomyEndpoints {
   /// GET /api/economy/gift-list
   static const String giftList = '/api/economy/gift-list';
 
-  /// POST /api/economy/send-gift
-  static const String sendGift = '/api/economy/send-gift';
+  /// POST /api/transactions/send-gift
+  static const String sendGift = '/api/transactions/send-gift';
+
+  /// Legacy economy route kept as fallback.
+  static const String sendGiftEconomyLegacy = '/api/economy/send-gift';
 
   /// Legacy route kept as fallback.
   static const String sendGiftLegacy = '/api/send-gift';
@@ -355,6 +364,12 @@ class UserEndpoints {
 
   /// POST /api/user/fcm-token — register device for chat push
   static const String fcmToken = '/api/user/fcm-token';
+
+  /// POST /api/users/super-admin-request
+  static const String superAdminRequest = '/api/users/super-admin-request';
+
+  /// GET /api/users/super-admin-status
+  static const String superAdminStatus = '/api/users/super-admin-status';
 }
 
 /// Central place for family related API endpoints.

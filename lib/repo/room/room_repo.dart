@@ -11,7 +11,7 @@ class RoomRepo {
 
   final ApiService _apiService;
 
-  /// Calls `POST /api/room/create` to create a live room.
+  /// Calls `POST /api/rooms` to create a live room.
   ///
   /// Returns decoded JSON map on success, otherwise `null`.
   Future<Map<String, dynamic>?> createRoom({
@@ -56,24 +56,42 @@ class RoomRepo {
       debugPrint(
         'POST ${RoomEndpoints.create} multipart files: {coverImage: ${coverFile.path}}',
       );
-      final response = await _apiService.multipartFormRequest(
+      var response = await _apiService.multipartFormRequest(
         endPoint: RoomEndpoints.create,
         fields: fields.map((key, value) => MapEntry(key, value.toString())),
         namedFiles: {'coverImage': coverFile},
         isShowLoader: isShowLoader,
       );
 
+      if (response?.statusCode == 404) {
+        response = await _apiService.multipartFormRequest(
+          endPoint: RoomEndpoints.createLegacy,
+          fields: fields.map((key, value) => MapEntry(key, value.toString())),
+          namedFiles: {'coverImage': coverFile},
+          isShowLoader: isShowLoader,
+        );
+      }
+
       if (response == null) return null;
       return ApiResponseUtils.tryDecodeMap(response.body);
     }
 
     debugPrint('POST ${RoomEndpoints.create} params: $fields');
-    final response = await _apiService.postRequest(
+    var response = await _apiService.postRequest(
       endPoint: RoomEndpoints.create,
       requestModel: fields,
       isShowLoader: isShowLoader,
       isLoginCall: false, // assuming user is already logged in
     );
+
+    if (response?.statusCode == 404) {
+      response = await _apiService.postRequest(
+        endPoint: RoomEndpoints.createLegacy,
+        requestModel: fields,
+        isShowLoader: isShowLoader,
+        isLoginCall: false,
+      );
+    }
 
     if (response == null) return null;
     return ApiResponseUtils.tryDecodeMap(response.body);
@@ -182,16 +200,32 @@ class RoomRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
-  /// Calls `POST /api/room/join` to join a room.
+  /// Calls `POST /api/rooms/join` to join a room.
   Future<Map<String, dynamic>?> joinRoom({
     required String roomId,
+    String? password,
     bool isShowLoader = true,
   }) async {
-    final response = await _apiService.postRequest(
+    final trimmedPassword = password?.trim();
+    final body = <String, dynamic>{
+      'roomId': roomId,
+      'room_id': roomId,
+      if (trimmedPassword != null && trimmedPassword.isNotEmpty)
+        'password': trimmedPassword,
+    };
+    var response = await _apiService.postRequest(
       endPoint: RoomEndpoints.joinRoom,
-      requestModel: <String, dynamic>{'room_id': roomId},
+      requestModel: body,
       isShowLoader: isShowLoader,
     );
+
+    if (response?.statusCode == 404) {
+      response = await _apiService.postRequest(
+        endPoint: RoomEndpoints.joinRoomLegacy,
+        requestModel: body,
+        isShowLoader: isShowLoader,
+      );
+    }
 
     if (response == null) return null;
     return ApiResponseUtils.tryDecodeMap(response.body);

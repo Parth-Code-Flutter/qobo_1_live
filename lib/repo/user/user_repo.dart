@@ -273,4 +273,29 @@ class UserRepo {
     if (response == null) return null;
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
+
+  /// `POST /api/users/super-admin-request` — logged-in user requests Super Admin review.
+  Future<Map<String, dynamic>?> requestSuperAdmin({
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: UserEndpoints.superAdminRequest,
+      requestModel: <String, dynamic>{},
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// `GET /api/users/super-admin-status` — current logged-in user's request status.
+  Future<Map<String, dynamic>?> getSuperAdminStatus({
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.getRequest(
+      endPoint: UserEndpoints.superAdminStatus,
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
 }
