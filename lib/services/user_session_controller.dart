@@ -15,7 +15,11 @@ class UserSessionController extends GetxController {
   String get userName => _stringValue('name');
   String get email => _stringValue('email');
   String get phone => _stringValue('phone');
+  String get role => _stringValueFromProfile(const ['role', 'userRole']);
+  String get agencyCode =>
+      _stringValueFromProfile(const ['agencyCode', 'agency_code']);
   String get displayPicturePath => _stringValue('displayPicture');
+  bool get isSuperAdmin => role.toLowerCase() == 'super_admin';
 
   String get displayName {
     if (userName.isNotEmpty) return userName;
@@ -61,7 +65,27 @@ class UserSessionController extends GetxController {
   }
 
   String _stringValue(String key) {
-    final value = _profileData?[key];
+    return _stringValueFromProfile([key]);
+  }
+
+  String _stringValueFromProfile(List<String> keys) {
+    for (final key in keys) {
+      final direct = _profileData?[key];
+      final directValue = _cleanString(direct);
+      if (directValue.isNotEmpty) return directValue;
+
+      // Auth responses can be cached as `{ user: {...}, token: ... }`, while
+      // `getProfile` stores a flat user row. Support both shapes here.
+      final nested = _profileData?['user'];
+      if (nested is Map) {
+        final nestedValue = _cleanString(nested[key]);
+        if (nestedValue.isNotEmpty) return nestedValue;
+      }
+    }
+    return '';
+  }
+
+  String _cleanString(dynamic value) {
     if (value == null) return '';
     return value.toString().trim();
   }

@@ -34,7 +34,7 @@ class ProfileTabView extends StatelessWidget {
               children: [
                 _profileHero(userSession),
                 Spacing.v16,
-                _profileActionCards(),
+                _profileActionCards(userSession),
                 Spacing.v12,
                 _profileFeatureGrid(),
                 Spacing.v20,
@@ -273,130 +273,144 @@ class ProfileTabView extends StatelessWidget {
   }
 
   /// Quick action cards right below stats, matching Figma layout.
-  Widget _profileActionCards() {
-    return Row(
-      children: [
-        Expanded(
-          child: _actionCard(
-            title: 'Recharge\nCoins',
-            icon: kIconRechargeCoins,
-            start: kColorProfileActionOrangeStart,
-            end: kColorProfileActionOrangeEnd,
-            onTap: () {
-              Get.to(() => const WalletView(), binding: WalletBinding());
-            },
-          ),
-        ),
-        Spacing.h10,
-        Expanded(
-          child: _actionCard(
-            title: 'Agency &\nHost',
-            trailing: const Icon(
-              Icons.groups_rounded,
-              color: kColorWhite,
-              size: 24,
+  Widget _profileActionCards(UserSessionController userSession) {
+    return GetBuilder<UserSessionController>(
+      init: userSession,
+      builder: (session) {
+        final actions = <Widget>[
+          Expanded(
+            child: _actionCard(
+              title: 'Recharge\nCoins',
+              icon: kIconRechargeCoins,
+              start: kColorProfileActionOrangeStart,
+              end: kColorProfileActionOrangeEnd,
+              onTap: () {
+                Get.to(() => const WalletView(), binding: WalletBinding());
+              },
             ),
-            start: kColorProfileActionPinkStart,
-            end: kColorProfileActionPinkEnd,
-            onTap: () {
-              Get.bottomSheet(
-                Container(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF161622),
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(24),
-                      topRight: Radius.circular(24),
-                    ),
+          ),
+        ];
+
+        // Backend now sends `role` in getProfile. Only Super Admin users can
+        // manage Agency & Host flows, so normal users should not see this entry.
+        if (session.isSuperAdmin) {
+          actions
+            ..add(Spacing.h10)
+            ..add(
+              Expanded(
+                child: _actionCard(
+                  title: 'Agency &\nHost',
+                  trailing: const Icon(
+                    Icons.groups_rounded,
+                    color: kColorWhite,
+                    size: 24,
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.white24,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      Spacing.v20,
-                      const SemiBoldText(
-                        text: 'Agency & Host',
-                        fontSize: 16,
-                        color: kColorWhite,
-                      ),
-                      Spacing.v20,
-                      ListTile(
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: kColorPrimary.withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.video_call_rounded,
-                            color: kColorPrimary,
-                          ),
-                        ),
-                        title: const SemiBoldText(
-                          text: 'Join an Agency (Host)',
-                          fontSize: 13,
-                          color: kColorWhite,
-                        ),
-                        subtitle: const AppText(
-                          text: 'Register as a streamer to start broadcasting.',
-                          fontSize: 11,
-                          color: Colors.white54,
-                        ),
-                        onTap: () {
-                          Get.back();
-                          Get.toNamed(
-                            Routes.AGENCY_ACCESS,
-                            arguments: {'mode': 'host'},
-                          );
-                        },
-                      ),
-                      const Divider(color: Colors.white10),
-                      ListTile(
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.purple.withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.business_rounded,
-                            color: Colors.purpleAccent,
-                          ),
-                        ),
-                        title: const SemiBoldText(
-                          text: 'Agency Owner Dashboard',
-                          fontSize: 13,
-                          color: kColorWhite,
-                        ),
-                        subtitle: const AppText(
-                          text:
-                              'Manage your agency, invite codes, & host earnings.',
-                          fontSize: 11,
-                          color: Colors.white54,
-                        ),
-                        onTap: () {
-                          Get.back();
-                          Get.toNamed(
-                            Routes.AGENCY_ACCESS,
-                            arguments: {'mode': 'owner'},
-                          );
-                        },
-                      ),
-                    ],
-                  ),
+                  start: kColorProfileActionPinkStart,
+                  end: kColorProfileActionPinkEnd,
+                  onTap: _openAgencyHostSheet,
                 ),
-              );
-            },
+              ),
+            );
+        }
+
+        return Row(children: actions);
+      },
+    );
+  }
+
+  void _openAgencyHostSheet() {
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        decoration: const BoxDecoration(
+          color: Color(0xFF161622),
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
           ),
         ),
-      ],
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Spacing.v20,
+            const SemiBoldText(
+              text: 'Agency & Host',
+              fontSize: 16,
+              color: kColorWhite,
+            ),
+            Spacing.v20,
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: kColorPrimary.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.video_call_rounded,
+                  color: kColorPrimary,
+                ),
+              ),
+              title: const SemiBoldText(
+                text: 'Join an Agency (Host)',
+                fontSize: 13,
+                color: kColorWhite,
+              ),
+              subtitle: const AppText(
+                text: 'Register as a streamer to start broadcasting.',
+                fontSize: 11,
+                color: Colors.white54,
+              ),
+              onTap: () {
+                Get.back();
+                Get.toNamed(
+                  Routes.AGENCY_ACCESS,
+                  arguments: {'mode': 'host'},
+                );
+              },
+            ),
+            const Divider(color: Colors.white10),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.purple.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.business_rounded,
+                  color: Colors.purpleAccent,
+                ),
+              ),
+              title: const SemiBoldText(
+                text: 'Agency Owner Dashboard',
+                fontSize: 13,
+                color: kColorWhite,
+              ),
+              subtitle: const AppText(
+                text: 'Manage your agency, invite codes, & host earnings.',
+                fontSize: 11,
+                color: Colors.white54,
+              ),
+              onTap: () {
+                Get.back();
+                Get.toNamed(
+                  Routes.AGENCY_ACCESS,
+                  arguments: {'mode': 'owner'},
+                );
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 

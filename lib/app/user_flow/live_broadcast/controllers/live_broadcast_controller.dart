@@ -1005,7 +1005,6 @@ class LiveBroadcastController extends GetxController {
 
   @override
   void onClose() {
-    unawaited(_reportAudioVideoRoomExit());
     _messageSub?.cancel();
     _userSub?.cancel();
     if (_viewerCountListener != null) {

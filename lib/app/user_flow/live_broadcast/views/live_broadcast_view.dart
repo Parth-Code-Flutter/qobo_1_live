@@ -100,7 +100,9 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
             events: call.ZegoUIKitPrebuiltCallEvents(
               onError: controller.handleGroupCallRoomError,
               onCallEnd: (event, defaultAction) {
-                controller.reportRoomExit();
+                if (_shouldReportGroupCallExit(event.reason)) {
+                  controller.reportRoomExit();
+                }
                 defaultAction.call();
               },
             ),
@@ -109,6 +111,22 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
         ],
       );
     });
+  }
+
+  bool _shouldReportGroupCallExit(call.ZegoCallEndReason reason) {
+    // Zego can emit `abandoned` when a call auto-closes during connection
+    // checks. Do not end backend rooms for that case; it makes new rooms
+    // disappear from lists even though the host did not intentionally end them.
+    if (reason == call.ZegoCallEndReason.abandoned) return false;
+
+    if (reason == call.ZegoCallEndReason.localHangUp ||
+        reason == call.ZegoCallEndReason.kickOut) {
+      return true;
+    }
+
+    // Viewers should still report leave when the host/room ends remotely.
+    return !controller.isHost.value &&
+        reason == call.ZegoCallEndReason.remoteHangUp;
   }
 
   Widget _buildGroupCallGiftDock() {
