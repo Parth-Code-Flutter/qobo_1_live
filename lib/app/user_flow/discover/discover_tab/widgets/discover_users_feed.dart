@@ -43,36 +43,29 @@ class DiscoverUsersFeed extends StatelessWidget {
         color: kColorPrimary,
         backgroundColor: LiveRoomUiColors.screenGradientBottom,
         onRefresh: controller.fetchDiscoverUsers,
-        child: ColoredBox(
-          color: LiveRoomUiColors.screenGradientBottom,
-          child: GridView.builder(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
-            physics: const AlwaysScrollableScrollPhysics(
-              parent: BouncingScrollPhysics(),
-            ),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 0.62,
-            ),
-            itemCount: users.length,
-            itemBuilder: (context, index) {
-              final user = users[index];
-              return ColoredBox(
-                color: LiveRoomUiColors.screenGradientBottom,
-                child: _DiscoverUserCard(
-                  user: user,
-                  isFavouriteLoading:
-                      controller.processingFavouriteId.value == user.id,
-                  onTap: () =>
-                      showDiscoverUserCallDialog(context, controller, user),
-                  onFavouriteTap: () =>
-                      controller.toggleFavourite(context, user),
-                ),
-              );
-            },
+        child: GridView.builder(
+          padding: const EdgeInsets.fromLTRB(0, 4, 0, 16),
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
           ),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
+            childAspectRatio: 0.62,
+          ),
+          itemCount: users.length,
+          itemBuilder: (context, index) {
+            final user = users[index];
+            return _DiscoverUserCard(
+              user: user,
+              isFavouriteLoading:
+                  controller.processingFavouriteId.value == user.id,
+              onTap: () =>
+                  showDiscoverUserCallDialog(context, controller, user),
+              onFavouriteTap: () => controller.toggleFavourite(context, user),
+            );
+          },
         ),
       );
     });
@@ -98,158 +91,156 @@ class _DiscoverUserCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final avatarUrl = resolveUserAvatarUrl(user.displayPicture);
 
-    return ColoredBox(
-      color: LiveRoomUiColors.screenGradientBottom,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(_radius),
-        clipBehavior: Clip.antiAlias,
-        child: Material(
-          color: LiveRoomUiColors.cardSurface,
-          child: InkWell(
-            onTap: onTap,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Positioned.fill(
-                  child: avatarUrl != null
-                      ? Image.network(
-                          avatarUrl,
-                          fit: BoxFit.cover,
-                          alignment: Alignment.topCenter,
-                          errorBuilder: (_, __, ___) => _photoFallback(),
-                        )
-                      : _photoFallback(),
-                ),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  height: 108,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withValues(alpha: 0.5),
-                          Colors.black.withValues(alpha: 0.82),
-                        ],
-                      ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(_radius),
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: LiveRoomUiColors.cardSurface,
+        child: InkWell(
+          onTap: onTap,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Positioned.fill(
+                child: avatarUrl != null
+                    ? Image.network(
+                        avatarUrl,
+                        fit: BoxFit.cover,
+                        alignment: Alignment.topCenter,
+                        errorBuilder: (_, __, ___) => _photoFallback(),
+                      )
+                    : _photoFallback(),
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: 108,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.5),
+                        Colors.black.withValues(alpha: 0.82),
+                      ],
                     ),
                   ),
                 ),
-                Positioned(
-                  top: 8,
-                  left: 8,
-                  right: 48,
-                  child: _TopBadgesRow(user: user),
-                ),
-                Positioned(
-                  left: 10,
-                  right: 10,
-                  bottom: 10,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: SemiBoldText(
-                              text: user.name,
-                              fontSize: TextStyles.k14FontSize,
-                              color: kColorWhite,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+              ),
+              Positioned(
+                top: 8,
+                left: 8,
+                right: 48,
+                child: _TopBadgesRow(user: user),
+              ),
+              Positioned(
+                left: 10,
+                right: 10,
+                bottom: 10,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SemiBoldText(
+                            text: user.name,
+                            fontSize: TextStyles.k14FontSize,
+                            color: kColorWhite,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          if (user.gender.isNotEmpty) ...[
-                            Icon(
-                              _genderIcon(user.gender),
-                              size: 14,
-                              color: kColorWhite.withValues(alpha: 0.9),
-                            ),
-                          ],
-                        ],
-                      ),
-                      if (_locationLine(user).isNotEmpty) ...[
-                        const SizedBox(height: 3),
-                        AppText(
-                          text: _locationLine(user),
-                          fontSize: TextStyles.k10FontSize,
-                          color: kColorWhite.withValues(alpha: 0.82),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ],
-                      if (user.bio.trim().isNotEmpty) ...[
-                        const SizedBox(height: 2),
-                        AppText(
-                          text: user.bio.trim(),
-                          fontSize: TextStyles.k10FontSize,
-                          color: kColorWhite.withValues(alpha: 0.72),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          if (user.followersCount > 0) ...[
-                            _MetaIcon(
-                              icon: Icons.people_outline_rounded,
-                              label: _compactCount(user.followersCount),
-                            ),
-                            const SizedBox(width: 8),
-                          ],
-                          if (user.coinsPerSecond > 0)
-                            _MetaIcon(
-                              icon: Icons.monetization_on_outlined,
-                              label: '${user.coinsPerSecond.toStringAsFixed(0)}/s',
-                            )
-                          else if (user.coins > 0)
-                            _MetaIcon(
-                              icon: Icons.monetization_on_outlined,
-                              label: user.coins.toStringAsFixed(0),
-                            ),
-                          if (user.isFollowing) ...[
-                            const Spacer(),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: kColorPrimary.withValues(alpha: 0.85),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const AppText(
-                                text: 'Following',
-                                fontSize: TextStyles.k8FontSize,
-                                color: kColorWhite,
-                              ),
-                            ),
-                          ],
+                        if (user.gender.isNotEmpty) ...[
+                          Icon(
+                            _genderIcon(user.gender),
+                            size: 14,
+                            color: kColorWhite.withValues(alpha: 0.9),
+                          ),
                         ],
+                      ],
+                    ),
+                    if (_locationLine(user).isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      AppText(
+                        text: _locationLine(user),
+                        fontSize: TextStyles.k10FontSize,
+                        color: kColorWhite.withValues(alpha: 0.82),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
-                  ),
-                ),
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: GestureDetector(
-                    onTap: isFavouriteLoading ? null : onFavouriteTap,
-                    behavior: HitTestBehavior.opaque,
-                    child: _FavouriteButton(
-                      isFavourite: user.isFavourite,
-                      isLoading: isFavouriteLoading,
+                    if (user.bio.trim().isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      AppText(
+                        text: user.bio.trim(),
+                        fontSize: TextStyles.k10FontSize,
+                        color: kColorWhite.withValues(alpha: 0.72),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        if (user.followersCount > 0) ...[
+                          _MetaIcon(
+                            icon: Icons.people_outline_rounded,
+                            label: _compactCount(user.followersCount),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        if (user.coinsPerSecond > 0)
+                          _MetaIcon(
+                            icon: Icons.monetization_on_outlined,
+                            label:
+                                '${user.coinsPerSecond.toStringAsFixed(0)}/s',
+                          )
+                        else if (user.coins > 0)
+                          _MetaIcon(
+                            icon: Icons.monetization_on_outlined,
+                            label: user.coins.toStringAsFixed(0),
+                          ),
+                        if (user.isFollowing) ...[
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: kColorPrimary.withValues(alpha: 0.85),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const AppText(
+                              text: 'Following',
+                              fontSize: TextStyles.k8FontSize,
+                              color: kColorWhite,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
+                  ],
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: GestureDetector(
+                  onTap: isFavouriteLoading ? null : onFavouriteTap,
+                  behavior: HitTestBehavior.opaque,
+                  child: _FavouriteButton(
+                    isFavourite: user.isFavourite,
+                    isLoading: isFavouriteLoading,
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -347,7 +338,10 @@ class _BadgeChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.35), width: 1),
+        border: Border.all(
+          color: kColorWhite.withValues(alpha: 0.35),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.4),
@@ -389,10 +383,7 @@ class _MetaIcon extends StatelessWidget {
 }
 
 class _FavouriteButton extends StatelessWidget {
-  const _FavouriteButton({
-    required this.isFavourite,
-    required this.isLoading,
-  });
+  const _FavouriteButton({required this.isFavourite, required this.isLoading});
 
   final bool isFavourite;
   final bool isLoading;

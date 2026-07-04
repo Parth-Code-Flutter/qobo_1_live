@@ -486,12 +486,6 @@ class ProfileTabView extends StatelessWidget {
         Color(0xFF43D40A),
         Color(0xFF80F20A),
       ], onTapRoute: Routes.ACTIVITY),
-      _ProfileFeatureItem(
-        'Aristocracy\nCenter',
-        kIconAristocracyCenter,
-        const [Color(0xFFFF2525), Color(0xFFFF8C2D)],
-        onTapRoute: Routes.ARISTOCRACY_CENTER,
-      ),
       _ProfileFeatureItem('Mall', kIconMall, const [
         Color(0xFFE5009E),
         Color(0xFFFF54C8),
@@ -504,12 +498,6 @@ class ProfileTabView extends StatelessWidget {
         Color(0xFFFF145C),
         Color(0xFFFFD83D),
       ], onTapRoute: Routes.AWARD),
-      _ProfileFeatureItem(
-        'Broadcast\nWatched',
-        kIconBroadcastWatched,
-        const [Color(0xFF20E06B), Color(0xFF50F0A8)],
-        onTapRoute: Routes.BROADCAST_WATCHED,
-      ),
       _ProfileFeatureItem('Call', kIconAward, const [
         Color(0xFFE5009E),
         Color(0xFFFF54C8),
