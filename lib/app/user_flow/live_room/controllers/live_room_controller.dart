@@ -15,6 +15,7 @@ import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_dialogs/live_stream_access_denied_dialog.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
+import 'package:qobo_one_live/utils/zego_engine_utils.dart';
 
 /// Controller for live room flow.
 class LiveRoomController extends GetxController {
@@ -30,6 +31,11 @@ class LiveRoomController extends GetxController {
   final highlightJoinGrid = false.obs;
   final isSearchExpanded = false.obs;
   final searchQuery = ''.obs;
+  final selectedRoomsMode = 'audio'.obs;
+  final videoRooms = <Map<String, dynamic>>[].obs;
+  final audioRooms = <Map<String, dynamic>>[].obs;
+  final isVideoRoomsLoading = false.obs;
+  final isAudioRoomsLoading = false.obs;
 
   final searchController = TextEditingController();
   final searchFocusNode = FocusNode();
@@ -44,6 +50,7 @@ class LiveRoomController extends GetxController {
     searchController.addListener(_onSearchChanged);
     fetchPromoBanner();
     fetchActiveRooms();
+    fetchSelectedRoomMode();
   }
 
   void _onSearchChanged() {
@@ -197,6 +204,86 @@ class LiveRoomController extends GetxController {
     }
   }
 
+  bool get isRoomsAudioMode => selectedRoomsMode.value == 'audio';
+
+  bool get isRoomsVideoMode => selectedRoomsMode.value == 'video';
+
+  void selectRoomsMode(String mode) {
+    final normalized = mode.toLowerCase() == 'video' ? 'video' : 'audio';
+    if (selectedRoomsMode.value == normalized) return;
+    selectedRoomsMode.value = normalized;
+    unawaited(fetchSelectedRoomMode());
+  }
+
+  Future<void> fetchSelectedRoomMode({bool refresh = true}) {
+    return isRoomsAudioMode
+        ? fetchAudioRooms(refresh: refresh)
+        : fetchVideoRooms(refresh: refresh);
+  }
+
+  Future<void> fetchVideoRooms({bool refresh = true}) async {
+    await _fetchTypedRooms(
+      type: 'video',
+      target: videoRooms,
+      loading: isVideoRoomsLoading,
+      refresh: refresh,
+    );
+  }
+
+  Future<void> fetchAudioRooms({bool refresh = true}) async {
+    await _fetchTypedRooms(
+      type: 'audio',
+      target: audioRooms,
+      loading: isAudioRoomsLoading,
+      refresh: refresh,
+    );
+  }
+
+  Future<void> _fetchTypedRooms({
+    required String type,
+    required RxList<Map<String, dynamic>> target,
+    required RxBool loading,
+    required bool refresh,
+  }) async {
+    if (loading.value) return;
+    try {
+      loading.value = true;
+      final response = await _roomRepo.listActiveRooms(
+        type: type,
+        page: 1,
+        limit: 30,
+        isShowLoader: false,
+      );
+      if (_isRoomApiSuccess(response)) {
+        final rooms = _extractRoomList(
+          response?['data'],
+        ).map((room) => _withRoomType(room, type)).toList();
+        target.assignAll(rooms);
+        return;
+      }
+      if (refresh) target.clear();
+    } catch (_) {
+      if (refresh) target.clear();
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  void openCreateSelectedRoom() {
+    Get.toNamed(
+      Routes.LIVE_ROOM_CREATE,
+      arguments: {'type': isRoomsAudioMode ? 'AUDIO' : 'VIDEO'},
+    );
+  }
+
+  void openCreateVideoRoom() {
+    Get.toNamed(Routes.LIVE_ROOM_CREATE, arguments: {'type': 'VIDEO'});
+  }
+
+  void openCreateAudioRoom() {
+    Get.toNamed(Routes.LIVE_ROOM_CREATE, arguments: {'type': 'AUDIO'});
+  }
+
   Map<String, dynamic> _mapRoom(Map room) {
     final type = room['type']?.toString().toUpperCase() ?? 'VIDEO';
     final rankBadge = room['roomRankBadge'];
@@ -254,6 +341,7 @@ class LiveRoomController extends GetxController {
         ? Get.find<UserSessionController>()
         : null;
     await session?.loadFromStorage();
+    if (!context.mounted) return;
     final userId = session?.userId ?? '';
     if (userId.isEmpty) {
       AppToast.showError(context, 'Please log in to go live');
@@ -300,10 +388,7 @@ class LiveRoomController extends GetxController {
       message: message,
       coins: coins,
       onBecomeAgency: () {
-        Get.toNamed(
-          Routes.AGENCY_ACCESS,
-          arguments: {'mode': 'owner'},
-        );
+        Get.toNamed(Routes.AGENCY_ACCESS, arguments: {'mode': 'owner'});
       },
       onAddCoins: () {
         Get.to(() => const WalletView(), binding: WalletBinding());
@@ -345,6 +430,122 @@ class LiveRoomController extends GetxController {
         'roomData': room['roomData'],
       },
     );
+  }
+
+  Future<void> joinTypedRoom(
+    BuildContext context,
+    Map<String, dynamic> room,
+  ) async {
+    final roomId = _roomId(room);
+    if (roomId.isEmpty) {
+      AppToast.showError(context, 'Room id is missing');
+      return;
+    }
+
+    final response = await _roomRepo.joinRoom(roomId: roomId);
+    if (!context.mounted) return;
+
+    if (!_isRoomApiSuccess(response)) {
+      AppToast.showError(
+        context,
+        response?['message']?.toString() ?? 'Could not join room',
+      );
+      return;
+    }
+
+    final payload = _normalizeJoinPayload(
+      response?['data'],
+      fallbackRoom: room,
+      fallbackRoomId: roomId,
+    );
+    final roomType = _text(payload['type'])?.toUpperCase() ?? 'VIDEO';
+    await ZegoEngineUtils.resetForRoomProject();
+    if (!context.mounted) return;
+    Get.toNamed(
+      Routes.LIVE_BROADCAST,
+      arguments: {'isHost': false, 'roomType': roomType, 'roomData': payload},
+    );
+  }
+
+  List<Map<String, dynamic>> _extractRoomList(dynamic raw) {
+    final list = raw is List
+        ? raw
+        : raw is Map
+        ? raw['rooms'] ?? raw['items'] ?? raw['list'] ?? raw['data']
+        : null;
+    if (list is! List) return const <Map<String, dynamic>>[];
+    return list
+        .whereType<Map>()
+        .map((room) => Map<String, dynamic>.from(room))
+        .toList();
+  }
+
+  Map<String, dynamic> _withRoomType(Map<String, dynamic> room, String type) {
+    final next = Map<String, dynamic>.from(room);
+    next.putIfAbsent('type', () => type);
+    return next;
+  }
+
+  Map<String, dynamic> _normalizeJoinPayload(
+    dynamic raw, {
+    required Map<String, dynamic> fallbackRoom,
+    required String fallbackRoomId,
+  }) {
+    final data = raw is Map ? Map<String, dynamic>.from(raw) : {};
+    final joinedRoom = data['room'] is Map
+        ? Map<String, dynamic>.from(data['room'] as Map)
+        : <String, dynamic>{};
+    final payload = <String, dynamic>{
+      ...fallbackRoom,
+      ...joinedRoom,
+      if (data['room'] is! Map) ...data,
+    };
+    final zegoStreaming = data['zegoStreaming'];
+    if (zegoStreaming is Map) {
+      payload['zegoStreaming'] = Map<String, dynamic>.from(zegoStreaming);
+      payload.putIfAbsent('zegoToken', () => zegoStreaming['token']);
+      payload.putIfAbsent('streamId', () => zegoStreaming['streamId']);
+    }
+    payload['room_id'] =
+        _text(data['room_id']) ??
+        _text(payload['room_id']) ??
+        _text(payload['roomId']) ??
+        fallbackRoomId;
+    payload['id'] = _text(payload['id']) ?? payload['room_id'];
+    payload['zegoLiveId'] =
+        _text(data['zegoLiveId']) ??
+        _text(data['channelName']) ??
+        _text(payload['zegoLiveId']) ??
+        _text(payload['channelName']) ??
+        (zegoStreaming is Map ? _text(zegoStreaming['roomId']) : null) ??
+        fallbackRoomId;
+    payload['channelName'] =
+        _text(data['channelName']) ??
+        _text(payload['channelName']) ??
+        payload['zegoLiveId'];
+    payload['type'] =
+        _text(payload['type']) ?? (isRoomsAudioMode ? 'audio' : 'video');
+    return payload;
+  }
+
+  String _roomId(Map<String, dynamic> room) {
+    return _text(room['room_id']) ??
+        _text(room['roomId']) ??
+        _text(room['_id']) ??
+        _text(room['id']) ??
+        '';
+  }
+
+  bool _isRoomApiSuccess(Map<String, dynamic>? response) {
+    if (response == null) return false;
+    final code = response['statusCode'];
+    return code == 1 || code == 200 || code == 201 || code == true;
+  }
+
+  String? _text(dynamic value) {
+    final text = value?.toString().trim();
+    if (text == null || text.isEmpty || text == 'null') return null;
+    return text;
   }
 
   @override

@@ -25,13 +25,13 @@ class BottomNavController extends GetxController {
       Get.isRegistered<UserSessionController>()
       ? Get.find<UserSessionController>()
       : Get.put(UserSessionController(), permanent: true);
-  final selectedIndex = 1.obs;
+  final selectedIndex = goLiveTabIndex.obs;
   final permissionBlocked = false.obs;
   final showOpenSettings = false.obs;
   Map<String, dynamic>? profileData;
 
   static const int roomsTabIndex = 1;
-  static const int goLiveActionIndex = 2;
+  static const int goLiveTabIndex = 2;
   static const int messagesTabIndex = 3;
 
   /// Bottom-nav tabs.
@@ -134,15 +134,14 @@ class BottomNavController extends GetxController {
   }
 
   void _applyTabSelection(int index) {
-    if (index == goLiveActionIndex) {
-      onGoLivePressed();
-      return;
-    }
     selectedIndex.value = index;
     if (index == 0 && Get.isRegistered<DiscoverTabController>()) {
       Get.find<DiscoverTabController>().refreshOnTabSelected();
     }
     if (index == roomsTabIndex && Get.isRegistered<LiveRoomController>()) {
+      unawaited(Get.find<LiveRoomController>().fetchSelectedRoomMode());
+    }
+    if (index == goLiveTabIndex && Get.isRegistered<LiveRoomController>()) {
       unawaited(Get.find<LiveRoomController>().fetchActiveRooms());
     }
     if (index == messagesTabIndex &&

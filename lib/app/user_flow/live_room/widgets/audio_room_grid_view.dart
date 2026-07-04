@@ -18,8 +18,8 @@ typedef _AudioRoomTileData = ({
   Map<String, dynamic> room,
 });
 
-class DiscoverAudioRoomView extends StatelessWidget {
-  const DiscoverAudioRoomView({
+class AudioRoomGridView extends StatelessWidget {
+  const AudioRoomGridView({
     super.key,
     this.rooms = const <Map<String, dynamic>>[],
     this.isLoading = false,

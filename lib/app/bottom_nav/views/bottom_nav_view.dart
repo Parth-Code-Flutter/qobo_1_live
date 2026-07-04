@@ -5,6 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/discover/discover_tab/views/discover_tab_view.dart';
 import 'package:qobo_one_live/app/user_flow/live_room/views/live_room_view.dart';
+import 'package:qobo_one_live/app/user_flow/live_room/views/rooms_tab_view.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/views/messages_tab_view.dart';
 import 'package:qobo_one_live/app/user_flow/profile_tab/views/profile_tab_view.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
@@ -35,6 +36,9 @@ class BottomNavView extends GetView<BottomNavController> {
               return const DiscoverTabView();
             }
             if (controller.selectedIndex.value == 1) {
+              return const RoomsTabView();
+            }
+            if (controller.selectedIndex.value == 2) {
               return const LiveRoomView();
             }
             if (controller.selectedIndex.value == 3) {
@@ -103,11 +107,11 @@ class BottomNavView extends GetView<BottomNavController> {
                                   controller.items[index].selectedIconPath,
                               selected:
                                   controller.selectedIndex.value == index &&
-                                  index !=
-                                      BottomNavController.goLiveActionIndex,
+                                  index != BottomNavController.goLiveTabIndex,
                               isAction:
-                                  index ==
-                                  BottomNavController.goLiveActionIndex,
+                                  index == BottomNavController.goLiveTabIndex,
+                              actionSelected:
+                                  controller.selectedIndex.value == index,
                               iconSize: _iconSize,
                               onTap: () =>
                                   controller.onNavBarTabSelected(index),
@@ -195,6 +199,7 @@ class _BottomNavTab extends StatelessWidget {
     required this.selectedIconPath,
     required this.selected,
     required this.isAction,
+    required this.actionSelected,
     required this.iconSize,
     required this.onTap,
   });
@@ -204,6 +209,7 @@ class _BottomNavTab extends StatelessWidget {
   final String selectedIconPath;
   final bool selected;
   final bool isAction;
+  final bool actionSelected;
   final double iconSize;
   final VoidCallback onTap;
 
@@ -219,7 +225,11 @@ class _BottomNavTab extends StatelessWidget {
         splashColor: Colors.white.withValues(alpha: 0.08),
         highlightColor: Colors.transparent,
         child: isAction
-            ? _GoLiveNavAction(label: label, onTap: onTap)
+            ? _GoLiveNavAction(
+                label: label,
+                selected: actionSelected,
+                onTap: onTap,
+              )
             : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -252,9 +262,14 @@ class _BottomNavTab extends StatelessWidget {
 }
 
 class _GoLiveNavAction extends StatelessWidget {
-  const _GoLiveNavAction({required this.label, required this.onTap});
+  const _GoLiveNavAction({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   final String label;
+  final bool selected;
   final VoidCallback onTap;
 
   @override
@@ -276,8 +291,8 @@ class _GoLiveNavAction extends StatelessWidget {
                   colors: [Color(0xFFFF2C4D), Color(0xFFFF7A45)],
                 ),
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.28),
-                  width: 1,
+                  color: Colors.white.withValues(alpha: selected ? 0.72 : 0.28),
+                  width: selected ? 1.4 : 1,
                 ),
                 boxShadow: [
                   BoxShadow(
@@ -297,7 +312,9 @@ class _GoLiveNavAction extends StatelessWidget {
             SemiBoldText(
               text: label,
               fontSize: TextStyles.k10FontSize,
-              color: kColorWhite,
+              color: selected
+                  ? kColorWhite
+                  : kColorWhite.withValues(alpha: 0.72),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),

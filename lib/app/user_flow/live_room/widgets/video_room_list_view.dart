@@ -20,15 +20,16 @@ typedef _VideoRoomTileData = ({
   Map<String, dynamic> room,
 });
 
-/// Video Room discover feed — accordion tiles (tap to expand / collapse).
-class DiscoverVideoRoomView extends StatefulWidget {
-  const DiscoverVideoRoomView({
+/// Video room feed — accordion tiles (tap to expand / collapse).
+class VideoRoomListView extends StatefulWidget {
+  const VideoRoomListView({
     super.key,
     this.rooms = const <Map<String, dynamic>>[],
     this.isLoading = false,
     this.onJoinLive,
     this.onCreateVideoRoom,
     this.onRefresh,
+    this.showCreatePanel = true,
   });
 
   final List<Map<String, dynamic>> rooms;
@@ -36,6 +37,7 @@ class DiscoverVideoRoomView extends StatefulWidget {
   final ValueChanged<Map<String, dynamic>>? onJoinLive;
   final VoidCallback? onCreateVideoRoom;
   final Future<void> Function()? onRefresh;
+  final bool showCreatePanel;
 
   static const String roomLabel = 'Video Room';
 
@@ -51,10 +53,10 @@ class DiscoverVideoRoomView extends StatefulWidget {
   );
 
   @override
-  State<DiscoverVideoRoomView> createState() => _DiscoverVideoRoomViewState();
+  State<VideoRoomListView> createState() => _VideoRoomListViewState();
 }
 
-class _DiscoverVideoRoomViewState extends State<DiscoverVideoRoomView> {
+class _VideoRoomListViewState extends State<VideoRoomListView> {
   int? _expandedIndex;
 
   void _onTileTap(int index) {
@@ -86,17 +88,20 @@ class _DiscoverVideoRoomViewState extends State<DiscoverVideoRoomView> {
               physics: const AlwaysScrollableScrollPhysics(
                 parent: BouncingScrollPhysics(),
               ),
-              itemCount: tiles.length + 1 + (tiles.isEmpty ? 1 : 0),
+              itemCount:
+                  tiles.length +
+                  (widget.showCreatePanel ? 1 : 0) +
+                  (tiles.isEmpty ? 1 : 0),
               separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
-                if (index == 0) {
+                if (widget.showCreatePanel && index == 0) {
                   return _CreateVideoRoomPanel(
                     liveCount: tiles.length,
                     onTap: widget.onCreateVideoRoom,
                   );
                 }
                 if (tiles.isEmpty) return const _VideoRoomsEmptyState();
-                final tileIndex = index - 1;
+                final tileIndex = index - (widget.showCreatePanel ? 1 : 0);
                 final data = tiles[tileIndex];
                 return _VideoRoomAccordionTile(
                   data: data,
@@ -623,7 +628,7 @@ class _ViewerMiniPill extends StatelessWidget {
             kIconEye,
             width: 12,
             height: 12,
-            colorFilter: DiscoverVideoRoomView._whiteIcon,
+            colorFilter: VideoRoomListView._whiteIcon,
           ),
           const SizedBox(width: 4),
           SemiBoldText(
@@ -725,7 +730,7 @@ class _PreviewFrame extends StatelessWidget {
             children: [
               const DecoratedBox(
                 decoration: BoxDecoration(
-                  gradient: DiscoverVideoRoomView._previewGradient,
+                  gradient: VideoRoomListView._previewGradient,
                 ),
               ),
               const _PreviewDecorations(),
@@ -886,7 +891,7 @@ class _LiveBadge extends StatelessWidget {
             kIconVideoCamera,
             width: compact ? 10 : 12,
             height: compact ? 10 : 12,
-            colorFilter: DiscoverVideoRoomView._whiteIcon,
+            colorFilter: VideoRoomListView._whiteIcon,
           ),
           SizedBox(width: compact ? 4 : 5),
           SemiBoldText(
@@ -968,9 +973,7 @@ class _RoomImage extends StatelessWidget {
       width: width,
       height: height,
       child: const DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: DiscoverVideoRoomView._previewGradient,
-        ),
+        decoration: BoxDecoration(gradient: VideoRoomListView._previewGradient),
         child: Center(
           child: Icon(Icons.videocam_rounded, color: kColorWhite, size: 32),
         ),
