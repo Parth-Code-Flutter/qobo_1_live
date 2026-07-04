@@ -8,7 +8,6 @@ import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
-import 'package:qobo_one_live/utils/ui_utils/app_ui_utils.dart';
 
 import '../controllers/discover_tab_controller.dart';
 import '../widgets/discover_country_filter_sheet.dart';
@@ -33,16 +32,16 @@ class DiscoverTabView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _topHeader(context, discoverController),
-              Spacing.v16,
+              Spacing.v12,
               _searchBar(discoverController),
-              Spacing.v8,
+              Spacing.v10,
               Obx(() {
                 if (discoverController.searchQuery.value.isNotEmpty) {
                   return const SizedBox.shrink();
                 }
                 return DiscoverFiltersBar(controller: discoverController);
               }),
-              Spacing.v6,
+              Spacing.v10,
               Expanded(
                 child: Obx(() {
                   if (discoverController.searchQuery.value.isNotEmpty) {
@@ -58,7 +57,6 @@ class DiscoverTabView extends StatelessWidget {
     );
   }
 
-  /// Header row (real profile image/name + location) matching Figma.
   Widget _topHeader(
     BuildContext context,
     DiscoverTabController discoverController,
@@ -68,96 +66,116 @@ class DiscoverTabView extends StatelessWidget {
       init: userSession,
       builder: (session) {
         final avatarUrl = session.displayPictureUrl;
-        return Row(
-          children: [
-            Container(
-              width: 30,
-              height: 30,
-              padding: const EdgeInsets.all(1),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: kColorWhite, width: 1),
+        return SizedBox(
+          height: 58,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Container(
+                  width: 38,
+                  height: 38,
+                  padding: const EdgeInsets.all(1.4),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: kColorWhite.withValues(alpha: 0.10),
+                    border: Border.all(
+                      color: kColorWhite.withValues(alpha: 0.78),
+                      width: 1.2,
+                    ),
+                  ),
+                  child: ClipOval(
+                    child: avatarUrl == null
+                        ? _initialsAvatar(session.initials)
+                        : Image.network(
+                            avatarUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                _initialsAvatar(session.initials),
+                          ),
+                  ),
+                ),
               ),
-              child: ClipOval(
-                child: avatarUrl == null
-                    ? _initialsAvatar(session.initials)
-                    : Image.network(
-                        avatarUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                            _initialsAvatar(session.initials),
-                      ),
-              ),
-            ),
-            Spacing.h10,
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
+              Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   const SemiBoldText(
                     text: 'EXPLORE',
-                    fontSize: TextStyles.k24FontSize - 2,
+                    fontSize: TextStyles.k24FontSize,
                     color: kColorWhite,
                   ),
                   AppText(
                     text: session.displayName,
-                    fontSize: TextStyles.k10FontSize,
-                    color: kColorWhite.withValues(alpha: 0.9),
+                    fontSize: TextStyles.k12FontSize,
+                    color: kColorWhite.withValues(alpha: 0.72),
                     align: TextAlign.center,
                   ),
                 ],
               ),
-            ),
-            Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                color: kColorWhite,
-                borderRadius: BorderRadius.circular(22),
-              ),
-              child: Center(
+              Align(
+                alignment: Alignment.centerRight,
                 child: Obx(() {
                   final hasFilter = discoverController.hasActiveDiscoverFilters;
-                  return Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      IconButton(
-                        onPressed: () =>
-                            _openCountryFilter(context, discoverController),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(
-                          minWidth: 30,
-                          minHeight: 30,
+                  return Material(
+                    color: Colors.transparent,
+                    shape: const CircleBorder(),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: () => _openCountryFilter(
+                        context,
+                        discoverController,
+                      ),
+                      customBorder: const CircleBorder(),
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: kColorWhite.withValues(alpha: 0.94),
+                          boxShadow: [
+                            BoxShadow(
+                              color: kColorPrimary.withValues(alpha: 0.20),
+                              blurRadius: 16,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
                         ),
-                        icon: SvgPicture.asset(
-                          kIconFilter,
-                          width: 20,
-                          height: 20,
-                          colorFilter: const ColorFilter.mode(
-                            kColorPrimary,
-                            BlendMode.srcIn,
-                          ),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          clipBehavior: Clip.none,
+                          children: [
+                            SvgPicture.asset(
+                              kIconFilter,
+                              width: 24,
+                              height: 24,
+                              colorFilter: const ColorFilter.mode(
+                                kColorPrimary,
+                                BlendMode.srcIn,
+                              ),
+                            ),
+                            if (hasFilter)
+                              Positioned(
+                                top: 9,
+                                right: 9,
+                                child: Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: const BoxDecoration(
+                                    color: kColorBottomNavHeart,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
-                      if (hasFilter)
-                        Positioned(
-                          top: 4,
-                          right: 4,
-                          child: Container(
-                            width: 7,
-                            height: 7,
-                            decoration: const BoxDecoration(
-                              color: kColorBottomNavHeart,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ),
-                    ],
+                    ),
                   );
                 }),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );
@@ -176,39 +194,76 @@ class DiscoverTabView extends StatelessWidget {
   }
 
   Widget _searchBar(DiscoverTabController discoverController) {
-    return Container(
-      height: 38,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        color: kColorDiscoverSearchBg,
-        borderRadius: AppUIUtils.primaryBorderRadius,
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.search_rounded, size: 16, color: kColorHint),
-          Spacing.h6,
-          Expanded(
-            child: TextField(
-              controller: discoverController.searchController,
-              textInputAction: TextInputAction.search,
-              style: TextStyles.kRegularPoppins(
-                fontSize: TextStyles.k12FontSize,
-                colors: kColorText,
-              ),
-              cursorColor: kColorPrimary,
-              decoration: InputDecoration(
-                isDense: true,
-                border: InputBorder.none,
-                hintText: 'Search',
-                hintStyle: TextStyles.kRegularPoppins(
-                  fontSize: TextStyles.k12FontSize,
-                  colors: kColorHint,
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        height: 46,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: kColorWhite.withValues(alpha: 0.96),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.26)),
+          boxShadow: [
+            BoxShadow(
+              color: kColorPrimary.withValues(alpha: 0.16),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.search_rounded,
+              size: 22,
+              color: kColorHint.withValues(alpha: 0.85),
+            ),
+            Spacing.h10,
+            Expanded(
+              child: TextField(
+                controller: discoverController.searchController,
+                textInputAction: TextInputAction.search,
+                style: TextStyles.kRegularPoppins(
+                  fontSize: TextStyles.k14FontSize,
+                  colors: kColorText,
                 ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                cursorColor: kColorPrimary,
+                decoration: InputDecoration(
+                  isDense: true,
+                  border: InputBorder.none,
+                  hintText: 'Search people',
+                  hintStyle: TextStyles.kRegularPoppins(
+                    fontSize: TextStyles.k14FontSize,
+                    colors: kColorHint,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                ),
               ),
             ),
-          ),
-        ],
+            Obx(() {
+              if (discoverController.searchQuery.value.isEmpty) {
+                return const SizedBox.shrink();
+              }
+              return GestureDetector(
+                onTap: discoverController.searchController.clear,
+                child: Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: kColorHint.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.close_rounded,
+                    size: 18,
+                    color: kColorHint,
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
       ),
     );
   }
