@@ -12,11 +12,8 @@ import 'package:qobo_one_live/utils/ui_utils/app_ui_utils.dart';
 
 import '../controllers/discover_tab_controller.dart';
 import '../widgets/discover_country_filter_sheet.dart';
-import '../models/discover_room_selection.dart';
-import '../widgets/discover_audio_room_view.dart';
 import '../widgets/discover_filters_bar.dart';
 import '../widgets/discover_users_feed.dart';
-import '../widgets/discover_video_room_view.dart';
 
 class DiscoverTabView extends StatelessWidget {
   const DiscoverTabView({super.key});
@@ -39,11 +36,8 @@ class DiscoverTabView extends StatelessWidget {
               Spacing.v16,
               _searchBar(discoverController),
               Spacing.v8,
-              _discoverModeTabs(discoverController),
-              Spacing.v8,
               Obx(() {
-                if (!discoverController.isPeopleMode ||
-                    discoverController.searchQuery.value.isNotEmpty) {
+                if (discoverController.searchQuery.value.isNotEmpty) {
                   return const SizedBox.shrink();
                 }
                 return DiscoverFiltersBar(controller: discoverController);
@@ -51,38 +45,6 @@ class DiscoverTabView extends StatelessWidget {
               Spacing.v6,
               Expanded(
                 child: Obx(() {
-                  if (discoverController.isVideoRoomMode) {
-                    return DiscoverVideoRoomView(
-                      rooms: discoverController.videoRooms,
-                      isLoading: discoverController.isVideoRoomsLoading.value,
-                      onCreateVideoRoom: discoverController.openCreateVideoRoom,
-                      onRefresh: discoverController.fetchVideoRooms,
-                      onJoinLive: (room) =>
-                          discoverController.joinDiscoverRoom(context, room),
-                    );
-                  }
-                  if (discoverController.isAudioRoomMode) {
-                    return Stack(
-                      children: [
-                        DiscoverAudioRoomView(
-                          rooms: discoverController.audioRooms,
-                          isLoading:
-                              discoverController.isAudioRoomsLoading.value,
-                          onCreateAudioRoom:
-                              discoverController.openCreateAudioRoom,
-                          onRefresh: discoverController.fetchAudioRooms,
-                          showCreatePanel: false,
-                          onJoinRoom: (room) => discoverController
-                              .joinDiscoverRoom(context, room),
-                        ),
-                        Positioned(
-                          right: 18,
-                          bottom: 22,
-                          child: _createAudioRoomFab(discoverController),
-                        ),
-                      ],
-                    );
-                  }
                   if (discoverController.searchQuery.value.isNotEmpty) {
                     return _searchResultsList(context, discoverController);
                   }
@@ -92,121 +54,6 @@ class DiscoverTabView extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _discoverModeTabs(DiscoverTabController controller) {
-    return Obx(
-      () => Container(
-        height: 42,
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: kColorWhite.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
-          boxShadow: [
-            BoxShadow(
-              color: kColorPrimary.withValues(alpha: 0.16),
-              blurRadius: 14,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            _modeTab(
-              label: 'People',
-              mode: DiscoverRoomSelection.none,
-              controller: controller,
-            ),
-            _modeTab(
-              label: 'Video Rooms',
-              mode: DiscoverRoomSelection.video,
-              controller: controller,
-            ),
-            _modeTab(
-              label: 'Audio Rooms',
-              mode: DiscoverRoomSelection.audio,
-              controller: controller,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _modeTab({
-    required String label,
-    required DiscoverRoomSelection mode,
-    required DiscoverTabController controller,
-  }) {
-    final selected = controller.selectedDiscoverMode.value == mode;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => controller.selectDiscoverMode(mode),
-        behavior: HitTestBehavior.opaque,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          alignment: Alignment.center,
-          margin: const EdgeInsets.symmetric(horizontal: 1),
-          decoration: BoxDecoration(
-            gradient: selected
-                ? const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      kColorLiveFilterChipGradientStart,
-                      kColorLiveFilterChipGradientEnd,
-                    ],
-                  )
-                : null,
-            color: selected ? null : kColorWhite.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: selected
-                  ? kColorWhite.withValues(alpha: 0.22)
-                  : Colors.transparent,
-            ),
-          ),
-          child: SemiBoldText(
-            text: label,
-            fontSize: TextStyles.k10FontSize,
-            color: kColorWhite.withValues(alpha: selected ? 1 : 0.82),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _createAudioRoomFab(DiscoverTabController controller) {
-    return GestureDetector(
-      onTap: controller.openCreateAudioRoom,
-      child: Container(
-        width: 58,
-        height: 58,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              kColorLiveFilterChipGradientStart,
-              kColorLiveFilterChipGradientEnd,
-            ],
-          ),
-          border: Border.all(color: kColorWhite.withValues(alpha: 0.22)),
-          boxShadow: [
-            BoxShadow(
-              color: kColorPrimary.withValues(alpha: 0.38),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: const Icon(Icons.add_rounded, color: kColorWhite, size: 32),
       ),
     );
   }

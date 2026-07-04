@@ -37,10 +37,10 @@ class BottomNavView extends GetView<BottomNavController> {
             if (controller.selectedIndex.value == 1) {
               return const LiveRoomView();
             }
-            if (controller.selectedIndex.value == 2) {
+            if (controller.selectedIndex.value == 3) {
               return const MessagesTabView();
             }
-            if (controller.selectedIndex.value == 3) {
+            if (controller.selectedIndex.value == 4) {
               return ProfileTabView(
                 onLogoutPressed: controller.onLogoutPressed,
               );
@@ -101,7 +101,13 @@ class BottomNavView extends GetView<BottomNavController> {
                               iconPath: controller.items[index].iconPath,
                               selectedIconPath:
                                   controller.items[index].selectedIconPath,
-                              selected: controller.selectedIndex.value == index,
+                              selected:
+                                  controller.selectedIndex.value == index &&
+                                  index !=
+                                      BottomNavController.goLiveActionIndex,
+                              isAction:
+                                  index ==
+                                  BottomNavController.goLiveActionIndex,
                               iconSize: _iconSize,
                               onTap: () =>
                                   controller.onNavBarTabSelected(index),
@@ -188,6 +194,7 @@ class _BottomNavTab extends StatelessWidget {
     required this.iconPath,
     required this.selectedIconPath,
     required this.selected,
+    required this.isAction,
     required this.iconSize,
     required this.onTap,
   });
@@ -196,6 +203,7 @@ class _BottomNavTab extends StatelessWidget {
   final String iconPath;
   final String selectedIconPath;
   final bool selected;
+  final bool isAction;
   final double iconSize;
   final VoidCallback onTap;
 
@@ -210,29 +218,88 @@ class _BottomNavTab extends StatelessWidget {
         onTap: onTap,
         splashColor: Colors.white.withValues(alpha: 0.08),
         highlightColor: Colors.transparent,
+        child: isAction
+            ? _GoLiveNavAction(label: label, onTap: onTap)
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SvgPicture.asset(
+                    displayIconPath,
+                    width: iconSize,
+                    height: iconSize,
+                    fit: BoxFit.contain,
+                    colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+                  ),
+                  Spacing.v6,
+                  AppText(
+                    text: label,
+                    fontSize: TextStyles.k10FontSize,
+                    style: selected
+                        ? TextStyles.kSemiBoldPoppins(
+                            fontSize: TextStyles.k12FontSize,
+                            colors: kColorWhite,
+                          )
+                        : TextStyles.kRegularPoppins(
+                            fontSize: TextStyles.k10FontSize,
+                            colors: Colors.white.withValues(alpha: 0.45),
+                          ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+class _GoLiveNavAction extends StatelessWidget {
+  const _GoLiveNavAction({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: GestureDetector(
+        onTap: onTap,
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            SvgPicture.asset(
-              displayIconPath,
-              width: iconSize,
-              height: iconSize,
-              fit: BoxFit.contain,
-              colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFFF2C4D), Color(0xFFFF7A45)],
+                ),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.28),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFFF3651).withValues(alpha: 0.36),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.videocam_rounded,
+                color: kColorWhite,
+                size: 25,
+              ),
             ),
-            Spacing.v6,
-            AppText(
+            Spacing.v4,
+            SemiBoldText(
               text: label,
               fontSize: TextStyles.k10FontSize,
-              style: selected
-                  ? TextStyles.kSemiBoldPoppins(
-                      fontSize: TextStyles.k12FontSize,
-                      colors: kColorWhite,
-                    )
-                  : TextStyles.kRegularPoppins(
-                      fontSize: TextStyles.k10FontSize,
-                      colors: Colors.white.withValues(alpha: 0.45),
-                    ),
+              color: kColorWhite,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

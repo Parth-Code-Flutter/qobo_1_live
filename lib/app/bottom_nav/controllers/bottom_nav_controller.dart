@@ -30,6 +30,10 @@ class BottomNavController extends GetxController {
   final showOpenSettings = false.obs;
   Map<String, dynamic>? profileData;
 
+  static const int roomsTabIndex = 1;
+  static const int goLiveActionIndex = 2;
+  static const int messagesTabIndex = 3;
+
   /// Bottom-nav tabs.
   final items =
       const <({String label, String iconPath, String selectedIconPath})>[
@@ -39,9 +43,14 @@ class BottomNavController extends GetxController {
           selectedIconPath: kIconDiscoverEnable,
         ),
         (
-          label: 'Go Live',
+          label: 'Rooms',
           iconPath: kIconLiveRoom,
           selectedIconPath: kIconLiveRoomEnable,
+        ),
+        (
+          label: 'Go Live',
+          iconPath: kIconVideoCamera,
+          selectedIconPath: kIconVideoCamera,
         ),
         (
           label: 'Messages',
@@ -125,14 +134,19 @@ class BottomNavController extends GetxController {
   }
 
   void _applyTabSelection(int index) {
+    if (index == goLiveActionIndex) {
+      onGoLivePressed();
+      return;
+    }
     selectedIndex.value = index;
     if (index == 0 && Get.isRegistered<DiscoverTabController>()) {
       Get.find<DiscoverTabController>().refreshOnTabSelected();
     }
-    if (index == 1 && Get.isRegistered<LiveRoomController>()) {
+    if (index == roomsTabIndex && Get.isRegistered<LiveRoomController>()) {
       unawaited(Get.find<LiveRoomController>().fetchActiveRooms());
     }
-    if (index == 2 && Get.isRegistered<MessagesTabController>()) {
+    if (index == messagesTabIndex &&
+        Get.isRegistered<MessagesTabController>()) {
       Get.find<MessagesTabController>().fetchInbox();
     }
   }
