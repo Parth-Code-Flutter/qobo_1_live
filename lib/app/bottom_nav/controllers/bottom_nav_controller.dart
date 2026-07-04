@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:get/get.dart';
-import 'package:qobo_one_live/app/user_flow/agency_host_list/controllers/agency_host_list_controller.dart';
 import 'package:qobo_one_live/app/user_flow/discover/discover_tab/controllers/discover_tab_controller.dart';
 import 'package:qobo_one_live/app/user_flow/live_room/controllers/live_room_controller.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/controllers/messages_tab_controller.dart';
@@ -31,13 +30,7 @@ class BottomNavController extends GetxController {
   final showOpenSettings = false.obs;
   Map<String, dynamic>? profileData;
 
-  /// Center heart tab — embedded [AgencyHostListView] with real API hosts.
-  static const int heartTabIndex = 2;
-
-  /// GetX tag for the heart-tab host list controller (separate from route instance).
-  static const String heartHostListTag = 'bottom_nav_heart_hosts';
-
-  /// Bottom-nav tabs (Figma-style labels + centered heart action).
+  /// Bottom-nav tabs.
   final items =
       const <({String label, String iconPath, String selectedIconPath})>[
         (
@@ -50,7 +43,6 @@ class BottomNavController extends GetxController {
           iconPath: kIconLiveRoom,
           selectedIconPath: kIconLiveRoomEnable,
         ),
-        (label: '', iconPath: kIconHeart, selectedIconPath: kIconHeart),
         (
           label: 'Messages',
           iconPath: kIconChat,
@@ -140,25 +132,15 @@ class BottomNavController extends GetxController {
     if (index == 1 && Get.isRegistered<LiveRoomController>()) {
       unawaited(Get.find<LiveRoomController>().fetchActiveRooms());
     }
-    if (index == heartTabIndex &&
-        Get.isRegistered<AgencyHostListController>(tag: heartHostListTag)) {
-      final hostListCtrl = Get.find<AgencyHostListController>(
-        tag: heartHostListTag,
-      );
-      final needsReload =
-          hostListCtrl.hostList.isEmpty ||
-          !hostListCtrl.fetchedWithAgencyContext;
-      hostListCtrl.refreshList(showLoading: needsReload);
-    }
-    if (index == 3 && Get.isRegistered<MessagesTabController>()) {
+    if (index == 2 && Get.isRegistered<MessagesTabController>()) {
       Get.find<MessagesTabController>().fetchInbox();
     }
   }
 
-  /// Opens heart tab with agency host map (from owner dashboard).
+  /// Legacy helper for callers that used to open the removed center heart tab.
   void openHeartTabForAgencyHosts() {
     _popToBottomNavIfNeeded();
-    onNavBarTabSelected(heartTabIndex);
+    onNavBarTabSelected(0);
   }
 
   bool _popToBottomNavIfNeeded() {

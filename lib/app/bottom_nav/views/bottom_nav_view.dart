@@ -7,9 +7,7 @@ import 'package:qobo_one_live/app/user_flow/discover/discover_tab/views/discover
 import 'package:qobo_one_live/app/user_flow/live_room/views/live_room_view.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/views/messages_tab_view.dart';
 import 'package:qobo_one_live/app/user_flow/profile_tab/views/profile_tab_view.dart';
-import 'package:qobo_one_live/app/user_flow/agency_host_list/views/agency_host_list_view.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -40,15 +38,9 @@ class BottomNavView extends GetView<BottomNavController> {
               return const LiveRoomView();
             }
             if (controller.selectedIndex.value == 2) {
-              return AgencyHostListView(
-                embeddedInBottomNav: true,
-                controllerTag: BottomNavController.heartHostListTag,
-              );
-            }
-            if (controller.selectedIndex.value == 3) {
               return const MessagesTabView();
             }
-            if (controller.selectedIndex.value == 4) {
+            if (controller.selectedIndex.value == 3) {
               return ProfileTabView(
                 onLogoutPressed: controller.onLogoutPressed,
               );
@@ -209,10 +201,8 @@ class _BottomNavTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isCenterTab = iconPath == kIconHeart;
     final displayIconPath = selected ? selectedIconPath : iconPath;
     final color = selected ? kColorWhite : Colors.white.withValues(alpha: 0.42);
-    final tintIcon = iconPath != kIconHeart;
 
     return Material(
       color: Colors.transparent,
@@ -220,67 +210,32 @@ class _BottomNavTab extends StatelessWidget {
         onTap: onTap,
         splashColor: Colors.white.withValues(alpha: 0.08),
         highlightColor: Colors.transparent,
-        child: isCenterTab
-            ? Center(
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 220),
-                  curve: Curves.easeOutCubic,
-                  width: selected ? 66 : 62,
-                  height: selected ? 66 : 62,
-                  margin: const EdgeInsets.only(bottom: 10),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: const Color(0xFFE6252F),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.22),
-                      width: 1,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SvgPicture.asset(
+              displayIconPath,
+              width: iconSize,
+              height: iconSize,
+              fit: BoxFit.contain,
+              colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+            ),
+            Spacing.v6,
+            AppText(
+              text: label,
+              fontSize: TextStyles.k10FontSize,
+              style: selected
+                  ? TextStyles.kSemiBoldPoppins(
+                      fontSize: TextStyles.k12FontSize,
+                      colors: kColorWhite,
+                    )
+                  : TextStyles.kRegularPoppins(
+                      fontSize: TextStyles.k10FontSize,
+                      colors: Colors.white.withValues(alpha: 0.45),
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFE6252F).withValues(alpha: 0.35),
-                        blurRadius: 16,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: SvgPicture.asset(
-                      displayIconPath,
-                      width: 28,
-                      height: 28,
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                ),
-              )
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SvgPicture.asset(
-                    displayIconPath,
-                    width: iconSize,
-                    height: iconSize,
-                    fit: BoxFit.contain,
-                    colorFilter: tintIcon
-                        ? ColorFilter.mode(color, BlendMode.srcIn)
-                        : null,
-                  ),
-                  Spacing.v6,
-                  AppText(
-                    text: label,
-                    fontSize: TextStyles.k10FontSize,
-                    style: selected
-                        ? TextStyles.kSemiBoldPoppins(
-                            fontSize: TextStyles.k12FontSize,
-                            colors: kColorWhite,
-                          )
-                        : TextStyles.kRegularPoppins(
-                            fontSize: TextStyles.k10FontSize,
-                            colors: Colors.white.withValues(alpha: 0.45),
-                          ),
-                  ),
-                ],
-              ),
+            ),
+          ],
+        ),
       ),
     );
   }
