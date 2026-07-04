@@ -39,6 +39,7 @@ class DiscoverTabController extends GetxController {
   final RoomRepo _roomRepo;
 
   final searchController = TextEditingController();
+  final searchFocusNode = FocusNode();
 
   final discoverUsers = <SocialUserCard>[].obs;
   final searchResults = <dynamic>[].obs;
@@ -46,6 +47,7 @@ class DiscoverTabController extends GetxController {
   final isDiscoverFiltersLoading = false.obs;
   final isSearchLoading = false.obs;
   final followingUserIds = <String>{}.obs;
+  final isSearchExpanded = false.obs;
   final searchQuery = ''.obs;
   final filters = const DiscoverFilterState().obs;
   final filterCountries = <CountryOption>[].obs;
@@ -109,6 +111,23 @@ class DiscoverTabController extends GetxController {
         searchResults.clear();
       }
     });
+  }
+
+  void openSearch() {
+    isSearchExpanded.value = true;
+    Future.microtask(() {
+      if (!searchFocusNode.hasFocus) {
+        searchFocusNode.requestFocus();
+      }
+    });
+  }
+
+  void closeSearch() {
+    searchController.clear();
+    searchResults.clear();
+    searchQuery.value = '';
+    isSearchExpanded.value = false;
+    searchFocusNode.unfocus();
   }
 
   /// Explore grid feed — `GET /api/discover` (separate from Messages New Match).
@@ -753,6 +772,7 @@ class DiscoverTabController extends GetxController {
   void onClose() {
     searchController.removeListener(_onSearchChanged);
     searchController.dispose();
+    searchFocusNode.dispose();
     _debounceTimer?.cancel();
     super.onClose();
   }
