@@ -83,11 +83,8 @@ class RoomEndpoints {
   /// GET /api/room/list
   static const String listActiveRooms = '/api/room/list';
 
-  /// POST /api/rooms/join
-  static const String joinRoom = '/api/rooms/join';
-
-  /// Legacy route kept as fallback.
-  static const String joinRoomLegacy = '/api/room/join';
+  /// POST /api/room/join
+  static const String joinRoom = '/api/room/join';
 
   /// POST /api/room/leave
   static const String leaveRoom = '/api/room/leave';

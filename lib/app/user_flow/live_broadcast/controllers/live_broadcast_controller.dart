@@ -86,7 +86,10 @@ class LiveBroadcastController extends GetxController {
         receiverId.value = _extractReceiverId(_roomData) ?? '';
         final streamingId = _extractStreamingId(_roomData);
         hasExplicitStreamingId.value = streamingId != null;
-        final rawId = streamingId ?? _extractBackendRoomId(_roomData) ?? '';
+        final backendRoomId = _extractBackendRoomId(_roomData);
+        final rawId = _isAudioVideoRoomPayload()
+            ? (backendRoomId ?? streamingId ?? '')
+            : (streamingId ?? backendRoomId ?? '');
         roomId.value = ZegoLiveIdUtils.sanitize(rawId);
       }
     }

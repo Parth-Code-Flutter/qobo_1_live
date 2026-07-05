@@ -459,8 +459,10 @@ class LiveRoomController extends GetxController {
       fallbackRoomId: roomId,
     );
     final roomType = _text(payload['type'])?.toUpperCase() ?? 'VIDEO';
-    await ZegoEngineUtils.resetForRoomProject();
-    if (!context.mounted) return;
+    await ZegoEngineUtils.resetForRoomProject().timeout(
+      const Duration(milliseconds: 700),
+      onTimeout: () {},
+    );
     Get.toNamed(
       Routes.LIVE_BROADCAST,
       arguments: {'isHost': false, 'roomType': roomType, 'roomData': payload},

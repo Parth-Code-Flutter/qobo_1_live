@@ -200,7 +200,7 @@ class RoomRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
-  /// Calls `POST /api/rooms/join` to join a room.
+  /// Calls `POST /api/room/join` to join a room.
   Future<Map<String, dynamic>?> joinRoom({
     required String roomId,
     String? password,
@@ -213,19 +213,11 @@ class RoomRepo {
       if (trimmedPassword != null && trimmedPassword.isNotEmpty)
         'password': trimmedPassword,
     };
-    var response = await _apiService.postRequest(
+    final response = await _apiService.postRequest(
       endPoint: RoomEndpoints.joinRoom,
       requestModel: body,
       isShowLoader: isShowLoader,
     );
-
-    if (response?.statusCode == 404) {
-      response = await _apiService.postRequest(
-        endPoint: RoomEndpoints.joinRoomLegacy,
-        requestModel: body,
-        isShowLoader: isShowLoader,
-      );
-    }
 
     if (response == null) return null;
     return ApiResponseUtils.tryDecodeMap(response.body);

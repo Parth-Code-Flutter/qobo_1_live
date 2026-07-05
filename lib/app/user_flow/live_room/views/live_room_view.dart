@@ -40,93 +40,104 @@ class LiveRoomView extends StatelessWidget {
             ),
           ),
           child: SafeArea(
-            child: Column(
+            child: Stack(
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-                  child: Column(
-                    children: [
-                      _topHeader(userSession, controller),
-                      Spacing.v16,
-                      _actionCtas(controller),
-                      Spacing.v16,
-                      _filterAndCategoryRow(context, categories),
-                      Spacing.v12,
-                      _topBanner(controller),
-                      Spacing.v12,
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 40),
-                    child: Obx(() {
-                      if (controller.isLoading.value) {
-                        return const Center(
-                          child: CircularProgressIndicator(
-                            color: kColorPrimary,
-                          ),
-                        );
-                      }
-                      if (controller.rooms.isEmpty) {
-                        if (controller.isSearching) {
-                          return _searchEmptyState(controller);
-                        }
-                        return _emptyState(controller);
-                      }
-                      final highlight = controller.highlightJoinGrid.value;
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+                      child: Column(
                         children: [
-                          _liveCountStrip(controller.rooms.length),
-                          Spacing.v10,
-                          Expanded(
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 300),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(18),
-                                border: Border.all(
-                                  color: highlight
-                                      ? LiveRoomUiColors.joinLiveBorder
-                                      : Colors.transparent,
-                                  width: 1.5,
-                                ),
-                              ),
-                              child: ColoredBox(
-                                color: LiveRoomUiColors.screenGradientBottom,
-                                child: GridView.builder(
-                                  physics: const BouncingScrollPhysics(),
-                                  itemCount: controller.rooms.length,
-                                  gridDelegate:
-                                      const SliverGridDelegateWithFixedCrossAxisCount(
-                                        crossAxisCount: 2,
-                                        mainAxisSpacing: 12,
-                                        crossAxisSpacing: 12,
-                                        childAspectRatio: 0.8,
-                                      ),
-                                  itemBuilder: (context, index) {
-                                    final room = controller.rooms[index];
-                                    return GestureDetector(
-                                      onTap: () => controller.joinRoom(room),
-                                      child: CommonLiveRoomWidget(
-                                        imageUrl: room['image'] as String,
-                                        userNameAge: room['nameAge'] as String,
-                                        badgeText: room['badge'] as String,
-                                        locationText:
-                                            room['location'] as String,
-                                        pointsText: room['points'] as String,
-                                        isFavorite: room['favorite'] as bool,
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
-                          ),
+                          _topHeader(context, userSession, controller),
+                          Spacing.v16,
+                          _categoryRow(categories),
+                          Spacing.v12,
+                          _topBanner(controller),
+                          Spacing.v12,
                         ],
-                      );
-                    }),
-                  ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 0, 14, 40),
+                        child: Obx(() {
+                          if (controller.isLoading.value) {
+                            return const Center(
+                              child: CircularProgressIndicator(
+                                color: kColorPrimary,
+                              ),
+                            );
+                          }
+                          if (controller.rooms.isEmpty) {
+                            if (controller.isSearching) {
+                              return _searchEmptyState(controller);
+                            }
+                            return _emptyState(controller);
+                          }
+                          final highlight = controller.highlightJoinGrid.value;
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _liveCountStrip(controller.rooms.length),
+                              Spacing.v10,
+                              Expanded(
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 300),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(18),
+                                    border: Border.all(
+                                      color: highlight
+                                          ? LiveRoomUiColors.joinLiveBorder
+                                          : Colors.transparent,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  child: ColoredBox(
+                                    color: Colors.transparent,
+                                    child: GridView.builder(
+                                      physics: const BouncingScrollPhysics(),
+                                      itemCount: controller.rooms.length,
+                                      gridDelegate:
+                                          const SliverGridDelegateWithFixedCrossAxisCount(
+                                            crossAxisCount: 2,
+                                            mainAxisSpacing: 12,
+                                            crossAxisSpacing: 12,
+                                            childAspectRatio: 0.8,
+                                          ),
+                                      itemBuilder: (context, index) {
+                                        final room = controller.rooms[index];
+                                        return GestureDetector(
+                                          onTap: () =>
+                                              controller.joinRoom(room),
+                                          child: CommonLiveRoomWidget(
+                                            imageUrl: room['image'] as String,
+                                            userNameAge:
+                                                room['nameAge'] as String,
+                                            badgeText: room['badge'] as String,
+                                            locationText:
+                                                room['location'] as String,
+                                            pointsText:
+                                                room['points'] as String,
+                                            isFavorite:
+                                                room['favorite'] as bool,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        }),
+                      ),
+                    ),
+                  ],
+                ),
+                Positioned(
+                  right: 18,
+                  bottom: 54,
+                  child: _liveActionMenu(controller),
                 ),
               ],
             ),
@@ -136,28 +147,171 @@ class LiveRoomView extends StatelessWidget {
     );
   }
 
-  /// Primary actions: start broadcasting or jump into an existing room.
-  Widget _actionCtas(LiveRoomController controller) {
-    return Row(
-      children: [
-        Expanded(
-          child: _ctaButton(
-            label: LocaleKeys.liveRoomGoLive.tr,
-            icon: Icons.videocam_rounded,
-            filled: true,
-            onTap: controller.openGoLive,
+  /// Compact action menu that replaces the large top CTA buttons.
+  Widget _liveActionMenu(LiveRoomController controller) {
+    var isOpen = false;
+
+    return StatefulBuilder(
+      builder: (context, setMenuState) {
+        void closeMenu() => setMenuState(() => isOpen = false);
+
+        return AnimatedSize(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.bottomRight,
+          child: SizedBox(
+            width: 176,
+            height: isOpen ? 160 : 54,
+            child: Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.bottomRight,
+              children: [
+                Positioned(
+                  right: 0,
+                  bottom: 64,
+                  child: IgnorePointer(
+                    ignoring: !isOpen,
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 180),
+                      opacity: isOpen ? 1 : 0,
+                      child: AnimatedSlide(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOutCubic,
+                        offset: isOpen ? Offset.zero : const Offset(0, 0.08),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _liveActionOption(
+                              label: LocaleKeys.liveRoomGoLive.tr,
+                              icon: Icons.videocam_rounded,
+                              filled: true,
+                              onTap: () {
+                                closeMenu();
+                                controller.openGoLive();
+                              },
+                            ),
+                            Spacing.v8,
+                            _liveActionOption(
+                              label: LocaleKeys.liveRoomJoinLive.tr,
+                              icon: Icons.sensors_rounded,
+                              filled: false,
+                              onTap: () {
+                                closeMenu();
+                                controller.focusJoinLive();
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                _plusActionButton(
+                  isOpen: isOpen,
+                  onTap: () => setMenuState(() => isOpen = !isOpen),
+                ),
+              ],
+            ),
           ),
-        ),
-        Spacing.h12,
-        Expanded(
-          child: _ctaButton(
-            label: LocaleKeys.liveRoomJoinLive.tr,
-            icon: Icons.sensors_rounded,
-            filled: false,
-            onTap: controller.focusJoinLive,
+        );
+      },
+    );
+  }
+
+  Widget _plusActionButton({
+    required bool isOpen,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        width: 54,
+        height: 54,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: const LinearGradient(
+            colors: [
+              LiveRoomUiColors.goLiveGradientStart,
+              LiveRoomUiColors.goLiveGradientEnd,
+            ],
           ),
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.18)),
+          boxShadow: [
+            BoxShadow(
+              color: LiveRoomUiColors.goLiveGradientStart.withValues(
+                alpha: 0.38,
+              ),
+              blurRadius: 16,
+              offset: const Offset(0, 7),
+            ),
+          ],
         ),
-      ],
+        child: AnimatedRotation(
+          duration: const Duration(milliseconds: 180),
+          turns: isOpen ? 0.125 : 0,
+          child: const Icon(Icons.add_rounded, color: kColorWhite, size: 30),
+        ),
+      ),
+    );
+  }
+
+  Widget _liveActionOption({
+    required String label,
+    required IconData icon,
+    required bool filled,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        height: 44,
+        width: 156,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          gradient: filled
+              ? const LinearGradient(
+                  colors: [
+                    LiveRoomUiColors.goLiveGradientStart,
+                    LiveRoomUiColors.goLiveGradientEnd,
+                  ],
+                )
+              : null,
+          color: filled ? null : LiveRoomUiColors.chipInactiveBg,
+          border: Border.all(
+            color: filled
+                ? kColorWhite.withValues(alpha: 0.12)
+                : LiveRoomUiColors.joinLiveBorder,
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: kColorBlack.withValues(alpha: 0.22),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: kColorWhite, size: 18),
+            Spacing.h8,
+            Expanded(
+              child: SemiBoldText(
+                text: label,
+                fontSize: TextStyles.k12FontSize,
+                color: kColorWhite,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -192,8 +346,9 @@ class LiveRoomView extends StatelessWidget {
           boxShadow: filled
               ? [
                   BoxShadow(
-                    color: LiveRoomUiColors.goLiveGradientStart
-                        .withValues(alpha: 0.4),
+                    color: LiveRoomUiColors.goLiveGradientStart.withValues(
+                      alpha: 0.4,
+                    ),
                     blurRadius: 14,
                     offset: const Offset(0, 6),
                   ),
@@ -257,11 +412,7 @@ class LiveRoomView extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
-            Icons.search_off_rounded,
-            color: kColorHint,
-            size: 48,
-          ),
+          const Icon(Icons.search_off_rounded, color: kColorHint, size: 48),
           Spacing.v12,
           SemiBoldText(
             text: 'No rooms match "${controller.searchQuery.value}"',
@@ -359,6 +510,7 @@ class LiveRoomView extends StatelessWidget {
   }
 
   Widget _topHeader(
+    BuildContext context,
     UserSessionController userSession,
     LiveRoomController liveRoomController,
   ) {
@@ -380,10 +532,7 @@ class LiveRoomView extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: kColorWhite,
                   shape: BoxShape.circle,
-                  border: Border.all(
-                    color: const Color(0xB3FFFFFF),
-                    width: 1,
-                  ),
+                  border: Border.all(color: const Color(0xB3FFFFFF), width: 1),
                 ),
                 child: ClipOval(
                   child: SafeNetworkAvatar(
@@ -435,15 +584,47 @@ class LiveRoomView extends StatelessWidget {
                 ),
               ),
               Spacing.h8,
+              _headerIconButton(
+                onTap: () => liveRoomController.openFilterSheet(context),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    SvgPicture.asset(
+                      kIconFilter,
+                      width: 17,
+                      height: 17,
+                      colorFilter: const ColorFilter.mode(
+                        kColorPrimary,
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                    if (liveRoomController.hasActiveFilters)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          width: 7,
+                          height: 7,
+                          decoration: const BoxDecoration(
+                            color: LiveRoomUiColors.goLiveGradientStart,
+                            shape: BoxShape.circle,
+                            border: Border.fromBorderSide(
+                              BorderSide(color: kColorWhite, width: 1),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Spacing.h8,
               InkWell(
                 onTap: () => Get.toNamed(Routes.LEADER_BOARD),
                 borderRadius: BorderRadius.circular(22),
                 child: SizedBox(
                   width: 36,
                   height: 36,
-                  child: Center(
-                    child: SvgPicture.asset(kIconLeaderboard),
-                  ),
+                  child: Center(child: SvgPicture.asset(kIconLeaderboard)),
                 ),
               ),
             ],
@@ -548,86 +729,37 @@ class LiveRoomView extends StatelessWidget {
     );
   }
 
-  Widget _filterAndCategoryRow(
-    BuildContext context,
-    List<String> categories,
-  ) {
-    final liveRoomController = _resolveController();
-    return SizedBox(
-      height: 44,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          _filterButton(
-            hasActiveFilters: liveRoomController.hasActiveFilters,
-            onTap: () => liveRoomController.openFilterSheet(context),
-          ),
-          Spacing.h12,
-          Expanded(
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              itemCount: categories.length,
-              separatorBuilder: (_, __) => Spacing.h8,
-              itemBuilder: (context, index) {
-                return _categoryChip(
-                  label: categories[index],
-                  isSelected:
-                      liveRoomController.selectedCategoryIndex == index,
-                  onTap: () => liveRoomController.onCategorySelected(index),
-                );
-              },
-            ),
-          ),
-        ],
+  Widget _headerIconButton({
+    required VoidCallback onTap,
+    required Widget child,
+  }) {
+    return Material(
+      color: kColorWhite,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: SizedBox(width: 36, height: 36, child: Center(child: child)),
       ),
     );
   }
 
-  Widget _filterButton({
-    required bool hasActiveFilters,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: kColorWhite,
-      shape: const CircleBorder(),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: SizedBox(
-          width: 44,
-          height: 44,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              SvgPicture.asset(
-                kIconFilter,
-                width: 20,
-                height: 20,
-                colorFilter: const ColorFilter.mode(
-                  kColorPrimary,
-                  BlendMode.srcIn,
-                ),
-              ),
-              if (hasActiveFilters)
-                Positioned(
-                  top: 10,
-                  right: 10,
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: LiveRoomUiColors.goLiveGradientStart,
-                      shape: BoxShape.circle,
-                      border: Border.fromBorderSide(
-                        BorderSide(color: kColorWhite, width: 1.2),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
+  Widget _categoryRow(List<String> categories) {
+    final liveRoomController = _resolveController();
+    return SizedBox(
+      height: 44,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: categories.length,
+        separatorBuilder: (_, __) => Spacing.h8,
+        itemBuilder: (context, index) {
+          return _categoryChip(
+            label: categories[index],
+            isSelected: liveRoomController.selectedCategoryIndex == index,
+            onTap: () => liveRoomController.onCategorySelected(index),
+          );
+        },
       ),
     );
   }

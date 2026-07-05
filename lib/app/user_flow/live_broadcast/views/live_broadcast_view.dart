@@ -7,8 +7,7 @@ import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
-import 'package:zego_uikit_prebuilt_call/zego_uikit_prebuilt_call.dart'
-    as call;
+import 'package:zego_uikit_prebuilt_call/zego_uikit_prebuilt_call.dart' as call;
 import 'package:zego_uikit_prebuilt_live_streaming/zego_uikit_prebuilt_live_streaming.dart';
 import 'package:zego_uikit_signaling_plugin/zego_uikit_signaling_plugin.dart';
 import 'package:qobo_one_live/constants/zego_config.dart';
@@ -16,6 +15,7 @@ import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 
 import '../controllers/live_broadcast_controller.dart';
+import '../widgets/audio_room_stage_overlay.dart';
 import '../widgets/room_options_sheet.dart';
 
 class LiveBroadcastView extends GetView<LiveBroadcastController> {
@@ -76,37 +76,43 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
         : 'User';
 
     return Obx(() {
-      if (!controller.canOpenZego) {
-        return _buildConnectionIssueState();
-      }
-
+      final isVideoRoom = controller.isVideoRoom;
       final conferenceId = controller.roomId.value;
-      if (conferenceId.isEmpty) {
+      final canOpenCall = controller.canOpenZego && conferenceId.isNotEmpty;
+
+      if (isVideoRoom && !canOpenCall) {
         return _buildConnectionIssueState();
       }
 
-      final config = _buildGroupCallConfig(controller.isVideoRoom);
+      final config = _buildGroupCallConfig(isVideoRoom);
 
       return Stack(
         children: [
-          call.ZegoUIKitPrebuiltCall(
-            key: ValueKey('group_call_$conferenceId'),
-            appID: ZegoConfig.roomAppId,
-            appSign: ZegoConfig.roomAppSign,
-            userID: currentUserId,
-            userName: currentUserName,
-            callID: conferenceId,
-            config: config,
-            events: call.ZegoUIKitPrebuiltCallEvents(
-              onError: controller.handleGroupCallRoomError,
-              onCallEnd: (event, defaultAction) {
-                if (_shouldReportGroupCallExit(event.reason)) {
-                  controller.reportRoomExit();
-                }
-                defaultAction.call();
-              },
-            ),
-          ),
+          if (canOpenCall)
+            call.ZegoUIKitPrebuiltCall(
+              key: ValueKey('group_call_$conferenceId'),
+              appID: ZegoConfig.roomAppId,
+              appSign: ZegoConfig.roomAppSign,
+              userID: currentUserId,
+              userName: currentUserName,
+              callID: conferenceId,
+              config: config,
+              events: call.ZegoUIKitPrebuiltCallEvents(
+                onError: controller.handleGroupCallRoomError,
+                onCallEnd: (event, defaultAction) {
+                  if (_shouldReportGroupCallExit(event.reason)) {
+                    controller.reportRoomExit();
+                  }
+                  defaultAction.call();
+                },
+              ),
+            )
+          else
+            const Positioned.fill(child: ColoredBox(color: Colors.black)),
+          if (!isVideoRoom) ...[
+            const Positioned.fill(bottom: 92, child: AudioRoomStageOverlay()),
+            if (!canOpenCall) _buildAudioRoomConnectionBanner(),
+          ],
           _buildGroupCallGiftDock(),
         ],
       );
@@ -199,6 +205,71 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
         ),
       );
     });
+  }
+
+  Widget _buildAudioRoomConnectionBanner() {
+    return Positioned(
+      left: 16,
+      right: 16,
+      bottom: 108,
+      child: SafeArea(
+        minimum: const EdgeInsets.only(bottom: 4),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: _surface,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.22),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.wifi_tethering_rounded,
+                color: _accent,
+                size: 18,
+              ),
+              Spacing.h8,
+              Expanded(
+                child: AppText(
+                  text: controller.connectionIssue.value.isEmpty
+                      ? 'Connecting audio...'
+                      : controller.connectionIssue.value,
+                  fontSize: TextStyles.k12FontSize,
+                  color: kColorWhite.withValues(alpha: 0.78),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Spacing.h8,
+              TextButton(
+                onPressed: controller.leaveRoom,
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(56, 34),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  backgroundColor: _accentPurple,
+                  foregroundColor: kColorWhite,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: const SemiBoldText(
+                  text: 'Back',
+                  fontSize: TextStyles.k12FontSize,
+                  color: kColorWhite,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   call.ZegoUIKitPrebuiltCallConfig _buildGroupCallConfig(bool isVideoRoom) {
