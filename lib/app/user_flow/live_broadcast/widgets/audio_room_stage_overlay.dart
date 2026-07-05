@@ -11,9 +11,8 @@ import '../controllers/live_broadcast_controller.dart';
 class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
   const AudioRoomStageOverlay({super.key});
 
-  static const _surfaceStrong = Color(0xFFFFFFFF);
-  static const _ink = Color(0xFF21172C);
-  static const _muted = Color(0xFF6C6074);
+  static const _ink = Color(0xFF24162E);
+  static const _muted = Color(0xFF776A80);
 
   @override
   Widget build(BuildContext context) {
@@ -22,8 +21,8 @@ class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFF3B0D45), Color(0xFF761B65), Color(0xFFF7F2FA)],
-          stops: [0, 0.22, 0.46],
+          colors: [Color(0xFF3B0D45), Color(0xFF8D2578), Color(0xFFF7F1FA)],
+          stops: [0, 0.28, 0.58],
         ),
       ),
       child: SafeArea(
@@ -31,25 +30,27 @@ class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final compact = constraints.maxWidth < 390;
-            return SingleChildScrollView(
+            return CustomScrollView(
               physics: const BouncingScrollPhysics(),
-              padding: EdgeInsets.fromLTRB(
-                compact ? 12 : 16,
-                10,
-                compact ? 12 : 16,
-                18,
-              ),
-              child: Column(
-                children: [
-                  _RoomHeader(compact: compact),
-                  const SizedBox(height: 14),
-                  _AnnouncementRow(compact: compact),
-                  const SizedBox(height: 18),
-                  _SeatStage(compact: compact),
-                  Spacing.v16,
-                  _ChatPreview(compact: compact),
-                ],
-              ),
+              slivers: [
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(
+                    compact ? 12 : 16,
+                    10,
+                    compact ? 12 : 16,
+                    18,
+                  ),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate.fixed([
+                      _RoomHeader(compact: compact),
+                      SizedBox(height: compact ? 18 : 22),
+                      _CenterStage(compact: compact),
+                      SizedBox(height: compact ? 16 : 18),
+                      _MemberGrid(compact: compact),
+                    ]),
+                  ),
+                ),
+              ],
             );
           },
         ),
@@ -66,23 +67,23 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final roomId = controller.roomId.value;
       final title = controller.streamTitle.value.isNotEmpty
           ? controller.streamTitle.value
           : 'Audio Room';
+      final roomId = controller.roomId.value;
 
       return Container(
-        padding: EdgeInsets.all(compact ? 10 : 12),
+        padding: EdgeInsets.all(compact ? 12 : 14),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [kColorPrimary, kColorBottomNav],
+            colors: [kColorPrimary, Color(0xFF4B0B3D)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: kColorPrimary.withValues(alpha: 0.26),
+              color: kColorPrimary.withValues(alpha: 0.24),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -90,7 +91,7 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
         ),
         child: Row(
           children: [
-            _RoundIconButton(
+            _CircleButton(
               icon: Icons.arrow_back_ios_new_rounded,
               onTap: controller.leaveRoom,
               compact: compact,
@@ -100,11 +101,8 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
             AppUserAvatar(
               name: controller.hostName.value,
               imageUrl: controller.hostAvatarUrl.value,
-              size: compact ? 50 : 58,
-              border: Border.all(
-                color: kColorWhite.withValues(alpha: 0.9),
-                width: 2,
-              ),
+              size: compact ? 48 : 56,
+              border: Border.all(color: kColorWhite, width: 2),
             ),
             Spacing.h10,
             Expanded(
@@ -112,72 +110,35 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: SemiBoldText(
-                          text: title,
-                          fontSize: compact
-                              ? TextStyles.k14FontSize
-                              : TextStyles.k16FontSize,
-                          color: kColorWhite,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      Spacing.h6,
-                      Icon(
-                        Icons.edit_square,
-                        size: compact ? 15 : 17,
-                        color: kColorWhite.withValues(alpha: 0.86),
-                      ),
-                    ],
+                  SemiBoldText(
+                    text: title,
+                    fontSize: compact
+                        ? TextStyles.k14FontSize
+                        : TextStyles.k16FontSize,
+                    color: kColorWhite,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   Spacing.v4,
-                  Row(
-                    children: [
-                      Flexible(
-                        child: AppText(
-                          text: 'Room ID: $roomId',
-                          fontSize: TextStyles.k12FontSize,
-                          color: kColorWhite.withValues(alpha: 0.82),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      Spacing.h6,
-                      Icon(
-                        Icons.copy_rounded,
-                        size: compact ? 14 : 16,
-                        color: kColorWhite.withValues(alpha: 0.78),
-                      ),
-                    ],
-                  ),
-                  Spacing.v6,
-                  Row(
-                    children: [
-                      _HeaderMetric(
-                        icon: Icons.local_fire_department_rounded,
-                        label: controller.likesLabel.value,
-                      ),
-                      Spacing.h8,
-                      _HeaderMetric(
-                        icon: Icons.group_rounded,
-                        label: '${controller.viewerCount.value}',
-                      ),
-                    ],
+                  AppText(
+                    text: 'Room ID: ${roomId.isEmpty ? '--' : roomId}',
+                    fontSize: TextStyles.k10FontSize,
+                    color: kColorWhite.withValues(alpha: 0.78),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
             Spacing.h8,
-            _RoundIconButton(
-              icon: Icons.ios_share_rounded,
-              onTap: controller.shareRoom,
-              compact: compact,
+            _HeaderMetric(
+              icon: Icons.local_fire_department_rounded,
+              label: controller.likesLabel.value.isEmpty
+                  ? '0'
+                  : controller.likesLabel.value,
             ),
             Spacing.h8,
-            _RoundIconButton(
+            _CircleButton(
               icon: Icons.power_settings_new_rounded,
               onTap: controller.leaveRoom,
               compact: compact,
@@ -186,6 +147,441 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
         ),
       );
     });
+  }
+}
+
+class _CenterStage extends GetView<LiveBroadcastController> {
+  const _CenterStage({required this.compact});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final hostName = controller.hostName.value.isEmpty
+          ? 'Host'
+          : controller.hostName.value;
+      final hostId = controller.receiverId.value.isNotEmpty
+          ? controller.receiverId.value
+          : controller.roomId.value;
+
+      return Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 8 : 12,
+          vertical: compact ? 12 : 16,
+        ),
+        decoration: BoxDecoration(
+          color: kColorWhite.withValues(alpha: 0.80),
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: kColorPrimary.withValues(alpha: 0.08),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(child: _MiniEmptySeat(seatNo: 2, compact: compact)),
+                Spacing.h6,
+                Expanded(child: _MiniEmptySeat(seatNo: 3, compact: compact)),
+                SizedBox(width: compact ? 8 : 12),
+                _HostSeat(
+                  name: hostName,
+                  avatarUrl: controller.hostAvatarUrl.value,
+                  hostId: hostId,
+                  compact: compact,
+                ),
+                SizedBox(width: compact ? 8 : 12),
+                Expanded(child: _MiniEmptySeat(seatNo: 4, compact: compact)),
+                Spacing.h6,
+                Expanded(child: _MiniEmptySeat(seatNo: 5, compact: compact)),
+              ],
+            ),
+          ],
+        ),
+      );
+    });
+  }
+}
+
+class _MemberGrid extends GetView<LiveBroadcastController> {
+  const _MemberGrid({required this.compact});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final seats = _buildSeats();
+      final crossAxisCount = compact ? 4 : 4;
+
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: seats.length,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: crossAxisCount,
+          mainAxisSpacing: compact ? 12 : 14,
+          crossAxisSpacing: compact ? 8 : 12,
+          childAspectRatio: compact ? 0.70 : 0.74,
+        ),
+        itemBuilder: (context, index) {
+          final seat = seats[index];
+          if (seat.locked) return _LockedSeat(seatNo: seat.seatNo);
+          if (!seat.occupied) return _GridEmptySeat(seatNo: seat.seatNo);
+          return _MemberSeat(seat: seat);
+        },
+      );
+    });
+  }
+
+  List<_AudioSeatData> _buildSeats() {
+    final seats = <_AudioSeatData>[];
+    var seatNo = 6;
+
+    for (final viewer in controller.liveViewers) {
+      if (seats.length >= 8) break;
+      if (viewer['isHost'] == true) continue;
+      seats.add(
+        _AudioSeatData(
+          seatNo: seatNo,
+          name: viewer['name']?.toString() ?? 'Member',
+          id: viewer['targetId']?.toString() ?? viewer['id']?.toString() ?? '',
+          avatarUrl: viewer['avatarUrl']?.toString(),
+          occupied: true,
+          muted: seatNo % 5 == 0,
+          level: 12 + seats.length,
+        ),
+      );
+      seatNo++;
+    }
+
+    const preview = [
+      ('Rahul', '785632', 23),
+      ('Pooja', '847392', 21),
+      ('Arjun', '765921', 19),
+      ('Neha', '936471', 18),
+      ('Vikash', '665738', 17),
+      ('Anjali', '883910', 16),
+      ('Karan', '629384', 15),
+      ('Simran', '910273', 14),
+    ];
+
+    var previewIndex = 0;
+    while (seats.length < 8 && previewIndex < preview.length) {
+      final item = preview[previewIndex];
+      seats.add(
+        _AudioSeatData(
+          seatNo: seatNo,
+          name: item.$1,
+          id: item.$2,
+          occupied: true,
+          muted: seatNo % 5 == 0,
+          level: item.$3,
+        ),
+      );
+      seatNo++;
+      previewIndex++;
+    }
+
+    while (seats.length < 10) {
+      seats.add(_AudioSeatData.empty(seatNo));
+      seatNo++;
+    }
+    seats.add(_AudioSeatData.empty(seatNo).copyWith(locked: true, level: 20));
+    return seats;
+  }
+}
+
+class _HostSeat extends StatelessWidget {
+  const _HostSeat({
+    required this.name,
+    required this.avatarUrl,
+    required this.hostId,
+    required this.compact,
+  });
+
+  final String name;
+  final String? avatarUrl;
+  final String hostId;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final avatarSize = compact ? 92.0 : 108.0;
+    final ringSize = compact ? 122.0 : 140.0;
+
+    return SizedBox(
+      width: compact ? 142 : 166,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Stack(
+            alignment: Alignment.center,
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: ringSize,
+                height: ringSize,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    colors: [kColorProfileActionPinkStart, kColorPrimary],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: kColorPrimary.withValues(alpha: 0.26),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+              ),
+              AppUserAvatar(
+                name: name,
+                imageUrl: avatarUrl,
+                size: avatarSize,
+                border: Border.all(color: kColorWhite, width: 4),
+              ),
+              const Positioned(
+                top: -10,
+                child: Icon(
+                  Icons.workspace_premium_rounded,
+                  color: kColorWalletAmount,
+                  size: 38,
+                ),
+              ),
+              const Positioned(left: 8, top: 4, child: _SeatBadge(number: 1)),
+              const Positioned(right: 8, bottom: 10, child: _MicBubble()),
+            ],
+          ),
+          Transform.translate(
+            offset: const Offset(0, -8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 6),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [kColorProfileFeatureBlue, kColorPrimary],
+                ),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const SemiBoldText(
+                text: 'Host',
+                fontSize: TextStyles.k12FontSize,
+                color: kColorWhite,
+              ),
+            ),
+          ),
+          SemiBoldText(
+            text: name,
+            fontSize: TextStyles.k14FontSize,
+            color: AudioRoomStageOverlay._ink,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            align: TextAlign.center,
+          ),
+          Spacing.v2,
+          AppText(
+            text: 'ID: ${hostId.isEmpty ? '000000' : hostId}',
+            fontSize: TextStyles.k10FontSize,
+            color: AudioRoomStageOverlay._muted,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            align: TextAlign.center,
+          ),
+          const _DiamondCount(value: 28),
+        ],
+      ),
+    );
+  }
+}
+
+class _MemberSeat extends StatelessWidget {
+  const _MemberSeat({required this.seat});
+
+  final _AudioSeatData seat;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            AppUserAvatar(
+              name: seat.name,
+              imageUrl: seat.avatarUrl,
+              size: 58,
+              border: Border.all(
+                color: kColorPrimary.withValues(alpha: 0.14),
+                width: 2,
+              ),
+            ),
+            Positioned(
+              left: -8,
+              top: -8,
+              child: _SeatBadge(number: seat.seatNo),
+            ),
+            Positioned(
+              right: -7,
+              bottom: -5,
+              child: _MicBubble(muted: seat.muted, small: true),
+            ),
+          ],
+        ),
+        Spacing.v8,
+        SemiBoldText(
+          text: seat.name,
+          fontSize: TextStyles.k10FontSize,
+          color: AudioRoomStageOverlay._ink,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          align: TextAlign.center,
+        ),
+        AppText(
+          text: 'ID: ${seat.id.isEmpty ? seat.seatNo : seat.id}',
+          fontSize: 9,
+          color: AudioRoomStageOverlay._muted,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          align: TextAlign.center,
+        ),
+        _DiamondCount(value: seat.level),
+      ],
+    );
+  }
+}
+
+class _MiniEmptySeat extends StatelessWidget {
+  const _MiniEmptySeat({required this.seatNo, required this.compact});
+
+  final int seatNo;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: compact ? 92 : 108,
+      constraints: const BoxConstraints(minWidth: 36),
+      decoration: BoxDecoration(
+        color: kColorWhite.withValues(alpha: 0.70),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: kColorPrimary.withValues(alpha: 0.06)),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned(top: 7, left: 6, child: _SeatBadge(number: seatNo)),
+          Icon(
+            Icons.mic_rounded,
+            color: kColorPrimary.withValues(alpha: 0.22),
+            size: compact ? 28 : 32,
+          ),
+          Positioned(
+            bottom: 8,
+            child: Icon(
+              Icons.add_rounded,
+              color: kColorPrimary,
+              size: compact ? 20 : 22,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GridEmptySeat extends StatelessWidget {
+  const _GridEmptySeat({required this.seatNo});
+
+  final int seatNo;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            Container(
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(
+                color: kColorWhite.withValues(alpha: 0.72),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: kColorPrimary.withValues(alpha: 0.08),
+                ),
+              ),
+              child: Icon(
+                Icons.mic_none_rounded,
+                color: kColorPrimary.withValues(alpha: 0.28),
+                size: 28,
+              ),
+            ),
+            Positioned(left: -8, top: -8, child: _SeatBadge(number: seatNo)),
+          ],
+        ),
+        Spacing.v8,
+        const AppText(
+          text: 'Open',
+          fontSize: TextStyles.k10FontSize,
+          color: AudioRoomStageOverlay._muted,
+          align: TextAlign.center,
+        ),
+      ],
+    );
+  }
+}
+
+class _LockedSeat extends StatelessWidget {
+  const _LockedSeat({required this.seatNo});
+
+  final int seatNo;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            Container(
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(
+                color: kColorWhite.withValues(alpha: 0.62),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.lock_rounded,
+                color: kColorPrimary.withValues(alpha: 0.36),
+              ),
+            ),
+            Positioned(left: -8, top: -8, child: _SeatBadge(number: seatNo)),
+          ],
+        ),
+        Spacing.v8,
+        const AppText(
+          text: 'Locked',
+          fontSize: TextStyles.k10FontSize,
+          color: AudioRoomStageOverlay._muted,
+          align: TextAlign.center,
+        ),
+        const _DiamondCount(value: 20),
+      ],
+    );
   }
 }
 
@@ -198,7 +594,7 @@ class _HeaderMetric extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
         color: kColorWhite.withValues(alpha: 0.13),
         borderRadius: BorderRadius.circular(14),
@@ -209,7 +605,7 @@ class _HeaderMetric extends StatelessWidget {
           Icon(icon, size: 14, color: kColorWalletAmount),
           Spacing.h4,
           AppText(
-            text: label.isEmpty ? '0' : label,
+            text: label,
             fontSize: TextStyles.k10FontSize,
             color: kColorWhite,
           ),
@@ -219,660 +615,8 @@ class _HeaderMetric extends StatelessWidget {
   }
 }
 
-class _AnnouncementRow extends GetView<LiveBroadcastController> {
-  const _AnnouncementRow({required this.compact});
-
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            height: compact ? 42 : 46,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: AudioRoomStageOverlay._surfaceStrong.withValues(
-                alpha: 0.94,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: kColorPrimary.withValues(alpha: 0.10)),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.campaign_rounded,
-                  color: kColorPrimary,
-                  size: 20,
-                ),
-                Spacing.h8,
-                Expanded(
-                  child: AppText(
-                    text: 'Announcement: Enjoy the talk and be respectful...',
-                    fontSize: TextStyles.k12FontSize,
-                    color: AudioRoomStageOverlay._ink,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  color: AudioRoomStageOverlay._muted,
-                ),
-              ],
-            ),
-          ),
-        ),
-        Spacing.h10,
-        _PillAction(icon: Icons.settings_rounded, label: 'Room Set'),
-        Spacing.h8,
-        _PillAction(icon: Icons.emoji_events_rounded, label: 'Ranking'),
-      ],
-    );
-  }
-}
-
-class _SeatStage extends GetView<LiveBroadcastController> {
-  const _SeatStage({required this.compact});
-
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    return Obx(() {
-      final seats = _buildSeats();
-      final seatSize = compact ? 74.0 : 82.0;
-      final hostSize = compact ? 126.0 : 144.0;
-
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(child: _EmptySeat(seatNo: 2, size: seatSize)),
-                    Spacing.h8,
-                    Expanded(child: _EmptySeat(seatNo: 3, size: seatSize)),
-                    Spacing.h10,
-                    SizedBox(
-                      width: hostSize,
-                      child: _HostSeat(
-                        name: controller.hostName.value,
-                        avatarUrl: controller.hostAvatarUrl.value,
-                        roomId: controller.receiverId.value.isNotEmpty
-                            ? controller.receiverId.value
-                            : controller.roomId.value,
-                      ),
-                    ),
-                    Spacing.h10,
-                    Expanded(child: _EmptySeat(seatNo: 4, size: seatSize)),
-                    Spacing.h8,
-                    Expanded(child: _EmptySeat(seatNo: 5, size: seatSize)),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: 11,
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: compact ? 3 : 4,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: compact ? 0.78 : 0.82,
-                  ),
-                  itemBuilder: (context, index) {
-                    final seat = seats[index + 5];
-                    if (seat.locked) return _LockedSeat(seatNo: seat.seatNo);
-                    if (!seat.occupied) {
-                      return _EmptySeat(seatNo: seat.seatNo, size: seatSize);
-                    }
-                    return _MemberSeat(seat: seat);
-                  },
-                ),
-              ],
-            ),
-          ),
-          Spacing.h10,
-          _SideRail(compact: compact),
-        ],
-      );
-    });
-  }
-
-  List<_AudioSeatData> _buildSeats() {
-    final seats = List.generate(16, (index) => _AudioSeatData.empty(index + 1));
-    seats[0] = _AudioSeatData(
-      seatNo: 1,
-      name: controller.hostName.value,
-      id: controller.receiverId.value,
-      avatarUrl: controller.hostAvatarUrl.value,
-      level: 28,
-      occupied: true,
-      host: true,
-    );
-
-    var cursor = 5;
-    for (final viewer in controller.liveViewers) {
-      if (cursor >= 15) break;
-      if (viewer['isHost'] == true) continue;
-      seats[cursor] = _AudioSeatData(
-        seatNo: cursor + 1,
-        name: viewer['name']?.toString() ?? 'Member',
-        id: viewer['targetId']?.toString() ?? viewer['id']?.toString() ?? '',
-        avatarUrl: viewer['avatarUrl']?.toString(),
-        level: 12 + cursor,
-        occupied: true,
-        muted: cursor % 4 == 2,
-      );
-      cursor++;
-    }
-
-    // UI-only preview seats keep the room lively before real members join.
-    final preview = [
-      ('Rahul', '785632', 23),
-      ('Pooja', '847392', 21),
-      ('Arjun', '765921', 19),
-      ('Neha', '936471', 18),
-      ('Vikash', '665738', 17),
-      ('Anjali', '883910', 16),
-      ('Karan', '629384', 15),
-      ('Simran', '910273', 14),
-      ('Rohit', '772910', 13),
-      ('Divya', '883112', 12),
-    ];
-    var previewIndex = 0;
-    while (cursor < 15 && previewIndex < preview.length) {
-      final item = preview[previewIndex];
-      seats[cursor] = _AudioSeatData(
-        seatNo: cursor + 1,
-        name: item.$1,
-        id: item.$2,
-        level: item.$3,
-        occupied: true,
-        muted: cursor % 5 == 0,
-      );
-      cursor++;
-      previewIndex++;
-    }
-
-    seats[15] = _AudioSeatData.empty(16).copyWith(locked: true, level: 20);
-    return seats;
-  }
-}
-
-class _HostSeat extends StatelessWidget {
-  const _HostSeat({
-    required this.name,
-    required this.avatarUrl,
-    required this.roomId,
-  });
-
-  final String name;
-  final String? avatarUrl;
-  final String roomId;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Stack(
-          alignment: Alignment.center,
-          clipBehavior: Clip.none,
-          children: [
-            Container(
-              width: 116,
-              height: 116,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  colors: [kColorProfileActionPinkStart, kColorPrimary],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: kColorPrimary.withValues(alpha: 0.30),
-                    blurRadius: 18,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-            ),
-            AppUserAvatar(
-              name: name,
-              imageUrl: avatarUrl,
-              size: 92,
-              border: Border.all(color: kColorWhite, width: 4),
-            ),
-            const Positioned(
-              top: -12,
-              child: Icon(
-                Icons.workspace_premium_rounded,
-                color: kColorWalletAmount,
-                size: 38,
-              ),
-            ),
-            Positioned(right: 4, bottom: 8, child: _MicBubble(muted: false)),
-            const Positioned(left: 4, top: 4, child: _SeatBadge(number: 1)),
-          ],
-        ),
-        Transform.translate(
-          offset: const Offset(0, -7),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [kColorProfileFeatureBlue, kColorPrimary],
-              ),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const SemiBoldText(
-              text: 'Host',
-              fontSize: TextStyles.k12FontSize,
-              color: kColorWhite,
-            ),
-          ),
-        ),
-        SemiBoldText(
-          text: name.isEmpty ? 'Host' : name,
-          fontSize: TextStyles.k12FontSize,
-          color: AudioRoomStageOverlay._ink,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          align: TextAlign.center,
-        ),
-        AppText(
-          text: 'ID: ${roomId.isEmpty ? '000000' : roomId}',
-          fontSize: TextStyles.k10FontSize,
-          color: AudioRoomStageOverlay._muted,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        const _DiamondCount(value: 28),
-      ],
-    );
-  }
-}
-
-class _MemberSeat extends StatelessWidget {
-  const _MemberSeat({required this.seat});
-
-  final _AudioSeatData seat;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 7),
-      decoration: BoxDecoration(
-        color: AudioRoomStageOverlay._surfaceStrong.withValues(alpha: 0.94),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: kColorPrimary.withValues(alpha: 0.08),
-            blurRadius: 14,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              AppUserAvatar(
-                name: seat.name,
-                imageUrl: seat.avatarUrl,
-                size: 58,
-                border: Border.all(
-                  color: kColorPrimary.withValues(alpha: 0.16),
-                  width: 2,
-                ),
-              ),
-              Positioned(
-                left: -10,
-                top: -8,
-                child: _SeatBadge(number: seat.seatNo),
-              ),
-              Positioned(
-                right: -6,
-                bottom: -4,
-                child: _MicBubble(muted: seat.muted),
-              ),
-              Positioned(
-                right: -8,
-                top: -7,
-                child: Icon(
-                  Icons.workspace_premium_rounded,
-                  color: seat.muted ? kColorHint : kColorProfileFeatureBlue,
-                  size: 20,
-                ),
-              ),
-            ],
-          ),
-          Spacing.v8,
-          SemiBoldText(
-            text: seat.name,
-            fontSize: TextStyles.k12FontSize,
-            color: AudioRoomStageOverlay._ink,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            align: TextAlign.center,
-          ),
-          AppText(
-            text: 'ID: ${seat.id.isEmpty ? seat.seatNo : seat.id}',
-            fontSize: 9,
-            color: AudioRoomStageOverlay._muted,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          _DiamondCount(value: seat.level),
-        ],
-      ),
-    );
-  }
-}
-
-class _EmptySeat extends StatelessWidget {
-  const _EmptySeat({required this.seatNo, required this.size});
-
-  final int seatNo;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: size * 1.32,
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: AudioRoomStageOverlay._surfaceStrong.withValues(alpha: 0.70),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: kColorPrimary.withValues(alpha: 0.05)),
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Positioned(left: 0, top: 0, child: _SeatBadge(number: seatNo)),
-          Icon(
-            Icons.mic_rounded,
-            color: kColorPrimary.withValues(alpha: 0.26),
-            size: 34,
-          ),
-          Positioned(
-            bottom: 0,
-            child: Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                color: kColorWhite,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: kColorPrimary.withValues(alpha: 0.18),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.add_rounded,
-                color: kColorPrimary,
-                size: 20,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LockedSeat extends StatelessWidget {
-  const _LockedSeat({required this.seatNo});
-
-  final int seatNo;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: AudioRoomStageOverlay._surfaceStrong.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _SeatBadge(number: seatNo),
-          Spacing.v8,
-          Container(
-            width: 56,
-            height: 56,
-            decoration: const BoxDecoration(
-              color: Color(0xFFF0E8F6),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.lock_rounded,
-              color: kColorPrimary.withValues(alpha: 0.42),
-            ),
-          ),
-          Spacing.v8,
-          const SemiBoldText(
-            text: 'Locked Seat',
-            fontSize: TextStyles.k10FontSize,
-            color: AudioRoomStageOverlay._ink,
-            align: TextAlign.center,
-          ),
-          const AppText(
-            text: 'Unlock to join',
-            fontSize: 9,
-            color: AudioRoomStageOverlay._muted,
-            align: TextAlign.center,
-          ),
-          const _DiamondCount(value: 20),
-        ],
-      ),
-    );
-  }
-}
-
-class _SideRail extends GetView<LiveBroadcastController> {
-  const _SideRail({required this.compact});
-
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: compact ? 62 : 72,
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        color: AudioRoomStageOverlay._surfaceStrong.withValues(alpha: 0.90),
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: kColorPrimary.withValues(alpha: 0.10),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          _RailAction(
-            icon: Icons.person_add_alt_1_rounded,
-            label: 'Invite',
-            onTap: controller.shareRoom,
-          ),
-          _RailAction(
-            icon: Icons.music_note_rounded,
-            label: 'Music',
-            onTap: () => Get.snackbar('Music', 'Music panel coming soon.'),
-          ),
-          _RailAction(
-            icon: Icons.card_giftcard_rounded,
-            label: 'Gift',
-            onTap: controller.openGiftsSheet,
-          ),
-          _RailAction(
-            icon: Icons.chat_bubble_rounded,
-            label: 'Chat',
-            onTap: () => Get.snackbar('Chat', 'Use the room chat below.'),
-          ),
-          _RailAction(
-            icon: Icons.queue_music_rounded,
-            label: 'Queue',
-            onTap: controller.openViewersSheet,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ChatPreview extends GetView<LiveBroadcastController> {
-  const _ChatPreview({required this.compact});
-
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    return Obx(() {
-      final messages = controller.chatMessages.take(3).toList();
-      final rows = messages.isEmpty
-          ? const [
-              ('Rahul', 'Hello everyone 👋'),
-              ('Pooja', 'sent Rose 🌹 x1'),
-              ('Arjun', 'Nice song 🎶'),
-            ]
-          : messages
-                .map(
-                  (message) => (
-                    message['sender']?.toString() ?? 'User',
-                    message['message']?.toString() ?? '',
-                  ),
-                )
-                .toList();
-
-      return Align(
-        alignment: Alignment.centerLeft,
-        child: Container(
-          width: double.infinity,
-          constraints: const BoxConstraints(maxWidth: 560),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AudioRoomStageOverlay._surfaceStrong.withValues(alpha: 0.82),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: kColorPrimary.withValues(alpha: 0.06)),
-          ),
-          child: Column(
-            children: rows.map((row) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  children: [
-                    AppUserAvatar(name: row.$1, size: 28),
-                    Spacing.h8,
-                    SemiBoldText(
-                      text: '${row.$1}:',
-                      fontSize: TextStyles.k12FontSize,
-                      color: kColorPrimary,
-                    ),
-                    Spacing.h6,
-                    Expanded(
-                      child: AppText(
-                        text: row.$2,
-                        fontSize: TextStyles.k12FontSize,
-                        color: AudioRoomStageOverlay._ink,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-      );
-    });
-  }
-}
-
-class _PillAction extends StatelessWidget {
-  const _PillAction({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 46,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        color: AudioRoomStageOverlay._surfaceStrong.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: kColorPrimary.withValues(alpha: 0.18)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: kColorPrimary, size: 18),
-          Spacing.h6,
-          SemiBoldText(
-            text: label,
-            fontSize: TextStyles.k10FontSize,
-            color: AudioRoomStageOverlay._ink,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RailAction extends StatelessWidget {
-  const _RailAction({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Column(
-          children: [
-            Icon(icon, color: kColorPrimary, size: 24),
-            Spacing.v4,
-            AppText(
-              text: label,
-              fontSize: 9,
-              color: AudioRoomStageOverlay._ink,
-              align: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _RoundIconButton extends StatelessWidget {
-  const _RoundIconButton({
+class _CircleButton extends StatelessWidget {
+  const _CircleButton({
     required this.icon,
     required this.onTap,
     required this.compact,
@@ -890,11 +634,11 @@ class _RoundIconButton extends StatelessWidget {
       onTap: onTap,
       customBorder: const CircleBorder(),
       child: Container(
-        width: compact ? 38 : 44,
-        height: compact ? 38 : 44,
+        width: compact ? 38 : 42,
+        height: compact ? 38 : 42,
         decoration: BoxDecoration(
           color: filled
-              ? kColorWhite.withValues(alpha: 0.95)
+              ? kColorWhite.withValues(alpha: 0.96)
               : kColorWhite.withValues(alpha: 0.12),
           shape: BoxShape.circle,
         ),
@@ -932,15 +676,17 @@ class _SeatBadge extends StatelessWidget {
 }
 
 class _MicBubble extends StatelessWidget {
-  const _MicBubble({required this.muted});
+  const _MicBubble({this.muted = false, this.small = false});
 
   final bool muted;
+  final bool small;
 
   @override
   Widget build(BuildContext context) {
+    final size = small ? 28.0 : 34.0;
     return Container(
-      width: 30,
-      height: 30,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         color: muted ? const Color(0xFF6B6470) : kColorProfileFeatureBlue,
         shape: BoxShape.circle,
@@ -949,7 +695,7 @@ class _MicBubble extends StatelessWidget {
       child: Icon(
         muted ? Icons.mic_off_rounded : Icons.mic_rounded,
         color: kColorWhite,
-        size: 17,
+        size: small ? 15 : 18,
       ),
     );
   }
@@ -964,6 +710,7 @@ class _DiamondCount extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         const Icon(Icons.diamond_rounded, size: 13, color: kColorPrimary),
         Spacing.h4,
@@ -981,7 +728,6 @@ class _AudioSeatData {
     this.avatarUrl,
     this.level = 0,
     this.occupied = false,
-    this.host = false,
     this.muted = false,
     this.locked = false,
   });
@@ -994,7 +740,6 @@ class _AudioSeatData {
   final String? avatarUrl;
   final int level;
   final bool occupied;
-  final bool host;
   final bool muted;
   final bool locked;
 
@@ -1006,7 +751,6 @@ class _AudioSeatData {
       avatarUrl: avatarUrl,
       level: level ?? this.level,
       occupied: occupied,
-      host: host,
       muted: muted,
       locked: locked ?? this.locked,
     );
