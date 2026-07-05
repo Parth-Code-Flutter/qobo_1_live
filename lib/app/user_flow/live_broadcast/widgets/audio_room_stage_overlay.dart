@@ -22,8 +22,8 @@ class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFF3B0D45), Color(0xFF8D2578), Color(0xFFF7F1FA)],
-          stops: [0, 0.28, 0.58],
+          colors: [Color(0xFFFFF8FD), Color(0xFFF5ECFA), Color(0xFFF9F5FC)],
+          stops: [0, 0.42, 1],
         ),
       ),
       child: SafeArea(
@@ -362,21 +362,23 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
 
       return Container(
         padding: EdgeInsets.symmetric(
-          horizontal: compact ? 10 : 12,
-          vertical: compact ? 9 : 10,
+          horizontal: compact ? 8 : 10,
+          vertical: compact ? 8 : 9,
         ),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [kColorPrimary, Color(0xFF4B0B3D)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(24),
+          color: kColorWhite.withValues(alpha: 0.86),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.72)),
           boxShadow: [
             BoxShadow(
-              color: kColorPrimary.withValues(alpha: 0.24),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
+              color: kColorPrimary.withValues(alpha: 0.10),
+              blurRadius: 22,
+              offset: const Offset(0, 12),
+            ),
+            BoxShadow(
+              color: kColorWhite.withValues(alpha: 0.80),
+              blurRadius: 8,
+              offset: const Offset(0, -2),
             ),
           ],
         ),
@@ -399,7 +401,7 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
                     fontSize: compact
                         ? TextStyles.k14FontSize
                         : TextStyles.k16FontSize,
-                    color: kColorWhite,
+                    color: AudioRoomStageOverlay._ink,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -438,21 +440,10 @@ class _CenterStage extends GetView<LiveBroadcastController> {
           ? 'Host'
           : controller.hostName.value;
 
-      return Container(
+      return Padding(
         padding: EdgeInsets.symmetric(
-          horizontal: compact ? 8 : 12,
-          vertical: compact ? 12 : 16,
-        ),
-        decoration: BoxDecoration(
-          color: kColorWhite.withValues(alpha: 0.80),
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: [
-            BoxShadow(
-              color: kColorPrimary.withValues(alpha: 0.08),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
+          horizontal: compact ? 4 : 8,
+          vertical: compact ? 4 : 6,
         ),
         child: Column(
           children: [
@@ -461,7 +452,7 @@ class _CenterStage extends GetView<LiveBroadcastController> {
               avatarUrl: controller.hostAvatarUrl.value,
               compact: compact,
             ),
-            SizedBox(height: compact ? 8 : 12),
+            SizedBox(height: compact ? 6 : 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
@@ -478,15 +469,29 @@ class _CenterStage extends GetView<LiveBroadcastController> {
   }
 }
 
-class _MemberGrid extends GetView<LiveBroadcastController> {
+class _MemberGrid extends StatefulWidget {
   const _MemberGrid({required this.compact});
 
   final bool compact;
 
   @override
+  State<_MemberGrid> createState() => _MemberGridState();
+}
+
+class _MemberGridState extends State<_MemberGrid> {
+  final LiveBroadcastController controller =
+      Get.find<LiveBroadcastController>();
+
+  bool _expanded = false;
+
+  @override
   Widget build(BuildContext context) {
     return Obx(() {
       final seats = _buildSeats();
+      final canToggle = seats.length > 10;
+      final visibleSeats = canToggle && !_expanded
+          ? seats.take(10).toList()
+          : seats;
 
       return LayoutBuilder(
         builder: (context, constraints) {
@@ -494,15 +499,22 @@ class _MemberGrid extends GetView<LiveBroadcastController> {
           return GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: seats.length,
+            itemCount: visibleSeats.length + (canToggle ? 1 : 0),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: crossAxisCount,
-              mainAxisExtent: compact ? 132 : 140,
-              mainAxisSpacing: compact ? 14 : 16,
-              crossAxisSpacing: compact ? 10 : 14,
+              mainAxisExtent: widget.compact ? 132 : 140,
+              mainAxisSpacing: widget.compact ? 14 : 16,
+              crossAxisSpacing: widget.compact ? 10 : 14,
             ),
             itemBuilder: (context, index) {
-              final seat = seats[index];
+              if (canToggle && index == visibleSeats.length) {
+                return _SeatToggle(
+                  expanded: _expanded,
+                  hiddenCount: seats.length - visibleSeats.length,
+                  onTap: () => setState(() => _expanded = !_expanded),
+                );
+              }
+              final seat = visibleSeats[index];
               if (seat.locked) return _LockedSeat(seatNo: seat.seatNo);
               if (!seat.occupied) return _GridEmptySeat(seatNo: seat.seatNo);
               return _MemberSeat(seat: seat);
@@ -584,11 +596,11 @@ class _HostSeat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final avatarSize = compact ? 92.0 : 108.0;
-    final ringSize = compact ? 122.0 : 140.0;
+    final avatarSize = compact ? 78.0 : 92.0;
+    final ringSize = compact ? 106.0 : 122.0;
 
     return SizedBox(
-      width: compact ? 142 : 166,
+      width: compact ? 128 : 148,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -634,10 +646,10 @@ class _HostSeat extends StatelessWidget {
                 size: avatarSize,
                 border: Border.all(color: kColorWhite, width: 4),
               ),
-              const Positioned(top: -12, child: _CrownBadge()),
+              const Positioned(top: -10, child: _CrownBadge()),
               Positioned(
                 right: 0,
-                top: 18,
+                top: 14,
                 child: Container(
                   padding: const EdgeInsets.all(5),
                   decoration: BoxDecoration(
@@ -657,14 +669,14 @@ class _HostSeat extends StatelessWidget {
                   ),
                 ),
               ),
-              const Positioned(left: 8, top: 4, child: _SeatBadge(number: 1)),
-              const Positioned(right: 8, bottom: 10, child: _MicBubble()),
+              const Positioned(left: 7, top: 4, child: _SeatBadge(number: 1)),
+              const Positioned(right: 7, bottom: 8, child: _MicBubble()),
             ],
           ),
           Transform.translate(
             offset: const Offset(0, -8),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [kColorProfileFeatureBlue, kColorPrimary],
@@ -680,7 +692,7 @@ class _HostSeat extends StatelessWidget {
           ),
           SemiBoldText(
             text: name,
-            fontSize: TextStyles.k16FontSize,
+            fontSize: TextStyles.k14FontSize,
             color: AudioRoomStageOverlay._ink,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -838,9 +850,9 @@ class _FeaturedEmptySeat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = compact ? 56.0 : 62.0;
+    final size = compact ? 50.0 : 56.0;
     return SizedBox(
-      width: compact ? 66 : 74,
+      width: compact ? 60 : 68,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -876,8 +888,8 @@ class _FeaturedEmptySeat extends StatelessWidget {
                 right: -4,
                 bottom: -4,
                 child: Container(
-                  width: compact ? 24 : 26,
-                  height: compact ? 24 : 26,
+                  width: compact ? 22 : 24,
+                  height: compact ? 22 : 24,
                   decoration: BoxDecoration(
                     color: kColorWhite,
                     shape: BoxShape.circle,
@@ -996,6 +1008,74 @@ class _LockedSeat extends StatelessWidget {
   }
 }
 
+class _SeatToggle extends StatelessWidget {
+  const _SeatToggle({
+    required this.expanded,
+    required this.hiddenCount,
+    required this.onTap,
+  });
+
+  final bool expanded;
+  final int hiddenCount;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      customBorder: const CircleBorder(),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 8),
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [kColorProfileFeatureBlue, kColorPrimary],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: kColorPrimary.withValues(alpha: 0.20),
+                  blurRadius: 14,
+                  offset: const Offset(0, 7),
+                ),
+              ],
+            ),
+            child: Icon(
+              expanded
+                  ? Icons.keyboard_arrow_up_rounded
+                  : Icons.keyboard_arrow_down_rounded,
+              color: kColorWhite,
+              size: 32,
+            ),
+          ),
+          Spacing.v6,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: kColorWhite.withValues(alpha: 0.72),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: SemiBoldText(
+              text: expanded ? 'Less' : '+$hiddenCount More',
+              fontSize: TextStyles.k10FontSize,
+              color: AudioRoomStageOverlay._ink,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              align: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _HeaderMetric extends StatelessWidget {
   const _HeaderMetric({required this.icon, required this.label});
 
@@ -1005,10 +1085,11 @@ class _HeaderMetric extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: kColorWhite.withValues(alpha: 0.13),
+        color: kColorPrimary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: kColorPrimary.withValues(alpha: 0.06)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1018,7 +1099,7 @@ class _HeaderMetric extends StatelessWidget {
           AppText(
             text: label,
             fontSize: TextStyles.k10FontSize,
-            color: kColorWhite,
+            color: AudioRoomStageOverlay._ink,
           ),
         ],
       ),
@@ -1049,15 +1130,12 @@ class _CircleButton extends StatelessWidget {
         height: compact ? 38 : 42,
         decoration: BoxDecoration(
           color: filled
-              ? kColorWhite.withValues(alpha: 0.96)
-              : kColorWhite.withValues(alpha: 0.12),
+              ? kColorPrimary.withValues(alpha: 0.08)
+              : kColorPrimary.withValues(alpha: 0.08),
           shape: BoxShape.circle,
+          border: Border.all(color: kColorPrimary.withValues(alpha: 0.08)),
         ),
-        child: Icon(
-          icon,
-          color: filled ? kColorPrimary : kColorWhite,
-          size: compact ? 20 : 22,
-        ),
+        child: Icon(icon, color: kColorPrimary, size: compact ? 20 : 22),
       ),
     );
   }
