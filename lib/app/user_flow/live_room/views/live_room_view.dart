@@ -83,6 +83,7 @@ class LiveRoomView extends StatelessWidget {
                               Expanded(
                                 child: AnimatedContainer(
                                   duration: const Duration(milliseconds: 300),
+                                  padding: const EdgeInsets.only(bottom: 74),
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(18),
                                     border: Border.all(
@@ -95,6 +96,7 @@ class LiveRoomView extends StatelessWidget {
                                   child: ColoredBox(
                                     color: Colors.transparent,
                                     child: GridView.builder(
+                                      padding: const EdgeInsets.only(top: 2),
                                       physics: const BouncingScrollPhysics(),
                                       itemCount: controller.rooms.length,
                                       gridDelegate:
@@ -136,7 +138,7 @@ class LiveRoomView extends StatelessWidget {
                 ),
                 Positioned(
                   right: 18,
-                  bottom: 54,
+                  bottom: 66,
                   child: _liveActionMenu(controller),
                 ),
               ],
@@ -373,37 +375,93 @@ class LiveRoomView extends StatelessWidget {
 
   /// Small "x rooms live now" strip above the listing grid.
   Widget _liveCountStrip(int count) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: const BoxDecoration(
-            color: LiveRoomUiColors.liveDot,
-            shape: BoxShape.circle,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        gradient: LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [
+            kColorWhite.withValues(alpha: 0.14),
+            kColorWhite.withValues(alpha: 0.07),
+          ],
+        ),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
+        boxShadow: [
+          BoxShadow(
+            color: kColorBlack.withValues(alpha: 0.16),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
-        ),
-        Spacing.h8,
-        SemiBoldText(
-          text: '$count ${LocaleKeys.liveRoomActiveNow.tr}',
-          fontSize: TextStyles.k12FontSize,
-          color: kColorWhite,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        Spacing.h8,
-        Expanded(
-          child: AppText(
-            text: LocaleKeys.liveRoomJoinHint.tr,
-            fontSize: TextStyles.k12FontSize,
-            color: kColorHint,
-            align: TextAlign.end,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: LiveRoomUiColors.liveDot.withValues(alpha: 0.16),
+              border: Border.all(
+                color: LiveRoomUiColors.liveDot.withValues(alpha: 0.35),
+              ),
+            ),
+            child: const Icon(
+              Icons.sensors_rounded,
+              color: LiveRoomUiColors.liveDot,
+              size: 18,
+            ),
           ),
-        ),
-      ],
+          Spacing.h10,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SemiBoldText(
+                  text: '$count ${LocaleKeys.liveRoomActiveNow.tr}',
+                  fontSize: TextStyles.k12FontSize,
+                  color: kColorWhite,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Spacing.v2,
+                AppText(
+                  text: LocaleKeys.liveRoomJoinHint.tr,
+                  fontSize: TextStyles.k10FontSize,
+                  color: kColorWhite.withValues(alpha: 0.68),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          Spacing.h10,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: LiveRoomUiColors.liveDot.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: LiveRoomUiColors.liveDot.withValues(alpha: 0.24),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _LivePulseDot(),
+                Spacing.h6,
+                SemiBoldText(
+                  text: 'LIVE',
+                  fontSize: TextStyles.k10FontSize,
+                  color: LiveRoomUiColors.liveDot,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -474,32 +532,111 @@ class LiveRoomView extends StatelessWidget {
 
   /// Promo banner shown above the live-room listing.
   Widget _topBanner(LiveRoomController controller) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: AspectRatio(
-        aspectRatio: 3.2,
-        child: Obx(() {
-          final bannerUrl = controller.promoBannerImageUrl.value;
-          if (bannerUrl != null && bannerUrl.isNotEmpty) {
-            return Image.network(
-              bannerUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _bannerFallback(),
-            );
-          }
-          return Image.asset(
-            kImgTemp1,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => _bannerFallback(),
-          );
-        }),
+    return Container(
+      padding: const EdgeInsets.all(1.2),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(17),
+        gradient: LinearGradient(
+          colors: [
+            kColorWhite.withValues(alpha: 0.24),
+            LiveRoomUiColors.joinLiveBorder.withValues(alpha: 0.28),
+            kColorWhite.withValues(alpha: 0.06),
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: kColorBlack.withValues(alpha: 0.18),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: AspectRatio(
+          aspectRatio: 3.35,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Obx(() {
+                final bannerUrl = controller.promoBannerImageUrl.value;
+                if (bannerUrl != null && bannerUrl.isNotEmpty) {
+                  return Image.network(
+                    bannerUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _bannerFallback(),
+                  );
+                }
+                return Image.asset(
+                  kImgTemp1,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => _bannerFallback(),
+                );
+              }),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      kColorBlack.withValues(alpha: 0.12),
+                      Colors.transparent,
+                      LiveRoomUiColors.goLiveGradientStart.withValues(
+                        alpha: 0.16,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 12,
+                bottom: 10,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: kColorBlack.withValues(alpha: 0.34),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: kColorWhite.withValues(alpha: 0.12),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.auto_awesome_rounded,
+                        color: kColorWalletAmount,
+                        size: 14,
+                      ),
+                      Spacing.h6,
+                      SemiBoldText(
+                        text: 'Featured rooms',
+                        fontSize: TextStyles.k10FontSize,
+                        color: kColorWhite.withValues(alpha: 0.92),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
   Widget _bannerFallback() {
     return Container(
-      color: const Color(0x66351B6C),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF351B6C), Color(0xFF7A236D), Color(0xFF14155B)],
+        ),
+      ),
       alignment: Alignment.center,
       child: const SemiBoldText(
         text: 'Celebration Banner',
@@ -844,6 +981,29 @@ class LiveRoomView extends StatelessWidget {
           fontSize: TextStyles.k14FontSize,
           color: kColorWhite,
         ),
+      ),
+    );
+  }
+}
+
+class _LivePulseDot extends StatelessWidget {
+  const _LivePulseDot();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 7,
+      height: 7,
+      decoration: BoxDecoration(
+        color: LiveRoomUiColors.liveDot,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: LiveRoomUiColors.liveDot.withValues(alpha: 0.55),
+            blurRadius: 8,
+            spreadRadius: 1,
+          ),
+        ],
       ),
     );
   }
