@@ -110,7 +110,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
           else
             const Positioned.fill(child: ColoredBox(color: Colors.black)),
           if (!isVideoRoom) ...[
-            const Positioned.fill(bottom: 92, child: AudioRoomStageOverlay()),
+            const Positioned.fill(child: AudioRoomStageOverlay()),
             if (!canOpenCall) _buildAudioRoomConnectionBanner(),
           ],
           _buildGroupCallGiftDock(),
@@ -137,6 +137,9 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
 
   Widget _buildGroupCallGiftDock() {
     return Obx(() {
+      if (controller.isAudioVideoRoom && !controller.isVideoRoom) {
+        return const SizedBox.shrink();
+      }
       if (!controller.canSendGifts) {
         return const SizedBox.shrink();
       }
@@ -310,10 +313,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                 call.ZegoCallMenuBarButtonName.hangUpButton,
               ]
             : const [
-                call.ZegoCallMenuBarButtonName.toggleMicrophoneButton,
-                call.ZegoCallMenuBarButtonName.switchAudioOutputButton,
-                call.ZegoCallMenuBarButtonName.chatButton,
-                call.ZegoCallMenuBarButtonName.hangUpButton,
+                // Audio rooms use the custom concert-style control dock.
               ],
       );
 
