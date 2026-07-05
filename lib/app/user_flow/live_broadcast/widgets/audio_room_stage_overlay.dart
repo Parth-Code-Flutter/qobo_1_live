@@ -183,23 +183,20 @@ class _CenterStage extends GetView<LiveBroadcastController> {
         ),
         child: Column(
           children: [
+            _HostSeat(
+              name: hostName,
+              avatarUrl: controller.hostAvatarUrl.value,
+              hostId: hostId,
+              compact: compact,
+            ),
+            SizedBox(height: compact ? 8 : 12),
             Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                Expanded(child: _MiniEmptySeat(seatNo: 2, compact: compact)),
-                Spacing.h6,
-                Expanded(child: _MiniEmptySeat(seatNo: 3, compact: compact)),
-                SizedBox(width: compact ? 8 : 12),
-                _HostSeat(
-                  name: hostName,
-                  avatarUrl: controller.hostAvatarUrl.value,
-                  hostId: hostId,
-                  compact: compact,
-                ),
-                SizedBox(width: compact ? 8 : 12),
-                Expanded(child: _MiniEmptySeat(seatNo: 4, compact: compact)),
-                Spacing.h6,
-                Expanded(child: _MiniEmptySeat(seatNo: 5, compact: compact)),
+                _FeaturedEmptySeat(seatNo: 2, compact: compact),
+                _FeaturedEmptySeat(seatNo: 3, compact: compact),
+                _FeaturedEmptySeat(seatNo: 4, compact: compact),
+                _FeaturedEmptySeat(seatNo: 5, compact: compact),
               ],
             ),
           ],
@@ -459,38 +456,78 @@ class _MemberSeat extends StatelessWidget {
   }
 }
 
-class _MiniEmptySeat extends StatelessWidget {
-  const _MiniEmptySeat({required this.seatNo, required this.compact});
+class _FeaturedEmptySeat extends StatelessWidget {
+  const _FeaturedEmptySeat({required this.seatNo, required this.compact});
 
   final int seatNo;
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: compact ? 92 : 108,
-      constraints: const BoxConstraints(minWidth: 36),
-      decoration: BoxDecoration(
-        color: kColorWhite.withValues(alpha: 0.70),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: kColorPrimary.withValues(alpha: 0.06)),
-      ),
-      child: Stack(
-        alignment: Alignment.center,
+    final size = compact ? 56.0 : 62.0;
+    return SizedBox(
+      width: compact ? 66 : 74,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Positioned(top: 7, left: 6, child: _SeatBadge(number: seatNo)),
-          Icon(
-            Icons.mic_rounded,
-            color: kColorPrimary.withValues(alpha: 0.22),
-            size: compact ? 28 : 32,
+          Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  color: kColorWhite.withValues(alpha: 0.78),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: kColorPrimary.withValues(alpha: 0.10),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: kColorPrimary.withValues(alpha: 0.08),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.mic_none_rounded,
+                  color: kColorPrimary.withValues(alpha: 0.30),
+                  size: compact ? 27 : 30,
+                ),
+              ),
+              Positioned(left: -7, top: -7, child: _SeatBadge(number: seatNo)),
+              Positioned(
+                right: -4,
+                bottom: -4,
+                child: Container(
+                  width: compact ? 24 : 26,
+                  height: compact ? 24 : 26,
+                  decoration: BoxDecoration(
+                    color: kColorWhite,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: kColorPrimary.withValues(alpha: 0.12),
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.add_rounded,
+                    color: kColorPrimary,
+                    size: compact ? 16 : 18,
+                  ),
+                ),
+              ),
+            ],
           ),
-          Positioned(
-            bottom: 8,
-            child: Icon(
-              Icons.add_rounded,
-              color: kColorPrimary,
-              size: compact ? 20 : 22,
-            ),
+          Spacing.v6,
+          const AppText(
+            text: 'Open',
+            fontSize: TextStyles.k10FontSize,
+            color: AudioRoomStageOverlay._muted,
+            align: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

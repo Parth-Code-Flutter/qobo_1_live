@@ -59,7 +59,7 @@ class LiveRoomView extends StatelessWidget {
                     ),
                     Expanded(
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(14, 0, 14, 40),
+                        padding: const EdgeInsets.fromLTRB(14, 0, 14, 0),
                         child: Obx(() {
                           if (controller.isLoading.value) {
                             return const Center(
@@ -83,7 +83,6 @@ class LiveRoomView extends StatelessWidget {
                               Expanded(
                                 child: AnimatedContainer(
                                   duration: const Duration(milliseconds: 300),
-                                  padding: const EdgeInsets.only(bottom: 74),
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(18),
                                     border: Border.all(
@@ -96,7 +95,12 @@ class LiveRoomView extends StatelessWidget {
                                   child: ColoredBox(
                                     color: Colors.transparent,
                                     child: GridView.builder(
-                                      padding: const EdgeInsets.only(top: 2),
+                                      padding: const EdgeInsets.fromLTRB(
+                                        0,
+                                        2,
+                                        0,
+                                        116,
+                                      ),
                                       physics: const BouncingScrollPhysics(),
                                       itemCount: controller.rooms.length,
                                       gridDelegate:
