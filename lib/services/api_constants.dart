@@ -353,11 +353,23 @@ class UserEndpoints {
   /// POST /api/user/tasks/claim
   static const String claimTask = '/api/user/tasks/claim';
 
+  /// POST /api/user/points/redeem
+  static const String redeemPoints = '/api/user/points/redeem';
+
   /// GET /api/user/achievements
   static const String achievements = '/api/user/achievements';
 
+  /// POST /api/user/achievements/claim
+  static const String claimAchievement = '/api/user/achievements/claim';
+
   /// GET /api/user/visitors
   static const String visitors = '/api/user/visitors';
+
+  /// GET /api/user/level
+  static const String level = '/api/user/level';
+
+  /// GET /api/user/settings
+  static const String settings = '/api/user/settings';
 
   /// DELETE /api/user/delete
   static const String delete = '/api/user/delete';
@@ -387,6 +399,12 @@ class FamilyEndpoints {
 
   /// GET /api/family/detail/:id
   static const String detail = '/api/family/detail';
+
+  /// GET /api/family/my
+  static const String my = '/api/family/my';
+
+  /// POST /api/family/leave
+  static const String leave = '/api/family/leave';
 }
 
 /// Central place for activity and event related API endpoints.
@@ -395,6 +413,9 @@ class ActivityEndpoints {
 
   /// GET /api/activity/list
   static const String list = '/api/activity/list';
+
+  /// POST /api/activity/join
+  static const String join = '/api/activity/join';
 }
 
 /// Central place for support related API endpoints.
@@ -406,4 +427,10 @@ class SupportEndpoints {
 
   /// GET /api/support/tickets
   static const String tickets = '/api/support/tickets';
+
+  /// GET /api/support/faqs
+  static const String faqs = '/api/support/faqs';
+
+  /// POST /api/support/chat/send
+  static const String chatSend = '/api/support/chat/send';
 }

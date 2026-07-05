@@ -77,10 +77,7 @@ class UserRepo {
     bool excludeFollowing = false,
     bool isShowLoader = false,
   }) async {
-    final params = <String, String>{
-      'page': '$page',
-      'limit': '$limit',
-    };
+    final params = <String, String>{'page': '$page', 'limit': '$limit'};
     if (country != null && country.trim().isNotEmpty) {
       params['country'] = country.trim();
     }
@@ -126,14 +123,30 @@ class UserRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
+  Future<Map<String, dynamic>?> followUnfollowUser({
+    required String targetId,
+    bool isShowLoader = false,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: AuthEndpoints.followUnfollow,
+      requestModel: <String, dynamic>{
+        'target_id': targetId.trim(),
+        'targetId': targetId.trim(),
+        'user_id': targetId.trim(),
+      },
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
   /// `GET /api/user/public/:id` — sanitized profile for match sheet.
   Future<Map<String, dynamic>?> getPublicProfile({
     required String userId,
     bool isShowLoader = false,
   }) async {
     final response = await _apiService.getRequest(
-      endPoint:
-          '${UserEndpoints.publicProfile}/${Uri.encodeComponent(userId)}',
+      endPoint: '${UserEndpoints.publicProfile}/${Uri.encodeComponent(userId)}',
       isShowLoader: isShowLoader,
     );
     if (response == null) return null;
@@ -225,6 +238,15 @@ class UserRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
+  Future<Map<String, dynamic>?> getLevel({bool isShowLoader = true}) async {
+    final response = await _apiService.getRequest(
+      endPoint: UserEndpoints.level,
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
   Future<Map<String, dynamic>?> claimTask({
     required String taskId,
     bool isShowLoader = true,
@@ -235,6 +257,23 @@ class UserRepo {
         'id': taskId,
         'taskId': taskId,
         'task_id': taskId,
+      },
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  Future<Map<String, dynamic>?> redeemPointsItem({
+    required String itemId,
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: UserEndpoints.redeemPoints,
+      requestModel: <String, dynamic>{
+        'item_id': itemId,
+        'itemId': itemId,
+        'id': itemId,
       },
       isShowLoader: isShowLoader,
     );
@@ -253,9 +292,48 @@ class UserRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
+  Future<Map<String, dynamic>?> claimAchievement({
+    required String achievementId,
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: UserEndpoints.claimAchievement,
+      requestModel: <String, dynamic>{
+        'achievement_id': achievementId,
+        'achievementId': achievementId,
+        'id': achievementId,
+      },
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
   Future<Map<String, dynamic>?> getVisitors({bool isShowLoader = true}) async {
     final response = await _apiService.getRequest(
       endPoint: UserEndpoints.visitors,
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  Future<Map<String, dynamic>?> getSettings({bool isShowLoader = true}) async {
+    final response = await _apiService.getRequest(
+      endPoint: UserEndpoints.settings,
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  Future<Map<String, dynamic>?> updateSettings({
+    required Map<String, dynamic> settings,
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.putRequest(
+      endPoint: UserEndpoints.settings,
+      requestModel: settings,
       isShowLoader: isShowLoader,
     );
     if (response == null) return null;

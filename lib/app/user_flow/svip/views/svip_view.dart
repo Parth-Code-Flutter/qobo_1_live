@@ -48,7 +48,10 @@ class SvipView extends GetView<SvipController> {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFD4AF37).withValues(alpha: 0.5), width: 1.5),
+        border: Border.all(
+          color: const Color(0xFFD4AF37).withValues(alpha: 0.5),
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
             color: kColorBlack.withValues(alpha: 0.4),
@@ -80,17 +83,25 @@ class SvipView extends GetView<SvipController> {
             style: TextStyle(letterSpacing: 2),
           ),
           Spacing.v8,
-          Obx(() => AppText(
-                text: controller.isSvipActive.value
-                    ? '★ Active Member (Expires in 30 days) ★'
-                    : 'Unlock elite customizations and absolute immunity.',
-                fontSize: TextStyles.k14FontSize,
-                color: controller.isSvipActive.value ? const Color(0xFFFFD700) : kColorWhite.withValues(alpha: 0.8),
-                align: TextAlign.center,
-                style: controller.isSvipActive.value
-                    ? const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFFFD700), fontSize: TextStyles.k14FontSize)
-                    : null,
-              )),
+          Obx(
+            () => AppText(
+              text: controller.isSvipActive.value
+                  ? '★ Active Member (Expires in 30 days) ★'
+                  : 'Unlock elite customizations and absolute immunity.',
+              fontSize: TextStyles.k14FontSize,
+              color: controller.isSvipActive.value
+                  ? const Color(0xFFFFD700)
+                  : kColorWhite.withValues(alpha: 0.8),
+              align: TextAlign.center,
+              style: controller.isSvipActive.value
+                  ? const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFFFD700),
+                      fontSize: TextStyles.k14FontSize,
+                    )
+                  : null,
+            ),
+          ),
           Spacing.v16,
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -101,13 +112,19 @@ class SvipView extends GetView<SvipController> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.monetization_on, color: Colors.amber, size: 18),
+                const Icon(
+                  Icons.monetization_on,
+                  color: Colors.amber,
+                  size: 18,
+                ),
                 Spacing.h6,
-                Obx(() => AppText(
-                      text: 'Balance: ${controller.coinsBalance.value} Coins',
-                      fontSize: TextStyles.k12FontSize,
-                      color: kColorWhite,
-                    )),
+                Obx(
+                  () => AppText(
+                    text: 'Balance: ${controller.coinsBalance.value} Coins',
+                    fontSize: TextStyles.k12FontSize,
+                    color: kColorWhite,
+                  ),
+                ),
               ],
             ),
           ),
@@ -166,7 +183,11 @@ class SvipView extends GetView<SvipController> {
                         color: color.withValues(alpha: 0.12),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(privilege['icon'] as IconData, color: color, size: 20),
+                      child: Icon(
+                        privilege['icon'] as IconData,
+                        color: color,
+                        size: 20,
+                      ),
                     ),
                     Spacing.v8,
                     SemiBoldText(
@@ -206,71 +227,86 @@ class SvipView extends GetView<SvipController> {
               color: kColorText,
             ),
           ),
-          Obx(() => Row(
-                children: controller.plans.map((plan) {
-                  final isSelected = controller.selectedPlan.value == plan['id'];
-                  return Expanded(
-                    child: GestureDetector(
-                      onTap: () => controller.selectPlan(plan['id'] as int),
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        decoration: BoxDecoration(
-                          color: isSelected ? const Color(0xFFFFD700).withValues(alpha: 0.05) : kColorWhite,
-                          border: Border.all(
-                            color: isSelected ? const Color(0xFFFFD700) : Colors.transparent,
-                            width: 1.5,
+          Obx(
+            () => Row(
+              children: controller.plans.map((plan) {
+                final isSelected = controller.selectedPlan.value == plan['id'];
+                return Expanded(
+                  child: GestureDetector(
+                    onTap: () => controller.selectPlan(plan['id']),
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? const Color(0xFFFFD700).withValues(alpha: 0.05)
+                            : kColorWhite,
+                        border: Border.all(
+                          color: isSelected
+                              ? const Color(0xFFFFD700)
+                              : Colors.transparent,
+                          width: 1.5,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: kColorBlack.withValues(alpha: 0.02),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
                           ),
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: kColorBlack.withValues(alpha: 0.02),
-                              blurRadius: 6,
-                              offset: const Offset(0, 3),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
                             ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: isSelected ? const Color(0xFFFFD700).withValues(alpha: 0.15) : const Color(0xFFF3F3F3),
-                                borderRadius: BorderRadius.circular(8),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? const Color(
+                                      0xFFFFD700,
+                                    ).withValues(alpha: 0.15)
+                                  : const Color(0xFFF3F3F3),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              plan['saving'] as String,
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: isSelected
+                                    ? const Color(0xFFD4AF37)
+                                    : kColorHint,
+                                fontWeight: FontWeight.bold,
                               ),
-                              child: Text(
-                                plan['saving'] as String,
-                                style: TextStyle(
-                                  fontSize: 9,
-                                  color: isSelected ? const Color(0xFFD4AF37) : kColorHint,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
                             ),
-                            Spacing.v8,
-                            SemiBoldText(
-                              text: plan['duration'] as String,
-                              fontSize: TextStyles.k14FontSize,
-                              color: kColorText,
-                            ),
-                            Spacing.v4,
-                            BoldText(
-                              text: '${plan['price']}',
-                              fontSize: TextStyles.k16FontSize,
-                              color: const Color(0xFFD4AF37),
-                            ),
-                            const AppText(
-                              text: 'Coins',
-                              fontSize: 9,
-                              color: kColorHint,
-                            ),
-                          ],
-                        ),
+                          ),
+                          Spacing.v8,
+                          SemiBoldText(
+                            text: plan['duration'] as String,
+                            fontSize: TextStyles.k14FontSize,
+                            color: kColorText,
+                          ),
+                          Spacing.v4,
+                          BoldText(
+                            text: '${plan['price']}',
+                            fontSize: TextStyles.k16FontSize,
+                            color: const Color(0xFFD4AF37),
+                          ),
+                          const AppText(
+                            text: 'Coins',
+                            fontSize: 9,
+                            color: kColorHint,
+                          ),
+                        ],
                       ),
                     ),
-                  );
-                }).toList(),
-              )),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
         ],
       ),
     );
@@ -295,7 +331,9 @@ class SvipView extends GetView<SvipController> {
           return appButton(
             onPressed: isAlreadyActive ? () {} : controller.subscribe,
             buttonText: isAlreadyActive ? 'Membership Active' : 'Open SVIP Now',
-            buttonColor: isAlreadyActive ? const Color(0xFFF3F3F3) : const Color(0xFF1E1E1E),
+            buttonColor: isAlreadyActive
+                ? const Color(0xFFF3F3F3)
+                : const Color(0xFF1E1E1E),
             textColor: isAlreadyActive ? kColorHint : const Color(0xFFFFD700),
             borderRadius: 24,
           );

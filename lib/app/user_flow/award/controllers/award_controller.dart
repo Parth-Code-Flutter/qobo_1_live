@@ -1,6 +1,10 @@
 import 'package:get/get.dart';
+import 'package:qobo_one_live/repo/user/user_repo.dart';
 
 class AwardController extends GetxController {
+  AwardController({UserRepo? userRepo}) : _userRepo = userRepo ?? UserRepo();
+
+  final UserRepo _userRepo;
   final isLoading = false.obs;
 
   // Medals / Achievements list
@@ -70,16 +74,72 @@ class AwardController extends GetxController {
 
   void fetchAwards() async {
     isLoading.value = true;
-    await Future.delayed(const Duration(milliseconds: 600));
-    isLoading.value = false;
+    try {
+      final response = await _userRepo.getAchievements(isShowLoader: false);
+      final data = response?['data'];
+      final list = data is Map ? data['items'] : data;
+      if (list is List) {
+        awards.assignAll(
+          list
+              .whereType<Map>()
+              .map((award) {
+                return <String, dynamic>{
+                  'id': award['id']?.toString() ?? '',
+                  'title': award['title']?.toString() ?? '',
+                  'desc':
+                      award['description']?.toString() ??
+                      award['desc']?.toString() ??
+                      '',
+                  'type': award['type']?.toString() ?? 'Achievement',
+                  'level': _toInt(award['level']),
+                  'isUnlocked':
+                      award['isUnlocked'] == true || award['unlocked'] == true,
+                  'progress': _toDouble(award['progress']),
+                  'progressText': award['progressText']?.toString() ?? '',
+                  'icon': award['icon']?.toString() ?? 'star_rounded',
+                  'points': _toInt(award['points'] ?? award['reward']),
+                  'isClaimed': award['isClaimed'] == true,
+                };
+              })
+              .where((award) => award['title'].toString().isNotEmpty),
+        );
+      }
+    } finally {
+      isLoading.value = false;
+    }
   }
 
-  void claimAwardRewards(int index) {
+  Future<void> claimAwardRewards(int index) async {
     final award = awards[index];
+    final id = award['id']?.toString() ?? '';
+    if (id.isNotEmpty) {
+      final response = await _userRepo.claimAchievement(
+        achievementId: id,
+        isShowLoader: true,
+      );
+      if (response == null || response['statusCode'] == 0) {
+        Get.snackbar('Awards', 'Could not claim this reward.');
+        return;
+      }
+      award['isClaimed'] = true;
+      awards[index] = Map<String, dynamic>.from(award);
+    }
     Get.snackbar(
       'Rewards Claimed!',
       'You claimed ${award['points']} points for "${award['title']}"!',
       snackPosition: SnackPosition.BOTTOM,
     );
+  }
+
+  int _toInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  double _toDouble(dynamic value) {
+    if (value is double) return value.clamp(0.0, 1.0);
+    if (value is num) return value.toDouble().clamp(0.0, 1.0);
+    return double.tryParse(value?.toString() ?? '')?.clamp(0.0, 1.0) ?? 0;
   }
 }

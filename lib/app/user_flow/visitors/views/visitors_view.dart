@@ -47,7 +47,7 @@ class VisitorsView extends GetView<VisitorsController> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: kColorPrimary.withOpacity(0.1),
+              color: kColorPrimary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -84,6 +84,7 @@ class VisitorsView extends GetView<VisitorsController> {
         final bool isFollowing = visitor['isFollowing'] ?? false;
         final String vipBadge = visitor['vip'] ?? '';
         final int level = visitor['level'] ?? 0;
+        final avatarUrl = visitor['avatarUrl']?.toString() ?? '';
 
         return Container(
           padding: const EdgeInsets.all(12),
@@ -92,7 +93,7 @@ class VisitorsView extends GetView<VisitorsController> {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: kColorBlack.withOpacity(0.04),
+                color: kColorBlack.withValues(alpha: 0.04),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -107,19 +108,28 @@ class VisitorsView extends GetView<VisitorsController> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: _getVipColor(vipBadge).withOpacity(0.6),
+                    color: _getVipColor(vipBadge).withValues(alpha: 0.6),
                     width: 1.5,
                   ),
                 ),
                 child: ClipOval(
-                  child: Image.asset(
-                    visitor['avatar'] ?? kImgTemp2,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const ColoredBox(
-                      color: kColorAvatarFallbackBg,
-                      child: Icon(Icons.person, color: kColorWhite),
-                    ),
-                  ),
+                  child: avatarUrl.startsWith('http')
+                      ? Image.network(
+                          avatarUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const ColoredBox(
+                            color: kColorAvatarFallbackBg,
+                            child: Icon(Icons.person, color: kColorWhite),
+                          ),
+                        )
+                      : Image.asset(
+                          visitor['avatar'] ?? kImgTemp2,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const ColoredBox(
+                            color: kColorAvatarFallbackBg,
+                            child: Icon(Icons.person, color: kColorWhite),
+                          ),
+                        ),
                 ),
               ),
               Spacing.h12,
@@ -187,7 +197,9 @@ class VisitorsView extends GetView<VisitorsController> {
                   onPressed: () => controller.toggleFollow(index),
                   buttonText: isFollowing ? 'Message' : 'Follow',
                   buttonColor: isFollowing ? kColorBackground : kColorPrimary,
-                  buttonBorderColor: isFollowing ? kColorPrimary : Colors.transparent,
+                  buttonBorderColor: isFollowing
+                      ? kColorPrimary
+                      : Colors.transparent,
                   borderRadius: 16,
                   buttonWidth: 90,
                   textStyle: TextStyles.kSemiBoldPoppins(
@@ -208,7 +220,7 @@ class VisitorsView extends GetView<VisitorsController> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(4),
         border: Border.all(color: color, width: 0.8),
       ),

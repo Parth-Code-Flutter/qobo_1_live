@@ -19,4 +19,21 @@ class ActivityRepo {
     if (response == null) return null;
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
+
+  Future<Map<String, dynamic>?> joinActivity({
+    required String activityId,
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: ActivityEndpoints.join,
+      requestModel: <String, dynamic>{
+        'activity_id': activityId,
+        'activityId': activityId,
+        'id': activityId,
+      },
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
 }

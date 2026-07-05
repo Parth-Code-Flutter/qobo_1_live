@@ -9,6 +9,15 @@ class SupportRepo {
 
   final ApiService _apiService;
 
+  Future<Map<String, dynamic>?> getFaqs({bool isShowLoader = true}) async {
+    final response = await _apiService.getRequest(
+      endPoint: SupportEndpoints.faqs,
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
   Future<Map<String, dynamic>?> createTicket({
     required String subject,
     required String description,
@@ -29,6 +38,23 @@ class SupportRepo {
   Future<Map<String, dynamic>?> getTickets({bool isShowLoader = true}) async {
     final response = await _apiService.getRequest(
       endPoint: SupportEndpoints.tickets,
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  Future<Map<String, dynamic>?> sendChatMessage({
+    required String message,
+    String? ticketId,
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: SupportEndpoints.chatSend,
+      requestModel: <String, dynamic>{
+        'message': message,
+        if ((ticketId ?? '').trim().isNotEmpty) 'ticketId': ticketId!.trim(),
+      },
       isShowLoader: isShowLoader,
     );
     if (response == null) return null;
