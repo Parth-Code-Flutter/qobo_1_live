@@ -45,7 +45,7 @@ class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
                     SliverPadding(
                       padding: EdgeInsets.fromLTRB(
                         compact ? 10 : 12,
-                        compact ? 8 : 10,
+                        compact ? 12 : 14,
                         compact ? 10 : 12,
                         compact ? 132 : 140,
                       ),
@@ -363,11 +363,12 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
       final title = controller.streamTitle.value.isNotEmpty
           ? controller.streamTitle.value
           : 'Audio Room';
+      final roomId = controller.roomId.value.trim();
 
       return Container(
         padding: EdgeInsets.symmetric(
-          horizontal: compact ? 7 : 9,
-          vertical: compact ? 6 : 7,
+          horizontal: compact ? 8 : 10,
+          vertical: compact ? 8 : 10,
         ),
         decoration: BoxDecoration(
           color: const Color(0xFF2A0737).withValues(alpha: 0.58),
@@ -381,6 +382,7 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
             ),
           ],
         ),
+        constraints: BoxConstraints(minHeight: compact ? 58 : 64),
         child: Row(
           children: [
             _CircleButton(
@@ -388,6 +390,13 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
               onTap: controller.leaveRoom,
               compact: compact,
               filled: false,
+            ),
+            Spacing.h8,
+            AppUserAvatar(
+              name: controller.hostName.value,
+              imageUrl: controller.hostAvatarUrl.value,
+              size: compact ? 40 : 44,
+              border: Border.all(color: kColorWhite, width: 1.5),
             ),
             Spacing.h10,
             Expanded(
@@ -398,14 +407,35 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
                   SemiBoldText(
                     text: title,
                     fontSize: compact
-                        ? TextStyles.k12FontSize
-                        : TextStyles.k14FontSize,
+                        ? TextStyles.k14FontSize
+                        : TextStyles.k16FontSize,
                     color: AudioRoomStageOverlay._ink,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Spacing.v2,
+                  AppText(
+                    text: 'Room Id : ${roomId.isEmpty ? '--' : roomId}',
+                    fontSize: compact
+                        ? TextStyles.k10FontSize
+                        : TextStyles.k12FontSize,
+                    color: kColorWhite.withValues(alpha: 0.82),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
+            ),
+            _CircleButton(
+              icon: Icons.share_rounded,
+              onTap: () => Get.snackbar(
+                'Share',
+                'Room sharing coming soon.',
+                snackPosition: SnackPosition.BOTTOM,
+                backgroundColor: const Color(0xFF1E1E2D),
+                colorText: kColorWhite,
+              ),
+              compact: compact,
             ),
             Spacing.h8,
             _HeaderMetric(
@@ -440,16 +470,11 @@ class _MemberGridState extends State<_MemberGrid> {
   final LiveBroadcastController controller =
       Get.find<LiveBroadcastController>();
 
-  bool _expanded = false;
-
   @override
   Widget build(BuildContext context) {
     return Obx(() {
       final seats = _buildSeats();
-      final canToggle = seats.length > 10;
-      final visibleSeats = canToggle && !_expanded
-          ? seats.take(10).toList()
-          : seats;
+      final visibleSeats = seats;
 
       return LayoutBuilder(
         builder: (context, constraints) {
@@ -457,7 +482,7 @@ class _MemberGridState extends State<_MemberGrid> {
           return GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: visibleSeats.length + (canToggle ? 1 : 0),
+            itemCount: visibleSeats.length,
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: crossAxisCount,
               mainAxisExtent: widget.compact ? 136 : 144,
@@ -465,13 +490,6 @@ class _MemberGridState extends State<_MemberGrid> {
               crossAxisSpacing: widget.compact ? 4 : 8,
             ),
             itemBuilder: (context, index) {
-              if (canToggle && index == visibleSeats.length) {
-                return _SeatToggle(
-                  expanded: _expanded,
-                  hiddenCount: seats.length - visibleSeats.length,
-                  onTap: () => setState(() => _expanded = !_expanded),
-                );
-              }
               final seat = visibleSeats[index];
               if (seat.locked) return _LockedSeat(seatNo: seat.seatNo);
               if (!seat.occupied) return _GridEmptySeat(seatNo: seat.seatNo);
@@ -484,20 +502,7 @@ class _MemberGridState extends State<_MemberGrid> {
   }
 
   List<_AudioSeatData> _buildSeats() {
-    final hostName = controller.hostName.value.isEmpty
-        ? 'Host'
-        : controller.hostName.value;
-    final seats = <_AudioSeatData>[
-      _AudioSeatData(
-        seatNo: 1,
-        name: hostName,
-        id: controller.receiverId.value,
-        avatarUrl: controller.hostAvatarUrl.value,
-        occupied: true,
-        level: 28,
-        isHost: true,
-      ),
-    ];
+    final seats = <_AudioSeatData>[];
     var seatNo = 2;
 
     while (seatNo <= 5) {
@@ -986,74 +991,6 @@ class _LockedSeat extends StatelessWidget {
   }
 }
 
-class _SeatToggle extends StatelessWidget {
-  const _SeatToggle({
-    required this.expanded,
-    required this.hiddenCount,
-    required this.onTap,
-  });
-
-  final bool expanded;
-  final int hiddenCount;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      customBorder: const CircleBorder(),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 14),
-          Container(
-            width: 78,
-            height: 78,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF32A8FF), Color(0xFF6A2C91)],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: kColorPrimary.withValues(alpha: 0.20),
-                  blurRadius: 14,
-                  offset: const Offset(0, 7),
-                ),
-              ],
-            ),
-            child: Icon(
-              expanded
-                  ? Icons.keyboard_arrow_up_rounded
-                  : Icons.keyboard_arrow_down_rounded,
-              color: kColorWhite,
-              size: 32,
-            ),
-          ),
-          Spacing.v6,
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: kColorWhite.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: SemiBoldText(
-              text: expanded ? 'Less' : '+$hiddenCount More',
-              fontSize: TextStyles.k10FontSize,
-              color: AudioRoomStageOverlay._ink,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              align: TextAlign.center,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _HeaderMetric extends StatelessWidget {
   const _HeaderMetric({required this.icon, required this.label});
 
@@ -1063,16 +1000,17 @@ class _HeaderMetric extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      height: 42,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.22),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: kColorWhite.withValues(alpha: 0.06)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: AudioRoomStageOverlay._seatGold),
+          Icon(icon, size: 16, color: AudioRoomStageOverlay._seatGold),
           Spacing.h4,
           AppText(
             text: label,
@@ -1104,8 +1042,8 @@ class _CircleButton extends StatelessWidget {
       onTap: onTap,
       customBorder: const CircleBorder(),
       child: Container(
-        width: compact ? 34 : 38,
-        height: compact ? 34 : 38,
+        width: compact ? 40 : 44,
+        height: compact ? 40 : 44,
         decoration: BoxDecoration(
           color: filled
               ? Colors.black.withValues(alpha: 0.24)
@@ -1113,7 +1051,7 @@ class _CircleButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: kColorWhite.withValues(alpha: 0.06)),
         ),
-        child: Icon(icon, color: kColorWhite, size: compact ? 18 : 20),
+        child: Icon(icon, color: kColorWhite, size: compact ? 22 : 24),
       ),
     );
   }
