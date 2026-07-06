@@ -38,17 +38,15 @@ class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
                   slivers: [
                     SliverPadding(
                       padding: EdgeInsets.fromLTRB(
-                        compact ? 12 : 16,
-                        10,
-                        compact ? 12 : 16,
+                        compact ? 10 : 12,
+                        compact ? 8 : 10,
+                        compact ? 10 : 12,
                         compact ? 132 : 140,
                       ),
                       sliver: SliverList(
                         delegate: SliverChildListDelegate.fixed([
                           _RoomHeader(compact: compact),
-                          SizedBox(height: compact ? 18 : 22),
-                          _CenterStage(compact: compact),
-                          SizedBox(height: compact ? 16 : 18),
+                          SizedBox(height: compact ? 14 : 16),
                           _MemberGrid(compact: compact),
                         ]),
                       ),
@@ -362,18 +360,18 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
 
       return Container(
         padding: EdgeInsets.symmetric(
-          horizontal: compact ? 8 : 10,
-          vertical: compact ? 8 : 9,
+          horizontal: compact ? 7 : 9,
+          vertical: compact ? 6 : 7,
         ),
         decoration: BoxDecoration(
           color: kColorWhite.withValues(alpha: 0.86),
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(color: kColorWhite.withValues(alpha: 0.72)),
           boxShadow: [
             BoxShadow(
               color: kColorPrimary.withValues(alpha: 0.10),
-              blurRadius: 22,
-              offset: const Offset(0, 12),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
             ),
             BoxShadow(
               color: kColorWhite.withValues(alpha: 0.80),
@@ -399,8 +397,8 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
                   SemiBoldText(
                     text: title,
                     fontSize: compact
-                        ? TextStyles.k14FontSize
-                        : TextStyles.k16FontSize,
+                        ? TextStyles.k12FontSize
+                        : TextStyles.k14FontSize,
                     color: AudioRoomStageOverlay._ink,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -420,47 +418,6 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
               icon: Icons.power_settings_new_rounded,
               onTap: controller.leaveRoom,
               compact: compact,
-            ),
-          ],
-        ),
-      );
-    });
-  }
-}
-
-class _CenterStage extends GetView<LiveBroadcastController> {
-  const _CenterStage({required this.compact});
-
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    return Obx(() {
-      final hostName = controller.hostName.value.isEmpty
-          ? 'Host'
-          : controller.hostName.value;
-
-      return Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: compact ? 4 : 8,
-          vertical: compact ? 4 : 6,
-        ),
-        child: Column(
-          children: [
-            _HostSeat(
-              name: hostName,
-              avatarUrl: controller.hostAvatarUrl.value,
-              compact: compact,
-            ),
-            SizedBox(height: compact ? 6 : 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _FeaturedEmptySeat(seatNo: 2, compact: compact),
-                _FeaturedEmptySeat(seatNo: 3, compact: compact),
-                _FeaturedEmptySeat(seatNo: 4, compact: compact),
-                _FeaturedEmptySeat(seatNo: 5, compact: compact),
-              ],
             ),
           ],
         ),
@@ -495,16 +452,16 @@ class _MemberGridState extends State<_MemberGrid> {
 
       return LayoutBuilder(
         builder: (context, constraints) {
-          final crossAxisCount = constraints.maxWidth < 360 ? 3 : 4;
+          const crossAxisCount = 3;
           return GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: visibleSeats.length + (canToggle ? 1 : 0),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: crossAxisCount,
-              mainAxisExtent: widget.compact ? 132 : 140,
-              mainAxisSpacing: widget.compact ? 14 : 16,
-              crossAxisSpacing: widget.compact ? 10 : 14,
+              mainAxisExtent: widget.compact ? 136 : 144,
+              mainAxisSpacing: widget.compact ? 8 : 10,
+              crossAxisSpacing: widget.compact ? 4 : 8,
             ),
             itemBuilder: (context, index) {
               if (canToggle && index == visibleSeats.length) {
@@ -526,11 +483,28 @@ class _MemberGridState extends State<_MemberGrid> {
   }
 
   List<_AudioSeatData> _buildSeats() {
-    final seats = <_AudioSeatData>[];
-    var seatNo = 6;
+    final hostName = controller.hostName.value.isEmpty
+        ? 'Host'
+        : controller.hostName.value;
+    final seats = <_AudioSeatData>[
+      _AudioSeatData(
+        seatNo: 1,
+        name: hostName,
+        avatarUrl: controller.hostAvatarUrl.value,
+        occupied: true,
+        level: 28,
+        isHost: true,
+      ),
+    ];
+    var seatNo = 2;
+
+    while (seatNo <= 5) {
+      seats.add(_AudioSeatData.empty(seatNo));
+      seatNo++;
+    }
 
     for (final viewer in controller.liveViewers) {
-      if (seats.length >= 8) break;
+      if (seats.length >= 13) break;
       if (viewer['isHost'] == true) continue;
       seats.add(
         _AudioSeatData(
@@ -558,7 +532,7 @@ class _MemberGridState extends State<_MemberGrid> {
     ];
 
     var previewIndex = 0;
-    while (seats.length < 8 && previewIndex < preview.length) {
+    while (seats.length < 13 && previewIndex < preview.length) {
       final item = preview[previewIndex];
       seats.add(
         _AudioSeatData(
@@ -574,134 +548,12 @@ class _MemberGridState extends State<_MemberGrid> {
       previewIndex++;
     }
 
-    while (seats.length < 10) {
+    while (seats.length < 15) {
       seats.add(_AudioSeatData.empty(seatNo));
       seatNo++;
     }
     seats.add(_AudioSeatData.empty(seatNo).copyWith(locked: true, level: 20));
     return seats;
-  }
-}
-
-class _HostSeat extends StatelessWidget {
-  const _HostSeat({
-    required this.name,
-    required this.avatarUrl,
-    required this.compact,
-  });
-
-  final String name;
-  final String? avatarUrl;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    final avatarSize = compact ? 78.0 : 92.0;
-    final ringSize = compact ? 106.0 : 122.0;
-
-    return SizedBox(
-      width: compact ? 128 : 148,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Stack(
-            alignment: Alignment.center,
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                width: ringSize + 14,
-                height: ringSize + 14,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: kColorProfileActionPinkStart.withValues(alpha: 0.10),
-                ),
-              ),
-              Container(
-                width: ringSize,
-                height: ringSize,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    colors: [kColorProfileActionPinkStart, kColorPrimary],
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: kColorProfileActionPinkStart.withValues(
-                        alpha: 0.34,
-                      ),
-                      blurRadius: 26,
-                      offset: const Offset(0, 10),
-                    ),
-                    BoxShadow(
-                      color: kColorProfileFeatureBlue.withValues(alpha: 0.18),
-                      blurRadius: 18,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-              ),
-              AppUserAvatar(
-                name: name,
-                imageUrl: avatarUrl,
-                size: avatarSize,
-                border: Border.all(color: kColorWhite, width: 4),
-              ),
-              const Positioned(top: -10, child: _CrownBadge()),
-              Positioned(
-                right: 0,
-                top: 14,
-                child: Container(
-                  padding: const EdgeInsets.all(5),
-                  decoration: BoxDecoration(
-                    color: kColorWhite,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: kColorWalletAmount.withValues(alpha: 0.30),
-                        blurRadius: 10,
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.auto_awesome_rounded,
-                    color: kColorWalletAmount,
-                    size: 16,
-                  ),
-                ),
-              ),
-              const Positioned(left: 7, top: 4, child: _SeatBadge(number: 1)),
-              const Positioned(right: 7, bottom: 8, child: _MicBubble()),
-            ],
-          ),
-          Transform.translate(
-            offset: const Offset(0, -8),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [kColorProfileFeatureBlue, kColorPrimary],
-                ),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const SemiBoldText(
-                text: 'Host',
-                fontSize: TextStyles.k12FontSize,
-                color: kColorWhite,
-              ),
-            ),
-          ),
-          SemiBoldText(
-            text: name,
-            fontSize: TextStyles.k14FontSize,
-            color: AudioRoomStageOverlay._ink,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            align: TextAlign.center,
-          ),
-          const _DiamondCount(value: 28),
-        ],
-      ),
-    );
   }
 }
 
@@ -715,7 +567,7 @@ class _MemberSeat extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const SizedBox(height: 8),
+        const SizedBox(height: 14),
         Stack(
           clipBehavior: Clip.none,
           alignment: Alignment.center,
@@ -724,6 +576,7 @@ class _MemberSeat extends StatelessWidget {
               name: seat.name,
               imageUrl: seat.avatarUrl,
               muted: seat.muted,
+              isHost: seat.isHost,
             ),
             Positioned(
               left: -8,
@@ -741,13 +594,18 @@ class _MemberSeat extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
           decoration: BoxDecoration(
-            color: kColorWhite.withValues(alpha: 0.72),
+            gradient: seat.isHost
+                ? const LinearGradient(
+                    colors: [kColorProfileFeatureBlue, kColorPrimary],
+                  )
+                : null,
+            color: seat.isHost ? null : kColorWhite.withValues(alpha: 0.72),
             borderRadius: BorderRadius.circular(10),
           ),
           child: SemiBoldText(
             text: seat.name,
             fontSize: TextStyles.k10FontSize,
-            color: AudioRoomStageOverlay._ink,
+            color: seat.isHost ? kColorWhite : AudioRoomStageOverlay._ink,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             align: TextAlign.center,
@@ -764,17 +622,19 @@ class _PremiumAvatarFrame extends StatelessWidget {
     required this.name,
     required this.imageUrl,
     required this.muted,
+    required this.isHost,
   });
 
   final String name;
   final String? imageUrl;
   final bool muted;
+  final bool isHost;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 64,
-      height: 64,
+      width: 84,
+      height: 84,
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
@@ -804,118 +664,11 @@ class _PremiumAvatarFrame extends StatelessWidget {
       child: AppUserAvatar(
         name: name,
         imageUrl: imageUrl,
-        size: 56,
+        size: 74,
         border: Border.all(
           color: kColorWhite.withValues(alpha: 0.88),
           width: 2,
         ),
-      ),
-    );
-  }
-}
-
-class _CrownBadge extends StatelessWidget {
-  const _CrownBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: kColorWalletAmount,
-        shape: BoxShape.circle,
-        border: Border.all(color: kColorWhite, width: 3),
-        boxShadow: [
-          BoxShadow(
-            color: kColorWalletAmount.withValues(alpha: 0.36),
-            blurRadius: 14,
-          ),
-        ],
-      ),
-      child: const Icon(
-        Icons.workspace_premium_rounded,
-        color: kColorPrimary,
-        size: 28,
-      ),
-    );
-  }
-}
-
-class _FeaturedEmptySeat extends StatelessWidget {
-  const _FeaturedEmptySeat({required this.seatNo, required this.compact});
-
-  final int seatNo;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    final size = compact ? 50.0 : 56.0;
-    return SizedBox(
-      width: compact ? 60 : 68,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.center,
-            children: [
-              Container(
-                width: size,
-                height: size,
-                decoration: BoxDecoration(
-                  color: kColorWhite.withValues(alpha: 0.78),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: kColorPrimary.withValues(alpha: 0.10),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: kColorPrimary.withValues(alpha: 0.08),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: Icon(
-                  Icons.mic_none_rounded,
-                  color: kColorPrimary.withValues(alpha: 0.30),
-                  size: compact ? 27 : 30,
-                ),
-              ),
-              Positioned(left: -7, top: -7, child: _SeatBadge(number: seatNo)),
-              Positioned(
-                right: -4,
-                bottom: -4,
-                child: Container(
-                  width: compact ? 22 : 24,
-                  height: compact ? 22 : 24,
-                  decoration: BoxDecoration(
-                    color: kColorWhite,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: kColorPrimary.withValues(alpha: 0.12),
-                    ),
-                  ),
-                  child: Icon(
-                    Icons.add_rounded,
-                    color: kColorPrimary,
-                    size: compact ? 16 : 18,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          Spacing.v6,
-          const AppText(
-            text: 'Open',
-            fontSize: TextStyles.k10FontSize,
-            color: AudioRoomStageOverlay._muted,
-            align: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
       ),
     );
   }
@@ -931,13 +684,14 @@ class _GridEmptySeat extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        const SizedBox(height: 14),
         Stack(
           clipBehavior: Clip.none,
           alignment: Alignment.center,
           children: [
             Container(
-              width: 58,
-              height: 58,
+              width: 84,
+              height: 84,
               decoration: BoxDecoration(
                 color: kColorWhite.withValues(alpha: 0.72),
                 shape: BoxShape.circle,
@@ -948,15 +702,42 @@ class _GridEmptySeat extends StatelessWidget {
               child: Icon(
                 Icons.mic_none_rounded,
                 color: kColorPrimary.withValues(alpha: 0.28),
-                size: 28,
+                size: 36,
               ),
             ),
             Positioned(left: -8, top: -8, child: _SeatBadge(number: seatNo)),
+            Positioned(
+              right: -5,
+              bottom: -5,
+              child: Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: kColorWhite,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: kColorPrimary.withValues(alpha: 0.12),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: kColorPrimary.withValues(alpha: 0.10),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.add_rounded,
+                  color: kColorPrimary,
+                  size: 20,
+                ),
+              ),
+            ),
           ],
         ),
-        Spacing.v8,
-        const AppText(
-          text: 'Open',
+        Spacing.v6,
+        const SemiBoldText(
+          text: 'Join',
           fontSize: TextStyles.k10FontSize,
           color: AudioRoomStageOverlay._muted,
           align: TextAlign.center,
@@ -976,13 +757,14 @@ class _LockedSeat extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        const SizedBox(height: 14),
         Stack(
           clipBehavior: Clip.none,
           alignment: Alignment.center,
           children: [
             Container(
-              width: 58,
-              height: 58,
+              width: 84,
+              height: 84,
               decoration: BoxDecoration(
                 color: kColorWhite.withValues(alpha: 0.62),
                 shape: BoxShape.circle,
@@ -1027,10 +809,10 @@ class _SeatToggle extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(height: 8),
+          const SizedBox(height: 14),
           Container(
-            width: 64,
-            height: 64,
+            width: 78,
+            height: 78,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: const LinearGradient(
@@ -1126,8 +908,8 @@ class _CircleButton extends StatelessWidget {
       onTap: onTap,
       customBorder: const CircleBorder(),
       child: Container(
-        width: compact ? 38 : 42,
-        height: compact ? 38 : 42,
+        width: compact ? 34 : 38,
+        height: compact ? 34 : 38,
         decoration: BoxDecoration(
           color: filled
               ? kColorPrimary.withValues(alpha: 0.08)
@@ -1135,7 +917,7 @@ class _CircleButton extends StatelessWidget {
           shape: BoxShape.circle,
           border: Border.all(color: kColorPrimary.withValues(alpha: 0.08)),
         ),
-        child: Icon(icon, color: kColorPrimary, size: compact ? 20 : 22),
+        child: Icon(icon, color: kColorPrimary, size: compact ? 18 : 20),
       ),
     );
   }
@@ -1172,7 +954,7 @@ class _MicBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = small ? 28.0 : 34.0;
+    final size = small ? 34.0 : 38.0;
     return Container(
       width: size,
       height: size,
@@ -1184,7 +966,7 @@ class _MicBubble extends StatelessWidget {
       child: Icon(
         muted ? Icons.mic_off_rounded : Icons.mic_rounded,
         color: kColorWhite,
-        size: small ? 15 : 18,
+        size: small ? 19 : 21,
       ),
     );
   }
@@ -1231,6 +1013,7 @@ class _AudioSeatData {
     this.occupied = false,
     this.muted = false,
     this.locked = false,
+    this.isHost = false,
   });
 
   factory _AudioSeatData.empty(int seatNo) => _AudioSeatData(seatNo: seatNo);
@@ -1243,6 +1026,7 @@ class _AudioSeatData {
   final bool occupied;
   final bool muted;
   final bool locked;
+  final bool isHost;
 
   _AudioSeatData copyWith({bool? locked, int? level}) {
     return _AudioSeatData(
@@ -1254,6 +1038,7 @@ class _AudioSeatData {
       occupied: occupied,
       muted: muted,
       locked: locked ?? this.locked,
+      isHost: isHost,
     );
   }
 }
