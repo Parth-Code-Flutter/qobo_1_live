@@ -66,6 +66,8 @@ class _GiftsBottomSheetState extends State<GiftsBottomSheet> {
             ),
           ),
           Spacing.v16,
+          Obx(() => _buildGiftScope(controller)),
+          Spacing.v10,
           Obx(() => _buildTabBar(controller)),
           Spacing.v12,
           Expanded(
@@ -79,6 +81,39 @@ class _GiftsBottomSheetState extends State<GiftsBottomSheet> {
             }),
           ),
           Obx(() => _buildBottomBar(controller)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGiftScope(LiveBroadcastController controller) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            controller.isRoomGiftMode.value
+                ? Icons.groups_rounded
+                : Icons.person_rounded,
+            color: Colors.pinkAccent,
+            size: 18,
+          ),
+          Spacing.h8,
+          Expanded(
+            child: AppText(
+              text: controller.giftSheetDescription,
+              fontSize: TextStyles.k12FontSize,
+              color: kColorWhite,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ),
     );
@@ -212,7 +247,8 @@ class _GiftsBottomSheetState extends State<GiftsBottomSheet> {
 
   Widget _buildBottomBar(LiveBroadcastController controller) {
     final gifts = _visibleGifts(controller);
-    final canSend = _selectedGiftIndex >= 0 && _selectedGiftIndex < gifts.length;
+    final canSend =
+        _selectedGiftIndex >= 0 && _selectedGiftIndex < gifts.length;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),

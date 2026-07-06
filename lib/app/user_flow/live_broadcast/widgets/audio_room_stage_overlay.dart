@@ -12,8 +12,14 @@ import '../controllers/live_broadcast_controller.dart';
 class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
   const AudioRoomStageOverlay({super.key});
 
-  static const _ink = Color(0xFF24162E);
-  static const _muted = Color(0xFF776A80);
+  static const _ink = Color(0xFFFFFFFF);
+  static const _muted = Color(0xCCFFFFFF);
+  static const _roomTop = Color(0xFF4A073F);
+  static const _roomMid = Color(0xFF30105F);
+  static const _roomBottom = Color(0xFF07103F);
+  static const _seatGold = Color(0xFFFFA10A);
+  static const _micGreen = Color(0xFF24C34A);
+  static const _deepPurple = Color(0xFF3B0647);
 
   @override
   Widget build(BuildContext context) {
@@ -22,8 +28,8 @@ class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFFFFF8FD), Color(0xFFF5ECFA), Color(0xFFF9F5FC)],
-          stops: [0, 0.42, 1],
+          colors: [_roomTop, _roomMid, _roomBottom],
+          stops: [0, 0.46, 1],
         ),
       ),
       child: SafeArea(
@@ -364,19 +370,14 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
           vertical: compact ? 6 : 7,
         ),
         decoration: BoxDecoration(
-          color: kColorWhite.withValues(alpha: 0.86),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: kColorWhite.withValues(alpha: 0.72)),
+          color: const Color(0xFF2A0737).withValues(alpha: 0.58),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
           boxShadow: [
             BoxShadow(
-              color: kColorPrimary.withValues(alpha: 0.10),
-              blurRadius: 16,
-              offset: const Offset(0, 8),
-            ),
-            BoxShadow(
-              color: kColorWhite.withValues(alpha: 0.80),
-              blurRadius: 8,
-              offset: const Offset(0, -2),
+              color: Colors.black.withValues(alpha: 0.16),
+              blurRadius: 14,
+              offset: const Offset(0, 7),
             ),
           ],
         ),
@@ -490,6 +491,7 @@ class _MemberGridState extends State<_MemberGrid> {
       _AudioSeatData(
         seatNo: 1,
         name: hostName,
+        id: controller.receiverId.value,
         avatarUrl: controller.hostAvatarUrl.value,
         occupied: true,
         level: 28,
@@ -557,62 +559,260 @@ class _MemberGridState extends State<_MemberGrid> {
   }
 }
 
-class _MemberSeat extends StatelessWidget {
+class _MemberSeat extends GetView<LiveBroadcastController> {
   const _MemberSeat({required this.seat});
 
   final _AudioSeatData seat;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const SizedBox(height: 14),
-        Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.center,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _openSeatActions(context),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 14),
+          Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              _PremiumAvatarFrame(
+                name: seat.name,
+                imageUrl: seat.avatarUrl,
+                muted: seat.muted,
+                isHost: seat.isHost,
+              ),
+              Positioned(
+                left: -8,
+                top: -8,
+                child: _SeatBadge(number: seat.seatNo),
+              ),
+              Positioned(
+                right: -7,
+                bottom: -5,
+                child: _MicBubble(muted: seat.muted, small: true),
+              ),
+            ],
+          ),
+          Spacing.v6,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(10)),
+            child: SemiBoldText(
+              text: seat.name,
+              fontSize: TextStyles.k10FontSize,
+              color: kColorWhite,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              align: TextAlign.center,
+            ),
+          ),
+          _DiamondCount(value: seat.level),
+        ],
+      ),
+    );
+  }
+
+  void _openSeatActions(BuildContext context) {
+    if (controller.isHost.value && seat.isHost) return;
+    Get.bottomSheet(
+      _AudioSeatActionsSheet(seat: seat, isHostView: controller.isHost.value),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+    );
+  }
+}
+
+class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
+  const _AudioSeatActionsSheet({required this.seat, required this.isHostView});
+
+  final _AudioSeatData seat;
+  final bool isHostView;
+
+  @override
+  Widget build(BuildContext context) {
+    final actions = isHostView
+        ? [
+            _SeatActionData(
+              icon: seat.muted ? Icons.mic_rounded : Icons.mic_off_rounded,
+              label: seat.muted ? 'Unmute' : 'Mute',
+              onTap: () => _showPendingAction(seat.muted ? 'Unmute' : 'Mute'),
+            ),
+            _SeatActionData(
+              icon: Icons.person_remove_rounded,
+              label: 'Kick off',
+              onTap: () => _showPendingAction('Kick off'),
+            ),
+            _SeatActionData(
+              icon: Icons.admin_panel_settings_rounded,
+              label: 'Make admin',
+              onTap: () => _showPendingAction('Make admin'),
+            ),
+            _SeatActionData(
+              icon: Icons.card_giftcard_rounded,
+              label: 'Gift',
+              onTap: _openGift,
+            ),
+          ]
+        : [
+            _SeatActionData(
+              icon: Icons.card_giftcard_rounded,
+              label: 'Send gift',
+              onTap: _openGift,
+            ),
+          ];
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 12, 18, 28),
+      decoration: const BoxDecoration(
+        color: Color(0xFF1D222B),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            _PremiumAvatarFrame(
-              name: seat.name,
-              imageUrl: seat.avatarUrl,
-              muted: seat.muted,
-              isHost: seat.isHost,
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: kColorWhite.withValues(alpha: 0.20),
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-            Positioned(
-              left: -8,
-              top: -8,
-              child: _SeatBadge(number: seat.seatNo),
+            Spacing.v16,
+            Row(
+              children: [
+                _PremiumAvatarFrame(
+                  name: seat.name,
+                  imageUrl: seat.avatarUrl,
+                  muted: seat.muted,
+                  isHost: seat.isHost,
+                ),
+                Spacing.h12,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SemiBoldText(
+                        text: seat.name,
+                        fontSize: TextStyles.k16FontSize,
+                        color: kColorWhite,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Spacing.v4,
+                      AppText(
+                        text: isHostView
+                            ? 'Manage this room member'
+                            : 'Send an individual gift',
+                        fontSize: TextStyles.k12FontSize,
+                        color: kColorWhite.withValues(alpha: 0.62),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            Positioned(
-              right: -7,
-              bottom: -5,
-              child: _MicBubble(muted: seat.muted, small: true),
+            const SizedBox(height: 18),
+            Row(
+              children: actions
+                  .map(
+                    (action) =>
+                        Expanded(child: _SeatActionButton(action: action)),
+                  )
+                  .toList(),
             ),
           ],
         ),
-        Spacing.v6,
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-          decoration: BoxDecoration(
-            gradient: seat.isHost
-                ? const LinearGradient(
-                    colors: [kColorProfileFeatureBlue, kColorPrimary],
-                  )
-                : null,
-            color: seat.isHost ? null : kColorWhite.withValues(alpha: 0.72),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: SemiBoldText(
-            text: seat.name,
-            fontSize: TextStyles.k10FontSize,
-            color: seat.isHost ? kColorWhite : AudioRoomStageOverlay._ink,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            align: TextAlign.center,
-          ),
+      ),
+    );
+  }
+
+  void _openGift() {
+    final receiverId = seat.id.trim();
+    if (receiverId.isEmpty) {
+      Get.back();
+      Get.snackbar(
+        'Gift not available',
+        'This user id is missing from the room member data.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFF1E1E2D),
+        colorText: kColorWhite,
+      );
+      return;
+    }
+    controller.openGiftsSheet(
+      receiverId: receiverId,
+      receiverName: seat.name,
+      roomGift: false,
+    );
+  }
+
+  void _showPendingAction(String action) {
+    Get.back();
+    Get.snackbar(
+      action,
+      '$action for ${seat.name} will be connected when moderation APIs are ready.',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: const Color(0xFF1E1E2D),
+      colorText: kColorWhite,
+    );
+  }
+}
+
+class _SeatActionData {
+  const _SeatActionData({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+}
+
+class _SeatActionButton extends StatelessWidget {
+  const _SeatActionButton({required this.action});
+
+  final _SeatActionData action;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: action.onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 3),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: kColorWhite.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+                border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
+              ),
+              child: Icon(action.icon, color: kColorWhite, size: 22),
+            ),
+            Spacing.v6,
+            AppText(
+              text: action.label,
+              fontSize: 9,
+              color: kColorWhite.withValues(alpha: 0.78),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              align: TextAlign.center,
+            ),
+          ],
         ),
-        _DiamondCount(value: seat.level),
-      ],
+      ),
     );
   }
 }
@@ -640,16 +840,12 @@ class _PremiumAvatarFrame extends StatelessWidget {
         shape: BoxShape.circle,
         gradient: muted
             ? const LinearGradient(
-                colors: [Color(0xFFB6A9BC), Color(0xFF74667C)],
+                colors: [Color(0xFFB8B8BC), Color(0xFF5F6274)],
               )
             : const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  kColorProfileFeatureBlue,
-                  kColorProfileActionPinkStart,
-                  kColorPrimary,
-                ],
+                colors: [Color(0xFF8F88FF), Color(0xFFFF4FA2)],
               ),
         boxShadow: [
           BoxShadow(
@@ -693,15 +889,13 @@ class _GridEmptySeat extends StatelessWidget {
               width: 84,
               height: 84,
               decoration: BoxDecoration(
-                color: kColorWhite.withValues(alpha: 0.72),
+                color: const Color(0xFFE5E5E5),
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: kColorPrimary.withValues(alpha: 0.08),
-                ),
+                border: Border.all(color: kColorWhite.withValues(alpha: 0.72)),
               ),
               child: Icon(
                 Icons.mic_none_rounded,
-                color: kColorPrimary.withValues(alpha: 0.28),
+                color: AudioRoomStageOverlay._deepPurple,
                 size: 36,
               ),
             ),
@@ -728,7 +922,7 @@ class _GridEmptySeat extends StatelessWidget {
                 ),
                 child: const Icon(
                   Icons.add_rounded,
-                  color: kColorPrimary,
+                  color: AudioRoomStageOverlay._deepPurple,
                   size: 20,
                 ),
               ),
@@ -737,7 +931,7 @@ class _GridEmptySeat extends StatelessWidget {
         ),
         Spacing.v6,
         const SemiBoldText(
-          text: 'Join',
+          text: 'Open',
           fontSize: TextStyles.k10FontSize,
           color: AudioRoomStageOverlay._muted,
           align: TextAlign.center,
@@ -766,12 +960,14 @@ class _LockedSeat extends StatelessWidget {
               width: 84,
               height: 84,
               decoration: BoxDecoration(
-                color: kColorWhite.withValues(alpha: 0.62),
+                color: const Color(0xFFDADADA),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.lock_rounded,
-                color: kColorPrimary.withValues(alpha: 0.36),
+                color: AudioRoomStageOverlay._deepPurple.withValues(
+                  alpha: 0.45,
+                ),
               ),
             ),
             Positioned(left: -8, top: -8, child: _SeatBadge(number: seatNo)),
@@ -818,7 +1014,7 @@ class _SeatToggle extends StatelessWidget {
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [kColorProfileFeatureBlue, kColorPrimary],
+                colors: [Color(0xFF32A8FF), Color(0xFF6A2C91)],
               ),
               boxShadow: [
                 BoxShadow(
@@ -840,7 +1036,7 @@ class _SeatToggle extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
-              color: kColorWhite.withValues(alpha: 0.72),
+              color: kColorWhite.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(10),
             ),
             child: SemiBoldText(
@@ -869,14 +1065,14 @@ class _HeaderMetric extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: kColorPrimary.withValues(alpha: 0.08),
+        color: Colors.black.withValues(alpha: 0.22),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: kColorPrimary.withValues(alpha: 0.06)),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.06)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: kColorWalletAmount),
+          Icon(icon, size: 14, color: AudioRoomStageOverlay._seatGold),
           Spacing.h4,
           AppText(
             text: label,
@@ -912,12 +1108,12 @@ class _CircleButton extends StatelessWidget {
         height: compact ? 34 : 38,
         decoration: BoxDecoration(
           color: filled
-              ? kColorPrimary.withValues(alpha: 0.08)
-              : kColorPrimary.withValues(alpha: 0.08),
-          shape: BoxShape.circle,
-          border: Border.all(color: kColorPrimary.withValues(alpha: 0.08)),
+              ? Colors.black.withValues(alpha: 0.24)
+              : Colors.black.withValues(alpha: 0.24),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.06)),
         ),
-        child: Icon(icon, color: kColorPrimary, size: compact ? 18 : 20),
+        child: Icon(icon, color: kColorWhite, size: compact ? 18 : 20),
       ),
     );
   }
@@ -935,11 +1131,12 @@ class _SeatBadge extends StatelessWidget {
       height: 24,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [kColorProfileFeatureBlue, kColorPrimary],
-        ),
+        color: AudioRoomStageOverlay._seatGold,
         shape: BoxShape.circle,
-        border: Border.all(color: kColorWhite, width: 1.5),
+        border: Border.all(
+          color: kColorWhite.withValues(alpha: 0.82),
+          width: 1.2,
+        ),
       ),
       child: SemiBoldText(text: '$number', fontSize: 10, color: kColorWhite),
     );
@@ -959,7 +1156,9 @@ class _MicBubble extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: muted ? const Color(0xFF6B6470) : kColorProfileFeatureBlue,
+        color: muted
+            ? const Color(0xFF6B6470)
+            : AudioRoomStageOverlay._micGreen,
         shape: BoxShape.circle,
         border: Border.all(color: kColorWhite, width: 2),
       ),
@@ -983,14 +1182,18 @@ class _DiamondCount extends StatelessWidget {
       margin: const EdgeInsets.only(top: 2),
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
-        color: kColorPrimary.withValues(alpha: 0.08),
+        color: kColorWhite.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.diamond_rounded, size: 13, color: kColorPrimary),
+          const Icon(
+            Icons.diamond_rounded,
+            size: 13,
+            color: AudioRoomStageOverlay._seatGold,
+          ),
           Spacing.h4,
           AppText(
             text: '$value',

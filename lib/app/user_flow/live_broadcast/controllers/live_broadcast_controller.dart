@@ -62,6 +62,9 @@ class LiveBroadcastController extends GetxController {
   final diamondsBalance = 0.obs;
   final giftCatalog = <Map<String, String>>[].obs;
   final isLoadingGifts = false.obs;
+  final selectedGiftReceiverId = RxnString();
+  final selectedGiftReceiverName = RxnString();
+  final isRoomGiftMode = true.obs;
   final liveBeautyEnabled = false.obs;
   final liveSmooth = 35.obs;
   final liveSkinTone = 25.obs;
@@ -196,6 +199,16 @@ class LiveBroadcastController extends GetxController {
   bool get isGroupCallRoom => isAudioVideoRoom;
 
   bool get canSendGifts => !isHost.value;
+
+  String get giftTargetLabel {
+    if (isRoomGiftMode.value) return 'Everyone in this room';
+    final name = selectedGiftReceiverName.value?.trim();
+    return name?.isNotEmpty == true ? name! : hostName.value;
+  }
+
+  String get giftSheetDescription => isRoomGiftMode.value
+      ? 'This gift will be shared with everyone in the room.'
+      : 'This gift will be sent privately to $giftTargetLabel.';
 
   /// Called after Zego room login — ensures host camera publishes and binds chat/users.
   void onZegoRoomLogined() {
@@ -358,9 +371,7 @@ class LiveBroadcastController extends GetxController {
       return;
     }
 
-    if (!isGroupCallRoom &&
-        !isHost.value &&
-        !hasExplicitStreamingId.value) {
+    if (!isGroupCallRoom && !isHost.value && !hasExplicitStreamingId.value) {
       connectionIssue.value =
           'This room has only backend room id. Audience join needs zegoLiveId/channelName from API.';
       return;
@@ -549,17 +560,6 @@ class LiveBroadcastController extends GetxController {
   }
 
   Future<void> sendGift(Map<String, String> gift) async {
-    if (!canSendGifts) {
-      Get.snackbar(
-        'Gift not sent',
-        'Hosts cannot send gifts in their own room.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFFD32F2F),
-        colorText: const Color(0xFFFFFFFF),
-      );
-      return;
-    }
-
     final int price = int.tryParse(gift['price'] ?? '0') ?? 0;
     if (coinsBalance.value < price) {
       Get.snackbar(
@@ -574,11 +574,14 @@ class LiveBroadcastController extends GetxController {
 
     final giftId = gift['id']?.trim() ?? '';
     final currentRoomId = roomId.value.trim();
-    final currentReceiverId = receiverId.value.trim();
+    final currentReceiverId =
+        selectedGiftReceiverId.value?.trim().isNotEmpty == true
+        ? selectedGiftReceiverId.value!.trim()
+        : receiverId.value.trim();
     if (giftId.isEmpty || currentRoomId.isEmpty || currentReceiverId.isEmpty) {
       Get.snackbar(
         'Gift not sent',
-        'Gift, host, or room id is missing from live room data.',
+        'Gift, receiver, or room id is missing from live room data.',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: const Color(0xFFD32F2F),
         colorText: const Color(0xFFFFFFFF),
@@ -617,7 +620,9 @@ class LiveBroadcastController extends GetxController {
 
       Get.snackbar(
         '🎁 Gift Sent! 🎁',
-        'You sent ${gift['name']} to ${hostName.value}!',
+        isRoomGiftMode.value
+            ? 'You shared ${gift['name']} with everyone in the room!'
+            : 'You sent ${gift['name']} to $giftTargetLabel!',
         snackPosition: SnackPosition.TOP,
         backgroundColor: const Color(0xFFFF4081),
         colorText: const Color(0xFFFFFFFF),
@@ -649,17 +654,18 @@ class LiveBroadcastController extends GetxController {
     );
   }
 
-  void openGiftsSheet() {
-    if (!canSendGifts) {
-      Get.snackbar(
-        'Gift not available',
-        'Hosts cannot send gifts in their own room.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFF1E1E2D),
-        colorText: const Color(0xFFFFFFFF),
-      );
-      return;
-    }
+  void openGiftsSheet({
+    String? receiverId,
+    String? receiverName,
+    bool roomGift = true,
+  }) {
+    isRoomGiftMode.value = roomGift;
+    selectedGiftReceiverId.value = roomGift
+        ? this.receiverId.value
+        : receiverId;
+    selectedGiftReceiverName.value = roomGift
+        ? 'Everyone in this room'
+        : receiverName;
 
     if (Get.isDialogOpen == true) Get.back();
     if (Get.isBottomSheetOpen == true) Get.back();
