@@ -1336,7 +1336,11 @@ class LiveBroadcastController extends GetxController {
 
   void leaveRoom() {
     if (isHost.value) {
-      confirmEndRoom();
+      if (_isAudioVideoRoomPayload()) {
+        confirmEndRoom();
+      } else {
+        confirmEndLiveStream();
+      }
       return;
     }
     unawaited(_reportAudioVideoRoomExit());
@@ -1383,6 +1387,83 @@ class LiveBroadcastController extends GetxController {
     );
   }
 
+  void confirmEndLiveStream() {
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: const Color(0xFF1D102F),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const SemiBoldText(
+          text: 'End live stream?',
+          fontSize: TextStyles.k18FontSize,
+          color: kColorWhite,
+        ),
+        content: AppText(
+          text:
+              'This will end your live stream for all viewers and close the session.',
+          fontSize: TextStyles.k12FontSize,
+          color: kColorWhite.withValues(alpha: 0.72),
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+        actions: [
+          TextButton(
+            onPressed: Get.back,
+            child: AppText(
+              text: 'Cancel',
+              fontSize: TextStyles.k12FontSize,
+              color: kColorWhite.withValues(alpha: 0.72),
+            ),
+          ),
+          TextButton(
+            onPressed: endLiveStreamForEveryone,
+            child: const SemiBoldText(
+              text: 'End Live',
+              fontSize: TextStyles.k12FontSize,
+              color: Color(0xFFFF5A7A),
+            ),
+          ),
+        ],
+      ),
+      barrierDismissible: true,
+    );
+  }
+
+  Future<void> endLiveStreamForEveryone() async {
+    if (_exitReported) return;
+    final liveStreamingId = liveStreamingApiId;
+    if (liveStreamingId.isEmpty) {
+      Get.back();
+      Get.snackbar(
+        'End live stream',
+        'Live stream id is missing, so this stream cannot be ended.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFFD32F2F),
+        colorText: kColorWhite,
+      );
+      return;
+    }
+
+    // Live streaming and audio/video rooms use different backend resources.
+    // Keep this path isolated so closing a Go Live stream never calls room APIs.
+    final response = await _roomRepo.endLiveStreaming(
+      liveStreamingId: liveStreamingId,
+      isShowLoader: true,
+    );
+
+    if (_isApiSuccess(response)) {
+      _exitReported = true;
+      if (Get.isDialogOpen == true) Get.back();
+      Get.back();
+      return;
+    }
+
+    if (Get.isDialogOpen == true) Get.back();
+    _showRoomApiError(
+      'End live stream',
+      response,
+      'Unable to end this live stream.',
+    );
+  }
+
   Future<void> endRoomForEveryone() async {
     if (_exitReported) return;
     final backendRoomId = audioRoomApiId;
@@ -1416,6 +1497,10 @@ class LiveBroadcastController extends GetxController {
 
   void reportRoomExit() {
     unawaited(_reportAudioVideoRoomExit());
+  }
+
+  String get liveStreamingApiId {
+    return (_extractStreamingId(_roomData) ?? roomId.value).trim();
   }
 
   Future<void> _reportAudioVideoRoomExit() async {

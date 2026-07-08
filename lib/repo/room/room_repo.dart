@@ -119,6 +119,29 @@ class RoomRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
+  /// Calls `POST /api/live-streaming/end` to close a host live stream.
+  Future<Map<String, dynamic>?> endLiveStreaming({
+    required String liveStreamingId,
+    bool isShowLoader = true,
+  }) async {
+    final id = liveStreamingId.trim();
+    if (id.isEmpty) return null;
+
+    final response = await _apiService.postRequest(
+      endPoint: RoomEndpoints.endLiveStreaming,
+      requestModel: <String, dynamic>{
+        'liveStreamingId': id,
+        'live_streaming_id': id,
+        'liveId': id,
+      },
+      isShowLoader: isShowLoader,
+      isLoginCall: false,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
   /// `GET /api/live-streaming/verify-access?userId=...`
   Future<Map<String, dynamic>?> verifyLiveStreamingAccess({
     required String userId,

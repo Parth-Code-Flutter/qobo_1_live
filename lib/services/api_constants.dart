@@ -76,6 +76,9 @@ class RoomEndpoints {
   /// POST /api/live-streaming/create — host starts Zego live stream
   static const String createLiveStreaming = '/api/live-streaming/create';
 
+  /// POST /api/live-streaming/end — host ends a Zego live stream
+  static const String endLiveStreaming = '/api/live-streaming/end';
+
   /// GET /api/live-streaming/verify-access — wallet/agency gate for Go Live
   static const String verifyLiveStreamingAccess =
       '/api/live-streaming/verify-access';
