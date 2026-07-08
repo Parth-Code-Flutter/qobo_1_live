@@ -105,11 +105,12 @@ class ChatVoiceCallView extends GetView<ChatVoiceCallController> {
           ? const [
               ZegoCallMenuBarButtonName.toggleCameraButton,
               ZegoCallMenuBarButtonName.switchCameraButton,
-              ZegoCallMenuBarButtonName.beautyEffectButton,
               ZegoCallMenuBarButtonName.hangUpButton,
             ]
           : const [ZegoCallMenuBarButtonName.hangUpButton],
-      extendButtons: const [ChatCallMicButton(), ChatCallSpeakerButton()],
+      extendButtons: isVideo
+          ? const [_ChatCallFilterButton()]
+          : const [ChatCallMicButton(), ChatCallSpeakerButton()],
     );
 
     final device = ZegoCallDeviceConfig(enableSyncDeviceStatusBySEI: false);
@@ -326,6 +327,245 @@ class _CompactCallActionButton extends StatelessWidget {
   }
 }
 
+class _ChatCallFilterButton extends StatelessWidget {
+  const _ChatCallFilterButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => Get.bottomSheet(
+          const _CallFilterBottomSheet(),
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+        ),
+        customBorder: const CircleBorder(),
+        child: Ink(
+          width: 60,
+          height: 60,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: const Color(0xFF444956).withValues(alpha: 0.96),
+            border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.18),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.auto_fix_high_rounded,
+            color: kColorWhite,
+            size: 30,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CallFilterBottomSheet extends StatefulWidget {
+  const _CallFilterBottomSheet();
+
+  @override
+  State<_CallFilterBottomSheet> createState() => _CallFilterBottomSheetState();
+}
+
+class _CallFilterBottomSheetState extends State<_CallFilterBottomSheet> {
+  final _presets = const ['Natural', 'Bright', 'Warm', 'Soft'];
+  var _selectedPreset = 0;
+  double _smooth = 0.35;
+  double _brightness = 0.45;
+  double _tone = 0.30;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 12, 18, 22),
+      decoration: const BoxDecoration(
+        color: Color(0xFF171321),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: kColorWhite.withValues(alpha: 0.22),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Spacing.v16,
+            const SemiBoldText(
+              text: 'Filters',
+              fontSize: TextStyles.k20FontSize,
+              color: kColorWhite,
+            ),
+            Spacing.v4,
+            AppText(
+              text: 'Choose a camera look for this video call.',
+              fontSize: TextStyles.k12FontSize,
+              color: kColorWhite.withValues(alpha: 0.66),
+            ),
+            Spacing.v16,
+            SizedBox(
+              height: 42,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: _presets.length,
+                separatorBuilder: (_, _) => Spacing.h8,
+                itemBuilder: (context, index) {
+                  final selected = _selectedPreset == index;
+                  return GestureDetector(
+                    onTap: () => setState(() => _selectedPreset = index),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        gradient: selected
+                            ? const LinearGradient(
+                                colors: [
+                                  kColorProfileActionPinkStart,
+                                  kColorProfileChipPurpleEnd,
+                                ],
+                              )
+                            : null,
+                        color: selected
+                            ? null
+                            : kColorWhite.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: selected
+                              ? kColorWhite.withValues(alpha: 0.18)
+                              : kColorWhite.withValues(alpha: 0.10),
+                        ),
+                      ),
+                      child: SemiBoldText(
+                        text: _presets[index],
+                        fontSize: TextStyles.k12FontSize,
+                        color: kColorWhite,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 18),
+            _FilterSlider(
+              icon: Icons.face_retouching_natural_rounded,
+              label: 'Smooth',
+              value: _smooth,
+              onChanged: (value) => setState(() => _smooth = value),
+            ),
+            _FilterSlider(
+              icon: Icons.wb_sunny_rounded,
+              label: 'Brightness',
+              value: _brightness,
+              onChanged: (value) => setState(() => _brightness = value),
+            ),
+            _FilterSlider(
+              icon: Icons.palette_rounded,
+              label: 'Tone',
+              value: _tone,
+              onChanged: (value) => setState(() => _tone = value),
+            ),
+            Spacing.v12,
+            SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: TextButton(
+                onPressed: Get.back,
+                style: TextButton.styleFrom(
+                  backgroundColor: kColorPrimary,
+                  foregroundColor: kColorWhite,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                ),
+                child: const SemiBoldText(
+                  text: 'Apply',
+                  fontSize: TextStyles.k14FontSize,
+                  color: kColorWhite,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterSlider extends StatelessWidget {
+  const _FilterSlider({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final IconData icon;
+  final String label;
+  final double value;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: kColorWhite.withValues(alpha: 0.08),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: kColorPrimary, size: 20),
+          ),
+          Spacing.h10,
+          SizedBox(
+            width: 86,
+            child: SemiBoldText(
+              text: label,
+              fontSize: TextStyles.k12FontSize,
+              color: kColorWhite,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Expanded(
+            child: SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                trackHeight: 5,
+                activeTrackColor: kColorPrimary,
+                inactiveTrackColor: kColorWhite.withValues(alpha: 0.12),
+                thumbColor: kColorWhite,
+                overlayColor: kColorPrimary.withValues(alpha: 0.16),
+              ),
+              child: Slider(value: value, onChanged: onChanged),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _VoiceCallGradientBackground extends StatelessWidget {
   const _VoiceCallGradientBackground();
 
@@ -336,11 +576,7 @@ class _VoiceCallGradientBackground extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF4B064A),
-            Color(0xFF2D0B58),
-            Color(0xFF06114B),
-          ],
+          colors: [Color(0xFF4B064A), Color(0xFF2D0B58), Color(0xFF06114B)],
           stops: [0, 0.45, 1],
         ),
       ),

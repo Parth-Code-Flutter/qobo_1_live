@@ -56,7 +56,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                 // ZEGOCLOUD Prebuilt UIKit automatically handles the interactive audio seats/grids
                 // in the viewport background. Hence, we do not double-render our simulated seat layout.
                 _buildChatList(),
-                _buildBottomControls(),
+                _buildBottomControls(context),
               ],
             ),
           ),
@@ -1017,9 +1017,10 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
     );
   }
 
-  Widget _buildBottomControls() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
+  Widget _buildBottomControls(BuildContext context) {
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsets.fromLTRB(16, 8, 16, 14),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1093,7 +1094,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
             ],
           ),
           Spacing.v10,
-          Align(alignment: Alignment.centerLeft, child: _chatShortcut()),
+          Row(children: [const Spacer(), _bottomViewerStrip(context)]),
         ],
       ),
     );
@@ -1108,19 +1109,6 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
     );
   }
 
-  Widget _chatShortcut() {
-    return Container(
-      width: 52,
-      height: 52,
-      decoration: BoxDecoration(
-        color: const Color(0xCC1D2740),
-        shape: BoxShape.circle,
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
-      ),
-      child: const Icon(Icons.chat_bubble_outline_rounded, color: kColorWhite),
-    );
-  }
-
   Widget _bottomActionIcon(
     IconData icon, {
     Color? color,
@@ -1131,14 +1119,153 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        width: 54,
-        height: 54,
+        width: 50,
+        height: 50,
         decoration: BoxDecoration(
           color: active ? _surface : const Color(0xCC351D2B),
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(color: kColorWhite.withValues(alpha: 0.06)),
         ),
         child: Icon(icon, color: color ?? kColorWhite, size: 24),
+      ),
+    );
+  }
+
+  Widget _bottomViewerStrip(BuildContext context) {
+    return Obx(() {
+      final viewers = controller.liveViewers.toList();
+      final chatViewers = viewers
+          .where((viewer) => viewer['isCurrentUser'] != true)
+          .take(4)
+          .toList();
+      final visibleViewers = chatViewers.isNotEmpty
+          ? chatViewers
+          : viewers.take(3).toList();
+
+      if (visibleViewers.isEmpty) {
+        return GestureDetector(
+          onTap: controller.openViewersSheet,
+          child: _ViewerOvalShell(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.people_alt_rounded,
+                  color: kColorWhite.withValues(alpha: 0.86),
+                  size: 18,
+                ),
+                Spacing.h6,
+                const SemiBoldText(
+                  text: 'Viewers',
+                  fontSize: TextStyles.k10FontSize,
+                  color: kColorWhite,
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+
+      return _ViewerOvalShell(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var index = 0; index < visibleViewers.length; index++) ...[
+              _ViewerAvatarButton(
+                viewer: visibleViewers[index],
+                onTap: () {
+                  final viewer = visibleViewers[index];
+                  if (viewer['isCurrentUser'] == true) {
+                    controller.openViewersSheet();
+                    return;
+                  }
+                  controller.openChatWithViewer(context, viewer);
+                },
+              ),
+              if (index != visibleViewers.length - 1) Spacing.h6,
+            ],
+            if (controller.liveViewers.length > visibleViewers.length) ...[
+              Spacing.h8,
+              GestureDetector(
+                onTap: controller.openViewersSheet,
+                child: Container(
+                  height: 30,
+                  padding: const EdgeInsets.symmetric(horizontal: 9),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: kColorWhite.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(15),
+                    border: Border.all(
+                      color: kColorWhite.withValues(alpha: 0.08),
+                    ),
+                  ),
+                  child: SemiBoldText(
+                    text:
+                        '+${controller.liveViewers.length - visibleViewers.length}',
+                    fontSize: TextStyles.k10FontSize,
+                    color: kColorWhite,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    });
+  }
+}
+
+class _ViewerOvalShell extends StatelessWidget {
+  const _ViewerOvalShell({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 190),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xD9141B29),
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.22),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+class _ViewerAvatarButton extends StatelessWidget {
+  const _ViewerAvatarButton({required this.viewer, required this.onTap});
+
+  final Map<String, dynamic> viewer;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = viewer['name']?.toString().trim().isNotEmpty == true
+        ? viewer['name'].toString()
+        : 'Viewer';
+    final avatarUrl = viewer['avatarUrl']?.toString();
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AppUserAvatar(
+        name: name,
+        imageUrl: avatarUrl,
+        size: 32,
+        fontSize: TextStyles.k10FontSize,
+        border: Border.all(
+          color: kColorWhite.withValues(alpha: 0.70),
+          width: 1.5,
+        ),
       ),
     );
   }
