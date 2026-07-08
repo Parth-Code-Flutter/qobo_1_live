@@ -229,10 +229,8 @@ class _VideoParticipantStrip extends GetView<ChatVoiceCallController> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 0, 14, 118),
           child: Obx(
-            () => Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              crossAxisAlignment: WrapCrossAlignment.center,
+            () => Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 IgnorePointer(
                   child: _MiniParticipantPill(
@@ -242,6 +240,7 @@ class _VideoParticipantStrip extends GetView<ChatVoiceCallController> {
                     dark: true,
                   ),
                 ),
+                const SizedBox(width: 6),
                 IgnorePointer(
                   child: _MiniParticipantPill(
                     name: controller.peerName.value,
@@ -252,15 +251,7 @@ class _VideoParticipantStrip extends GetView<ChatVoiceCallController> {
                     dark: true,
                   ),
                 ),
-                _CompactCallActionButton(
-                  icon: Icons.person_rounded,
-                  label: 'Profile',
-                  onTap: () => Get.bottomSheet(
-                    _CallProfileSheet(controller: controller),
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                  ),
-                ),
+                const SizedBox(width: 6),
                 _CompactCallActionButton(
                   icon: Icons.card_giftcard_rounded,
                   label: 'Gift',
@@ -296,9 +287,9 @@ class _CompactCallActionButton extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
-        width: 120,
-        height: 48,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        width: 96,
+        height: 44,
+        padding: const EdgeInsets.symmetric(horizontal: 9),
         decoration: BoxDecoration(
           color: Colors.black.withValues(alpha: 0.48),
           borderRadius: BorderRadius.circular(24),
@@ -628,7 +619,9 @@ class _MiniParticipantPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(8, 7, 12, 7),
+      width: 96,
+      height: 44,
+      padding: const EdgeInsets.fromLTRB(7, 6, 8, 6),
       decoration: BoxDecoration(
         color: (dark ? Colors.black : kColorWhite).withValues(
           alpha: dark ? 0.52 : 0.10,
@@ -642,13 +635,12 @@ class _MiniParticipantPill extends StatelessWidget {
           AppUserAvatar(
             name: name,
             imageUrl: imageUrl,
-            size: 34,
+            size: 30,
             fontSize: TextStyles.k10FontSize,
             border: Border.all(color: kColorWhite.withValues(alpha: 0.72)),
           ),
-          Spacing.h8,
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 92),
+          const SizedBox(width: 6),
+          Expanded(
             child: SemiBoldText(
               text: label,
               fontSize: TextStyles.k10FontSize,
