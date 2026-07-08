@@ -8,6 +8,7 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:zego_uikit/zego_uikit.dart';
 
 import '../controllers/live_broadcast_controller.dart';
+import '../models/audio_room_models.dart';
 
 class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
   const AudioRoomStageOverlay({super.key});
@@ -18,7 +19,8 @@ class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
   static const _roomMid = Color(0xFF30105F);
   static const _roomBottom = Color(0xFF07103F);
   static const _seatGold = Color(0xFFFFA10A);
-  static const _micGreen = Color(0xFF24C34A);
+  static const _micStart = Color(0xFF2FE56E);
+  static const _micEnd = Color(0xFF12B845);
   static const _deepPurple = Color(0xFF3B0647);
 
   @override
@@ -109,7 +111,7 @@ class _AudioRoomBottomControls extends GetView<LiveBroadcastController> {
               label: 'Request',
               compact: compact,
               emphasized: true,
-              onTap: () => Get.snackbar('Request', 'Seat request coming soon.'),
+              onTap: () => controller.requestAudioSeat(),
             ),
             _ControlButton(
               icon: Icons.favorite_rounded,
@@ -428,13 +430,7 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
             ),
             _CircleButton(
               icon: Icons.share_rounded,
-              onTap: () => Get.snackbar(
-                'Share',
-                'Room sharing coming soon.',
-                snackPosition: SnackPosition.BOTTOM,
-                backgroundColor: const Color(0xFF1E1E2D),
-                colorText: kColorWhite,
-              ),
+              onTap: () => controller.shareRoom(),
               compact: compact,
             ),
             Spacing.h8,
@@ -444,12 +440,14 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
                   ? '0'
                   : controller.likesLabel.value,
             ),
-            Spacing.h8,
-            _CircleButton(
-              icon: Icons.power_settings_new_rounded,
-              onTap: controller.leaveRoom,
-              compact: compact,
-            ),
+            if (controller.isHost.value) ...[
+              Spacing.h8,
+              _CircleButton(
+                icon: Icons.power_settings_new_rounded,
+                onTap: controller.confirmEndRoom,
+                compact: compact,
+              ),
+            ],
           ],
         ),
       );
@@ -491,7 +489,7 @@ class _MemberGridState extends State<_MemberGrid> {
             ),
             itemBuilder: (context, index) {
               final seat = visibleSeats[index];
-              if (seat.locked) return _LockedSeat(seatNo: seat.seatNo);
+              if (seat.isLocked) return _LockedSeat(seatNo: seat.seatNo);
               if (!seat.occupied) return _GridEmptySeat(seatNo: seat.seatNo);
               return _MemberSeat(seat: seat);
             },
@@ -501,73 +499,13 @@ class _MemberGridState extends State<_MemberGrid> {
     });
   }
 
-  List<_AudioSeatData> _buildSeats() {
-    final seats = <_AudioSeatData>[];
-    var seatNo = 2;
-
-    while (seatNo <= 5) {
-      seats.add(_AudioSeatData.empty(seatNo));
-      seatNo++;
-    }
-
-    for (final viewer in controller.liveViewers) {
-      if (seats.length >= 13) break;
-      if (viewer['isHost'] == true) continue;
-      seats.add(
-        _AudioSeatData(
-          seatNo: seatNo,
-          name: viewer['name']?.toString() ?? 'Member',
-          id: viewer['targetId']?.toString() ?? viewer['id']?.toString() ?? '',
-          avatarUrl: viewer['avatarUrl']?.toString(),
-          occupied: true,
-          muted: seatNo % 5 == 0,
-          level: 12 + seats.length,
-        ),
-      );
-      seatNo++;
-    }
-
-    const preview = [
-      ('Rahul', '785632', 23),
-      ('Pooja', '847392', 21),
-      ('Arjun', '765921', 19),
-      ('Neha', '936471', 18),
-      ('Vikash', '665738', 17),
-      ('Anjali', '883910', 16),
-      ('Karan', '629384', 15),
-      ('Simran', '910273', 14),
-    ];
-
-    var previewIndex = 0;
-    while (seats.length < 13 && previewIndex < preview.length) {
-      final item = preview[previewIndex];
-      seats.add(
-        _AudioSeatData(
-          seatNo: seatNo,
-          name: item.$1,
-          id: item.$2,
-          occupied: true,
-          muted: seatNo % 5 == 0,
-          level: item.$3,
-        ),
-      );
-      seatNo++;
-      previewIndex++;
-    }
-
-    while (seats.length < 15) {
-      seats.add(_AudioSeatData.empty(seatNo));
-      seatNo++;
-    }
-    seats.add(_AudioSeatData.empty(seatNo).copyWith(locked: true, level: 20));
-    return seats;
-  }
+  List<AudioRoomSeatModel> _buildSeats() => controller.audioRoomSeats.toList();
 }
 
 class _MemberSeat extends GetView<LiveBroadcastController> {
   const _MemberSeat({required this.seat});
 
-  final _AudioSeatData seat;
+  final AudioRoomSeatModel seat;
 
   @override
   Widget build(BuildContext context) {
@@ -585,7 +523,7 @@ class _MemberSeat extends GetView<LiveBroadcastController> {
               _PremiumAvatarFrame(
                 name: seat.name,
                 imageUrl: seat.avatarUrl,
-                muted: seat.muted,
+                muted: seat.isMuted,
                 isHost: seat.isHost,
               ),
               Positioned(
@@ -596,7 +534,7 @@ class _MemberSeat extends GetView<LiveBroadcastController> {
               Positioned(
                 right: -7,
                 bottom: -5,
-                child: _MicBubble(muted: seat.muted, small: true),
+                child: _MicBubble(muted: seat.isMuted, small: true),
               ),
             ],
           ),
@@ -613,7 +551,7 @@ class _MemberSeat extends GetView<LiveBroadcastController> {
               align: TextAlign.center,
             ),
           ),
-          _DiamondCount(value: seat.level),
+          _DiamondCount(value: seat.diamonds),
         ],
       ),
     );
@@ -632,7 +570,7 @@ class _MemberSeat extends GetView<LiveBroadcastController> {
 class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
   const _AudioSeatActionsSheet({required this.seat, required this.isHostView});
 
-  final _AudioSeatData seat;
+  final AudioRoomSeatModel seat;
   final bool isHostView;
 
   @override
@@ -640,19 +578,25 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
     final actions = isHostView
         ? [
             _SeatActionData(
-              icon: seat.muted ? Icons.mic_rounded : Icons.mic_off_rounded,
-              label: seat.muted ? 'Unmute' : 'Mute',
-              onTap: () => _showPendingAction(seat.muted ? 'Unmute' : 'Mute'),
+              icon: seat.isMuted ? Icons.mic_rounded : Icons.mic_off_rounded,
+              label: seat.isMuted ? 'Unmute' : 'Mute',
+              onTap: () => controller.updateAudioSeatMic(
+                seat: seat,
+                mute: !seat.isMuted,
+              ),
             ),
             _SeatActionData(
               icon: Icons.person_remove_rounded,
               label: 'Kick off',
-              onTap: () => _showPendingAction('Kick off'),
+              onTap: () => controller.kickAudioRoomUser(seat),
             ),
             _SeatActionData(
               icon: Icons.admin_panel_settings_rounded,
-              label: 'Make admin',
-              onTap: () => _showPendingAction('Make admin'),
+              label: seat.isAdmin ? 'Remove admin' : 'Make admin',
+              onTap: () => controller.setAudioRoomAdmin(
+                seat: seat,
+                makeAdmin: !seat.isAdmin,
+              ),
             ),
             _SeatActionData(
               icon: Icons.card_giftcard_rounded,
@@ -693,7 +637,7 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
                 _PremiumAvatarFrame(
                   name: seat.name,
                   imageUrl: seat.avatarUrl,
-                  muted: seat.muted,
+                  muted: seat.isMuted,
                   isHost: seat.isHost,
                 ),
                 Spacing.h12,
@@ -738,7 +682,7 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
   }
 
   void _openGift() {
-    final receiverId = seat.id.trim();
+    final receiverId = seat.userId.trim();
     if (receiverId.isEmpty) {
       Get.back();
       Get.snackbar(
@@ -754,17 +698,6 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
       receiverId: receiverId,
       receiverName: seat.name,
       roomGift: false,
-    );
-  }
-
-  void _showPendingAction(String action) {
-    Get.back();
-    Get.snackbar(
-      action,
-      '$action for ${seat.name} will be connected when moderation APIs are ready.',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: const Color(0xFF1E1E2D),
-      colorText: kColorWhite,
     );
   }
 }
@@ -875,73 +808,255 @@ class _PremiumAvatarFrame extends StatelessWidget {
   }
 }
 
-class _GridEmptySeat extends StatelessWidget {
+class _GridEmptySeat extends GetView<LiveBroadcastController> {
   const _GridEmptySeat({required this.seatNo});
 
   final int seatNo;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const SizedBox(height: 14),
-        Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.center,
-          children: [
-            Container(
-              width: 84,
-              height: 84,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE5E5E5),
-                shape: BoxShape.circle,
-                border: Border.all(color: kColorWhite.withValues(alpha: 0.72)),
-              ),
-              child: Icon(
-                Icons.mic_none_rounded,
-                color: AudioRoomStageOverlay._deepPurple,
-                size: 36,
-              ),
-            ),
-            Positioned(left: -8, top: -8, child: _SeatBadge(number: seatNo)),
-            Positioned(
-              right: -5,
-              bottom: -5,
-              child: Container(
-                width: 30,
-                height: 30,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => Get.bottomSheet(
+        _InviteCandidatesSheet(seatNo: seatNo),
+        backgroundColor: Colors.transparent,
+        isScrollControlled: true,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 14),
+          Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              Container(
+                width: 84,
+                height: 84,
                 decoration: BoxDecoration(
-                  color: kColorWhite,
+                  color: const Color(0xFFE5E5E5),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: kColorPrimary.withValues(alpha: 0.12),
+                    color: kColorWhite.withValues(alpha: 0.72),
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: kColorPrimary.withValues(alpha: 0.10),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
                 ),
-                child: const Icon(
-                  Icons.add_rounded,
+                child: Icon(
+                  Icons.mic_none_rounded,
                   color: AudioRoomStageOverlay._deepPurple,
-                  size: 20,
+                  size: 36,
                 ),
               ),
+              Positioned(left: -8, top: -8, child: _SeatBadge(number: seatNo)),
+              Positioned(
+                right: -5,
+                bottom: -5,
+                child: Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: kColorWhite,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: kColorPrimary.withValues(alpha: 0.12),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: kColorPrimary.withValues(alpha: 0.10),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.add_rounded,
+                    color: AudioRoomStageOverlay._deepPurple,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          Spacing.v6,
+          const SemiBoldText(
+            text: 'Invite',
+            fontSize: TextStyles.k10FontSize,
+            color: AudioRoomStageOverlay._muted,
+            align: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InviteCandidatesSheet extends StatefulWidget {
+  const _InviteCandidatesSheet({required this.seatNo});
+
+  final int seatNo;
+
+  @override
+  State<_InviteCandidatesSheet> createState() => _InviteCandidatesSheetState();
+}
+
+class _InviteCandidatesSheetState extends State<_InviteCandidatesSheet> {
+  final LiveBroadcastController controller =
+      Get.find<LiveBroadcastController>();
+  final TextEditingController searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    controller.loadAudioInviteCandidates();
+  }
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.72,
+      ),
+      padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
+      decoration: const BoxDecoration(
+        color: Color(0xFF1D102F),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: kColorWhite.withValues(alpha: 0.20),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Spacing.v16,
+            Row(
+              children: [
+                const Expanded(
+                  child: SemiBoldText(
+                    text: 'Invite to mic',
+                    fontSize: TextStyles.k16FontSize,
+                    color: kColorWhite,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AudioRoomStageOverlay._seatGold.withValues(
+                      alpha: 0.16,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: SemiBoldText(
+                    text: 'Seat ${widget.seatNo}',
+                    fontSize: TextStyles.k10FontSize,
+                    color: AudioRoomStageOverlay._seatGold,
+                  ),
+                ),
+              ],
+            ),
+            Spacing.v12,
+            TextField(
+              controller: searchController,
+              style: const TextStyle(color: kColorWhite),
+              onSubmitted: (value) =>
+                  controller.loadAudioInviteCandidates(search: value),
+              decoration: InputDecoration(
+                hintText: 'Search followers',
+                hintStyle: TextStyle(
+                  color: kColorWhite.withValues(alpha: 0.48),
+                ),
+                prefixIcon: Icon(
+                  Icons.search_rounded,
+                  color: kColorWhite.withValues(alpha: 0.7),
+                ),
+                filled: true,
+                fillColor: kColorWhite.withValues(alpha: 0.08),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+            Spacing.v12,
+            Flexible(
+              child: Obx(() {
+                if (controller.isLoadingInviteCandidates.value) {
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      color: AudioRoomStageOverlay._seatGold,
+                    ),
+                  );
+                }
+                final users = controller.audioInviteCandidates;
+                if (users.isEmpty) {
+                  return Center(
+                    child: AppText(
+                      text: 'No followers available to invite right now.',
+                      fontSize: TextStyles.k12FontSize,
+                      color: kColorWhite.withValues(alpha: 0.64),
+                      align: TextAlign.center,
+                    ),
+                  );
+                }
+                return ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: users.length,
+                  separatorBuilder: (_, __) => Divider(
+                    height: 1,
+                    color: kColorWhite.withValues(alpha: 0.08),
+                  ),
+                  itemBuilder: (context, index) {
+                    final user = users[index];
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: AppUserAvatar(
+                        name: user.name,
+                        imageUrl: user.avatarUrl,
+                        size: 42,
+                      ),
+                      title: SemiBoldText(
+                        text: user.name,
+                        fontSize: TextStyles.k12FontSize,
+                        color: kColorWhite,
+                      ),
+                      subtitle: AppText(
+                        text: user.isOnline ? 'Online follower' : 'Follower',
+                        fontSize: TextStyles.k10FontSize,
+                        color: kColorWhite.withValues(alpha: 0.58),
+                      ),
+                      trailing: TextButton(
+                        onPressed: () => controller.inviteUserToAudioSeat(
+                          seatNo: widget.seatNo,
+                          user: user,
+                        ),
+                        child: const SemiBoldText(
+                          text: 'Invite',
+                          fontSize: TextStyles.k10FontSize,
+                          color: AudioRoomStageOverlay._seatGold,
+                        ),
+                      ),
+                    );
+                  },
+                );
+              }),
             ),
           ],
         ),
-        Spacing.v6,
-        const SemiBoldText(
-          text: 'Open',
-          fontSize: TextStyles.k10FontSize,
-          color: AudioRoomStageOverlay._muted,
-          align: TextAlign.center,
-        ),
-      ],
+      ),
     );
   }
 }
@@ -1094,11 +1209,30 @@ class _MicBubble extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: muted
-            ? const Color(0xFF6B6470)
-            : AudioRoomStageOverlay._micGreen,
+        color: muted ? const Color(0xFF6B6470) : null,
+        gradient: muted
+            ? null
+            : const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AudioRoomStageOverlay._micStart,
+                  AudioRoomStageOverlay._micEnd,
+                ],
+              ),
         shape: BoxShape.circle,
         border: Border.all(color: kColorWhite, width: 2),
+        boxShadow: muted
+            ? null
+            : [
+                BoxShadow(
+                  color: AudioRoomStageOverlay._micStart.withValues(
+                    alpha: 0.22,
+                  ),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
       ),
       child: Icon(
         muted ? Icons.mic_off_rounded : Icons.mic_rounded,
@@ -1140,46 +1274,6 @@ class _DiamondCount extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _AudioSeatData {
-  const _AudioSeatData({
-    required this.seatNo,
-    this.name = '',
-    this.id = '',
-    this.avatarUrl,
-    this.level = 0,
-    this.occupied = false,
-    this.muted = false,
-    this.locked = false,
-    this.isHost = false,
-  });
-
-  factory _AudioSeatData.empty(int seatNo) => _AudioSeatData(seatNo: seatNo);
-
-  final int seatNo;
-  final String name;
-  final String id;
-  final String? avatarUrl;
-  final int level;
-  final bool occupied;
-  final bool muted;
-  final bool locked;
-  final bool isHost;
-
-  _AudioSeatData copyWith({bool? locked, int? level}) {
-    return _AudioSeatData(
-      seatNo: seatNo,
-      name: name,
-      id: id,
-      avatarUrl: avatarUrl,
-      level: level ?? this.level,
-      occupied: occupied,
-      muted: muted,
-      locked: locked ?? this.locked,
-      isHost: isHost,
     );
   }
 }

@@ -1,0 +1,168 @@
+class AudioRoomSeatModel {
+  const AudioRoomSeatModel({
+    required this.seatNo,
+    this.userId = '',
+    this.name = '',
+    this.avatarUrl,
+    this.role = 'empty',
+    this.diamonds = 0,
+    this.isMuted = false,
+    this.isLocked = false,
+    this.isAdmin = false,
+  });
+
+  factory AudioRoomSeatModel.empty(int seatNo) =>
+      AudioRoomSeatModel(seatNo: seatNo);
+
+  factory AudioRoomSeatModel.fromMap(Map<String, dynamic> raw) {
+    final occupant = raw['occupant'];
+    final occupantMap = occupant is Map
+        ? Map<String, dynamic>.from(occupant)
+        : null;
+    final userId =
+        _readString(raw, const ['userId', 'user_id', 'id']) ??
+        _readString(occupantMap, const ['id', '_id', 'userId', 'user_id']) ??
+        '';
+    final name =
+        _readString(raw, const ['name', 'fullName', 'username']) ??
+        _readString(occupantMap, const [
+          'name',
+          'fullName',
+          'username',
+          'displayName',
+        ]) ??
+        '';
+    final avatar =
+        _readString(raw, const [
+          'avatarUrl',
+          'avatar',
+          'displayPicture',
+          'profileImage',
+        ]) ??
+        _readString(occupantMap, const [
+          'avatarUrl',
+          'avatar',
+          'displayPicture',
+          'profileImage',
+          'image',
+        ]);
+
+    return AudioRoomSeatModel(
+      seatNo: _readInt(raw, const ['seatNo', 'seat_id', 'seatId', 'seat']) ?? 0,
+      userId: userId,
+      name: name,
+      avatarUrl: avatar,
+      role:
+          _readString(raw, const ['role', 'type']) ??
+          (userId.isEmpty ? 'empty' : 'speaker'),
+      diamonds:
+          _readInt(raw, const ['diamonds', 'diamond', 'level', 'gems']) ?? 0,
+      isMuted: _readBool(raw, const ['isMuted', 'muted', 'micMuted']),
+      isLocked: _readBool(raw, const ['isLocked', 'locked']),
+      isAdmin: _readBool(raw, const ['isAdmin', 'admin']),
+    );
+  }
+
+  final int seatNo;
+  final String userId;
+  final String name;
+  final String? avatarUrl;
+  final String role;
+  final int diamonds;
+  final bool isMuted;
+  final bool isLocked;
+  final bool isAdmin;
+
+  bool get occupied => userId.trim().isNotEmpty || name.trim().isNotEmpty;
+  bool get isHost => role.toLowerCase() == 'host' || seatNo == 1;
+
+  AudioRoomSeatModel copyWith({
+    int? seatNo,
+    String? userId,
+    String? name,
+    String? avatarUrl,
+    String? role,
+    int? diamonds,
+    bool? isMuted,
+    bool? isLocked,
+    bool? isAdmin,
+  }) {
+    return AudioRoomSeatModel(
+      seatNo: seatNo ?? this.seatNo,
+      userId: userId ?? this.userId,
+      name: name ?? this.name,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      role: role ?? this.role,
+      diamonds: diamonds ?? this.diamonds,
+      isMuted: isMuted ?? this.isMuted,
+      isLocked: isLocked ?? this.isLocked,
+      isAdmin: isAdmin ?? this.isAdmin,
+    );
+  }
+}
+
+class AudioRoomInviteCandidate {
+  const AudioRoomInviteCandidate({
+    required this.id,
+    required this.name,
+    this.avatarUrl,
+    this.isOnline = false,
+    this.isFollower = false,
+    this.isInRoom = false,
+  });
+
+  factory AudioRoomInviteCandidate.fromMap(Map<String, dynamic> raw) {
+    return AudioRoomInviteCandidate(
+      id: _readString(raw, const ['id', '_id', 'userId', 'user_id']) ?? '',
+      name: _readString(raw, const ['name', 'fullName', 'username']) ?? 'User',
+      avatarUrl: _readString(raw, const [
+        'avatarUrl',
+        'avatar',
+        'displayPicture',
+        'profileImage',
+        'image',
+      ]),
+      isOnline: _readBool(raw, const ['isOnline', 'online']),
+      isFollower: _readBool(raw, const ['isFollower', 'follower']),
+      isInRoom: _readBool(raw, const ['isInRoom', 'inRoom']),
+    );
+  }
+
+  final String id;
+  final String name;
+  final String? avatarUrl;
+  final bool isOnline;
+  final bool isFollower;
+  final bool isInRoom;
+}
+
+String? _readString(Map<String, dynamic>? raw, List<String> keys) {
+  if (raw == null) return null;
+  for (final key in keys) {
+    final value = raw[key]?.toString().trim();
+    if (value != null && value.isNotEmpty && value != 'null') return value;
+  }
+  return null;
+}
+
+int? _readInt(Map<String, dynamic> raw, List<String> keys) {
+  for (final key in keys) {
+    final value = raw[key];
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    final parsed = int.tryParse(value?.toString() ?? '');
+    if (parsed != null) return parsed;
+  }
+  return null;
+}
+
+bool _readBool(Map<String, dynamic> raw, List<String> keys) {
+  for (final key in keys) {
+    final value = raw[key];
+    if (value is bool) return value;
+    final normalized = value?.toString().toLowerCase();
+    if (normalized == 'true' || normalized == '1') return true;
+    if (normalized == 'false' || normalized == '0') return false;
+  }
+  return false;
+}

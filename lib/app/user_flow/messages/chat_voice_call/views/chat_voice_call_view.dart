@@ -10,6 +10,7 @@ import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
+import 'package:zego_uikit/zego_uikit.dart';
 import 'package:zego_uikit_prebuilt_call/zego_uikit_prebuilt_call.dart';
 
 import '../controllers/chat_voice_call_controller.dart';
@@ -83,8 +84,15 @@ class ChatVoiceCallView extends GetView<ChatVoiceCallController> {
                 ),
               ),
             ),
+            if (isVideo)
+              const _VideoParticipantStrip()
+            else ...[
+              const _VoiceCallPortraitStage(),
+              const _VoiceLocalPreviewCard(),
+              const _VoiceReceiverPreviewCard(),
+            ],
             const _CallTopOverlay(),
-            const _CallSideActions(),
+            if (isVideo) const _CallSideActions(),
           ],
         ),
       );
@@ -110,6 +118,7 @@ class ChatVoiceCallView extends GetView<ChatVoiceCallController> {
 
     if (isVideo) {
       return ZegoUIKitPrebuiltCallConfig.oneOnOneVideoCall()
+        ..avatarBuilder = _buildZegoAvatar
         ..turnOnCameraWhenJoining = true
         ..turnOnMicrophoneWhenJoining = true
         ..useSpeakerWhenJoining = true
@@ -121,14 +130,492 @@ class ChatVoiceCallView extends GetView<ChatVoiceCallController> {
     }
 
     return ZegoUIKitPrebuiltCallConfig.oneOnOneVoiceCall()
+      ..avatarBuilder = _buildZegoAvatar
       ..turnOnCameraWhenJoining = false
       ..turnOnMicrophoneWhenJoining = true
       ..useSpeakerWhenJoining = true
       ..enableAccidentalTouchPrevention = false
+      ..background = const _VoiceCallGradientBackground()
       ..duration.isVisible = false
       ..user.requiredUsers.enabled = false
+      ..audioVideoView.showAvatarInAudioMode = false
+      ..audioVideoView.showSoundWavesInAudioMode = false
+      ..audioVideoView.showUserNameOnView = false
+      ..audioVideoView.showMicrophoneStateOnView = false
+      ..audioVideoView.showWaitingCallAcceptAudioVideoView = false
+      ..audioVideoView.containerBuilder = _buildHiddenVoiceAudioContainer
       ..bottomMenuBar = bottomBar
       ..device = device;
+  }
+
+  Widget? _buildHiddenVoiceAudioContainer(
+    BuildContext context,
+    List<ZegoUIKitUser> allUsers,
+    List<ZegoUIKitUser> audioVideoUsers,
+    ZegoAudioVideoView Function(ZegoUIKitUser) audioVideoViewCreator,
+  ) {
+    return const SizedBox.shrink();
+  }
+
+  Widget? _buildZegoAvatar(
+    BuildContext context,
+    Size size,
+    ZegoUIKitUser? user,
+    Map<String, dynamic> extraInfo,
+  ) {
+    if (user == null) return null;
+    final isCurrentUser = user.id == controller.zegoUserId;
+    return AppUserAvatar(
+      name: isCurrentUser
+          ? controller.currentUserName
+          : controller.peerName.value,
+      imageUrl: isCurrentUser
+          ? controller.currentUserAvatar
+          : controller.peerAvatar.value,
+      size: size.shortestSide,
+      fontSize: size.shortestSide * 0.28,
+    );
+  }
+}
+
+class _VoiceCallPortraitStage extends GetView<ChatVoiceCallController> {
+  const _VoiceCallPortraitStage();
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final haloSize = (constraints.maxWidth * 0.50)
+                .clamp(154.0, 188.0)
+                .toDouble();
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(20, 112, 20, 128),
+              child: Obx(
+                () => Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Spacer(),
+                    _PortraitHalo(
+                      name: controller.peerName.value,
+                      imageUrl: controller.peerAvatar.value,
+                      size: haloSize,
+                      label: controller.peerName.value,
+                      labelPrefix: controller.hasPeerJoined.value
+                          ? 'Connected with'
+                          : 'Calling',
+                      prominent: true,
+                    ),
+                    const SizedBox(height: 80),
+                    const Spacer(flex: 2),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _VideoParticipantStrip extends GetView<ChatVoiceCallController> {
+  const _VideoParticipantStrip();
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: SafeArea(
+        child: Align(
+          alignment: Alignment.bottomLeft,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 118),
+            child: Obx(
+              () => Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _MiniParticipantPill(
+                    name: controller.currentUserName,
+                    imageUrl: controller.currentUserAvatar,
+                    label: 'You',
+                    dark: true,
+                  ),
+                  Spacing.h10,
+                  _MiniParticipantPill(
+                    name: controller.peerName.value,
+                    imageUrl: controller.peerAvatar.value,
+                    label: controller.hasPeerJoined.value
+                        ? controller.peerName.value
+                        : 'Ringing',
+                    dark: true,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _VoiceCallGradientBackground extends StatelessWidget {
+  const _VoiceCallGradientBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFF4B064A),
+            Color(0xFF2D0B58),
+            Color(0xFF06114B),
+          ],
+          stops: [0, 0.45, 1],
+        ),
+      ),
+    );
+  }
+}
+
+class _VoiceLocalPreviewCard extends GetView<ChatVoiceCallController> {
+  const _VoiceLocalPreviewCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Align(
+        alignment: Alignment.bottomLeft,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 0, 132),
+          child: Obx(
+            () => _VoiceParticipantCard(
+              name: controller.currentUserName,
+              imageUrl: controller.currentUserAvatar,
+              label: 'You',
+              status: controller.hasPeerJoined.value ? 'In call' : 'Waiting',
+              compact: true,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _VoiceReceiverPreviewCard extends StatefulWidget {
+  const _VoiceReceiverPreviewCard();
+
+  @override
+  State<_VoiceReceiverPreviewCard> createState() =>
+      _VoiceReceiverPreviewCardState();
+}
+
+class _VoiceReceiverPreviewCardState extends State<_VoiceReceiverPreviewCard> {
+  Offset? _position;
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Get.find<ChatVoiceCallController>();
+    const cardWidth = 140.0;
+    const cardHeight = 154.0;
+
+    return SafeArea(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final maxX = constraints.maxWidth - cardWidth - 12;
+          final maxY = constraints.maxHeight - cardHeight - 112;
+          final initialPosition = Offset(
+            constraints.maxWidth - cardWidth - 18,
+            constraints.maxHeight - cardHeight - 132,
+          );
+          final position = _position ?? initialPosition;
+
+          Offset clampPosition(Offset value) {
+            return Offset(
+              value.dx.clamp(12.0, maxX < 12 ? 12 : maxX),
+              value.dy.clamp(96.0, maxY < 96 ? 96 : maxY),
+            );
+          }
+
+          return Stack(
+            children: [
+              Positioned(
+                left: clampPosition(position).dx,
+                top: clampPosition(position).dy,
+                width: cardWidth,
+                height: cardHeight,
+                child: GestureDetector(
+                  onPanUpdate: (details) {
+                    setState(() {
+                      _position = clampPosition(position + details.delta);
+                    });
+                  },
+                  onTap: () => Get.bottomSheet(
+                    _CallProfileSheet(controller: controller),
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                  ),
+                  child: Obx(
+                    () => _VoiceParticipantCard(
+                      name: controller.peerName.value,
+                      imageUrl: controller.peerAvatar.value,
+                      label: controller.peerName.value,
+                      status: controller.hasPeerJoined.value
+                          ? 'Connected'
+                          : 'Ringing',
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _VoiceParticipantCard extends StatelessWidget {
+  const _VoiceParticipantCard({
+    required this.name,
+    required this.imageUrl,
+    required this.label,
+    required this.status,
+    this.compact = false,
+  });
+
+  final String name;
+  final String? imageUrl;
+  final String label;
+  final String status;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final avatarSize = compact ? 52.0 : 62.0;
+    return Container(
+      width: compact ? 122 : null,
+      padding: EdgeInsets.fromLTRB(12, compact ? 11 : 12, 12, 11),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            kColorProfileActionPinkStart.withValues(alpha: 0.72),
+            const Color(0xFF2A1348).withValues(alpha: 0.88),
+            const Color(0xFF111B3F).withValues(alpha: 0.88),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.28)),
+        boxShadow: [
+          BoxShadow(
+            color: kColorPrimary.withValues(alpha: 0.20),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  kColorProfileActionPinkStart.withValues(alpha: 0.95),
+                  kColorProfileChipPurpleEnd.withValues(alpha: 0.9),
+                ],
+              ),
+            ),
+            child: AppUserAvatar(
+              name: name,
+              imageUrl: imageUrl,
+              size: avatarSize,
+              fontSize: compact
+                  ? TextStyles.k14FontSize
+                  : TextStyles.k16FontSize,
+              border: Border.all(
+                color: kColorWhite.withValues(alpha: 0.80),
+                width: 2,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SemiBoldText(
+            text: label,
+            fontSize: TextStyles.k12FontSize,
+            color: kColorWhite,
+            align: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 5),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 7,
+                height: 7,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF24C08A),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              Spacing.h6,
+              Flexible(
+                child: AppText(
+                  text: status,
+                  fontSize: TextStyles.k10FontSize,
+                  color: kColorWhite.withValues(alpha: 0.82),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PortraitHalo extends StatelessWidget {
+  const _PortraitHalo({
+    required this.name,
+    required this.imageUrl,
+    required this.size,
+    required this.label,
+    required this.labelPrefix,
+    this.prominent = false,
+  });
+
+  final String name;
+  final String? imageUrl;
+  final double size;
+  final String label;
+  final String labelPrefix;
+  final bool prominent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: size + 22,
+          height: size + 22,
+          padding: const EdgeInsets.all(7),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: kColorWhite.withValues(alpha: 0.14)),
+            boxShadow: [
+              BoxShadow(
+                color: kColorPrimary.withValues(alpha: prominent ? 0.32 : 0.18),
+                blurRadius: prominent ? 36 : 18,
+                spreadRadius: prominent ? 5 : 1,
+              ),
+            ],
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  kColorProfileActionPinkStart.withValues(alpha: 0.95),
+                  kColorProfileChipPurpleEnd.withValues(alpha: 0.9),
+                ],
+              ),
+            ),
+            child: AppUserAvatar(
+              name: name,
+              imageUrl: imageUrl,
+              size: size,
+              fontSize: TextStyles.k48FontSize,
+              border: Border.all(
+                color: kColorWhite.withValues(alpha: 0.76),
+                width: 3,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 18),
+        AppText(
+          text: labelPrefix,
+          fontSize: TextStyles.k12FontSize,
+          color: kColorWhite.withValues(alpha: 0.66),
+          align: TextAlign.center,
+        ),
+        Spacing.v4,
+        SemiBoldText(
+          text: label,
+          fontSize: TextStyles.k22FontSize,
+          color: kColorWhite,
+          align: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
+}
+
+class _MiniParticipantPill extends StatelessWidget {
+  const _MiniParticipantPill({
+    required this.name,
+    required this.imageUrl,
+    required this.label,
+    this.dark = false,
+  });
+
+  final String name;
+  final String? imageUrl;
+  final String label;
+  final bool dark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(8, 7, 12, 7),
+      decoration: BoxDecoration(
+        color: (dark ? Colors.black : kColorWhite).withValues(
+          alpha: dark ? 0.52 : 0.10,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AppUserAvatar(
+            name: name,
+            imageUrl: imageUrl,
+            size: 34,
+            fontSize: TextStyles.k10FontSize,
+            border: Border.all(color: kColorWhite.withValues(alpha: 0.72)),
+          ),
+          Spacing.h8,
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 92),
+            child: SemiBoldText(
+              text: label,
+              fontSize: TextStyles.k10FontSize,
+              color: kColorWhite,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -146,7 +633,8 @@ class _CallTopOverlay extends GetView<ChatVoiceCallController> {
             () => GestureDetector(
               onTap: () => _showProfileSheet(context),
               child: Container(
-                padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+                constraints: const BoxConstraints(minHeight: 74),
+                padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.56),
                   borderRadius: BorderRadius.circular(20),
@@ -166,7 +654,7 @@ class _CallTopOverlay extends GetView<ChatVoiceCallController> {
                     AppUserAvatar(
                       name: controller.peerName.value,
                       imageUrl: controller.peerAvatar.value,
-                      size: 42,
+                      size: 40,
                       fontSize: TextStyles.k14FontSize,
                     ),
                     Spacing.h8,
@@ -206,7 +694,10 @@ class _CallTopOverlay extends GetView<ChatVoiceCallController> {
                         ],
                       ),
                     ),
-                    _CoinsPanel(controller: controller),
+                    Flexible(
+                      flex: 0,
+                      child: _CoinsPanel(controller: controller),
+                    ),
                   ],
                 ),
               ),
@@ -236,8 +727,8 @@ class _CoinsPanel extends StatelessWidget {
     final earning = !controller.isCaller.value;
     final connected = controller.hasPeerJoined.value;
     return Container(
-      constraints: const BoxConstraints(minWidth: 92),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      constraints: const BoxConstraints(minWidth: 78, maxWidth: 116),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         gradient: connected
             ? LinearGradient(

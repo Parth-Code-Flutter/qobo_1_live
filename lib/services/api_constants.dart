@@ -95,6 +95,21 @@ class RoomEndpoints {
   /// POST /api/room/mic-action
   static const String micAction = '/api/room/mic-action';
 
+  /// GET /api/room/seats
+  static const String seats = '/api/room/seats';
+
+  /// POST /api/room/admin-action
+  static const String adminAction = '/api/room/admin-action';
+
+  /// GET /api/room/invite-candidates
+  static const String inviteCandidates = '/api/room/invite-candidates';
+
+  /// POST /api/room/invite
+  static const String invite = '/api/room/invite';
+
+  /// POST /api/room/invite/respond
+  static const String inviteRespond = '/api/room/invite/respond';
+
   /// POST /api/room/security-sos
   static const String securitySos = '/api/room/security-sos';
 

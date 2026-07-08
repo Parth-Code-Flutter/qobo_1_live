@@ -15,9 +15,11 @@ import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
+import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 import 'package:zego_uikit_prebuilt_live_streaming/zego_uikit_prebuilt_live_streaming.dart';
 
+import '../models/audio_room_models.dart';
 import '../utils/live_room_profile_utils.dart';
 import '../widgets/gifts_bottom_sheet.dart';
 import '../widgets/live_filters_sheet.dart';
@@ -65,6 +67,10 @@ class LiveBroadcastController extends GetxController {
   final selectedGiftReceiverId = RxnString();
   final selectedGiftReceiverName = RxnString();
   final isRoomGiftMode = true.obs;
+  final audioRoomSeats = <AudioRoomSeatModel>[].obs;
+  final audioInviteCandidates = <AudioRoomInviteCandidate>[].obs;
+  final isLoadingAudioSeats = false.obs;
+  final isLoadingInviteCandidates = false.obs;
   final liveBeautyEnabled = false.obs;
   final liveSmooth = 35.obs;
   final liveSkinTone = 25.obs;
@@ -100,6 +106,13 @@ class LiveBroadcastController extends GetxController {
     _validateStreamingInput();
     loadWalletBalance();
     loadGiftCatalog();
+    if (!isVideoRoom) {
+      final initialSeats = _parseAudioSeats(_roomData);
+      if (initialSeats.isNotEmpty) {
+        audioRoomSeats.assignAll(initialSeats);
+      }
+      unawaited(loadAudioRoomSeats());
+    }
     chatMessages.clear();
   }
 
@@ -593,6 +606,7 @@ class LiveBroadcastController extends GetxController {
       receiverId: currentReceiverId,
       giftId: giftId,
       roomId: currentRoomId,
+      scope: isRoomGiftMode.value ? 'room' : 'user',
       isShowLoader: true,
     );
 
@@ -794,6 +808,330 @@ class LiveBroadcastController extends GetxController {
             ZegoLiveIdUtils.sanitizeUserId(targetId);
   }
 
+  String get audioRoomApiId {
+    return (_extractBackendRoomId(_roomData) ?? roomId.value).trim();
+  }
+
+  Future<void> loadAudioRoomSeats({bool showErrors = false}) async {
+    if (isVideoRoom) return;
+    final apiRoomId = audioRoomApiId;
+    if (apiRoomId.isEmpty) {
+      audioRoomSeats.assignAll(_buildFallbackAudioSeats());
+      return;
+    }
+
+    isLoadingAudioSeats.value = true;
+    try {
+      final response = await _roomRepo.getRoomSeats(
+        roomId: apiRoomId,
+        isShowLoader: false,
+      );
+      if (_isApiSuccess(response)) {
+        final seats = _parseAudioSeats(response?['data']);
+        audioRoomSeats.assignAll(
+          seats.isNotEmpty ? seats : _buildFallbackAudioSeats(),
+        );
+        return;
+      }
+
+      if (audioRoomSeats.isEmpty) {
+        audioRoomSeats.assignAll(_buildFallbackAudioSeats());
+      }
+      if (showErrors) {
+        _showRoomApiError('Seats', response, 'Unable to fetch room seats.');
+      }
+    } finally {
+      isLoadingAudioSeats.value = false;
+    }
+  }
+
+  Future<void> loadAudioInviteCandidates({
+    String search = '',
+    bool showErrors = true,
+  }) async {
+    final apiRoomId = audioRoomApiId;
+    if (apiRoomId.isEmpty) {
+      audioInviteCandidates.clear();
+      if (showErrors) {
+        Get.snackbar(
+          'Invite users',
+          'Room id is missing, so followers cannot be loaded.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFFD32F2F),
+          colorText: kColorWhite,
+        );
+      }
+      return;
+    }
+
+    isLoadingInviteCandidates.value = true;
+    try {
+      final response = await _roomRepo.getInviteCandidates(
+        roomId: apiRoomId,
+        search: search,
+        isShowLoader: false,
+      );
+      if (_isApiSuccess(response)) {
+        audioInviteCandidates.assignAll(
+          _parseInviteCandidates(response?['data']),
+        );
+        return;
+      }
+
+      audioInviteCandidates.clear();
+      if (showErrors) {
+        _showRoomApiError(
+          'Invite users',
+          response,
+          'Unable to fetch followers for invite.',
+        );
+      }
+    } finally {
+      isLoadingInviteCandidates.value = false;
+    }
+  }
+
+  Future<void> inviteUserToAudioSeat({
+    required int seatNo,
+    required AudioRoomInviteCandidate user,
+  }) async {
+    final apiRoomId = audioRoomApiId;
+    if (apiRoomId.isEmpty || user.id.trim().isEmpty) return;
+
+    final response = await _roomRepo.inviteUserToSeat(
+      roomId: apiRoomId,
+      targetUserId: user.id,
+      seatId: seatNo,
+      message: '${hostName.value} invited you to join the mic',
+      isShowLoader: true,
+    );
+
+    if (_isApiSuccess(response)) {
+      if (Get.isBottomSheetOpen == true) Get.back();
+      Get.snackbar(
+        'Invite sent',
+        '${user.name} has been invited to seat $seatNo.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.black87,
+        colorText: kColorWhite,
+      );
+      return;
+    }
+
+    _showRoomApiError('Invite failed', response, 'Unable to send invite.');
+  }
+
+  Future<void> updateAudioSeatMic({
+    required AudioRoomSeatModel seat,
+    required bool mute,
+  }) async {
+    await _runSeatAction(
+      label: mute ? 'Mute' : 'Unmute',
+      action: () => _roomRepo.micAction(
+        roomId: audioRoomApiId,
+        seatId: seat.seatNo,
+        targetUserId: seat.userId,
+        action: mute ? 'mute' : 'unmute',
+        isShowLoader: true,
+      ),
+    );
+  }
+
+  Future<void> kickAudioRoomUser(AudioRoomSeatModel seat) async {
+    await _runSeatAction(
+      label: 'Kick off',
+      action: () => _roomRepo.kickParticipant(
+        roomId: audioRoomApiId,
+        targetUserId: seat.userId,
+        isShowLoader: true,
+      ),
+    );
+  }
+
+  Future<void> setAudioRoomAdmin({
+    required AudioRoomSeatModel seat,
+    required bool makeAdmin,
+  }) async {
+    await _runSeatAction(
+      label: makeAdmin ? 'Make admin' : 'Remove admin',
+      action: () => _roomRepo.adminAction(
+        roomId: audioRoomApiId,
+        targetUserId: seat.userId,
+        action: makeAdmin ? 'make_admin' : 'remove_admin',
+        isShowLoader: true,
+      ),
+    );
+  }
+
+  Future<void> requestAudioSeat() async {
+    AudioRoomSeatModel? targetSeat;
+    for (final seat in audioRoomSeats) {
+      if (!seat.occupied && !seat.isLocked) {
+        targetSeat = seat;
+        break;
+      }
+    }
+    if (targetSeat == null) {
+      Get.snackbar(
+        'Request',
+        'No open mic seats are available right now.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.black87,
+        colorText: kColorWhite,
+      );
+      return;
+    }
+
+    final selectedSeat = targetSeat;
+    await _runSeatAction(
+      label: 'Request',
+      action: () => _roomRepo.micAction(
+        roomId: audioRoomApiId,
+        seatId: selectedSeat.seatNo,
+        action: 'request_to_speak',
+        isShowLoader: true,
+      ),
+      successMessage: 'Request sent to the host.',
+    );
+  }
+
+  Future<void> _runSeatAction({
+    required String label,
+    required Future<Map<String, dynamic>?> Function() action,
+    String? successMessage,
+  }) async {
+    final response = await action();
+    if (_isApiSuccess(response)) {
+      if (Get.isBottomSheetOpen == true) Get.back();
+      await loadAudioRoomSeats();
+      Get.snackbar(
+        label,
+        successMessage ?? '$label updated successfully.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.black87,
+        colorText: kColorWhite,
+      );
+      return;
+    }
+
+    _showRoomApiError(label, response, 'Unable to complete this action.');
+  }
+
+  List<AudioRoomSeatModel> _parseAudioSeats(dynamic data) {
+    final seatConfig = _readSeatConfig(data);
+    final rawSeats = data is Map ? data['seats'] : data;
+    final parsed = rawSeats is List
+        ? rawSeats
+              .whereType<Map>()
+              .map(
+                (raw) =>
+                    AudioRoomSeatModel.fromMap(Map<String, dynamic>.from(raw)),
+              )
+              .where((seat) => seat.seatNo > 0)
+              .toList()
+        : <AudioRoomSeatModel>[];
+
+    final seatsByNo = <int, AudioRoomSeatModel>{
+      for (final seat in parsed) seat.seatNo: seat,
+    };
+    final maxSeat = seatConfig > 0
+        ? seatConfig
+        : seatsByNo.keys.fold<int>(
+            16,
+            (max, value) => value > max ? value : max,
+          );
+
+    final seats = <AudioRoomSeatModel>[];
+    for (var seatNo = 2; seatNo <= maxSeat; seatNo++) {
+      seats.add(seatsByNo[seatNo] ?? AudioRoomSeatModel.empty(seatNo));
+    }
+
+    final hostSeat = seatsByNo[1];
+    if (hostSeat != null && hostSeat.occupied) {
+      if (hostSeat.name.trim().isNotEmpty) hostName.value = hostSeat.name;
+      if (hostSeat.avatarUrl?.trim().isNotEmpty == true) {
+        hostAvatarUrl.value = hostSeat.avatarUrl;
+      }
+      if (receiverId.value.trim().isEmpty) receiverId.value = hostSeat.userId;
+    }
+
+    return seats;
+  }
+
+  int _readSeatConfig(dynamic data) {
+    final value = data is Map
+        ? data['seatConfig'] ?? data['maxSeats'] ?? data['seat_count']
+        : null;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    final parsed = int.tryParse(value?.toString() ?? '');
+    if (parsed != null) return parsed;
+    final roomConfig =
+        _roomData['seatConfig'] ?? _roomData['maxSeats'] ?? _roomData['seats'];
+    if (roomConfig is int) return roomConfig;
+    if (roomConfig is num) return roomConfig.toInt();
+    return int.tryParse(roomConfig?.toString() ?? '') ?? 16;
+  }
+
+  List<AudioRoomInviteCandidate> _parseInviteCandidates(dynamic data) {
+    final users = data is Map ? data['users'] ?? data['data'] : data;
+    if (users is! List) return const [];
+    return users
+        .whereType<Map>()
+        .map(
+          (raw) =>
+              AudioRoomInviteCandidate.fromMap(Map<String, dynamic>.from(raw)),
+        )
+        .where((user) => user.id.trim().isNotEmpty && !user.isInRoom)
+        .toList();
+  }
+
+  List<AudioRoomSeatModel> _buildFallbackAudioSeats() {
+    final maxSeats = _readSeatConfig(_roomData);
+    final seats = <AudioRoomSeatModel>[];
+    var seatNo = 2;
+
+    for (final viewer in liveViewers) {
+      if (seatNo > maxSeats) break;
+      if (viewer['isHost'] == true) continue;
+      seats.add(
+        AudioRoomSeatModel(
+          seatNo: seatNo,
+          userId:
+              viewer['targetId']?.toString() ?? viewer['id']?.toString() ?? '',
+          name: viewer['name']?.toString() ?? 'Member',
+          avatarUrl: viewer['avatarUrl']?.toString(),
+          diamonds: 0,
+        ),
+      );
+      seatNo++;
+    }
+
+    while (seatNo <= maxSeats) {
+      seats.add(AudioRoomSeatModel.empty(seatNo));
+      seatNo++;
+    }
+    return seats;
+  }
+
+  bool _isApiSuccess(Map<String, dynamic>? response) {
+    return response?['statusCode'] == 1 || response?['success'] == true;
+  }
+
+  void _showRoomApiError(
+    String title,
+    Map<String, dynamic>? response,
+    String fallback,
+  ) {
+    Get.snackbar(
+      title,
+      response?['message']?.toString() ?? fallback,
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: const Color(0xFFD32F2F),
+      colorText: kColorWhite,
+    );
+  }
+
   Future<void> toggleFollowHost() async {
     if (isHost.value) return;
     final targetId = receiverId.value.trim();
@@ -842,11 +1180,25 @@ class LiveBroadcastController extends GetxController {
     );
   }
 
-  void shareRoom() {
-    final shareId = roomId.value.trim().isNotEmpty
-        ? roomId.value.trim()
-        : _extractBackendRoomId(_roomData) ?? 'room';
-    final String roomUrl = 'https://qobo.live/room/$shareId';
+  Future<void> shareRoom() async {
+    final shareId = audioRoomApiId.isNotEmpty ? audioRoomApiId : 'room';
+    var roomUrl = 'https://qobo.live/room/$shareId';
+    final response = await _roomRepo.getShareLink(
+      roomId: shareId,
+      isShowLoader: false,
+    );
+    if (_isApiSuccess(response)) {
+      final data = response?['data'];
+      if (data is Map) {
+        final backendLink =
+            data['link']?.toString() ??
+            data['url']?.toString() ??
+            data['shareUrl']?.toString();
+        if (backendLink != null && backendLink.trim().isNotEmpty) {
+          roomUrl = backendLink.trim();
+        }
+      }
+    }
 
     Get.bottomSheet(
       Container(
@@ -983,8 +1335,83 @@ class LiveBroadcastController extends GetxController {
   }
 
   void leaveRoom() {
+    if (isHost.value) {
+      confirmEndRoom();
+      return;
+    }
     unawaited(_reportAudioVideoRoomExit());
     Get.back();
+  }
+
+  void confirmEndRoom() {
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: const Color(0xFF1D102F),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const SemiBoldText(
+          text: 'End audio room?',
+          fontSize: TextStyles.k18FontSize,
+          color: kColorWhite,
+        ),
+        content: AppText(
+          text:
+              'This will end the room for everyone and close the live session.',
+          fontSize: TextStyles.k12FontSize,
+          color: kColorWhite.withValues(alpha: 0.72),
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+        actions: [
+          TextButton(
+            onPressed: Get.back,
+            child: AppText(
+              text: 'Cancel',
+              fontSize: TextStyles.k12FontSize,
+              color: kColorWhite.withValues(alpha: 0.72),
+            ),
+          ),
+          TextButton(
+            onPressed: endRoomForEveryone,
+            child: const SemiBoldText(
+              text: 'End Room',
+              fontSize: TextStyles.k12FontSize,
+              color: Color(0xFFFF5A7A),
+            ),
+          ),
+        ],
+      ),
+      barrierDismissible: true,
+    );
+  }
+
+  Future<void> endRoomForEveryone() async {
+    if (_exitReported) return;
+    final backendRoomId = audioRoomApiId;
+    if (backendRoomId.isEmpty) {
+      Get.back();
+      Get.snackbar(
+        'End room',
+        'Room id is missing, so this room cannot be ended.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFFD32F2F),
+        colorText: kColorWhite,
+      );
+      return;
+    }
+
+    final response = await _roomRepo.endRoom(
+      roomId: backendRoomId,
+      isShowLoader: true,
+    );
+
+    if (_isApiSuccess(response)) {
+      _exitReported = true;
+      if (Get.isDialogOpen == true) Get.back();
+      Get.back();
+      return;
+    }
+
+    if (Get.isDialogOpen == true) Get.back();
+    _showRoomApiError('End room', response, 'Unable to end this room.');
   }
 
   void reportRoomExit() {

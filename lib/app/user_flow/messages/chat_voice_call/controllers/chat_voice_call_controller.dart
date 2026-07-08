@@ -74,6 +74,13 @@ class ChatVoiceCallController extends GetxController {
     return name.isNotEmpty ? name : 'User';
   }
 
+  String get currentUserName => zegoUserName;
+
+  String? get currentUserAvatar {
+    if (!Get.isRegistered<UserSessionController>()) return null;
+    return Get.find<UserSessionController>().displayPictureUrl;
+  }
+
   @override
   void onInit() {
     super.onInit();

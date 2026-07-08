@@ -88,13 +88,16 @@ class EconomyRepo {
     required String giftId,
     required String roomId,
     int quantity = 1,
+    String scope = 'user',
     bool isShowLoader = true,
   }) async {
+    final normalizedScope = scope.trim().isEmpty ? 'user' : scope.trim();
     final body = <String, dynamic>{
       'receiverId': receiverId,
       'roomId': roomId,
       'giftId': giftId,
       'quantity': quantity,
+      'scope': normalizedScope,
     };
 
     var response = await _apiService.postRequest(
@@ -111,6 +114,7 @@ class EconomyRepo {
           'gift_id': giftId,
           'room_id': roomId,
           'quantity': quantity,
+          'scope': normalizedScope,
         },
         isShowLoader: isShowLoader,
       );
@@ -124,6 +128,7 @@ class EconomyRepo {
           'gift_id': giftId,
           'room_id': roomId,
           'quantity': quantity,
+          'scope': normalizedScope,
         },
         isShowLoader: isShowLoader,
       );

@@ -226,16 +226,124 @@ class RoomRepo {
   /// Calls `POST /api/room/mic-action` to change seat status.
   Future<Map<String, dynamic>?> micAction({
     String? roomId,
-    required String action, // 'mute', 'unmute', 'lock', 'unlock'
+    String? targetUserId,
+    required String action,
     required int seatId,
     bool isShowLoader = true,
   }) async {
+    final trimmedTargetUserId = targetUserId?.trim();
     final response = await _apiService.postRequest(
       endPoint: RoomEndpoints.micAction,
       requestModel: <String, dynamic>{
         if (roomId != null && roomId.trim().isNotEmpty) 'room_id': roomId,
+        if (trimmedTargetUserId != null && trimmedTargetUserId.isNotEmpty)
+          'target_user_id': trimmedTargetUserId,
         'action': action,
         'seat_id': seatId,
+      },
+      isShowLoader: isShowLoader,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// Calls `GET /api/room/seats?room_id=...`.
+  Future<Map<String, dynamic>?> getRoomSeats({
+    required String roomId,
+    bool isShowLoader = false,
+  }) async {
+    final response = await _apiService.getRequest(
+      endPoint: '${RoomEndpoints.seats}?room_id=${Uri.encodeComponent(roomId)}',
+      isShowLoader: isShowLoader,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// Calls `POST /api/room/admin-action`.
+  Future<Map<String, dynamic>?> adminAction({
+    required String roomId,
+    required String targetUserId,
+    required String action,
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: RoomEndpoints.adminAction,
+      requestModel: <String, dynamic>{
+        'room_id': roomId,
+        'target_user_id': targetUserId,
+        'action': action,
+      },
+      isShowLoader: isShowLoader,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// Calls `GET /api/room/invite-candidates?room_id=...`.
+  Future<Map<String, dynamic>?> getInviteCandidates({
+    required String roomId,
+    int page = 1,
+    int limit = 20,
+    String? search,
+    bool isShowLoader = false,
+  }) async {
+    final params = <String, String>{
+      'room_id': roomId,
+      'page': page.toString(),
+      'limit': limit.toString(),
+      if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+    };
+    final response = await _apiService.getRequest(
+      endPoint:
+          '${RoomEndpoints.inviteCandidates}?${Uri(queryParameters: params).query}',
+      isShowLoader: isShowLoader,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// Calls `POST /api/room/invite`.
+  Future<Map<String, dynamic>?> inviteUserToSeat({
+    required String roomId,
+    required String targetUserId,
+    required int seatId,
+    String? message,
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: RoomEndpoints.invite,
+      requestModel: <String, dynamic>{
+        'room_id': roomId,
+        'target_user_id': targetUserId,
+        'seat_id': seatId,
+        if (message != null && message.trim().isNotEmpty)
+          'message': message.trim(),
+      },
+      isShowLoader: isShowLoader,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// Calls `POST /api/room/invite/respond`.
+  Future<Map<String, dynamic>?> respondToSeatInvite({
+    required String roomId,
+    required int seatId,
+    required String action,
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: RoomEndpoints.inviteRespond,
+      requestModel: <String, dynamic>{
+        'room_id': roomId,
+        'seat_id': seatId,
+        'action': action,
       },
       isShowLoader: isShowLoader,
     );
