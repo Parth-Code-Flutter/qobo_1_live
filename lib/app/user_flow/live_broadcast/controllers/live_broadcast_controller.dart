@@ -1430,38 +1430,42 @@ class LiveBroadcastController extends GetxController {
   Future<void> endLiveStreamForEveryone() async {
     if (_exitReported) return;
     final liveStreamingId = liveStreamingApiId;
-    if (liveStreamingId.isEmpty) {
-      Get.back();
-      Get.snackbar(
-        'End live stream',
-        'Live stream id is missing, so this stream cannot be ended.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFFD32F2F),
-        colorText: kColorWhite,
-      );
-      return;
-    }
+    Map<String, dynamic>? response;
 
     // Live streaming and audio/video rooms use different backend resources.
     // Keep this path isolated so closing a Go Live stream never calls room APIs.
-    final response = await _roomRepo.endLiveStreaming(
-      liveStreamingId: liveStreamingId,
-      isShowLoader: true,
-    );
-
-    if (_isApiSuccess(response)) {
-      _exitReported = true;
-      if (Get.isDialogOpen == true) Get.back();
-      Get.back();
-      return;
+    if (liveStreamingId.isNotEmpty) {
+      try {
+        response = await _roomRepo.endLiveStreaming(
+          liveStreamingId: liveStreamingId,
+          isShowLoader: true,
+        );
+      } catch (_) {
+        response = null;
+      }
     }
 
-    if (Get.isDialogOpen == true) Get.back();
-    _showRoomApiError(
-      'End live stream',
-      response,
-      'Unable to end this live stream.',
+    final apiConfirmed = liveStreamingId.isNotEmpty && _isApiSuccess(response);
+    _closeLiveStreamLocally();
+
+    if (apiConfirmed) return;
+
+    final fallback = liveStreamingId.isEmpty
+        ? 'Live stream id was missing, but the stream was closed on this device.'
+        : 'Backend could not confirm the end request, but the stream was closed on this device.';
+    Get.snackbar(
+      'Live stream closed',
+      response?['message']?.toString() ?? fallback,
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.black87,
+      colorText: kColorWhite,
     );
+  }
+
+  void _closeLiveStreamLocally() {
+    _exitReported = true;
+    if (Get.isDialogOpen == true) Get.back();
+    Get.back();
   }
 
   Future<void> endRoomForEveryone() async {
