@@ -91,7 +91,6 @@ class ChatVoiceCallView extends GetView<ChatVoiceCallController> {
               const _VoiceReceiverPreviewCard(),
             ],
             const _CallTopOverlay(),
-            if (isVideo) const _CallSideActions(),
           ],
         ),
       );
@@ -224,24 +223,27 @@ class _VideoParticipantStrip extends GetView<ChatVoiceCallController> {
 
   @override
   Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: SafeArea(
-        child: Align(
-          alignment: Alignment.bottomLeft,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 0, 14, 118),
-            child: Obx(
-              () => Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _MiniParticipantPill(
+    return SafeArea(
+      child: Align(
+        alignment: Alignment.bottomLeft,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 0, 14, 118),
+          child: Obx(
+            () => Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                IgnorePointer(
+                  child: _MiniParticipantPill(
                     name: controller.currentUserName,
                     imageUrl: controller.currentUserAvatar,
                     label: 'You',
                     dark: true,
                   ),
-                  Spacing.h10,
-                  _MiniParticipantPill(
+                ),
+                IgnorePointer(
+                  child: _MiniParticipantPill(
                     name: controller.peerName.value,
                     imageUrl: controller.peerAvatar.value,
                     label: controller.hasPeerJoined.value
@@ -249,10 +251,84 @@ class _VideoParticipantStrip extends GetView<ChatVoiceCallController> {
                         : 'Ringing',
                     dark: true,
                   ),
-                ],
-              ),
+                ),
+                _CompactCallActionButton(
+                  icon: Icons.person_rounded,
+                  label: 'Profile',
+                  onTap: () => Get.bottomSheet(
+                    _CallProfileSheet(controller: controller),
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                  ),
+                ),
+                _CompactCallActionButton(
+                  icon: Icons.card_giftcard_rounded,
+                  label: 'Gift',
+                  onTap: () => Get.bottomSheet(
+                    _CallGiftsBottomSheet(controller: controller),
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                  ),
+                ),
+              ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CompactCallActionButton extends StatelessWidget {
+  const _CompactCallActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: 120,
+        height: 48,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.48),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.16),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 24,
+              child: Icon(icon, color: kColorWhite, size: 22),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: SemiBoldText(
+                text: label,
+                fontSize: TextStyles.k10FontSize,
+                color: kColorWhite,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -619,6 +695,27 @@ class _CallTopOverlay extends GetView<ChatVoiceCallController> {
                 ),
                 child: Row(
                   children: [
+                    GestureDetector(
+                      onTap: () => _confirmBackEndsCall(context),
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: kColorWhite.withValues(alpha: 0.10),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: kColorWhite.withValues(alpha: 0.10),
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: kColorWhite,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                    Spacing.h8,
                     AppUserAvatar(
                       name: controller.isVideo.value
                           ? controller.peerName.value
@@ -689,6 +786,49 @@ class _CallTopOverlay extends GetView<ChatVoiceCallController> {
       backgroundColor: Colors.transparent,
     );
   }
+
+  Future<void> _confirmBackEndsCall(BuildContext context) async {
+    final shouldEnd = await Get.dialog<bool>(
+      AlertDialog(
+        backgroundColor: const Color(0xFF171321),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const SemiBoldText(
+          text: 'End call?',
+          fontSize: TextStyles.k18FontSize,
+          color: kColorWhite,
+        ),
+        content: AppText(
+          text: 'If you back call will be end',
+          fontSize: TextStyles.k14FontSize,
+          color: kColorWhite.withValues(alpha: 0.78),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: AppText(
+              text: 'Cancel',
+              fontSize: TextStyles.k12FontSize,
+              color: kColorWhite.withValues(alpha: 0.74),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            child: const SemiBoldText(
+              text: 'End Call',
+              fontSize: TextStyles.k12FontSize,
+              color: kColorPrimary,
+            ),
+          ),
+        ],
+      ),
+      barrierDismissible: true,
+    );
+    if (shouldEnd != true || !context.mounted) return;
+    await ZegoUIKitPrebuiltCallController().hangUp(
+      context,
+      reason: ZegoCallEndReason.localHangUp,
+    );
+  }
 }
 
 class _CoinsPanel extends StatelessWidget {
@@ -757,90 +897,6 @@ class _CoinsPanel extends StatelessWidget {
             color: kColorWhite.withValues(alpha: 0.74),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CallSideActions extends GetView<ChatVoiceCallController> {
-  const _CallSideActions();
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Align(
-        alignment: Alignment.centerRight,
-        child: Padding(
-          padding: const EdgeInsets.only(right: 12, bottom: 70),
-          child: Obx(
-            () => Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _RoundActionButton(
-                  icon: Icons.person_rounded,
-                  label: 'Profile',
-                  onTap: () => Get.bottomSheet(
-                    _CallProfileSheet(controller: controller),
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                  ),
-                ),
-                if (controller.isVideo.value) ...[
-                  Spacing.v12,
-                  _RoundActionButton(
-                    icon: Icons.card_giftcard_rounded,
-                    label: 'Gift',
-                    onTap: () => Get.bottomSheet(
-                      _CallGiftsBottomSheet(controller: controller),
-                      isScrollControlled: true,
-                      backgroundColor: Colors.transparent,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _RoundActionButton extends StatelessWidget {
-  const _RoundActionButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.50),
-              shape: BoxShape.circle,
-              border: Border.all(color: kColorWhite.withValues(alpha: 0.16)),
-            ),
-            child: Icon(icon, color: kColorWhite, size: 22),
-          ),
-          Spacing.v4,
-          AppText(
-            text: label,
-            fontSize: 9,
-            color: kColorWhite.withValues(alpha: 0.82),
           ),
         ],
       ),
