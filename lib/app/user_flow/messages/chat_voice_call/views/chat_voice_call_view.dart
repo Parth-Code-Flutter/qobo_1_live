@@ -88,7 +88,6 @@ class ChatVoiceCallView extends GetView<ChatVoiceCallController> {
               const _VideoParticipantStrip()
             else ...[
               const _VoiceCallPortraitStage(),
-              const _VoiceLocalPreviewCard(),
               const _VoiceReceiverPreviewCard(),
             ],
             const _CallTopOverlay(),
@@ -198,13 +197,13 @@ class _VoiceCallPortraitStage extends GetView<ChatVoiceCallController> {
                   children: [
                     const Spacer(),
                     _PortraitHalo(
-                      name: controller.peerName.value,
-                      imageUrl: controller.peerAvatar.value,
+                      name: controller.currentUserName,
+                      imageUrl: controller.currentUserAvatar,
                       size: haloSize,
-                      label: controller.peerName.value,
+                      label: controller.currentUserName,
                       labelPrefix: controller.hasPeerJoined.value
-                          ? 'Connected with'
-                          : 'Calling',
+                          ? 'You are connected'
+                          : 'Waiting for answer',
                       prominent: true,
                     ),
                     const SizedBox(height: 80),
@@ -276,31 +275,6 @@ class _VoiceCallGradientBackground extends StatelessWidget {
             Color(0xFF06114B),
           ],
           stops: [0, 0.45, 1],
-        ),
-      ),
-    );
-  }
-}
-
-class _VoiceLocalPreviewCard extends GetView<ChatVoiceCallController> {
-  const _VoiceLocalPreviewCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Align(
-        alignment: Alignment.bottomLeft,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 0, 132),
-          child: Obx(
-            () => _VoiceParticipantCard(
-              name: controller.currentUserName,
-              imageUrl: controller.currentUserAvatar,
-              label: 'You',
-              status: controller.hasPeerJoined.value ? 'In call' : 'Waiting',
-              compact: true,
-            ),
-          ),
         ),
       ),
     );
@@ -386,21 +360,17 @@ class _VoiceParticipantCard extends StatelessWidget {
     required this.imageUrl,
     required this.label,
     required this.status,
-    this.compact = false,
   });
 
   final String name;
   final String? imageUrl;
   final String label;
   final String status;
-  final bool compact;
 
   @override
   Widget build(BuildContext context) {
-    final avatarSize = compact ? 52.0 : 62.0;
     return Container(
-      width: compact ? 122 : null,
-      padding: EdgeInsets.fromLTRB(12, compact ? 11 : 12, 12, 11),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 11),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -438,10 +408,8 @@ class _VoiceParticipantCard extends StatelessWidget {
             child: AppUserAvatar(
               name: name,
               imageUrl: imageUrl,
-              size: avatarSize,
-              fontSize: compact
-                  ? TextStyles.k14FontSize
-                  : TextStyles.k16FontSize,
+              size: 62,
+              fontSize: TextStyles.k16FontSize,
               border: Border.all(
                 color: kColorWhite.withValues(alpha: 0.80),
                 width: 2,
@@ -652,8 +620,12 @@ class _CallTopOverlay extends GetView<ChatVoiceCallController> {
                 child: Row(
                   children: [
                     AppUserAvatar(
-                      name: controller.peerName.value,
-                      imageUrl: controller.peerAvatar.value,
+                      name: controller.isVideo.value
+                          ? controller.peerName.value
+                          : controller.currentUserName,
+                      imageUrl: controller.isVideo.value
+                          ? controller.peerAvatar.value
+                          : controller.currentUserAvatar,
                       size: 40,
                       fontSize: TextStyles.k14FontSize,
                     ),
@@ -664,7 +636,9 @@ class _CallTopOverlay extends GetView<ChatVoiceCallController> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           SemiBoldText(
-                            text: controller.peerName.value,
+                            text: controller.isVideo.value
+                                ? controller.peerName.value
+                                : controller.currentUserName,
                             fontSize: TextStyles.k14FontSize,
                             color: kColorWhite,
                             maxLines: 1,
