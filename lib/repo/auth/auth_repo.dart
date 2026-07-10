@@ -93,10 +93,7 @@ class AuthRepo {
   }) async {
     final response = await _apiService.postRequest(
       endPoint: AuthEndpoints.verifyEmailOtp,
-      requestModel: <String, dynamic>{
-        'email': email.trim(),
-        'otp': otp.trim(),
-      },
+      requestModel: <String, dynamic>{'email': email.trim(), 'otp': otp.trim()},
       isShowLoader: isShowLoader,
       isLoginCall: true,
     );
@@ -142,11 +139,13 @@ class AuthRepo {
   Future<LoginWithOtpResponseModel?> loginWithOtp({
     required String phone,
     required String countryCode,
+    required String email,
     bool isShowLoader = true,
   }) async {
     final request = LoginWithOtpRequestModel(
       phone: phone,
       countryCode: countryCode,
+      email: email,
     );
 
     final response = await _apiService.postRequest(
@@ -221,10 +220,11 @@ class AuthRepo {
   /// on the verify screen without requiring global overlay dependencies.
   Future<VerifyOtpResponseModel?> verifyOtp({
     required String phone,
+    required String email,
     required String otp,
     bool isShowLoader = false,
   }) async {
-    final request = VerifyOtpRequestModel(phone: phone, otp: otp);
+    final request = VerifyOtpRequestModel(phone: phone, email: email, otp: otp);
 
     final response = await _apiService.postRequest(
       endPoint: AuthEndpoints.verifyOtp,

@@ -17,7 +17,7 @@ import '../models/response/verify_otp_response_model.dart';
 
 class AuthVerifyAccountController extends GetxController {
   AuthVerifyAccountController({AuthRepo? authRepo})
-      : _authRepo = authRepo ?? AuthRepo();
+    : _authRepo = authRepo ?? AuthRepo();
 
   final AuthRepo _authRepo;
 
@@ -33,8 +33,10 @@ class AuthVerifyAccountController extends GetxController {
   final otpFocusNodes = List.generate(4, (_) => FocusNode());
   bool isComeFromForgotPassword = false;
 
-  /// Phone or email string last used with `login-phone` (must match `verify-otp`).
+  /// Phone or email string last used with OTP APIs (must match `verify-otp`).
   String _otpRecipient = '';
+  String _otpPhone = '';
+  String _otpEmail = '';
   bool _otpSentToPhone = true;
   static const int _otpResendSeconds = 120;
   final otpResendRemainingSeconds = 0.obs;
@@ -64,6 +66,8 @@ class AuthVerifyAccountController extends GetxController {
   void showPhoneNumberView() {
     isOtpView.value = false;
     _otpRecipient = '';
+    _otpPhone = '';
+    _otpEmail = '';
     _otpSentToPhone = true;
     _cancelOtpResendTimer();
   }
@@ -85,10 +89,7 @@ class AuthVerifyAccountController extends GetxController {
     return true;
   }
 
-  void onOtpChanged({
-    required int index,
-    required String value,
-  }) {
+  void onOtpChanged({required int index, required String value}) {
     otpError.value = null;
     if (value.isNotEmpty && index < otpFocusNodes.length - 1) {
       otpFocusNodes[index + 1].requestFocus();
@@ -238,6 +239,8 @@ class AuthVerifyAccountController extends GetxController {
 
       if (res.isSuccess) {
         _otpRecipient = p;
+        _otpPhone = p;
+        _otpEmail = '';
         _otpSentToPhone = true;
         AppToast.showSuccess(context, res.message);
         showOtpView();
@@ -267,8 +270,9 @@ class AuthVerifyAccountController extends GetxController {
     try {
       setContinueLoading(true);
       final res = await _authRepo.loginWithOtp(
-        phone: usePhone ? p : e,
+        phone: usePhone ? p : '',
         countryCode: usePhone ? selectedDialCode.value : '',
+        email: usePhone ? '' : e,
         isShowLoader: false,
       );
       if (!context.mounted) return;
@@ -284,6 +288,8 @@ class AuthVerifyAccountController extends GetxController {
 
       if (res.statusCode == 1) {
         _otpRecipient = usePhone ? p : e;
+        _otpPhone = usePhone ? p : '';
+        _otpEmail = usePhone ? '' : e;
         _otpSentToPhone = usePhone;
         AppToast.showSuccess(context, message);
         showOtpView();
@@ -333,8 +339,9 @@ class AuthVerifyAccountController extends GetxController {
       }
 
       final res = await _authRepo.loginWithOtp(
-        phone: _otpRecipient,
+        phone: _otpPhone,
         countryCode: _otpSentToPhone ? selectedDialCode.value : '',
+        email: _otpEmail,
         isShowLoader: false,
       );
       if (!context.mounted) return;
@@ -404,7 +411,8 @@ class AuthVerifyAccountController extends GetxController {
     try {
       setContinueLoading(true);
       final res = await _authRepo.verifyOtp(
-        phone: _otpRecipient,
+        phone: _otpPhone,
+        email: _otpEmail,
         otp: otpDigits,
         isShowLoader: false,
       );
