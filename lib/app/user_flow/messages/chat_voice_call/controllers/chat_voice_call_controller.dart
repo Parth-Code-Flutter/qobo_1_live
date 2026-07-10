@@ -12,6 +12,7 @@ import 'package:qobo_one_live/services/chat/chat_inbox_preview.dart';
 import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
+import 'package:qobo_one_live/utils/ui_utils/gift_celebration_overlay.dart';
 import 'package:qobo_one_live/utils/zego_call_id_utils.dart';
 import 'package:qobo_one_live/utils/zego_engine_utils.dart';
 import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
@@ -253,6 +254,7 @@ class ChatVoiceCallController extends GetxController {
     if (isEconomyApiSuccess(response)) {
       await loadWalletBalance();
       if (Get.isBottomSheetOpen == true) Get.back<void>();
+      GiftCelebrationOverlay.show(giftName: gift['name']);
       Get.snackbar(
         'Gift Sent',
         'You sent ${gift['name'] ?? 'a gift'} to ${peerName.value}.',

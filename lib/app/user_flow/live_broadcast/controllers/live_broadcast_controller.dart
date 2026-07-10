@@ -16,6 +16,7 @@ import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/utils/ui_utils/gift_celebration_overlay.dart';
 import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 import 'package:zego_uikit_prebuilt_live_streaming/zego_uikit_prebuilt_live_streaming.dart';
 
@@ -80,6 +81,7 @@ class LiveBroadcastController extends GetxController {
   Map<String, dynamic> _roomData = {};
   StreamSubscription<List<ZegoInRoomMessage>>? _messageSub;
   StreamSubscription<List<ZegoUIKitUser>>? _userSub;
+  Timer? _seatRefreshTimer;
   VoidCallback? _viewerCountListener;
   var _exitReported = false;
 
@@ -106,12 +108,12 @@ class LiveBroadcastController extends GetxController {
     _validateStreamingInput();
     loadWalletBalance();
     loadGiftCatalog();
-    if (!isVideoRoom) {
+    if (isAudioVideoRoom) {
       final initialSeats = _parseAudioSeats(_roomData);
       if (initialSeats.isNotEmpty) {
         audioRoomSeats.assignAll(initialSeats);
       }
-      unawaited(loadAudioRoomSeats());
+      _startSeatRefreshPolling();
     }
     chatMessages.clear();
   }
@@ -631,6 +633,7 @@ class LiveBroadcastController extends GetxController {
       }
 
       Get.back();
+      GiftCelebrationOverlay.show(giftName: gift['name']);
 
       Get.snackbar(
         '🎁 Gift Sent! 🎁',
@@ -812,8 +815,26 @@ class LiveBroadcastController extends GetxController {
     return (_extractBackendRoomId(_roomData) ?? roomId.value).trim();
   }
 
+  void _startSeatRefreshPolling() {
+    _seatRefreshTimer?.cancel();
+    unawaited(loadAudioRoomSeats());
+    _seatRefreshTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+      if (_exitReported || !isAudioVideoRoom) {
+        _stopSeatRefreshPolling();
+        return;
+      }
+      unawaited(loadAudioRoomSeats());
+    });
+  }
+
+  void _stopSeatRefreshPolling() {
+    _seatRefreshTimer?.cancel();
+    _seatRefreshTimer = null;
+  }
+
   Future<void> loadAudioRoomSeats({bool showErrors = false}) async {
-    if (isVideoRoom) return;
+    if (!isAudioVideoRoom) return;
+    if (isLoadingAudioSeats.value) return;
     final apiRoomId = audioRoomApiId;
     if (apiRoomId.isEmpty) {
       audioRoomSeats.assignAll(_buildFallbackAudioSeats());
@@ -1343,6 +1364,7 @@ class LiveBroadcastController extends GetxController {
       }
       return;
     }
+    _stopSeatRefreshPolling();
     unawaited(_reportAudioVideoRoomExit());
     Get.back();
   }
@@ -1464,6 +1486,7 @@ class LiveBroadcastController extends GetxController {
 
   void _closeLiveStreamLocally() {
     _exitReported = true;
+    _stopSeatRefreshPolling();
     if (Get.isDialogOpen == true) Get.back();
     Get.back();
   }
@@ -1490,6 +1513,7 @@ class LiveBroadcastController extends GetxController {
 
     if (_isApiSuccess(response)) {
       _exitReported = true;
+      _stopSeatRefreshPolling();
       if (Get.isDialogOpen == true) Get.back();
       Get.back();
       return;
@@ -1510,6 +1534,7 @@ class LiveBroadcastController extends GetxController {
   Future<void> _reportAudioVideoRoomExit() async {
     if (_exitReported || !_isAudioVideoRoomPayload()) return;
     _exitReported = true;
+    _stopSeatRefreshPolling();
     final backendRoomId = _extractBackendRoomId(_roomData);
     if (backendRoomId == null || backendRoomId.trim().isEmpty) return;
 
@@ -1530,6 +1555,7 @@ class LiveBroadcastController extends GetxController {
 
   @override
   void onClose() {
+    _stopSeatRefreshPolling();
     _messageSub?.cancel();
     _userSub?.cancel();
     if (_viewerCountListener != null) {
