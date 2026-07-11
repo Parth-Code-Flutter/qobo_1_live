@@ -28,9 +28,9 @@ class RoomsTabView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _header(controller),
-              Spacing.v12,
+              Spacing.v16,
               _modeTabs(controller),
-              Spacing.v10,
+              Spacing.v12,
               Expanded(
                 child: Obx(() {
                   if (controller.isRoomsVideoMode) {
@@ -90,25 +90,56 @@ class RoomsTabView extends StatelessWidget {
   Widget _modeTabs(LiveRoomController controller) {
     return Obx(
       () => Container(
-        height: 46,
-        padding: const EdgeInsets.all(4),
+        height: 78,
+        padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: kColorWhite.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              kColorWhite.withValues(alpha: 0.16),
+              kColorWhite.withValues(alpha: 0.07),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.14)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.16),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+            BoxShadow(
+              color: kColorProfileActionPinkStart.withValues(alpha: 0.10),
+              blurRadius: 22,
+              offset: const Offset(0, 0),
+            ),
+          ],
         ),
         child: Row(
           children: [
             _modeTab(
               label: 'Audio',
+              subtitle: _modeSubtitle(
+                count: controller.audioRooms.length,
+                isLoading: controller.isAudioRoomsLoading.value,
+              ),
               icon: Icons.mic_rounded,
               selected: controller.isRoomsAudioMode,
+              startColor: const Color(0xFF8C45FF),
+              endColor: const Color(0xFFFF4EB8),
               onTap: () => controller.selectRoomsMode('audio'),
             ),
             _modeTab(
               label: 'Video',
+              subtitle: _modeSubtitle(
+                count: controller.videoRooms.length,
+                isLoading: controller.isVideoRoomsLoading.value,
+              ),
               icon: Icons.videocam_rounded,
               selected: controller.isRoomsVideoMode,
+              startColor: const Color(0xFFFF6D48),
+              endColor: const Color(0xFFFF2E7E),
               onTap: () => controller.selectRoomsMode('video'),
             ),
           ],
@@ -117,10 +148,19 @@ class RoomsTabView extends StatelessWidget {
     );
   }
 
+  String _modeSubtitle({required int count, required bool isLoading}) {
+    if (isLoading) return 'Updating...';
+    if (count == 0) return 'No rooms yet';
+    return count == 1 ? '1 room live' : '$count rooms live';
+  }
+
   Widget _modeTab({
     required String label,
+    required String subtitle,
     required IconData icon,
     required bool selected,
+    required Color startColor,
+    required Color endColor,
     required VoidCallback onTap,
   }) {
     return Expanded(
@@ -128,38 +168,83 @@ class RoomsTabView extends StatelessWidget {
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          alignment: Alignment.center,
-          margin: const EdgeInsets.symmetric(horizontal: 1),
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          margin: const EdgeInsets.symmetric(horizontal: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
             gradient: selected
-                ? const LinearGradient(
+                ? LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFF8C45FF), Color(0xFFFF4EB8)],
+                    colors: [startColor, endColor],
                   )
                 : null,
             color: selected ? null : kColorWhite.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: selected
-                  ? kColorWhite.withValues(alpha: 0.22)
-                  : Colors.transparent,
+                  ? kColorWhite.withValues(alpha: 0.30)
+                  : kColorWhite.withValues(alpha: 0.06),
             ),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: endColor.withValues(alpha: 0.34),
+                      blurRadius: 16,
+                      offset: const Offset(0, 8),
+                    ),
+                  ]
+                : null,
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                icon,
-                size: 16,
-                color: kColorWhite.withValues(alpha: selected ? 1 : 0.72),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: selected
+                      ? kColorWhite.withValues(alpha: 0.20)
+                      : kColorWhite.withValues(alpha: 0.10),
+                  border: Border.all(
+                    color: kColorWhite.withValues(
+                      alpha: selected ? 0.28 : 0.08,
+                    ),
+                  ),
+                ),
+                child: Icon(
+                  icon,
+                  size: 20,
+                  color: kColorWhite.withValues(alpha: selected ? 1 : 0.72),
+                ),
               ),
-              Spacing.h6,
-              SemiBoldText(
-                text: label,
-                fontSize: TextStyles.k12FontSize,
-                color: kColorWhite.withValues(alpha: selected ? 1 : 0.78),
+              Spacing.h10,
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SemiBoldText(
+                      text: label,
+                      fontSize: TextStyles.k14FontSize,
+                      color: kColorWhite.withValues(alpha: selected ? 1 : 0.82),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Spacing.v2,
+                    AppText(
+                      text: subtitle,
+                      fontSize: TextStyles.k10FontSize,
+                      color: kColorWhite.withValues(
+                        alpha: selected ? 0.78 : 0.48,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
