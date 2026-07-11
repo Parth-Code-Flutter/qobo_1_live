@@ -12,6 +12,7 @@ import 'package:qobo_one_live/app/user_flow/wallet/views/wallet_view.dart';
 import 'package:qobo_one_live/utils/alert_message_utils/alert_message_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/files_utils/file_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -76,6 +77,7 @@ class ProfileTabView extends StatelessWidget {
           builder: (_, constraints) {
             final isCompact = constraints.maxWidth < 360;
             final avatarSize = isCompact ? 74.0 : 88.0;
+            final avatarFrameSize = avatarSize * 1.34;
             return Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
@@ -83,24 +85,22 @@ class ProfileTabView extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Container(
-                        width: avatarSize,
-                        height: avatarSize,
-                        padding: const EdgeInsets.all(3),
-                        decoration: BoxDecoration(
-                          color: kColorWhite,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: kColorWhite, width: 1.2),
-                        ),
-                        child: ClipOval(
-                          child: imageUrl == null
-                              ? _initialsAvatar(session.initials)
-                              : Image.network(
-                                  imageUrl,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) =>
-                                      _initialsAvatar(session.initials),
-                                ),
+                      SizedBox(
+                        width: avatarFrameSize,
+                        height: avatarFrameSize,
+                        child: Center(
+                          child: FramedUserAvatar(
+                            name: session.displayName,
+                            imageUrl: imageUrl,
+                            size: avatarSize,
+                            frameUrl: session.profileFrameUrl,
+                            frameSeed: session.userId.isNotEmpty
+                                ? session.userId
+                                : session.displayName,
+                            fontSize: isCompact
+                                ? TextStyles.k14FontSize
+                                : TextStyles.k18FontSize,
+                          ),
                         ),
                       ),
                       Spacing.h12,
@@ -263,19 +263,6 @@ class ProfileTabView extends StatelessWidget {
       height: 52,
       margin: const EdgeInsets.symmetric(horizontal: 6),
       color: kColorWhite.withValues(alpha: 0.85),
-    );
-  }
-
-  Widget _initialsAvatar(String initials) {
-    return ColoredBox(
-      color: kColorAvatarFallbackBg,
-      child: Center(
-        child: SemiBoldText(
-          text: initials,
-          fontSize: TextStyles.k24FontSize,
-          color: kColorWhite,
-        ),
-      ),
     );
   }
 

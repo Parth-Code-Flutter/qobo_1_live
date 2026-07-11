@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/safe_network_avatar.dart';
@@ -81,7 +82,8 @@ class AppUserAvatar extends StatelessWidget {
   }
 
   Widget _initialsTile() {
-    final labelFontSize = fontSize ??
+    final labelFontSize =
+        fontSize ??
         (size <= 32
             ? TextStyles.k10FontSize
             : size <= 48
@@ -97,6 +99,168 @@ class AppUserAvatar extends StatelessWidget {
           color: textColor ?? kColorWhite,
         ),
       ),
+    );
+  }
+}
+
+/// User avatar with a decorative profile frame overlay.
+///
+/// [frameUrl] can be a backend URL, a local asset path, or a known frame id
+/// such as `frame_gold`. When it is missing, a stable frame is selected from
+/// [frameSeed] so users get a consistent mock frame until the API is ready.
+class FramedUserAvatar extends StatelessWidget {
+  const FramedUserAvatar({
+    super.key,
+    required this.name,
+    this.imageUrl,
+    required this.size,
+    this.frameUrl,
+    this.frameSeed,
+    this.fontSize,
+    this.fit = BoxFit.cover,
+  });
+
+  static const _royalFrame = 'assets/images/audio_room_frame_royal.svg';
+  static const _neonFrame = 'assets/images/audio_room_frame_neon.svg';
+  static const _luxeFrame = 'assets/images/audio_room_frame_luxe.svg';
+
+  final String name;
+  final String? imageUrl;
+  final double size;
+  final String? frameUrl;
+  final String? frameSeed;
+  final double? fontSize;
+  final BoxFit fit;
+
+  @override
+  Widget build(BuildContext context) {
+    final frameSize = size * 1.34;
+    final avatarSize = size;
+    final source = _resolveFrameSource();
+
+    return SizedBox(
+      width: frameSize,
+      height: frameSize,
+      child: Stack(
+        alignment: Alignment.center,
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: avatarSize,
+            height: avatarSize,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: kColorPrimary.withValues(alpha: 0.30),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: AppUserAvatar(
+              name: name,
+              imageUrl: imageUrl,
+              size: avatarSize,
+              fontSize: fontSize,
+              border: Border.all(
+                color: kColorWhite.withValues(alpha: 0.92),
+                width: 2,
+              ),
+              fit: fit,
+            ),
+          ),
+          IgnorePointer(
+            child: _FrameImage(source: source, size: frameSize),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _resolveFrameSource() {
+    final raw = frameUrl?.trim() ?? '';
+    if (raw.isNotEmpty && raw != 'null') return _mapFrameId(raw);
+
+    final choices = [_royalFrame, _neonFrame, _luxeFrame];
+    final seed = (frameSeed?.trim().isNotEmpty ?? false) ? frameSeed! : name;
+    return choices[_stableIndex(seed, choices.length)];
+  }
+
+  String _mapFrameId(String value) {
+    final normalized = value.toLowerCase();
+    if (normalized.contains('gold') || normalized.contains('royal')) {
+      return _royalFrame;
+    }
+    if (normalized.contains('neon') || normalized.contains('fire')) {
+      return _neonFrame;
+    }
+    if (normalized.contains('vip') ||
+        normalized.contains('luxe') ||
+        normalized.contains('love')) {
+      return _luxeFrame;
+    }
+    return value;
+  }
+
+  int _stableIndex(String value, int length) {
+    var hash = 0;
+    for (final codeUnit in value.codeUnits) {
+      hash = (hash + codeUnit) & 0x7fffffff;
+    }
+    return hash % length;
+  }
+}
+
+class _FrameImage extends StatelessWidget {
+  const _FrameImage({required this.source, required this.size});
+
+  final String source;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final isRemote =
+        source.startsWith('http://') ||
+        source.startsWith('https://') ||
+        source.startsWith('/');
+    final normalizedUrl = isRemote ? ApiImageUtils.normalize(source) : null;
+    final isSvg = source.toLowerCase().endsWith('.svg');
+
+    if (isRemote && isSvg) {
+      return SvgPicture.network(
+        normalizedUrl!,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+      );
+    }
+
+    if (isRemote) {
+      return Image.network(
+        normalizedUrl!,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+      );
+    }
+
+    if (isSvg) {
+      return SvgPicture.asset(
+        source,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+      );
+    }
+
+    return Image.asset(
+      source,
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
     );
   }
 }

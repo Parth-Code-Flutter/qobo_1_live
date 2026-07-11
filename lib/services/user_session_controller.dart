@@ -19,6 +19,17 @@ class UserSessionController extends GetxController {
   String get agencyCode =>
       _stringValueFromProfile(const ['agencyCode', 'agency_code']);
   String get displayPicturePath => _stringValue('displayPicture');
+  String get profileFrameUrl => _stringValueFromProfile(const [
+    'profileFrameUrl',
+    'profile_frame_url',
+    'profileFrame',
+    'profile_frame',
+    'avatarFrameUrl',
+    'avatar_frame_url',
+    'frameUrl',
+    'frame_url',
+    'frame',
+  ]);
   bool get isSuperAdmin => role.toLowerCase() == 'super_admin';
 
   String get displayName {
@@ -40,7 +51,10 @@ class UserSessionController extends GetxController {
   String get initials {
     final source = displayName.trim();
     if (source.isEmpty) return 'U';
-    final parts = source.split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
+    final parts = source
+        .split(RegExp(r'\s+'))
+        .where((e) => e.isNotEmpty)
+        .toList();
     if (parts.length >= 2) {
       return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
     }
