@@ -4,12 +4,15 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
+import 'package:qobo_one_live/repo/user/user_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/app/user_flow/wallet/bindings/wallet_binding.dart';
 import 'package:qobo_one_live/app/user_flow/wallet/views/wallet_view.dart';
+import 'package:qobo_one_live/utils/alert_message_utils/alert_message_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/files_utils/file_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -194,6 +197,10 @@ class ProfileTabView extends StatelessWidget {
                       ),
                     ],
                   ),
+                  if (!session.isSuperAdmin) ...[
+                    Spacing.v12,
+                    const _BecomeSuperAdminButton(),
+                  ],
                 ],
               ),
             );
@@ -371,10 +378,7 @@ class ProfileTabView extends StatelessWidget {
               ),
               onTap: () {
                 Get.back();
-                Get.toNamed(
-                  Routes.AGENCY_ACCESS,
-                  arguments: {'mode': 'host'},
-                );
+                Get.toNamed(Routes.AGENCY_ACCESS, arguments: {'mode': 'host'});
               },
             ),
             const Divider(color: Colors.white10),
@@ -402,10 +406,7 @@ class ProfileTabView extends StatelessWidget {
               ),
               onTap: () {
                 Get.back();
-                Get.toNamed(
-                  Routes.AGENCY_ACCESS,
-                  arguments: {'mode': 'owner'},
-                );
+                Get.toNamed(Routes.AGENCY_ACCESS, arguments: {'mode': 'owner'});
               },
             ),
           ],
@@ -620,6 +621,155 @@ class ProfileTabView extends StatelessWidget {
               size: 22,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BecomeSuperAdminButton extends StatefulWidget {
+  const _BecomeSuperAdminButton();
+
+  @override
+  State<_BecomeSuperAdminButton> createState() =>
+      _BecomeSuperAdminButtonState();
+}
+
+class _BecomeSuperAdminButtonState extends State<_BecomeSuperAdminButton> {
+  final UserRepo _userRepo = UserRepo();
+  bool _isLoading = false;
+
+  Future<void> _submitRequest() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+
+    try {
+      final response = await _userRepo.requestSuperAdmin(isShowLoader: true);
+      final link = _findFirstLink(response);
+
+      if (link != null) {
+        await FileUtils.openFileOrLink(link);
+      } else {
+        _showSuccess(_readMessage(response) ?? 'Request sent successfully.');
+      }
+    } catch (_) {
+      _showError('Could not send request. Please try again.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  String? _findFirstLink(Object? value) {
+    if (value is String) {
+      final trimmed = value.trim();
+      final uri = Uri.tryParse(trimmed);
+      if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
+        return trimmed;
+      }
+    }
+
+    if (value is Map) {
+      for (final entry in value.entries) {
+        final key = entry.key.toString().toLowerCase();
+        if (key.contains('link') ||
+            key.contains('url') ||
+            key.contains('redirect')) {
+          final directLink = _findFirstLink(entry.value);
+          if (directLink != null) return directLink;
+        }
+      }
+      for (final entry in value.entries) {
+        final nestedLink = _findFirstLink(entry.value);
+        if (nestedLink != null) return nestedLink;
+      }
+    }
+
+    if (value is Iterable) {
+      for (final item in value) {
+        final nestedLink = _findFirstLink(item);
+        if (nestedLink != null) return nestedLink;
+      }
+    }
+
+    return null;
+  }
+
+  String? _readMessage(Map<String, dynamic>? response) {
+    final message = response?['message']?.toString().trim();
+    return message == null || message.isEmpty ? null : message;
+  }
+
+  void _showSuccess(String message) {
+    if (Get.isRegistered<AlertMessageUtils>()) {
+      Get.find<AlertMessageUtils>().showSuccessSnackBar(message);
+    } else {
+      Get.snackbar('Success', message);
+    }
+  }
+
+  void _showError(String message) {
+    if (Get.isRegistered<AlertMessageUtils>()) {
+      Get.find<AlertMessageUtils>().showErrorSnackBar(message);
+    } else {
+      Get.snackbar('Error', message);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _submitRequest,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 180),
+        opacity: _isLoading ? 0.68 : 1,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: [
+                kColorProfileActionPinkStart,
+                kColorProfileChipPurpleEnd,
+              ],
+            ),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: kColorWhite.withValues(alpha: 0.16)),
+            boxShadow: [
+              BoxShadow(
+                color: kColorProfileActionPinkStart.withValues(alpha: 0.22),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (_isLoading)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: kColorWhite,
+                  ),
+                )
+              else
+                const Icon(
+                  Icons.workspace_premium_rounded,
+                  color: kColorWhite,
+                  size: 20,
+                ),
+              Spacing.h8,
+              const SemiBoldText(
+                text: 'Become Super Admin',
+                fontSize: TextStyles.k14FontSize,
+                color: kColorWhite,
+              ),
+            ],
+          ),
         ),
       ),
     );

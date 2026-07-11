@@ -392,8 +392,8 @@ class UserEndpoints {
   /// POST /api/user/fcm-token — register device for chat push
   static const String fcmToken = '/api/user/fcm-token';
 
-  /// POST /api/users/super-admin-request
-  static const String superAdminRequest = '/api/users/super-admin-request';
+  /// POST /api/user/super-admin-request
+  static const String superAdminRequest = '/api/user/super-admin-request';
 
   /// GET /api/users/super-admin-status
   static const String superAdminStatus = '/api/users/super-admin-status';

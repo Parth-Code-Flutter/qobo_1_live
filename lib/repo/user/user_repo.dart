@@ -352,7 +352,7 @@ class UserRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
-  /// `POST /api/users/super-admin-request` — logged-in user requests Super Admin review.
+  /// `POST /api/user/super-admin-request` — logged-in user requests Super Admin review.
   Future<Map<String, dynamic>?> requestSuperAdmin({
     bool isShowLoader = true,
   }) async {

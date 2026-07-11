@@ -68,7 +68,13 @@ class UpdateProfileController extends GetxController
     }
     if (args is Map) {
       final email = args['email']?.toString().trim() ?? '';
-      if (email.isNotEmpty) emailController.text = email;
+      if (email.isNotEmpty) {
+        emailController.text = email;
+        if (isComeFromOtpScreen.value) {
+          isEmailOtpVerified.value = true;
+          _lastVerifiedEmail = email;
+        }
+      }
     }
     emailController.addListener(_resetEmailVerificationWhenChanged);
     _prefillFromStoredProfile();
@@ -422,11 +428,8 @@ class UpdateProfileController extends GetxController
       EmailOtpDialog(
         email: email,
         onVerify: (otp) => _verifyEmailOtp(context, email: email, otp: otp),
-        onResend: () => _sendEmailOtp(
-          context,
-          email: email,
-          showSuccessMessage: true,
-        ),
+        onResend: () =>
+            _sendEmailOtp(context, email: email, showSuccessMessage: true),
       ),
       barrierDismissible: false,
     );
