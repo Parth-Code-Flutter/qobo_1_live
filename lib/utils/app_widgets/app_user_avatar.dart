@@ -135,7 +135,7 @@ class FramedUserAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final frameSize = size * 1.34;
-    final avatarSize = size;
+    final avatarSize = frameSize * 0.56;
     final source = _resolveFrameSource();
 
     return SizedBox(
@@ -145,6 +145,9 @@ class FramedUserAvatar extends StatelessWidget {
         alignment: Alignment.center,
         clipBehavior: Clip.none,
         children: [
+          IgnorePointer(
+            child: _FrameImage(source: source, size: frameSize),
+          ),
           Container(
             width: avatarSize,
             height: avatarSize,
@@ -152,9 +155,9 @@ class FramedUserAvatar extends StatelessWidget {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: kColorPrimary.withValues(alpha: 0.30),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
+                  color: Colors.black.withValues(alpha: 0.22),
+                  blurRadius: 12,
+                  offset: const Offset(0, 5),
                 ),
               ],
             ),
@@ -165,13 +168,10 @@ class FramedUserAvatar extends StatelessWidget {
               fontSize: fontSize,
               border: Border.all(
                 color: kColorWhite.withValues(alpha: 0.92),
-                width: 2,
+                width: 1.6,
               ),
               fit: fit,
             ),
-          ),
-          IgnorePointer(
-            child: _FrameImage(source: source, size: frameSize),
           ),
         ],
       ),
