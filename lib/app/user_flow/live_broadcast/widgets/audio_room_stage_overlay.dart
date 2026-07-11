@@ -781,10 +781,10 @@ class _PremiumAvatarFrame extends StatelessWidget {
       child: AppUserAvatar(
         name: name,
         imageUrl: imageUrl,
-        size: 66,
+        size: 64,
         border: Border.all(
           color: kColorWhite.withValues(alpha: 0.90),
-          width: 2,
+          width: 1.6,
         ),
       ),
     );
@@ -818,6 +818,7 @@ class _AudioSeatFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final opacity = muted || locked ? 0.64 : 1.0;
+    final contentSize = locked ? 58.0 : 64.0;
     return Opacity(
       opacity: opacity,
       child: SizedBox(
@@ -827,9 +828,17 @@ class _AudioSeatFrame extends StatelessWidget {
           alignment: Alignment.center,
           clipBehavior: Clip.none,
           children: [
+            IgnorePointer(
+              child: SvgPicture.asset(
+                assetPath,
+                width: 112,
+                height: 112,
+                fit: BoxFit.contain,
+              ),
+            ),
             Container(
-              width: 72,
-              height: 72,
+              width: contentSize,
+              height: contentSize,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: locked
@@ -847,16 +856,51 @@ class _AudioSeatFrame extends StatelessWidget {
               ),
               child: child,
             ),
-            IgnorePointer(
-              child: SvgPicture.asset(
-                assetPath,
-                width: 112,
-                height: 112,
-                fit: BoxFit.contain,
-              ),
-            ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _EmptySeatPlaceholder extends StatelessWidget {
+  const _EmptySeatPlaceholder({required this.seatNo});
+
+  final int seatNo;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            kColorWhite,
+            kColorWhite.withValues(alpha: 0.88),
+            kColorProfileChipPinkStart.withValues(alpha: 0.28),
+          ],
+        ),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Icon(
+            Icons.person_rounded,
+            color: AudioRoomStageOverlay._deepPurple.withValues(alpha: 0.36),
+            size: 38,
+          ),
+          Positioned(
+            right: 12,
+            bottom: 10,
+            child: Icon(
+              Icons.mic_rounded,
+              color: AudioRoomStageOverlay._deepPurple.withValues(alpha: 0.46),
+              size: 16,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -886,17 +930,7 @@ class _GridEmptySeat extends GetView<LiveBroadcastController> {
             children: [
               _AudioSeatFrame(
                 assetPath: _AudioSeatFrame.assetForSeat(seatNo, isHost: false),
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFE5E5E5),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.mic_none_rounded,
-                    color: AudioRoomStageOverlay._deepPurple,
-                    size: 34,
-                  ),
-                ),
+                child: _EmptySeatPlaceholder(seatNo: seatNo),
               ),
               Positioned(left: -8, top: -8, child: _SeatBadge(number: seatNo)),
               Positioned(
