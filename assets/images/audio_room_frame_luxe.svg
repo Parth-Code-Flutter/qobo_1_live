@@ -1,0 +1,25 @@
+<svg width="140" height="140" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="loveGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(70 72) rotate(90) scale(58)">
+      <stop stop-color="#FFFFFF" stop-opacity=".9"/>
+      <stop offset=".45" stop-color="#FF6ACB" stop-opacity=".86"/>
+      <stop offset="1" stop-color="#7D3DFF" stop-opacity=".42"/>
+    </radialGradient>
+    <linearGradient id="pinkRing" x1="18" y1="20" x2="122" y2="120" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFC0EB"/>
+      <stop offset=".45" stop-color="#FF3C9E"/>
+      <stop offset="1" stop-color="#8B5DFF"/>
+    </linearGradient>
+  </defs>
+  <circle cx="70" cy="72" r="54" fill="url(#loveGlow)" opacity=".36"/>
+  <path d="M32 31C45 25 57 31 61 45C48 46 36 41 27 32C28 32 30 31 32 31Z" fill="#FF77C9" stroke="#FFF2FB" stroke-width="2.5"/>
+  <path d="M108 31C95 25 83 31 79 45C92 46 104 41 113 32C112 32 110 31 108 31Z" fill="#FF77C9" stroke="#FFF2FB" stroke-width="2.5"/>
+  <circle cx="70" cy="72" r="45" fill="#351052"/>
+  <circle cx="70" cy="72" r="48" stroke="url(#pinkRing)" stroke-width="10"/>
+  <circle cx="70" cy="72" r="37" stroke="#FFF4FC" stroke-width="3"/>
+  <path d="M23 84C11 91 10 105 13 116C27 111 36 101 41 89C34 91 28 89 23 84Z" fill="#FFE2F7" opacity=".96"/>
+  <path d="M117 84C129 91 130 105 127 116C113 111 104 101 99 89C106 91 112 89 117 84Z" fill="#FFE2F7" opacity=".96"/>
+  <path d="M70 35C65 28 54 31 54 41C54 50 67 57 70 61C73 57 86 50 86 41C86 31 75 28 70 35Z" fill="#FF4DAD" stroke="#FFFFFF" stroke-width="2.5"/>
+  <path d="M104 35L107 42L114 45L107 48L104 55L101 48L94 45L101 42L104 35Z" fill="#FFFFFF"/>
+  <path d="M37 40L39 45L44 47L39 49L37 54L35 49L30 47L35 45L37 40Z" fill="#FFFFFF"/>
+</svg>

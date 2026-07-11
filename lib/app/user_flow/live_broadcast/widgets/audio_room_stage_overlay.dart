@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
@@ -483,8 +484,8 @@ class _MemberGridState extends State<_MemberGrid> {
             itemCount: visibleSeats.length,
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: crossAxisCount,
-              mainAxisExtent: widget.compact ? 136 : 144,
-              mainAxisSpacing: widget.compact ? 8 : 10,
+              mainAxisExtent: widget.compact ? 146 : 154,
+              mainAxisSpacing: widget.compact ? 6 : 8,
               crossAxisSpacing: widget.compact ? 4 : 8,
             ),
             itemBuilder: (context, index) {
@@ -525,6 +526,7 @@ class _MemberSeat extends GetView<LiveBroadcastController> {
                 imageUrl: seat.avatarUrl,
                 muted: seat.isMuted,
                 isHost: seat.isHost,
+                seatNo: seat.seatNo,
               ),
               Positioned(
                 left: -8,
@@ -639,6 +641,7 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
                   imageUrl: seat.avatarUrl,
                   muted: seat.isMuted,
                   isHost: seat.isHost,
+                  seatNo: seat.seatNo,
                 ),
                 Spacing.h12,
                 Expanded(
@@ -761,47 +764,98 @@ class _PremiumAvatarFrame extends StatelessWidget {
     required this.imageUrl,
     required this.muted,
     required this.isHost,
+    required this.seatNo,
   });
 
   final String name;
   final String? imageUrl;
   final bool muted;
   final bool isHost;
+  final int seatNo;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 84,
-      height: 84,
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: muted
-            ? const LinearGradient(
-                colors: [Color(0xFFB8B8BC), Color(0xFF5F6274)],
-              )
-            : const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF8F88FF), Color(0xFFFF4FA2)],
-              ),
-        boxShadow: [
-          BoxShadow(
-            color: (muted ? kColorHint : kColorProfileFeatureBlue).withValues(
-              alpha: 0.24,
-            ),
-            blurRadius: 14,
-            offset: const Offset(0, 7),
-          ),
-        ],
-      ),
+    return _AudioSeatFrame(
+      assetPath: _AudioSeatFrame.assetForSeat(seatNo, isHost: isHost),
+      muted: muted,
       child: AppUserAvatar(
         name: name,
         imageUrl: imageUrl,
-        size: 74,
+        size: 66,
         border: Border.all(
-          color: kColorWhite.withValues(alpha: 0.88),
+          color: kColorWhite.withValues(alpha: 0.90),
           width: 2,
+        ),
+      ),
+    );
+  }
+}
+
+class _AudioSeatFrame extends StatelessWidget {
+  const _AudioSeatFrame({
+    required this.assetPath,
+    required this.child,
+    this.muted = false,
+    this.locked = false,
+  });
+
+  static const _royal = 'assets/images/audio_room_frame_royal.svg';
+  static const _neon = 'assets/images/audio_room_frame_neon.svg';
+  static const _luxe = 'assets/images/audio_room_frame_luxe.svg';
+  static const _empty = 'assets/images/audio_room_frame_empty.svg';
+
+  final String assetPath;
+  final Widget child;
+  final bool muted;
+  final bool locked;
+
+  static String assetForSeat(int seatNo, {required bool isHost}) {
+    if (isHost) return _royal;
+    const frames = [_neon, _luxe, _royal, _empty];
+    return frames[seatNo % frames.length];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final opacity = muted || locked ? 0.64 : 1.0;
+    return Opacity(
+      opacity: opacity,
+      child: SizedBox(
+        width: 112,
+        height: 112,
+        child: Stack(
+          alignment: Alignment.center,
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: locked
+                    ? const Color(0xFFDADADA)
+                    : const Color(0xFF2B0D48),
+                boxShadow: [
+                  BoxShadow(
+                    color: (muted ? kColorHint : kColorPrimary).withValues(
+                      alpha: locked ? 0.08 : 0.20,
+                    ),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: child,
+            ),
+            IgnorePointer(
+              child: SvgPicture.asset(
+                assetPath,
+                width: 112,
+                height: 112,
+                fit: BoxFit.contain,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -830,20 +884,18 @@ class _GridEmptySeat extends GetView<LiveBroadcastController> {
             clipBehavior: Clip.none,
             alignment: Alignment.center,
             children: [
-              Container(
-                width: 84,
-                height: 84,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE5E5E5),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: kColorWhite.withValues(alpha: 0.72),
+              _AudioSeatFrame(
+                assetPath: _AudioSeatFrame.assetForSeat(seatNo, isHost: false),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFE5E5E5),
+                    shape: BoxShape.circle,
                   ),
-                ),
-                child: Icon(
-                  Icons.mic_none_rounded,
-                  color: AudioRoomStageOverlay._deepPurple,
-                  size: 36,
+                  child: Icon(
+                    Icons.mic_none_rounded,
+                    color: AudioRoomStageOverlay._deepPurple,
+                    size: 34,
+                  ),
                 ),
               ),
               Positioned(left: -8, top: -8, child: _SeatBadge(number: seatNo)),
@@ -1076,13 +1128,9 @@ class _LockedSeat extends StatelessWidget {
           clipBehavior: Clip.none,
           alignment: Alignment.center,
           children: [
-            Container(
-              width: 84,
-              height: 84,
-              decoration: BoxDecoration(
-                color: const Color(0xFFDADADA),
-                shape: BoxShape.circle,
-              ),
+            _AudioSeatFrame(
+              assetPath: _AudioSeatFrame._empty,
+              locked: true,
               child: Icon(
                 Icons.lock_rounded,
                 color: AudioRoomStageOverlay._deepPurple.withValues(

@@ -1,0 +1,35 @@
+<svg width="140" height="140" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="halo" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(70 72) rotate(90) scale(62)">
+      <stop stop-color="#FFF9C9" stop-opacity=".96"/>
+      <stop offset=".48" stop-color="#FF9F18" stop-opacity=".95"/>
+      <stop offset="1" stop-color="#8B20FF" stop-opacity=".35"/>
+    </radialGradient>
+    <linearGradient id="ring" x1="28" y1="22" x2="112" y2="118" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF5B7"/>
+      <stop offset=".25" stop-color="#FFBA20"/>
+      <stop offset=".55" stop-color="#FF5B39"/>
+      <stop offset="1" stop-color="#FFE067"/>
+    </linearGradient>
+    <linearGradient id="gem" x1="47" y1="99" x2="93" y2="136" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF8AC"/>
+      <stop offset=".5" stop-color="#FFB018"/>
+      <stop offset="1" stop-color="#FF5C25"/>
+    </linearGradient>
+  </defs>
+  <circle cx="70" cy="72" r="55" fill="url(#halo)" opacity=".38"/>
+  <path d="M32 72C18 76 9 90 9 107C26 104 40 94 48 80C42 79 36 76 32 72Z" fill="#FFF1A6" opacity=".96"/>
+  <path d="M108 72C122 76 131 90 131 107C114 104 100 94 92 80C98 79 104 76 108 72Z" fill="#FFF1A6" opacity=".96"/>
+  <path d="M22 91C14 97 12 108 13 117C26 113 35 105 41 94C34 96 27 95 22 91Z" fill="#FFAA18"/>
+  <path d="M118 91C126 97 128 108 127 117C114 113 105 105 99 94C106 96 113 95 118 91Z" fill="#FFAA18"/>
+  <circle cx="70" cy="72" r="45" fill="#33104F"/>
+  <circle cx="70" cy="72" r="48" stroke="url(#ring)" stroke-width="10"/>
+  <circle cx="70" cy="72" r="37" stroke="#FFF7D8" stroke-width="3"/>
+  <path d="M43 30L51 10L63 25L70 5L77 25L89 10L97 30L91 42H49L43 30Z" fill="url(#ring)" stroke="#FFF9D6" stroke-width="3"/>
+  <circle cx="51" cy="10" r="4" fill="#FFF4A8"/>
+  <circle cx="70" cy="5" r="5" fill="#FFF4A8"/>
+  <circle cx="89" cy="10" r="4" fill="#FFF4A8"/>
+  <path d="M70 96L94 112L70 136L46 112L70 96Z" fill="url(#gem)" stroke="#FFF9D6" stroke-width="3"/>
+  <path d="M55 112H85M70 96V136" stroke="#FFF8DA" stroke-width="2" opacity=".65"/>
+  <path d="M108 34L111 42L119 45L111 48L108 56L105 48L97 45L105 42L108 34Z" fill="#FFF5B7"/>
+</svg>

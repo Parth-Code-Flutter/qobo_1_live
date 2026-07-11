@@ -1,0 +1,24 @@
+<svg width="140" height="140" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="silver" x1="19" y1="20" x2="121" y2="121" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset=".34" stop-color="#F1E3FF"/>
+      <stop offset=".68" stop-color="#B28AFF"/>
+      <stop offset="1" stop-color="#FFFFFF"/>
+    </linearGradient>
+    <radialGradient id="softGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(70 72) rotate(90) scale(55)">
+      <stop stop-color="#FFFFFF" stop-opacity=".8"/>
+      <stop offset=".58" stop-color="#E0BFFF" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#6E2EFF" stop-opacity=".22"/>
+    </radialGradient>
+  </defs>
+  <circle cx="70" cy="72" r="53" fill="url(#softGlow)"/>
+  <path d="M25 84C12 90 10 104 13 116C28 112 38 101 43 88C36 91 30 89 25 84Z" fill="#F7EDFF" opacity=".9"/>
+  <path d="M115 84C128 90 130 104 127 116C112 112 102 101 97 88C104 91 110 89 115 84Z" fill="#F7EDFF" opacity=".9"/>
+  <circle cx="70" cy="72" r="45" fill="#E8E6EA"/>
+  <circle cx="70" cy="72" r="48" stroke="url(#silver)" stroke-width="9"/>
+  <circle cx="70" cy="72" r="37" stroke="#FFFFFF" stroke-width="3"/>
+  <path d="M48 30L58 18L70 30L82 18L92 30L86 41H54L48 30Z" fill="#F3E7FF" stroke="#FFFFFF" stroke-width="2.5"/>
+  <path d="M102 34L105 42L113 45L105 48L102 56L99 48L91 45L99 42L102 34Z" fill="#FFFFFF"/>
+  <path d="M38 38L40 44L46 46L40 48L38 54L36 48L30 46L36 44L38 38Z" fill="#FFFFFF"/>
+</svg>

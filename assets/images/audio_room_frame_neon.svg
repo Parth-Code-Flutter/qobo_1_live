@@ -1,0 +1,25 @@
+<svg width="140" height="140" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="fireFill" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(70 72) rotate(90) scale(58)">
+      <stop stop-color="#FFF07B"/>
+      <stop offset=".4" stop-color="#FF6B1E"/>
+      <stop offset=".72" stop-color="#FF245F"/>
+      <stop offset="1" stop-color="#6812A1"/>
+    </radialGradient>
+    <linearGradient id="hotRing" x1="18" y1="19" x2="123" y2="121" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFE866"/>
+      <stop offset=".25" stop-color="#FF9814"/>
+      <stop offset=".62" stop-color="#FF2C76"/>
+      <stop offset="1" stop-color="#FFE767"/>
+    </linearGradient>
+  </defs>
+  <path d="M29 37C39 17 55 16 62 32C69 11 88 18 93 37C114 36 121 54 109 69C124 85 114 109 92 106C83 125 57 125 48 106C26 109 16 85 31 69C20 54 24 43 29 37Z" fill="url(#fireFill)" opacity=".98"/>
+  <path d="M35 49C43 39 54 40 60 51C66 33 83 39 87 53C101 53 106 65 98 76C108 88 99 103 85 99C78 114 60 114 54 99C39 103 31 88 41 76C32 66 31 56 35 49Z" fill="#FFDB4D" opacity=".32"/>
+  <circle cx="70" cy="72" r="45" fill="#320D4E"/>
+  <circle cx="70" cy="72" r="48" stroke="url(#hotRing)" stroke-width="10"/>
+  <circle cx="70" cy="72" r="37" stroke="#FFF8DE" stroke-width="3"/>
+  <path d="M18 82C31 81 42 91 44 106C30 108 19 99 18 82Z" fill="#FFB820"/>
+  <path d="M122 82C109 81 98 91 96 106C110 108 121 99 122 82Z" fill="#FFB820"/>
+  <path d="M42 29C50 14 63 18 70 32C77 18 90 14 98 29C90 27 84 32 82 42H58C56 32 50 27 42 29Z" fill="#FFD83F" stroke="#FFFFFF" stroke-width="2"/>
+  <path d="M103 31L106 38L113 41L106 44L103 51L100 44L93 41L100 38L103 31Z" fill="#FFF2A0"/>
+</svg>
