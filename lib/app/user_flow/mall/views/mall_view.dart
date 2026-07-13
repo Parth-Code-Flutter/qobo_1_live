@@ -52,11 +52,13 @@ class MallView extends GetView<MallController> {
                     fontSize: 10,
                     color: kColorHint,
                   ),
-                  Obx(() => SemiBoldText(
-                        text: '${controller.coinsBalance.value} Coins',
-                        fontSize: TextStyles.k16FontSize,
-                        color: kColorText,
-                      )),
+                  Obx(
+                    () => SemiBoldText(
+                      text: '${controller.coinsBalance.value} Coins',
+                      fontSize: TextStyles.k16FontSize,
+                      color: kColorText,
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -66,7 +68,10 @@ class MallView extends GetView<MallController> {
             width: 90,
             child: appButton(
               onPressed: () {
-                Get.snackbar('Recharge', 'Redirecting to coin recharge packages...');
+                Get.snackbar(
+                  'Recharge',
+                  'Redirecting to coin recharge packages...',
+                );
               },
               buttonText: 'Recharge',
               buttonColor: const Color(0xFFFF8A48),
@@ -96,7 +101,7 @@ class MallView extends GetView<MallController> {
         border: Border.all(color: const Color(0xFF672C5C), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: kColorBlack.withOpacity(0.15),
+            color: kColorBlack.withValues(alpha: 0.15),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -109,12 +114,10 @@ class MallView extends GetView<MallController> {
           Positioned.fill(
             child: Opacity(
               opacity: 0.1,
-              child: CustomPaint(
-                painter: _GridPainter(),
-              ),
+              child: CustomPaint(painter: _GridPainter()),
             ),
           ),
-          
+
           Obx(() {
             final item = controller.selectedPreviewItem.value;
             if (item == null) {
@@ -127,17 +130,16 @@ class MallView extends GetView<MallController> {
             }
 
             final tabId = controller.selectedTab.value;
-            
+
             return Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Expanded(
-                  child: Center(
-                    child: _buildItemPreview(tabId, item),
-                  ),
-                ),
+                Expanded(child: Center(child: _buildItemPreview(tabId, item))),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: const BoxDecoration(
                     color: Colors.black26,
                     borderRadius: BorderRadius.only(
@@ -158,7 +160,7 @@ class MallView extends GetView<MallController> {
                       AppText(
                         text: item['description'] ?? '',
                         fontSize: 10,
-                        color: kColorWhite.withOpacity(0.8),
+                        color: kColorWhite.withValues(alpha: 0.8),
                         align: TextAlign.center,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -176,52 +178,49 @@ class MallView extends GetView<MallController> {
 
   Widget _buildItemPreview(int tabId, Map<String, dynamic> item) {
     if (tabId == 1) {
-      // Avatar Frames Preview
-      Color frameColor = Colors.amber;
-      if (item['id'] == 'frame_neon') {
-        frameColor = const Color(0xFFFF5EA7);
-      } else if (item['id'] == 'frame_vip') {
-        frameColor = const Color(0xFF8F55FF);
-      }
-      
+      final imageUrl = item['imageUrl']?.toString();
       return Stack(
         alignment: Alignment.center,
         children: [
-          // User Avatar fallback
           const CircleAvatar(
             radius: 40,
             backgroundColor: kColorAvatarFallbackBg,
-            child: Text('User', style: TextStyle(color: kColorWhite, fontWeight: FontWeight.bold)),
-          ),
-          // Interactive Border Frame
-          Container(
-            width: 90,
-            height: 90,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: frameColor, width: 4),
-              boxShadow: [
-                BoxShadow(
-                  color: frameColor.withOpacity(0.4),
-                  blurRadius: 10,
-                  spreadRadius: 2,
-                ),
-              ],
+            child: Text(
+              'User',
+              style: TextStyle(color: kColorWhite, fontWeight: FontWeight.bold),
             ),
           ),
-          // Small badge
-          Positioned(
-            top: 2,
-            right: 2,
-            child: Container(
-              padding: const EdgeInsets.all(4),
+          if (imageUrl != null && imageUrl.isNotEmpty)
+            _FrameImage(source: imageUrl, size: 124)
+          else
+            Container(
+              width: 100,
+              height: 100,
               decoration: BoxDecoration(
-                color: frameColor,
                 shape: BoxShape.circle,
+                border: Border.all(color: Colors.amber, width: 4),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.amber.withValues(alpha: 0.4),
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  ),
+                ],
               ),
-              child: const Icon(Icons.star, color: kColorWhite, size: 10),
             ),
-          ),
+          if (item['isEquipped'] == true)
+            Positioned(
+              top: 2,
+              right: 2,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: Colors.green,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.check, color: kColorWhite, size: 12),
+              ),
+            ),
         ],
       );
     } else if (tabId == 2) {
@@ -230,7 +229,9 @@ class MallView extends GetView<MallController> {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: isDragon ? const Color(0xFFFF8A48).withOpacity(0.2) : const Color(0xFF2FA9FF).withOpacity(0.2),
+          color: isDragon
+              ? const Color(0xFFFF8A48).withValues(alpha: 0.2)
+              : const Color(0xFF2FA9FF).withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isDragon ? const Color(0xFFFF8A48) : const Color(0xFF2FA9FF),
@@ -242,7 +243,9 @@ class MallView extends GetView<MallController> {
           children: [
             Icon(
               isDragon ? Icons.local_fire_department : Icons.stars,
-              color: isDragon ? const Color(0xFFFF8A48) : const Color(0xFF2FA9FF),
+              color: isDragon
+                  ? const Color(0xFFFF8A48)
+                  : const Color(0xFF2FA9FF),
             ),
             Spacing.h8,
             const Column(
@@ -270,7 +273,9 @@ class MallView extends GetView<MallController> {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: isOcean ? const Color(0xFF4DD5FF).withOpacity(0.2) : const Color(0xFFFF5EA7).withOpacity(0.2),
+          color: isOcean
+              ? const Color(0xFF4DD5FF).withValues(alpha: 0.2)
+              : const Color(0xFFFF5EA7).withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isOcean ? const Color(0xFF4DD5FF) : const Color(0xFFFF5EA7),
@@ -286,8 +291,13 @@ class MallView extends GetView<MallController> {
               children: [
                 CircleAvatar(
                   radius: 8,
-                  backgroundColor: isOcean ? const Color(0xFF4DD5FF) : const Color(0xFFFF5EA7),
-                  child: const Text('J', style: TextStyle(fontSize: 6, color: kColorWhite)),
+                  backgroundColor: isOcean
+                      ? const Color(0xFF4DD5FF)
+                      : const Color(0xFFFF5EA7),
+                  child: const Text(
+                    'J',
+                    style: TextStyle(fontSize: 6, color: kColorWhite),
+                  ),
                 ),
                 Spacing.h6,
                 const SemiBoldText(
@@ -323,12 +333,17 @@ class MallView extends GetView<MallController> {
                 onTap: () => controller.selectTab(tab['id'] as int),
                 child: Container(
                   margin: const EdgeInsets.only(right: 12),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: isSelected ? kColorPrimary : Colors.transparent,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: isSelected ? kColorPrimary : kColorHint.withOpacity(0.3),
+                      color: isSelected
+                          ? kColorPrimary
+                          : kColorHint.withValues(alpha: 0.3),
                     ),
                   ),
                   child: AppText(
@@ -349,7 +364,12 @@ class MallView extends GetView<MallController> {
     return Obx(() {
       final items = controller.storeItems[controller.selectedTab.value] ?? [];
       final activePreview = controller.selectedPreviewItem.value;
-      
+      final isFrameTab = controller.selectedTab.value == 1;
+
+      if (controller.isLoading.value && isFrameTab) {
+        return const Center(child: CircularProgressIndicator());
+      }
+
       if (items.isEmpty) {
         return Center(
           child: AppText(
@@ -371,8 +391,18 @@ class MallView extends GetView<MallController> {
         ),
         itemBuilder: (context, index) {
           final item = items[index];
-          final isSelected = activePreview != null && activePreview['id'] == item['id'];
-          
+          final isSelected =
+              activePreview != null && activePreview['id'] == item['id'];
+          final isOwned = item['isOwned'] == true;
+          final isEquipped = item['isEquipped'] == true;
+          final buttonText = isFrameTab
+              ? isEquipped
+                    ? 'Equipped'
+                    : isOwned
+                    ? 'Equip'
+                    : '${item['price']} Coins'
+              : '${item['price']} Coins';
+
           return GestureDetector(
             onTap: () => controller.selectedPreviewItem.value = item,
             child: Container(
@@ -386,7 +416,7 @@ class MallView extends GetView<MallController> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: kColorBlack.withOpacity(0.04),
+                    color: kColorBlack.withValues(alpha: 0.04),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -397,19 +427,7 @@ class MallView extends GetView<MallController> {
                 children: [
                   Expanded(
                     child: Center(
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: kColorPrimary.withOpacity(0.05),
-                          shape: BoxShape.circle,
-                        ),
-                        child: SvgPicture.asset(
-                          item['icon'] as String,
-                          width: 44,
-                          height: 44,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
+                      child: _StoreItemVisual(item: item, isFrame: isFrameTab),
                     ),
                   ),
                   Spacing.v10,
@@ -419,6 +437,14 @@ class MallView extends GetView<MallController> {
                     color: kColorText,
                     align: TextAlign.center,
                   ),
+                  if (isFrameTab) ...[
+                    Spacing.v2,
+                    AppText(
+                      text: item['category']?.toString() ?? 'Premium',
+                      fontSize: 10,
+                      color: isEquipped ? Colors.green : kColorHint,
+                    ),
+                  ],
                   Spacing.v2,
                   AppText(
                     text: 'Validity: ${item['duration']}',
@@ -431,13 +457,21 @@ class MallView extends GetView<MallController> {
                     width: double.infinity,
                     child: appButton(
                       onPressed: () => controller.buyItem(item),
-                      buttonText: '${item['price']} Coins',
-                      buttonColor: isSelected ? kColorPrimary : const Color(0xFFF0E5EE),
-                      textColor: isSelected ? kColorWhite : kColorPrimary,
+                      buttonText: buttonText,
+                      buttonColor: isEquipped
+                          ? Colors.green
+                          : isSelected
+                          ? kColorPrimary
+                          : const Color(0xFFF0E5EE),
+                      textColor: isEquipped || isSelected
+                          ? kColorWhite
+                          : kColorPrimary,
                       borderRadius: 18,
                       textStyle: TextStyles.kSemiBoldPoppins(
                         fontSize: TextStyles.k12FontSize,
-                        colors: isSelected ? kColorWhite : kColorPrimary,
+                        colors: isEquipped || isSelected
+                            ? kColorWhite
+                            : kColorPrimary,
                       ),
                     ),
                   ),
@@ -451,12 +485,111 @@ class MallView extends GetView<MallController> {
   }
 }
 
+class _StoreItemVisual extends StatelessWidget {
+  const _StoreItemVisual({required this.item, required this.isFrame});
+
+  final Map<String, dynamic> item;
+  final bool isFrame;
+
+  @override
+  Widget build(BuildContext context) {
+    final imageUrl = item['imageUrl']?.toString();
+    if (isFrame && imageUrl != null && imageUrl.isNotEmpty) {
+      return SizedBox(
+        width: 86,
+        height: 86,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            const CircleAvatar(
+              radius: 29,
+              backgroundColor: kColorAvatarFallbackBg,
+              child: Text(
+                'U',
+                style: TextStyle(
+                  color: kColorWhite,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            _FrameImage(source: imageUrl, size: 86),
+            if (item['isOwned'] == true)
+              Positioned(
+                right: 3,
+                bottom: 3,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: item['isEquipped'] == true
+                        ? Colors.green
+                        : kColorPrimary,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: kColorWhite, width: 1.5),
+                  ),
+                  child: Icon(
+                    item['isEquipped'] == true
+                        ? Icons.check
+                        : Icons.shopping_bag,
+                    size: 12,
+                    color: kColorWhite,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: kColorPrimary.withValues(alpha: 0.05),
+        shape: BoxShape.circle,
+      ),
+      child: SvgPicture.asset(
+        item['icon'] as String,
+        width: 44,
+        height: 44,
+        fit: BoxFit.contain,
+      ),
+    );
+  }
+}
+
+class _FrameImage extends StatelessWidget {
+  const _FrameImage({required this.source, required this.size});
+
+  final String source;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final isSvg = source.toLowerCase().endsWith('.svg');
+    if (isSvg) {
+      return SvgPicture.network(
+        source,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+      );
+    }
+
+    return Image.network(
+      source,
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+    );
+  }
+}
+
 // Background Grid Painter for Preview Panel
 class _GridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.1)
+      ..color = Colors.white.withValues(alpha: 0.1)
       ..strokeWidth = 1.0;
 
     const step = 20.0;

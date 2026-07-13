@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
-import 'package:qobo_one_live/app/user_flow/backpack/controllers/backpack_controller.dart';
 import 'package:qobo_one_live/repo/economy/economy_repo.dart';
+import 'package:qobo_one_live/repo/frame/frame_repo.dart';
+import 'package:qobo_one_live/utils/api_image_utils.dart';
 
 class MallController extends GetxController {
-  MallController({EconomyRepo? economyRepo})
-    : _economyRepo = economyRepo ?? EconomyRepo();
+  MallController({EconomyRepo? economyRepo, FrameRepo? frameRepo})
+    : _economyRepo = economyRepo ?? EconomyRepo(),
+      _frameRepo = frameRepo ?? FrameRepo();
 
   final EconomyRepo _economyRepo;
+  final FrameRepo _frameRepo;
   final isLoading = false.obs;
 
-  // Current user balance
-  final coinsBalance = 12450.obs;
+  final coinsBalance = 0.obs;
 
   final tabs = <Map<String, dynamic>>[
     {'id': 1, 'name': 'Avatar Frames'},
@@ -34,30 +36,12 @@ class MallController extends GetxController {
   storeItems = <int, List<Map<String, dynamic>>>{
     1: [
       {
-        'id': 'frame_gold',
-        'name': 'Golden Crown',
+        'id': 'frame_loading',
+        'name': 'Loading frames',
         'icon': kIconUserLevel,
-        'price': 500,
-        'duration': '7 days',
-        'description':
-            'Look like royalty with this gleaming golden crown frame.',
-      },
-      {
-        'id': 'frame_neon',
-        'name': 'Neon Border',
-        'icon': kIconVisitor,
-        'price': 1200,
-        'duration': '30 days',
-        'description':
-            'A vibrant neon purple-pink border that pulses with energy.',
-      },
-      {
-        'id': 'frame_vip',
-        'name': 'VVIP Frame',
-        'icon': kIconSVIP,
-        'price': 3000,
-        'duration': '30 days',
-        'description': 'Strictly for VIP high-rollers. Showcases prestige.',
+        'price': 0,
+        'duration': 'Please wait',
+        'description': 'Fetching latest avatar frames from the mall.',
       },
     ],
     2: [
@@ -104,187 +88,248 @@ class MallController extends GetxController {
 
   void selectTab(int tabId) {
     selectedTab.value = tabId;
-    if (storeItems[tabId] != null && storeItems[tabId]!.isNotEmpty) {
-      selectedPreviewItem.value = storeItems[tabId]![0];
-    } else {
-      selectedPreviewItem.value = null;
-    }
+    final items = storeItems[tabId];
+    selectedPreviewItem.value = items == null || items.isEmpty
+        ? null
+        : items.first;
   }
 
   Future<void> fetchMall() async {
     isLoading.value = true;
     try {
-      final wallet = await _economyRepo.getWalletBalances(isShowLoader: false);
-      final walletData = wallet?['data'];
-      if (walletData is Map) {
-        coinsBalance.value = _toInt(walletData['coins']);
-      }
-
-      final response = await _economyRepo.getMallItems(isShowLoader: false);
-      final data = response?['data'];
-      final list = data is Map ? data['items'] : data;
-      if (list is List) {
-        final grouped = <int, List<Map<String, dynamic>>>{};
-        for (final raw in list.whereType<Map>()) {
-          final categoryId = _categoryId(raw);
-          grouped.putIfAbsent(categoryId, () => <Map<String, dynamic>>[]).add({
-            'id': raw['id']?.toString() ?? '',
-            'name': raw['name']?.toString() ?? '',
-            'icon': _iconForCategory(categoryId),
-            'iconUrl':
-                raw['iconUrl']?.toString() ??
-                raw['thumbnailUrl']?.toString() ??
-                '',
-            'price': _toInt(raw['price'] ?? raw['cost']),
-            'duration':
-                raw['duration']?.toString() ??
-                '${_toInt(raw['durationDays'])} days',
-            'description': raw['description']?.toString() ?? '',
-          });
-        }
-        if (grouped.isNotEmpty) {
-          storeItems.assignAll(grouped);
-          final selectedItems = storeItems[selectedTab.value];
-          selectedPreviewItem.value =
-              selectedItems == null || selectedItems.isEmpty
-              ? null
-              : selectedItems.first;
-        }
-      }
+      await _fetchWalletBalance();
+      await _fetchFrameShop();
+      selectTab(selectedTab.value);
     } finally {
       isLoading.value = false;
     }
   }
 
+  Future<void> _fetchWalletBalance() async {
+    final wallet = await _economyRepo.getWalletBalances(isShowLoader: false);
+    final walletData = wallet?['data'];
+    if (walletData is Map) {
+      coinsBalance.value = _toInt(walletData['coins']);
+    }
+  }
+
+  Future<void> _fetchFrameShop() async {
+    final shopResponse = await _frameRepo.getShopFrames(isShowLoader: false);
+    final backpackResponse = await _frameRepo.getMyBackpack(
+      isShowLoader: false,
+    );
+    final purchasedByFrameId = _purchasedFramesByFrameId(
+      _extractList(backpackResponse?['data']),
+    );
+    final frames = <Map<String, dynamic>>[];
+
+    for (final raw in _extractList(shopResponse?['data']).whereType<Map>()) {
+      final frameId = raw['id']?.toString() ?? '';
+      if (frameId.isEmpty) continue;
+
+      final purchased = purchasedByFrameId[frameId];
+      final durationDays = _toInt(raw['durationDays']);
+      final category = raw['category']?.toString() ?? 'Premium';
+      frames.add({
+        'id': frameId,
+        'name': raw['name']?.toString() ?? 'Avatar Frame',
+        'icon': kIconUserLevel,
+        'imageUrl': ApiImageUtils.normalize(raw['image']?.toString()),
+        'price': _toInt(raw['price']),
+        'duration': durationDays > 0 ? '$durationDays days' : 'Limited time',
+        'durationDays': durationDays,
+        'category': category,
+        'status': raw['status']?.toString() ?? 'active',
+        'description': 'Premium $category frame for your profile and rooms.',
+        'isOwned': purchased != null,
+        'isEquipped': purchased?['isEquipped'] == true,
+        'backpackItemId': purchased?['id']?.toString(),
+        'expiresAt': purchased?['expiresAt']?.toString(),
+      });
+    }
+
+    if (frames.isEmpty) return;
+
+    final merged = Map<int, List<Map<String, dynamic>>>.from(storeItems);
+    merged[1] = frames;
+    storeItems.assignAll(merged);
+  }
+
   Future<void> buyItem(Map<String, dynamic> item) async {
+    if (selectedTab.value == 1) {
+      if (item['isOwned'] == true) {
+        await equipFrame(item);
+      } else {
+        await buyFrame(item);
+      }
+      return;
+    }
+
+    await _buyLegacyMallItem(item);
+  }
+
+  Future<void> buyFrame(Map<String, dynamic> item) async {
     final price = _toInt(item['price']);
-    final name = item['name'] as String;
+    final name = item['name']?.toString() ?? 'Avatar Frame';
 
-    if (coinsBalance.value >= price) {
-      final response = await _economyRepo.buyMallItem(
-        itemId: item['id'].toString(),
-        isShowLoader: true,
-      );
-      if (response == null || response['statusCode'] == 0) {
-        Get.snackbar('Mall', 'Could not purchase "$name".');
-        return;
-      }
-
-      // Deduct balance
-      coinsBalance.value -= price;
-
-      // Dynamically add to backpack if BackpackController is loaded
-      try {
-        if (Get.isRegistered<BackpackController>()) {
-          final backpack = Get.find<BackpackController>();
-          final catId = selectedTab.value;
-          final currentList = backpack.mockItems[catId] ?? [];
-
-          // Check if item already exists in backpack
-          final existingIndex = currentList.indexWhere(
-            (x) => x['name'] == name,
-          );
-          if (existingIndex != -1) {
-            final existing = currentList[existingIndex];
-            currentList[existingIndex] = {
-              'name': name,
-              'icon': item['icon'],
-              'quantity': (existing['quantity'] as int) + 1,
-            };
-          } else {
-            currentList.add({
-              'name': name,
-              'icon': item['icon'],
-              'quantity': 1,
-            });
-          }
-          backpack.mockItems[catId] = List.from(currentList);
-        }
-      } catch (e) {
-        // BackpackController not loaded, ignore
-      }
-
-      Get.dialog(
-        AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.green),
-              SizedBox(width: 8),
-              Text('Purchase Successful'),
-            ],
-          ),
-          content: Text(
-            'You have successfully purchased "$name" for $price Coins!\nThe item has been added to your Backpack.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Get.back(),
-              child: const Text('Great!'),
-            ),
-          ],
-        ),
-      );
-    } else {
-      Get.dialog(
-        AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.warning_amber_rounded, color: Colors.orange),
-              SizedBox(width: 8),
-              Text('Insufficient Coins'),
-            ],
-          ),
-          content: Text(
-            'You need ${price - coinsBalance.value} more Coins to purchase "$name". Would you like to recharge?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Get.back(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF761B65),
-              ),
-              onPressed: () {
-                Get.back();
-                // Route to recharge
-                Get.snackbar('Redirecting', 'Opening recharge panel...');
-              },
-              child: const Text(
-                'Recharge Now',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ],
-        ),
-      );
+    if (coinsBalance.value < price) {
+      _showInsufficientCoinsDialog(price: price, itemName: name);
+      return;
     }
+
+    final response = await _frameRepo.buyFrame(
+      frameId: item['id'].toString(),
+      isShowLoader: true,
+    );
+    if (!_isSuccess(response)) {
+      Get.snackbar('Mall', 'Could not purchase "$name".');
+      return;
+    }
+
+    final data = response?['data'];
+    final remaining = data is Map ? data['remainingCoins'] : null;
+    coinsBalance.value = remaining == null
+        ? coinsBalance.value - price
+        : _toInt(remaining);
+
+    await _fetchFrameShop();
+    selectTab(1);
+    _showPurchaseSuccessDialog(name: name, price: price);
   }
 
-  int _categoryId(Map raw) {
-    final categoryId = _toInt(raw['categoryId']);
-    if (categoryId > 0) return categoryId;
-    final type = (raw['type'] ?? raw['category'] ?? '')
-        .toString()
-        .toLowerCase();
-    if (type.contains('frame')) return 1;
-    if (type.contains('effect') || type.contains('entrance')) return 2;
-    if (type.contains('bubble') || type.contains('chat')) return 3;
-    return selectedTab.value;
+  Future<void> equipFrame(Map<String, dynamic> item) async {
+    final backpackItemId = item['backpackItemId']?.toString();
+    if (backpackItemId == null || backpackItemId.isEmpty) {
+      Get.snackbar('Mall', 'Purchase this frame before equipping it.');
+      return;
+    }
+
+    final shouldEquip = item['isEquipped'] != true;
+    final response = await _frameRepo.equipFrame(
+      backpackItemId: backpackItemId,
+      equip: shouldEquip,
+      isShowLoader: true,
+    );
+    if (!_isSuccess(response)) {
+      Get.snackbar('Mall', 'Could not update this frame.');
+      return;
+    }
+
+    await _fetchFrameShop();
+    selectTab(1);
+    Get.snackbar(
+      'Mall',
+      shouldEquip ? 'Frame equipped successfully.' : 'Frame removed.',
+    );
   }
 
-  String _iconForCategory(int categoryId) {
-    switch (categoryId) {
-      case 1:
-        return kIconUserLevel;
-      case 2:
-        return kIconActivity;
-      case 3:
-        return kIconPointerCenter;
-      default:
-        return kIconAward;
+  Future<void> _buyLegacyMallItem(Map<String, dynamic> item) async {
+    final price = _toInt(item['price']);
+    final name = item['name']?.toString() ?? 'Mall item';
+
+    if (coinsBalance.value < price) {
+      _showInsufficientCoinsDialog(price: price, itemName: name);
+      return;
     }
+
+    final response = await _economyRepo.buyMallItem(
+      itemId: item['id'].toString(),
+      isShowLoader: true,
+    );
+    if (!_isSuccess(response)) {
+      Get.snackbar('Mall', 'Could not purchase "$name".');
+      return;
+    }
+
+    coinsBalance.value -= price;
+    _showPurchaseSuccessDialog(name: name, price: price);
+  }
+
+  void _showPurchaseSuccessDialog({required String name, required int price}) {
+    Get.dialog(
+      AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green),
+            SizedBox(width: 8),
+            Text('Purchase Successful'),
+          ],
+        ),
+        content: Text(
+          'You have successfully purchased "$name" for $price Coins!\nThe item has been added to your Backpack.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: const Text('Great!')),
+        ],
+      ),
+    );
+  }
+
+  void _showInsufficientCoinsDialog({
+    required int price,
+    required String itemName,
+  }) {
+    Get.dialog(
+      AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('Insufficient Coins'),
+          ],
+        ),
+        content: Text(
+          'You need ${price - coinsBalance.value} more Coins to purchase "$itemName". Would you like to recharge?',
+        ),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF761B65),
+            ),
+            onPressed: () {
+              Get.back();
+              Get.snackbar('Redirecting', 'Opening recharge panel...');
+            },
+            child: const Text(
+              'Recharge Now',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Map<String, Map<String, dynamic>> _purchasedFramesByFrameId(List items) {
+    final result = <String, Map<String, dynamic>>{};
+    for (final raw in items.whereType<Map>()) {
+      final item = Map<String, dynamic>.from(raw);
+      final frameDetails = item['frameDetails'];
+      final frameId =
+          item['itemId']?.toString() ??
+          (frameDetails is Map ? frameDetails['id']?.toString() : null);
+      if (frameId != null && frameId.isNotEmpty) {
+        result[frameId] = item;
+      }
+    }
+    return result;
+  }
+
+  List _extractList(dynamic value) {
+    if (value is List) return value;
+    if (value is Map) {
+      final nested = value['items'] ?? value['frames'] ?? value['data'];
+      if (nested is List) return nested;
+    }
+    return const [];
+  }
+
+  bool _isSuccess(Map<String, dynamic>? response) {
+    final code = response?['statusCode'];
+    if (code == 1 || code == 200 || code == 201) return true;
+    final data = response?['data'];
+    return data is Map && data['success'] == true;
   }
 
   int _toInt(dynamic value) {

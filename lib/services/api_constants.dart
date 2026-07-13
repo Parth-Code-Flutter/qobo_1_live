@@ -241,6 +241,23 @@ class EconomyEndpoints {
   static const String sellerDashboard = '/api/economy/seller/dashboard';
 }
 
+/// Central place for avatar frame storefront API endpoints.
+class FrameEndpoints {
+  FrameEndpoints._();
+
+  /// GET /api/frame/shop
+  static const String shop = '/api/frame/shop';
+
+  /// POST /api/frame/buy
+  static const String buy = '/api/frame/buy';
+
+  /// GET /api/frame/my-backpack
+  static const String myBackpack = '/api/frame/my-backpack';
+
+  /// POST /api/frame/equip
+  static const String equip = '/api/frame/equip';
+}
+
 /// Central place for PK and Call related API endpoints.
 class PkEndpoints {
   PkEndpoints._();
