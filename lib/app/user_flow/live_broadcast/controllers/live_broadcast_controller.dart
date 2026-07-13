@@ -1488,7 +1488,7 @@ class LiveBroadcastController extends GetxController {
     }
 
     final apiConfirmed = liveStreamingId.isNotEmpty && _isApiSuccess(response);
-    _closeLiveStreamLocally();
+    await _closeLiveStreamLocally();
 
     if (apiConfirmed) return;
 
@@ -1504,30 +1504,51 @@ class LiveBroadcastController extends GetxController {
     );
   }
 
-  void _closeLiveStreamLocally() {
+  Future<void> _closeLiveStreamLocally() async {
     _exitReported = true;
     _stopSeatRefreshPolling();
     if (Get.isDialogOpen == true) {
       Get.back();
-      Future<void>.delayed(
-        const Duration(milliseconds: 80),
-        _popLiveBroadcastRoute,
-      );
-      return;
     }
-    _popLiveBroadcastRoute();
+    if (Get.isBottomSheetOpen == true) {
+      Get.back();
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 80));
+    final poppedLiveRoute = _popLiveBroadcastRoute();
+    if (!poppedLiveRoute) {
+      Get.offAllNamed(Routes.BOTTOM_NAV);
+    }
   }
 
-  void _popLiveBroadcastRoute() {
+  bool _popLiveBroadcastRoute() {
     final navigator = Get.key.currentState;
-    if (navigator == null || !navigator.canPop()) return;
+    if (navigator == null) return false;
 
     if (Get.currentRoute == Routes.LIVE_BROADCAST) {
-      Get.back();
-      return;
+      if (!navigator.canPop()) return false;
+      navigator.pop();
+      return true;
     }
 
-    Get.until((route) => route.settings.name != Routes.LIVE_BROADCAST);
+    var removedLiveBroadcast = false;
+    if (navigator.canPop()) {
+      navigator.popUntil((route) {
+        if (route.settings.name == Routes.LIVE_BROADCAST) {
+          removedLiveBroadcast = true;
+          return false;
+        }
+        return removedLiveBroadcast || route.isFirst;
+      });
+    }
+
+    // If GetX/Zego placed the page on an unnamed route, still leave the
+    // current live screen after the backend confirms the stream has ended.
+    if (!removedLiveBroadcast && navigator.canPop()) {
+      navigator.pop();
+      return true;
+    }
+
+    return removedLiveBroadcast;
   }
 
   Future<void> endRoomForEveryone() async {

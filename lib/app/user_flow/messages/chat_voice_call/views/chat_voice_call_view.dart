@@ -69,9 +69,9 @@ class ChatVoiceCallView extends GetView<ChatVoiceCallController> {
                   ),
                   user: ZegoCallUserEvents(
                     onEnter: (user) {
-                      controller.onPeerJoined();
+                      controller.onCallUserEntered(user.id);
                       LoggerUtils.logInfo(
-                        'ChatVoiceCallView: peer joined ${user.id}',
+                        'ChatVoiceCallView: call user entered ${user.id}',
                       );
                     },
                   ),

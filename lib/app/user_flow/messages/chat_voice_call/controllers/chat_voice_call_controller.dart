@@ -147,7 +147,31 @@ class ChatVoiceCallController extends GetxController {
     isCaller.value ? estimatedRemainingCoins : coinsBalance.value,
   );
 
-  void onPeerJoined() {
+  void onCallUserEntered(String userId) {
+    final rawEnteredId = userId.trim();
+    if (rawEnteredId.isEmpty) return;
+
+    final enteredId = ZegoLiveIdUtils.sanitizeUserId(rawEnteredId);
+    final currentId = zegoUserId;
+    final expectedPeerId = ZegoLiveIdUtils.sanitizeUserId(hostId.value);
+
+    if (enteredId == currentId) {
+      LoggerUtils.logInfo(
+        'ChatVoiceCallController: ignored local call user $enteredId',
+      );
+      return;
+    }
+
+    // Billing should only begin when the actual caller/callee enters. Zego can
+    // emit user-enter events for the local SDK user or stale room users, which
+    // must not count as an answered paid call.
+    if (expectedPeerId.isNotEmpty && enteredId != expectedPeerId) {
+      LoggerUtils.logInfo(
+        'ChatVoiceCallController: ignored non-peer call user $enteredId',
+      );
+      return;
+    }
+
     _markPeerJoined();
   }
 
