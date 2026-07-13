@@ -12,13 +12,17 @@ import 'package:qobo_one_live/app/user_flow/update_profile/models/request/update
 import 'package:qobo_one_live/app/user_flow/update_profile/models/response/update_profile_response_model.dart';
 import 'package:qobo_one_live/services/api_service.dart';
 import 'package:qobo_one_live/services/api_constants.dart';
+import 'package:qobo_one_live/services/firebase/fcm_token_service.dart';
 import 'package:qobo_one_live/utils/api_response_utils.dart';
 
 /// Auth repository contains API calls for authentication flows.
 class AuthRepo {
-  AuthRepo({ApiService? apiService}) : _apiService = apiService ?? ApiService();
+  AuthRepo({ApiService? apiService, FcmTokenService? fcmTokenService})
+    : _apiService = apiService ?? ApiService(),
+      _fcmTokenService = fcmTokenService ?? FcmTokenService();
 
   final ApiService _apiService;
+  final FcmTokenService _fcmTokenService;
 
   /// Calls `POST /api/auth/login` with username + password.
   ///
@@ -28,11 +32,13 @@ class AuthRepo {
     required String password,
     bool isShowLoader = false,
   }) async {
+    final fcmToken = await _fcmTokenService.getToken();
     final response = await _apiService.postRequest(
       endPoint: AuthEndpoints.login,
       requestModel: <String, dynamic>{
         'username': username,
         'password': password,
+        if (fcmToken != null) 'fcm_token': fcmToken,
       },
       isShowLoader: isShowLoader,
       isLoginCall: true,
@@ -109,9 +115,13 @@ class AuthRepo {
     required SocialLoginRequestModel request,
     bool isShowLoader = false,
   }) async {
+    final requestJson = request.toJson();
+    final fcmToken = await _fcmTokenService.getToken();
+    if (fcmToken != null) requestJson['fcm_token'] = fcmToken;
+
     final response = await _apiService.postRequest(
       endPoint: AuthEndpoints.socialLogin,
-      requestModel: request.toJson(),
+      requestModel: requestJson,
       isShowLoader: isShowLoader,
       isLoginCall: true,
     );
@@ -142,10 +152,12 @@ class AuthRepo {
     required String email,
     bool isShowLoader = true,
   }) async {
+    final fcmToken = await _fcmTokenService.getToken();
     final request = LoginWithOtpRequestModel(
       phone: phone,
       countryCode: countryCode,
       email: email,
+      fcmToken: fcmToken,
     );
 
     final response = await _apiService.postRequest(
@@ -224,7 +236,13 @@ class AuthRepo {
     required String otp,
     bool isShowLoader = false,
   }) async {
-    final request = VerifyOtpRequestModel(phone: phone, email: email, otp: otp);
+    final fcmToken = await _fcmTokenService.getToken();
+    final request = VerifyOtpRequestModel(
+      phone: phone,
+      email: email,
+      otp: otp,
+      fcmToken: fcmToken,
+    );
 
     final response = await _apiService.postRequest(
       endPoint: AuthEndpoints.verifyOtp,
