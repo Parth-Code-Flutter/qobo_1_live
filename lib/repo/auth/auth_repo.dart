@@ -24,6 +24,12 @@ class AuthRepo {
   final ApiService _apiService;
   final FcmTokenService _fcmTokenService;
 
+  String? get _mobilePlatform {
+    if (Platform.isAndroid) return 'android';
+    if (Platform.isIOS) return 'ios';
+    return null;
+  }
+
   /// Calls `POST /api/auth/login` with username + password.
   ///
   /// Returns decoded JSON map on success, otherwise `null`.
@@ -33,12 +39,14 @@ class AuthRepo {
     bool isShowLoader = false,
   }) async {
     final fcmToken = await _fcmTokenService.getToken();
+    final platform = _mobilePlatform;
     final response = await _apiService.postRequest(
       endPoint: AuthEndpoints.login,
       requestModel: <String, dynamic>{
         'username': username,
         'password': password,
         if (fcmToken != null) 'fcm_token': fcmToken,
+        if (platform != null) 'platform': platform,
       },
       isShowLoader: isShowLoader,
       isLoginCall: true,
