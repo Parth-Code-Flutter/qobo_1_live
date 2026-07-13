@@ -82,7 +82,6 @@ class AudioRoomGridView extends StatelessWidget {
                 final data = tiles[index];
                 return _AudioRoomGridTile(
                   data: data,
-                  roleLabel: _roleLabelForIndex(index),
                   isSpeaking: index == 1,
                   onTap: onJoinRoom == null
                       ? null
@@ -132,12 +131,6 @@ class AudioRoomGridView extends StatelessWidget {
     );
   }
 
-  String _roleLabelForIndex(int index) {
-    if (index == 0) return 'Host';
-    if (index == 1) return 'Speaking';
-    return 'Member Listen...';
-  }
-
   String? _text(dynamic value) {
     final text = value?.toString().trim();
     if (text == null || text.isEmpty || text == 'null') return null;
@@ -148,19 +141,18 @@ class AudioRoomGridView extends StatelessWidget {
 class _AudioRoomGridTile extends StatelessWidget {
   const _AudioRoomGridTile({
     required this.data,
-    required this.roleLabel,
     required this.isSpeaking,
     this.onTap,
   });
 
   final _AudioRoomTileData data;
-  final String roleLabel;
   final bool isSpeaking;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final displayName = data.hostName.isNotEmpty ? data.hostName : data.title;
+    final roomTitle = data.title.isNotEmpty ? data.title : 'Audio Room';
+    final hostName = data.hostName.isNotEmpty ? data.hostName : 'Host';
 
     return GestureDetector(
       onTap: onTap,
@@ -222,7 +214,7 @@ class _AudioRoomGridTile extends StatelessWidget {
           ),
           Spacing.v8,
           SemiBoldText(
-            text: displayName,
+            text: roomTitle,
             fontSize: TextStyles.k12FontSize,
             color: isSpeaking ? const Color(0xFF12F287) : kColorWhite,
             maxLines: 1,
@@ -231,7 +223,7 @@ class _AudioRoomGridTile extends StatelessWidget {
           ),
           Spacing.v2,
           AppText(
-            text: roleLabel,
+            text: hostName,
             fontSize: TextStyles.k10FontSize,
             color: kColorWhite.withValues(alpha: 0.72),
             maxLines: 1,

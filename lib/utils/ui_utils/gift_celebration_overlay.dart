@@ -6,16 +6,20 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import 'package:svgaplayer_flutter/svgaplayer_flutter.dart';
 
 class GiftCelebrationOverlay {
   GiftCelebrationOverlay._();
 
+  static const String treeLoveGiftAsset = 'assets/gif/tree_love_gift_79.svga';
+  static const String jellyfishGiftAsset = 'assets/gif/jellyfish_gift_49.svga';
+
   static OverlayEntry? _activeEntry;
 
-  static void show({String? giftName}) {
+  static void show({String? giftName, String? svgaAsset}) {
     final context = Get.overlayContext ?? Get.context;
     if (context == null) return;
-    final overlay = Overlay.maybeOf(context);
+    final overlay = Overlay.maybeOf(context, rootOverlay: true);
     if (overlay == null) return;
 
     _activeEntry?.remove();
@@ -24,6 +28,7 @@ class GiftCelebrationOverlay {
         giftName: giftName?.trim().isNotEmpty == true
             ? giftName!.trim()
             : 'Gift',
+        svgaAsset: svgaAsset,
         onCompleted: () {
           _activeEntry?.remove();
           _activeEntry = null;
@@ -37,10 +42,12 @@ class GiftCelebrationOverlay {
 class _GiftCelebrationView extends StatefulWidget {
   const _GiftCelebrationView({
     required this.giftName,
+    this.svgaAsset,
     required this.onCompleted,
   });
 
   final String giftName;
+  final String? svgaAsset;
   final VoidCallback onCompleted;
 
   @override
@@ -49,27 +56,57 @@ class _GiftCelebrationView extends StatefulWidget {
 
 class _GiftCelebrationViewState extends State<_GiftCelebrationView>
     with SingleTickerProviderStateMixin {
+  static const _overlayDuration = Duration(milliseconds: 4200);
+  static const _fadeStart = 0.84;
+
   late final AnimationController _controller;
+  SVGAAnimationController? _svgaController;
   Timer? _removeTimer;
+  bool _isSvgaReady = false;
+  bool _svgaFailed = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2300),
-    )..forward();
-    _removeTimer = Timer(
-      const Duration(milliseconds: 2600),
-      widget.onCompleted,
-    );
+    _controller = AnimationController(vsync: this, duration: _overlayDuration)
+      ..forward();
+    _removeTimer = Timer(_overlayDuration, widget.onCompleted);
+    _loadSvgaAnimation();
   }
 
   @override
   void dispose() {
     _removeTimer?.cancel();
+    _svgaController?.dispose();
     _controller.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadSvgaAnimation() async {
+    final asset = widget.svgaAsset;
+    if (asset == null || asset.trim().isEmpty) return;
+
+    final controller = SVGAAnimationController(vsync: this);
+    _svgaController = controller;
+    try {
+      final videoItem = await SVGAParser.shared.decodeFromAssets(asset);
+      if (!mounted || _svgaController != controller) {
+        videoItem.dispose();
+        return;
+      }
+      controller.videoItem = videoItem;
+      setState(() => _isSvgaReady = true);
+      controller
+        ..reset()
+        ..repeat();
+    } catch (_) {
+      if (mounted && _svgaController == controller) {
+        setState(() {
+          _isSvgaReady = false;
+          _svgaFailed = true;
+        });
+      }
+    }
   }
 
   @override
@@ -81,26 +118,50 @@ class _GiftCelebrationViewState extends State<_GiftCelebrationView>
           animation: _controller,
           builder: (context, _) {
             final value = Curves.easeOutCubic.transform(_controller.value);
-            final fade = _controller.value < 0.78
+            final fade = _controller.value < _fadeStart
                 ? 1.0
-                : (1 - ((_controller.value - 0.78) / 0.22)).clamp(0.0, 1.0);
+                : (1 - ((_controller.value - _fadeStart) / (1 - _fadeStart)))
+                      .clamp(0.0, 1.0);
             return Opacity(
               opacity: fade,
               child: Stack(
                 children: [
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.18),
+                      ),
+                    ),
+                  ),
+                  if (_isSvgaReady && _svgaController != null)
+                    Positioned.fill(
+                      child: FittedBox(
+                        fit: BoxFit.cover,
+                        child: SizedBox(
+                          width: MediaQuery.sizeOf(context).width,
+                          height: MediaQuery.sizeOf(context).height,
+                          child: SVGAImage(
+                            _svgaController!,
+                            fit: BoxFit.cover,
+                            clearsAfterStop: false,
+                          ),
+                        ),
+                      ),
+                    ),
                   CustomPaint(
                     painter: _GiftBurstPainter(progress: value),
                     size: Size.infinite,
                   ),
-                  Positioned(
-                    top: top - (10 * value),
-                    left: 18,
-                    right: 18,
-                    child: Transform.scale(
-                      scale: 0.86 + (0.14 * value),
-                      child: const _GiftCelebrationCard(),
+                  if (!_isSvgaReady || _svgaFailed)
+                    Positioned(
+                      top: top - (10 * value),
+                      left: 18,
+                      right: 18,
+                      child: Transform.scale(
+                        scale: 0.86 + (0.14 * value),
+                        child: const _GiftCelebrationCard(),
+                      ),
                     ),
-                  ),
                   Positioned(
                     top: top + 64,
                     left: 28,

@@ -16,11 +16,12 @@ typedef _VideoRoomTileData = ({
   String viewerCountShort,
   String image,
   String avatar,
+  String country,
   List<String> tags,
   Map<String, dynamic> room,
 });
 
-/// Video room feed — accordion tiles (tap to expand / collapse).
+/// Video room feed with image-first cards for a dating-style browse feel.
 class VideoRoomListView extends StatefulWidget {
   const VideoRoomListView({
     super.key,
@@ -57,14 +58,6 @@ class VideoRoomListView extends StatefulWidget {
 }
 
 class _VideoRoomListViewState extends State<VideoRoomListView> {
-  int? _expandedIndex;
-
-  void _onTileTap(int index) {
-    setState(() {
-      _expandedIndex = _expandedIndex == index ? null : index;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final tiles = List<_VideoRoomTileData>.generate(
@@ -83,35 +76,49 @@ class _VideoRoomListViewState extends State<VideoRoomListView> {
             color: kColorPrimary,
             backgroundColor: LiveRoomUiColors.screenGradientBottom,
             onRefresh: widget.onRefresh ?? () async {},
-            child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(14, 4, 14, 24),
+            child: CustomScrollView(
+              slivers: [
+                if (widget.showCreatePanel)
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(14, 4, 14, 12),
+                    sliver: SliverToBoxAdapter(
+                      child: _CreateVideoRoomPanel(
+                        liveCount: tiles.length,
+                        onTap: widget.onCreateVideoRoom,
+                      ),
+                    ),
+                  ),
+                if (tiles.isEmpty)
+                  const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: _VideoRoomsEmptyState(),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(14, 4, 14, 24),
+                    sliver: SliverGrid(
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 14,
+                            crossAxisSpacing: 12,
+                            childAspectRatio: 0.72,
+                          ),
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final data = tiles[index];
+                        return _VideoRoomAccordionTile(
+                          data: data,
+                          onJoinLive: widget.onJoinLive == null
+                              ? null
+                              : () => widget.onJoinLive!(data.room),
+                        );
+                      }, childCount: tiles.length),
+                    ),
+                  ),
+              ],
               physics: const AlwaysScrollableScrollPhysics(
                 parent: BouncingScrollPhysics(),
               ),
-              itemCount:
-                  tiles.length +
-                  (widget.showCreatePanel ? 1 : 0) +
-                  (tiles.isEmpty ? 1 : 0),
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                if (widget.showCreatePanel && index == 0) {
-                  return _CreateVideoRoomPanel(
-                    liveCount: tiles.length,
-                    onTap: widget.onCreateVideoRoom,
-                  );
-                }
-                if (tiles.isEmpty) return const _VideoRoomsEmptyState();
-                final tileIndex = index - (widget.showCreatePanel ? 1 : 0);
-                final data = tiles[tileIndex];
-                return _VideoRoomAccordionTile(
-                  data: data,
-                  expanded: _expandedIndex == tileIndex,
-                  onToggle: () => _onTileTap(tileIndex),
-                  onJoinLive: widget.onJoinLive == null
-                      ? null
-                      : () => widget.onJoinLive!(data.room),
-                );
-              },
             ),
           );
   }
@@ -169,6 +176,11 @@ class _VideoRoomListViewState extends State<VideoRoomListView> {
       viewerCountShort: viewers,
       image: image,
       avatar: avatar,
+      country:
+          _text(room['countryCode']) ??
+          _text(room['country']) ??
+          _text(room['countryName']) ??
+          'GLOBAL',
       tags: [
         '#${(room['type']?.toString() ?? 'video').toUpperCase()}',
         ...roomTags,
@@ -341,145 +353,116 @@ class _VideoRoomsEmptyState extends StatelessWidget {
   }
 }
 
-/// Single accordion card: header always visible; body animates open below.
+/// Image-first card inspired by social/dating video room grids.
 class _VideoRoomAccordionTile extends StatelessWidget {
-  const _VideoRoomAccordionTile({
-    required this.data,
-    required this.expanded,
-    required this.onToggle,
-    this.onJoinLive,
-  });
+  const _VideoRoomAccordionTile({required this.data, this.onJoinLive});
 
   final _VideoRoomTileData data;
-  final bool expanded;
-  final VoidCallback onToggle;
   final VoidCallback? onJoinLive;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOutCubic,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: kColorWhite.withValues(alpha: 0.10),
-        border: Border.all(
-          color: expanded
-              ? kColorVideoPreviewAccent.withValues(alpha: 0.42)
-              : kColorWhite.withValues(alpha: 0.12),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.14),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _CollapsedHeader(
-            data: data,
-            expanded: expanded,
-            onTap: onToggle,
-            onJoinLive: onJoinLive,
-          ),
-          AnimatedCrossFade(
-            firstCurve: Curves.easeOutCubic,
-            secondCurve: Curves.easeOutCubic,
-            sizeCurve: Curves.easeOutCubic,
-            crossFadeState: expanded
-                ? CrossFadeState.showSecond
-                : CrossFadeState.showFirst,
-            duration: const Duration(milliseconds: 280),
-            firstChild: const SizedBox(width: double.infinity),
-            secondChild: _ExpandedBody(data: data, onJoinLive: onJoinLive),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CollapsedHeader extends StatelessWidget {
-  const _CollapsedHeader({
-    required this.data,
-    required this.expanded,
-    required this.onTap,
-    this.onJoinLive,
-  });
-
-  final _VideoRoomTileData data;
-  final bool expanded;
-  final VoidCallback onTap;
-  final VoidCallback? onJoinLive;
-
-  static const double _thumbSize = 64;
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onTap,
-        splashColor: kColorVideoPreviewAccent.withValues(alpha: 0.2),
-        highlightColor: kColorWhite.withValues(alpha: 0.06),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
+        onTap: onJoinLive,
+        splashColor: kColorWhite.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(22),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                kColorWhite.withValues(alpha: 0.18),
+                kColorWhite.withValues(alpha: 0.06),
+              ],
+            ),
+            border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.20),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
           child: Stack(
+            fit: StackFit.expand,
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  _ThumbWithFrame(data: data, size: _thumbSize),
-                  Spacing.h10,
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 72),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SemiBoldText(
-                            text: data.title,
-                            fontSize: TextStyles.k14FontSize,
-                            color: kColorWhite,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Spacing.v4,
-                          AppText(
-                            text: data.category,
-                            fontSize: TextStyles.k12FontSize,
-                            color: kColorVideoSecondaryText,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Spacing.v6,
-                          AppText(
-                            text: data.hostName,
-                            fontSize: TextStyles.k12FontSize,
-                            color: kColorWhite.withValues(alpha: 0.84),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
+              _RoomImage(path: data.image),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.10),
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.82),
+                    ],
+                    stops: const [0, 0.45, 1],
                   ),
-                ],
+                ),
               ),
               Positioned(
-                right: 0,
-                top: 0,
+                left: 10,
+                top: 10,
+                child: _CountryBadge(label: data.country),
+              ),
+              Positioned(
+                right: 9,
+                top: 9,
                 child: _ViewerMiniPill(count: data.viewerCountShort),
               ),
               Positioned(
-                right: 0,
-                bottom: 3,
-                child: _SimpleJoinButton(onTap: onJoinLive ?? onTap),
+                left: 10,
+                right: 10,
+                bottom: 10,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _RoomTypeChip(
+                      label: data.tags.isNotEmpty
+                          ? data.tags.first.replaceFirst('#', '')
+                          : VideoRoomListView.roomLabel,
+                    ),
+                    Spacing.v8,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SemiBoldText(
+                                text: data.title,
+                                fontSize: TextStyles.k14FontSize,
+                                color: kColorWhite,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Spacing.v2,
+                              AppText(
+                                text: data.hostName,
+                                fontSize: TextStyles.k10FontSize,
+                                color: kColorWhite.withValues(alpha: 0.82),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Spacing.h8,
+                        _FloatingJoinButton(onTap: onJoinLive),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -489,119 +472,103 @@ class _CollapsedHeader extends StatelessWidget {
   }
 }
 
-class _SimpleJoinButton extends StatelessWidget {
-  const _SimpleJoinButton({required this.onTap});
+class _CountryBadge extends StatelessWidget {
+  const _CountryBadge({required this.label});
 
-  final VoidCallback onTap;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        height: 34,
-        width: 68,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [kColorVideoJoinLivePurple, kColorVideoJoinLiveGradientEnd],
-          ),
-          borderRadius: BorderRadius.circular(17),
-        ),
-        alignment: Alignment.center,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.play_arrow_rounded, color: kColorWhite, size: 18),
-            Spacing.h2,
-            const SemiBoldText(
-              text: 'Join',
-              fontSize: TextStyles.k12FontSize,
-              color: kColorWhite,
-            ),
-          ],
-        ),
+    final display = label.trim().toUpperCase();
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 58),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.34),
+        borderRadius: BorderRadius.circular(11),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.16)),
+      ),
+      child: AppText(
+        text: display.length > 6 ? display.substring(0, 6) : display,
+        fontSize: TextStyles.k10FontSize,
+        color: kColorWhite,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        align: TextAlign.center,
       ),
     );
   }
 }
 
-class _ThumbWithFrame extends StatelessWidget {
-  const _ThumbWithFrame({required this.data, required this.size});
+class _RoomTypeChip extends StatelessWidget {
+  const _RoomTypeChip({required this.label});
 
-  final _VideoRoomTileData data;
-  final double size;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: size,
-      height: size,
-      padding: const EdgeInsets.all(2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: kColorWhite.withValues(alpha: 0.14),
-      ),
-      child: ClipRRect(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF7B4BFF), Color(0xFFFF4FA7)],
+        ),
         borderRadius: BorderRadius.circular(12),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            _RoomImage(path: data.image, width: size, height: size),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withValues(alpha: 0.30),
-                  ],
-                ),
-              ),
-            ),
-            Positioned(
-              right: 6,
-              bottom: 6,
-              child: Container(
-                width: 18,
-                height: 18,
-                decoration: BoxDecoration(
-                  color: kColorWhite.withValues(alpha: 0.92),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.20),
-                      blurRadius: 5,
-                    ),
-                  ],
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Icon(
-                  Icons.videocam_rounded,
-                  color: kColorVideoJoinLivePurple,
-                  size: 12,
-                ),
-              ),
-            ),
-            Positioned(
-              left: 6,
-              bottom: 7,
-              child: Container(
-                width: 7,
-                height: 7,
-                decoration: BoxDecoration(
-                  color: kColorVideoLiveBadgeRed,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: kColorVideoLiveBadgeRed.withValues(alpha: 0.45),
-                      blurRadius: 5,
-                    ),
-                  ],
-                ),
-              ),
+        boxShadow: [
+          BoxShadow(
+            color: kColorVideoJoinLivePurple.withValues(alpha: 0.35),
+            blurRadius: 8,
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.videocam_rounded, color: kColorWhite, size: 12),
+          Spacing.h4,
+          SemiBoldText(
+            text: label.toLowerCase().contains('audio')
+                ? 'Audio Room'
+                : 'Video Room',
+            fontSize: TextStyles.k10FontSize,
+            color: kColorWhite,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FloatingJoinButton extends StatelessWidget {
+  const _FloatingJoinButton({this.onTap});
+
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: const LinearGradient(
+            colors: [kColorVideoJoinLivePurple, kColorVideoJoinLiveGradientEnd],
+          ),
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.22)),
+          boxShadow: [
+            BoxShadow(
+              color: kColorVideoJoinLivePurple.withValues(alpha: 0.45),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
+        ),
+        child: const Icon(
+          Icons.play_arrow_rounded,
+          color: kColorWhite,
+          size: 25,
         ),
       ),
     );
@@ -642,341 +609,32 @@ class _ViewerMiniPill extends StatelessWidget {
   }
 }
 
-class _ExpandedBody extends StatelessWidget {
-  const _ExpandedBody({required this.data, this.onJoinLive});
-
-  final _VideoRoomTileData data;
-  final VoidCallback? onJoinLive;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Container(
-            height: 1,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.transparent,
-                  kColorVideoPreviewAccent.withValues(alpha: 0.45),
-                  Colors.transparent,
-                ],
-              ),
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _PreviewFrame(
-                imagePath: data.image,
-                viewerCount: data.viewerCountShort,
-              ),
-              const SizedBox(height: 14),
-              if (data.tags.isNotEmpty)
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [for (final tag in data.tags) _TagChip(label: tag)],
-                ),
-              if (data.tags.isNotEmpty) Spacing.v12,
-              _JoinLiveButton(onTap: onJoinLive),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Preview area with purple gradient base so empty/failed images match the app.
-class _PreviewFrame extends StatelessWidget {
-  const _PreviewFrame({required this.imagePath, required this.viewerCount});
-
-  final String imagePath;
-  final String viewerCount;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: LinearGradient(
-          colors: [
-            kColorVideoPreviewAccent.withValues(alpha: 0.55),
-            kColorVideoJoinLivePurple.withValues(alpha: 0.35),
-          ],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: kColorVideoJoinLivePurple.withValues(alpha: 0.25),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(2),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: AspectRatio(
-          aspectRatio: 16 / 9,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: VideoRoomListView._previewGradient,
-                ),
-              ),
-              const _PreviewDecorations(),
-              _RoomImage(path: imagePath, fit: BoxFit.cover),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      kColorVideoPreviewGradientStart.withValues(alpha: 0.35),
-                      Colors.transparent,
-                      kColorVideoRoomBgGradientBottom.withValues(alpha: 0.55),
-                    ],
-                    stops: const [0.0, 0.45, 1.0],
-                  ),
-                ),
-              ),
-              const Positioned(
-                left: 10,
-                top: 10,
-                child: _LiveBadge(compact: false),
-              ),
-              Positioned(
-                right: 10,
-                top: 10,
-                child: _ViewerMiniPill(count: viewerCount),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Soft glow orbs behind preview when stream thumb is missing.
-class _PreviewDecorations extends StatelessWidget {
-  const _PreviewDecorations();
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Positioned(
-          right: -20,
-          top: -10,
-          child: Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: kColorVideoPreviewAccent.withValues(alpha: 0.22),
-            ),
-          ),
-        ),
-        Positioned(
-          left: -16,
-          bottom: -24,
-          child: Container(
-            width: 88,
-            height: 88,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: kColorVideoJoinLiveGradientEnd.withValues(alpha: 0.2),
-            ),
-          ),
-        ),
-        Center(
-          child: Icon(
-            Icons.live_tv_rounded,
-            size: 48,
-            color: kColorWhite.withValues(alpha: 0.18),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _JoinLiveButton extends StatelessWidget {
-  const _JoinLiveButton({this.onTap});
-
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 48,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        gradient: const LinearGradient(
-          colors: [kColorVideoJoinLivePurple, kColorVideoJoinLiveGradientEnd],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: kColorVideoJoinLivePurple.withValues(alpha: 0.45),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(14),
-          child: const Center(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.play_circle_fill_rounded,
-                  color: kColorWhite,
-                  size: 22,
-                ),
-                SizedBox(width: 8),
-                SemiBoldText(
-                  text: 'Join Live',
-                  fontSize: TextStyles.k14FontSize,
-                  color: kColorWhite,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LiveBadge extends StatelessWidget {
-  const _LiveBadge({required this.compact});
-
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: compact ? 8 : 10,
-        vertical: compact ? 4 : 6,
-      ),
-      decoration: BoxDecoration(
-        color: kColorVideoLiveBadgeRed,
-        borderRadius: BorderRadius.circular(compact ? 12 : 16),
-        boxShadow: [
-          BoxShadow(
-            color: kColorVideoLiveBadgeRed.withValues(alpha: 0.45),
-            blurRadius: compact ? 4 : 8,
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SvgPicture.asset(
-            kIconVideoCamera,
-            width: compact ? 10 : 12,
-            height: compact ? 10 : 12,
-            colorFilter: VideoRoomListView._whiteIcon,
-          ),
-          SizedBox(width: compact ? 4 : 5),
-          SemiBoldText(
-            text: 'Live',
-            fontSize: compact ? TextStyles.k10FontSize : TextStyles.k12FontSize,
-            color: kColorWhite,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TagChip extends StatelessWidget {
-  const _TagChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            kColorVideoTagBg,
-            kColorVideoJoinLivePurple.withValues(alpha: 0.65),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: kColorVideoPreviewAccent.withValues(alpha: 0.35),
-        ),
-      ),
-      child: AppText(
-        text: label,
-        fontSize: TextStyles.k12FontSize,
-        color: kColorWhite.withValues(alpha: 0.92),
-      ),
-    );
-  }
-}
-
 class _RoomImage extends StatelessWidget {
-  const _RoomImage({
-    required this.path,
-    this.width,
-    this.height,
-    this.fit = BoxFit.cover,
-  });
+  const _RoomImage({required this.path});
 
   final String path;
-  final double? width;
-  final double? height;
-  final BoxFit fit;
 
   @override
   Widget build(BuildContext context) {
     if (path.startsWith('http')) {
       return Image.network(
         path,
-        width: width,
-        height: height,
-        fit: fit,
+        fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => _fallback(),
       );
     }
     return Image.asset(
       path,
-      width: width,
-      height: height,
-      fit: fit,
+      fit: BoxFit.cover,
       errorBuilder: (_, __, ___) => _fallback(),
     );
   }
 
   Widget _fallback() {
-    return SizedBox(
-      width: width,
-      height: height,
-      child: const DecoratedBox(
-        decoration: BoxDecoration(gradient: VideoRoomListView._previewGradient),
-        child: Center(
-          child: Icon(Icons.videocam_rounded, color: kColorWhite, size: 32),
-        ),
+    return const DecoratedBox(
+      decoration: BoxDecoration(gradient: VideoRoomListView._previewGradient),
+      child: Center(
+        child: Icon(Icons.videocam_rounded, color: kColorWhite, size: 32),
       ),
     );
   }

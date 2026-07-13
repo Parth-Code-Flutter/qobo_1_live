@@ -37,7 +37,8 @@ class ProfileTabView extends StatelessWidget {
             child: Column(
               children: [
                 _profileHero(userSession),
-                Spacing.v16,
+                _superAdminAction(userSession),
+                Spacing.v12,
                 _profileActionCards(userSession),
                 Spacing.v12,
                 _profileFeatureGrid(),
@@ -197,10 +198,6 @@ class ProfileTabView extends StatelessWidget {
                       ),
                     ],
                   ),
-                  if (!session.isSuperAdmin) ...[
-                    Spacing.v12,
-                    const _BecomeSuperAdminButton(),
-                  ],
                 ],
               ),
             );
@@ -263,6 +260,20 @@ class ProfileTabView extends StatelessWidget {
       height: 52,
       margin: const EdgeInsets.symmetric(horizontal: 6),
       color: kColorWhite.withValues(alpha: 0.85),
+    );
+  }
+
+  Widget _superAdminAction(UserSessionController userSession) {
+    return GetBuilder<UserSessionController>(
+      init: userSession,
+      builder: (session) {
+        if (session.isSuperAdmin) return const SizedBox.shrink();
+
+        return const Padding(
+          padding: EdgeInsets.only(top: 10),
+          child: _BecomeSuperAdminButton(),
+        );
+      },
     );
   }
 

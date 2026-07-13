@@ -212,16 +212,14 @@ class _LiveBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const liveGreen = Color(0xFF22C55E);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        color: const Color(0xFFE6252F).withValues(alpha: 0.92),
+        color: liveGreen.withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFE6252F).withValues(alpha: 0.35),
-            blurRadius: 10,
-          ),
+          BoxShadow(color: liveGreen.withValues(alpha: 0.35), blurRadius: 10),
         ],
       ),
       child: Row(

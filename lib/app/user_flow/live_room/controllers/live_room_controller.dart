@@ -14,8 +14,10 @@ import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_dialogs/live_stream_access_denied_dialog.dart';
+import 'package:qobo_one_live/utils/live_streaming_permissions.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/zego_engine_utils.dart';
+import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 
 /// Controller for live room flow.
 class LiveRoomController extends GetxController {
@@ -31,6 +33,7 @@ class LiveRoomController extends GetxController {
   final highlightJoinGrid = false.obs;
   final isSearchExpanded = false.obs;
   final searchQuery = ''.obs;
+  final isStartingLiveStream = false.obs;
   final selectedRoomsMode = 'audio'.obs;
   final videoRooms = <Map<String, dynamic>>[].obs;
   final audioRooms = <Map<String, dynamic>>[].obs;
@@ -375,7 +378,111 @@ class LiveRoomController extends GetxController {
       return;
     }
 
-    Get.toNamed(Routes.LIVE_ROOM_CREATE, arguments: {'mode': 'live_streaming'});
+    await _startLiveStreamingNow(context, session);
+  }
+
+  Future<void> _startLiveStreamingNow(
+    BuildContext context,
+    UserSessionController? session,
+  ) async {
+    if (isStartingLiveStream.value) return;
+    isStartingLiveStream.value = true;
+    try {
+      final title = _currentUserLiveTitle(session);
+      final liveId = ZegoLiveIdUtils.sanitize(ZegoLiveIdUtils.generate());
+
+      final response = await _roomRepo.createLiveStreaming(
+        name: title,
+        liveStreamingId: liveId,
+        onlyFollows: false,
+        isShowLoader: true,
+      );
+      if (!context.mounted) return;
+
+      final roomData = _isRoomApiSuccess(response)
+          ? _normalizeLiveStreamingPayload(response?['data'], title, liveId)
+          : _buildLocalLiveStreamingPayload(title, liveId, session);
+
+      final granted = await LiveStreamingPermissions.ensureHostVideoPermissions(
+        context,
+      );
+      if (!context.mounted || !granted) return;
+
+      await ZegoEngineUtils.resetForLiveProject().timeout(
+        const Duration(milliseconds: 700),
+        onTimeout: () {},
+      );
+      if (!context.mounted) return;
+
+      final successMessage = _isRoomApiSuccess(response)
+          ? (response?['message']?.toString() ?? 'Live streaming started')
+          : 'Starting live stream';
+      AppToast.showSuccess(context, successMessage);
+      Get.offNamed(
+        Routes.LIVE_BROADCAST,
+        arguments: {'isHost': true, 'roomType': 'VIDEO', 'roomData': roomData},
+      );
+    } finally {
+      isStartingLiveStream.value = false;
+    }
+  }
+
+  String _currentUserLiveTitle(UserSessionController? session) {
+    final name = session?.displayName.trim() ?? '';
+    return name.isEmpty ? 'My Live' : name;
+  }
+
+  Map<String, dynamic> _normalizeLiveStreamingPayload(
+    dynamic raw,
+    String title,
+    String liveId,
+  ) {
+    final map = raw is Map
+        ? Map<String, dynamic>.from(raw)
+        : <String, dynamic>{};
+    final zegoId = ZegoLiveIdUtils.sanitize(
+      _text(map['zegoLiveId']) ??
+          _text(map['zego_live_id']) ??
+          _text(map['liveStreamingId']) ??
+          _text(map['live_streaming_id']) ??
+          liveId,
+    );
+    final session = Get.isRegistered<UserSessionController>()
+        ? Get.find<UserSessionController>()
+        : null;
+
+    map['name'] = _text(map['name']) ?? title;
+    map['title'] = _text(map['title']) ?? title;
+    map['liveStreamingId'] = zegoId;
+    map['zegoLiveId'] = zegoId;
+    map['isLive'] = true;
+    map.putIfAbsent('hostId', () => session?.userId ?? '');
+    map.putIfAbsent('hostName', () => session?.displayName ?? title);
+    map.putIfAbsent('hostAvatar', () => session?.displayPicturePath ?? '');
+    map.putIfAbsent('displayPicture', () => session?.displayPicturePath ?? '');
+    return map;
+  }
+
+  Map<String, dynamic> _buildLocalLiveStreamingPayload(
+    String title,
+    String liveId,
+    UserSessionController? session,
+  ) {
+    final zegoId = ZegoLiveIdUtils.sanitize(liveId);
+    return {
+      'name': title,
+      'title': title,
+      'liveStreamingId': zegoId,
+      'zegoLiveId': zegoId,
+      'onlyFollows': false,
+      'isLive': true,
+      if (session != null) ...{
+        'hostId': session.userId,
+        'hostName': session.displayName,
+        'hostAvatar': session.displayPicturePath,
+        'displayPicture': session.displayPicturePath,
+      },
+    };
   }
 
   Future<void> _showLiveAccessDeniedDialog(

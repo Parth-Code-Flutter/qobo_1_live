@@ -153,76 +153,10 @@ class LiveRoomView extends StatelessWidget {
     );
   }
 
-  /// Compact action menu that replaces the large top CTA buttons.
+  /// Floating start-live shortcut. The listing page now starts live directly
+  /// instead of opening the old Go Live / Join Live option menu.
   Widget _liveActionMenu(LiveRoomController controller) {
-    var isOpen = false;
-
-    return StatefulBuilder(
-      builder: (context, setMenuState) {
-        void closeMenu() => setMenuState(() => isOpen = false);
-
-        return AnimatedSize(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-          alignment: Alignment.bottomRight,
-          child: SizedBox(
-            width: 176,
-            height: isOpen ? 160 : 54,
-            child: Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.bottomRight,
-              children: [
-                Positioned(
-                  right: 0,
-                  bottom: 64,
-                  child: IgnorePointer(
-                    ignoring: !isOpen,
-                    child: AnimatedOpacity(
-                      duration: const Duration(milliseconds: 180),
-                      opacity: isOpen ? 1 : 0,
-                      child: AnimatedSlide(
-                        duration: const Duration(milliseconds: 220),
-                        curve: Curves.easeOutCubic,
-                        offset: isOpen ? Offset.zero : const Offset(0, 0.08),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _liveActionOption(
-                              label: LocaleKeys.liveRoomGoLive.tr,
-                              icon: Icons.videocam_rounded,
-                              filled: true,
-                              onTap: () {
-                                closeMenu();
-                                controller.openGoLive();
-                              },
-                            ),
-                            Spacing.v8,
-                            _liveActionOption(
-                              label: LocaleKeys.liveRoomJoinLive.tr,
-                              icon: Icons.sensors_rounded,
-                              filled: false,
-                              onTap: () {
-                                closeMenu();
-                                controller.focusJoinLive();
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                _plusActionButton(
-                  isOpen: isOpen,
-                  onTap: () => setMenuState(() => isOpen = !isOpen),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+    return _plusActionButton(isOpen: false, onTap: controller.openGoLive);
   }
 
   Widget _plusActionButton({
@@ -259,63 +193,6 @@ class LiveRoomView extends StatelessWidget {
           duration: const Duration(milliseconds: 180),
           turns: isOpen ? 0.125 : 0,
           child: const Icon(Icons.add_rounded, color: kColorWhite, size: 30),
-        ),
-      ),
-    );
-  }
-
-  Widget _liveActionOption({
-    required String label,
-    required IconData icon,
-    required bool filled,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        height: 44,
-        width: 156,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
-          gradient: filled
-              ? const LinearGradient(
-                  colors: [
-                    LiveRoomUiColors.goLiveGradientStart,
-                    LiveRoomUiColors.goLiveGradientEnd,
-                  ],
-                )
-              : null,
-          color: filled ? null : LiveRoomUiColors.chipInactiveBg,
-          border: Border.all(
-            color: filled
-                ? kColorWhite.withValues(alpha: 0.12)
-                : LiveRoomUiColors.joinLiveBorder,
-            width: 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: kColorBlack.withValues(alpha: 0.22),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: kColorWhite, size: 18),
-            Spacing.h8,
-            Expanded(
-              child: SemiBoldText(
-                text: label,
-                fontSize: TextStyles.k12FontSize,
-                color: kColorWhite,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
         ),
       ),
     );

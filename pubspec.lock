@@ -18,7 +18,7 @@ packages:
     source: hosted
     version: "1.12.32"
   archive:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
       name: archive
       sha256: a96e8b390886ee8abb49b7bd3ac8df6f451c621619f52a26e815fdcf568959ff
@@ -984,6 +984,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.9.1"
+  path_drawing:
+    dependency: transitive
+    description:
+      name: path_drawing
+      sha256: bbb1934c0cbb03091af082a6389ca2080345291ef07a5fa6d6e078ba8682f977
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.1"
   path_parsing:
     dependency: transitive
     description:
@@ -1144,6 +1152,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.5.0"
+  protobuf:
+    dependency: transitive
+    description:
+      name: protobuf
+      sha256: "01dd9bd0fa02548bf2ceee13545d4a0ec6046459d847b6b061d8a27237108a08"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.1.0"
   provider:
     dependency: transitive
     description:
@@ -1405,6 +1421,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.1"
+  svgaplayer_flutter:
+    dependency: "direct main"
+    description:
+      name: svgaplayer_flutter
+      sha256: "13ad44aabb454e0094962b260c5333662fbd2879c7f9f8d2595b3c4b79817651"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.2.0"
   synchronized:
     dependency: transitive
     description:

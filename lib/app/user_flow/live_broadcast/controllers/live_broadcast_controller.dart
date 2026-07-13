@@ -11,6 +11,7 @@ import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/repo/economy/economy_repo.dart';
 import 'package:qobo_one_live/repo/chat/chat_navigation_helper.dart';
 import 'package:qobo_one_live/repo/room/room_repo.dart';
+import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
@@ -210,6 +211,14 @@ class LiveBroadcastController extends GetxController {
   bool get isVideoRoom => roomType.value.toUpperCase() != 'AUDIO';
 
   bool get isAudioVideoRoom => _isAudioVideoRoomPayload();
+
+  bool get isAudioRoom {
+    final payloadType = readRoomField(_roomData, [
+      'type',
+      'roomType',
+    ])?.toLowerCase();
+    return roomType.value.toUpperCase() == 'AUDIO' || payloadType == 'audio';
+  }
 
   bool get isGroupCallRoom => isAudioVideoRoom;
 
@@ -613,14 +622,24 @@ class LiveBroadcastController extends GetxController {
     );
 
     if (isEconomyApiSuccess(response)) {
-      await loadWalletBalance();
+      final showAudioRoomGiftAnimation = isAudioRoom;
+      if (showAudioRoomGiftAnimation) {
+        Get.back();
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+        GiftCelebrationOverlay.show(
+          giftName: gift['name'],
+          svgaAsset: GiftCelebrationOverlay.jellyfishGiftAsset,
+        );
+      }
+
+      unawaited(loadWalletBalance());
 
       final giftLabel =
           '🎁 sent ${gift['name']} ${isNetworkGiftIcon(gift['icon']) ? '' : gift['icon'] ?? ''}'
               .trim();
       if (isZegoConnected.value) {
-        await ZegoUIKitPrebuiltLiveStreamingController().message.send(
-          giftLabel,
+        unawaited(
+          ZegoUIKitPrebuiltLiveStreamingController().message.send(giftLabel),
         );
       } else {
         chatMessages.add({
@@ -632,19 +651,20 @@ class LiveBroadcastController extends GetxController {
         });
       }
 
-      Get.back();
-      GiftCelebrationOverlay.show(giftName: gift['name']);
-
-      Get.snackbar(
-        '🎁 Gift Sent! 🎁',
-        isRoomGiftMode.value
-            ? 'You shared ${gift['name']} with everyone in the room!'
-            : 'You sent ${gift['name']} to $giftTargetLabel!',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: const Color(0xFFFF4081),
-        colorText: const Color(0xFFFFFFFF),
-        duration: const Duration(seconds: 3),
-      );
+      if (!showAudioRoomGiftAnimation) {
+        Get.back();
+        GiftCelebrationOverlay.show(giftName: gift['name']);
+        Get.snackbar(
+          '🎁 Gift Sent! 🎁',
+          isRoomGiftMode.value
+              ? 'You shared ${gift['name']} with everyone in the room!'
+              : 'You sent ${gift['name']} to $giftTargetLabel!',
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: const Color(0xFFFF4081),
+          colorText: const Color(0xFFFFFFFF),
+          duration: const Duration(seconds: 3),
+        );
+      }
     } else {
       Get.snackbar(
         'Gift not sent',
@@ -1487,8 +1507,27 @@ class LiveBroadcastController extends GetxController {
   void _closeLiveStreamLocally() {
     _exitReported = true;
     _stopSeatRefreshPolling();
-    if (Get.isDialogOpen == true) Get.back();
-    Get.back();
+    if (Get.isDialogOpen == true) {
+      Get.back();
+      Future<void>.delayed(
+        const Duration(milliseconds: 80),
+        _popLiveBroadcastRoute,
+      );
+      return;
+    }
+    _popLiveBroadcastRoute();
+  }
+
+  void _popLiveBroadcastRoute() {
+    final navigator = Get.key.currentState;
+    if (navigator == null || !navigator.canPop()) return;
+
+    if (Get.currentRoute == Routes.LIVE_BROADCAST) {
+      Get.back();
+      return;
+    }
+
+    Get.until((route) => route.settings.name != Routes.LIVE_BROADCAST);
   }
 
   Future<void> endRoomForEveryone() async {
