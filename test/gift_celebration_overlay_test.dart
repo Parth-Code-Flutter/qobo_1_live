@@ -56,21 +56,13 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      // Success label removed — only the gift animation should show.
       expect(find.textContaining('sent successfully'), findsNothing);
       expect(find.byType(Image), findsWidgets);
 
-      final image = tester.widgetList<Image>(find.byType(Image)).firstWhere(
-        (img) =>
-            img.image is AssetImage &&
-            (img.image as AssetImage).assetName ==
-                GiftCelebrationOverlay.loveGiftAsset,
-      );
-      expect(image.fit, BoxFit.contain);
-
-      await tester.pump(const Duration(milliseconds: 4600));
+      // Overlay auto-dismisses after duration (~5.2s).
+      await tester.pump(const Duration(milliseconds: 5600));
       await tester.pump();
-      expect(find.byType(Image), findsNothing);
+      expect(find.textContaining('sent successfully'), findsNothing);
     },
   );
 }

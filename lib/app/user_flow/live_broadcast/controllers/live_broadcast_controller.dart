@@ -373,10 +373,12 @@ class LiveBroadcastController extends GetxController {
       if (isMine) continue;
 
       _lastCelebratedGiftKey = key;
+      final animUrl = parseGiftAnimUrl(message.message);
       GiftCelebrationOverlay.show(
         giftName: _giftNameFromChatLabel(message.message),
-        // Full-screen jellyfish SVGA for peer gifts in audio rooms.
-        svgaAsset: GiftCelebrationOverlay.jellyfishGiftAsset,
+        // Peer gifts play the same API animationUrl embedded in the chat payload.
+        svgaUrl: animUrl,
+        // svgaAsset: GiftCelebrationOverlay.jellyfishGiftAsset,
       );
       return;
     }
@@ -384,10 +386,10 @@ class LiveBroadcastController extends GetxController {
 
   /// Extracts a readable gift name from labels like "🎁 sent Red Rose 🌹".
   String _giftNameFromChatLabel(String text) {
-    final trimmed = text.replaceFirst('🎁 ', '').trim();
-    final withoutSent = trimmed.startsWith('sent ')
-        ? trimmed.substring(5).trim()
-        : trimmed;
+    final visible = stripGiftAnimMarker(text).replaceFirst('🎁 ', '').trim();
+    final withoutSent = visible.startsWith('sent ')
+        ? visible.substring(5).trim()
+        : visible;
     if (withoutSent.isEmpty) return 'Gift';
     // Drop a trailing emoji/icon token when present.
     final parts = withoutSent.split(RegExp(r'\s+'));
@@ -395,6 +397,20 @@ class LiveBroadcastController extends GetxController {
       return parts.sublist(0, parts.length - 1).join(' ');
     }
     return withoutSent;
+  }
+
+  /// Builds the Zego gift chat line, optionally embedding the animation URL.
+  String _buildGiftChatLabel({
+    required String? giftName,
+    required String? giftIcon,
+    required String animationUrl,
+  }) {
+    final name = giftName?.trim().isNotEmpty == true ? giftName!.trim() : 'Gift';
+    final iconPart = isNetworkGiftIcon(giftIcon) ? '' : (giftIcon ?? '');
+    final base = '🎁 sent $name $iconPart'.trim();
+    if (animationUrl.isEmpty) return base;
+    // Hidden marker so other clients can play the exact gift SVGA.
+    return '$base\n[[giftAnim:$animationUrl]]';
   }
 
   Map<String, dynamic> _mapZegoMessage(
@@ -410,7 +426,8 @@ class LiveBroadcastController extends GetxController {
 
     return {
       'sender': isMine ? 'You' : senderName,
-      'message': text,
+      // Hide the embedded animation marker from the chat bubble.
+      'message': isGift ? stripGiftAnimMarker(text) : text,
       'translation': '',
       'isTranslated': false,
       'isSystem': isGift,
@@ -640,12 +657,22 @@ class LiveBroadcastController extends GetxController {
         '🎁';
     final category =
         raw['category']?.toString() ?? raw['type']?.toString() ?? 'Popular';
+    // Backend gift animation clip (SVGA) — played after send-gift success.
+    final animationUrl =
+        raw['animationUrl']?.toString() ??
+        raw['animation_url']?.toString() ??
+        raw['svgaUrl']?.toString() ??
+        '';
+    final soundUrl =
+        raw['soundUrl']?.toString() ?? raw['sound_url']?.toString() ?? '';
     return {
       'id': raw['id']?.toString() ?? raw['_id']?.toString() ?? '',
       'name': name,
       'price': price.toString(),
       'icon': icon,
       'category': category,
+      'animationUrl': animationUrl.trim(),
+      'soundUrl': soundUrl.trim(),
     };
   }
 
@@ -689,22 +716,27 @@ class LiveBroadcastController extends GetxController {
 
     if (isEconomyApiSuccess(response)) {
       final showAudioRoomGiftAnimation = isAudioRoom;
+      final animationUrl = gift['animationUrl']?.trim() ?? '';
       if (showAudioRoomGiftAnimation) {
-        // Close sheet first so the gift GIF is visible over the room UI.
+        // Close sheet first so the gift animation is visible over the room UI.
         Get.back();
         await Future<void>.delayed(const Duration(milliseconds: 300));
         GiftCelebrationOverlay.show(
           giftName: gift['name'],
-          // Full-screen jellyfish SVGA after successful send-gift API.
-          svgaAsset: GiftCelebrationOverlay.jellyfishGiftAsset,
+          // Dynamic SVGA from gift-list API `animationUrl`.
+          svgaUrl: animationUrl.isNotEmpty ? animationUrl : null,
+          // Local jellyfish SVGA disabled — API animationUrl is the source of truth.
+          // svgaAsset: GiftCelebrationOverlay.jellyfishGiftAsset,
         );
       }
 
       unawaited(loadWalletBalance());
 
-      final giftLabel =
-          '🎁 sent ${gift['name']} ${isNetworkGiftIcon(gift['icon']) ? '' : gift['icon'] ?? ''}'
-              .trim();
+      final giftLabel = _buildGiftChatLabel(
+        giftName: gift['name'],
+        giftIcon: gift['icon'],
+        animationUrl: animationUrl,
+      );
       if (isZegoConnected.value) {
         unawaited(
           ZegoUIKitPrebuiltLiveStreamingController().message.send(giftLabel),
@@ -712,7 +744,7 @@ class LiveBroadcastController extends GetxController {
       } else {
         chatMessages.add({
           'sender': 'You',
-          'message': giftLabel,
+          'message': stripGiftAnimMarker(giftLabel),
           'translation': '',
           'isTranslated': false,
           'isSystem': true,
@@ -721,7 +753,10 @@ class LiveBroadcastController extends GetxController {
 
       if (!showAudioRoomGiftAnimation) {
         Get.back();
-        GiftCelebrationOverlay.show(giftName: gift['name']);
+        GiftCelebrationOverlay.show(
+          giftName: gift['name'],
+          svgaUrl: animationUrl.isNotEmpty ? animationUrl : null,
+        );
         Get.snackbar(
           '🎁 Gift Sent! 🎁',
           isRoomGiftMode.value

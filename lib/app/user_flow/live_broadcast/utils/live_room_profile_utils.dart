@@ -156,3 +156,25 @@ bool isNetworkGiftIcon(String? icon) {
   final raw = icon?.trim().toLowerCase() ?? '';
   return raw.startsWith('http://') || raw.startsWith('https://');
 }
+
+/// Marker appended to gift chat lines so peers can load `animationUrl`.
+const giftAnimMarkerPrefix = '[[giftAnim:';
+const giftAnimMarkerSuffix = ']]';
+
+/// Removes the embedded animation marker so chat UI stays clean.
+String stripGiftAnimMarker(String text) {
+  return text
+      .replaceAll(RegExp(r'\n?\[\[giftAnim:.*?\]\]'), '')
+      .trim();
+}
+
+/// Parses `animationUrl` from a gift chat payload, if present.
+String? parseGiftAnimUrl(String text) {
+  final match = RegExp(
+    r'\[\[giftAnim:(https?:\/\/[^\]]+)\]\]',
+    caseSensitive: false,
+  ).firstMatch(text);
+  final url = match?.group(1)?.trim();
+  if (url == null || url.isEmpty) return null;
+  return url;
+}

@@ -9,27 +9,26 @@ import 'package:svgaplayer_flutter/svgaplayer_flutter.dart';
 
 /// Full-screen celebration overlay shown after a successful gift send.
 ///
-/// Prefer [svgaAsset] (e.g. [jellyfishGiftAsset]) for client SVGA gift clips.
-/// Pass [gifAsset] only when a GIF is needed instead of SVGA.
+/// Prefer [svgaUrl] from the gift-list API `animationUrl` field.
+/// Local SVGA / GIF assets remain available as optional fallbacks only.
 class GiftCelebrationOverlay {
   GiftCelebrationOverlay._();
 
-  static const String treeLoveGiftAsset = 'assets/gif/tree_love_gift_79.svga';
-  static const String jellyfishGiftAsset = 'assets/gif/jellyfish_gift_49.svga';
-
-  /// Optional GIF fallback (`assets/gif/love_gif.gif`).
+  // --- Local assets (kept for reference; prefer API animationUrl) ---
+  // static const String treeLoveGiftAsset = 'assets/gif/tree_love_gift_79.svga';
+  // static const String jellyfishGiftAsset = 'assets/gif/jellyfish_gift_49.svga';
   static const String loveGiftAsset = kGifLoveGift;
 
   static OverlayEntry? _activeEntry;
 
   /// Shows a non-blocking full-screen gift celebration over the current route.
   ///
-  /// [gifAsset]  — local GIF (Image.asset animates .gif natively)
-  /// [svgaAsset] — optional SVGA effect (used when no gifAsset is set)
+  /// Priority: [svgaUrl] (network) → [svgaAsset] (local) → [gifAsset] → badge.
   static void show({
     String? giftName,
-    String? gifAsset,
+    String? svgaUrl,
     String? svgaAsset,
+    String? gifAsset,
   }) {
     // Prefer navigator context — Get.overlayContext is the Overlay itself, and
     // Overlay.maybeOf(overlayContext) returns null (no Overlay ancestor).
@@ -48,8 +47,10 @@ class GiftCelebrationOverlay {
         giftName: giftName?.trim().isNotEmpty == true
             ? giftName!.trim()
             : 'Gift',
+        svgaUrl: svgaUrl?.trim(),
+        // Local SVGA asset path kept for optional fallback; prefer svgaUrl.
+        svgaAsset: svgaAsset?.trim(),
         gifAsset: gifAsset,
-        svgaAsset: svgaAsset,
         onCompleted: () {
           _activeEntry?.remove();
           _activeEntry = null;
@@ -63,14 +64,16 @@ class GiftCelebrationOverlay {
 class _GiftCelebrationView extends StatefulWidget {
   const _GiftCelebrationView({
     required this.giftName,
-    this.gifAsset,
+    this.svgaUrl,
     this.svgaAsset,
+    this.gifAsset,
     required this.onCompleted,
   });
 
   final String giftName;
-  final String? gifAsset;
+  final String? svgaUrl;
   final String? svgaAsset;
+  final String? gifAsset;
   final VoidCallback onCompleted;
 
   @override
@@ -79,8 +82,8 @@ class _GiftCelebrationView extends StatefulWidget {
 
 class _GiftCelebrationViewState extends State<_GiftCelebrationView>
     with TickerProviderStateMixin {
-  // Long enough for love_gif.gif to play through at least once.
-  static const _overlayDuration = Duration(milliseconds: 4500);
+  // Default on-screen time once media is ready (network SVGA may load slower).
+  static const _overlayDuration = Duration(milliseconds: 5200);
   static const _fadeStart = 0.88;
 
   late final AnimationController _controller;
@@ -88,23 +91,36 @@ class _GiftCelebrationViewState extends State<_GiftCelebrationView>
   Timer? _removeTimer;
   bool _isSvgaReady = false;
   bool _svgaFailed = false;
+  bool _isLoadingSvga = false;
 
   bool get _hasGifAsset =>
       widget.gifAsset != null && widget.gifAsset!.trim().isNotEmpty;
 
+  bool get _hasNetworkSvga {
+    final url = widget.svgaUrl?.trim() ?? '';
+    return url.startsWith('http://') || url.startsWith('https://');
+  }
+
+  bool get _hasLocalSvga =>
+      widget.svgaAsset != null && widget.svgaAsset!.trim().isNotEmpty;
+
   bool get _shouldLoadSvga =>
-      !_hasGifAsset &&
-      widget.svgaAsset != null &&
-      widget.svgaAsset!.trim().isNotEmpty;
+      !_hasGifAsset && (_hasNetworkSvga || _hasLocalSvga);
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(vsync: this, duration: _overlayDuration)
       ..forward();
-    _removeTimer = Timer(_overlayDuration, widget.onCompleted);
+
     if (_shouldLoadSvga) {
+      _isLoadingSvga = true;
       _loadSvgaAnimation();
+    } else if (_hasGifAsset) {
+      _scheduleDismiss();
+    } else {
+      // No media — still show a brief badge celebration.
+      _scheduleDismiss();
     }
   }
 
@@ -116,30 +132,47 @@ class _GiftCelebrationViewState extends State<_GiftCelebrationView>
     super.dispose();
   }
 
-  Future<void> _loadSvgaAnimation() async {
-    final asset = widget.svgaAsset;
-    if (asset == null || asset.trim().isEmpty) return;
+  void _scheduleDismiss() {
+    _removeTimer?.cancel();
+    _removeTimer = Timer(_overlayDuration, widget.onCompleted);
+  }
 
+  Future<void> _loadSvgaAnimation() async {
     final controller = SVGAAnimationController(vsync: this);
     _svgaController = controller;
+
     try {
-      final videoItem = await SVGAParser.shared.decodeFromAssets(asset);
+      final videoItem = _hasNetworkSvga
+          // Gift-list API `animationUrl` (Cloudinary / CDN SVGA bytes).
+          ? await SVGAParser.shared.decodeFromURL(widget.svgaUrl!)
+          // Local asset fallback (optional; callers may pass svgaAsset).
+          : await SVGAParser.shared.decodeFromAssets(widget.svgaAsset!);
+
       if (!mounted || _svgaController != controller) {
         videoItem.dispose();
         return;
       }
+
       controller.videoItem = videoItem;
-      setState(() => _isSvgaReady = true);
+      setState(() {
+        _isSvgaReady = true;
+        _isLoadingSvga = false;
+        _svgaFailed = false;
+      });
       controller
         ..reset()
         ..repeat();
+      // Start dismiss clock only after the clip is ready to play.
+      _scheduleDismiss();
     } catch (_) {
-      // Keep the UI usable if an SVGA asset fails to decode.
+      // Keep the UI usable if network / local SVGA fails to decode.
       if (mounted && _svgaController == controller) {
         setState(() {
           _isSvgaReady = false;
+          _isLoadingSvga = false;
           _svgaFailed = true;
         });
+        _scheduleDismiss();
       }
     }
   }
@@ -164,43 +197,51 @@ class _GiftCelebrationViewState extends State<_GiftCelebrationView>
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Dimmed full-screen backdrop behind the gift GIF.
                   Positioned.fill(
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(
-                          alpha: _hasGifAsset ? 0.55 : 0.22,
+                          alpha: _hasGifAsset || _hasNetworkSvga ? 0.45 : 0.22,
                         ),
                       ),
                     ),
                   ),
-                  // Preferred path: full-screen animated GIF.
                   if (_hasGifAsset) _buildFullScreenGif(size: size),
-                  // Fallback path: SVGA effect (existing support).
                   if (!_hasGifAsset &&
                       _isSvgaReady &&
                       _svgaController != null)
                     Positioned.fill(
                       child: FittedBox(
-                        fit: BoxFit.cover,
+                        fit: BoxFit.contain,
                         child: SizedBox(
                           width: size.width,
                           height: size.height,
                           child: SVGAImage(
                             _svgaController!,
-                            fit: BoxFit.cover,
+                            fit: BoxFit.contain,
                             clearsAfterStop: false,
                           ),
                         ),
                       ),
                     ),
-                  if (!_hasGifAsset)
+                  if (_isLoadingSvga && !_isSvgaReady)
+                    const Center(
+                      child: SizedBox(
+                        width: 36,
+                        height: 36,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.6,
+                          color: kColorWhite,
+                        ),
+                      ),
+                    ),
+                  if (!_hasGifAsset && !_hasNetworkSvga && !_hasLocalSvga)
                     CustomPaint(
                       painter: _GiftBurstPainter(progress: value),
                       size: Size.infinite,
                     ),
-                  // Static gift badge only when neither GIF nor SVGA is ready.
-                  if (!_hasGifAsset && (!_isSvgaReady || _svgaFailed))
+                  // Fallback badge when SVGA cannot be loaded.
+                  if (!_hasGifAsset && (!_isSvgaReady || _svgaFailed) && !_isLoadingSvga)
                     Positioned(
                       top: top - (10 * value),
                       left: 18,
@@ -219,7 +260,6 @@ class _GiftCelebrationViewState extends State<_GiftCelebrationView>
     );
   }
 
-  /// Renders [gifAsset] edge-to-edge (full screen) while preserving aspect ratio.
   Widget _buildFullScreenGif({required Size size}) {
     return Positioned.fill(
       child: Center(
@@ -228,7 +268,6 @@ class _GiftCelebrationViewState extends State<_GiftCelebrationView>
           width: size.width,
           height: size.height,
           fit: BoxFit.contain,
-          // Flutter animates .gif assets automatically.
           gaplessPlayback: true,
           errorBuilder: (_, __, ___) => const _GiftCelebrationCard(),
         ),

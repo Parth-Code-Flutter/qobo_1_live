@@ -278,7 +278,11 @@ class ChatVoiceCallController extends GetxController {
     if (isEconomyApiSuccess(response)) {
       await loadWalletBalance();
       if (Get.isBottomSheetOpen == true) Get.back<void>();
-      GiftCelebrationOverlay.show(giftName: gift['name']);
+      final animationUrl = gift['animationUrl']?.trim() ?? '';
+      GiftCelebrationOverlay.show(
+        giftName: gift['name'],
+        svgaUrl: animationUrl.isNotEmpty ? animationUrl : null,
+      );
       Get.snackbar(
         'Gift Sent',
         'You sent ${gift['name'] ?? 'a gift'} to ${peerName.value}.',
@@ -311,6 +315,10 @@ class ChatVoiceCallController extends GetxController {
 
   Map<String, String> _mapGift(Map<String, dynamic> raw) {
     final price = raw['price'] ?? raw['coins'] ?? raw['amount'] ?? 0;
+    final animationUrl =
+        raw['animationUrl']?.toString() ??
+        raw['animation_url']?.toString() ??
+        '';
     return {
       'id': raw['id']?.toString() ?? raw['_id']?.toString() ?? '',
       'name': raw['name']?.toString() ?? raw['title']?.toString() ?? 'Gift',
@@ -323,6 +331,7 @@ class ChatVoiceCallController extends GetxController {
           '🎁',
       'category':
           raw['category']?.toString() ?? raw['type']?.toString() ?? 'Popular',
+      'animationUrl': animationUrl.trim(),
     };
   }
 
