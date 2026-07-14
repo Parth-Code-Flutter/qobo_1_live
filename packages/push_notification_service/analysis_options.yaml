@@ -1,0 +1,7 @@
+# Include flutter_lints when analyzing this package in isolation.
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    prefer_const_constructors: true
+    prefer_final_locals: true

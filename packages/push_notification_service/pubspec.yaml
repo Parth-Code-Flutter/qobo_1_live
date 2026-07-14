@@ -1,0 +1,24 @@
+name: push_notification_service
+description: >
+  Reusable Flutter package for receiving Firebase Cloud Messaging (FCM) push
+  notifications. Drop into any Flutter app that already initializes Firebase.
+version: 1.0.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.8.1
+  flutter: '>=3.22.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  firebase_core: ^3.15.1
+  firebase_messaging: ^15.2.10
+  flutter_local_notifications: ^19.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
