@@ -82,6 +82,11 @@ class LiveBroadcastController extends GetxController {
   Map<String, dynamic> _roomData = {};
   StreamSubscription<List<ZegoInRoomMessage>>? _messageSub;
   StreamSubscription<List<ZegoUIKitUser>>? _userSub;
+
+  /// Dedupes audio-room gift celebrations triggered by Zego gift chat events.
+  String? _lastCelebratedGiftKey;
+  final Set<String> _seenGiftMessageKeys = <String>{};
+  bool _giftChatBootstrapDone = false;
   Timer? _seatRefreshTimer;
   VoidCallback? _viewerCountListener;
   var _exitReported = false;
@@ -329,6 +334,66 @@ class LiveBroadcastController extends GetxController {
     chatMessages.assignAll(
       messages.map((message) => _mapZegoMessage(message, myId)),
     );
+
+    // When someone else shares a gift in an audio room, play the celebration.
+    _maybeCelebrateIncomingGift(messages, myId);
+  }
+
+  /// Plays the gift GIF for peer (non-self) gift chat events in audio rooms.
+  void _maybeCelebrateIncomingGift(
+    List<ZegoInRoomMessage> messages,
+    String myUserId,
+  ) {
+    if (!isAudioRoom || messages.isEmpty) return;
+
+    final giftMessages = messages
+        .where((m) => m.message.trim().startsWith('🎁 '))
+        .toList();
+    if (giftMessages.isEmpty) return;
+
+    // First sync after join: mark existing gifts as seen (no replay/pop).
+    if (!_giftChatBootstrapDone) {
+      for (final message in giftMessages) {
+        _seenGiftMessageKeys.add('${message.messageID}_${message.timestamp}');
+      }
+      _giftChatBootstrapDone = true;
+      return;
+    }
+
+    // Celebrate only newly arrived peer gift messages (newest first).
+    for (var i = giftMessages.length - 1; i >= 0; i--) {
+      final message = giftMessages[i];
+      final key = '${message.messageID}_${message.timestamp}';
+      if (!_seenGiftMessageKeys.add(key)) continue;
+      if (key == _lastCelebratedGiftKey) continue;
+
+      final senderId = ZegoLiveIdUtils.sanitizeUserId(message.user.id);
+      final isMine = senderId.isNotEmpty && senderId == myUserId;
+      // Sender already celebrates on send-gift API success — skip duplicates.
+      if (isMine) continue;
+
+      _lastCelebratedGiftKey = key;
+      GiftCelebrationOverlay.show(
+        giftName: _giftNameFromChatLabel(message.message),
+        gifAsset: GiftCelebrationOverlay.loveGiftAsset,
+      );
+      return;
+    }
+  }
+
+  /// Extracts a readable gift name from labels like "🎁 sent Red Rose 🌹".
+  String _giftNameFromChatLabel(String text) {
+    final trimmed = text.replaceFirst('🎁 ', '').trim();
+    final withoutSent = trimmed.startsWith('sent ')
+        ? trimmed.substring(5).trim()
+        : trimmed;
+    if (withoutSent.isEmpty) return 'Gift';
+    // Drop a trailing emoji/icon token when present.
+    final parts = withoutSent.split(RegExp(r'\s+'));
+    if (parts.length >= 2 && parts.last.runes.length <= 2) {
+      return parts.sublist(0, parts.length - 1).join(' ');
+    }
+    return withoutSent;
   }
 
   Map<String, dynamic> _mapZegoMessage(
@@ -624,11 +689,13 @@ class LiveBroadcastController extends GetxController {
     if (isEconomyApiSuccess(response)) {
       final showAudioRoomGiftAnimation = isAudioRoom;
       if (showAudioRoomGiftAnimation) {
+        // Close sheet first so the gift GIF is visible over the room UI.
         Get.back();
         await Future<void>.delayed(const Duration(milliseconds: 300));
         GiftCelebrationOverlay.show(
           giftName: gift['name'],
-          svgaAsset: GiftCelebrationOverlay.jellyfishGiftAsset,
+          // Full-screen love_gif.gif after successful send-gift API.
+          gifAsset: GiftCelebrationOverlay.loveGiftAsset,
         );
       }
 

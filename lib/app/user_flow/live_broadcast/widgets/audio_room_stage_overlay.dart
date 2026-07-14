@@ -10,6 +10,7 @@ import 'package:zego_uikit/zego_uikit.dart';
 
 import '../controllers/live_broadcast_controller.dart';
 import '../models/audio_room_models.dart';
+import '../utils/audio_room_seat_layout.dart';
 
 class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
   const AudioRoomStageOverlay({super.key});
@@ -212,48 +213,51 @@ class _ControlButton extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: size,
-                height: size,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: emphasized
-                      ? const LinearGradient(
-                          colors: [kColorProfileFeatureBlue, kColorPrimary],
-                        )
-                      : null,
-                  color: emphasized
-                      ? null
-                      : active
-                      ? kColorWhite
-                      : kColorWhite.withValues(alpha: 0.12),
-                  border: Border.all(
-                    color: kColorWhite.withValues(alpha: 0.08),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: size,
+                  height: size,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: emphasized
+                        ? const LinearGradient(
+                            colors: [kColorProfileFeatureBlue, kColorPrimary],
+                          )
+                        : null,
+                    color: emphasized
+                        ? null
+                        : active
+                        ? kColorWhite
+                        : kColorWhite.withValues(alpha: 0.12),
+                    border: Border.all(
+                      color: kColorWhite.withValues(alpha: 0.08),
+                    ),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: compact ? 19 : 22,
+                    color: emphasized
+                        ? kColorWhite
+                        : active
+                        ? kColorPrimary
+                        : kColorWhite.withValues(alpha: 0.88),
                   ),
                 ),
-                child: Icon(
-                  icon,
-                  size: compact ? 19 : 22,
-                  color: emphasized
-                      ? kColorWhite
-                      : active
-                      ? kColorPrimary
-                      : kColorWhite.withValues(alpha: 0.88),
+                Spacing.v4,
+                AppText(
+                  text: label,
+                  fontSize: compact ? 8 : 9,
+                  color: kColorWhite.withValues(alpha: 0.78),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  align: TextAlign.center,
                 ),
-              ),
-              Spacing.v4,
-              AppText(
-                text: label,
-                fontSize: compact ? 8 : 9,
-                color: kColorWhite.withValues(alpha: 0.78),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                align: TextAlign.center,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -283,71 +287,74 @@ class _GiftControlButton extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    width: compact ? 40 : 46,
-                    height: compact ? 40 : 46,
-                    decoration: const BoxDecoration(
-                      color: kColorProfileActionPinkStart,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.card_giftcard_rounded,
-                      color: kColorWhite,
-                      size: 20,
-                    ),
-                  ),
-                  if (!compact)
-                    Positioned(
-                      right: -8,
-                      top: -6,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 5,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF262D38),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: kColorWhite.withValues(alpha: 0.10),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.diamond_rounded,
-                              color: kColorWalletAmount,
-                              size: 10,
-                            ),
-                            const SizedBox(width: 2),
-                            SemiBoldText(
-                              text: label,
-                              fontSize: TextStyles.k10FontSize,
-                              color: kColorWhite,
-                            ),
-                          ],
-                        ),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      width: compact ? 40 : 46,
+                      height: compact ? 40 : 46,
+                      decoration: const BoxDecoration(
+                        color: kColorProfileActionPinkStart,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.card_giftcard_rounded,
+                        color: kColorWhite,
+                        size: 20,
                       ),
                     ),
-                ],
-              ),
-              Spacing.v4,
-              AppText(
-                text: 'Gift',
-                fontSize: compact ? 8 : 9,
-                color: kColorWhite.withValues(alpha: 0.78),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                align: TextAlign.center,
-              ),
-            ],
+                    if (!compact)
+                      Positioned(
+                        right: -8,
+                        top: -6,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF262D38),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: kColorWhite.withValues(alpha: 0.10),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.diamond_rounded,
+                                color: kColorWalletAmount,
+                                size: 10,
+                              ),
+                              const SizedBox(width: 2),
+                              SemiBoldText(
+                                text: label,
+                                fontSize: TextStyles.k10FontSize,
+                                color: kColorWhite,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                Spacing.v4,
+                AppText(
+                  text: 'Gift',
+                  fontSize: compact ? 8 : 9,
+                  color: kColorWhite.withValues(alpha: 0.78),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  align: TextAlign.center,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -456,6 +463,10 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
   }
 }
 
+/// Responsive seat-cell metrics so the audio grid fits any phone width
+/// without fixed-height overflows (e.g. "BOTTOM OVERFLOWED BY 0.9px").
+typedef _SeatLayoutMetrics = AudioRoomSeatLayoutMetrics;
+
 class _MemberGrid extends StatefulWidget {
   const _MemberGrid({required this.compact});
 
@@ -477,22 +488,29 @@ class _MemberGridState extends State<_MemberGrid> {
 
       return LayoutBuilder(
         builder: (context, constraints) {
-          const crossAxisCount = 3;
+          final metrics = _SeatLayoutMetrics.fromWidth(
+            constraints.maxWidth,
+            compact: widget.compact,
+          );
           return GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: visibleSeats.length,
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount,
-              mainAxisExtent: widget.compact ? 146 : 154,
-              mainAxisSpacing: widget.compact ? 6 : 8,
-              crossAxisSpacing: widget.compact ? 4 : 8,
+              crossAxisCount: AudioRoomSeatLayoutMetrics.crossAxisCount,
+              mainAxisExtent: metrics.mainAxisExtent,
+              mainAxisSpacing: metrics.mainAxisSpacing,
+              crossAxisSpacing: metrics.crossAxisSpacing,
             ),
             itemBuilder: (context, index) {
               final seat = visibleSeats[index];
-              if (seat.isLocked) return _LockedSeat(seatNo: seat.seatNo);
-              if (!seat.occupied) return _GridEmptySeat(seatNo: seat.seatNo);
-              return _MemberSeat(seat: seat);
+              if (seat.isLocked) {
+                return _LockedSeat(seatNo: seat.seatNo, metrics: metrics);
+              }
+              if (!seat.occupied) {
+                return _GridEmptySeat(seatNo: seat.seatNo, metrics: metrics);
+              }
+              return _MemberSeat(seat: seat, metrics: metrics);
             },
           );
         },
@@ -503,58 +521,80 @@ class _MemberGridState extends State<_MemberGrid> {
   List<AudioRoomSeatModel> _buildSeats() => controller.audioRoomSeats.toList();
 }
 
+/// Scales seat content down if fonts/accessibility push past the cell height.
+Widget _seatCellShell({required Widget child}) {
+  return Align(
+    alignment: Alignment.topCenter,
+    child: FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.topCenter,
+      child: child,
+    ),
+  );
+}
+
 class _MemberSeat extends GetView<LiveBroadcastController> {
-  const _MemberSeat({required this.seat});
+  const _MemberSeat({required this.seat, required this.metrics});
 
   final AudioRoomSeatModel seat;
+  final _SeatLayoutMetrics metrics;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => _openSeatActions(context),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 14),
-          Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.center,
+      child: _seatCellShell(
+        child: SizedBox(
+          width: metrics.frameSize + metrics.badgeSize,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              _PremiumAvatarFrame(
-                name: seat.name,
-                imageUrl: seat.avatarUrl,
-                muted: seat.isMuted,
-                isHost: seat.isHost,
-                seatNo: seat.seatNo,
+              SizedBox(height: metrics.topInset),
+              Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.center,
+                children: [
+                  _PremiumAvatarFrame(
+                    name: seat.name,
+                    imageUrl: seat.avatarUrl,
+                    muted: seat.isMuted,
+                    isHost: seat.isHost,
+                    seatNo: seat.seatNo,
+                    frameSize: metrics.frameSize,
+                    avatarSize: metrics.avatarSize,
+                  ),
+                  Positioned(
+                    left: -6,
+                    top: -6,
+                    child: _SeatBadge(
+                      number: seat.seatNo,
+                      size: metrics.badgeSize,
+                    ),
+                  ),
+                  Positioned(
+                    right: -6,
+                    bottom: -4,
+                    child: _MicBubble(muted: seat.isMuted, small: true),
+                  ),
+                ],
               ),
-              Positioned(
-                left: -8,
-                top: -8,
-                child: _SeatBadge(number: seat.seatNo),
+              SizedBox(height: metrics.gapAfterFrame),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: SemiBoldText(
+                  text: seat.name,
+                  fontSize: TextStyles.k10FontSize,
+                  color: kColorWhite,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  align: TextAlign.center,
+                ),
               ),
-              Positioned(
-                right: -7,
-                bottom: -5,
-                child: _MicBubble(muted: seat.isMuted, small: true),
-              ),
+              _DiamondCount(value: seat.diamonds),
             ],
           ),
-          Spacing.v6,
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(10)),
-            child: SemiBoldText(
-              text: seat.name,
-              fontSize: TextStyles.k10FontSize,
-              color: kColorWhite,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              align: TextAlign.center,
-            ),
-          ),
-          _DiamondCount(value: seat.diamonds),
-        ],
+        ),
       ),
     );
   }
@@ -765,6 +805,8 @@ class _PremiumAvatarFrame extends StatelessWidget {
     required this.muted,
     required this.isHost,
     required this.seatNo,
+    this.frameSize = 112,
+    this.avatarSize = 64,
   });
 
   final String name;
@@ -772,16 +814,20 @@ class _PremiumAvatarFrame extends StatelessWidget {
   final bool muted;
   final bool isHost;
   final int seatNo;
+  final double frameSize;
+  final double avatarSize;
 
   @override
   Widget build(BuildContext context) {
     return _AudioSeatFrame(
       assetPath: _AudioSeatFrame.assetForSeat(seatNo, isHost: isHost),
       muted: muted,
+      size: frameSize,
+      contentSize: avatarSize,
       child: AppUserAvatar(
         name: name,
         imageUrl: imageUrl,
-        size: 64,
+        size: avatarSize,
         border: Border.all(
           color: kColorWhite.withValues(alpha: 0.90),
           width: 1.6,
@@ -797,6 +843,8 @@ class _AudioSeatFrame extends StatelessWidget {
     required this.child,
     this.muted = false,
     this.locked = false,
+    this.size = 112,
+    this.contentSize,
   });
 
   static const _royal = 'assets/images/audio_room_frame_royal.svg';
@@ -808,6 +856,8 @@ class _AudioSeatFrame extends StatelessWidget {
   final Widget child;
   final bool muted;
   final bool locked;
+  final double size;
+  final double? contentSize;
 
   static String assetForSeat(int seatNo, {required bool isHost}) {
     if (isHost) return _royal;
@@ -818,12 +868,12 @@ class _AudioSeatFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final opacity = muted || locked ? 0.64 : 1.0;
-    final contentSize = locked ? 58.0 : 64.0;
+    final innerSize = contentSize ?? (locked ? size * 0.52 : size * 0.57);
     return Opacity(
       opacity: opacity,
       child: SizedBox(
-        width: 112,
-        height: 112,
+        width: size,
+        height: size,
         child: Stack(
           alignment: Alignment.center,
           clipBehavior: Clip.none,
@@ -831,14 +881,14 @@ class _AudioSeatFrame extends StatelessWidget {
             IgnorePointer(
               child: SvgPicture.asset(
                 assetPath,
-                width: 112,
-                height: 112,
+                width: size,
+                height: size,
                 fit: BoxFit.contain,
               ),
             ),
             Container(
-              width: contentSize,
-              height: contentSize,
+              width: innerSize,
+              height: innerSize,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: locked
@@ -907,9 +957,10 @@ class _EmptySeatPlaceholder extends StatelessWidget {
 }
 
 class _GridEmptySeat extends GetView<LiveBroadcastController> {
-  const _GridEmptySeat({required this.seatNo});
+  const _GridEmptySeat({required this.seatNo, required this.metrics});
 
   final int seatNo;
+  final _SeatLayoutMetrics metrics;
 
   @override
   Widget build(BuildContext context) {
@@ -920,56 +971,75 @@ class _GridEmptySeat extends GetView<LiveBroadcastController> {
         backgroundColor: Colors.transparent,
         isScrollControlled: true,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 14),
-          Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.center,
+      child: _seatCellShell(
+        child: SizedBox(
+          width: metrics.frameSize + metrics.badgeSize,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              _AudioSeatFrame(
-                assetPath: _AudioSeatFrame.assetForSeat(seatNo, isHost: false),
-                child: _EmptySeatPlaceholder(seatNo: seatNo),
-              ),
-              Positioned(left: -8, top: -8, child: _SeatBadge(number: seatNo)),
-              Positioned(
-                right: -5,
-                bottom: -5,
-                child: Container(
-                  width: 30,
-                  height: 30,
-                  decoration: BoxDecoration(
-                    color: kColorWhite,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: kColorPrimary.withValues(alpha: 0.12),
+              SizedBox(height: metrics.topInset),
+              Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.center,
+                children: [
+                  _AudioSeatFrame(
+                    assetPath: _AudioSeatFrame.assetForSeat(
+                      seatNo,
+                      isHost: false,
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: kColorPrimary.withValues(alpha: 0.10),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
+                    size: metrics.frameSize,
+                    contentSize: metrics.avatarSize,
+                    child: _EmptySeatPlaceholder(seatNo: seatNo),
+                  ),
+                  Positioned(
+                    left: -6,
+                    top: -6,
+                    child: _SeatBadge(
+                      number: seatNo,
+                      size: metrics.badgeSize,
+                    ),
+                  ),
+                  Positioned(
+                    right: -4,
+                    bottom: -4,
+                    child: Container(
+                      width: metrics.addButtonSize,
+                      height: metrics.addButtonSize,
+                      decoration: BoxDecoration(
+                        color: kColorWhite,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: kColorPrimary.withValues(alpha: 0.12),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: kColorPrimary.withValues(alpha: 0.10),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                    ],
+                      child: Icon(
+                        Icons.add_rounded,
+                        color: AudioRoomStageOverlay._deepPurple,
+                        size: metrics.addButtonSize * 0.66,
+                      ),
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.add_rounded,
-                    color: AudioRoomStageOverlay._deepPurple,
-                    size: 20,
-                  ),
-                ),
+                ],
               ),
+              SizedBox(height: metrics.gapAfterFrame),
+              const SemiBoldText(
+                text: 'Invite',
+                fontSize: TextStyles.k10FontSize,
+                color: AudioRoomStageOverlay._muted,
+                align: TextAlign.center,
+              ),
+              // Spacer matching diamond row so empty/occupied cells stay aligned.
+              const SizedBox(height: 18),
             ],
           ),
-          Spacing.v6,
-          const SemiBoldText(
-            text: 'Invite',
-            fontSize: TextStyles.k10FontSize,
-            color: AudioRoomStageOverlay._muted,
-            align: TextAlign.center,
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -1148,42 +1218,58 @@ class _InviteCandidatesSheetState extends State<_InviteCandidatesSheet> {
 }
 
 class _LockedSeat extends StatelessWidget {
-  const _LockedSeat({required this.seatNo});
+  const _LockedSeat({required this.seatNo, required this.metrics});
 
   final int seatNo;
+  final _SeatLayoutMetrics metrics;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const SizedBox(height: 14),
-        Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.center,
+    return _seatCellShell(
+      child: SizedBox(
+        width: metrics.frameSize + metrics.badgeSize,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            _AudioSeatFrame(
-              assetPath: _AudioSeatFrame._empty,
-              locked: true,
-              child: Icon(
-                Icons.lock_rounded,
-                color: AudioRoomStageOverlay._deepPurple.withValues(
-                  alpha: 0.45,
+            SizedBox(height: metrics.topInset),
+            Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
+              children: [
+                _AudioSeatFrame(
+                  assetPath: _AudioSeatFrame._empty,
+                  locked: true,
+                  size: metrics.frameSize,
+                  contentSize: metrics.avatarSize * 0.9,
+                  child: Icon(
+                    Icons.lock_rounded,
+                    color: AudioRoomStageOverlay._deepPurple.withValues(
+                      alpha: 0.45,
+                    ),
+                    size: metrics.avatarSize * 0.45,
+                  ),
                 ),
-              ),
+                Positioned(
+                  left: -6,
+                  top: -6,
+                  child: _SeatBadge(
+                    number: seatNo,
+                    size: metrics.badgeSize,
+                  ),
+                ),
+              ],
             ),
-            Positioned(left: -8, top: -8, child: _SeatBadge(number: seatNo)),
+            SizedBox(height: metrics.gapAfterFrame),
+            const AppText(
+              text: 'Locked',
+              fontSize: TextStyles.k10FontSize,
+              color: AudioRoomStageOverlay._muted,
+              align: TextAlign.center,
+            ),
+            const _DiamondCount(value: 20),
           ],
         ),
-        Spacing.v8,
-        const AppText(
-          text: 'Locked',
-          fontSize: TextStyles.k10FontSize,
-          color: AudioRoomStageOverlay._muted,
-          align: TextAlign.center,
-        ),
-        const _DiamondCount(value: 20),
-      ],
+      ),
     );
   }
 }
@@ -1255,15 +1341,16 @@ class _CircleButton extends StatelessWidget {
 }
 
 class _SeatBadge extends StatelessWidget {
-  const _SeatBadge({required this.number});
+  const _SeatBadge({required this.number, this.size = 24});
 
   final int number;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 24,
-      height: 24,
+      width: size,
+      height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: AudioRoomStageOverlay._seatGold,
@@ -1273,7 +1360,11 @@ class _SeatBadge extends StatelessWidget {
           width: 1.2,
         ),
       ),
-      child: SemiBoldText(text: '$number', fontSize: 10, color: kColorWhite),
+      child: SemiBoldText(
+        text: '$number',
+        fontSize: size >= 22 ? 10 : 9,
+        color: kColorWhite,
+      ),
     );
   }
 }

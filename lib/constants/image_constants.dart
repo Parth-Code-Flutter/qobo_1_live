@@ -14,6 +14,8 @@ const String kImgSplashScreen = '$imgPath/splash_screen_img.png';
 const String kImgBG = '$imgPath/bg_img.png';
 const String kGifSplashScreen = '$gifPath/splash_screen_gif.gif';
 const String kGifCongratulation = '$gifPath/congratulation_success.gif';
+/// Audio-room gift celebration GIF (full-screen after send-gift success).
+const String kGifLoveGift = '$gifPath/love_gif.gif';
 
 /// PNG Icons
 const String kIconApp = '$iconPath/app_icon.png';
