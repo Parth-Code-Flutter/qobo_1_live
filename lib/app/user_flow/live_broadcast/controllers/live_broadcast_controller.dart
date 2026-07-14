@@ -375,7 +375,8 @@ class LiveBroadcastController extends GetxController {
       _lastCelebratedGiftKey = key;
       GiftCelebrationOverlay.show(
         giftName: _giftNameFromChatLabel(message.message),
-        gifAsset: GiftCelebrationOverlay.loveGiftAsset,
+        // Full-screen jellyfish SVGA for peer gifts in audio rooms.
+        svgaAsset: GiftCelebrationOverlay.jellyfishGiftAsset,
       );
       return;
     }
@@ -694,8 +695,8 @@ class LiveBroadcastController extends GetxController {
         await Future<void>.delayed(const Duration(milliseconds: 300));
         GiftCelebrationOverlay.show(
           giftName: gift['name'],
-          // Full-screen love_gif.gif after successful send-gift API.
-          gifAsset: GiftCelebrationOverlay.loveGiftAsset,
+          // Full-screen jellyfish SVGA after successful send-gift API.
+          svgaAsset: GiftCelebrationOverlay.jellyfishGiftAsset,
         );
       }
 

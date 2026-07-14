@@ -5,21 +5,19 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
-import 'package:qobo_one_live/utils/text_utils/app_text.dart';
-import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:svgaplayer_flutter/svgaplayer_flutter.dart';
 
 /// Full-screen celebration overlay shown after a successful gift send.
 ///
-/// Prefer [gifAsset] (e.g. [loveGiftAsset]) for animated GIFs. Pass [svgaAsset]
-/// only when an SVGA effect is needed and no GIF is provided.
+/// Prefer [svgaAsset] (e.g. [jellyfishGiftAsset]) for client SVGA gift clips.
+/// Pass [gifAsset] only when a GIF is needed instead of SVGA.
 class GiftCelebrationOverlay {
   GiftCelebrationOverlay._();
 
   static const String treeLoveGiftAsset = 'assets/gif/tree_love_gift_79.svga';
   static const String jellyfishGiftAsset = 'assets/gif/jellyfish_gift_49.svga';
 
-  /// Default audio-room gift celebration GIF (`assets/gif/love_gif.gif`).
+  /// Optional GIF fallback (`assets/gif/love_gif.gif`).
   static const String loveGiftAsset = kGifLoveGift;
 
   static OverlayEntry? _activeEntry;
@@ -212,34 +210,6 @@ class _GiftCelebrationViewState extends State<_GiftCelebrationView>
                         child: const _GiftCelebrationCard(),
                       ),
                     ),
-                  Positioned(
-                    top: top + 12,
-                    left: 28,
-                    right: 28,
-                    child: Center(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.48),
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(
-                            color: kColorWhite.withValues(alpha: 0.12),
-                          ),
-                        ),
-                        child: AppText(
-                          text: '${widget.giftName} sent successfully',
-                          fontSize: TextStyles.k12FontSize,
-                          color: kColorWhite,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          align: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             );

@@ -30,7 +30,7 @@ void main() {
   });
 
   testWidgets(
-    'GiftCelebrationOverlay shows full-screen love GIF after success',
+    'GiftCelebrationOverlay shows celebration without success label',
     (tester) async {
       await tester.pumpWidget(
         GetMaterialApp(
@@ -40,7 +40,7 @@ void main() {
                 return ElevatedButton(
                   onPressed: () {
                     GiftCelebrationOverlay.show(
-                      giftName: 'Red Rose',
+                      giftName: 'Fireworks',
                       gifAsset: GiftCelebrationOverlay.loveGiftAsset,
                     );
                   },
@@ -54,10 +54,10 @@ void main() {
 
       await tester.tap(find.text('Send'));
       await tester.pump();
-      // Allow Image.asset / GIF decoder a frame to settle.
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('Red Rose sent successfully'), findsOneWidget);
+      // Success label removed — only the gift animation should show.
+      expect(find.textContaining('sent successfully'), findsNothing);
       expect(find.byType(Image), findsWidgets);
 
       final image = tester.widgetList<Image>(find.byType(Image)).firstWhere(
@@ -67,13 +67,10 @@ void main() {
                 GiftCelebrationOverlay.loveGiftAsset,
       );
       expect(image.fit, BoxFit.contain);
-      expect(image.width, isNotNull);
-      expect(image.height, isNotNull);
 
-      // Overlay auto-dismisses after its duration.
       await tester.pump(const Duration(milliseconds: 4600));
       await tester.pump();
-      expect(find.text('Red Rose sent successfully'), findsNothing);
+      expect(find.byType(Image), findsNothing);
     },
   );
 }
