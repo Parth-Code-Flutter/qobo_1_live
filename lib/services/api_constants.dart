@@ -259,6 +259,23 @@ class FrameEndpoints {
   static const String equip = '/api/frame/equip';
 }
 
+/// Central place for profile background storefront API endpoints.
+class BackgroundEndpoints {
+  BackgroundEndpoints._();
+
+  /// GET /api/background/shop
+  static const String shop = '/api/background/shop';
+
+  /// POST /api/background/buy
+  static const String buy = '/api/background/buy';
+
+  /// GET /api/background/my-backpack
+  static const String myBackpack = '/api/background/my-backpack';
+
+  /// POST /api/background/equip
+  static const String equip = '/api/background/equip';
+}
+
 /// Central place for PK and Call related API endpoints.
 class PkEndpoints {
   PkEndpoints._();

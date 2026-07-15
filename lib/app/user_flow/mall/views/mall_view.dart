@@ -225,6 +225,62 @@ class MallView extends GetView<MallController> {
             ),
         ],
       );
+    } else if (tabId == 4) {
+      final imageUrl = item['imageUrl']?.toString() ?? '';
+      return Container(
+        width: 150,
+        height: 106,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.55)),
+          image: imageUrl.isNotEmpty
+              ? DecorationImage(
+                  image: NetworkImage(imageUrl),
+                  fit: BoxFit.cover,
+                )
+              : null,
+          gradient: imageUrl.isEmpty
+              ? const LinearGradient(
+                  colors: [Color(0xFF8922C2), Color(0xFF151C68)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          boxShadow: [
+            BoxShadow(
+              color: kColorPrimary.withValues(alpha: 0.22),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            gradient: LinearGradient(
+              colors: [
+                kColorBlack.withValues(alpha: 0.1),
+                kColorBlack.withValues(alpha: 0.42),
+              ],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
+          child: const Center(
+            child: CircleAvatar(
+              radius: 26,
+              backgroundColor: kColorAvatarFallbackBg,
+              child: Text(
+                'U',
+                style: TextStyle(
+                  color: kColorWhite,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
     } else if (tabId == 2) {
       // Entrance Effects Preview
       final isDragon = item['id'] == 'effect_dragon';
@@ -367,8 +423,9 @@ class MallView extends GetView<MallController> {
       final items = controller.storeItems[controller.selectedTab.value] ?? [];
       final activePreview = controller.selectedPreviewItem.value;
       final isFrameTab = controller.selectedTab.value == 1;
+      final isBackgroundTab = controller.selectedTab.value == 4;
 
-      if (controller.isLoading.value && isFrameTab) {
+      if (controller.isLoading.value && (isFrameTab || isBackgroundTab)) {
         return const Center(child: CircularProgressIndicator());
       }
 
@@ -397,7 +454,8 @@ class MallView extends GetView<MallController> {
               activePreview != null && activePreview['id'] == item['id'];
           final isOwned = item['isOwned'] == true;
           final isEquipped = item['isEquipped'] == true;
-          final buttonText = isFrameTab
+          final usesBackpackFlow = isFrameTab || isBackgroundTab;
+          final buttonText = usesBackpackFlow
               ? isOwned
                     ? 'Open Backpack'
                     : '${item['price']} Coins'
@@ -427,7 +485,11 @@ class MallView extends GetView<MallController> {
                 children: [
                   Expanded(
                     child: Center(
-                      child: _StoreItemVisual(item: item, isFrame: isFrameTab),
+                      child: _StoreItemVisual(
+                        item: item,
+                        isFrame: isFrameTab,
+                        isBackground: isBackgroundTab,
+                      ),
                     ),
                   ),
                   Spacing.v10,
@@ -437,7 +499,7 @@ class MallView extends GetView<MallController> {
                     color: kColorText,
                     align: TextAlign.center,
                   ),
-                  if (isFrameTab) ...[
+                  if (usesBackpackFlow) ...[
                     Spacing.v2,
                     AppText(
                       text: item['category']?.toString() ?? 'Premium',
@@ -486,10 +548,15 @@ class MallView extends GetView<MallController> {
 }
 
 class _StoreItemVisual extends StatelessWidget {
-  const _StoreItemVisual({required this.item, required this.isFrame});
+  const _StoreItemVisual({
+    required this.item,
+    required this.isFrame,
+    required this.isBackground,
+  });
 
   final Map<String, dynamic> item;
   final bool isFrame;
+  final bool isBackground;
 
   @override
   Widget build(BuildContext context) {
@@ -537,6 +604,51 @@ class _StoreItemVisual extends StatelessWidget {
                 ),
               ),
           ],
+        ),
+      );
+    }
+
+    final backgroundUrl = item['imageUrl']?.toString() ?? '';
+    if (isBackground && backgroundUrl.isNotEmpty) {
+      return Container(
+        width: 96,
+        height: 86,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          image: DecorationImage(
+            image: NetworkImage(backgroundUrl),
+            fit: BoxFit.cover,
+          ),
+          border: Border.all(
+            color: item['isEquipped'] == true ? Colors.green : kColorWhite,
+            width: item['isEquipped'] == true ? 2 : 1,
+          ),
+        ),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              colors: [
+                kColorBlack.withValues(alpha: 0.02),
+                kColorBlack.withValues(alpha: 0.42),
+              ],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
+          child: const Center(
+            child: CircleAvatar(
+              radius: 20,
+              backgroundColor: kColorAvatarFallbackBg,
+              child: Text(
+                'U',
+                style: TextStyle(
+                  color: kColorWhite,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
         ),
       );
     }

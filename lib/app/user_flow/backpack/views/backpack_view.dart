@@ -80,6 +80,16 @@ class BackpackView extends GetView<BackpackController> {
               _equippedSlot('Chat Bubble', controller.equippedBubble),
             ],
           ),
+          Spacing.v8,
+          Row(
+            children: [
+              _equippedSlot(
+                'Background',
+                controller.equippedBackground,
+                displayNameObs: controller.equippedBackgroundName,
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -249,6 +259,10 @@ class BackpackView extends GetView<BackpackController> {
         return _buildPurchasedFramesGrid(items);
       }
 
+      if (categoryId == 5) {
+        return _buildPurchasedBackgroundsGrid(items);
+      }
+
       return GridView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: items.length,
@@ -272,6 +286,9 @@ class BackpackView extends GetView<BackpackController> {
           }
           if (categoryId == 4) {
             isEquipped = controller.equippedBubble.value == itemId;
+          }
+          if (categoryId == 5) {
+            isEquipped = controller.equippedBackground.value == itemId;
           }
 
           return Container(
@@ -440,6 +457,35 @@ class BackpackView extends GetView<BackpackController> {
                 onEquip: () => controller.equipItem(2, frame),
               );
             },
+          );
+        },
+      ),
+    );
+  }
+
+  /// Profile backgrounds use a wider visual card so users can recognize the
+  /// equipped profile skin before applying it.
+  Widget _buildPurchasedBackgroundsGrid(
+    List<Map<String, dynamic>> backgrounds,
+  ) {
+    return RefreshIndicator(
+      color: kColorPrimary,
+      onRefresh: controller.fetchBackpack,
+      child: GridView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+        itemCount: backgrounds.length,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 0.78,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+        ),
+        itemBuilder: (context, index) {
+          final background = backgrounds[index];
+          return _PurchasedBackgroundCard(
+            background: background,
+            onEquip: () => controller.equipItem(5, background),
           );
         },
       ),
@@ -638,6 +684,146 @@ class _BackpackFrameMedia extends StatelessWidget {
       height: size,
       fit: BoxFit.contain,
       errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+    );
+  }
+}
+
+class _PurchasedBackgroundCard extends StatelessWidget {
+  const _PurchasedBackgroundCard({
+    required this.background,
+    required this.onEquip,
+  });
+
+  final Map<String, dynamic> background;
+  final VoidCallback onEquip;
+
+  @override
+  Widget build(BuildContext context) {
+    final isEquipped = background['isEquipped'] == true;
+    final imageUrl = background['imageUrl']?.toString().trim() ?? '';
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: kColorWhite,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isEquipped
+              ? Colors.amber
+              : kColorPrimary.withValues(alpha: 0.10),
+          width: isEquipped ? 1.8 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (isEquipped ? Colors.amber : kColorPrimary).withValues(
+              alpha: 0.12,
+            ),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Align(
+            alignment: Alignment.topRight,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: isEquipped
+                    ? Colors.green
+                    : kColorPrimary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: AppText(
+                text: isEquipped ? 'ACTIVE' : 'OWNED',
+                fontSize: 9,
+                color: isEquipped ? kColorWhite : kColorPrimary,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: imageUrl.isEmpty
+                    ? const LinearGradient(
+                        colors: [Color(0xFF8922C2), Color(0xFF151C68)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : null,
+                image: imageUrl.isNotEmpty
+                    ? DecorationImage(
+                        image: NetworkImage(imageUrl),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
+              ),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: LinearGradient(
+                    colors: [
+                      kColorBlack.withValues(alpha: 0.04),
+                      kColorBlack.withValues(alpha: 0.42),
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
+                child: const Center(
+                  child: CircleAvatar(
+                    radius: 24,
+                    backgroundColor: kColorAvatarFallbackBg,
+                    child: SemiBoldText(
+                      text: 'U',
+                      fontSize: TextStyles.k16FontSize,
+                      color: kColorWhite,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          SemiBoldText(
+            text: background['name']?.toString() ?? 'Profile Background',
+            fontSize: TextStyles.k14FontSize,
+            color: kColorText,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            align: TextAlign.center,
+          ),
+          Spacing.v4,
+          AppText(
+            text: background['description']?.toString() ?? 'Purchased item',
+            fontSize: 9,
+            color: kColorHint,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            align: TextAlign.center,
+          ),
+          Spacing.v10,
+          SizedBox(
+            width: double.infinity,
+            height: 34,
+            child: appButton(
+              onPressed: onEquip,
+              buttonText: isEquipped ? 'Unequip' : 'Equip Background',
+              buttonColor: isEquipped ? const Color(0xFFF1E6B8) : kColorPrimary,
+              textColor: isEquipped ? kColorText : kColorWhite,
+              borderRadius: 17,
+              textStyle: TextStyles.kSemiBoldPoppins(
+                fontSize: TextStyles.k12FontSize,
+                colors: isEquipped ? kColorText : kColorWhite,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

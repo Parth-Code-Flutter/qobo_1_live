@@ -1,16 +1,23 @@
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/repo/background/background_repo.dart';
 import 'package:qobo_one_live/repo/frame/frame_repo.dart';
 import 'package:qobo_one_live/repo/user/user_repo.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 
 class BackpackController extends GetxController {
-  BackpackController({UserRepo? userRepo, FrameRepo? frameRepo})
+  BackpackController({
+    UserRepo? userRepo,
+    FrameRepo? frameRepo,
+    BackgroundRepo? backgroundRepo,
+  })
     : _userRepo = userRepo ?? UserRepo(),
-      _frameRepo = frameRepo ?? FrameRepo();
+      _frameRepo = frameRepo ?? FrameRepo(),
+      _backgroundRepo = backgroundRepo ?? BackgroundRepo();
 
   final UserRepo _userRepo;
   final FrameRepo _frameRepo;
+  final BackgroundRepo _backgroundRepo;
   final isLoading = false.obs;
 
   final categories = <Map<String, dynamic>>[
@@ -18,6 +25,7 @@ class BackpackController extends GetxController {
     {'id': 2, 'name': 'Avatar Frames'},
     {'id': 3, 'name': 'Entrance Effects'},
     {'id': 4, 'name': 'Chat Bubbles'},
+    {'id': 5, 'name': 'Profile Backgrounds'},
   ].obs;
 
   final selectedCategory = 1.obs;
@@ -27,6 +35,8 @@ class BackpackController extends GetxController {
   final equippedFrameName = RxnString('Golden Crown');
   final equippedEffect = RxnString();
   final equippedBubble = RxnString();
+  final equippedBackground = RxnString();
+  final equippedBackgroundName = RxnString();
 
   // Reactive Map of items currently owned
   final RxMap<int, List<Map<String, dynamic>>>
@@ -77,6 +87,15 @@ class BackpackController extends GetxController {
             'A cooling light-blue bubble theme for all room text chats.',
       },
     ],
+    5: [
+      {
+        'id': 'background_loading',
+        'name': 'Loading backgrounds',
+        'icon': kIconMall,
+        'quantity': 1,
+        'description': 'Fetching purchased profile backgrounds.',
+      },
+    ],
   }.obs;
 
   @override
@@ -123,7 +142,9 @@ class BackpackController extends GetxController {
           final grouped = <int, List<Map<String, dynamic>>>{};
           for (final raw in apiItems.whereType<Map>()) {
             final categoryId = _toInt(raw['categoryId']);
-            if (categoryId == 0 || categoryId == 2) continue;
+            if (categoryId == 0 || categoryId == 2 || categoryId == 5) {
+              continue;
+            }
             grouped
                 .putIfAbsent(categoryId, () => <Map<String, dynamic>>[])
                 .add({
@@ -147,6 +168,7 @@ class BackpackController extends GetxController {
       }
 
       await _fetchAvatarFrames();
+      await _fetchProfileBackgrounds();
     } finally {
       isLoading.value = false;
     }
@@ -218,16 +240,73 @@ class BackpackController extends GetxController {
     equippedFrameName.value = activeFrameName;
   }
 
+  Future<void> _fetchProfileBackgrounds() async {
+    final response = await _backgroundRepo.getMyBackpack(isShowLoader: false);
+    final backgrounds = <Map<String, dynamic>>[];
+    String? activeBackgroundId;
+    String? activeBackgroundName;
+
+    for (final raw in _extractList(response?['data']).whereType<Map>()) {
+      final item = Map<String, dynamic>.from(raw);
+      final backgroundDetails = item['backgroundDetails'];
+      final background = backgroundDetails is Map
+          ? Map<String, dynamic>.from(backgroundDetails)
+          : const <String, dynamic>{};
+      final itemId = item['id']?.toString() ?? '';
+      if (itemId.isEmpty) continue;
+
+      final name = background['name']?.toString() ?? 'Profile Background';
+      final isEquipped = item['isEquipped'] == true;
+      if (isEquipped) {
+        activeBackgroundId = itemId;
+        activeBackgroundName = name;
+      }
+
+      backgrounds.add({
+        'id': itemId,
+        'backgroundId':
+            background['id']?.toString() ?? item['itemId']?.toString() ?? '',
+        'name': name,
+        'icon': kIconMall,
+        'imageUrl':
+            ApiImageUtils.normalize(
+              _firstText([
+                background['image'],
+                background['imageUrl'],
+                background['previewUrl'],
+                item['image'],
+                item['imageUrl'],
+              ]),
+            ) ??
+            '',
+        'quantity': 1,
+        'description': _itemExpiryLabel(item['expiresAt']),
+        'isEquipped': isEquipped,
+        'expiresAt': item['expiresAt']?.toString() ?? '',
+      });
+    }
+
+    final merged = Map<int, List<Map<String, dynamic>>>.from(mockItems);
+    merged[5] = backgrounds;
+    mockItems.assignAll(merged);
+    equippedBackground.value = activeBackgroundId;
+    equippedBackgroundName.value = activeBackgroundName;
+  }
+
   Future<void> equipItem(int categoryId, Map<String, dynamic> item) async {
     final itemId = item['id'] as String;
     final name = item['name'] as String;
     final isCurrentlyEquipped =
         categoryId == 2 && equippedFrame.value == itemId ||
         categoryId == 3 && equippedEffect.value == itemId ||
-        categoryId == 4 && equippedBubble.value == itemId;
+        categoryId == 4 && equippedBubble.value == itemId ||
+        categoryId == 5 && equippedBackground.value == itemId;
 
     if (categoryId == 2) {
       await _equipAvatarFrame(itemId: itemId, name: name);
+      return;
+    } else if (categoryId == 5) {
+      await _equipProfileBackground(itemId: itemId, name: name);
       return;
     } else if (categoryId == 3) {
       if (equippedEffect.value == itemId) {
@@ -286,6 +365,28 @@ class BackpackController extends GetxController {
     );
   }
 
+  Future<void> _equipProfileBackground({
+    required String itemId,
+    required String name,
+  }) async {
+    final shouldEquip = equippedBackground.value != itemId;
+    final response = await _backgroundRepo.equipBackground(
+      backpackItemId: itemId,
+      equip: shouldEquip,
+      isShowLoader: true,
+    );
+    if (response == null || response['statusCode'] == 0) {
+      Get.snackbar('Backpack', 'Could not update this background.');
+      return;
+    }
+
+    await _fetchProfileBackgrounds();
+    Get.snackbar(
+      'Backpack',
+      shouldEquip ? 'Equipped $name successfully!' : 'Unequipped $name',
+    );
+  }
+
   List _extractList(dynamic value) {
     if (value is List) return value;
     if (value is Map) {
@@ -296,8 +397,12 @@ class BackpackController extends GetxController {
   }
 
   String _frameExpiryLabel(dynamic value) {
+    return _itemExpiryLabel(value).replaceFirst('Purchased item', 'Purchased frame');
+  }
+
+  String _itemExpiryLabel(dynamic value) {
     final text = value?.toString() ?? '';
-    if (text.trim().isEmpty || text == 'null') return 'Purchased frame';
+    if (text.trim().isEmpty || text == 'null') return 'Purchased item';
     return 'Expires $text';
   }
 
@@ -330,6 +435,8 @@ class BackpackController extends GetxController {
         return kIconActivity;
       case 4:
         return kIconPointerCenter;
+      case 5:
+        return kIconMall;
       default:
         return kIconAward;
     }

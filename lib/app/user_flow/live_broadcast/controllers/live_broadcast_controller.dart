@@ -865,16 +865,6 @@ class LiveBroadcastController extends GetxController {
           svgaUrl: animationUrl.isNotEmpty ? animationUrl : null,
           soundUrl: soundUrl.isNotEmpty ? soundUrl : null,
         );
-        Get.snackbar(
-          '🎁 Gift Sent! 🎁',
-          isRoomGiftMode.value
-              ? 'You shared ${gift['name']} with everyone in the room!'
-              : 'You sent ${gift['name']} to $giftTargetLabel!',
-          snackPosition: SnackPosition.TOP,
-          backgroundColor: const Color(0xFFFF4081),
-          colorText: const Color(0xFFFFFFFF),
-          duration: const Duration(seconds: 3),
-        );
       }
     } else {
       Get.snackbar(

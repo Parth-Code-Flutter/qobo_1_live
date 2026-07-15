@@ -31,6 +31,15 @@ class UserSessionController extends GetxController {
     'frame',
     'avatarFrame.image',
   ]);
+  String get profileBackgroundUrl => _stringValueFromProfile(const [
+    'profileBackgroundUrl',
+    'profile_background_url',
+    'profileBackground',
+    'profile_background',
+    'backgroundUrl',
+    'background_url',
+    'profileBackground.image',
+  ]);
   bool get isSuperAdmin => role.toLowerCase() == 'super_admin';
 
   String get displayName {

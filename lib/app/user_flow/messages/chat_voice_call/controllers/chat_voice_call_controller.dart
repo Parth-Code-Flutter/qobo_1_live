@@ -285,11 +285,6 @@ class ChatVoiceCallController extends GetxController {
         svgaUrl: animationUrl.isNotEmpty ? animationUrl : null,
         soundUrl: soundUrl.isNotEmpty ? soundUrl : null,
       );
-      Get.snackbar(
-        'Gift Sent',
-        'You sent ${gift['name'] ?? 'a gift'} to ${peerName.value}.',
-        snackPosition: SnackPosition.TOP,
-      );
       return;
     }
     Get.snackbar(

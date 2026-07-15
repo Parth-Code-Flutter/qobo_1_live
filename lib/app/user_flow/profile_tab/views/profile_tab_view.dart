@@ -10,6 +10,7 @@ import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/app/user_flow/wallet/bindings/wallet_binding.dart';
 import 'package:qobo_one_live/app/user_flow/wallet/views/wallet_view.dart';
 import 'package:qobo_one_live/utils/alert_message_utils/alert_message_utils.dart';
+import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
@@ -74,14 +75,15 @@ class ProfileTabView extends StatelessWidget {
       init: userSession,
       builder: (session) {
         final imageUrl = session.displayPictureUrl;
+        final profileBackgroundUrl =
+            ApiImageUtils.normalize(session.profileBackgroundUrl) ?? '';
         return LayoutBuilder(
           builder: (_, constraints) {
             final isCompact = constraints.maxWidth < 360;
             final avatarSize = isCompact ? 74.0 : 88.0;
             final avatarFrameSize = avatarSize * 1.34;
-            return Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+            return _ProfileBackgroundShell(
+              backgroundUrl: profileBackgroundUrl,
               child: Column(
                 children: [
                   Row(
@@ -631,6 +633,58 @@ class _BecomeSuperAdminButton extends StatefulWidget {
   @override
   State<_BecomeSuperAdminButton> createState() =>
       _BecomeSuperAdminButtonState();
+}
+
+class _ProfileBackgroundShell extends StatelessWidget {
+  const _ProfileBackgroundShell({
+    required this.backgroundUrl,
+    required this.child,
+  });
+
+  final String backgroundUrl;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasBackground = backgroundUrl.trim().isNotEmpty;
+
+    // The equipped background sits behind profile details only. A dark overlay
+    // keeps name, ID, chips, and stats readable on bright uploaded images.
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        border: hasBackground
+            ? Border.all(color: kColorWhite.withValues(alpha: 0.16))
+            : null,
+        image: hasBackground
+            ? DecorationImage(
+                image: NetworkImage(backgroundUrl),
+                fit: BoxFit.cover,
+              )
+            : null,
+      ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: hasBackground
+              ? LinearGradient(
+                  colors: [
+                    kColorBlack.withValues(alpha: 0.18),
+                    kColorBlack.withValues(alpha: 0.52),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                )
+              : null,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+          child: child,
+        ),
+      ),
+    );
+  }
 }
 
 class _BecomeSuperAdminButtonState extends State<_BecomeSuperAdminButton> {

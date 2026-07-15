@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/repo/background/background_repo.dart';
 import 'package:qobo_one_live/repo/economy/economy_repo.dart';
 import 'package:qobo_one_live/repo/frame/frame_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
@@ -8,12 +9,18 @@ import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_dialogs/common_giffy_dialog.dart';
 
 class MallController extends GetxController {
-  MallController({EconomyRepo? economyRepo, FrameRepo? frameRepo})
+  MallController({
+    EconomyRepo? economyRepo,
+    FrameRepo? frameRepo,
+    BackgroundRepo? backgroundRepo,
+  })
     : _economyRepo = economyRepo ?? EconomyRepo(),
-      _frameRepo = frameRepo ?? FrameRepo();
+      _frameRepo = frameRepo ?? FrameRepo(),
+      _backgroundRepo = backgroundRepo ?? BackgroundRepo();
 
   final EconomyRepo _economyRepo;
   final FrameRepo _frameRepo;
+  final BackgroundRepo _backgroundRepo;
   final isLoading = false.obs;
 
   final coinsBalance = 0.obs;
@@ -22,6 +29,7 @@ class MallController extends GetxController {
     {'id': 1, 'name': 'Avatar Frames'},
     {'id': 2, 'name': 'Entrance Effects'},
     {'id': 3, 'name': 'Chat Bubbles'},
+    {'id': 4, 'name': 'Profile Backgrounds'},
   ].obs;
 
   final selectedTab = 1.obs;
@@ -86,6 +94,16 @@ class MallController extends GetxController {
             'Express yourself with a beautiful pink heart-adorned bubble.',
       },
     ],
+    4: [
+      {
+        'id': 'background_loading',
+        'name': 'Loading backgrounds',
+        'icon': kIconMall,
+        'price': 0,
+        'duration': 'Please wait',
+        'description': 'Fetching latest profile backgrounds from the mall.',
+      },
+    ],
   }.obs;
 
   void selectTab(int tabId) {
@@ -101,6 +119,7 @@ class MallController extends GetxController {
     try {
       await _fetchWalletBalance();
       await _fetchFrameShop();
+      await _fetchBackgroundShop();
       selectTab(selectedTab.value);
     } finally {
       isLoading.value = false;
@@ -172,6 +191,56 @@ class MallController extends GetxController {
     storeItems.assignAll(merged);
   }
 
+  Future<void> _fetchBackgroundShop() async {
+    final shopResponse = await _backgroundRepo.getShopBackgrounds(
+      isShowLoader: false,
+    );
+    final backpackResponse = await _backgroundRepo.getMyBackpack(
+      isShowLoader: false,
+    );
+    final purchasedByBackgroundId = _purchasedBackgroundsByBackgroundId(
+      _extractList(backpackResponse?['data']),
+    );
+    final backgrounds = <Map<String, dynamic>>[];
+
+    for (final raw in _extractList(shopResponse?['data']).whereType<Map>()) {
+      final backgroundId = raw['id']?.toString() ?? '';
+      if (backgroundId.isEmpty) continue;
+
+      final purchased = purchasedByBackgroundId[backgroundId];
+      final durationDays = _toInt(raw['durationDays']);
+      final category = raw['category']?.toString() ?? 'Premium';
+      final imageUrl = ApiImageUtils.normalize(
+        raw['image']?.toString() ??
+            raw['imageUrl']?.toString() ??
+            raw['previewUrl']?.toString(),
+      );
+
+      backgrounds.add({
+        'id': backgroundId,
+        'name': raw['name']?.toString() ?? 'Profile Background',
+        'icon': kIconMall,
+        'imageUrl': imageUrl,
+        'price': _toInt(raw['price']),
+        'duration': durationDays > 0 ? '$durationDays days' : 'Limited time',
+        'durationDays': durationDays,
+        'category': category,
+        'status': raw['status']?.toString() ?? 'active',
+        'description': 'Premium $category background for your profile.',
+        'isOwned': purchased != null,
+        'isEquipped': purchased?['isEquipped'] == true,
+        'backpackItemId': purchased?['id']?.toString(),
+        'expiresAt': purchased?['expiresAt']?.toString(),
+      });
+    }
+
+    if (backgrounds.isEmpty) return;
+
+    final merged = Map<int, List<Map<String, dynamic>>>.from(storeItems);
+    merged[4] = backgrounds;
+    storeItems.assignAll(merged);
+  }
+
   Future<void> buyItem(Map<String, dynamic> item) async {
     if (selectedTab.value == 1) {
       if (item['isOwned'] == true) {
@@ -180,6 +249,15 @@ class MallController extends GetxController {
         await Get.toNamed(Routes.BACKPACK);
       } else {
         await buyFrame(item);
+      }
+      return;
+    }
+
+    if (selectedTab.value == 4) {
+      if (item['isOwned'] == true) {
+        await Get.toNamed(Routes.BACKPACK);
+      } else {
+        await buyBackground(item);
       }
       return;
     }
@@ -213,6 +291,35 @@ class MallController extends GetxController {
 
     await _fetchFrameShop();
     selectTab(1);
+    await _showPurchaseSuccessDialog(name: name, price: price);
+  }
+
+  Future<void> buyBackground(Map<String, dynamic> item) async {
+    final price = _toInt(item['price']);
+    final name = item['name']?.toString() ?? 'Profile Background';
+
+    if (coinsBalance.value < price) {
+      _showInsufficientCoinsDialog(price: price, itemName: name);
+      return;
+    }
+
+    final response = await _backgroundRepo.buyBackground(
+      backgroundId: item['id'].toString(),
+      isShowLoader: true,
+    );
+    if (!_isSuccess(response)) {
+      Get.snackbar('Mall', 'Could not purchase "$name".');
+      return;
+    }
+
+    final data = response?['data'];
+    final remaining = data is Map ? data['remainingCoins'] : null;
+    coinsBalance.value = remaining == null
+        ? coinsBalance.value - price
+        : _toInt(remaining);
+
+    await _fetchBackgroundShop();
+    selectTab(4);
     await _showPurchaseSuccessDialog(name: name, price: price);
   }
 
@@ -305,6 +412,23 @@ class MallController extends GetxController {
           (frameDetails is Map ? frameDetails['id']?.toString() : null);
       if (frameId != null && frameId.isNotEmpty) {
         result[frameId] = item;
+      }
+    }
+    return result;
+  }
+
+  Map<String, Map<String, dynamic>> _purchasedBackgroundsByBackgroundId(
+    List items,
+  ) {
+    final result = <String, Map<String, dynamic>>{};
+    for (final raw in items.whereType<Map>()) {
+      final item = Map<String, dynamic>.from(raw);
+      final backgroundDetails = item['backgroundDetails'];
+      final backgroundId =
+          item['itemId']?.toString() ??
+          (backgroundDetails is Map ? backgroundDetails['id']?.toString() : null);
+      if (backgroundId != null && backgroundId.isNotEmpty) {
+        result[backgroundId] = item;
       }
     }
     return result;
