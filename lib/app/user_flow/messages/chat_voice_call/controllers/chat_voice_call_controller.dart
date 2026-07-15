@@ -279,9 +279,11 @@ class ChatVoiceCallController extends GetxController {
       await loadWalletBalance();
       if (Get.isBottomSheetOpen == true) Get.back<void>();
       final animationUrl = _giftAnimationUrlFromResponse(response, gift);
+      final soundUrl = _giftSoundUrlFromResponse(response, gift);
       GiftCelebrationOverlay.show(
         giftName: gift['name'],
         svgaUrl: animationUrl.isNotEmpty ? animationUrl : null,
+        soundUrl: soundUrl.isNotEmpty ? soundUrl : null,
       );
       Get.snackbar(
         'Gift Sent',
@@ -316,6 +318,30 @@ class ChatVoiceCallController extends GetxController {
     return gift['animationUrl']?.trim() ?? '';
   }
 
+  String _giftSoundUrlFromResponse(
+    Map<String, dynamic>? response,
+    Map<String, String> gift,
+  ) {
+    final data = response?['data'];
+    final responseGift = data is Map ? data['gift'] : null;
+    final soundValue =
+        (responseGift is Map
+            ? responseGift['soundUrl'] ??
+                  responseGift['sound_url'] ??
+                  responseGift['audioUrl'] ??
+                  responseGift['audio_url']
+            : null) ??
+        (data is Map
+            ? data['soundUrl'] ??
+                  data['sound_url'] ??
+                  data['audioUrl'] ??
+                  data['audio_url']
+            : null);
+    final apiSoundUrl = soundValue?.toString().trim();
+    if (apiSoundUrl != null && apiSoundUrl.isNotEmpty) return apiSoundUrl;
+    return gift['soundUrl']?.trim() ?? '';
+  }
+
   void _startTicker() {
     _ticker?.cancel();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -338,6 +364,12 @@ class ChatVoiceCallController extends GetxController {
         raw['animationUrl']?.toString() ??
         raw['animation_url']?.toString() ??
         '';
+    final soundUrl =
+        raw['soundUrl']?.toString() ??
+        raw['sound_url']?.toString() ??
+        raw['audioUrl']?.toString() ??
+        raw['audio_url']?.toString() ??
+        '';
     return {
       'id': raw['id']?.toString() ?? raw['_id']?.toString() ?? '',
       'name': raw['name']?.toString() ?? raw['title']?.toString() ?? 'Gift',
@@ -351,6 +383,7 @@ class ChatVoiceCallController extends GetxController {
       'category':
           raw['category']?.toString() ?? raw['type']?.toString() ?? 'Popular',
       'animationUrl': animationUrl.trim(),
+      'soundUrl': soundUrl.trim(),
     };
   }
 

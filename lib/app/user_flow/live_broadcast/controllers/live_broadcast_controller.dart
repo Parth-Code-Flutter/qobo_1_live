@@ -90,6 +90,7 @@ class LiveBroadcastController extends GetxController {
   Timer? _seatRefreshTimer;
   VoidCallback? _viewerCountListener;
   var _exitReported = false;
+  var _hostEndConfirmed = false;
 
   @override
   void onInit() {
@@ -229,6 +230,11 @@ class LiveBroadcastController extends GetxController {
 
   bool get canSendGifts => !isHost.value;
 
+  /// Zego can emit call-end lifecycle events during participant changes.
+  /// Hosts may leave the route only after explicitly confirming room end.
+  bool get canProcessGroupCallEnd =>
+      !isHost.value || (_hostEndConfirmed && _exitReported);
+
   String get giftTargetLabel {
     if (isRoomGiftMode.value) return 'Everyone in this room';
     final name = selectedGiftReceiverName.value?.trim();
@@ -283,6 +289,15 @@ class LiveBroadcastController extends GetxController {
         _syncViewers(ZegoUIKit().getAllUsers());
       } catch (_) {}
     });
+  }
+
+  /// Group-call rooms share the same Zego message bus but not the live-stream
+  /// controller facade. Subscribe through the base UIKit for peer gift events.
+  void _bindGroupCallMessageListener() {
+    _messageSub?.cancel();
+    final zego = ZegoUIKit();
+    _messageSub = zego.getInRoomMessageListStream().listen(_syncChatFromZego);
+    _syncChatFromZego(zego.getInRoomMessages());
   }
 
   void _onViewerCountChanged() {
@@ -344,13 +359,11 @@ class LiveBroadcastController extends GetxController {
     List<ZegoInRoomMessage> messages,
     String myUserId,
   ) {
-    if (!isAudioRoom || messages.isEmpty) return;
+    if (!isAudioRoom) return;
 
     final giftMessages = messages
         .where((m) => m.message.trim().startsWith('🎁 '))
         .toList();
-    if (giftMessages.isEmpty) return;
-
     // First sync after join: mark existing gifts as seen (no replay/pop).
     if (!_giftChatBootstrapDone) {
       for (final message in giftMessages) {
@@ -359,6 +372,7 @@ class LiveBroadcastController extends GetxController {
       _giftChatBootstrapDone = true;
       return;
     }
+    if (giftMessages.isEmpty) return;
 
     // Celebrate only newly arrived peer gift messages (newest first).
     for (var i = giftMessages.length - 1; i >= 0; i--) {
@@ -374,10 +388,12 @@ class LiveBroadcastController extends GetxController {
 
       _lastCelebratedGiftKey = key;
       final animUrl = parseGiftAnimUrl(message.message);
+      final soundUrl = parseGiftSoundUrl(message.message);
       GiftCelebrationOverlay.show(
         giftName: _giftNameFromChatLabel(message.message),
         // Peer gifts play the same API animationUrl embedded in the chat payload.
         svgaUrl: animUrl,
+        soundUrl: soundUrl,
         // svgaAsset: GiftCelebrationOverlay.jellyfishGiftAsset,
       );
       return;
@@ -404,15 +420,19 @@ class LiveBroadcastController extends GetxController {
     required String? giftName,
     required String? giftIcon,
     required String animationUrl,
+    required String soundUrl,
   }) {
     final name = giftName?.trim().isNotEmpty == true
         ? giftName!.trim()
         : 'Gift';
     final iconPart = isNetworkGiftIcon(giftIcon) ? '' : (giftIcon ?? '');
     final base = '🎁 sent $name $iconPart'.trim();
-    if (animationUrl.isEmpty) return base;
-    // Hidden marker so other clients can play the exact gift SVGA.
-    return '$base\n[[giftAnim:$animationUrl]]';
+    final markers = <String>[
+      if (animationUrl.isNotEmpty) '[[giftAnim:$animationUrl]]',
+      if (soundUrl.isNotEmpty) '[[giftSound:$soundUrl]]',
+    ];
+    // Hidden markers let peers play the exact gift animation and sound.
+    return markers.isEmpty ? base : '$base\n${markers.join('\n')}';
   }
 
   Map<String, dynamic> _mapZegoMessage(
@@ -454,10 +474,36 @@ class LiveBroadcastController extends GetxController {
     );
   }
 
-  void handleGroupCallRoomError(Object error) {
+  void onGroupCallRoomConnected({bool bindMessages = true}) {
+    isZegoConnected.value = true;
+    connectionIssue.value = '';
+    if (bindMessages) {
+      _bindGroupCallMessageListener();
+    }
+  }
+
+  void handleGroupCallRoomLoginFailed(int errorCode) {
+    if (isZegoConnected.value) return;
+    _showGroupCallLoginError(errorCode: errorCode);
+  }
+
+  void handleGroupCallRoomError(ZegoUIKitError error) {
+    final method = error.method.toLowerCase();
+    final isLoginError =
+        error.code == ZegoUIKitErrorCode.roomLoginError ||
+        method.contains('loginroom') ||
+        method.contains('joinroom');
+
+    // The prebuilt call error stream also reports participant media/device
+    // errors. Those are not local room-login failures and must not alarm hosts.
+    if (!isLoginError || isZegoConnected.value) return;
+    _showGroupCallLoginError(errorCode: error.code);
+  }
+
+  void _showGroupCallLoginError({required int errorCode}) {
     isZegoConnected.value = false;
     connectionIssue.value =
-        'Could not join room. Verify Zego Voice & Video Call App ID / App Sign.';
+        'Could not join room (error $errorCode). Please try again.';
     if (Get.isSnackbarOpen) {
       Get.closeAllSnackbars();
     }
@@ -666,7 +712,11 @@ class LiveBroadcastController extends GetxController {
         raw['svgaUrl']?.toString() ??
         '';
     final soundUrl =
-        raw['soundUrl']?.toString() ?? raw['sound_url']?.toString() ?? '';
+        raw['soundUrl']?.toString() ??
+        raw['sound_url']?.toString() ??
+        raw['audioUrl']?.toString() ??
+        raw['audio_url']?.toString() ??
+        '';
     return {
       'id': raw['id']?.toString() ?? raw['_id']?.toString() ?? '',
       'name': name,
@@ -695,6 +745,30 @@ class LiveBroadcastController extends GetxController {
       return apiAnimationUrl;
     }
     return gift['animationUrl']?.trim() ?? '';
+  }
+
+  String _giftSoundUrlFromResponse(
+    Map<String, dynamic>? response,
+    Map<String, String> gift,
+  ) {
+    final data = response?['data'];
+    final responseGift = data is Map ? data['gift'] : null;
+    final soundValue =
+        (responseGift is Map
+            ? responseGift['soundUrl'] ??
+                  responseGift['sound_url'] ??
+                  responseGift['audioUrl'] ??
+                  responseGift['audio_url']
+            : null) ??
+        (data is Map
+            ? data['soundUrl'] ??
+                  data['sound_url'] ??
+                  data['audioUrl'] ??
+                  data['audio_url']
+            : null);
+    final apiSoundUrl = soundValue?.toString().trim();
+    if (apiSoundUrl != null && apiSoundUrl.isNotEmpty) return apiSoundUrl;
+    return gift['soundUrl']?.trim() ?? '';
   }
 
   Future<void> sendGift(Map<String, String> gift) async {
@@ -743,6 +817,7 @@ class LiveBroadcastController extends GetxController {
     if (isEconomyApiSuccess(response)) {
       final showAudioRoomGiftAnimation = isAudioRoom;
       final animationUrl = _giftAnimationUrlFromResponse(response, gift);
+      final soundUrl = _giftSoundUrlFromResponse(response, gift);
       if (showAudioRoomGiftAnimation) {
         // Close sheet first so the gift animation is visible over the room UI.
         Get.back();
@@ -751,6 +826,7 @@ class LiveBroadcastController extends GetxController {
           giftName: gift['name'],
           // Dynamic SVGA from gift-list API `animationUrl`.
           svgaUrl: animationUrl.isNotEmpty ? animationUrl : null,
+          soundUrl: soundUrl.isNotEmpty ? soundUrl : null,
           // Local jellyfish SVGA disabled — API animationUrl is the source of truth.
           // svgaAsset: GiftCelebrationOverlay.jellyfishGiftAsset,
         );
@@ -762,11 +838,16 @@ class LiveBroadcastController extends GetxController {
         giftName: gift['name'],
         giftIcon: gift['icon'],
         animationUrl: animationUrl,
+        soundUrl: soundUrl,
       );
       if (isZegoConnected.value) {
-        unawaited(
-          ZegoUIKitPrebuiltLiveStreamingController().message.send(giftLabel),
-        );
+        if (isGroupCallRoom) {
+          unawaited(ZegoUIKit().sendInRoomMessage(giftLabel));
+        } else {
+          unawaited(
+            ZegoUIKitPrebuiltLiveStreamingController().message.send(giftLabel),
+          );
+        }
       } else {
         chatMessages.add({
           'sender': 'You',
@@ -782,6 +863,7 @@ class LiveBroadcastController extends GetxController {
         GiftCelebrationOverlay.show(
           giftName: gift['name'],
           svgaUrl: animationUrl.isNotEmpty ? animationUrl : null,
+          soundUrl: soundUrl.isNotEmpty ? soundUrl : null,
         );
         Get.snackbar(
           '🎁 Gift Sent! 🎁',
@@ -1701,6 +1783,7 @@ class LiveBroadcastController extends GetxController {
     );
 
     if (_isApiSuccess(response)) {
+      _hostEndConfirmed = true;
       _exitReported = true;
       _stopSeatRefreshPolling();
       if (Get.isDialogOpen == true) Get.back();
@@ -1712,7 +1795,45 @@ class LiveBroadcastController extends GetxController {
     _showRoomApiError('End room', response, 'Unable to end this room.');
   }
 
+  /// Ends a host room only after Zego's hang-up confirmation was accepted.
+  ///
+  /// This deliberately does not navigate; returning `true` lets the prebuilt
+  /// call widget perform its normal, single route exit.
+  Future<bool> endRoomAfterConfirmedHangUp() async {
+    if (!isHost.value || !_isAudioVideoRoomPayload()) return true;
+    if (_exitReported) return true;
+
+    final backendRoomId = audioRoomApiId;
+    if (backendRoomId.isEmpty) {
+      Get.snackbar(
+        'End room',
+        'Room id is missing, so this room cannot be ended.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFFD32F2F),
+        colorText: kColorWhite,
+      );
+      return false;
+    }
+
+    final response = await _roomRepo.endRoom(
+      roomId: backendRoomId,
+      isShowLoader: true,
+    );
+    if (!_isApiSuccess(response)) {
+      _showRoomApiError('End room', response, 'Unable to end this room.');
+      return false;
+    }
+
+    _exitReported = true;
+    _hostEndConfirmed = true;
+    _stopSeatRefreshPolling();
+    return true;
+  }
+
   void reportRoomExit() {
+    // Host room termination must only happen through an explicit confirmed
+    // action, never from Zego lifecycle/rebuild callbacks.
+    if (isHost.value) return;
     unawaited(_reportAudioVideoRoomExit());
   }
 
@@ -1721,17 +1842,13 @@ class LiveBroadcastController extends GetxController {
   }
 
   Future<void> _reportAudioVideoRoomExit() async {
-    if (_exitReported || !_isAudioVideoRoomPayload()) return;
+    if (isHost.value || _exitReported || !_isAudioVideoRoomPayload()) return;
     _exitReported = true;
     _stopSeatRefreshPolling();
     final backendRoomId = _extractBackendRoomId(_roomData);
     if (backendRoomId == null || backendRoomId.trim().isEmpty) return;
 
-    if (isHost.value) {
-      await _roomRepo.endRoom(roomId: backendRoomId, isShowLoader: false);
-    } else {
-      await _roomRepo.leaveRoom(roomId: backendRoomId, isShowLoader: false);
-    }
+    await _roomRepo.leaveRoom(roomId: backendRoomId, isShowLoader: false);
   }
 
   bool _isAudioVideoRoomPayload() {

@@ -78,7 +78,8 @@ String? resolveHostAvatarUrl({
           'photo',
         ]);
 
-  final raw = fromNested ??
+  final raw =
+      fromNested ??
       readRoomField(roomData, [
         'hostAvatar',
         'host_avatar',
@@ -124,7 +125,8 @@ String? resolveHostId(Map<String, dynamic> roomData) {
 
 int readEngagementCount(Map<String, dynamic> roomData) {
   final nested = readNestedHost(roomData);
-  final raw = nested?['followerCount'] ??
+  final raw =
+      nested?['followerCount'] ??
       nested?['followers'] ??
       nested?['likes'] ??
       roomData['heatScore'] ??
@@ -160,11 +162,13 @@ bool isNetworkGiftIcon(String? icon) {
 /// Marker appended to gift chat lines so peers can load `animationUrl`.
 const giftAnimMarkerPrefix = '[[giftAnim:';
 const giftAnimMarkerSuffix = ']]';
+const giftSoundMarkerPrefix = '[[giftSound:';
+const giftSoundMarkerSuffix = ']]';
 
-/// Removes the embedded animation marker so chat UI stays clean.
+/// Removes embedded gift media markers so chat UI stays clean.
 String stripGiftAnimMarker(String text) {
   return text
-      .replaceAll(RegExp(r'\n?\[\[giftAnim:.*?\]\]'), '')
+      .replaceAll(RegExp(r'\n?\[\[gift(?:Anim|Sound):.*?\]\]'), '')
       .trim();
 }
 
@@ -172,6 +176,17 @@ String stripGiftAnimMarker(String text) {
 String? parseGiftAnimUrl(String text) {
   final match = RegExp(
     r'\[\[giftAnim:(https?:\/\/[^\]]+)\]\]',
+    caseSensitive: false,
+  ).firstMatch(text);
+  final url = match?.group(1)?.trim();
+  if (url == null || url.isEmpty) return null;
+  return url;
+}
+
+/// Parses `soundUrl` from a gift chat payload, if present.
+String? parseGiftSoundUrl(String text) {
+  final match = RegExp(
+    r'\[\[giftSound:(https?:\/\/[^\]]+)\]\]',
     caseSensitive: false,
   ).firstMatch(text);
   final url = match?.group(1)?.trim();

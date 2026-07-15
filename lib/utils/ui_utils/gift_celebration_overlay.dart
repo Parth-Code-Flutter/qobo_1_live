@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:just_audio/just_audio.dart' as just_audio;
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:svgaplayer_flutter/svgaplayer_flutter.dart';
@@ -27,6 +28,7 @@ class GiftCelebrationOverlay {
   static void show({
     String? giftName,
     String? svgaUrl,
+    String? soundUrl,
     String? svgaAsset,
     String? gifAsset,
   }) {
@@ -48,6 +50,7 @@ class GiftCelebrationOverlay {
             ? giftName!.trim()
             : 'Gift',
         svgaUrl: svgaUrl?.trim(),
+        soundUrl: soundUrl?.trim(),
         // Local SVGA asset path kept for optional fallback; prefer svgaUrl.
         svgaAsset: svgaAsset?.trim(),
         gifAsset: gifAsset,
@@ -65,6 +68,7 @@ class _GiftCelebrationView extends StatefulWidget {
   const _GiftCelebrationView({
     required this.giftName,
     this.svgaUrl,
+    this.soundUrl,
     this.svgaAsset,
     this.gifAsset,
     required this.onCompleted,
@@ -72,6 +76,7 @@ class _GiftCelebrationView extends StatefulWidget {
 
   final String giftName;
   final String? svgaUrl;
+  final String? soundUrl;
   final String? svgaAsset;
   final String? gifAsset;
   final VoidCallback onCompleted;
@@ -88,10 +93,12 @@ class _GiftCelebrationViewState extends State<_GiftCelebrationView>
 
   late final AnimationController _controller;
   SVGAAnimationController? _svgaController;
+  just_audio.AudioPlayer? _audioPlayer;
   Timer? _removeTimer;
   bool _isSvgaReady = false;
   bool _svgaFailed = false;
   bool _isLoadingSvga = false;
+  bool _soundStarted = false;
 
   bool get _hasGifAsset =>
       widget.gifAsset != null && widget.gifAsset!.trim().isNotEmpty;
@@ -103,6 +110,11 @@ class _GiftCelebrationViewState extends State<_GiftCelebrationView>
 
   bool get _hasLocalSvga =>
       widget.svgaAsset != null && widget.svgaAsset!.trim().isNotEmpty;
+
+  bool get _hasNetworkSound {
+    final url = widget.soundUrl?.trim() ?? '';
+    return url.startsWith('http://') || url.startsWith('https://');
+  }
 
   bool get _shouldLoadSvga =>
       !_hasGifAsset && (_hasNetworkSvga || _hasLocalSvga);
@@ -117,9 +129,11 @@ class _GiftCelebrationViewState extends State<_GiftCelebrationView>
       _isLoadingSvga = true;
       _loadSvgaAnimation();
     } else if (_hasGifAsset) {
+      unawaited(_playGiftSound());
       _scheduleDismiss();
     } else {
       // No media — still show a brief badge celebration.
+      unawaited(_playGiftSound());
       _scheduleDismiss();
     }
   }
@@ -127,6 +141,12 @@ class _GiftCelebrationViewState extends State<_GiftCelebrationView>
   @override
   void dispose() {
     _removeTimer?.cancel();
+    final audioPlayer = _audioPlayer;
+    _audioPlayer = null;
+    if (audioPlayer != null) {
+      unawaited(audioPlayer.stop().catchError((_) {}));
+      unawaited(audioPlayer.dispose().catchError((_) {}));
+    }
     _svgaController?.dispose();
     _controller.dispose();
     super.dispose();
@@ -162,6 +182,8 @@ class _GiftCelebrationViewState extends State<_GiftCelebrationView>
       controller
         ..reset()
         ..repeat();
+      // Start sound only when the visual is ready so both feel synchronized.
+      unawaited(_playGiftSound());
       // Start dismiss clock only after the clip is ready to play.
       _scheduleDismiss();
     } catch (_) {
@@ -172,7 +194,35 @@ class _GiftCelebrationViewState extends State<_GiftCelebrationView>
           _isLoadingSvga = false;
           _svgaFailed = true;
         });
+        // A failed animation must not prevent the API-provided sound effect.
+        unawaited(_playGiftSound());
         _scheduleDismiss();
+      }
+    }
+  }
+
+  Future<void> _playGiftSound() async {
+    if (!_hasNetworkSound || _soundStarted || !mounted) return;
+    _soundStarted = true;
+    // Reuse the app's existing audio session instead of activating or changing
+    // it, which keeps Zego room/call audio routing untouched.
+    final player = just_audio.AudioPlayer(
+      handleInterruptions: false,
+      handleAudioSessionActivation: false,
+      androidApplyAudioAttributes: false,
+    );
+    _audioPlayer = player;
+
+    try {
+      await player.setUrl(widget.soundUrl!);
+      if (!mounted || _audioPlayer != player) return;
+      await player.setVolume(1);
+      unawaited(player.play().catchError((_) {}));
+    } catch (_) {
+      // Sound is optional; an invalid URL must never break gift animation flow.
+      if (_audioPlayer == player) {
+        _audioPlayer = null;
+        await player.dispose();
       }
     }
   }
@@ -207,9 +257,7 @@ class _GiftCelebrationViewState extends State<_GiftCelebrationView>
                     ),
                   ),
                   if (_hasGifAsset) _buildFullScreenGif(size: size),
-                  if (!_hasGifAsset &&
-                      _isSvgaReady &&
-                      _svgaController != null)
+                  if (!_hasGifAsset && _isSvgaReady && _svgaController != null)
                     Positioned.fill(
                       child: FittedBox(
                         fit: BoxFit.contain,
@@ -241,7 +289,9 @@ class _GiftCelebrationViewState extends State<_GiftCelebrationView>
                       size: Size.infinite,
                     ),
                   // Fallback badge when SVGA cannot be loaded.
-                  if (!_hasGifAsset && (!_isSvgaReady || _svgaFailed) && !_isLoadingSvga)
+                  if (!_hasGifAsset &&
+                      (!_isSvgaReady || _svgaFailed) &&
+                      !_isLoadingSvga)
                     Positioned(
                       top: top - (10 * value),
                       left: 18,

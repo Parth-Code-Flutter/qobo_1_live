@@ -69,6 +69,7 @@ dependencies:
   permission_handler: ^12.0.1
   push_notification_service:
     path: packages/push_notification_service
+  just_audio: 0.10.5
 
 dev_dependencies:
   flutter_test:

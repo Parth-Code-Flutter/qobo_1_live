@@ -99,7 +99,31 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
               config: config,
               events: call.ZegoUIKitPrebuiltCallEvents(
                 onError: controller.handleGroupCallRoomError,
+                room: call.ZegoCallRoomEvents(
+                  onStateChanged: (state) {
+                    if (state.reason == ZegoRoomStateChangedReason.Logined ||
+                        state.reason ==
+                            ZegoRoomStateChangedReason.Reconnected) {
+                      controller.onGroupCallRoomConnected();
+                    } else if (state.reason ==
+                        ZegoRoomStateChangedReason.LoginFailed) {
+                      controller.handleGroupCallRoomLoginFailed(
+                        state.errorCode,
+                      );
+                    }
+                  },
+                ),
+                onHangUpConfirmation: (event, defaultAction) async {
+                  final confirmed = await defaultAction.call();
+                  if (!confirmed || !controller.isHost.value) {
+                    return confirmed;
+                  }
+                  return controller.endRoomAfterConfirmedHangUp();
+                },
                 onCallEnd: (event, defaultAction) {
+                  // Do not let participant/reconnect lifecycle events navigate
+                  // the host away from an active room.
+                  if (!controller.canProcessGroupCallEnd) return;
                   if (_shouldReportGroupCallExit(event.reason)) {
                     controller.reportRoomExit();
                   }
@@ -120,6 +144,10 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
   }
 
   bool _shouldReportGroupCallExit(call.ZegoCallEndReason reason) {
+    // Host rooms are ended only after the explicit hang-up confirmation.
+    // Zego may emit lifecycle end events during reconnects or internal rebuilds.
+    if (controller.isHost.value) return false;
+
     // Zego can emit `abandoned` when a call auto-closes during connection
     // checks. Do not end backend rooms for that case; it makes new rooms
     // disappear from lists even though the host did not intentionally end them.
@@ -131,8 +159,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
     }
 
     // Viewers should still report leave when the host/room ends remotely.
-    return !controller.isHost.value &&
-        reason == call.ZegoCallEndReason.remoteHangUp;
+    return reason == call.ZegoCallEndReason.remoteHangUp;
   }
 
   Widget _buildGroupCallGiftDock() {
