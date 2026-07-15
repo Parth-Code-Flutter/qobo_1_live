@@ -195,11 +195,12 @@ class EconomyEndpoints {
   /// GET /api/economy/gift-list
   static const String giftList = '/api/economy/gift-list';
 
-  /// POST /api/transactions/send-gift
-  static const String sendGift = '/api/transactions/send-gift';
+  /// POST /api/economy/send-gift
+  static const String sendGift = '/api/economy/send-gift';
 
-  /// Legacy economy route kept as fallback.
-  static const String sendGiftEconomyLegacy = '/api/economy/send-gift';
+  /// Legacy transaction route kept as fallback.
+  static const String sendGiftTransactionsLegacy =
+      '/api/transactions/send-gift';
 
   /// Legacy route kept as fallback.
   static const String sendGiftLegacy = '/api/send-gift';

@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:qobo_one_live/services/api_service.dart';
 import 'package:qobo_one_live/services/api_constants.dart';
 import 'package:qobo_one_live/utils/api_response_utils.dart';
@@ -82,22 +84,30 @@ class EconomyRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
-  /// Calls `POST /api/transactions/send-gift` to send a gift in a room.
+  /// Calls `POST /api/economy/send-gift` to send a gift in a room.
   Future<Map<String, dynamic>?> sendGift({
-    required String receiverId,
+    String? receiverId,
     required String giftId,
     required String roomId,
     int quantity = 1,
     String scope = 'user',
+    String? clientGiftId,
     bool isShowLoader = true,
   }) async {
-    final normalizedScope = scope.trim().isEmpty ? 'user' : scope.trim();
+    final normalizedScope = scope.trim().isEmpty
+        ? 'user'
+        : scope.trim().toLowerCase();
+    final normalizedReceiverId = receiverId?.trim() ?? '';
+    final resolvedClientGiftId = clientGiftId?.trim().isNotEmpty == true
+        ? clientGiftId!.trim()
+        : _newClientGiftId();
     final body = <String, dynamic>{
-      'receiverId': receiverId,
       'roomId': roomId,
       'giftId': giftId,
+      if (normalizedReceiverId.isNotEmpty) 'receiverId': normalizedReceiverId,
       'quantity': quantity,
       'scope': normalizedScope,
+      'clientGiftId': resolvedClientGiftId,
     };
 
     var response = await _apiService.postRequest(
@@ -108,14 +118,8 @@ class EconomyRepo {
 
     if (response?.statusCode == 404) {
       response = await _apiService.postRequest(
-        endPoint: EconomyEndpoints.sendGiftEconomyLegacy,
-        requestModel: <String, dynamic>{
-          'receiver_id': receiverId,
-          'gift_id': giftId,
-          'room_id': roomId,
-          'quantity': quantity,
-          'scope': normalizedScope,
-        },
+        endPoint: EconomyEndpoints.sendGiftTransactionsLegacy,
+        requestModel: body,
         isShowLoader: isShowLoader,
       );
     }
@@ -124,11 +128,13 @@ class EconomyRepo {
       response = await _apiService.postRequest(
         endPoint: EconomyEndpoints.sendGiftLegacy,
         requestModel: <String, dynamic>{
-          'receiver_id': receiverId,
+          if (normalizedReceiverId.isNotEmpty)
+            'receiver_id': normalizedReceiverId,
           'gift_id': giftId,
           'room_id': roomId,
           'quantity': quantity,
           'scope': normalizedScope,
+          'client_gift_id': resolvedClientGiftId,
         },
         isShowLoader: isShowLoader,
       );
@@ -136,6 +142,12 @@ class EconomyRepo {
 
     if (response == null) return null;
     return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  String _newClientGiftId() {
+    final timestamp = DateTime.now().microsecondsSinceEpoch;
+    final randomPart = Random().nextInt(1 << 32).toRadixString(16);
+    return 'gift_${timestamp}_$randomPart';
   }
 
   /// Calls `GET /api/withdraw/config` for withdrawal tiers and eligibility.

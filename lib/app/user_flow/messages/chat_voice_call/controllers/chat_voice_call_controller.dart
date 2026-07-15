@@ -278,7 +278,7 @@ class ChatVoiceCallController extends GetxController {
     if (isEconomyApiSuccess(response)) {
       await loadWalletBalance();
       if (Get.isBottomSheetOpen == true) Get.back<void>();
-      final animationUrl = gift['animationUrl']?.trim() ?? '';
+      final animationUrl = _giftAnimationUrlFromResponse(response, gift);
       GiftCelebrationOverlay.show(
         giftName: gift['name'],
         svgaUrl: animationUrl.isNotEmpty ? animationUrl : null,
@@ -295,6 +295,25 @@ class ChatVoiceCallController extends GetxController {
       response?['message']?.toString() ?? 'Unable to send this gift.',
       snackPosition: SnackPosition.BOTTOM,
     );
+  }
+
+  String _giftAnimationUrlFromResponse(
+    Map<String, dynamic>? response,
+    Map<String, String> gift,
+  ) {
+    final data = response?['data'];
+    final responseGift = data is Map ? data['gift'] : null;
+    final apiAnimationUrl = responseGift is Map
+        ? (responseGift['animationUrl'] ??
+                  responseGift['animation_url'] ??
+                  responseGift['svgaUrl'])
+              ?.toString()
+              .trim()
+        : null;
+    if (apiAnimationUrl != null && apiAnimationUrl.isNotEmpty) {
+      return apiAnimationUrl;
+    }
+    return gift['animationUrl']?.trim() ?? '';
   }
 
   void _startTicker() {

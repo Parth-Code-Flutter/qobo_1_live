@@ -153,10 +153,56 @@ class LiveRoomView extends StatelessWidget {
     );
   }
 
-  /// Floating start-live shortcut. The listing page now starts live directly
-  /// instead of opening the old Go Live / Join Live option menu.
   Widget _liveActionMenu(LiveRoomController controller) {
-    return _plusActionButton(isOpen: false, onTap: controller.openGoLive);
+    return Obx(() {
+      final isOpen = controller.isLiveActionMenuOpen.value;
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            child: isOpen
+                ? Padding(
+                    key: const ValueKey('live-actions-open'),
+                    padding: const EdgeInsets.only(bottom: 14),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        SizedBox(
+                          width: 190,
+                          child: _ctaButton(
+                            label: LocaleKeys.liveRoomGoLive.tr,
+                            icon: Icons.videocam_rounded,
+                            filled: true,
+                            onTap: controller.openGoLive,
+                          ),
+                        ),
+                        Spacing.v10,
+                        SizedBox(
+                          width: 190,
+                          child: _ctaButton(
+                            label: 'Join Live',
+                            icon: Icons.sensors_rounded,
+                            filled: false,
+                            onTap: controller.focusJoinLive,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : const SizedBox.shrink(key: ValueKey('live-actions-closed')),
+          ),
+          _plusActionButton(
+            isOpen: isOpen,
+            onTap: controller.toggleLiveActionMenu,
+          ),
+        ],
+      );
+    });
   }
 
   Widget _plusActionButton({
@@ -219,24 +265,22 @@ class LiveRoomView extends StatelessWidget {
                   ],
                 )
               : null,
-          color: filled ? null : LiveRoomUiColors.chipInactiveBg,
+          color: filled ? null : const Color(0xFF4C3268),
           border: Border.all(
             color: filled
                 ? Colors.transparent
                 : LiveRoomUiColors.joinLiveBorder,
             width: 1.2,
           ),
-          boxShadow: filled
-              ? [
-                  BoxShadow(
-                    color: LiveRoomUiColors.goLiveGradientStart.withValues(
-                      alpha: 0.4,
-                    ),
-                    blurRadius: 14,
-                    offset: const Offset(0, 6),
-                  ),
-                ]
-              : null,
+          boxShadow: [
+            BoxShadow(
+              color: filled
+                  ? LiveRoomUiColors.goLiveGradientStart.withValues(alpha: 0.4)
+                  : kColorBlack.withValues(alpha: 0.28),
+              blurRadius: filled ? 14 : 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,

@@ -95,24 +95,12 @@ class _VideoRoomListViewState extends State<VideoRoomListView> {
                   )
                 else
                   SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(14, 4, 14, 24),
-                    sliver: SliverGrid(
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            mainAxisSpacing: 14,
-                            crossAxisSpacing: 12,
-                            childAspectRatio: 0.72,
-                          ),
-                      delegate: SliverChildBuilderDelegate((context, index) {
-                        final data = tiles[index];
-                        return _VideoRoomAccordionTile(
-                          data: data,
-                          onJoinLive: widget.onJoinLive == null
-                              ? null
-                              : () => widget.onJoinLive!(data.room),
-                        );
-                      }, childCount: tiles.length),
+                    padding: const EdgeInsets.fromLTRB(14, 4, 14, 28),
+                    sliver: SliverToBoxAdapter(
+                      child: _VideoRoomsBrowseGrid(
+                        tiles: tiles,
+                        onJoinLive: widget.onJoinLive,
+                      ),
                     ),
                   ),
               ],
@@ -205,6 +193,111 @@ class _VideoRoomListViewState extends State<VideoRoomListView> {
     final text = value?.toString().trim();
     if (text == null || text.isEmpty || text == 'null') return null;
     return text;
+  }
+}
+
+/// Dating-app inspired browse layout: one immersive featured room followed by
+/// a responsive two-column grid. A single room no longer looks undersized.
+class _VideoRoomsBrowseGrid extends StatelessWidget {
+  const _VideoRoomsBrowseGrid({
+    required this.tiles,
+    required this.onJoinLive,
+  });
+
+  final List<_VideoRoomTileData> tiles;
+  final ValueChanged<Map<String, dynamic>>? onJoinLive;
+
+  @override
+  Widget build(BuildContext context) {
+    final remaining = tiles.skip(1).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionTitle(
+          title: 'Trending now',
+          subtitle: '${tiles.length} live ${tiles.length == 1 ? 'room' : 'rooms'}',
+        ),
+        Spacing.v10,
+        SizedBox(
+          height: 286,
+          child: _VideoRoomAccordionTile(
+            data: tiles.first,
+            featured: true,
+            onJoinLive: _joinCallback(tiles.first),
+          ),
+        ),
+        if (remaining.isNotEmpty) ...[
+          Spacing.v20,
+          const _SectionTitle(
+            title: 'More live rooms',
+            subtitle: 'Meet someone new',
+          ),
+          Spacing.v10,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              const spacing = 12.0;
+              final cardWidth = (constraints.maxWidth - spacing) / 2;
+              return Wrap(
+                spacing: spacing,
+                runSpacing: 14,
+                children: remaining
+                    .map(
+                      (data) => SizedBox(
+                        width: cardWidth,
+                        height: 250,
+                        child: _VideoRoomAccordionTile(
+                          data: data,
+                          onJoinLive: _joinCallback(data),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              );
+            },
+          ),
+        ],
+      ],
+    );
+  }
+
+  VoidCallback? _joinCallback(_VideoRoomTileData data) {
+    if (onJoinLive == null) return null;
+    return () => onJoinLive!(data.room);
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: SemiBoldText(
+            text: title,
+            fontSize: TextStyles.k16FontSize,
+            color: kColorWhite,
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+          decoration: BoxDecoration(
+            color: kColorWhite.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
+          ),
+          child: AppText(
+            text: subtitle,
+            fontSize: TextStyles.k10FontSize,
+            color: kColorWhite.withValues(alpha: 0.66),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -355,10 +448,15 @@ class _VideoRoomsEmptyState extends StatelessWidget {
 
 /// Image-first card inspired by social/dating video room grids.
 class _VideoRoomAccordionTile extends StatelessWidget {
-  const _VideoRoomAccordionTile({required this.data, this.onJoinLive});
+  const _VideoRoomAccordionTile({
+    required this.data,
+    this.onJoinLive,
+    this.featured = false,
+  });
 
   final _VideoRoomTileData data;
   final VoidCallback? onJoinLive;
+  final bool featured;
 
   @override
   Widget build(BuildContext context) {
@@ -367,10 +465,10 @@ class _VideoRoomAccordionTile extends StatelessWidget {
       child: InkWell(
         onTap: onJoinLive,
         splashColor: kColorWhite.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(featured ? 28 : 22),
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(featured ? 28 : 22),
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -379,13 +477,24 @@ class _VideoRoomAccordionTile extends StatelessWidget {
                 kColorWhite.withValues(alpha: 0.06),
               ],
             ),
-            border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
+            border: Border.all(
+              color: featured
+                  ? const Color(0xFFFF4FA7).withValues(alpha: 0.42)
+                  : kColorWhite.withValues(alpha: 0.12),
+              width: featured ? 1.4 : 1,
+            ),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.20),
-                blurRadius: 16,
-                offset: const Offset(0, 8),
+                blurRadius: featured ? 24 : 16,
+                offset: Offset(0, featured ? 12 : 8),
               ),
+              if (featured)
+                BoxShadow(
+                  color: const Color(0xFFFF3F8E).withValues(alpha: 0.16),
+                  blurRadius: 30,
+                  spreadRadius: 1,
+                ),
             ],
           ),
           clipBehavior: Clip.antiAlias,
@@ -399,41 +508,52 @@ class _VideoRoomAccordionTile extends StatelessWidget {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.black.withValues(alpha: 0.10),
+                      Colors.black.withValues(alpha: featured ? 0.06 : 0.10),
                       Colors.transparent,
-                      Colors.black.withValues(alpha: 0.82),
+                      Colors.black.withValues(alpha: featured ? 0.90 : 0.84),
                     ],
-                    stops: const [0, 0.45, 1],
+                    stops: const [0, 0.42, 1],
                   ),
                 ),
               ),
               Positioned(
-                left: 10,
-                top: 10,
-                child: _CountryBadge(label: data.country),
+                left: featured ? 14 : 10,
+                top: featured ? 14 : 10,
+                child: const _LiveBadge(),
               ),
               Positioned(
-                right: 9,
-                top: 9,
+                right: featured ? 14 : 9,
+                top: featured ? 14 : 9,
                 child: _ViewerMiniPill(count: data.viewerCountShort),
               ),
               Positioned(
-                left: 10,
-                right: 10,
-                bottom: 10,
+                left: featured ? 16 : 10,
+                right: featured ? 16 : 10,
+                bottom: featured ? 16 : 10,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _RoomTypeChip(
-                      label: data.tags.isNotEmpty
-                          ? data.tags.first.replaceFirst('#', '')
-                          : VideoRoomListView.roomLabel,
+                    Row(
+                      children: [
+                        _RoomTypeChip(
+                          label: data.tags.isNotEmpty
+                              ? data.tags.first.replaceFirst('#', '')
+                              : VideoRoomListView.roomLabel,
+                        ),
+                        Spacing.h6,
+                        Flexible(child: _CountryBadge(label: data.country)),
+                      ],
                     ),
                     Spacing.v8,
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
+                        _HostAvatar(
+                          path: data.avatar,
+                          size: featured ? 43 : 34,
+                        ),
+                        SizedBox(width: featured ? 10 : 7),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -441,15 +561,21 @@ class _VideoRoomAccordionTile extends StatelessWidget {
                             children: [
                               SemiBoldText(
                                 text: data.title,
-                                fontSize: TextStyles.k14FontSize,
+                                fontSize: featured
+                                    ? TextStyles.k18FontSize
+                                    : TextStyles.k14FontSize,
                                 color: kColorWhite,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                               Spacing.v2,
                               AppText(
-                                text: data.hostName,
-                                fontSize: TextStyles.k10FontSize,
+                                text: featured
+                                    ? '${data.hostName}  •  ${data.category}'
+                                    : data.hostName,
+                                fontSize: featured
+                                    ? TextStyles.k12FontSize
+                                    : TextStyles.k10FontSize,
                                 color: kColorWhite.withValues(alpha: 0.82),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -458,7 +584,10 @@ class _VideoRoomAccordionTile extends StatelessWidget {
                           ),
                         ),
                         Spacing.h8,
-                        _FloatingJoinButton(onTap: onJoinLive),
+                        _FloatingJoinButton(
+                          onTap: onJoinLive,
+                          featured: featured,
+                        ),
                       ],
                     ),
                   ],
@@ -496,6 +625,65 @@ class _CountryBadge extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
         align: TextAlign.center,
       ),
+    );
+  }
+}
+
+class _LiveBadge extends StatelessWidget {
+  const _LiveBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFF355D), Color(0xFFFF3EA5)],
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.30)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFF355D).withValues(alpha: 0.42),
+            blurRadius: 12,
+          ),
+        ],
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.circle, size: 7, color: kColorWhite),
+          SizedBox(width: 5),
+          SemiBoldText(
+            text: 'LIVE',
+            fontSize: TextStyles.k10FontSize,
+            color: kColorWhite,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HostAvatar extends StatelessWidget {
+  const _HostAvatar({required this.path, required this.size});
+
+  final String path;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      padding: const EdgeInsets.all(2),
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          colors: [Color(0xFFFFD84D), Color(0xFFFF3F8E), Color(0xFF8B5CFF)],
+        ),
+      ),
+      child: ClipOval(child: _RoomImage(path: path)),
     );
   }
 }
@@ -540,17 +728,18 @@ class _RoomTypeChip extends StatelessWidget {
 }
 
 class _FloatingJoinButton extends StatelessWidget {
-  const _FloatingJoinButton({this.onTap});
+  const _FloatingJoinButton({this.onTap, this.featured = false});
 
   final VoidCallback? onTap;
+  final bool featured;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 38,
-        height: 38,
+        width: featured ? 48 : 38,
+        height: featured ? 48 : 38,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: const LinearGradient(
@@ -568,7 +757,7 @@ class _FloatingJoinButton extends StatelessWidget {
         child: const Icon(
           Icons.play_arrow_rounded,
           color: kColorWhite,
-          size: 25,
+          size: 28,
         ),
       ),
     );

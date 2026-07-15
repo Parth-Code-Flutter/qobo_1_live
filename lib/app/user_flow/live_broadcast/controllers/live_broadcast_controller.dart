@@ -405,7 +405,9 @@ class LiveBroadcastController extends GetxController {
     required String? giftIcon,
     required String animationUrl,
   }) {
-    final name = giftName?.trim().isNotEmpty == true ? giftName!.trim() : 'Gift';
+    final name = giftName?.trim().isNotEmpty == true
+        ? giftName!.trim()
+        : 'Gift';
     final iconPart = isNetworkGiftIcon(giftIcon) ? '' : (giftIcon ?? '');
     final base = '🎁 sent $name $iconPart'.trim();
     if (animationUrl.isEmpty) return base;
@@ -676,6 +678,25 @@ class LiveBroadcastController extends GetxController {
     };
   }
 
+  String _giftAnimationUrlFromResponse(
+    Map<String, dynamic>? response,
+    Map<String, String> gift,
+  ) {
+    final data = response?['data'];
+    final responseGift = data is Map ? data['gift'] : null;
+    final apiAnimationUrl = responseGift is Map
+        ? (responseGift['animationUrl'] ??
+                  responseGift['animation_url'] ??
+                  responseGift['svgaUrl'])
+              ?.toString()
+              .trim()
+        : null;
+    if (apiAnimationUrl != null && apiAnimationUrl.isNotEmpty) {
+      return apiAnimationUrl;
+    }
+    return gift['animationUrl']?.trim() ?? '';
+  }
+
   Future<void> sendGift(Map<String, String> gift) async {
     final int price = int.tryParse(gift['price'] ?? '0') ?? 0;
     if (coinsBalance.value < price) {
@@ -695,10 +716,15 @@ class LiveBroadcastController extends GetxController {
         selectedGiftReceiverId.value?.trim().isNotEmpty == true
         ? selectedGiftReceiverId.value!.trim()
         : receiverId.value.trim();
-    if (giftId.isEmpty || currentRoomId.isEmpty || currentReceiverId.isEmpty) {
+    final scope = isRoomGiftMode.value ? 'room' : 'user';
+    if (giftId.isEmpty ||
+        currentRoomId.isEmpty ||
+        (scope == 'user' && currentReceiverId.isEmpty)) {
       Get.snackbar(
         'Gift not sent',
-        'Gift, receiver, or room id is missing from live room data.',
+        scope == 'room'
+            ? 'Gift or room id is missing from live room data.'
+            : 'Gift, receiver, or room id is missing from live room data.',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: const Color(0xFFD32F2F),
         colorText: const Color(0xFFFFFFFF),
@@ -707,16 +733,16 @@ class LiveBroadcastController extends GetxController {
     }
 
     final response = await _economyRepo.sendGift(
-      receiverId: currentReceiverId,
+      receiverId: currentReceiverId.isEmpty ? null : currentReceiverId,
       giftId: giftId,
       roomId: currentRoomId,
-      scope: isRoomGiftMode.value ? 'room' : 'user',
+      scope: scope,
       isShowLoader: true,
     );
 
     if (isEconomyApiSuccess(response)) {
       final showAudioRoomGiftAnimation = isAudioRoom;
-      final animationUrl = gift['animationUrl']?.trim() ?? '';
+      final animationUrl = _giftAnimationUrlFromResponse(response, gift);
       if (showAudioRoomGiftAnimation) {
         // Close sheet first so the gift animation is visible over the room UI.
         Get.back();

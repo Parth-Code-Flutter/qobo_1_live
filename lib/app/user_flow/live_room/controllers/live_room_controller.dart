@@ -34,6 +34,7 @@ class LiveRoomController extends GetxController {
   final isSearchExpanded = false.obs;
   final searchQuery = ''.obs;
   final isStartingLiveStream = false.obs;
+  final isLiveActionMenuOpen = false.obs;
   final selectedRoomsMode = 'audio'.obs;
   final videoRooms = <Map<String, dynamic>>[].obs;
   final audioRooms = <Map<String, dynamic>>[].obs;
@@ -333,7 +334,16 @@ class LiveRoomController extends GetxController {
   }
 
   void openGoLive() {
+    isLiveActionMenuOpen.value = false;
     unawaited(_openGoLiveWithAccessCheck());
+  }
+
+  void toggleLiveActionMenu() {
+    isLiveActionMenuOpen.toggle();
+  }
+
+  void closeLiveActionMenu() {
+    isLiveActionMenuOpen.value = false;
   }
 
   Future<void> _openGoLiveWithAccessCheck() async {
@@ -504,6 +514,7 @@ class LiveRoomController extends GetxController {
   }
 
   void focusJoinLive() {
+    isLiveActionMenuOpen.value = false;
     Get.toNamed(Routes.JOIN_LIVE);
   }
 
