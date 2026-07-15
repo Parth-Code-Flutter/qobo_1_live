@@ -199,10 +199,7 @@ class _VideoRoomListViewState extends State<VideoRoomListView> {
 /// Dating-app inspired browse layout: one immersive featured room followed by
 /// a responsive two-column grid. A single room no longer looks undersized.
 class _VideoRoomsBrowseGrid extends StatelessWidget {
-  const _VideoRoomsBrowseGrid({
-    required this.tiles,
-    required this.onJoinLive,
-  });
+  const _VideoRoomsBrowseGrid({required this.tiles, required this.onJoinLive});
 
   final List<_VideoRoomTileData> tiles;
   final ValueChanged<Map<String, dynamic>>? onJoinLive;
@@ -215,7 +212,8 @@ class _VideoRoomsBrowseGrid extends StatelessWidget {
       children: [
         _SectionTitle(
           title: 'Trending now',
-          subtitle: '${tiles.length} live ${tiles.length == 1 ? 'room' : 'rooms'}',
+          subtitle:
+              '${tiles.length} live ${tiles.length == 1 ? 'room' : 'rooms'}',
         ),
         Spacing.v10,
         SizedBox(
@@ -460,140 +458,150 @@ class _VideoRoomAccordionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onJoinLive,
-        splashColor: kColorWhite.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(featured ? 28 : 22),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(featured ? 28 : 22),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                kColorWhite.withValues(alpha: 0.18),
-                kColorWhite.withValues(alpha: 0.06),
+    final radius = BorderRadius.circular(featured ? 28 : 22);
+
+    // Keep the painted border/glow inside the fixed-height parent so rounded
+    // corners do not look cut on dense mobile layouts.
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(1, 1, 1, 3),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onJoinLive,
+          splashColor: kColorWhite.withValues(alpha: 0.10),
+          borderRadius: radius,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: radius,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  kColorWhite.withValues(alpha: 0.18),
+                  kColorWhite.withValues(alpha: 0.06),
+                ],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.20),
+                  blurRadius: featured ? 24 : 16,
+                  offset: Offset(0, featured ? 12 : 8),
+                ),
+                if (featured)
+                  BoxShadow(
+                    color: const Color(0xFFFF3F8E).withValues(alpha: 0.16),
+                    blurRadius: 30,
+                    spreadRadius: 1,
+                  ),
               ],
             ),
-            border: Border.all(
-              color: featured
-                  ? const Color(0xFFFF4FA7).withValues(alpha: 0.42)
-                  : kColorWhite.withValues(alpha: 0.12),
-              width: featured ? 1.4 : 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.20),
-                blurRadius: featured ? 24 : 16,
-                offset: Offset(0, featured ? 12 : 8),
+            foregroundDecoration: BoxDecoration(
+              borderRadius: radius,
+              border: Border.all(
+                color: featured
+                    ? const Color(0xFFFF4FA7).withValues(alpha: 0.42)
+                    : kColorWhite.withValues(alpha: 0.12),
+                width: featured ? 1.4 : 1,
               ),
-              if (featured)
-                BoxShadow(
-                  color: const Color(0xFFFF3F8E).withValues(alpha: 0.16),
-                  blurRadius: 30,
-                  spreadRadius: 1,
-                ),
-            ],
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              _RoomImage(path: data.image),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withValues(alpha: featured ? 0.06 : 0.10),
-                      Colors.transparent,
-                      Colors.black.withValues(alpha: featured ? 0.90 : 0.84),
-                    ],
-                    stops: const [0, 0.42, 1],
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                _RoomImage(path: data.image),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: featured ? 0.06 : 0.10),
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: featured ? 0.90 : 0.84),
+                      ],
+                      stops: const [0, 0.42, 1],
+                    ),
                   ),
                 ),
-              ),
-              Positioned(
-                left: featured ? 14 : 10,
-                top: featured ? 14 : 10,
-                child: const _LiveBadge(),
-              ),
-              Positioned(
-                right: featured ? 14 : 9,
-                top: featured ? 14 : 9,
-                child: _ViewerMiniPill(count: data.viewerCountShort),
-              ),
-              Positioned(
-                left: featured ? 16 : 10,
-                right: featured ? 16 : 10,
-                bottom: featured ? 16 : 10,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        _RoomTypeChip(
-                          label: data.tags.isNotEmpty
-                              ? data.tags.first.replaceFirst('#', '')
-                              : VideoRoomListView.roomLabel,
-                        ),
-                        Spacing.h6,
-                        Flexible(child: _CountryBadge(label: data.country)),
-                      ],
-                    ),
-                    Spacing.v8,
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        _HostAvatar(
-                          path: data.avatar,
-                          size: featured ? 43 : 34,
-                        ),
-                        SizedBox(width: featured ? 10 : 7),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SemiBoldText(
-                                text: data.title,
-                                fontSize: featured
-                                    ? TextStyles.k18FontSize
-                                    : TextStyles.k14FontSize,
-                                color: kColorWhite,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              Spacing.v2,
-                              AppText(
-                                text: featured
-                                    ? '${data.hostName}  •  ${data.category}'
-                                    : data.hostName,
-                                fontSize: featured
-                                    ? TextStyles.k12FontSize
-                                    : TextStyles.k10FontSize,
-                                color: kColorWhite.withValues(alpha: 0.82),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                        Spacing.h8,
-                        _FloatingJoinButton(
-                          onTap: onJoinLive,
-                          featured: featured,
-                        ),
-                      ],
-                    ),
-                  ],
+                Positioned(
+                  left: featured ? 14 : 10,
+                  top: featured ? 14 : 10,
+                  child: const _LiveBadge(),
                 ),
-              ),
-            ],
+                Positioned(
+                  right: featured ? 14 : 9,
+                  top: featured ? 14 : 9,
+                  child: _ViewerMiniPill(count: data.viewerCountShort),
+                ),
+                Positioned(
+                  left: featured ? 16 : 10,
+                  right: featured ? 16 : 10,
+                  bottom: featured ? 16 : 10,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          _RoomTypeChip(
+                            label: data.tags.isNotEmpty
+                                ? data.tags.first.replaceFirst('#', '')
+                                : VideoRoomListView.roomLabel,
+                          ),
+                          Spacing.h6,
+                          Flexible(child: _CountryBadge(label: data.country)),
+                        ],
+                      ),
+                      Spacing.v8,
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          _HostAvatar(
+                            path: data.avatar,
+                            size: featured ? 43 : 34,
+                          ),
+                          SizedBox(width: featured ? 10 : 7),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SemiBoldText(
+                                  text: data.title,
+                                  fontSize: featured
+                                      ? TextStyles.k18FontSize
+                                      : TextStyles.k14FontSize,
+                                  color: kColorWhite,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Spacing.v2,
+                                AppText(
+                                  text: featured
+                                      ? '${data.hostName}  •  ${data.category}'
+                                      : data.hostName,
+                                  fontSize: featured
+                                      ? TextStyles.k12FontSize
+                                      : TextStyles.k10FontSize,
+                                  color: kColorWhite.withValues(alpha: 0.82),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          Spacing.h8,
+                          _FloatingJoinButton(
+                            onTap: onJoinLive,
+                            featured: featured,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
