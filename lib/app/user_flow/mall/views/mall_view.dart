@@ -5,6 +5,7 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
+import 'package:qobo_one_live/utils/app_widgets/network_svga_widget.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -178,7 +179,8 @@ class MallView extends GetView<MallController> {
 
   Widget _buildItemPreview(int tabId, Map<String, dynamic> item) {
     if (tabId == 1) {
-      final imageUrl = item['imageUrl']?.toString();
+      final frameSource =
+          item['svgaUrl']?.toString() ?? item['imageUrl']?.toString();
       return Stack(
         alignment: Alignment.center,
         children: [
@@ -190,8 +192,8 @@ class MallView extends GetView<MallController> {
               style: TextStyle(color: kColorWhite, fontWeight: FontWeight.bold),
             ),
           ),
-          if (imageUrl != null && imageUrl.isNotEmpty)
-            _FrameImage(source: imageUrl, size: 124)
+          if (frameSource != null && frameSource.isNotEmpty)
+            _FrameMedia(source: frameSource, size: 124)
           else
             Container(
               width: 100,
@@ -493,8 +495,9 @@ class _StoreItemVisual extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = item['imageUrl']?.toString();
-    if (isFrame && imageUrl != null && imageUrl.isNotEmpty) {
+    final frameSource =
+        item['svgaUrl']?.toString() ?? item['imageUrl']?.toString();
+    if (isFrame && frameSource != null && frameSource.isNotEmpty) {
       return SizedBox(
         width: 86,
         height: 86,
@@ -512,7 +515,7 @@ class _StoreItemVisual extends StatelessWidget {
                 ),
               ),
             ),
-            _FrameImage(source: imageUrl, size: 86),
+            _FrameMedia(source: frameSource, size: 86),
             if (item['isOwned'] == true)
               Positioned(
                 right: 3,
@@ -556,21 +559,49 @@ class _StoreItemVisual extends StatelessWidget {
   }
 }
 
-class _FrameImage extends StatelessWidget {
-  const _FrameImage({required this.source, required this.size});
+/// Displays frame-shop media, including API-hosted SVGA animations.
+///
+/// Explicit static image extensions bypass SVGA parsing. Extensionless and
+/// `.svga` URLs use the reusable network player, then fall back to image/SVG.
+class _FrameMedia extends StatelessWidget {
+  const _FrameMedia({required this.source, required this.size});
 
   final String source;
   final double size;
 
   @override
   Widget build(BuildContext context) {
-    final isSvg = source.toLowerCase().endsWith('.svg');
-    if (isSvg) {
+    final staticFallback = _staticMedia();
+    if (_isKnownStaticMedia(source)) return staticFallback;
+
+    return NetworkSvgaWidget(
+      url: source,
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+      fallback: staticFallback,
+    );
+  }
+
+  bool _isKnownStaticMedia(String value) {
+    final path = Uri.tryParse(value.trim())?.path.toLowerCase() ?? '';
+    return path.endsWith('.svg') ||
+        path.endsWith('.png') ||
+        path.endsWith('.jpg') ||
+        path.endsWith('.jpeg') ||
+        path.endsWith('.webp') ||
+        path.endsWith('.gif');
+  }
+
+  Widget _staticMedia() {
+    final path = Uri.tryParse(source.trim())?.path.toLowerCase() ?? '';
+    if (path.endsWith('.svg')) {
       return SvgPicture.network(
         source,
         width: size,
         height: size,
         fit: BoxFit.contain,
+        placeholderBuilder: (_) => _loading(),
       );
     }
 
@@ -580,6 +611,20 @@ class _FrameImage extends StatelessWidget {
       height: size,
       fit: BoxFit.contain,
       errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+    );
+  }
+
+  Widget _loading() {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: const Center(
+        child: SizedBox(
+          width: 22,
+          height: 22,
+          child: CircularProgressIndicator(strokeWidth: 1.8),
+        ),
+      ),
     );
   }
 }

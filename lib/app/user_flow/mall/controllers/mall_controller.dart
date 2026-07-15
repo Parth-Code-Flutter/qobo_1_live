@@ -130,11 +130,26 @@ class MallController extends GetxController {
       final purchased = purchasedByFrameId[frameId];
       final durationDays = _toInt(raw['durationDays']);
       final category = raw['category']?.toString() ?? 'Premium';
+      // New frame-shop responses can return a network SVGA URL. Prefer the
+      // explicit animation fields and keep `image` as a legacy fallback.
+      final svgaUrl = ApiImageUtils.normalize(
+        raw['animationUrl']?.toString() ??
+            raw['animation_url']?.toString() ??
+            raw['svgaUrl']?.toString() ??
+            raw['svga_url']?.toString(),
+      );
+      final imageUrl = ApiImageUtils.normalize(
+        raw['image']?.toString() ??
+            raw['imageUrl']?.toString() ??
+            raw['previewUrl']?.toString() ??
+            raw['iconUrl']?.toString(),
+      );
       frames.add({
         'id': frameId,
         'name': raw['name']?.toString() ?? 'Avatar Frame',
         'icon': kIconUserLevel,
-        'imageUrl': ApiImageUtils.normalize(raw['image']?.toString()),
+        'svgaUrl': svgaUrl,
+        'imageUrl': imageUrl,
         'price': _toInt(raw['price']),
         'duration': durationDays > 0 ? '$durationDays days' : 'Limited time',
         'durationDays': durationDays,
