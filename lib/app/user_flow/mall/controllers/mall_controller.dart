@@ -4,6 +4,7 @@ import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/repo/economy/economy_repo.dart';
 import 'package:qobo_one_live/repo/frame/frame_repo.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
+import 'package:qobo_one_live/utils/app_dialogs/common_giffy_dialog.dart';
 
 class MallController extends GetxController {
   MallController({EconomyRepo? economyRepo, FrameRepo? frameRepo})
@@ -209,7 +210,7 @@ class MallController extends GetxController {
 
     await _fetchFrameShop();
     selectTab(1);
-    _showPurchaseSuccessDialog(name: name, price: price);
+    await _showPurchaseSuccessDialog(name: name, price: price);
   }
 
   Future<void> equipFrame(Map<String, dynamic> item) async {
@@ -257,26 +258,27 @@ class MallController extends GetxController {
     }
 
     coinsBalance.value -= price;
-    _showPurchaseSuccessDialog(name: name, price: price);
+    await _showPurchaseSuccessDialog(name: name, price: price);
   }
 
-  void _showPurchaseSuccessDialog({required String name, required int price}) {
-    Get.dialog(
-      AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.green),
-            SizedBox(width: 8),
-            Text('Purchase Successful'),
-          ],
-        ),
-        content: Text(
-          'You have successfully purchased "$name" for $price Coins!\nThe item has been added to your Backpack.',
-        ),
-        actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('Great!')),
-        ],
-      ),
+  Future<void> _showPurchaseSuccessDialog({
+    required String name,
+    required int price,
+  }) async {
+    final context = Get.context;
+    if (context == null) return;
+
+    await CommonGiffyDialog.showSuccess(
+      context,
+      title: 'Purchase Complete!',
+      subtitle:
+          '"$name" is now yours\n'
+          '$price Coins paid • Added to your Backpack',
+      buttonText: 'Awesome!',
+      gifAssetPath: kGifCongratulation,
+      barrierDismissible: false,
+      // The common dialog closes itself before invoking this callback.
+      onPressed: () {},
     );
   }
 

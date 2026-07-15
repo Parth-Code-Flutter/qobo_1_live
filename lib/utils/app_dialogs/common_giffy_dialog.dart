@@ -24,6 +24,7 @@ class CommonGiffyDialog {
       subtitle: subtitle,
       buttonText: buttonText,
       onPressed: onPressed,
+      gifAssetPath: gifAssetPath,
       barrierDismissible: barrierDismissible,
       variant: _DialogVariant.success,
     );
@@ -44,6 +45,7 @@ class CommonGiffyDialog {
       subtitle: subtitle,
       buttonText: buttonText,
       onPressed: onPressed,
+      gifAssetPath: gifAssetPath,
       barrierDismissible: barrierDismissible,
       variant: _DialogVariant.failure,
     );
@@ -65,6 +67,7 @@ class CommonGiffyDialog {
       subtitle: subtitle,
       buttonText: buttonText,
       onPressed: onPressed,
+      gifAssetPath: gifAssetPath,
       barrierDismissible: barrierDismissible,
       variant: _DialogVariant.custom,
       accentColor: accentColor,
@@ -77,6 +80,7 @@ class CommonGiffyDialog {
     required String subtitle,
     required String buttonText,
     required VoidCallback onPressed,
+    required String gifAssetPath,
     required _DialogVariant variant,
     Color accentColor = kColorPrimary,
     required bool barrierDismissible,
@@ -87,18 +91,25 @@ class CommonGiffyDialog {
       builder: (dialogContext) {
         return Dialog(
           backgroundColor: kColorWhite,
-          shadowColor: Colors.black26,
+          shadowColor: kColorPrimary.withValues(alpha: 0.24),
           surfaceTintColor: kColorWhite,
           insetPadding: const EdgeInsets.symmetric(horizontal: 28),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(28),
+            side: BorderSide(
+              color: kColorPrimary.withValues(alpha: 0.10),
+            ),
           ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+            padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _heroIcon(variant: variant, accentColor: accentColor),
+                _heroIcon(
+                  variant: variant,
+                  accentColor: accentColor,
+                  gifAssetPath: gifAssetPath,
+                ),
                 Spacing.v20,
                 SemiBoldText(
                   text: title,
@@ -139,6 +150,7 @@ class CommonGiffyDialog {
   static Widget _heroIcon({
     required _DialogVariant variant,
     required Color accentColor,
+    required String gifAssetPath,
   }) {
     final isSuccess = variant == _DialogVariant.success;
     final isFailure = variant == _DialogVariant.failure;
@@ -150,7 +162,7 @@ class CommonGiffyDialog {
         : Icons.info_outline_rounded;
 
     return SizedBox(
-      height: 88,
+      height: 104,
       width: double.infinity,
       child: Stack(
         alignment: Alignment.center,
@@ -158,8 +170,8 @@ class CommonGiffyDialog {
         children: [
           if (isSuccess) ..._confettiDots(),
           Container(
-            width: 72,
-            height: 72,
+            width: 88,
+            height: 88,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: isSuccess
@@ -180,7 +192,23 @@ class CommonGiffyDialog {
                     ]
                   : null,
             ),
-            child: Icon(iconData, color: isSuccess ? kColorWhite : iconColor, size: 36),
+            clipBehavior: Clip.antiAlias,
+            child: isSuccess && gifAssetPath.trim().isNotEmpty
+                ? Image.asset(
+                    gifAssetPath,
+                    fit: BoxFit.cover,
+                    gaplessPlayback: true,
+                    errorBuilder: (_, __, ___) => Icon(
+                      iconData,
+                      color: kColorWhite,
+                      size: 40,
+                    ),
+                  )
+                : Icon(
+                    iconData,
+                    color: isSuccess ? kColorWhite : iconColor,
+                    size: 40,
+                  ),
           ),
         ],
       ),
