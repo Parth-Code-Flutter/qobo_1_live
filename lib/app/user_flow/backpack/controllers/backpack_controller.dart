@@ -1,11 +1,15 @@
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/repo/frame/frame_repo.dart';
 import 'package:qobo_one_live/repo/user/user_repo.dart';
 
 class BackpackController extends GetxController {
-  BackpackController({UserRepo? userRepo}) : _userRepo = userRepo ?? UserRepo();
+  BackpackController({UserRepo? userRepo, FrameRepo? frameRepo})
+    : _userRepo = userRepo ?? UserRepo(),
+      _frameRepo = frameRepo ?? FrameRepo();
 
   final UserRepo _userRepo;
+  final FrameRepo _frameRepo;
   final isLoading = false.obs;
 
   final categories = <Map<String, dynamic>>[
@@ -19,6 +23,7 @@ class BackpackController extends GetxController {
 
   // Active equipped items
   final equippedFrame = RxnString('frame_gold');
+  final equippedFrameName = RxnString('Golden Crown');
   final equippedEffect = RxnString();
   final equippedBubble = RxnString();
 
@@ -88,57 +93,104 @@ class BackpackController extends GetxController {
     try {
       final response = await _userRepo.getBackpack(isShowLoader: false);
       final data = response?['data'];
-      if (data is! Map) return;
-
-      final apiCategories = data['categories'];
-      if (apiCategories is List && apiCategories.isNotEmpty) {
-        categories.assignAll(
-          apiCategories
-              .whereType<Map>()
-              .map((cat) {
-                return <String, dynamic>{
-                  'id': _toInt(cat['id']),
-                  'name': cat['name']?.toString() ?? '',
-                };
-              })
-              .where(
-                (cat) => cat['id'] != 0 && cat['name'].toString().isNotEmpty,
-              ),
-        );
-      }
-
-      final equipped = data['equipped'];
-      if (equipped is Map) {
-        equippedFrame.value = _nullableText(equipped['frame']);
-        equippedEffect.value = _nullableText(equipped['effect']);
-        equippedBubble.value = _nullableText(equipped['bubble']);
-      }
-
-      final apiItems = data['items'];
-      if (apiItems is List) {
-        final grouped = <int, List<Map<String, dynamic>>>{};
-        for (final raw in apiItems.whereType<Map>()) {
-          final categoryId = _toInt(raw['categoryId']);
-          if (categoryId == 0) continue;
-          grouped.putIfAbsent(categoryId, () => <Map<String, dynamic>>[]).add({
-            'id': raw['id']?.toString() ?? '',
-            'name': raw['name']?.toString() ?? '',
-            'icon': _iconForCategory(categoryId),
-            'iconUrl': raw['iconUrl']?.toString() ?? '',
-            'thumbnailUrl': raw['thumbnailUrl']?.toString() ?? '',
-            'quantity': _toInt(raw['quantity']),
-            'description': raw['description']?.toString() ?? '',
-            'isEquipped': raw['isEquipped'] == true,
-            'expiresAt': raw['expiresAt']?.toString() ?? '',
-          });
+      if (data is Map) {
+        final apiCategories = data['categories'];
+        if (apiCategories is List && apiCategories.isNotEmpty) {
+          categories.assignAll(
+            apiCategories
+                .whereType<Map>()
+                .map((cat) {
+                  return <String, dynamic>{
+                    'id': _toInt(cat['id']),
+                    'name': cat['name']?.toString() ?? '',
+                  };
+                })
+                .where(
+                  (cat) => cat['id'] != 0 && cat['name'].toString().isNotEmpty,
+                ),
+          );
         }
-        if (grouped.isNotEmpty) {
-          mockItems.assignAll(grouped);
+
+        final equipped = data['equipped'];
+        if (equipped is Map) {
+          equippedEffect.value = _nullableText(equipped['effect']);
+          equippedBubble.value = _nullableText(equipped['bubble']);
+        }
+
+        final apiItems = data['items'];
+        if (apiItems is List) {
+          final grouped = <int, List<Map<String, dynamic>>>{};
+          for (final raw in apiItems.whereType<Map>()) {
+            final categoryId = _toInt(raw['categoryId']);
+            if (categoryId == 0 || categoryId == 2) continue;
+            grouped
+                .putIfAbsent(categoryId, () => <Map<String, dynamic>>[])
+                .add({
+                  'id': raw['id']?.toString() ?? '',
+                  'name': raw['name']?.toString() ?? '',
+                  'icon': _iconForCategory(categoryId),
+                  'iconUrl': raw['iconUrl']?.toString() ?? '',
+                  'thumbnailUrl': raw['thumbnailUrl']?.toString() ?? '',
+                  'quantity': _toInt(raw['quantity']),
+                  'description': raw['description']?.toString() ?? '',
+                  'isEquipped': raw['isEquipped'] == true,
+                  'expiresAt': raw['expiresAt']?.toString() ?? '',
+                });
+          }
+          if (grouped.isNotEmpty) {
+            final merged = Map<int, List<Map<String, dynamic>>>.from(mockItems);
+            merged.addAll(grouped);
+            mockItems.assignAll(merged);
+          }
         }
       }
+
+      await _fetchAvatarFrames();
     } finally {
       isLoading.value = false;
     }
+  }
+
+  Future<void> _fetchAvatarFrames() async {
+    final response = await _frameRepo.getMyBackpack(isShowLoader: false);
+    final frames = <Map<String, dynamic>>[];
+    String? activeFrameId;
+    String? activeFrameName;
+
+    for (final raw in _extractList(response?['data']).whereType<Map>()) {
+      final item = Map<String, dynamic>.from(raw);
+      final frameDetails = item['frameDetails'];
+      final frame = frameDetails is Map
+          ? Map<String, dynamic>.from(frameDetails)
+          : const <String, dynamic>{};
+      final itemId = item['id']?.toString() ?? '';
+      if (itemId.isEmpty) continue;
+
+      final name = frame['name']?.toString() ?? 'Avatar Frame';
+      final isEquipped = item['isEquipped'] == true;
+      if (isEquipped) {
+        activeFrameId = itemId;
+        activeFrameName = name;
+      }
+
+      frames.add({
+        'id': itemId,
+        'frameId': frame['id']?.toString() ?? item['itemId']?.toString() ?? '',
+        'name': name,
+        'icon': kIconUserLevel,
+        'imageUrl': frame['image']?.toString() ?? '',
+        'quantity': 1,
+        'description': _frameExpiryLabel(item['expiresAt']),
+        'isEquipped': isEquipped,
+        'expiresAt': item['expiresAt']?.toString() ?? '',
+      });
+    }
+
+    final merged = Map<int, List<Map<String, dynamic>>>.from(mockItems);
+    merged[2] = frames;
+    mockItems.assignAll(merged);
+    equippedFrame.value = activeFrameId;
+    equippedFrameName.value = activeFrameName;
   }
 
   Future<void> equipItem(int categoryId, Map<String, dynamic> item) async {
@@ -150,13 +202,8 @@ class BackpackController extends GetxController {
         categoryId == 4 && equippedBubble.value == itemId;
 
     if (categoryId == 2) {
-      if (equippedFrame.value == itemId) {
-        equippedFrame.value = null;
-        Get.snackbar('Backpack', 'Unequipped $name');
-      } else {
-        equippedFrame.value = itemId;
-        Get.snackbar('Backpack', 'Equipped $name successfully!');
-      }
+      await _equipAvatarFrame(itemId: itemId, name: name);
+      return;
     } else if (categoryId == 3) {
       if (equippedEffect.value == itemId) {
         equippedEffect.value = null;
@@ -190,6 +237,43 @@ class BackpackController extends GetxController {
       await fetchBackpack();
       Get.snackbar('Backpack', 'Could not update this item.');
     }
+  }
+
+  Future<void> _equipAvatarFrame({
+    required String itemId,
+    required String name,
+  }) async {
+    final shouldEquip = equippedFrame.value != itemId;
+    final response = await _frameRepo.equipFrame(
+      backpackItemId: itemId,
+      equip: shouldEquip,
+      isShowLoader: true,
+    );
+    if (response == null || response['statusCode'] == 0) {
+      Get.snackbar('Backpack', 'Could not update this frame.');
+      return;
+    }
+
+    await _fetchAvatarFrames();
+    Get.snackbar(
+      'Backpack',
+      shouldEquip ? 'Equipped $name successfully!' : 'Unequipped $name',
+    );
+  }
+
+  List _extractList(dynamic value) {
+    if (value is List) return value;
+    if (value is Map) {
+      final nested = value['items'] ?? value['frames'] ?? value['data'];
+      if (nested is List) return nested;
+    }
+    return const [];
+  }
+
+  String _frameExpiryLabel(dynamic value) {
+    final text = value?.toString() ?? '';
+    if (text.trim().isEmpty || text == 'null') return 'Purchased frame';
+    return 'Expires $text';
   }
 
   int _toInt(dynamic value) {

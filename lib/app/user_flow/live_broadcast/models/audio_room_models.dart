@@ -4,6 +4,7 @@ class AudioRoomSeatModel {
     this.userId = '',
     this.name = '',
     this.avatarUrl,
+    this.avatarFrameUrl,
     this.role = 'empty',
     this.diamonds = 0,
     this.isMuted = false,
@@ -46,12 +47,32 @@ class AudioRoomSeatModel {
           'profileImage',
           'image',
         ]);
+    final avatarFrame =
+        _readFrameUrl(raw['avatarFrame']) ??
+        _readFrameUrl(occupantMap?['avatarFrame']) ??
+        _readString(raw, const [
+          'avatarFrameUrl',
+          'avatar_frame_url',
+          'profileFrameUrl',
+          'profile_frame_url',
+          'frameUrl',
+          'frame_url',
+        ]) ??
+        _readString(occupantMap, const [
+          'avatarFrameUrl',
+          'avatar_frame_url',
+          'profileFrameUrl',
+          'profile_frame_url',
+          'frameUrl',
+          'frame_url',
+        ]);
 
     return AudioRoomSeatModel(
       seatNo: _readInt(raw, const ['seatNo', 'seat_id', 'seatId', 'seat']) ?? 0,
       userId: userId,
       name: name,
       avatarUrl: avatar,
+      avatarFrameUrl: avatarFrame,
       role:
           _readString(raw, const ['role', 'type']) ??
           (userId.isEmpty ? 'empty' : 'speaker'),
@@ -67,6 +88,7 @@ class AudioRoomSeatModel {
   final String userId;
   final String name;
   final String? avatarUrl;
+  final String? avatarFrameUrl;
   final String role;
   final int diamonds;
   final bool isMuted;
@@ -81,6 +103,7 @@ class AudioRoomSeatModel {
     String? userId,
     String? name,
     String? avatarUrl,
+    String? avatarFrameUrl,
     String? role,
     int? diamonds,
     bool? isMuted,
@@ -92,6 +115,7 @@ class AudioRoomSeatModel {
       userId: userId ?? this.userId,
       name: name ?? this.name,
       avatarUrl: avatarUrl ?? this.avatarUrl,
+      avatarFrameUrl: avatarFrameUrl ?? this.avatarFrameUrl,
       role: role ?? this.role,
       diamonds: diamonds ?? this.diamonds,
       isMuted: isMuted ?? this.isMuted,
@@ -141,6 +165,25 @@ String? _readString(Map<String, dynamic>? raw, List<String> keys) {
   for (final key in keys) {
     final value = raw[key]?.toString().trim();
     if (value != null && value.isNotEmpty && value != 'null') return value;
+  }
+  return null;
+}
+
+String? _readFrameUrl(dynamic value) {
+  if (value == null) return null;
+  if (value is String) {
+    final text = value.trim();
+    return text.isEmpty || text == 'null' ? null : text;
+  }
+  if (value is Map) {
+    return _readString(Map<String, dynamic>.from(value), const [
+      'image',
+      'url',
+      'frameUrl',
+      'frame_url',
+      'avatarFrameUrl',
+      'avatar_frame_url',
+    ]);
   }
   return null;
 }

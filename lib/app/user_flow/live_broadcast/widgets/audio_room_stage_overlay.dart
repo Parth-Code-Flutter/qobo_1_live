@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -558,6 +559,7 @@ class _MemberSeat extends GetView<LiveBroadcastController> {
                   _PremiumAvatarFrame(
                     name: seat.name,
                     imageUrl: seat.avatarUrl,
+                    frameUrl: seat.avatarFrameUrl,
                     muted: seat.isMuted,
                     isHost: seat.isHost,
                     seatNo: seat.seatNo,
@@ -679,6 +681,7 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
                 _PremiumAvatarFrame(
                   name: seat.name,
                   imageUrl: seat.avatarUrl,
+                  frameUrl: seat.avatarFrameUrl,
                   muted: seat.isMuted,
                   isHost: seat.isHost,
                   seatNo: seat.seatNo,
@@ -802,6 +805,7 @@ class _PremiumAvatarFrame extends StatelessWidget {
   const _PremiumAvatarFrame({
     required this.name,
     required this.imageUrl,
+    this.frameUrl,
     required this.muted,
     required this.isHost,
     required this.seatNo,
@@ -811,6 +815,7 @@ class _PremiumAvatarFrame extends StatelessWidget {
 
   final String name;
   final String? imageUrl;
+  final String? frameUrl;
   final bool muted;
   final bool isHost;
   final int seatNo;
@@ -821,6 +826,7 @@ class _PremiumAvatarFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     return _AudioSeatFrame(
       assetPath: _AudioSeatFrame.assetForSeat(seatNo, isHost: isHost),
+      frameUrl: frameUrl,
       muted: muted,
       size: frameSize,
       contentSize: avatarSize,
@@ -841,6 +847,7 @@ class _AudioSeatFrame extends StatelessWidget {
   const _AudioSeatFrame({
     required this.assetPath,
     required this.child,
+    this.frameUrl,
     this.muted = false,
     this.locked = false,
     this.size = 112,
@@ -854,6 +861,7 @@ class _AudioSeatFrame extends StatelessWidget {
 
   final String assetPath;
   final Widget child;
+  final String? frameUrl;
   final bool muted;
   final bool locked;
   final double size;
@@ -869,6 +877,7 @@ class _AudioSeatFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     final opacity = muted || locked ? 0.64 : 1.0;
     final innerSize = contentSize ?? (locked ? size * 0.52 : size * 0.57);
+    final customFrame = frameUrl?.trim() ?? '';
     return Opacity(
       opacity: opacity,
       child: SizedBox(
@@ -879,11 +888,9 @@ class _AudioSeatFrame extends StatelessWidget {
           clipBehavior: Clip.none,
           children: [
             IgnorePointer(
-              child: SvgPicture.asset(
-                assetPath,
-                width: size,
-                height: size,
-                fit: BoxFit.contain,
+              child: _FrameMedia(
+                source: customFrame.isNotEmpty ? customFrame : assetPath,
+                size: size,
               ),
             ),
             Container(
@@ -910,6 +917,53 @@ class _AudioSeatFrame extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _FrameMedia extends StatelessWidget {
+  const _FrameMedia({required this.source, required this.size});
+
+  final String source;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final isRemote =
+        source.startsWith('http://') ||
+        source.startsWith('https://') ||
+        source.startsWith('/');
+    final normalizedUrl = isRemote ? ApiImageUtils.normalize(source) : null;
+    final isSvg = source.toLowerCase().endsWith('.svg');
+
+    if (isRemote && isSvg) {
+      return SvgPicture.network(
+        normalizedUrl!,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+      );
+    }
+
+    if (isRemote) {
+      return Image.network(
+        normalizedUrl!,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+      );
+    }
+
+    if (isSvg) {
+      return SvgPicture.asset(
+        source,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+      );
+    }
+
+    return Image.asset(source, width: size, height: size, fit: BoxFit.contain);
   }
 }
 
@@ -994,10 +1048,7 @@ class _GridEmptySeat extends GetView<LiveBroadcastController> {
                   Positioned(
                     left: -6,
                     top: -6,
-                    child: _SeatBadge(
-                      number: seatNo,
-                      size: metrics.badgeSize,
-                    ),
+                    child: _SeatBadge(number: seatNo, size: metrics.badgeSize),
                   ),
                   Positioned(
                     right: -4,
@@ -1252,10 +1303,7 @@ class _LockedSeat extends StatelessWidget {
                 Positioned(
                   left: -6,
                   top: -6,
-                  child: _SeatBadge(
-                    number: seatNo,
-                    size: metrics.badgeSize,
-                  ),
+                  child: _SeatBadge(number: seatNo, size: metrics.badgeSize),
                 ),
               ],
             ),

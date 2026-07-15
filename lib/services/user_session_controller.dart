@@ -29,6 +29,7 @@ class UserSessionController extends GetxController {
     'frameUrl',
     'frame_url',
     'frame',
+    'avatarFrame.image',
   ]);
   bool get isSuperAdmin => role.toLowerCase() == 'super_admin';
 
@@ -84,7 +85,7 @@ class UserSessionController extends GetxController {
 
   String _stringValueFromProfile(List<String> keys) {
     for (final key in keys) {
-      final direct = _profileData?[key];
+      final direct = _readProfileValue(_profileData, key);
       final directValue = _cleanString(direct);
       if (directValue.isNotEmpty) return directValue;
 
@@ -92,11 +93,31 @@ class UserSessionController extends GetxController {
       // `getProfile` stores a flat user row. Support both shapes here.
       final nested = _profileData?['user'];
       if (nested is Map) {
-        final nestedValue = _cleanString(nested[key]);
+        final nestedValue = _cleanString(_readProfileValue(nested, key));
         if (nestedValue.isNotEmpty) return nestedValue;
       }
     }
     return '';
+  }
+
+  dynamic _readProfileValue(Map<dynamic, dynamic>? source, String key) {
+    if (source == null) return null;
+    if (key.contains('.')) {
+      dynamic cursor = source;
+      for (final part in key.split('.')) {
+        if (cursor is! Map) return null;
+        cursor = cursor[part];
+      }
+      return cursor;
+    }
+    final value = source[key];
+    if (value is Map) {
+      return value['image'] ??
+          value['url'] ??
+          value['frameUrl'] ??
+          value['frame_url'];
+    }
+    return value;
   }
 
   String _cleanString(dynamic value) {

@@ -70,7 +70,11 @@ class BackpackView extends GetView<BackpackController> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _equippedSlot('Frame', controller.equippedFrame),
+              _equippedSlot(
+                'Frame',
+                controller.equippedFrame,
+                displayNameObs: controller.equippedFrameName,
+              ),
               _equippedSlot('Entrance', controller.equippedEffect),
               _equippedSlot('Chat Bubble', controller.equippedBubble),
             ],
@@ -80,21 +84,29 @@ class BackpackView extends GetView<BackpackController> {
     );
   }
 
-  Widget _equippedSlot(String label, RxnString equippedObs) {
+  Widget _equippedSlot(
+    String label,
+    RxnString equippedObs, {
+    RxnString? displayNameObs,
+  }) {
     return Obx(() {
       final itemId = equippedObs.value;
       final isActive = itemId != null;
 
       // Extract simple display name
-      String displayName = 'None';
+      String displayName = displayNameObs?.value ?? 'None';
       if (isActive) {
-        if (itemId.contains('gold')) displayName = 'Golden Crown';
-        if (itemId.contains('neon')) displayName = 'Neon Border';
-        if (itemId.contains('vip')) displayName = 'VVIP';
-        if (itemId.contains('dragon')) displayName = 'Dragon';
-        if (itemId.contains('star')) displayName = 'Star Shower';
-        if (itemId.contains('ocean')) displayName = 'Ocean';
-        if (itemId.contains('love')) displayName = 'Love Heart';
+        if (displayName == 'None') {
+          if (itemId.contains('gold')) displayName = 'Golden Crown';
+          if (itemId.contains('neon')) displayName = 'Neon Border';
+          if (itemId.contains('vip')) displayName = 'VVIP';
+          if (itemId.contains('dragon')) displayName = 'Dragon';
+          if (itemId.contains('star')) displayName = 'Star Shower';
+          if (itemId.contains('ocean')) displayName = 'Ocean';
+          if (itemId.contains('love')) displayName = 'Love Heart';
+        }
+      } else {
+        displayName = 'None';
       }
 
       return Expanded(
@@ -146,12 +158,17 @@ class BackpackView extends GetView<BackpackController> {
                 onTap: () => controller.selectCategory(cat['id'] as int),
                 child: Container(
                   margin: const EdgeInsets.only(right: 12),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: isSelected ? kColorPrimary : Colors.transparent,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: isSelected ? kColorPrimary : kColorHint.withOpacity(0.3),
+                      color: isSelected
+                          ? kColorPrimary
+                          : kColorHint.withValues(alpha: 0.3),
                     ),
                   ),
                   child: AppText(
@@ -172,7 +189,7 @@ class BackpackView extends GetView<BackpackController> {
     return Obx(() {
       final categoryId = controller.selectedCategory.value;
       final items = controller.mockItems[categoryId] ?? [];
-      
+
       if (items.isEmpty) {
         return Center(
           child: Padding(
@@ -180,7 +197,11 @@ class BackpackView extends GetView<BackpackController> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.inventory_2_outlined, size: 56, color: kColorHint.withValues(alpha: 0.4)),
+                Icon(
+                  Icons.inventory_2_outlined,
+                  size: 56,
+                  color: kColorHint.withValues(alpha: 0.4),
+                ),
                 Spacing.v16,
                 const SemiBoldText(
                   text: 'No Items Found',
@@ -189,7 +210,8 @@ class BackpackView extends GetView<BackpackController> {
                 ),
                 Spacing.v8,
                 const AppText(
-                  text: 'You don\'t own any customizations in this category yet.',
+                  text:
+                      'You don\'t own any customizations in this category yet.',
                   color: kColorHint,
                   align: TextAlign.center,
                 ),
@@ -231,9 +253,15 @@ class BackpackView extends GetView<BackpackController> {
 
           // Check if equipped
           bool isEquipped = false;
-          if (categoryId == 2) isEquipped = controller.equippedFrame.value == itemId;
-          if (categoryId == 3) isEquipped = controller.equippedEffect.value == itemId;
-          if (categoryId == 4) isEquipped = controller.equippedBubble.value == itemId;
+          if (categoryId == 2) {
+            isEquipped = controller.equippedFrame.value == itemId;
+          }
+          if (categoryId == 3) {
+            isEquipped = controller.equippedEffect.value == itemId;
+          }
+          if (categoryId == 4) {
+            isEquipped = controller.equippedBubble.value == itemId;
+          }
 
           return Container(
             padding: const EdgeInsets.all(12),
@@ -260,7 +288,10 @@ class BackpackView extends GetView<BackpackController> {
                   children: [
                     if (categoryId == 1)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: kColorPrimary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
@@ -277,7 +308,11 @@ class BackpackView extends GetView<BackpackController> {
                     else
                       const SizedBox.shrink(),
                     if (isEquipped)
-                      const Icon(Icons.check_circle, color: Colors.amber, size: 18)
+                      const Icon(
+                        Icons.check_circle,
+                        color: Colors.amber,
+                        size: 18,
+                      )
                     else
                       const SizedBox.shrink(),
                   ],
@@ -325,7 +360,9 @@ class BackpackView extends GetView<BackpackController> {
                     child: appButton(
                       onPressed: () => controller.equipItem(categoryId, item),
                       buttonText: isEquipped ? 'Unequip' : 'Equip',
-                      buttonColor: isEquipped ? const Color(0xFFF3F3F3) : kColorPrimary,
+                      buttonColor: isEquipped
+                          ? const Color(0xFFF3F3F3)
+                          : kColorPrimary,
                       textColor: isEquipped ? kColorTextGrey : kColorWhite,
                       borderRadius: 16,
                       textStyle: TextStyles.kSemiBoldPoppins(
@@ -340,7 +377,10 @@ class BackpackView extends GetView<BackpackController> {
                     width: double.infinity,
                     child: appButton(
                       onPressed: () {
-                        Get.snackbar('Backpack', 'Rose can be gifted to streamers inside live rooms.');
+                        Get.snackbar(
+                          'Backpack',
+                          'Rose can be gifted to streamers inside live rooms.',
+                        );
                       },
                       buttonText: 'Send Gift',
                       buttonColor: kColorPrimary.withValues(alpha: 0.1),
