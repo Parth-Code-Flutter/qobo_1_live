@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/repo/frame/frame_repo.dart';
 import 'package:qobo_one_live/repo/user/user_repo.dart';
+import 'package:qobo_one_live/utils/api_image_utils.dart';
 
 class BackpackController extends GetxController {
   BackpackController({UserRepo? userRepo, FrameRepo? frameRepo})
@@ -178,7 +179,31 @@ class BackpackController extends GetxController {
         'frameId': frame['id']?.toString() ?? item['itemId']?.toString() ?? '',
         'name': name,
         'icon': kIconUserLevel,
-        'imageUrl': frame['image']?.toString() ?? '',
+        // `/my-backpack` may return an animated SVGA frame. Keep the static
+        // image fields as fallback for older purchased-frame records.
+        'svgaUrl':
+            ApiImageUtils.normalize(
+              _firstText([
+                frame['animationUrl'],
+                frame['animation_url'],
+                frame['svgaUrl'],
+                frame['svga_url'],
+                item['animationUrl'],
+                item['svgaUrl'],
+              ]),
+            ) ??
+            '',
+        'imageUrl':
+            ApiImageUtils.normalize(
+              _firstText([
+                frame['image'],
+                frame['imageUrl'],
+                frame['previewUrl'],
+                item['image'],
+                item['imageUrl'],
+              ]),
+            ) ??
+            '',
         'quantity': 1,
         'description': _frameExpiryLabel(item['expiresAt']),
         'isEquipped': isEquipped,
@@ -285,6 +310,14 @@ class BackpackController extends GetxController {
   String? _nullableText(dynamic value) {
     final text = value?.toString().trim();
     return text == null || text.isEmpty || text == 'null' ? null : text;
+  }
+
+  String? _firstText(Iterable<dynamic> values) {
+    for (final value in values) {
+      final text = value?.toString().trim() ?? '';
+      if (text.isNotEmpty && text != 'null') return text;
+    }
+    return null;
   }
 
   String _iconForCategory(int categoryId) {

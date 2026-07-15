@@ -5,6 +5,7 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
+import 'package:qobo_one_live/utils/app_widgets/network_svga_widget.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
@@ -190,6 +191,12 @@ class BackpackView extends GetView<BackpackController> {
       final categoryId = controller.selectedCategory.value;
       final items = controller.mockItems[categoryId] ?? [];
 
+      if (controller.isLoading.value) {
+        return const Center(
+          child: CircularProgressIndicator(color: kColorPrimary),
+        );
+      }
+
       if (items.isEmpty) {
         return Center(
           child: Padding(
@@ -236,6 +243,10 @@ class BackpackView extends GetView<BackpackController> {
             ),
           ),
         );
+      }
+
+      if (categoryId == 2) {
+        return _buildPurchasedFramesGrid(items);
       }
 
       return GridView.builder(
@@ -398,5 +409,235 @@ class BackpackView extends GetView<BackpackController> {
         },
       );
     });
+  }
+
+  /// Modern purchased-frame collection backed by `/api/frame/my-backpack`.
+  Widget _buildPurchasedFramesGrid(List<Map<String, dynamic>> frames) {
+    return RefreshIndicator(
+      color: kColorPrimary,
+      onRefresh: controller.fetchBackpack,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final columns = constraints.maxWidth >= 760
+              ? 4
+              : constraints.maxWidth >= 520
+              ? 3
+              : 2;
+          return GridView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+            itemCount: frames.length,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: columns,
+              childAspectRatio: 0.72,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+            ),
+            itemBuilder: (context, index) {
+              final frame = frames[index];
+              return _PurchasedFrameCard(
+                frame: frame,
+                onEquip: () => controller.equipItem(2, frame),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _PurchasedFrameCard extends StatelessWidget {
+  const _PurchasedFrameCard({required this.frame, required this.onEquip});
+
+  final Map<String, dynamic> frame;
+  final VoidCallback onEquip;
+
+  @override
+  Widget build(BuildContext context) {
+    final isEquipped = frame['isEquipped'] == true;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isEquipped
+              ? [const Color(0xFFFFF9E8), const Color(0xFFFFF1C1)]
+              : [kColorWhite, const Color(0xFFF9F2F8)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isEquipped
+              ? Colors.amber
+              : kColorPrimary.withValues(alpha: 0.10),
+          width: isEquipped ? 1.8 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (isEquipped ? Colors.amber : kColorPrimary).withValues(
+              alpha: 0.12,
+            ),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Align(
+            alignment: Alignment.topRight,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: isEquipped
+                    ? Colors.green
+                    : kColorPrimary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: AppText(
+                text: isEquipped ? 'ACTIVE' : 'OWNED',
+                fontSize: 9,
+                color: isEquipped ? kColorWhite : kColorPrimary,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Center(
+              child: _BackpackFramePreview(frame: frame, size: 104),
+            ),
+          ),
+          SemiBoldText(
+            text: frame['name']?.toString() ?? 'Avatar Frame',
+            fontSize: TextStyles.k14FontSize,
+            color: kColorText,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            align: TextAlign.center,
+          ),
+          Spacing.v4,
+          AppText(
+            text: frame['description']?.toString() ?? 'Purchased frame',
+            fontSize: 9,
+            color: kColorHint,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            align: TextAlign.center,
+          ),
+          Spacing.v10,
+          SizedBox(
+            width: double.infinity,
+            height: 34,
+            child: appButton(
+              onPressed: onEquip,
+              buttonText: isEquipped ? 'Unequip' : 'Equip Frame',
+              buttonColor: isEquipped ? const Color(0xFFF1E6B8) : kColorPrimary,
+              textColor: isEquipped ? kColorText : kColorWhite,
+              borderRadius: 17,
+              textStyle: TextStyles.kSemiBoldPoppins(
+                fontSize: TextStyles.k12FontSize,
+                colors: isEquipped ? kColorText : kColorWhite,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BackpackFramePreview extends StatelessWidget {
+  const _BackpackFramePreview({required this.frame, required this.size});
+
+  final Map<String, dynamic> frame;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final svgaUrl = frame['svgaUrl']?.toString().trim() ?? '';
+    final imageUrl = frame['imageUrl']?.toString().trim() ?? '';
+    final source = svgaUrl.isNotEmpty ? svgaUrl : imageUrl;
+
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          CircleAvatar(
+            radius: size * 0.27,
+            backgroundColor: kColorAvatarFallbackBg,
+            child: const SemiBoldText(
+              text: 'U',
+              fontSize: TextStyles.k16FontSize,
+              color: kColorWhite,
+            ),
+          ),
+          if (source.isNotEmpty)
+            _BackpackFrameMedia(source: source, size: size)
+          else
+            Container(
+              width: size * 0.78,
+              height: size * 0.78,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.amber, width: 4),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Plays purchased network SVGA frames and supports legacy static frame media.
+class _BackpackFrameMedia extends StatelessWidget {
+  const _BackpackFrameMedia({required this.source, required this.size});
+
+  final String source;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final fallback = _staticMedia();
+    if (_isKnownStaticMedia()) return fallback;
+
+    return NetworkSvgaWidget(
+      url: source,
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+      fallback: fallback,
+    );
+  }
+
+  bool _isKnownStaticMedia() {
+    final path = Uri.tryParse(source)?.path.toLowerCase() ?? '';
+    return path.endsWith('.svg') ||
+        path.endsWith('.png') ||
+        path.endsWith('.jpg') ||
+        path.endsWith('.jpeg') ||
+        path.endsWith('.webp') ||
+        path.endsWith('.gif');
+  }
+
+  Widget _staticMedia() {
+    final path = Uri.tryParse(source)?.path.toLowerCase() ?? '';
+    if (path.endsWith('.svg')) {
+      return SvgPicture.network(
+        source,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+      );
+    }
+    return Image.network(
+      source,
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+    );
   }
 }

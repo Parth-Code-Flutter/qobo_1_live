@@ -398,10 +398,8 @@ class MallView extends GetView<MallController> {
           final isOwned = item['isOwned'] == true;
           final isEquipped = item['isEquipped'] == true;
           final buttonText = isFrameTab
-              ? isEquipped
-                    ? 'Equipped'
-                    : isOwned
-                    ? 'Equip'
+              ? isOwned
+                    ? 'Open Backpack'
                     : '${item['price']} Coins'
               : '${item['price']} Coins';
 

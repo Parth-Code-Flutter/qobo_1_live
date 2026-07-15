@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/repo/economy/economy_repo.dart';
 import 'package:qobo_one_live/repo/frame/frame_repo.dart';
+import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_dialogs/common_giffy_dialog.dart';
 
@@ -174,7 +175,9 @@ class MallController extends GetxController {
   Future<void> buyItem(Map<String, dynamic> item) async {
     if (selectedTab.value == 1) {
       if (item['isOwned'] == true) {
-        await equipFrame(item);
+        // Purchased frames are managed from Backpack so Mall remains focused
+        // on discovering and purchasing new customizations.
+        await Get.toNamed(Routes.BACKPACK);
       } else {
         await buyFrame(item);
       }
@@ -211,32 +214,6 @@ class MallController extends GetxController {
     await _fetchFrameShop();
     selectTab(1);
     await _showPurchaseSuccessDialog(name: name, price: price);
-  }
-
-  Future<void> equipFrame(Map<String, dynamic> item) async {
-    final backpackItemId = item['backpackItemId']?.toString();
-    if (backpackItemId == null || backpackItemId.isEmpty) {
-      Get.snackbar('Mall', 'Purchase this frame before equipping it.');
-      return;
-    }
-
-    final shouldEquip = item['isEquipped'] != true;
-    final response = await _frameRepo.equipFrame(
-      backpackItemId: backpackItemId,
-      equip: shouldEquip,
-      isShowLoader: true,
-    );
-    if (!_isSuccess(response)) {
-      Get.snackbar('Mall', 'Could not update this frame.');
-      return;
-    }
-
-    await _fetchFrameShop();
-    selectTab(1);
-    Get.snackbar(
-      'Mall',
-      shouldEquip ? 'Frame equipped successfully.' : 'Frame removed.',
-    );
   }
 
   Future<void> _buyLegacyMallItem(Map<String, dynamic> item) async {
