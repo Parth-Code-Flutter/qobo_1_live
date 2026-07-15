@@ -5,6 +5,7 @@ import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/safe_network_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import 'package:svgaplayer_flutter/svgaplayer_flutter.dart';
 
 /// Two-letter initials from a display name (first letter of first two words).
 String userDisplayInitials(String name) {
@@ -212,53 +213,145 @@ class FramedUserAvatar extends StatelessWidget {
   }
 }
 
-class _FrameImage extends StatelessWidget {
+class _FrameImage extends StatefulWidget {
   const _FrameImage({required this.source, required this.size});
 
   final String source;
   final double size;
 
   @override
-  Widget build(BuildContext context) {
-    final isRemote =
-        source.startsWith('http://') ||
-        source.startsWith('https://') ||
-        source.startsWith('/');
-    final normalizedUrl = isRemote ? ApiImageUtils.normalize(source) : null;
-    final isSvg = source.toLowerCase().endsWith('.svg');
+  State<_FrameImage> createState() => _FrameImageState();
+}
 
-    if (isRemote && isSvg) {
+class _FrameImageState extends State<_FrameImage>
+    with SingleTickerProviderStateMixin {
+  SVGAAnimationController? _svgaController;
+  bool _isSvgaReady = false;
+  bool _svgaFailed = false;
+
+  bool get _isRemote =>
+      widget.source.startsWith('http://') ||
+      widget.source.startsWith('https://') ||
+      widget.source.startsWith('/');
+
+  bool get _isSvg => widget.source.toLowerCase().endsWith('.svg');
+
+  bool get _shouldTrySvga {
+    final normalized = widget.source.toLowerCase();
+    return _isRemote &&
+        !_isSvg &&
+        !normalized.endsWith('.png') &&
+        !normalized.endsWith('.jpg') &&
+        !normalized.endsWith('.jpeg') &&
+        !normalized.endsWith('.webp') &&
+        !normalized.endsWith('.gif');
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSvgaIfNeeded();
+  }
+
+  @override
+  void didUpdateWidget(covariant _FrameImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.source != widget.source) {
+      _svgaController?.dispose();
+      _svgaController = null;
+      _isSvgaReady = false;
+      _svgaFailed = false;
+      _loadSvgaIfNeeded();
+    }
+  }
+
+  @override
+  void dispose() {
+    _svgaController?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadSvgaIfNeeded() async {
+    if (!_shouldTrySvga) return;
+    final controller = SVGAAnimationController(vsync: this);
+    _svgaController = controller;
+    try {
+      final videoItem = await SVGAParser.shared.decodeFromURL(
+        ApiImageUtils.normalize(widget.source) ?? widget.source,
+      );
+      if (!mounted || _svgaController != controller) {
+        controller.dispose();
+        return;
+      }
+      controller.videoItem = videoItem;
+      controller.repeat();
+      setState(() {
+        _isSvgaReady = true;
+        _svgaFailed = false;
+      });
+    } catch (_) {
+      if (!mounted || _svgaController != controller) return;
+      setState(() {
+        _isSvgaReady = false;
+        _svgaFailed = true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final normalizedUrl = _isRemote
+        ? ApiImageUtils.normalize(widget.source)
+        : null;
+
+    if (_shouldTrySvga &&
+        _isSvgaReady &&
+        !_svgaFailed &&
+        _svgaController != null) {
+      return SizedBox(
+        width: widget.size,
+        height: widget.size,
+        child: SVGAImage(
+          _svgaController!,
+          fit: BoxFit.contain,
+          preferredSize: Size.square(widget.size),
+          clearsAfterStop: false,
+        ),
+      );
+    }
+
+    if (_isRemote && _isSvg) {
       return SvgPicture.network(
         normalizedUrl!,
-        width: size,
-        height: size,
+        width: widget.size,
+        height: widget.size,
         fit: BoxFit.contain,
       );
     }
 
-    if (isRemote) {
+    if (_isRemote) {
       return Image.network(
         normalizedUrl!,
-        width: size,
-        height: size,
+        width: widget.size,
+        height: widget.size,
         fit: BoxFit.contain,
         errorBuilder: (_, __, ___) => const SizedBox.shrink(),
       );
     }
 
-    if (isSvg) {
+    if (_isSvg) {
       return SvgPicture.asset(
-        source,
-        width: size,
-        height: size,
+        widget.source,
+        width: widget.size,
+        height: widget.size,
         fit: BoxFit.contain,
       );
     }
 
     return Image.asset(
-      source,
-      width: size,
-      height: size,
+      widget.source,
+      width: widget.size,
+      height: widget.size,
       fit: BoxFit.contain,
       errorBuilder: (_, __, ___) => const SizedBox.shrink(),
     );
