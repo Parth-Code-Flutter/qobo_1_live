@@ -10,8 +10,10 @@ Copy this folder into another repo (or depend via `path` / git) after the host a
 - Foreground message receive
 - Background / terminated message receive (top-level handler)
 - Optional foreground system tray via `flutter_local_notifications`
+- Actionable room invite trays (`JOIN_ROOM` / `REJECT_ROOM` / `DISMISS_ROOM`)
 - FCM token + token refresh callbacks
-- `onNotificationTap` hook ready for a later onClick phase
+- `onNotificationTap` + `onNotificationAction` hooks
+- `flushPendingLaunch()` for cold-start navigation after `runApp`
 
 ## Host setup
 
@@ -45,12 +47,15 @@ Future<void> main() async {
       onForegroundMessage: (msg) { /* optional */ },
       onToken: (token) { /* send to backend if needed */ },
       onTokenRefresh: (token) { /* update backend if needed */ },
-      // TODO: implement navigation later
       onNotificationTap: (msg) {},
+      onNotificationAction: (actionId, msg) {},
     ),
   );
 
   runApp(const MyApp());
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    PushNotificationService.instance.flushPendingLaunch();
+  });
 }
 ```
 

@@ -21,4 +21,34 @@ void main() {
     expect(config.showForegroundNotifications, isTrue);
     expect(config.requestPermissionsOnInit, isTrue);
   });
+
+  test('payload JSON round-trip preserves FCM data map', () {
+    const message = PushNotificationMessage(
+      messageId: 'id-1',
+      title: 'Room Invitation',
+      body: 'Join',
+      data: {
+        'type': 'room_invite',
+        'invitation_id': 'inv-1',
+        'room_id': 'room-1',
+      },
+    );
+
+    final restored = PushNotificationMessage.fromPayloadJson(
+      message.toPayloadJson(),
+    );
+    expect(restored.data['invitation_id'], 'inv-1');
+    expect(restored.title, 'Room Invitation');
+  });
+
+  test('action set mapping follows backend type contract', () {
+    expect(
+      PushNotificationService.actionSetForData({'type': 'room_invite'}),
+      PushNotificationActionSet.joinReject,
+    );
+    expect(
+      PushNotificationService.actionSetForData({'type': 'room_created'}),
+      PushNotificationActionSet.joinDismiss,
+    );
+  });
 }

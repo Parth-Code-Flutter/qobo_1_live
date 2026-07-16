@@ -224,17 +224,24 @@ class RoomRepo {
   }
 
   /// Calls `POST /api/room/join` to join a room.
+  ///
+  /// Pass [invitationId] when joining from a direct `room_invite` push so the
+  /// backend can grant private-room access without a password.
   Future<Map<String, dynamic>?> joinRoom({
     required String roomId,
     String? password,
+    String? invitationId,
     bool isShowLoader = true,
   }) async {
     final trimmedPassword = password?.trim();
+    final trimmedInvitationId = invitationId?.trim();
     final body = <String, dynamic>{
       'roomId': roomId,
       'room_id': roomId,
       if (trimmedPassword != null && trimmedPassword.isNotEmpty)
         'password': trimmedPassword,
+      if (trimmedInvitationId != null && trimmedInvitationId.isNotEmpty)
+        'invitation_id': trimmedInvitationId,
     };
     final response = await _apiService.postRequest(
       endPoint: RoomEndpoints.joinRoom,
@@ -354,7 +361,7 @@ class RoomRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
-  /// Calls `POST /api/room/invite/respond`.
+  /// Calls `POST /api/room/invite/respond` for in-room seat invites.
   Future<Map<String, dynamic>?> respondToSeatInvite({
     required String roomId,
     required int seatId,
@@ -367,6 +374,34 @@ class RoomRepo {
         'room_id': roomId,
         'seat_id': seatId,
         'action': action,
+      },
+      isShowLoader: isShowLoader,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// Calls `POST /api/room/invite/respond` for push-notification invitations.
+  ///
+  /// Backend contract: `{ invitation_id, action: "reject" | "accept" }`.
+  Future<Map<String, dynamic>?> respondToRoomInvite({
+    required String invitationId,
+    required String action,
+    String? roomId,
+    bool isShowLoader = true,
+  }) async {
+    final trimmedInvite = invitationId.trim();
+    if (trimmedInvite.isEmpty) return null;
+
+    final trimmedRoomId = roomId?.trim();
+    final response = await _apiService.postRequest(
+      endPoint: RoomEndpoints.inviteRespond,
+      requestModel: <String, dynamic>{
+        'invitation_id': trimmedInvite,
+        'action': action.trim().toLowerCase(),
+        if (trimmedRoomId != null && trimmedRoomId.isNotEmpty)
+          'room_id': trimmedRoomId,
       },
       isShowLoader: isShowLoader,
     );

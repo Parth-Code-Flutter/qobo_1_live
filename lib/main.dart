@@ -48,4 +48,9 @@ Future<void> main() async {
       },
     ),
   );
+
+  // Deliver Join/Reject from a terminated-state notification after UI exists.
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    PushNotificationBootstrap.flushPendingLaunch();
+  });
 }

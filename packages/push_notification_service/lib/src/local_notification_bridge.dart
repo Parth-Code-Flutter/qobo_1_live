@@ -3,30 +3,64 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import 'push_notification_actions.dart';
 import 'push_notification_config.dart';
 import 'push_notification_message.dart';
 
-/// Thin wrapper around [FlutterLocalNotificationsPlugin] for foreground trays.
+/// Thin wrapper around [FlutterLocalNotificationsPlugin].
 ///
-/// Kept inside the package so host apps do not re-implement Android channels.
+/// Hosts can show plain or actionable (Join / Reject) trays without re-creating
+/// Android channels or iOS notification categories.
 class LocalNotificationBridge {
-  LocalNotificationBridge({
-    FlutterLocalNotificationsPlugin? plugin,
-  }) : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
+  LocalNotificationBridge({FlutterLocalNotificationsPlugin? plugin})
+    : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
 
   final FlutterLocalNotificationsPlugin _plugin;
   bool _ready = false;
 
-  /// Payload callback reserved for future on-tap navigation.
-  void Function(String? payload)? onLocalNotificationTap;
+  /// Body tap (no action button).
+  void Function(PushNotificationMessage message)? onLocalNotificationTap;
+
+  /// Action button tap (`JOIN_ROOM`, `REJECT_ROOM`, …).
+  void Function(String actionId, PushNotificationMessage message)?
+  onLocalNotificationAction;
+
+  /// Optional background entry used when the UI isolate is not alive.
+  DidReceiveBackgroundNotificationResponseCallback? backgroundActionHandler;
 
   Future<void> initialize(PushNotificationConfig config) async {
     if (_ready) return;
 
-    const iosInit = DarwinInitializationSettings(
+    // Register ROOM_INVITE so iOS can render Join/Reject from APNs category.
+    final iosInit = DarwinInitializationSettings(
       requestAlertPermission: false,
       requestBadgePermission: false,
       requestSoundPermission: false,
+      notificationCategories: <DarwinNotificationCategory>[
+        DarwinNotificationCategory(
+          PushNotificationActions.roomInviteCategory,
+          actions: <DarwinNotificationAction>[
+            DarwinNotificationAction.plain(
+              PushNotificationActions.joinRoom,
+              'Join',
+              options: <DarwinNotificationActionOption>{
+                DarwinNotificationActionOption.foreground,
+              },
+            ),
+            DarwinNotificationAction.plain(
+              PushNotificationActions.rejectRoom,
+              'Reject',
+              options: <DarwinNotificationActionOption>{
+                DarwinNotificationActionOption.destructive,
+              },
+            ),
+            DarwinNotificationAction.plain(
+              PushNotificationActions.dismissRoom,
+              'Dismiss',
+            ),
+          ],
+        ),
+      ],
     );
 
     await _plugin.initialize(
@@ -34,15 +68,15 @@ class LocalNotificationBridge {
         android: AndroidInitializationSettings(config.androidDefaultIcon),
         iOS: iosInit,
       ),
-      onDidReceiveNotificationResponse: (response) {
-        // Hook for later: map response.payload -> host navigation.
-        onLocalNotificationTap?.call(response.payload);
-      },
+      onDidReceiveNotificationResponse: _onResponse,
+      onDidReceiveBackgroundNotificationResponse: backgroundActionHandler,
     );
 
     if (!kIsWeb && Platform.isAndroid) {
-      final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
+      final androidPlugin = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       await androidPlugin?.createNotificationChannel(
         AndroidNotificationChannel(
           config.androidNotificationChannelId,
@@ -59,10 +93,17 @@ class LocalNotificationBridge {
   Future<void> showFromMessage({
     required PushNotificationConfig config,
     required PushNotificationMessage message,
+    PushNotificationActionSet actionSet = PushNotificationActionSet.none,
+    String? titleOverride,
+    String? bodyOverride,
   }) async {
     if (!_ready) return;
-    if (!message.hasNotificationContent) return;
 
+    final title = (titleOverride ?? message.title).trim();
+    final body = (bodyOverride ?? message.body).trim();
+    if (title.isEmpty && body.isEmpty) return;
+
+    final androidActions = _androidActionsFor(actionSet);
     final androidDetails = AndroidNotificationDetails(
       config.androidNotificationChannelId,
       config.androidNotificationChannelName,
@@ -70,25 +111,96 @@ class LocalNotificationBridge {
       importance: Importance.high,
       priority: Priority.high,
       icon: config.androidDefaultIcon,
+      category: AndroidNotificationCategory.call,
+      actions: androidActions,
+      // Keep the tray until the user acts — invites are time-sensitive.
+      autoCancel: true,
     );
 
-    const iosDetails = DarwinNotificationDetails(
+    final iosDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
+      categoryIdentifier: actionSet == PushNotificationActionSet.none
+          ? null
+          : PushNotificationActions.roomInviteCategory,
     );
 
     await _plugin.show(
-      // Prefer a stable-ish id so rapid duplicates replace instead of stacking wildly.
       _notificationIdFor(message),
-      message.title.isEmpty ? 'Notification' : message.title,
-      message.body,
+      title.isEmpty ? 'Notification' : title,
+      body,
       NotificationDetails(android: androidDetails, iOS: iosDetails),
-      payload: message.messageId.isEmpty ? null : message.messageId,
+      payload: message.toPayloadJson(),
     );
   }
 
+  /// Cancels a previously shown invite (e.g. after Reject / successful Join).
+  Future<void> cancelForMessage(PushNotificationMessage message) async {
+    if (!_ready) return;
+    await _plugin.cancel(_notificationIdFor(message));
+  }
+
+  void _onResponse(NotificationResponse response) {
+    final message = PushNotificationMessage.fromPayloadJson(response.payload);
+    final actionId = response.actionId?.trim() ?? '';
+
+    // Body tap → treat as Join when the payload is a room invite/alert.
+    if (actionId.isEmpty ||
+        response.notificationResponseType ==
+            NotificationResponseType.selectedNotification) {
+      onLocalNotificationTap?.call(message);
+      return;
+    }
+
+    onLocalNotificationAction?.call(actionId, message);
+  }
+
+  List<AndroidNotificationAction> _androidActionsFor(
+    PushNotificationActionSet actionSet,
+  ) {
+    switch (actionSet) {
+      case PushNotificationActionSet.joinReject:
+        return const <AndroidNotificationAction>[
+          // Bring UI to foreground so GetX / room navigation can run.
+          AndroidNotificationAction(
+            PushNotificationActions.joinRoom,
+            'Join',
+            showsUserInterface: true,
+            cancelNotification: true,
+          ),
+          AndroidNotificationAction(
+            PushNotificationActions.rejectRoom,
+            'Reject',
+            showsUserInterface: true,
+            cancelNotification: true,
+          ),
+        ];
+      case PushNotificationActionSet.joinDismiss:
+        return const <AndroidNotificationAction>[
+          AndroidNotificationAction(
+            PushNotificationActions.joinRoom,
+            'Join',
+            showsUserInterface: true,
+            cancelNotification: true,
+          ),
+          AndroidNotificationAction(
+            PushNotificationActions.dismissRoom,
+            'Dismiss',
+            cancelNotification: true,
+          ),
+        ];
+      case PushNotificationActionSet.none:
+        return const <AndroidNotificationAction>[];
+    }
+  }
+
   int _notificationIdFor(PushNotificationMessage message) {
+    // Prefer backend notification_id so retries replace the same tray entry.
+    final notificationId = message.data['notification_id']?.toString().trim();
+    if (notificationId != null && notificationId.isNotEmpty) {
+      return notificationId.hashCode & 0x7fffffff;
+    }
     if (message.messageId.isNotEmpty) {
       return message.messageId.hashCode & 0x7fffffff;
     }

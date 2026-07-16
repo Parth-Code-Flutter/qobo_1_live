@@ -1,0 +1,237 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:push_notification_service/push_notification_service.dart';
+import 'package:qobo_one_live/repo/room/room_repo.dart';
+import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/services/firebase/room_invite_push_payload.dart';
+import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
+import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
+import 'package:qobo_one_live/utils/zego_engine_utils.dart';
+
+/// Handles Join / Reject / Dismiss for room invite push notifications.
+///
+/// Contract (backend guide):
+/// - `room_invite` → Join calls `/api/room/join` with `invitation_id`,
+///   Reject calls `/api/room/invite/respond` with `action: reject`
+/// - `room_created` → Join only; Dismiss is local
+/// - Block Join when `expires_at` is in the past
+class RoomInvitePushHandler {
+  RoomInvitePushHandler({RoomRepo? roomRepo})
+    : _roomRepo = roomRepo ?? RoomRepo();
+
+  final RoomRepo _roomRepo;
+
+  /// Body tap → same as Join for invite / broadcast room alerts.
+  Future<void> handleNotificationTap(PushNotificationMessage message) async {
+    final payload = RoomInvitePushPayload.fromMessage(message);
+    if (payload == null) {
+      LoggerUtils.logInfo(
+        'RoomInvitePush: ignore non-room tap data=${message.data}',
+      );
+      return;
+    }
+    await joinFromInvite(payload, sourceMessage: message);
+  }
+
+  /// Action button: `JOIN_ROOM` / `REJECT_ROOM` / `DISMISS_ROOM`.
+  Future<void> handleNotificationAction({
+    required String actionId,
+    required PushNotificationMessage message,
+  }) async {
+    final payload = RoomInvitePushPayload.fromMessage(message);
+    if (payload == null) {
+      LoggerUtils.logInfo(
+        'RoomInvitePush: ignore action=$actionId data=${message.data}',
+      );
+      return;
+    }
+
+    switch (actionId) {
+      case PushNotificationActions.joinRoom:
+        await joinFromInvite(payload, sourceMessage: message);
+      case PushNotificationActions.rejectRoom:
+        await rejectInvite(payload, sourceMessage: message);
+      case PushNotificationActions.dismissRoom:
+        await PushNotificationService.instance.cancelLocalNotification(message);
+        LoggerUtils.logInfo(
+          'RoomInvitePush: dismissed room_created for ${payload.roomId}',
+        );
+      default:
+        LoggerUtils.logInfo('RoomInvitePush: unknown action=$actionId');
+    }
+  }
+
+  /// Joins the room via API and opens the live broadcast screen.
+  Future<void> joinFromInvite(
+    RoomInvitePushPayload payload, {
+    PushNotificationMessage? sourceMessage,
+  }) async {
+    if (payload.isExpired) {
+      _showFeedback('This invitation has expired');
+      if (sourceMessage != null) {
+        await PushNotificationService.instance.cancelLocalNotification(
+          sourceMessage,
+        );
+      }
+      return;
+    }
+
+    // Direct invites must carry invitation_id for private-room bypass.
+    if (payload.isDirectInvite && !payload.hasInvitationId) {
+      _showFeedback('Invitation id is missing from this notification');
+      return;
+    }
+
+    final response = await _roomRepo.joinRoom(
+      roomId: payload.roomId,
+      invitationId: payload.hasInvitationId ? payload.invitationId : null,
+      isShowLoader: true,
+    );
+
+    if (!_isApiSuccess(response)) {
+      final error =
+          response?['error']?.toString() ??
+          response?['message']?.toString() ??
+          'Could not join room';
+      _showFeedback(error);
+      return;
+    }
+
+    if (sourceMessage != null) {
+      await PushNotificationService.instance.cancelLocalNotification(
+        sourceMessage,
+      );
+    }
+
+    final roomData = _normalizeJoinPayload(response?['data'], payload: payload);
+    final roomType = (roomData['type']?.toString() ?? payload.roomType)
+        .toUpperCase();
+
+    await ZegoEngineUtils.resetForRoomProject().timeout(
+      const Duration(milliseconds: 700),
+      onTimeout: () {},
+    );
+
+    // Defer navigation until after any pending frame (cold-start race).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Get.toNamed(
+        Routes.LIVE_BROADCAST,
+        arguments: {
+          'isHost': false,
+          'roomType': roomType == 'AUDIO' ? 'AUDIO' : 'VIDEO',
+          'roomData': roomData,
+        },
+      );
+    });
+  }
+
+  /// Marks a direct invitation as rejected on the backend.
+  Future<void> rejectInvite(
+    RoomInvitePushPayload payload, {
+    PushNotificationMessage? sourceMessage,
+  }) async {
+    if (!payload.isDirectInvite) {
+      // Broadcast alerts only dismiss locally — no server reject.
+      if (sourceMessage != null) {
+        await PushNotificationService.instance.cancelLocalNotification(
+          sourceMessage,
+        );
+      }
+      return;
+    }
+
+    if (!payload.hasInvitationId) {
+      _showFeedback('Invitation id is missing');
+      return;
+    }
+
+    final response = await _roomRepo.respondToRoomInvite(
+      invitationId: payload.invitationId,
+      action: 'reject',
+      roomId: payload.roomId,
+      isShowLoader: false,
+    );
+
+    if (sourceMessage != null) {
+      await PushNotificationService.instance.cancelLocalNotification(
+        sourceMessage,
+      );
+    }
+
+    if (_isApiSuccess(response)) {
+      _showFeedback('Invitation rejected', isError: false);
+      return;
+    }
+
+    _showFeedback(
+      response?['message']?.toString() ?? 'Could not reject invitation',
+    );
+  }
+
+  Map<String, dynamic> _normalizeJoinPayload(
+    dynamic raw, {
+    required RoomInvitePushPayload payload,
+  }) {
+    final data = raw is Map
+        ? Map<String, dynamic>.from(raw)
+        : <String, dynamic>{};
+    final joinedRoom = data['room'] is Map
+        ? Map<String, dynamic>.from(data['room'] as Map)
+        : <String, dynamic>{};
+
+    final roomData = <String, dynamic>{
+      ...joinedRoom,
+      if (data['room'] is! Map) ...data,
+      'room_id': payload.roomId,
+      'id': joinedRoom['id'] ?? data['room_id'] ?? payload.roomId,
+      'type': joinedRoom['type'] ?? payload.roomType,
+      'title': joinedRoom['title'] ?? payload.roomTitle,
+      'name': joinedRoom['name'] ?? joinedRoom['title'] ?? payload.roomTitle,
+      'hostId': joinedRoom['hostId'] ?? payload.hostId,
+      'hostName': joinedRoom['hostName'] ?? payload.hostName,
+    };
+
+    final zegoStreaming = data['zegoStreaming'] ?? joinedRoom['zegoStreaming'];
+    if (zegoStreaming is Map) {
+      roomData['zegoStreaming'] = Map<String, dynamic>.from(zegoStreaming);
+      roomData.putIfAbsent('zegoToken', () => zegoStreaming['token']);
+    }
+
+    roomData['zegoLiveId'] =
+        data['zegoLiveId']?.toString() ??
+        data['channelName']?.toString() ??
+        joinedRoom['zegoLiveId']?.toString() ??
+        (zegoStreaming is Map ? zegoStreaming['roomId']?.toString() : null) ??
+        payload.roomId;
+    roomData['channelName'] =
+        data['channelName']?.toString() ??
+        roomData['zegoLiveId']?.toString() ??
+        payload.roomId;
+
+    if (data['seatId'] != null) {
+      roomData['seatId'] = data['seatId'];
+    }
+
+    return roomData;
+  }
+
+  bool _isApiSuccess(Map<String, dynamic>? response) {
+    if (response == null) return false;
+    if (response['success'] == true) return true;
+    final code = response['statusCode'];
+    return code == 1 || code == 200 || code == 201 || code == true;
+  }
+
+  void _showFeedback(String message, {bool isError = true}) {
+    final context = Get.overlayContext ?? Get.context;
+    if (context != null) {
+      if (isError) {
+        AppToast.showError(context, message);
+      } else {
+        AppToast.showSuccess(context, message);
+      }
+      return;
+    }
+    Get.snackbar('Room invite', message, snackPosition: SnackPosition.BOTTOM);
+  }
+}
