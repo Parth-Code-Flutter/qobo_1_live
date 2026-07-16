@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:push_notification_service/push_notification_service.dart';
 import 'package:qobo_one_live/services/firebase/firebase_bootstrap.dart';
 import 'package:qobo_one_live/services/firebase/room_invite_push_handler.dart';
+import 'package:qobo_one_live/utils/app_widgets/room_invite_in_app_banner.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 
 /// App-level wiring for the reusable [PushNotificationService] package.
@@ -45,8 +46,14 @@ abstract final class PushNotificationBootstrap {
           LoggerUtils.logInfo(
             'Push foreground: ${message.title} | data=${message.data}',
           );
-          // Actionable trays for room_invite / room_created are shown by the
-          // package itself so Join / Reject buttons appear in every app state.
+        },
+        // Branded Join/Dismiss card while the app is open (OS tray buttons
+        // cannot use app gradients).
+        onForegroundActionableMessage: (message) {
+          return RoomInviteInAppBanner.tryShow(
+            message,
+            handler: _roomInviteHandler,
+          );
         },
         onToken: (token) {
           LoggerUtils.logInfo('Push token ready (${token.length} chars)');
@@ -55,14 +62,12 @@ abstract final class PushNotificationBootstrap {
           LoggerUtils.logInfo('Push token refreshed (${token.length} chars)');
           // TODO: sync refreshed token with backend profile/device APIs.
         },
-        // Body tap → join room when payload is a room invite / alert.
         onNotificationTap: (message) {
           LoggerUtils.logInfo(
             'Push tapped: ${message.title} | ${message.data}',
           );
           _roomInviteHandler.handleNotificationTap(message);
         },
-        // Action buttons: JOIN_ROOM / REJECT_ROOM / DISMISS_ROOM.
         onNotificationAction: (actionId, message) {
           LoggerUtils.logInfo('Push action=$actionId | data=${message.data}');
           _roomInviteHandler.handleNotificationAction(

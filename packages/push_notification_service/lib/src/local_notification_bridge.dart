@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'push_notification_actions.dart';
@@ -42,7 +43,7 @@ class LocalNotificationBridge {
           actions: <DarwinNotificationAction>[
             DarwinNotificationAction.plain(
               PushNotificationActions.joinRoom,
-              'Join',
+              'Join Now',
               options: <DarwinNotificationActionOption>{
                 DarwinNotificationActionOption.foreground,
               },
@@ -56,7 +57,7 @@ class LocalNotificationBridge {
             ),
             DarwinNotificationAction.plain(
               PushNotificationActions.dismissRoom,
-              'Dismiss',
+              'Not Now',
             ),
           ],
         ),
@@ -111,9 +112,19 @@ class LocalNotificationBridge {
       importance: Importance.high,
       priority: Priority.high,
       icon: config.androidDefaultIcon,
+      // Brand accent tints the small icon / action chrome on many OEMs.
+      color: const Color(0xFFFF2C4D),
       category: AndroidNotificationCategory.call,
       actions: androidActions,
-      // Keep the tray until the user acts — invites are time-sensitive.
+      styleInformation: BigTextStyleInformation(
+        body.isEmpty ? title : body,
+        contentTitle: title.isEmpty ? 'Notification' : title,
+        summaryText: actionSet == PushNotificationActionSet.joinReject
+            ? 'Tap Join Now to enter'
+            : actionSet == PushNotificationActionSet.joinDismiss
+            ? 'Tap Join Now to enter'
+            : null,
+      ),
       autoCancel: true,
     );
 
@@ -162,16 +173,17 @@ class LocalNotificationBridge {
     switch (actionSet) {
       case PushNotificationActionSet.joinReject:
         return const <AndroidNotificationAction>[
-          // Bring UI to foreground so GetX / room navigation can run.
           AndroidNotificationAction(
             PushNotificationActions.joinRoom,
-            'Join',
+            'Join Now',
+            icon: DrawableResourceAndroidBitmap('ic_notif_join'),
             showsUserInterface: true,
             cancelNotification: true,
           ),
           AndroidNotificationAction(
             PushNotificationActions.rejectRoom,
             'Reject',
+            icon: DrawableResourceAndroidBitmap('ic_notif_reject'),
             showsUserInterface: true,
             cancelNotification: true,
           ),
@@ -180,13 +192,15 @@ class LocalNotificationBridge {
         return const <AndroidNotificationAction>[
           AndroidNotificationAction(
             PushNotificationActions.joinRoom,
-            'Join',
+            'Join Now',
+            icon: DrawableResourceAndroidBitmap('ic_notif_join'),
             showsUserInterface: true,
             cancelNotification: true,
           ),
           AndroidNotificationAction(
             PushNotificationActions.dismissRoom,
-            'Dismiss',
+            'Not Now',
+            icon: DrawableResourceAndroidBitmap('ic_notif_dismiss'),
             cancelNotification: true,
           ),
         ];

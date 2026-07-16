@@ -232,11 +232,15 @@ class PushNotificationService {
 
         final actionSet = actionSetForData(message.data);
         if (actionSet != PushNotificationActionSet.none) {
+          // Prefer branded in-app UI when the host provides one.
+          final handled =
+              await _handlers.onForegroundActionableMessage?.call(message) ??
+              false;
+          if (handled) return;
+
           // iOS already renders the APNs alert + ROOM_INVITE actions when a
           // `notification` block is present — avoid a duplicate local tray.
-          if (!kIsWeb &&
-              Platform.isIOS &&
-              message.hasNotificationContent) {
+          if (!kIsWeb && Platform.isIOS && message.hasNotificationContent) {
             return;
           }
           final display = displayCopyFor(message);

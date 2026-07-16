@@ -8,6 +8,7 @@ import 'push_notification_message.dart';
 class PushNotificationHandlers {
   const PushNotificationHandlers({
     this.onForegroundMessage,
+    this.onForegroundActionableMessage,
     this.onNotificationTap,
     this.onNotificationAction,
     this.onToken,
@@ -16,6 +17,13 @@ class PushNotificationHandlers {
 
   /// Fires when a message arrives while the app is in the foreground.
   final void Function(PushNotificationMessage message)? onForegroundMessage;
+
+  /// Optional branded UI for room invites while the app is open.
+  ///
+  /// Return `true` to suppress the default system tray (OS action buttons
+  /// cannot use app gradients — prefer an in-app banner instead).
+  final Future<bool> Function(PushNotificationMessage message)?
+  onForegroundActionableMessage;
 
   /// Called when the user opens the app via a notification body tap.
   final void Function(PushNotificationMessage message)? onNotificationTap;
