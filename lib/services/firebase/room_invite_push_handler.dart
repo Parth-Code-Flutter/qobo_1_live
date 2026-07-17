@@ -8,12 +8,12 @@ import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/zego_engine_utils.dart';
 
-/// Handles Join / Reject / Dismiss for room invite push notifications.
+/// Handles Join / Reject / Dismiss for actionable push notifications.
 ///
-/// Contract (backend guide):
-/// - `room_invite` → Join calls `/api/room/join` with `invitation_id`,
-///   Reject calls `/api/room/invite/respond` with `action: reject`
-/// - `room_created` → Join only; Dismiss is local
+/// Contract (backend types):
+/// - `room_invite` → Join + Reject (`invitation_id` required for Join)
+/// - `room_created` / `live_streaming_created` → Join + Dismiss
+/// - `general` / `custom` → Join + Dismiss (Join only when `room_id` present)
 /// - Block Join when `expires_at` is in the past
 class RoomInvitePushHandler {
   RoomInvitePushHandler({RoomRepo? roomRepo})
@@ -54,7 +54,7 @@ class RoomInvitePushHandler {
       case PushNotificationActions.dismissRoom:
         await PushNotificationService.instance.cancelLocalNotification(message);
         LoggerUtils.logInfo(
-          'RoomInvitePush: dismissed room_created for ${payload.roomId}',
+          'RoomInvitePush: dismissed type=${payload.type} room=${payload.roomId}',
         );
       default:
         LoggerUtils.logInfo('RoomInvitePush: unknown action=$actionId');
@@ -73,6 +73,19 @@ class RoomInvitePushHandler {
           sourceMessage,
         );
       }
+      return;
+    }
+
+    // Admin / general broadcasts without a room just open the app.
+    if (!payload.hasRoomId) {
+      if (sourceMessage != null) {
+        await PushNotificationService.instance.cancelLocalNotification(
+          sourceMessage,
+        );
+      }
+      LoggerUtils.logInfo(
+        'RoomInvitePush: Join with no room_id for type=${payload.type}',
+      );
       return;
     }
 

@@ -11,6 +11,7 @@ import 'push_notification_actions.dart';
 import 'push_notification_config.dart';
 import 'push_notification_handlers.dart';
 import 'push_notification_message.dart';
+import 'push_notification_types.dart';
 
 /// Portable FCM receive service usable across Flutter projects.
 ///
@@ -42,8 +43,10 @@ class PushNotificationService {
 
   /// Called by [pushNotificationBackgroundHandler] in a background isolate.
   ///
-  /// Shows an actionable local notification for room invite / room_created
-  /// data-only messages so Android can expose Join / Reject buttons.
+  /// Shows an actionable local notification for known push types
+  /// (`room_invite`, `room_created`, `live_streaming_created`, `general`,
+  /// `custom`) so Android data-only messages can expose Join / Reject or
+  /// Join / Dismiss buttons.
   static Future<void> handleBackgroundMessage(RemoteMessage message) async {
     try {
       if (Firebase.apps.isEmpty) {
@@ -302,8 +305,12 @@ class PushNotificationService {
   /// Maps FCM `type` → which action buttons the tray should show.
   static PushNotificationActionSet actionSetForData(Map<String, dynamic> data) {
     final type = data['type']?.toString().trim().toLowerCase() ?? '';
-    if (type == 'room_invite') return PushNotificationActionSet.joinReject;
-    if (type == 'room_created') return PushNotificationActionSet.joinDismiss;
+    if (PushNotificationTypes.isDirectInvite(type)) {
+      return PushNotificationActionSet.joinReject;
+    }
+    if (PushNotificationTypes.isJoinDismiss(type)) {
+      return PushNotificationActionSet.joinDismiss;
+    }
     return PushNotificationActionSet.none;
   }
 
@@ -315,27 +322,55 @@ class PushNotificationService {
     final host = message.data['host_name']?.toString().trim();
     final roomTitle = message.data['room_title']?.toString().trim();
     final roomType = message.data['room_type']?.toString().trim() ?? 'live';
+    final hostLabel = host?.isNotEmpty == true ? host! : 'A host';
+    final roomLabel = roomTitle?.isNotEmpty == true ? roomTitle! : 'a room';
 
-    final title = message.title.trim().isNotEmpty
-        ? message.title.trim()
-        : type == 'room_invite'
-        ? 'Room Invitation'
-        : type == 'room_created'
-        ? 'Live Stream Alert'
-        : 'Notification';
+    if (message.title.trim().isNotEmpty || message.body.trim().isNotEmpty) {
+      return (
+        title: message.title.trim().isNotEmpty
+            ? message.title.trim()
+            : _defaultTitleFor(type),
+        body: message.body.trim(),
+      );
+    }
 
-    final body = message.body.trim().isNotEmpty
-        ? message.body.trim()
-        : type == 'room_invite'
-        ? '${host?.isNotEmpty == true ? host : 'Someone'} invited you to '
-              'join "${roomTitle?.isNotEmpty == true ? roomTitle : 'a room'}"'
-        : type == 'room_created'
-        ? '${host?.isNotEmpty == true ? host : 'A host'} started a '
-              '$roomType room'
-              '${roomTitle?.isNotEmpty == true ? ': $roomTitle' : ''}'
-        : '';
+    switch (type) {
+      case PushNotificationTypes.roomInvite:
+        return (
+          title: 'Room Invitation',
+          body: '${host?.isNotEmpty == true ? host : 'Someone'} invited you to '
+              'join "$roomLabel"',
+        );
+      case PushNotificationTypes.roomCreated:
+        return (
+          title: 'Live Stream Alert',
+          body: '$hostLabel started a $roomType room'
+              '${roomTitle?.isNotEmpty == true ? ': $roomTitle' : ''}',
+        );
+      case PushNotificationTypes.liveStreamingCreated:
+        return (
+          title: 'Live Stream Alert',
+          body: '$hostLabel started a live video stream'
+              '${roomTitle?.isNotEmpty == true ? ': $roomTitle' : ''}',
+        );
+      case PushNotificationTypes.general:
+      case PushNotificationTypes.custom:
+        return (title: 'Notification', body: '');
+      default:
+        return (title: 'Notification', body: '');
+    }
+  }
 
-    return (title: title, body: body);
+  static String _defaultTitleFor(String type) {
+    switch (type) {
+      case PushNotificationTypes.roomInvite:
+        return 'Room Invitation';
+      case PushNotificationTypes.roomCreated:
+      case PushNotificationTypes.liveStreamingCreated:
+        return 'Live Stream Alert';
+      default:
+        return 'Notification';
+    }
   }
 
   static void _log(String message) {

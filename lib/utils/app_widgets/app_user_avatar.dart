@@ -5,7 +5,7 @@ import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/safe_network_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
-import 'package:svgaplayer_flutter/svgaplayer_flutter.dart';
+import 'package:flutter_svga/flutter_svga.dart';
 
 /// Two-letter initials from a display name (first letter of first two words).
 String userDisplayInitials(String name) {
@@ -284,6 +284,8 @@ class _FrameImageState extends State<_FrameImage>
         return;
       }
       controller.videoItem = videoItem;
+      // Avatar-frame SVGAs must stay silent in profile / chat chrome.
+      controller.muted = true;
       controller.repeat();
       setState(() {
         _isSvgaReady = true;

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:svgaplayer_flutter/svgaplayer_flutter.dart';
+import 'package:flutter_svga/flutter_svga.dart';
 
 /// Reusable network SVGA player for API-driven animated assets.
 ///
@@ -80,6 +80,8 @@ class _NetworkSvgaWidgetState extends State<NetworkSvgaWidget>
       }
 
       controller.videoItem = videoItem;
+      // Frame / badge SVGAs are visual-only in lists and avatars.
+      controller.muted = true;
       controller
         ..reset()
         ..repeat();

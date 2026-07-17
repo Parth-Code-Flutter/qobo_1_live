@@ -1,6 +1,6 @@
 import 'package:push_notification_service/push_notification_service.dart';
 
-/// Parsed FCM data for `room_invite` / `room_created` pushes.
+/// Parsed FCM data for actionable room / live / broadcast pushes.
 class RoomInvitePushPayload {
   const RoomInvitePushPayload({
     required this.type,
@@ -12,9 +12,11 @@ class RoomInvitePushPayload {
     required this.notificationId,
     required this.invitationId,
     required this.expiresAt,
+    this.title = '',
+    this.body = '',
   });
 
-  /// `room_invite` (Join+Reject) or `room_created` (Join+Dismiss).
+  /// One of [PushNotificationTypes.all].
   final String type;
   final String roomId;
   final String roomType;
@@ -25,9 +27,17 @@ class RoomInvitePushPayload {
   final String invitationId;
   final DateTime? expiresAt;
 
-  bool get isDirectInvite => type == 'room_invite';
-  bool get isBroadcastAlert => type == 'room_created';
+  /// Optional FCM notification title/body (admin / general dispatches).
+  final String title;
+  final String body;
+
+  bool get isDirectInvite => PushNotificationTypes.isDirectInvite(type);
+
+  /// Join + Dismiss broadcast types (`room_created`, live stream, general…).
+  bool get isBroadcastAlert => PushNotificationTypes.isJoinDismiss(type);
+
   bool get hasInvitationId => invitationId.isNotEmpty;
+  bool get hasRoomId => roomId.isNotEmpty;
 
   /// True when [expiresAt] is present and already in the past.
   bool get isExpired {
@@ -35,13 +45,56 @@ class RoomInvitePushPayload {
     return DateTime.now().toUtc().isAfter(expiresAt!.toUtc());
   }
 
-  /// Returns null when the payload is not a supported room push type.
-  static RoomInvitePushPayload? tryParse(Map<String, dynamic> data) {
+  /// Headline for in-app Join/Dismiss (or Join/Reject) banner.
+  String get bannerTitle {
+    if (title.trim().isNotEmpty) return title.trim();
+    switch (type) {
+      case PushNotificationTypes.roomInvite:
+        return 'Room Invitation';
+      case PushNotificationTypes.roomCreated:
+      case PushNotificationTypes.liveStreamingCreated:
+        return 'Live Stream Alert';
+      case PushNotificationTypes.general:
+      case PushNotificationTypes.custom:
+        return 'Notification';
+      default:
+        return 'Notification';
+    }
+  }
+
+  /// Supporting copy for the in-app banner.
+  String get bannerBody {
+    if (body.trim().isNotEmpty) return body.trim();
+    switch (type) {
+      case PushNotificationTypes.roomInvite:
+        return '$hostName invited you to join "$roomTitle"';
+      case PushNotificationTypes.roomCreated:
+        return '$hostName started a $roomType room: "$roomTitle"';
+      case PushNotificationTypes.liveStreamingCreated:
+        return '$hostName started a live video stream: "$roomTitle"';
+      case PushNotificationTypes.general:
+      case PushNotificationTypes.custom:
+        return roomTitle.isNotEmpty && roomTitle != 'Live room'
+            ? roomTitle
+            : 'Tap Join Now to open';
+      default:
+        return '';
+    }
+  }
+
+  /// Returns null when the payload is not a supported actionable push type.
+  static RoomInvitePushPayload? tryParse(
+    Map<String, dynamic> data, {
+    String title = '',
+    String body = '',
+  }) {
     final type = _text(data['type'])?.toLowerCase() ?? '';
-    if (type != 'room_invite' && type != 'room_created') return null;
+    if (!PushNotificationTypes.all.contains(type)) return null;
 
     final roomId = _text(data['room_id']) ?? _text(data['roomId']) ?? '';
-    if (roomId.isEmpty) return null;
+    if (PushNotificationTypes.requiresRoomId(type) && roomId.isEmpty) {
+      return null;
+    }
 
     return RoomInvitePushPayload(
       type: type,
@@ -58,11 +111,13 @@ class RoomInvitePushPayload {
       notificationId: _text(data['notification_id']) ?? '',
       invitationId: _text(data['invitation_id']) ?? '',
       expiresAt: _parseExpiresAt(_text(data['expires_at'])),
+      title: title,
+      body: body,
     );
   }
 
   static RoomInvitePushPayload? fromMessage(PushNotificationMessage message) {
-    return tryParse(message.data);
+    return tryParse(message.data, title: message.title, body: message.body);
   }
 
   static DateTime? _parseExpiresAt(String? raw) {

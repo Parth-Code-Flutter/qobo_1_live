@@ -1,3 +1,4 @@
+import 'package:audio_session/audio_session.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
@@ -13,6 +14,10 @@ import 'package:toastification/toastification.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Allow gift SVGA / short SFX to play on iOS even with the Silent switch on,
+  // while mixing with Zego live-room / call audio (do not take exclusive focus).
+  await _configureGiftAudioSession();
 
   // Background isolate entry must be registered before FCM is used.
   PushNotificationBootstrap.registerBackgroundHandler();
@@ -53,4 +58,31 @@ Future<void> main() async {
   WidgetsBinding.instance.addPostFrameCallback((_) {
     PushNotificationBootstrap.flushPendingLaunch();
   });
+}
+
+/// Configures a playback-capable session that mixes with RTC (Zego).
+///
+/// Note: `svgaplayer_flutter` is archived and has no `enableSound` API.
+/// Gift SVGA audio comes from `flutter_svga` (embedded tracks) and/or the
+/// gift-list `soundUrl` via [GiftSoundPlayer].
+Future<void> _configureGiftAudioSession() async {
+  try {
+    final session = await AudioSession.instance;
+    await session.configure(
+      const AudioSessionConfiguration(
+        avAudioSessionCategory: AVAudioSessionCategory.playback,
+        avAudioSessionCategoryOptions:
+            AVAudioSessionCategoryOptions.mixWithOthers,
+        avAudioSessionMode: AVAudioSessionMode.defaultMode,
+        androidAudioAttributes: AndroidAudioAttributes(
+          contentType: AndroidAudioContentType.sonification,
+          usage: AndroidAudioUsage.assistanceSonification,
+        ),
+        androidAudioFocusGainType:
+            AndroidAudioFocusGainType.gainTransientMayDuck,
+      ),
+    );
+  } catch (_) {
+    // Audio session setup must never block app launch.
+  }
 }

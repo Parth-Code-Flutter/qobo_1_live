@@ -12,10 +12,11 @@ import 'package:qobo_one_live/services/chat/chat_inbox_preview.dart';
 import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
-import 'package:qobo_one_live/utils/ui_utils/gift_celebration_overlay.dart';
+import 'package:qobo_one_live/utils/ui_utils/gift_media_utils.dart';
 import 'package:qobo_one_live/utils/zego_call_id_utils.dart';
 import 'package:qobo_one_live/utils/zego_engine_utils.dart';
 import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
+import 'package:zego_uikit/zego_uikit.dart';
 
 class ChatVoiceCallController extends GetxController {
   ChatVoiceCallController({
@@ -59,6 +60,12 @@ class ChatVoiceCallController extends GetxController {
   bool _peerJoined = false;
   bool _recordCallHistory = true;
   Timer? _ticker;
+
+  /// Peer gift celebration via Zego in-room messages (same markers as live rooms).
+  StreamSubscription<List<ZegoInRoomMessage>>? _giftMessageSub;
+  final Set<String> _seenGiftMessageKeys = <String>{};
+  bool _giftChatBootstrapDone = false;
+  String? _lastCelebratedGiftKey;
 
   String get zegoUserId {
     if (!Get.isRegistered<UserSessionController>()) {
@@ -115,6 +122,8 @@ class ChatVoiceCallController extends GetxController {
     _startTicker();
     unawaited(loadWalletBalance());
     unawaited(loadGiftCatalog());
+    // Listen for peer gifts once the call room message bus is available.
+    _bindGiftMessageListener();
     LoggerUtils.logInfo(
       'ChatVoiceCallController: Zego join callId=${callId.value} '
       'room=${roomId.value} video=${isVideo.value}',
@@ -179,6 +188,8 @@ class ChatVoiceCallController extends GetxController {
     _peerJoined = true;
     hasPeerJoined.value = true;
     _billingStartedAt ??= DateTime.now();
+    // Engine is usually ready once the peer is in — (re)bind gift messages.
+    _bindGiftMessageListener();
   }
 
   void onZegoError(Object error) {
@@ -214,6 +225,7 @@ class ChatVoiceCallController extends GetxController {
   @override
   void onClose() {
     _ticker?.cancel();
+    _giftMessageSub?.cancel();
     unawaited(_recordCallIfNeeded());
     super.onClose();
   }
@@ -236,7 +248,10 @@ class ChatVoiceCallController extends GetxController {
         giftCatalog.assignAll(
           data
               .whereType<Map>()
-              .map((raw) => _mapGift(Map<String, dynamic>.from(raw)))
+              .map(
+                (raw) =>
+                    GiftMediaUtils.mapGiftFromApi(Map<String, dynamic>.from(raw)),
+              )
               .where((gift) => (gift['id'] ?? '').isNotEmpty)
               .toList(),
         );
@@ -278,12 +293,29 @@ class ChatVoiceCallController extends GetxController {
     if (isEconomyApiSuccess(response)) {
       await loadWalletBalance();
       if (Get.isBottomSheetOpen == true) Get.back<void>();
-      final animationUrl = _giftAnimationUrlFromResponse(response, gift);
-      final soundUrl = _giftSoundUrlFromResponse(response, gift);
-      GiftCelebrationOverlay.show(
+
+      final animationUrl = GiftMediaUtils.animationUrlFromResponse(
+        response,
+        gift,
+      );
+      final soundUrl = GiftMediaUtils.soundUrlFromResponse(response, gift);
+
+      // Sender celebration (SVGA + sound from gift-list / send-gift response).
+      GiftMediaUtils.showCelebration(
         giftName: gift['name'],
-        svgaUrl: animationUrl.isNotEmpty ? animationUrl : null,
-        soundUrl: soundUrl.isNotEmpty ? soundUrl : null,
+        animationUrl: animationUrl,
+        soundUrl: soundUrl,
+      );
+
+      // Notify the peer so they can play the same animation on their call UI.
+      final giftLabel = GiftMediaUtils.buildChatLabel(
+        giftName: gift['name'],
+        giftIcon: gift['icon'],
+        animationUrl: animationUrl,
+        soundUrl: soundUrl,
+      );
+      unawaited(
+        ZegoUIKit().sendInRoomMessage(giftLabel).catchError((_) => false),
       );
       return;
     }
@@ -294,47 +326,54 @@ class ChatVoiceCallController extends GetxController {
     );
   }
 
-  String _giftAnimationUrlFromResponse(
-    Map<String, dynamic>? response,
-    Map<String, String> gift,
-  ) {
-    final data = response?['data'];
-    final responseGift = data is Map ? data['gift'] : null;
-    final apiAnimationUrl = responseGift is Map
-        ? (responseGift['animationUrl'] ??
-                  responseGift['animation_url'] ??
-                  responseGift['svgaUrl'])
-              ?.toString()
-              .trim()
-        : null;
-    if (apiAnimationUrl != null && apiAnimationUrl.isNotEmpty) {
-      return apiAnimationUrl;
+  /// Subscribes to Zego in-room messages for peer gift celebrations.
+  void _bindGiftMessageListener() {
+    // Keep a single subscription so rebinds do not re-play old gift messages.
+    if (_giftMessageSub != null) return;
+    try {
+      final zego = ZegoUIKit();
+      _giftMessageSub = zego.getInRoomMessageListStream().listen(
+        _maybeCelebrateIncomingGift,
+      );
+      _maybeCelebrateIncomingGift(zego.getInRoomMessages());
+    } catch (error) {
+      // Call engine may not be ready yet — retry when the peer joins.
+      LoggerUtils.logInfo(
+        'ChatVoiceCallController: gift message bind deferred ($error)',
+      );
     }
-    return gift['animationUrl']?.trim() ?? '';
   }
 
-  String _giftSoundUrlFromResponse(
-    Map<String, dynamic>? response,
-    Map<String, String> gift,
-  ) {
-    final data = response?['data'];
-    final responseGift = data is Map ? data['gift'] : null;
-    final soundValue =
-        (responseGift is Map
-            ? responseGift['soundUrl'] ??
-                  responseGift['sound_url'] ??
-                  responseGift['audioUrl'] ??
-                  responseGift['audio_url']
-            : null) ??
-        (data is Map
-            ? data['soundUrl'] ??
-                  data['sound_url'] ??
-                  data['audioUrl'] ??
-                  data['audio_url']
-            : null);
-    final apiSoundUrl = soundValue?.toString().trim();
-    if (apiSoundUrl != null && apiSoundUrl.isNotEmpty) return apiSoundUrl;
-    return gift['soundUrl']?.trim() ?? '';
+  /// Plays celebration for peer gift chat events (skips own send duplicates).
+  void _maybeCelebrateIncomingGift(List<ZegoInRoomMessage> messages) {
+    final giftMessages = messages
+        .where((m) => GiftMediaUtils.isGiftChatMessage(m.message))
+        .toList();
+
+    if (!_giftChatBootstrapDone) {
+      for (final message in giftMessages) {
+        _seenGiftMessageKeys.add('${message.messageID}_${message.timestamp}');
+      }
+      _giftChatBootstrapDone = true;
+      return;
+    }
+    if (giftMessages.isEmpty) return;
+
+    final myUserId = zegoUserId;
+    for (var i = giftMessages.length - 1; i >= 0; i--) {
+      final message = giftMessages[i];
+      final key = '${message.messageID}_${message.timestamp}';
+      if (!_seenGiftMessageKeys.add(key)) continue;
+      if (key == _lastCelebratedGiftKey) continue;
+
+      final senderId = ZegoLiveIdUtils.sanitizeUserId(message.user.id);
+      final isMine = senderId.isNotEmpty && senderId == myUserId;
+      if (isMine) continue;
+
+      _lastCelebratedGiftKey = key;
+      GiftMediaUtils.showCelebrationFromChatLabel(message.message);
+      return;
+    }
   }
 
   void _startTicker() {
@@ -351,35 +390,6 @@ class ChatVoiceCallController extends GetxController {
             .inSeconds;
       }
     });
-  }
-
-  Map<String, String> _mapGift(Map<String, dynamic> raw) {
-    final price = raw['price'] ?? raw['coins'] ?? raw['amount'] ?? 0;
-    final animationUrl =
-        raw['animationUrl']?.toString() ??
-        raw['animation_url']?.toString() ??
-        '';
-    final soundUrl =
-        raw['soundUrl']?.toString() ??
-        raw['sound_url']?.toString() ??
-        raw['audioUrl']?.toString() ??
-        raw['audio_url']?.toString() ??
-        '';
-    return {
-      'id': raw['id']?.toString() ?? raw['_id']?.toString() ?? '',
-      'name': raw['name']?.toString() ?? raw['title']?.toString() ?? 'Gift',
-      'price': price.toString(),
-      'icon':
-          raw['icon']?.toString() ??
-          raw['emoji']?.toString() ??
-          raw['image']?.toString() ??
-          raw['imageUrl']?.toString() ??
-          '🎁',
-      'category':
-          raw['category']?.toString() ?? raw['type']?.toString() ?? 'Popular',
-      'animationUrl': animationUrl.trim(),
-      'soundUrl': soundUrl.trim(),
-    };
   }
 
   String _formatDuration(int seconds) {

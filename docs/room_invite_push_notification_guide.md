@@ -7,8 +7,18 @@ This document defines the backend contract and mobile requirements for actionabl
 ## **Required Backend Decisions & System Design**
 
 ### **1. Invitation Nature & Flow**
-* **Direct Invitations (`type: "room_invite"`)**: These are targeted direct invitations to specific users, which carry an `invitation_id` and allow the user to **Join** (calls join API) or **Reject** (notifies the server to mark it rejected).
-* **General Broadcast Alerts (`type: "room_created"`)**: Sent when a followed host starts streaming. These only support **Join** and **Dismiss** (purely local client dismiss).
+* **Direct Invitations (`type: "room_invite"`)**: These are targeted direct invitations to specific users, which carry an `invitation_id` and allow the user to **Join** (calls join API) or **Reject** (notifies the server to mark it rejected). iOS `aps.category`: `ROOM_INVITE`.
+* **Audio room alert (`type: "room_created"`)**: Followed host starts an audio room → **Join** + **Dismiss**. iOS `aps.category`: `ROOM_BROADCAST`.
+* **Live video alert (`type: "live_streaming_created"`)**: Followed host starts a live video stream → **Join** + **Dismiss**. iOS `aps.category`: `ROOM_BROADCAST`.
+* **Admin broadcast (`type: "general"` / `"custom"`)**: Manual dispatch → **Join** + **Dismiss** (Join joins a room only when `room_id` is present). iOS `aps.category`: `ROOM_BROADCAST`.
+
+| type | Android | iOS category | Actions |
+|---|---|---|---|
+| `room_invite` | Data-only (custom Join/Reject) | `ROOM_INVITE` | Join / Reject |
+| `room_created` | Prefer data-only for action buttons | `ROOM_BROADCAST` | Join / Dismiss |
+| `live_streaming_created` | Prefer data-only for action buttons | `ROOM_BROADCAST` | Join / Dismiss |
+| `general` / `custom` | Prefer data-only for action buttons | `ROOM_BROADCAST` | Join / Dismiss |
+
 
 ### **2. Expiration Rules**
 * Every `room_invite` is valid for exactly **5 minutes** from the moment of dispatch. 

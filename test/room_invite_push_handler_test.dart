@@ -51,20 +51,75 @@ void main() {
       expect(payload.hasInvitationId, isFalse);
     });
 
-    test('returns null for unsupported push types', () {
+    test('parses live_streaming_created as Join/Dismiss broadcast', () {
+      final payload = RoomInvitePushPayload.tryParse({
+        'type': 'live_streaming_created',
+        'room_id': 'room-live-1',
+        'room_type': 'video',
+        'host_name': 'Yasmin',
+        'room_title': 'Friday Live',
+      });
+
+      expect(payload, isNotNull);
+      expect(payload!.isBroadcastAlert, isTrue);
+      expect(payload.isDirectInvite, isFalse);
+      expect(payload.bannerTitle, 'Live Stream Alert');
+      expect(payload.bannerBody, contains('live video stream'));
+    });
+
+    test('parses general/custom without room_id', () {
+      final general = RoomInvitePushPayload.tryParse(
+        {'type': 'general', 'notification_id': 'n1'},
+        title: 'Promo',
+        body: 'Check the mall',
+      );
+      expect(general, isNotNull);
+      expect(general!.isBroadcastAlert, isTrue);
+      expect(general.hasRoomId, isFalse);
+      expect(general.bannerTitle, 'Promo');
+      expect(general.bannerBody, 'Check the mall');
+
+      final custom = RoomInvitePushPayload.tryParse({
+        'type': 'custom',
+        'room_id': 'room-3',
+        'host_name': 'Admin',
+      });
+      expect(custom, isNotNull);
+      expect(custom!.hasRoomId, isTrue);
+    });
+
+    test('returns null for unsupported push types or missing room_id', () {
       expect(RoomInvitePushPayload.tryParse({'type': 'chat'}), isNull);
       expect(RoomInvitePushPayload.tryParse({'type': 'room_invite'}), isNull);
+      expect(
+        RoomInvitePushPayload.tryParse({'type': 'live_streaming_created'}),
+        isNull,
+      );
     });
   });
 
   group('PushNotificationService helpers', () {
-    test('maps room_invite and room_created to action sets', () {
+    test('maps backend notification types to action sets', () {
       expect(
         PushNotificationService.actionSetForData({'type': 'room_invite'}),
         PushNotificationActionSet.joinReject,
       );
       expect(
         PushNotificationService.actionSetForData({'type': 'room_created'}),
+        PushNotificationActionSet.joinDismiss,
+      );
+      expect(
+        PushNotificationService.actionSetForData({
+          'type': 'live_streaming_created',
+        }),
+        PushNotificationActionSet.joinDismiss,
+      );
+      expect(
+        PushNotificationService.actionSetForData({'type': 'general'}),
+        PushNotificationActionSet.joinDismiss,
+      );
+      expect(
+        PushNotificationService.actionSetForData({'type': 'custom'}),
         PushNotificationActionSet.joinDismiss,
       );
       expect(
@@ -91,6 +146,24 @@ void main() {
       expect(display.body, contains("Yasmin's Lounge"));
     });
 
+    test('synthesizes display copy for live_streaming_created', () {
+      const message = PushNotificationMessage(
+        messageId: '2',
+        title: '',
+        body: '',
+        data: {
+          'type': 'live_streaming_created',
+          'host_name': 'Yasmin',
+          'room_title': 'Friday Live',
+        },
+      );
+
+      final display = PushNotificationService.displayCopyFor(message);
+      expect(display.title, 'Live Stream Alert');
+      expect(display.body, contains('live video stream'));
+      expect(display.body, contains('Friday Live'));
+    });
+
     test('round-trips local notification payload JSON', () {
       const original = PushNotificationMessage(
         messageId: 'msg-1',
@@ -115,9 +188,25 @@ void main() {
   group('PushNotificationActions', () {
     test('keeps stable ids matching backend APNs category contract', () {
       expect(PushNotificationActions.roomInviteCategory, 'ROOM_INVITE');
+      expect(PushNotificationActions.roomBroadcastCategory, 'ROOM_BROADCAST');
       expect(PushNotificationActions.joinRoom, 'JOIN_ROOM');
       expect(PushNotificationActions.rejectRoom, 'REJECT_ROOM');
       expect(PushNotificationActions.dismissRoom, 'DISMISS_ROOM');
+    });
+  });
+
+  group('PushNotificationTypes', () {
+    test('classifies join-reject vs join-dismiss types', () {
+      expect(PushNotificationTypes.isDirectInvite('room_invite'), isTrue);
+      expect(PushNotificationTypes.isJoinDismiss('room_created'), isTrue);
+      expect(
+        PushNotificationTypes.isJoinDismiss('live_streaming_created'),
+        isTrue,
+      );
+      expect(PushNotificationTypes.isJoinDismiss('general'), isTrue);
+      expect(PushNotificationTypes.isJoinDismiss('custom'), isTrue);
+      expect(PushNotificationTypes.requiresRoomId('general'), isFalse);
+      expect(PushNotificationTypes.requiresRoomId('room_created'), isTrue);
     });
   });
 }

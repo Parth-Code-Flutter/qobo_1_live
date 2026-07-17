@@ -3,10 +3,10 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:just_audio/just_audio.dart' as just_audio;
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
-import 'package:svgaplayer_flutter/svgaplayer_flutter.dart';
+import 'package:qobo_one_live/utils/ui_utils/gift_sound_player.dart';
+import 'package:flutter_svga/flutter_svga.dart';
 
 /// Full-screen celebration overlay shown after a successful gift send.
 ///
@@ -93,7 +93,7 @@ class _GiftCelebrationViewState extends State<_GiftCelebrationView>
 
   late final AnimationController _controller;
   SVGAAnimationController? _svgaController;
-  just_audio.AudioPlayer? _audioPlayer;
+  GiftSoundPlayer? _soundPlayer;
   Timer? _removeTimer;
   bool _isSvgaReady = false;
   bool _svgaFailed = false;
@@ -110,11 +110,6 @@ class _GiftCelebrationViewState extends State<_GiftCelebrationView>
 
   bool get _hasLocalSvga =>
       widget.svgaAsset != null && widget.svgaAsset!.trim().isNotEmpty;
-
-  bool get _hasNetworkSound {
-    final url = widget.soundUrl?.trim() ?? '';
-    return url.startsWith('http://') || url.startsWith('https://');
-  }
 
   bool get _shouldLoadSvga =>
       !_hasGifAsset && (_hasNetworkSvga || _hasLocalSvga);
@@ -141,11 +136,10 @@ class _GiftCelebrationViewState extends State<_GiftCelebrationView>
   @override
   void dispose() {
     _removeTimer?.cancel();
-    final audioPlayer = _audioPlayer;
-    _audioPlayer = null;
-    if (audioPlayer != null) {
-      unawaited(audioPlayer.stop().catchError((_) {}));
-      unawaited(audioPlayer.dispose().catchError((_) {}));
+    final soundPlayer = _soundPlayer;
+    _soundPlayer = null;
+    if (soundPlayer != null) {
+      unawaited(soundPlayer.dispose());
     }
     _svgaController?.dispose();
     _controller.dispose();
@@ -174,6 +168,10 @@ class _GiftCelebrationViewState extends State<_GiftCelebrationView>
       }
 
       controller.videoItem = videoItem;
+      // Gift celebration may include embedded SVGA audio tracks.
+      controller
+        ..muted = false
+        ..volume = 1.0;
       setState(() {
         _isSvgaReady = true;
         _isLoadingSvga = false;
@@ -182,8 +180,12 @@ class _GiftCelebrationViewState extends State<_GiftCelebrationView>
       controller
         ..reset()
         ..repeat();
-      // Start sound only when the visual is ready so both feel synchronized.
-      unawaited(_playGiftSound());
+      // Prefer embedded SVGA audio when present; otherwise play API soundUrl.
+      if (videoItem.audios.isEmpty) {
+        unawaited(_playGiftSound());
+      } else {
+        _soundStarted = true;
+      }
       // Start dismiss clock only after the clip is ready to play.
       _scheduleDismiss();
     } catch (_) {
@@ -202,28 +204,16 @@ class _GiftCelebrationViewState extends State<_GiftCelebrationView>
   }
 
   Future<void> _playGiftSound() async {
-    if (!_hasNetworkSound || _soundStarted || !mounted) return;
+    if (_soundStarted || !mounted) return;
+    if (GiftSoundPlayer.resolvePlayableUrl(widget.soundUrl) == null) return;
     _soundStarted = true;
-    // Reuse the app's existing audio session instead of activating or changing
-    // it, which keeps Zego room/call audio routing untouched.
-    final player = just_audio.AudioPlayer(
-      handleInterruptions: false,
-      handleAudioSessionActivation: false,
-      androidApplyAudioAttributes: false,
-    );
-    _audioPlayer = player;
 
+    final player = GiftSoundPlayer();
+    _soundPlayer = player;
     try {
-      await player.setUrl(widget.soundUrl!);
-      if (!mounted || _audioPlayer != player) return;
-      await player.setVolume(1);
-      unawaited(player.play().catchError((_) {}));
+      await player.play(widget.soundUrl);
     } catch (_) {
       // Sound is optional; an invalid URL must never break gift animation flow.
-      if (_audioPlayer == player) {
-        _audioPlayer = null;
-        await player.dispose();
-      }
     }
   }
 

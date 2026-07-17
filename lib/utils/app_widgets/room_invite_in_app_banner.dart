@@ -132,15 +132,13 @@ class _RoomInviteBannerDialog extends StatelessWidget {
             ),
             Spacing.v12,
             SemiBoldText(
-              text: isInvite ? 'Room Invitation' : 'Live Stream Alert',
+              text: payload.bannerTitle,
               fontSize: TextStyles.k18FontSize,
               color: kColorWhite,
             ),
             Spacing.v6,
             AppText(
-              text: isInvite
-                  ? '${payload.hostName} invited you to join "${payload.roomTitle}"'
-                  : '${payload.hostName} started a ${payload.roomType} room: "${payload.roomTitle}"',
+              text: payload.bannerBody,
               fontSize: TextStyles.k12FontSize,
               color: kColorWhite.withValues(alpha: 0.78),
             ),

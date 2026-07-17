@@ -50,5 +50,19 @@ void main() {
       PushNotificationService.actionSetForData({'type': 'room_created'}),
       PushNotificationActionSet.joinDismiss,
     );
+    expect(
+      PushNotificationService.actionSetForData({
+        'type': 'live_streaming_created',
+      }),
+      PushNotificationActionSet.joinDismiss,
+    );
+    expect(
+      PushNotificationService.actionSetForData({'type': 'general'}),
+      PushNotificationActionSet.joinDismiss,
+    );
+    expect(
+      PushNotificationService.actionSetForData({'type': 'custom'}),
+      PushNotificationActionSet.joinDismiss,
+    );
   });
 }

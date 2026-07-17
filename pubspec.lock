@@ -50,7 +50,7 @@ packages:
     source: hosted
     version: "2.13.0"
   audio_session:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: audio_session
       sha256: "7217b229db57cc4dc577a8abb56b7429a5a212b978517a5be578704bfe5e568b"
@@ -670,6 +670,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.2.3"
+  flutter_svga:
+    dependency: "direct main"
+    description:
+      name: flutter_svga
+      sha256: c914ba2aee5e2d53775b64c7ff6530b4cdc3c27fd9348debb0d86fd68b869c39
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.13"
   flutter_test:
     dependency: "direct dev"
     description: flutter
@@ -1212,10 +1220,10 @@ packages:
     dependency: transitive
     description:
       name: protobuf
-      sha256: "01dd9bd0fa02548bf2ceee13545d4a0ec6046459d847b6b061d8a27237108a08"
+      sha256: "75ec242d22e950bdcc79ee38dd520ce4ee0bc491d7fadc4ea47694604d22bf06"
       url: "https://pub.dev"
     source: hosted
-    version: "2.1.0"
+    version: "6.0.0"
   provider:
     dependency: transitive
     description:
@@ -1484,14 +1492,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.1"
-  svgaplayer_flutter:
-    dependency: "direct main"
-    description:
-      name: svgaplayer_flutter
-      sha256: "13ad44aabb454e0094962b260c5333662fbd2879c7f9f8d2595b3c4b79817651"
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.2.0"
   synchronized:
     dependency: transitive
     description:
@@ -1789,7 +1789,7 @@ packages:
     source: hosted
     version: "1.0.0+6"
   zego_express_engine:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: zego_express_engine
       sha256: "2e9ae338f0d934f38c2d94655dcf2392881cf3eb6041bdb1dcbae769c1662ea4"
@@ -1853,5 +1853,5 @@ packages:
     source: hosted
     version: "2.8.0"
 sdks:
-  dart: ">=3.10.0-0 <4.0.0"
+  dart: ">=3.10.7 <4.0.0"
   flutter: ">=3.32.0"

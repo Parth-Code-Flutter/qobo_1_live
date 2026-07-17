@@ -17,7 +17,7 @@ import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
-import 'package:qobo_one_live/utils/ui_utils/gift_celebration_overlay.dart';
+import 'package:qobo_one_live/utils/ui_utils/gift_media_utils.dart';
 import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 import 'package:zego_uikit_prebuilt_live_streaming/zego_uikit_prebuilt_live_streaming.dart';
 
@@ -350,19 +350,17 @@ class LiveBroadcastController extends GetxController {
       messages.map((message) => _mapZegoMessage(message, myId)),
     );
 
-    // When someone else shares a gift in an audio room, play the celebration.
+    // When someone else shares a gift in the room, play the celebration.
     _maybeCelebrateIncomingGift(messages, myId);
   }
 
-  /// Plays the gift GIF for peer (non-self) gift chat events in audio rooms.
+  /// Plays the gift SVGA/sound for peer (non-self) gift chat events in any room.
   void _maybeCelebrateIncomingGift(
     List<ZegoInRoomMessage> messages,
     String myUserId,
   ) {
-    if (!isAudioRoom) return;
-
     final giftMessages = messages
-        .where((m) => m.message.trim().startsWith('🎁 '))
+        .where((m) => GiftMediaUtils.isGiftChatMessage(m.message))
         .toList();
     // First sync after join: mark existing gifts as seen (no replay/pop).
     if (!_giftChatBootstrapDone) {
@@ -387,52 +385,9 @@ class LiveBroadcastController extends GetxController {
       if (isMine) continue;
 
       _lastCelebratedGiftKey = key;
-      final animUrl = parseGiftAnimUrl(message.message);
-      final soundUrl = parseGiftSoundUrl(message.message);
-      GiftCelebrationOverlay.show(
-        giftName: _giftNameFromChatLabel(message.message),
-        // Peer gifts play the same API animationUrl embedded in the chat payload.
-        svgaUrl: animUrl,
-        soundUrl: soundUrl,
-        // svgaAsset: GiftCelebrationOverlay.jellyfishGiftAsset,
-      );
+      GiftMediaUtils.showCelebrationFromChatLabel(message.message);
       return;
     }
-  }
-
-  /// Extracts a readable gift name from labels like "🎁 sent Red Rose 🌹".
-  String _giftNameFromChatLabel(String text) {
-    final visible = stripGiftAnimMarker(text).replaceFirst('🎁 ', '').trim();
-    final withoutSent = visible.startsWith('sent ')
-        ? visible.substring(5).trim()
-        : visible;
-    if (withoutSent.isEmpty) return 'Gift';
-    // Drop a trailing emoji/icon token when present.
-    final parts = withoutSent.split(RegExp(r'\s+'));
-    if (parts.length >= 2 && parts.last.runes.length <= 2) {
-      return parts.sublist(0, parts.length - 1).join(' ');
-    }
-    return withoutSent;
-  }
-
-  /// Builds the Zego gift chat line, optionally embedding the animation URL.
-  String _buildGiftChatLabel({
-    required String? giftName,
-    required String? giftIcon,
-    required String animationUrl,
-    required String soundUrl,
-  }) {
-    final name = giftName?.trim().isNotEmpty == true
-        ? giftName!.trim()
-        : 'Gift';
-    final iconPart = isNetworkGiftIcon(giftIcon) ? '' : (giftIcon ?? '');
-    final base = '🎁 sent $name $iconPart'.trim();
-    final markers = <String>[
-      if (animationUrl.isNotEmpty) '[[giftAnim:$animationUrl]]',
-      if (soundUrl.isNotEmpty) '[[giftSound:$soundUrl]]',
-    ];
-    // Hidden markers let peers play the exact gift animation and sound.
-    return markers.isEmpty ? base : '$base\n${markers.join('\n')}';
   }
 
   Map<String, dynamic> _mapZegoMessage(
@@ -684,7 +639,10 @@ class LiveBroadcastController extends GetxController {
         giftCatalog.assignAll(
           data
               .whereType<Map>()
-              .map((raw) => _mapGift(Map<String, dynamic>.from(raw)))
+              .map(
+                (raw) =>
+                    GiftMediaUtils.mapGiftFromApi(Map<String, dynamic>.from(raw)),
+              )
               .where((gift) => (gift['id'] ?? '').isNotEmpty)
               .toList(),
         );
@@ -692,83 +650,6 @@ class LiveBroadcastController extends GetxController {
     } finally {
       isLoadingGifts.value = false;
     }
-  }
-
-  Map<String, String> _mapGift(Map<String, dynamic> raw) {
-    final name = raw['name']?.toString() ?? raw['title']?.toString() ?? 'Gift';
-    final price = raw['price'] ?? raw['coins'] ?? raw['amount'] ?? 0;
-    final icon =
-        raw['icon']?.toString() ??
-        raw['emoji']?.toString() ??
-        raw['image']?.toString() ??
-        raw['imageUrl']?.toString() ??
-        '🎁';
-    final category =
-        raw['category']?.toString() ?? raw['type']?.toString() ?? 'Popular';
-    // Backend gift animation clip (SVGA) — played after send-gift success.
-    final animationUrl =
-        raw['animationUrl']?.toString() ??
-        raw['animation_url']?.toString() ??
-        raw['svgaUrl']?.toString() ??
-        '';
-    final soundUrl =
-        raw['soundUrl']?.toString() ??
-        raw['sound_url']?.toString() ??
-        raw['audioUrl']?.toString() ??
-        raw['audio_url']?.toString() ??
-        '';
-    return {
-      'id': raw['id']?.toString() ?? raw['_id']?.toString() ?? '',
-      'name': name,
-      'price': price.toString(),
-      'icon': icon,
-      'category': category,
-      'animationUrl': animationUrl.trim(),
-      'soundUrl': soundUrl.trim(),
-    };
-  }
-
-  String _giftAnimationUrlFromResponse(
-    Map<String, dynamic>? response,
-    Map<String, String> gift,
-  ) {
-    final data = response?['data'];
-    final responseGift = data is Map ? data['gift'] : null;
-    final apiAnimationUrl = responseGift is Map
-        ? (responseGift['animationUrl'] ??
-                  responseGift['animation_url'] ??
-                  responseGift['svgaUrl'])
-              ?.toString()
-              .trim()
-        : null;
-    if (apiAnimationUrl != null && apiAnimationUrl.isNotEmpty) {
-      return apiAnimationUrl;
-    }
-    return gift['animationUrl']?.trim() ?? '';
-  }
-
-  String _giftSoundUrlFromResponse(
-    Map<String, dynamic>? response,
-    Map<String, String> gift,
-  ) {
-    final data = response?['data'];
-    final responseGift = data is Map ? data['gift'] : null;
-    final soundValue =
-        (responseGift is Map
-            ? responseGift['soundUrl'] ??
-                  responseGift['sound_url'] ??
-                  responseGift['audioUrl'] ??
-                  responseGift['audio_url']
-            : null) ??
-        (data is Map
-            ? data['soundUrl'] ??
-                  data['sound_url'] ??
-                  data['audioUrl'] ??
-                  data['audio_url']
-            : null);
-    final apiSoundUrl = soundValue?.toString().trim();
-    if (apiSoundUrl != null && apiSoundUrl.isNotEmpty) return apiSoundUrl;
-    return gift['soundUrl']?.trim() ?? '';
   }
 
   Future<void> sendGift(Map<String, String> gift) async {
@@ -815,26 +696,27 @@ class LiveBroadcastController extends GetxController {
     );
 
     if (isEconomyApiSuccess(response)) {
+      // Audio rooms close the sheet first so the overlay is not covered.
       final showAudioRoomGiftAnimation = isAudioRoom;
-      final animationUrl = _giftAnimationUrlFromResponse(response, gift);
-      final soundUrl = _giftSoundUrlFromResponse(response, gift);
+      final animationUrl = GiftMediaUtils.animationUrlFromResponse(
+        response,
+        gift,
+      );
+      final soundUrl = GiftMediaUtils.soundUrlFromResponse(response, gift);
       if (showAudioRoomGiftAnimation) {
-        // Close sheet first so the gift animation is visible over the room UI.
         Get.back();
         await Future<void>.delayed(const Duration(milliseconds: 300));
-        GiftCelebrationOverlay.show(
+        GiftMediaUtils.showCelebration(
           giftName: gift['name'],
-          // Dynamic SVGA from gift-list API `animationUrl`.
-          svgaUrl: animationUrl.isNotEmpty ? animationUrl : null,
-          soundUrl: soundUrl.isNotEmpty ? soundUrl : null,
-          // Local jellyfish SVGA disabled — API animationUrl is the source of truth.
-          // svgaAsset: GiftCelebrationOverlay.jellyfishGiftAsset,
+          animationUrl: animationUrl,
+          soundUrl: soundUrl,
         );
       }
 
       unawaited(loadWalletBalance());
 
-      final giftLabel = _buildGiftChatLabel(
+      // Broadcast gift markers so peers (audio + video + group) can celebrate.
+      final giftLabel = GiftMediaUtils.buildChatLabel(
         giftName: gift['name'],
         giftIcon: gift['icon'],
         animationUrl: animationUrl,
@@ -860,10 +742,10 @@ class LiveBroadcastController extends GetxController {
 
       if (!showAudioRoomGiftAnimation) {
         Get.back();
-        GiftCelebrationOverlay.show(
+        GiftMediaUtils.showCelebration(
           giftName: gift['name'],
-          svgaUrl: animationUrl.isNotEmpty ? animationUrl : null,
-          soundUrl: soundUrl.isNotEmpty ? soundUrl : null,
+          animationUrl: animationUrl,
+          soundUrl: soundUrl,
         );
       }
     } else {

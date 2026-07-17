@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:qobo_one_live/app/user_flow/live_broadcast/utils/live_room_profile_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/safe_network_avatar.dart';
-import 'package:svgaplayer_flutter/svgaplayer_flutter.dart';
+import 'package:flutter_svga/flutter_svga.dart';
 
 /// Renders a gift icon from:
 /// - network SVGA / animated clip URL (`icon` from gift-list API)
@@ -100,6 +100,8 @@ class _NetworkGiftIconState extends State<_NetworkGiftIcon>
         return;
       }
       controller.videoItem = videoItem;
+      // Catalog icons are decorative — never play embedded gift SFX here.
+      controller.muted = true;
       controller
         ..reset()
         ..repeat();

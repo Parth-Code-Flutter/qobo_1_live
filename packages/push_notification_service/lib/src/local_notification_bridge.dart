@@ -32,7 +32,7 @@ class LocalNotificationBridge {
   Future<void> initialize(PushNotificationConfig config) async {
     if (_ready) return;
 
-    // Register ROOM_INVITE so iOS can render Join/Reject from APNs category.
+    // Register APNs categories so iOS can render the correct action buttons.
     final iosInit = DarwinInitializationSettings(
       requestAlertPermission: false,
       requestBadgePermission: false,
@@ -55,9 +55,21 @@ class LocalNotificationBridge {
                 DarwinNotificationActionOption.destructive,
               },
             ),
+          ],
+        ),
+        DarwinNotificationCategory(
+          PushNotificationActions.roomBroadcastCategory,
+          actions: <DarwinNotificationAction>[
+            DarwinNotificationAction.plain(
+              PushNotificationActions.joinRoom,
+              'Join Now',
+              options: <DarwinNotificationActionOption>{
+                DarwinNotificationActionOption.foreground,
+              },
+            ),
             DarwinNotificationAction.plain(
               PushNotificationActions.dismissRoom,
-              'Not Now',
+              'Dismiss',
             ),
           ],
         ),
@@ -132,9 +144,13 @@ class LocalNotificationBridge {
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
-      categoryIdentifier: actionSet == PushNotificationActionSet.none
-          ? null
-          : PushNotificationActions.roomInviteCategory,
+      categoryIdentifier: switch (actionSet) {
+        PushNotificationActionSet.joinReject =>
+          PushNotificationActions.roomInviteCategory,
+        PushNotificationActionSet.joinDismiss =>
+          PushNotificationActions.roomBroadcastCategory,
+        PushNotificationActionSet.none => null,
+      },
     );
 
     await _plugin.show(
@@ -199,7 +215,7 @@ class LocalNotificationBridge {
           ),
           AndroidNotificationAction(
             PushNotificationActions.dismissRoom,
-            'Not Now',
+            'Dismiss',
             icon: DrawableResourceAndroidBitmap('ic_notif_dismiss'),
             cancelNotification: true,
           ),
