@@ -228,7 +228,8 @@ class LiveBroadcastController extends GetxController {
 
   bool get isGroupCallRoom => isAudioVideoRoom;
 
-  bool get canSendGifts => !isHost.value;
+  /// Hosts and viewers can open the gift sheet in audio/video/group rooms.
+  bool get canSendGifts => true;
 
   /// Zego can emit call-end lifecycle events during participant changes.
   /// Hosts may leave the route only after explicitly confirming room end.
