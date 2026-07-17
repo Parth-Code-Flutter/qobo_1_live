@@ -538,9 +538,12 @@ class ProfileTabView extends StatelessWidget {
 
   Widget _featureItem(_ProfileFeatureItem item) {
     return GestureDetector(
-      onTap: () {
+      onTap: () async {
         if (item.onTapRoute != null) {
-          Get.toNamed(item.onTapRoute!);
+          await Get.toNamed(item.onTapRoute!);
+          if (item.onTapRoute == Routes.BACKPACK) {
+            await _resolveUserSession().refreshProfileFromApi();
+          }
         }
       },
       child: Column(
@@ -776,7 +779,9 @@ class _BecomeSuperAdminButtonState extends State<_BecomeSuperAdminButton> {
         opacity: _isLoading ? 0.68 : 1,
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          // Match `_actionCard` height so Super Admin and Recharge align.
+          height: 74,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               begin: Alignment.centerLeft,
@@ -786,7 +791,7 @@ class _BecomeSuperAdminButtonState extends State<_BecomeSuperAdminButton> {
                 kColorProfileChipPurpleEnd,
               ],
             ),
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(10),
             border: Border.all(color: kColorWhite.withValues(alpha: 0.16)),
             boxShadow: [
               BoxShadow(
