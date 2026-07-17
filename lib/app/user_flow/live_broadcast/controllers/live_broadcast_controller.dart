@@ -50,6 +50,7 @@ class LiveBroadcastController extends GetxController {
   final streamTitle = ''.obs;
   final hostName = 'Live Host'.obs;
   final hostAvatarUrl = RxnString();
+  final hostAvatarFrameUrl = RxnString();
   final likesLabel = '0'.obs;
   final viewerCount = 0.obs;
   final liveViewers = <Map<String, dynamic>>[].obs;
@@ -138,6 +139,11 @@ class LiveBroadcastController extends GetxController {
     hostAvatarUrl.value = resolveHostAvatarUrl(
       isHost: isHost.value,
       sessionAvatarUrl: session?.displayPictureUrl,
+      roomData: _roomData,
+    );
+    hostAvatarFrameUrl.value = resolveHostAvatarFrameUrl(
+      isHost: isHost.value,
+      sessionFrameUrl: session?.profileFrameUrl,
       roomData: _roomData,
     );
     streamTitle.value =
@@ -641,8 +647,9 @@ class LiveBroadcastController extends GetxController {
           data
               .whereType<Map>()
               .map(
-                (raw) =>
-                    GiftMediaUtils.mapGiftFromApi(Map<String, dynamic>.from(raw)),
+                (raw) => GiftMediaUtils.mapGiftFromApi(
+                  Map<String, dynamic>.from(raw),
+                ),
               )
               .where((gift) => (gift['id'] ?? '').isNotEmpty)
               .toList(),
@@ -1157,7 +1164,7 @@ class LiveBroadcastController extends GetxController {
         : <AudioRoomSeatModel>[];
 
     final seatsByNo = <int, AudioRoomSeatModel>{
-      for (final seat in parsed) seat.seatNo: seat,
+      for (final seat in _withCurrentUserFrame(parsed)) seat.seatNo: seat,
     };
     final maxSeat = seatConfig > 0
         ? seatConfig
@@ -1177,10 +1184,36 @@ class LiveBroadcastController extends GetxController {
       if (hostSeat.avatarUrl?.trim().isNotEmpty == true) {
         hostAvatarUrl.value = hostSeat.avatarUrl;
       }
+      if (hostSeat.avatarFrameUrl?.trim().isNotEmpty == true) {
+        hostAvatarFrameUrl.value = hostSeat.avatarFrameUrl;
+      }
       if (receiverId.value.trim().isEmpty) receiverId.value = hostSeat.userId;
     }
 
     return seats;
+  }
+
+  List<AudioRoomSeatModel> _withCurrentUserFrame(
+    List<AudioRoomSeatModel> seats,
+  ) {
+    final session = Get.isRegistered<UserSessionController>()
+        ? Get.find<UserSessionController>()
+        : null;
+    final currentUserId = session?.userId.trim() ?? '';
+    final currentFrameUrl = session == null
+        ? ''
+        : session.profileFrameUrl.trim();
+    if (currentUserId.isEmpty || currentFrameUrl.isEmpty) return seats;
+
+    return seats
+        .map(
+          (seat) =>
+              seat.userId == currentUserId &&
+                  (seat.avatarFrameUrl?.trim().isEmpty ?? true)
+              ? seat.copyWith(avatarFrameUrl: currentFrameUrl)
+              : seat,
+        )
+        .toList();
   }
 
   int _readSeatConfig(dynamic data) {

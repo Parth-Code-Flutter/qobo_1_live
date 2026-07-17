@@ -174,18 +174,40 @@ class _InboxAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: hasUnread
-            ? Border.all(color: kColorBottomNavHeart, width: 2)
-            : Border.all(color: kColorWhite.withValues(alpha: 0.2), width: 1),
-      ),
-      child: AppUserAvatar(
-        name: item.name,
-        imageUrl: item.imageUrl,
-        size: 48,
+    // Same framed avatar used by New Match / discover (API frame or seed fallback).
+    const avatarSize = 48.0;
+    final frameExtent = avatarSize * 1.34;
+
+    return SizedBox(
+      width: frameExtent,
+      height: frameExtent,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          FramedUserAvatar(
+            name: item.name,
+            imageUrl: item.imageUrl,
+            frameUrl: item.avatarFrameUrl,
+            frameSeed: item.targetId,
+            size: avatarSize,
+            fontSize: TextStyles.k12FontSize,
+          ),
+          if (hasUnread)
+            Positioned(
+              right: 2,
+              bottom: 2,
+              child: Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: kColorBottomNavHeart,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFF1A1230), width: 1.5),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

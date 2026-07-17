@@ -23,9 +23,9 @@ class MatchUserSheetActions {
   final SocialUserCard? Function(String id) userById;
   final Future<SocialUserCard?> Function(String id) fetchPublicProfile;
   final Future<void> Function(BuildContext context, SocialUserCard user)
-      toggleFollow;
+  toggleFollow;
   final Future<void> Function(BuildContext context, SocialUserCard user)
-      openChat;
+  openChat;
 }
 
 /// Bottom sheet when tapping a New Match avatar.
@@ -174,10 +174,7 @@ class _MatchUserSheetBody extends StatelessWidget {
                   ),
                   Spacing.v8,
                   _statusRow(),
-                  if (user.bio.isNotEmpty) ...[
-                    Spacing.v12,
-                    _bioCard(),
-                  ],
+                  if (user.bio.isNotEmpty) ...[Spacing.v12, _bioCard()],
                   if (user.followersCount > 0 || user.followingCount > 0) ...[
                     Spacing.v12,
                     _statsRow(),
@@ -214,46 +211,13 @@ class _MatchUserSheetBody extends StatelessWidget {
         clipBehavior: Clip.none,
         alignment: Alignment.center,
         children: [
-          Container(
-            width: 96,
-            height: 96,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  kColorProfileChipPinkStart.withValues(alpha: 0.85),
-                  kColorProfileChipPurpleEnd.withValues(alpha: 0.75),
-                ],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: kColorProfileChipPinkStart.withValues(alpha: 0.35),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            width: 88,
-            height: 88,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: kColorWhite.withValues(alpha: 0.18),
-                width: 2,
-              ),
-            ),
-            child: ClipOval(
-              child: AppUserAvatar(
-                name: user.name,
-                imageUrl: user.displayPicture,
-                size: 88,
-                fontSize: TextStyles.k20FontSize,
-              ),
-            ),
+          FramedUserAvatar(
+            name: user.name,
+            imageUrl: user.displayPicture,
+            frameUrl: user.avatarFrameUrl,
+            frameSeed: user.id,
+            size: 78,
+            fontSize: TextStyles.k20FontSize,
           ),
           if (user.isVip)
             Positioned(
@@ -286,7 +250,8 @@ class _MatchUserSheetBody extends StatelessWidget {
       spacing: 8,
       runSpacing: 6,
       children: [
-        if (user.level > 0) _chip('LV.${user.level}', Icons.military_tech_rounded),
+        if (user.level > 0)
+          _chip('LV.${user.level}', Icons.military_tech_rounded),
         if (user.isMutual)
           _chip('Mutual', Icons.favorite_rounded, accent: true)
         else if (user.isFollowing)
@@ -319,7 +284,9 @@ class _MatchUserSheetBody extends StatelessWidget {
           Icon(
             icon,
             size: 12,
-            color: accent ? kColorProfileChipPinkStart : kColorWhite.withValues(alpha: 0.75),
+            color: accent
+                ? kColorProfileChipPinkStart
+                : kColorWhite.withValues(alpha: 0.75),
           ),
           Spacing.h4,
           SemiBoldText(
@@ -396,10 +363,7 @@ class _MatchUserSheetBody extends StatelessWidget {
         ),
         Spacing.h12,
         Expanded(
-          child: _MessageButton(
-            enabled: user.canMessage,
-            onTap: onMessageTap,
-          ),
+          child: _MessageButton(enabled: user.canMessage, onTap: onMessageTap),
         ),
       ],
     );
@@ -474,9 +438,7 @@ class _FollowButton extends StatelessWidget {
                       kColorProfileActionPinkEnd,
                     ],
                   ),
-            color: isFollowing
-                ? kColorWhite.withValues(alpha: 0.08)
-                : null,
+            color: isFollowing ? kColorWhite.withValues(alpha: 0.08) : null,
             border: isFollowing
                 ? Border.all(color: kColorWhite.withValues(alpha: 0.22))
                 : null,
@@ -484,7 +446,9 @@ class _FollowButton extends StatelessWidget {
                 ? null
                 : [
                     BoxShadow(
-                      color: kColorProfileActionPinkStart.withValues(alpha: 0.35),
+                      color: kColorProfileActionPinkStart.withValues(
+                        alpha: 0.35,
+                      ),
                       blurRadius: 14,
                       offset: const Offset(0, 6),
                     ),
@@ -528,10 +492,7 @@ class _FollowButton extends StatelessWidget {
 }
 
 class _MessageButton extends StatelessWidget {
-  const _MessageButton({
-    required this.enabled,
-    required this.onTap,
-  });
+  const _MessageButton({required this.enabled, required this.onTap});
 
   final bool enabled;
   final VoidCallback onTap;

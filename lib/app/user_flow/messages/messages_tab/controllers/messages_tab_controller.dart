@@ -13,6 +13,7 @@ import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart'
 import 'package:qobo_one_live/services/chat/chat_logger.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
+import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 
 import '../models/social_user_card.dart';
@@ -229,6 +230,7 @@ class MessagesTabController extends GetxController {
       message: newer.message.isNotEmpty ? newer.message : older.message,
       time: newer.time.isNotEmpty ? newer.time : older.time,
       imageUrl: _resolveInboxImageUrl(newer, older),
+      avatarFrameUrl: _resolveInboxFrameUrl(newer, older),
       unreadCount: newer.unreadCount > 0 ? newer.unreadCount : older.unreadCount,
       roomId: newer.roomId.isNotEmpty ? newer.roomId : older.roomId,
       lastMessageType: newer.lastMessageType != ChatInboxPreviewType.text
@@ -266,6 +268,18 @@ class MessagesTabController extends GetxController {
       return fallback.imageUrl;
     }
     return primary.imageUrl ?? fallback.imageUrl;
+  }
+
+  /// Prefer a real API frame over an empty/missing value when merging sources.
+  static String? _resolveInboxFrameUrl(
+    MessageListItemModel primary,
+    MessageListItemModel fallback,
+  ) {
+    final primaryFrame = primary.avatarFrameUrl?.trim();
+    if (primaryFrame != null && primaryFrame.isNotEmpty) return primaryFrame;
+    final fallbackFrame = fallback.avatarFrameUrl?.trim();
+    if (fallbackFrame != null && fallbackFrame.isNotEmpty) return fallbackFrame;
+    return null;
   }
 
   static bool _isGenericInboxName(String name) {
@@ -329,6 +343,10 @@ class MessagesTabController extends GetxController {
         recipientMap?['id']?.toString() ??
         '';
     final picture = recipientMap?['displayPicture']?.toString();
+    // Same frame parsing as New Match (`SocialUserCard` / recipient.avatarFrame).
+    final avatarFrameUrl = recipientMap == null
+        ? null
+        : SocialUserCard.fromJson(recipientMap).avatarFrameUrl;
 
     var lastMessageType =
         json['lastMessageType']?.toString() ?? ChatInboxPreviewType.text;
@@ -364,7 +382,8 @@ class MessagesTabController extends GetxController {
       name: name.isNotEmpty ? name : 'User',
       message: preview,
       time: _formatThreadTime(activityRaw),
-      imageUrl: picture,
+      imageUrl: ApiImageUtils.normalize(picture),
+      avatarFrameUrl: avatarFrameUrl,
       unreadCount: _toInt(json['unreadCount']),
       roomId: json['roomId']?.toString() ?? '',
       lastMessageType: lastMessageType,

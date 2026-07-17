@@ -6,6 +6,7 @@ class SocialUserCard {
     required this.id,
     required this.name,
     this.displayPicture,
+    this.avatarFrameUrl,
     this.gender = '',
     this.country = '',
     this.level = 0,
@@ -25,6 +26,7 @@ class SocialUserCard {
   final String id;
   final String name;
   final String? displayPicture;
+  final String? avatarFrameUrl;
   final String gender;
   final String country;
   final int level;
@@ -53,6 +55,7 @@ class SocialUserCard {
       id: id,
       name: name,
       displayPicture: displayPicture,
+      avatarFrameUrl: avatarFrameUrl,
       gender: gender,
       country: country,
       level: level,
@@ -75,8 +78,7 @@ class SocialUserCard {
   factory SocialUserCard.fromJson(Map<String, dynamic> json) {
     final isFollowing = json['isFollowing'] == true;
     final isFollower = json['isFollower'] == true;
-    final isMutual =
-        json['isMutual'] == true || (isFollowing && isFollower);
+    final isMutual = json['isMutual'] == true || (isFollowing && isFollower);
     final apiCanMessage = json['canMessage'] == true;
 
     return SocialUserCard(
@@ -87,6 +89,7 @@ class SocialUserCard {
       displayPicture: ApiImageUtils.normalize(
         json['displayPicture']?.toString(),
       ),
+      avatarFrameUrl: ApiImageUtils.normalize(_readAvatarFrameUrl(json)),
       gender: json['gender']?.toString() ?? '',
       country: json['country']?.toString() ?? '',
       level: _toInt(json['level']),
@@ -96,8 +99,7 @@ class SocialUserCard {
       isMutual: isMutual,
       canMessage: apiCanMessage || isFollowing || isFollower || isMutual,
       isVip: json['isVip'] == true,
-      isFavourite:
-          json['isFavourite'] == true || json['isFavorite'] == true,
+      isFavourite: json['isFavourite'] == true || json['isFavorite'] == true,
       coins: _toDouble(json['coins']),
       coinsPerSecond: _toDouble(json['coinsPerSecond']),
       followersCount: _toInt(json['followersCount']),
@@ -134,6 +136,33 @@ class SocialUserCard {
   static double _toDouble(dynamic raw) {
     if (raw is num) return raw.toDouble();
     return double.tryParse(raw?.toString() ?? '') ?? 0;
+  }
+
+  static String? _readAvatarFrameUrl(Map<String, dynamic> json) {
+    final direct =
+        json['avatarFrameUrl'] ??
+        json['avatar_frame_url'] ??
+        json['profileFrameUrl'] ??
+        json['profile_frame_url'];
+    final directText = direct?.toString().trim();
+    if (directText != null && directText.isNotEmpty && directText != 'null') {
+      return directText;
+    }
+
+    final avatarFrame = json['avatarFrame'];
+    if (avatarFrame is Map) {
+      final nested =
+          avatarFrame['image'] ??
+          avatarFrame['imageUrl'] ??
+          avatarFrame['url'] ??
+          avatarFrame['frameUrl'];
+      final nestedText = nested?.toString().trim();
+      if (nestedText != null && nestedText.isNotEmpty && nestedText != 'null') {
+        return nestedText;
+      }
+    }
+
+    return null;
   }
 }
 

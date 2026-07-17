@@ -82,6 +82,9 @@ class ChatLocalStore {
 
     final index = threads.indexWhere((t) => t['id']?.toString() == targetId);
     final existing = index >= 0 ? threads[index] : <String, dynamic>{};
+    final existingRecipient = existing['recipient'] is Map
+        ? Map<String, dynamic>.from(existing['recipient'] as Map)
+        : <String, dynamic>{};
     final updated = {
       'id': targetId,
       'lastMessage': lastMessage,
@@ -90,9 +93,14 @@ class ChatLocalStore {
       'unreadCount': 0,
       'recipient': {
         'id': targetId,
-        'name': name ?? existing['recipient']?['name'] ?? 'User',
+        'name': name ?? existingRecipient['name'] ?? 'User',
         'displayPicture':
-            imageUrl ?? existing['recipient']?['displayPicture'],
+            imageUrl ?? existingRecipient['displayPicture'],
+        // Keep equipped frame from API cache when local previews refresh.
+        if (existingRecipient['avatarFrame'] != null)
+          'avatarFrame': existingRecipient['avatarFrame'],
+        if (existingRecipient['avatarFrameUrl'] != null)
+          'avatarFrameUrl': existingRecipient['avatarFrameUrl'],
       },
       'localOnly': true,
     };
@@ -135,6 +143,9 @@ class ChatLocalStore {
 
     final index = threads.indexWhere((t) => t['id']?.toString() == targetId);
     final existing = index >= 0 ? threads[index] : <String, dynamic>{};
+    final existingRecipient = existing['recipient'] is Map
+        ? Map<String, dynamic>.from(existing['recipient'] as Map)
+        : <String, dynamic>{};
     final updated = {
       'id': targetId,
       'roomId': roomId.isNotEmpty ? roomId : existing['roomId']?.toString() ?? '',
@@ -145,9 +156,13 @@ class ChatLocalStore {
       'unreadCount': 0,
       'recipient': {
         'id': targetId,
-        'name': name ?? existing['recipient']?['name'] ?? 'User',
+        'name': name ?? existingRecipient['name'] ?? 'User',
         'displayPicture':
-            imageUrl ?? existing['recipient']?['displayPicture'],
+            imageUrl ?? existingRecipient['displayPicture'],
+        if (existingRecipient['avatarFrame'] != null)
+          'avatarFrame': existingRecipient['avatarFrame'],
+        if (existingRecipient['avatarFrameUrl'] != null)
+          'avatarFrameUrl': existingRecipient['avatarFrameUrl'],
       },
       'localOnly': true,
     };

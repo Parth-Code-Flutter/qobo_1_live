@@ -56,11 +56,7 @@ class DiscoverUserCallDialog extends StatelessWidget {
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF2A1248),
-              Color(0xFF1A0E32),
-              Color(0xFF120822),
-            ],
+            colors: [Color(0xFF2A1248), Color(0xFF1A0E32), Color(0xFF120822)],
           ),
           boxShadow: [
             BoxShadow(
@@ -87,10 +83,7 @@ class DiscoverUserCallDialog extends StatelessWidget {
                   ),
                   Spacing.v8,
                   _statusRow(),
-                  if (user.bio.isNotEmpty) ...[
-                    Spacing.v12,
-                    _bioCard(),
-                  ],
+                  if (user.bio.isNotEmpty) ...[Spacing.v12, _bioCard()],
                   if (user.followersCount > 0 || user.followingCount > 0) ...[
                     Spacing.v12,
                     _statsRow(),
@@ -125,39 +118,13 @@ class DiscoverUserCallDialog extends StatelessWidget {
         clipBehavior: Clip.none,
         alignment: Alignment.center,
         children: [
-          Container(
-            width: 88,
-            height: 88,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  kColorProfileChipPinkStart.withValues(alpha: 0.85),
-                  kColorProfileChipPurpleEnd.withValues(alpha: 0.75),
-                ],
-              ),
-            ),
-          ),
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: kColorWhite.withValues(alpha: 0.18),
-                width: 2,
-              ),
-            ),
-            child: ClipOval(
-              child: AppUserAvatar(
-                name: user.name,
-                imageUrl: user.displayPicture,
-                size: 80,
-                fontSize: TextStyles.k18FontSize,
-              ),
-            ),
+          FramedUserAvatar(
+            name: user.name,
+            imageUrl: user.displayPicture,
+            frameUrl: user.avatarFrameUrl,
+            frameSeed: user.id,
+            size: 72,
+            fontSize: TextStyles.k18FontSize,
           ),
           if (user.isVip)
             Positioned(
@@ -198,8 +165,7 @@ class DiscoverUserCallDialog extends StatelessWidget {
           _chip('Following', Icons.person_add_alt_1_rounded)
         else if (user.isFollower)
           _chip('Follows you', Icons.arrow_downward_rounded),
-        if (user.country.isNotEmpty)
-          _chip(user.country, Icons.public_rounded),
+        if (user.country.isNotEmpty) _chip(user.country, Icons.public_rounded),
       ],
     );
   }
@@ -304,10 +270,7 @@ class DiscoverUserCallDialog extends StatelessWidget {
                 kColorProfileChipPurpleEnd,
               ],
             ),
-            onTap: () => _startCall(
-              context,
-              ChatCallType.voice,
-            ),
+            onTap: () => _startCall(context, ChatCallType.voice),
           ),
         ),
         Spacing.h12,
@@ -321,17 +284,17 @@ class DiscoverUserCallDialog extends StatelessWidget {
                 kColorProfileActionPinkEnd,
               ],
             ),
-            onTap: () => _startCall(
-              context,
-              ChatCallType.video,
-            ),
+            onTap: () => _startCall(context, ChatCallType.video),
           ),
         ),
       ],
     );
   }
 
-  Future<void> _startCall(BuildContext dialogContext, ChatCallType callType) async {
+  Future<void> _startCall(
+    BuildContext dialogContext,
+    ChatCallType callType,
+  ) async {
     Navigator.of(dialogContext).pop();
     await Future<void>.delayed(Duration.zero);
     final launchContext = hostContext.mounted ? hostContext : Get.context;

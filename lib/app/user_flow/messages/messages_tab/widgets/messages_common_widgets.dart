@@ -17,6 +17,7 @@ class MessageListItemModel {
     required this.message,
     required this.time,
     this.imageUrl,
+    this.avatarFrameUrl,
     this.unreadCount = 0,
     this.roomId = '',
     this.lastMessageType = ChatInboxPreviewType.text,
@@ -29,6 +30,9 @@ class MessageListItemModel {
   final String message;
   final String time;
   final String? imageUrl;
+
+  /// Equipped avatar frame from `recipient.avatarFrame.image` on `/api/chat/list`.
+  final String? avatarFrameUrl;
   final int unreadCount;
   final String roomId;
   final String lastMessageType;
@@ -52,58 +56,59 @@ class MessageListItemModel {
 
 /// Horizontal New Match avatar — tap opens profile sheet.
 class MessageMatchAvatarItem extends StatelessWidget {
-  const MessageMatchAvatarItem({
-    super.key,
-    required this.user,
-    this.onTap,
-  });
+  const MessageMatchAvatarItem({super.key, required this.user, this.onTap});
 
   final SocialUserCard user;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    const avatarSize = 48.0;
+    const frameExtent = avatarSize * 1.34;
+
     return GestureDetector(
       onTap: onTap,
       child: SizedBox(
-        width: 66,
+        width: 78,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                AppUserAvatar(
-                  name: user.name,
-                  imageUrl: user.displayPicture,
-                  size: 50,
-                  border: Border.all(
-                    color: user.isMutual
-                        ? kColorBottomNavHeart
-                        : kColorWhite.withValues(alpha: 0.85),
-                    width: user.isMutual ? 2 : 1.2,
+            SizedBox(
+              width: frameExtent,
+              height: frameExtent,
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.center,
+                children: [
+                  FramedUserAvatar(
+                    name: user.name,
+                    imageUrl: user.displayPicture,
+                    frameUrl: user.avatarFrameUrl,
+                    frameSeed: user.id,
+                    size: avatarSize,
+                    fontSize: TextStyles.k12FontSize,
                   ),
-                ),
-                if (user.isFollowing)
-                  Positioned(
-                    right: -1,
-                    bottom: -1,
-                    child: Container(
-                      width: 16,
-                      height: 16,
-                      decoration: BoxDecoration(
-                        color: Colors.greenAccent.shade400,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFF1A1230)),
-                      ),
-                      child: const Icon(
-                        Icons.check_rounded,
-                        size: 10,
-                        color: Colors.black87,
+                  if (user.isFollowing)
+                    Positioned(
+                      right: 1,
+                      bottom: 1,
+                      child: Container(
+                        width: 16,
+                        height: 16,
+                        decoration: BoxDecoration(
+                          color: Colors.greenAccent.shade400,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: const Color(0xFF1A1230)),
+                        ),
+                        child: const Icon(
+                          Icons.check_rounded,
+                          size: 10,
+                          color: Colors.black87,
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
             Spacing.v6,
             AppText(

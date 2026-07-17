@@ -888,11 +888,12 @@ class _AudioSeatFrame extends StatelessWidget {
           clipBehavior: Clip.none,
           children: [
             IgnorePointer(
-              child: _FrameMedia(
-                source: customFrame.isNotEmpty ? customFrame : assetPath,
-                size: size,
-              ),
+              child: _FrameMedia(source: assetPath, size: size),
             ),
+            if (customFrame.isNotEmpty && customFrame != assetPath)
+              IgnorePointer(
+                child: _FrameMedia(source: customFrame, size: size),
+              ),
             Container(
               width: innerSize,
               height: innerSize,

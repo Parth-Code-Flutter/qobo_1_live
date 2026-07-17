@@ -491,6 +491,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                 return _AudioRoomParticipantTile(
                   name: participant['name']?.toString() ?? 'Member',
                   avatarUrl: participant['avatarUrl']?.toString(),
+                  avatarFrameUrl: participant['avatarFrameUrl']?.toString(),
                   isHost: participant['isHost'] == true,
                   isSpeaking:
                       index == 1 || participant['isCurrentUser'] == true,
@@ -509,6 +510,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
     participants.add({
       'name': controller.hostName.value,
       'avatarUrl': controller.hostAvatarUrl.value,
+      'avatarFrameUrl': controller.hostAvatarFrameUrl.value,
       'isHost': true,
     });
 
@@ -744,15 +746,23 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Stack(
+                clipBehavior: Clip.none,
                 children: [
-                  AppUserAvatar(
+                  FramedUserAvatar(
                     name: controller.hostName.value,
                     imageUrl: controller.hostAvatarUrl.value,
-                    size: compact ? 38 : 48,
+                    frameUrl: controller.hostAvatarFrameUrl.value,
+                    frameSeed: controller.receiverId.value.isNotEmpty
+                        ? controller.receiverId.value
+                        : controller.hostName.value,
+                    size: compact ? 30 : 38,
+                    fontSize: compact
+                        ? TextStyles.k10FontSize
+                        : TextStyles.k12FontSize,
                   ),
                   Positioned(
-                    right: 0,
-                    bottom: 1,
+                    right: compact ? -1 : -2,
+                    bottom: compact ? -1 : 0,
                     child: Container(
                       width: 11,
                       height: 11,
@@ -1327,6 +1337,7 @@ class _AudioRoomParticipantTile extends StatelessWidget {
   const _AudioRoomParticipantTile({
     required this.name,
     required this.avatarUrl,
+    this.avatarFrameUrl,
     required this.isHost,
     required this.isSpeaking,
     required this.isMuted,
@@ -1334,6 +1345,7 @@ class _AudioRoomParticipantTile extends StatelessWidget {
 
   final String name;
   final String? avatarUrl;
+  final String? avatarFrameUrl;
   final bool isHost;
   final bool isSpeaking;
   final bool isMuted;
@@ -1350,33 +1362,15 @@ class _AudioRoomParticipantTile extends StatelessWidget {
           clipBehavior: Clip.none,
           alignment: Alignment.center,
           children: [
-            Container(
+            SizedBox(
               width: 70,
               height: 70,
-              padding: EdgeInsets.all(isSpeaking ? 3 : 0),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isSpeaking
-                      ? const Color(0xFF12F287)
-                      : Colors.transparent,
-                  width: 2,
-                ),
-                boxShadow: [
-                  if (isSpeaking)
-                    BoxShadow(
-                      color: const Color(0xFF12F287).withValues(alpha: 0.34),
-                      blurRadius: 16,
-                      spreadRadius: 1,
-                    ),
-                ],
-              ),
-              child: AppUserAvatar(
+              child: FramedUserAvatar(
                 name: name,
                 imageUrl: avatarUrl,
-                size: 64,
-                backgroundColor: kColorWhite.withValues(alpha: 0.12),
-                textColor: kColorWhite,
+                frameUrl: avatarFrameUrl,
+                frameSeed: name,
+                size: 52,
               ),
             ),
             Positioned(

@@ -94,6 +94,57 @@ String? resolveHostAvatarUrl({
   return resolveUserAvatarUrl(ApiImageUtils.normalize(raw));
 }
 
+String? resolveHostAvatarFrameUrl({
+  required bool isHost,
+  required String? sessionFrameUrl,
+  required Map<String, dynamic> roomData,
+}) {
+  if (isHost && sessionFrameUrl?.trim().isNotEmpty == true) {
+    return ApiImageUtils.normalize(sessionFrameUrl);
+  }
+
+  final nested = readNestedHost(roomData);
+  final fromNested =
+      _readFrameUrl(nested?['avatarFrame']) ??
+      (nested == null
+          ? null
+          : readRoomField(nested, [
+              'avatarFrameUrl',
+              'avatar_frame_url',
+              'profileFrameUrl',
+              'profile_frame_url',
+              'frameUrl',
+              'frame_url',
+            ]));
+
+  final raw =
+      fromNested ??
+      _readFrameUrl(roomData['avatarFrame']) ??
+      readRoomField(roomData, [
+        'hostAvatarFrame',
+        'host_avatar_frame',
+        'avatarFrameUrl',
+        'avatar_frame_url',
+        'profileFrameUrl',
+        'profile_frame_url',
+        'frameUrl',
+        'frame_url',
+      ]);
+
+  return ApiImageUtils.normalize(raw);
+}
+
+String? _readFrameUrl(dynamic frame) {
+  if (frame is! Map) return null;
+  return readRoomField(Map<String, dynamic>.from(frame), [
+    'image',
+    'imageUrl',
+    'url',
+    'frameUrl',
+    'frame_url',
+  ]);
+}
+
 String? resolveHostId(Map<String, dynamic> roomData) {
   final nested = readNestedHost(roomData);
   if (nested != null) {

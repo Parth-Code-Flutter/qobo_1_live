@@ -145,7 +145,17 @@ class _DiscoverUserCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
+                        FramedUserAvatar(
+                          name: user.name,
+                          imageUrl: user.displayPicture,
+                          frameUrl: user.avatarFrameUrl,
+                          frameSeed: user.id,
+                          size: 38,
+                          fontSize: TextStyles.k10FontSize,
+                        ),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: SemiBoldText(
                             text: user.name,
