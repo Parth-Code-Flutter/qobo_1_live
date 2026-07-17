@@ -3,17 +3,18 @@ import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/repo/background/background_repo.dart';
 import 'package:qobo_one_live/repo/frame/frame_repo.dart';
 import 'package:qobo_one_live/repo/user/user_repo.dart';
+import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
+import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
 
 class BackpackController extends GetxController {
   BackpackController({
     UserRepo? userRepo,
     FrameRepo? frameRepo,
     BackgroundRepo? backgroundRepo,
-  })
-    : _userRepo = userRepo ?? UserRepo(),
-      _frameRepo = frameRepo ?? FrameRepo(),
-      _backgroundRepo = backgroundRepo ?? BackgroundRepo();
+  }) : _userRepo = userRepo ?? UserRepo(),
+       _frameRepo = frameRepo ?? FrameRepo(),
+       _backgroundRepo = backgroundRepo ?? BackgroundRepo();
 
   final UserRepo _userRepo;
   final FrameRepo _frameRepo;
@@ -354,13 +355,14 @@ class BackpackController extends GetxController {
       isShowLoader: true,
     );
     if (response == null || response['statusCode'] == 0) {
-      Get.snackbar('Backpack', 'Could not update this frame.');
+      _showBackpackDialog('Could not update this frame.');
       return;
     }
 
+    // Refresh backpack list + session so Profile tab picks up the new frame URL.
     await _fetchAvatarFrames();
-    Get.snackbar(
-      'Backpack',
+    await _refreshProfileSession();
+    _showBackpackDialog(
       shouldEquip ? 'Equipped $name successfully!' : 'Unequipped $name',
     );
   }
@@ -376,14 +378,35 @@ class BackpackController extends GetxController {
       isShowLoader: true,
     );
     if (response == null || response['statusCode'] == 0) {
-      Get.snackbar('Backpack', 'Could not update this background.');
+      _showBackpackDialog('Could not update this background.');
       return;
     }
 
     await _fetchProfileBackgrounds();
-    Get.snackbar(
-      'Backpack',
+    await _refreshProfileSession();
+    _showBackpackDialog(
       shouldEquip ? 'Equipped $name successfully!' : 'Unequipped $name',
+    );
+  }
+
+  /// Syncs equipped cosmetics into [UserSessionController] for Profile / other tabs.
+  Future<void> _refreshProfileSession() async {
+    if (!Get.isRegistered<UserSessionController>()) return;
+    await Get.find<UserSessionController>().refreshProfileFromApi();
+  }
+
+  /// Prefer our shared dialog over snackbars for equip / unequip feedback.
+  void _showBackpackDialog(String message) {
+    final context = Get.overlayContext ?? Get.context;
+    if (context == null) return;
+
+    CommonAppDialog.show(
+      context,
+      title: 'Backpack',
+      message: message,
+      actions: [
+        CommonAppDialogAction(label: 'OK', onPressed: () {}),
+      ],
     );
   }
 
@@ -397,7 +420,9 @@ class BackpackController extends GetxController {
   }
 
   String _frameExpiryLabel(dynamic value) {
-    return _itemExpiryLabel(value).replaceFirst('Purchased item', 'Purchased frame');
+    return _itemExpiryLabel(
+      value,
+    ).replaceFirst('Purchased item', 'Purchased frame');
   }
 
   String _itemExpiryLabel(dynamic value) {

@@ -655,6 +655,16 @@ class _BackpackFrameMedia extends StatelessWidget {
       height: size,
       fit: BoxFit.contain,
       fallback: fallback,
+      loading: Center(
+        child: SizedBox(
+          width: size * 0.22,
+          height: size * 0.22,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: kColorPrimary.withValues(alpha: 0.85),
+          ),
+        ),
+      ),
     );
   }
 
@@ -683,6 +693,19 @@ class _BackpackFrameMedia extends StatelessWidget {
       width: size,
       height: size,
       fit: BoxFit.contain,
+      loadingBuilder: (context, child, progress) {
+        if (progress == null) return child;
+        return Center(
+          child: SizedBox(
+            width: size * 0.22,
+            height: size * 0.22,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: kColorPrimary.withValues(alpha: 0.85),
+            ),
+          ),
+        );
+      },
       errorBuilder: (_, __, ___) => const SizedBox.shrink(),
     );
   }

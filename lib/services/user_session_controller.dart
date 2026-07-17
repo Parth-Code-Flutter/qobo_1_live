@@ -1,8 +1,8 @@
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/local_storage_constants.dart';
+import 'package:qobo_one_live/constants/status_code_constants.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/services/api_constants.dart';
-import 'package:qobo_one_live/services/status_code_constants.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 
 /// Centralized, app-wide user session store.
@@ -10,7 +10,8 @@ import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_cont
 /// Keeps profile data in memory for fast access and syncs it with local storage
 /// so any screen can read user info without repeating storage/API parsing logic.
 class UserSessionController extends GetxController {
-  UserSessionController({AuthRepo? authRepo}) : _authRepo = authRepo ?? AuthRepo();
+  UserSessionController({AuthRepo? authRepo})
+    : _authRepo = authRepo ?? AuthRepo();
 
   final AuthRepo _authRepo;
   Map<String, dynamic>? _profileData;

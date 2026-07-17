@@ -92,7 +92,12 @@ class ProfileTabView extends StatelessWidget {
                         width: avatarFrameSize,
                         height: avatarFrameSize,
                         child: Center(
+                          // Key remounts the avatar when the frame URL changes
+                          // so the loader appears while the new asset loads.
                           child: FramedUserAvatar(
+                            key: ValueKey(
+                              'profile_frame_${session.profileFrameUrl}',
+                            ),
                             name: session.displayName,
                             imageUrl: imageUrl,
                             size: avatarSize,
@@ -541,8 +546,11 @@ class ProfileTabView extends StatelessWidget {
       onTap: () async {
         if (item.onTapRoute != null) {
           await Get.toNamed(item.onTapRoute!);
+          // After Backpack equip/unequip, reload session so the hero frame updates.
           if (item.onTapRoute == Routes.BACKPACK) {
-            await _resolveUserSession().refreshProfileFromApi();
+            await _resolveUserSession().refreshProfileFromApi(
+              isShowLoader: false,
+            );
           }
         }
       },

@@ -20,29 +20,38 @@ class CommonAppDialog extends StatelessWidget {
   const CommonAppDialog({
     super.key,
     required this.title,
+    this.message,
     required this.actions,
   });
 
   final String title;
+
+  /// Optional body copy under the title (e.g. equip success text).
+  final String? message;
   final List<CommonAppDialogAction> actions;
 
   /// Presents a centered [Dialog] with a white surface (see [kColorWhite]).
   static Future<void> show(
     BuildContext context, {
     required String title,
+    String? message,
     required List<CommonAppDialogAction> actions,
     bool barrierDismissible = true,
   }) {
     return showDialog<void>(
       context: context,
       barrierDismissible: barrierDismissible,
-      builder: (dialogContext) =>
-          CommonAppDialog(title: title, actions: actions),
+      builder: (dialogContext) => CommonAppDialog(
+        title: title,
+        message: message,
+        actions: actions,
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final body = message?.trim() ?? '';
     return Dialog(
       backgroundColor: kColorWhite,
       shadowColor: Colors.transparent,
@@ -61,6 +70,15 @@ class CommonAppDialog extends StatelessWidget {
               color: kColorText,
               align: TextAlign.center,
             ),
+            if (body.isNotEmpty) ...[
+              Spacing.v12,
+              AppText(
+                text: body,
+                fontSize: TextStyles.k14FontSize,
+                color: kColorTextGrey,
+                align: TextAlign.center,
+              ),
+            ],
             Spacing.v16,
             ...actions.map(
               (action) => Padding(

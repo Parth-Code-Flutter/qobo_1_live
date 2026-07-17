@@ -147,7 +147,12 @@ class FramedUserAvatar extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           IgnorePointer(
-            child: _FrameImage(source: source, size: frameSize),
+            // Key forces a clean remount when the equipped frame URL changes.
+            child: _FrameImage(
+              key: ValueKey(source),
+              source: source,
+              size: frameSize,
+            ),
           ),
           Container(
             width: avatarSize,
@@ -214,7 +219,7 @@ class FramedUserAvatar extends StatelessWidget {
 }
 
 class _FrameImage extends StatefulWidget {
-  const _FrameImage({required this.source, required this.size});
+  const _FrameImage({super.key, required this.source, required this.size});
 
   final String source;
   final double size;
@@ -306,6 +311,11 @@ class _FrameImageState extends State<_FrameImage>
         ? ApiImageUtils.normalize(widget.source)
         : null;
 
+    // Show a centered spinner while the SVGA frame is still downloading.
+    if (_shouldTrySvga && !_isSvgaReady && !_svgaFailed) {
+      return _frameLoader();
+    }
+
     if (_shouldTrySvga &&
         _isSvgaReady &&
         !_svgaFailed &&
@@ -328,6 +338,7 @@ class _FrameImageState extends State<_FrameImage>
         width: widget.size,
         height: widget.size,
         fit: BoxFit.contain,
+        placeholderBuilder: (_) => _frameLoader(),
       );
     }
 
@@ -337,6 +348,10 @@ class _FrameImageState extends State<_FrameImage>
         width: widget.size,
         height: widget.size,
         fit: BoxFit.contain,
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return _frameLoader();
+        },
         errorBuilder: (_, __, ___) => const SizedBox.shrink(),
       );
     }
@@ -356,6 +371,24 @@ class _FrameImageState extends State<_FrameImage>
       height: widget.size,
       fit: BoxFit.contain,
       errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+    );
+  }
+
+  Widget _frameLoader() {
+    final indicatorSize = (widget.size * 0.18).clamp(16.0, 28.0);
+    return SizedBox(
+      width: widget.size,
+      height: widget.size,
+      child: Center(
+        child: SizedBox(
+          width: indicatorSize,
+          height: indicatorSize,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: kColorPrimary.withValues(alpha: 0.85),
+          ),
+        ),
+      ),
     );
   }
 }
