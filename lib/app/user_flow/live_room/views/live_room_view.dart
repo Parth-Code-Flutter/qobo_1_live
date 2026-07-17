@@ -8,7 +8,7 @@ import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
-import 'package:qobo_one_live/utils/app_widgets/safe_network_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -587,24 +587,15 @@ class LiveRoomView extends StatelessWidget {
           final avatarUrl = session.displayPictureUrl;
           return Row(
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  color: kColorWhite,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xB3FFFFFF), width: 1),
-                ),
-                child: ClipOval(
-                  child: SafeNetworkAvatar(
-                    url: avatarUrl,
-                    size: 40,
-                    fallback: _initialsAvatar(session.initials),
-                  ),
-                ),
+              FramedUserAvatar(
+                name: session.displayName,
+                imageUrl: avatarUrl,
+                frameUrl: session.profileFrameUrl,
+                frameSeed: session.userId,
+                size: 36,
+                fontSize: TextStyles.k10FontSize,
               ),
-              Spacing.h10,
+              Spacing.h8,
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -895,19 +886,6 @@ class LiveRoomView extends StatelessWidget {
       return Get.find<UserSessionController>();
     }
     return Get.put(UserSessionController(), permanent: true);
-  }
-
-  Widget _initialsAvatar(String initials) {
-    return ColoredBox(
-      color: const Color(0xFF2A2A2A),
-      child: Center(
-        child: SemiBoldText(
-          text: initials,
-          fontSize: TextStyles.k14FontSize,
-          color: kColorWhite,
-        ),
-      ),
-    );
   }
 }
 

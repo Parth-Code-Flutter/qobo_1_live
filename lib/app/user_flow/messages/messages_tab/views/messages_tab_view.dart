@@ -20,10 +20,7 @@ class MessagesTabView extends GetView<MessagesTabController> {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        image: DecorationImage(
-          image: AssetImage(kImgBG),
-          fit: BoxFit.cover,
-        ),
+        image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
       ),
       child: SafeArea(
         child: Padding(
@@ -81,23 +78,13 @@ class MessagesTabView extends GetView<MessagesTabController> {
         final avatarUrl = session.displayPictureUrl;
         return Row(
           children: [
-            Container(
-              width: 34,
-              height: 34,
-              padding: const EdgeInsets.all(1),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: kColorWhite, width: 1),
-              ),
-            child: ClipOval(
-              child: AppUserAvatar(
-                name: session.displayName,
-                imageUrl: avatarUrl,
-                size: 34,
-                fontSize: TextStyles.k10FontSize,
-                backgroundColor: kColorAvatarFallbackBg,
-              ),
-            ),
+            FramedUserAvatar(
+              name: session.displayName,
+              imageUrl: avatarUrl,
+              frameUrl: session.profileFrameUrl,
+              frameSeed: session.userId,
+              size: 28,
+              fontSize: TextStyles.k10FontSize,
             ),
             Spacing.h10,
             Expanded(child: _searchBar()),
@@ -131,11 +118,7 @@ class MessagesTabView extends GetView<MessagesTabController> {
           ),
           prefixIcon: const Padding(
             padding: EdgeInsets.only(top: 10),
-            child: Icon(
-              Icons.search_rounded,
-              size: 16,
-              color: kColorHint,
-            ),
+            child: Icon(Icons.search_rounded, size: 16, color: kColorHint),
           ),
           prefixIconConstraints: const BoxConstraints(minWidth: 34),
           contentPadding: const EdgeInsets.only(top: 10, right: 10),
@@ -147,12 +130,9 @@ class MessagesTabView extends GetView<MessagesTabController> {
   Widget _newMatchRow(BuildContext context) {
     if (controller.isNewMatchesLoading.value) {
       return const SizedBox(
-        height: 86,
+        height: 104,
         child: Center(
-          child: CircularProgressIndicator(
-            color: kColorWhite,
-            strokeWidth: 2,
-          ),
+          child: CircularProgressIndicator(color: kColorWhite, strokeWidth: 2),
         ),
       );
     }
@@ -160,7 +140,7 @@ class MessagesTabView extends GetView<MessagesTabController> {
     final matches = controller.newMatches;
     if (matches.isEmpty) {
       return const SizedBox(
-        height: 86,
+        height: 104,
         child: _InlineEmptyState(
           icon: Icons.favorite_border_rounded,
           text: 'New matches will appear here',
@@ -169,7 +149,7 @@ class MessagesTabView extends GetView<MessagesTabController> {
     }
 
     return SizedBox(
-      height: 86,
+      height: 104,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
@@ -179,11 +159,8 @@ class MessagesTabView extends GetView<MessagesTabController> {
           final user = matches[index];
           return MessageMatchAvatarItem(
             user: user,
-            onTap: () => showMatchUserSheet(
-              context,
-              controller.matchSheetActions,
-              user,
-            ),
+            onTap: () =>
+                showMatchUserSheet(context, controller.matchSheetActions, user),
           );
         },
       ),
@@ -220,11 +197,8 @@ class MessagesTabView extends GetView<MessagesTabController> {
           user: user,
           isProcessing: controller.processingFollowId.value == user.id,
           onFollowTap: () => controller.toggleFollow(context, user),
-          onAvatarTap: () => showMatchUserSheet(
-            context,
-            controller.matchSheetActions,
-            user,
-          ),
+          onAvatarTap: () =>
+              showMatchUserSheet(context, controller.matchSheetActions, user),
         );
       },
     );
@@ -241,10 +215,7 @@ class MessagesTabView extends GetView<MessagesTabController> {
     }
 
     if (controller.inboxThreads.isEmpty) {
-      return const SizedBox(
-        height: 160,
-        child: _MessagesEmptyState(),
-      );
+      return const SizedBox(height: 160, child: _MessagesEmptyState());
     }
 
     return ListView.separated(

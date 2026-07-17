@@ -68,28 +68,13 @@ class DiscoverTabView extends StatelessWidget {
               children: [
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: Container(
-                    width: 38,
-                    height: 38,
-                    padding: const EdgeInsets.all(1.4),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: kColorWhite.withValues(alpha: 0.10),
-                      border: Border.all(
-                        color: kColorWhite.withValues(alpha: 0.78),
-                        width: 1.2,
-                      ),
-                    ),
-                    child: ClipOval(
-                      child: avatarUrl == null
-                          ? _initialsAvatar(session.initials)
-                          : Image.network(
-                              avatarUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) =>
-                                  _initialsAvatar(session.initials),
-                            ),
-                    ),
+                  child: FramedUserAvatar(
+                    name: session.displayName,
+                    imageUrl: avatarUrl,
+                    frameUrl: session.profileFrameUrl,
+                    frameSeed: session.userId,
+                    size: 30,
+                    fontSize: TextStyles.k10FontSize,
                   ),
                 ),
                 Column(
@@ -126,10 +111,8 @@ class DiscoverTabView extends StatelessWidget {
                         final hasFilter =
                             discoverController.hasActiveDiscoverFilters;
                         return _headerIconButton(
-                          onTap: () => _openCountryFilter(
-                            context,
-                            discoverController,
-                          ),
+                          onTap: () =>
+                              _openCountryFilter(context, discoverController),
                           icon: Stack(
                             alignment: Alignment.center,
                             clipBehavior: Clip.none,
@@ -329,19 +312,6 @@ class DiscoverTabView extends StatelessWidget {
       return Get.find<DiscoverTabController>();
     }
     return Get.put(DiscoverTabController());
-  }
-
-  Widget _initialsAvatar(String initials) {
-    return ColoredBox(
-      color: kColorAvatarFallbackBg,
-      child: Center(
-        child: SemiBoldText(
-          text: initials,
-          fontSize: TextStyles.k12FontSize,
-          color: kColorWhite,
-        ),
-      ),
-    );
   }
 
   Widget _searchResultsList(
