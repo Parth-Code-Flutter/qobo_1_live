@@ -331,23 +331,26 @@ class DiscoverUserPreviewSheet extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: _ActionButton(
+          child: _DatingActionButton(
             label: user.isFollowing ? 'Following' : 'Follow',
             icon: user.isFollowing
                 ? Icons.check_rounded
                 : Icons.person_add_alt_1_rounded,
-            outlined: user.isFollowing,
+            style: user.isFollowing
+                ? _DatingActionStyle.softFollow
+                : _DatingActionStyle.follow,
             loading: isFollowProcessing,
             onTap: () => controller.toggleFollowUser(sheetContext, user),
           ),
         ),
         Spacing.h10,
         Expanded(
-          child: _ActionButton(
+          child: _DatingActionButton(
             label: 'Message',
             icon: Icons.chat_bubble_rounded,
-            accent: true,
-            muted: !user.canMessage,
+            style: user.canMessage
+                ? _DatingActionStyle.message
+                : _DatingActionStyle.messageLocked,
             onTap: () => _onMessagePressed(sheetContext),
           ),
         ),
@@ -356,38 +359,11 @@ class DiscoverUserPreviewSheet extends StatelessWidget {
   }
 
   Widget _viewProfileButton(BuildContext sheetContext) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => _openFullProfile(sheetContext),
-        borderRadius: BorderRadius.circular(16),
-        child: Ink(
-          height: 48,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: kColorWhite.withValues(alpha: 0.22)),
-            color: kColorWhite.withValues(alpha: 0.06),
-          ),
-          child: Center(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.person_outline_rounded,
-                  size: 18,
-                  color: kColorWhite,
-                ),
-                const SizedBox(width: 8),
-                SemiBoldText(
-                  text: 'View Profile',
-                  fontSize: TextStyles.k14FontSize,
-                  color: kColorWhite,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+    return _DatingActionButton(
+      label: 'View Profile',
+      icon: Icons.person_outline_rounded,
+      style: _DatingActionStyle.viewProfile,
+      onTap: () => _openFullProfile(sheetContext),
     );
   }
 
@@ -458,59 +434,114 @@ class DiscoverUserPreviewSheet extends StatelessWidget {
   }
 }
 
-class _ActionButton extends StatelessWidget {
-  const _ActionButton({
+class _DatingActionStyle {
+  const _DatingActionStyle._({
+    required this.gradient,
+    required this.glow,
+    this.border,
+    this.textAlpha = 1,
+  });
+
+  final Gradient gradient;
+  final Color glow;
+  final Border? border;
+  final double textAlpha;
+
+  /// Hot pink — primary CTA for Follow.
+  static const follow = _DatingActionStyle._(
+    gradient: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFFFF4DC4), Color(0xFFFF2D7B), Color(0xFFFF6A3D)],
+    ),
+    glow: Color(0xFFFF2D7B),
+  );
+
+  /// Soft glass when already following.
+  static final softFollow = _DatingActionStyle._(
+    gradient: LinearGradient(
+      colors: [
+        kColorWhite.withValues(alpha: 0.16),
+        kColorWhite.withValues(alpha: 0.08),
+      ],
+    ),
+    glow: kColorProfileChipPinkStart,
+    border: Border.all(color: kColorProfileChipPinkStart.withValues(alpha: 0.55)),
+  );
+
+  /// Electric violet/blue for Message when unlocked.
+  static const message = _DatingActionStyle._(
+    gradient: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFF7B5CFF), Color(0xFF4F7CFF), Color(0xFF2ED3FF)],
+    ),
+    glow: Color(0xFF5B6CFF),
+  );
+
+  /// Still colorful when locked — dimmed cyan/violet so it doesn’t look dead.
+  static final messageLocked = _DatingActionStyle._(
+    gradient: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        const Color(0xFF7B5CFF).withValues(alpha: 0.42),
+        const Color(0xFF2ED3FF).withValues(alpha: 0.28),
+      ],
+    ),
+    glow: const Color(0xFF5B6CFF),
+    border: Border.all(color: const Color(0xFF8FA8FF).withValues(alpha: 0.45)),
+    textAlpha: 0.78,
+  );
+
+  /// Sunset orange/gold for View Profile.
+  static const viewProfile = _DatingActionStyle._(
+    gradient: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFFFF9A3D), Color(0xFFFF5E7A), Color(0xFFFF3DAA)],
+    ),
+    glow: Color(0xFFFF6A4E),
+  );
+}
+
+class _DatingActionButton extends StatelessWidget {
+  const _DatingActionButton({
     required this.label,
     required this.icon,
+    required this.style,
     required this.onTap,
-    this.outlined = false,
-    this.accent = false,
-    this.muted = false,
     this.loading = false,
   });
 
   final String label;
   final IconData icon;
+  final _DatingActionStyle style;
   final VoidCallback onTap;
-  final bool outlined;
-  final bool accent;
-  final bool muted;
   final bool loading;
 
   @override
   Widget build(BuildContext context) {
-    final textColor = muted
-        ? kColorWhite.withValues(alpha: 0.4)
-        : kColorWhite;
+    final textColor = kColorWhite.withValues(alpha: style.textAlpha);
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: loading ? null : onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         child: Ink(
-          height: 50,
+          height: 52,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: outlined || muted
-                ? null
-                : LinearGradient(
-                    colors: accent
-                        ? [
-                            kColorBottomNavHeart,
-                            kColorBottomNavHeart.withValues(alpha: 0.85),
-                          ]
-                        : const [
-                            kColorProfileActionPinkStart,
-                            kColorProfileActionPinkEnd,
-                          ],
-                  ),
-            color: outlined || muted
-                ? kColorWhite.withValues(alpha: 0.08)
-                : null,
-            border: outlined || muted
-                ? Border.all(color: kColorWhite.withValues(alpha: 0.18))
-                : null,
+            borderRadius: BorderRadius.circular(18),
+            gradient: style.gradient,
+            border: style.border,
+            boxShadow: [
+              BoxShadow(
+                color: style.glow.withValues(alpha: 0.42),
+                blurRadius: 16,
+                offset: const Offset(0, 7),
+              ),
+            ],
           ),
           child: Center(
             child: loading
@@ -525,8 +556,8 @@ class _ActionButton extends StatelessWidget {
                 : Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(icon, size: 17, color: textColor),
-                      Spacing.h6,
+                      Icon(icon, size: 18, color: textColor),
+                      Spacing.h8,
                       SemiBoldText(
                         text: label,
                         fontSize: TextStyles.k14FontSize,
