@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+// Temporarily disabled: Discover audio/video call entry points.
+// import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/services/chat/chat_call_service.dart';
+// import 'package:qobo_one_live/services/chat/chat_call_service.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -10,7 +11,8 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 import '../controllers/discover_tab_controller.dart';
 
-/// Center dialog when tapping a user on Discover — profile + call actions.
+/// Center dialog when tapping a user on Discover — profile preview.
+/// Voice/Video call actions are temporarily commented out.
 Future<void> showDiscoverUserCallDialog(
   BuildContext context,
   DiscoverTabController controller,
@@ -41,8 +43,12 @@ class DiscoverUserCallDialog extends StatelessWidget {
   });
 
   /// Feed/root context — stays mounted after the dialog is popped.
+  // Kept for Voice/Video restore (`_startCall` uses this after dialog pop).
+  // ignore: unused_field
   final BuildContext hostContext;
   final SocialUserCard user;
+  // Used by temporarily disabled `_startCall` / `startDirectCall`.
+  // ignore: unused_field
   final DiscoverTabController controller;
 
   @override
@@ -88,8 +94,9 @@ class DiscoverUserCallDialog extends StatelessWidget {
                     Spacing.v12,
                     _statsRow(),
                   ],
-                  Spacing.v20,
-                  _callButtons(context),
+                  // Temporarily hide Discover Voice / Video call options.
+                  // Spacing.v20,
+                  // _callButtons(context),
                 ],
               ),
             ),
@@ -257,99 +264,100 @@ class DiscoverUserCallDialog extends StatelessWidget {
     );
   }
 
-  Widget _callButtons(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _CallActionButton(
-            label: 'Voice',
-            icon: Icons.call_rounded,
-            gradient: const LinearGradient(
-              colors: [
-                kColorProfileChipPurpleStart,
-                kColorProfileChipPurpleEnd,
-              ],
-            ),
-            onTap: () => _startCall(context, ChatCallType.voice),
-          ),
-        ),
-        Spacing.h12,
-        Expanded(
-          child: _CallActionButton(
-            label: 'Video',
-            icon: Icons.videocam_rounded,
-            gradient: const LinearGradient(
-              colors: [
-                kColorProfileActionPinkStart,
-                kColorProfileActionPinkEnd,
-              ],
-            ),
-            onTap: () => _startCall(context, ChatCallType.video),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _startCall(
-    BuildContext dialogContext,
-    ChatCallType callType,
-  ) async {
-    Navigator.of(dialogContext).pop();
-    await Future<void>.delayed(Duration.zero);
-    final launchContext = hostContext.mounted ? hostContext : Get.context;
-    if (launchContext == null || !launchContext.mounted) return;
-    await controller.startDirectCall(launchContext, user, callType);
-  }
+  // --- Temporarily disabled: Discover Voice / Video call UI ---
+  // Widget _callButtons(BuildContext context) {
+  //   return Row(
+  //     children: [
+  //       Expanded(
+  //         child: _CallActionButton(
+  //           label: 'Voice',
+  //           icon: Icons.call_rounded,
+  //           gradient: const LinearGradient(
+  //             colors: [
+  //               kColorProfileChipPurpleStart,
+  //               kColorProfileChipPurpleEnd,
+  //             ],
+  //           ),
+  //           onTap: () => _startCall(context, ChatCallType.voice),
+  //         ),
+  //       ),
+  //       Spacing.h12,
+  //       Expanded(
+  //         child: _CallActionButton(
+  //           label: 'Video',
+  //           icon: Icons.videocam_rounded,
+  //           gradient: const LinearGradient(
+  //             colors: [
+  //               kColorProfileActionPinkStart,
+  //               kColorProfileActionPinkEnd,
+  //             ],
+  //           ),
+  //           onTap: () => _startCall(context, ChatCallType.video),
+  //         ),
+  //       ),
+  //     ],
+  //   );
+  // }
+  //
+  // Future<void> _startCall(
+  //   BuildContext dialogContext,
+  //   ChatCallType callType,
+  // ) async {
+  //   Navigator.of(dialogContext).pop();
+  //   await Future<void>.delayed(Duration.zero);
+  //   final launchContext = hostContext.mounted ? hostContext : Get.context;
+  //   if (launchContext == null || !launchContext.mounted) return;
+  //   await controller.startDirectCall(launchContext, user, callType);
+  // }
 }
 
-class _CallActionButton extends StatelessWidget {
-  const _CallActionButton({
-    required this.label,
-    required this.icon,
-    required this.gradient,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
-  final Gradient gradient;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Ink(
-          height: 52,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: gradient,
-            boxShadow: [
-              BoxShadow(
-                color: kColorProfileActionPinkStart.withValues(alpha: 0.25),
-                blurRadius: 12,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 20, color: kColorWhite),
-              Spacing.h8,
-              SemiBoldText(
-                text: label,
-                fontSize: TextStyles.k14FontSize,
-                color: kColorWhite,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
+// class _CallActionButton extends StatelessWidget {
+//   const _CallActionButton({
+//     required this.label,
+//     required this.icon,
+//     required this.gradient,
+//     required this.onTap,
+//   });
+//
+//   final String label;
+//   final IconData icon;
+//   final Gradient gradient;
+//   final VoidCallback onTap;
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return Material(
+//       color: Colors.transparent,
+//       child: InkWell(
+//         onTap: onTap,
+//         borderRadius: BorderRadius.circular(16),
+//         child: Ink(
+//           height: 52,
+//           decoration: BoxDecoration(
+//             borderRadius: BorderRadius.circular(16),
+//             gradient: gradient,
+//             boxShadow: [
+//               BoxShadow(
+//                 color: kColorProfileActionPinkStart.withValues(alpha: 0.25),
+//                 blurRadius: 12,
+//                 offset: const Offset(0, 6),
+//               ),
+//             ],
+//           ),
+//           child: Row(
+//             mainAxisAlignment: MainAxisAlignment.center,
+//             children: [
+//               Icon(icon, size: 20, color: kColorWhite),
+//               Spacing.h8,
+//               SemiBoldText(
+//                 text: label,
+//                 fontSize: TextStyles.k14FontSize,
+//                 color: kColorWhite,
+//               ),
+//             ],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+// }
