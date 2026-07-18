@@ -10,6 +10,7 @@ import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 import '../controllers/discover_tab_controller.dart';
+import '../models/discover_feed_layout.dart';
 import '../widgets/discover_country_filter_sheet.dart';
 import '../widgets/discover_users_feed.dart';
 
@@ -31,7 +32,9 @@ class DiscoverTabView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _topHeader(context, discoverController),
-              Spacing.v12,
+              Spacing.v10,
+              _feedLayoutToggle(discoverController),
+              Spacing.v10,
               Expanded(
                 child: Obx(() {
                   if (discoverController.searchQuery.value.isNotEmpty) {
@@ -152,6 +155,77 @@ class DiscoverTabView extends StatelessWidget {
         },
       );
     });
+  }
+
+  /// Grid / single-profile switch under the Explore header.
+  Widget _feedLayoutToggle(DiscoverTabController discoverController) {
+    return Obx(() {
+      // Hide while searching so results stay full-width without layout noise.
+      if (discoverController.isSearchExpanded.value ||
+          discoverController.searchQuery.value.isNotEmpty) {
+        return const SizedBox.shrink();
+      }
+
+      final selected = discoverController.feedLayout.value;
+      return Align(
+        alignment: Alignment.centerRight,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: kColorWhite.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(3),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _layoutToggleButton(
+                  icon: Icons.grid_view_rounded,
+                  selected: selected == DiscoverFeedLayout.grid,
+                  onTap: () =>
+                      discoverController.setFeedLayout(DiscoverFeedLayout.grid),
+                ),
+                Spacing.h4,
+                _layoutToggleButton(
+                  icon: Icons.view_agenda_rounded,
+                  selected: selected == DiscoverFeedLayout.single,
+                  onTap: () => discoverController.setFeedLayout(
+                    DiscoverFeedLayout.single,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _layoutToggleButton({
+    required IconData icon,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: selected ? kColorPrimary : Colors.transparent,
+      borderRadius: BorderRadius.circular(9),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          width: 36,
+          height: 32,
+          child: Icon(
+            icon,
+            size: 18,
+            color: selected
+                ? kColorWhite
+                : kColorWhite.withValues(alpha: 0.72),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _headerIconButton({

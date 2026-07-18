@@ -8,9 +8,10 @@ import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 import '../controllers/discover_tab_controller.dart';
+import '../models/discover_feed_layout.dart';
 import 'discover_user_call_dialog.dart';
 
-/// Discover tab — photo grid with name overlay (`GET /api/discover`).
+/// Discover tab — photo grid or single-profile feed (`GET /api/discover`).
 class DiscoverUsersFeed extends StatelessWidget {
   const DiscoverUsersFeed({super.key, required this.controller});
 
@@ -39,36 +40,68 @@ class DiscoverUsersFeed extends StatelessWidget {
         );
       }
 
+      // Read layout inside Obx so grid ↔ single swaps without refetching users.
+      final isSingle = controller.feedLayout.value == DiscoverFeedLayout.single;
       return RefreshIndicator(
         color: kColorPrimary,
         backgroundColor: LiveRoomUiColors.screenGradientBottom,
         onRefresh: controller.fetchDiscoverUsers,
-        child: GridView.builder(
-          padding: const EdgeInsets.fromLTRB(0, 4, 0, 16),
-          physics: const AlwaysScrollableScrollPhysics(
-            parent: BouncingScrollPhysics(),
-          ),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: 0.62,
-          ),
-          itemCount: users.length,
-          itemBuilder: (context, index) {
-            final user = users[index];
-            return _DiscoverUserCard(
-              user: user,
-              isFavouriteLoading:
-                  controller.processingFavouriteId.value == user.id,
-              onTap: () =>
-                  showDiscoverUserCallDialog(context, controller, user),
-              onFavouriteTap: () => controller.toggleFavourite(context, user),
-            );
-          },
-        ),
+        child: isSingle
+            ? _singleProfileList(context, users)
+            : _gridList(context, users),
       );
     });
+  }
+
+  Widget _gridList(BuildContext context, List<SocialUserCard> users) {
+    return GridView.builder(
+      padding: const EdgeInsets.fromLTRB(0, 4, 0, 16),
+      physics: const AlwaysScrollableScrollPhysics(
+        parent: BouncingScrollPhysics(),
+      ),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: 0.62,
+      ),
+      itemCount: users.length,
+      itemBuilder: (context, index) => _userCard(context, users[index]),
+    );
+  }
+
+  /// One tall card per viewport; vertical page snap reveals the next profile.
+  Widget _singleProfileList(BuildContext context, List<SocialUserCard> users) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final pageHeight = constraints.maxHeight;
+        return ListView.builder(
+          padding: const EdgeInsets.fromLTRB(0, 4, 0, 16),
+          physics: const PageScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
+          ),
+          itemExtent: pageHeight > 0 ? pageHeight : null,
+          itemCount: users.length,
+          itemBuilder: (context, index) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _userCard(context, users[index]),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _userCard(BuildContext context, SocialUserCard user) {
+    return _DiscoverUserCard(
+      user: user,
+      isFavouriteLoading: controller.processingFavouriteId.value == user.id,
+      onTap: () => showDiscoverUserCallDialog(context, controller, user),
+      onFavouriteTap: () => controller.toggleFavourite(context, user),
+    );
   }
 }
 

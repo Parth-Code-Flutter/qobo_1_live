@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/app/user_flow/discover/discover_tab/models/discover_feed_layout.dart';
 import 'package:qobo_one_live/app/user_flow/discover/discover_tab/models/discover_filter_state.dart';
 import 'package:qobo_one_live/app/user_flow/discover/discover_tab/models/discover_room_selection.dart';
 import 'package:qobo_one_live/app/user_flow/discover/discover_tab/models/explore_discover_utils.dart';
@@ -59,10 +60,20 @@ class DiscoverTabController extends GetxController {
   final isVideoRoomsLoading = false.obs;
   final isAudioRoomsLoading = false.obs;
 
+  /// Grid (default) vs single full-height profile feed under Explore.
+  final feedLayout = DiscoverFeedLayout.grid.obs;
+
   /// Back-compat for header badge.
   String? get selectedCountry => filters.value.country;
 
   bool get hasActiveDiscoverFilters => filters.value.hasActiveFilters;
+
+  bool get isGridFeedLayout => feedLayout.value == DiscoverFeedLayout.grid;
+
+  void setFeedLayout(DiscoverFeedLayout layout) {
+    if (feedLayout.value == layout) return;
+    feedLayout.value = layout;
+  }
 
   bool get isPeopleMode =>
       selectedDiscoverMode.value == DiscoverRoomSelection.none;
