@@ -17,6 +17,8 @@ import '../app/user_flow/leader_board/bindings/leader_board_binding.dart';
 import '../app/user_flow/leader_board/views/leader_board_view.dart';
 import '../app/user_flow/user_basic_profile/bindings/user_basic_profile_binding.dart';
 import '../app/user_flow/user_basic_profile/views/user_basic_profile_view.dart';
+import '../app/user_flow/discover/public_profile/bindings/discover_public_profile_binding.dart';
+import '../app/user_flow/discover/public_profile/views/discover_public_profile_view.dart';
 import '../app/user_flow/agency_access/bindings/agency_access_binding.dart';
 import '../app/user_flow/agency_access/views/agency_access_view.dart';
 import '../app/user_flow/agency_host_onboarding/bindings/agency_host_onboarding_binding.dart';
@@ -143,6 +145,11 @@ class AppPages {
       name: _Paths.USER_BASIC_PROFILE,
       page: () => const UserBasicProfileView(),
       binding: UserBasicProfileBinding(),
+    ),
+    GetPage(
+      name: _Paths.DISCOVER_PUBLIC_PROFILE,
+      page: () => const DiscoverPublicProfileView(),
+      binding: DiscoverPublicProfileBinding(),
     ),
     GetPage(
       name: _Paths.LEADER_BOARD,
