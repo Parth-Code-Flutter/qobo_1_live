@@ -15,6 +15,7 @@ import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_media_utils.dart';
@@ -1156,22 +1157,35 @@ class LiveBroadcastController extends GetxController {
       onTimeout: () {},
     );
 
-    Get.snackbar(
-      'Removed from room',
-      message?.trim().isNotEmpty == true
-          ? message!.trim()
-          : 'You were removed from this room.',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: const Color(0xFFD32F2F),
-      colorText: kColorWhite,
-    );
-
     await Future<void>.delayed(const Duration(milliseconds: 80));
     final poppedLiveRoute = _popLiveBroadcastRoute();
     if (!poppedLiveRoute) {
       Get.offAllNamed(Routes.BOTTOM_NAV);
     }
+
+    // Show after leaving the room so the dialog appears on the destination screen.
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    _showRemovedFromRoomDialog(message);
   }
+
+  void _showRemovedFromRoomDialog(String? message) {
+    final context = Get.overlayContext ?? Get.context;
+    if (context == null) return;
+
+    CommonAppDialog.show(
+      context,
+      title: 'Removed from room',
+      message: message?.trim().isNotEmpty == true
+          ? message!.trim()
+          : 'You were removed from this room.',
+      barrierDismissible: false,
+      actions: [
+        CommonAppDialogAction(label: 'OK', onPressed: _noop),
+      ],
+    );
+  }
+
+  static void _noop() {}
 
   String _currentUserId() {
     if (!Get.isRegistered<UserSessionController>()) return '';
