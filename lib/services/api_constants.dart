@@ -173,6 +173,27 @@ class AgencyEndpoints {
   static const String payout = '/api/agency/payout';
 }
 
+/// Central place for super-admin mobile dashboard endpoints.
+class SuperAdminEndpoints {
+  SuperAdminEndpoints._();
+
+  /// GET /api/super-admin/dashboard
+  static const String dashboard = '/api/super-admin/dashboard';
+
+  /// GET /api/super-admin/agencies
+  static const String agencies = '/api/super-admin/agencies';
+
+  /// POST /api/super-admin/agency/process
+  static const String processAgency = '/api/super-admin/agency/process';
+
+  /// GET /api/super-admin/hosts/track
+  static const String hostsTrack = '/api/super-admin/hosts/track';
+
+  /// GET /api/super-admin/agency/generate-link
+  static const String generateAgencyLink =
+      '/api/super-admin/agency/generate-link';
+}
+
 /// Central place for economy related API endpoints.
 class EconomyEndpoints {
   EconomyEndpoints._();

@@ -97,6 +97,8 @@ import '../app/user_flow/call/views/call_view.dart';
 import '../app/user_flow/coin_seller/views/coin_seller_view.dart';
 import '../app/user_flow/agency_owner_dashboard/bindings/agency_owner_dashboard_binding.dart';
 import '../app/user_flow/agency_owner_dashboard/views/agency_owner_dashboard_view.dart';
+import '../app/user_flow/super_admin_dashboard/bindings/super_admin_dashboard_binding.dart';
+import '../app/user_flow/super_admin_dashboard/views/super_admin_dashboard_view.dart';
 
 part 'app_routes.dart';
 
@@ -346,6 +348,11 @@ class AppPages {
       name: _Paths.AGENCY_OWNER,
       page: () => const AgencyOwnerDashboardView(),
       binding: AgencyOwnerDashboardBinding(),
+    ),
+    GetPage(
+      name: _Paths.SUPER_ADMIN_DASHBOARD,
+      page: () => const SuperAdminDashboardView(),
+      binding: SuperAdminDashboardBinding(),
     ),
   ];
 }

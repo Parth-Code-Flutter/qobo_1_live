@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:qobo_one_live/services/api_constants.dart';
 import 'package:qobo_one_live/services/api_service.dart';
 import 'package:qobo_one_live/utils/api_response_utils.dart';
@@ -353,14 +355,32 @@ class UserRepo {
   }
 
   /// `POST /api/user/super-admin-request` — logged-in user requests Super Admin review.
+  ///
+  /// The new mobile flow asks for verification documents first. File aliases are
+  /// intentionally sent with backend-friendly field names so existing admin
+  /// review payloads do not need separate mobile-only handling.
   Future<Map<String, dynamic>?> requestSuperAdmin({
+    List<File> documents = const <File>[],
+    String? note,
     bool isShowLoader = true,
   }) async {
-    final response = await _apiService.postRequest(
-      endPoint: UserEndpoints.superAdminRequest,
-      requestModel: <String, dynamic>{},
-      isShowLoader: isShowLoader,
-    );
+    final response = documents.isEmpty
+        ? await _apiService.postRequest(
+            endPoint: UserEndpoints.superAdminRequest,
+            requestModel: <String, dynamic>{
+              if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+            },
+            isShowLoader: isShowLoader,
+          )
+        : await _apiService.multipartFormRequest(
+            endPoint: UserEndpoints.superAdminRequest,
+            fields: <String, String>{
+              if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+            },
+            files: documents,
+            fileFieldName: 'documents',
+            isShowLoader: isShowLoader,
+          );
     if (response == null) return null;
     return ApiResponseUtils.tryDecodeMap(response.body);
   }

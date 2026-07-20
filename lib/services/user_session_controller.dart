@@ -47,6 +47,8 @@ class UserSessionController extends GetxController {
     'profileBackground.image',
   ]);
   bool get isSuperAdmin => role.toLowerCase() == 'super_admin';
+  bool get isAgency => role.toLowerCase() == 'agency';
+  bool get isHost => role.toLowerCase() == 'host';
 
   String get displayName {
     if (userName.isNotEmpty) return userName;

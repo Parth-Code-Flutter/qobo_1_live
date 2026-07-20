@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
@@ -274,7 +276,9 @@ class ProfileTabView extends StatelessWidget {
     return GetBuilder<UserSessionController>(
       init: userSession,
       builder: (session) {
-        if (session.isSuperAdmin) return const SizedBox.shrink();
+        if (session.isSuperAdmin || session.isAgency || session.isHost) {
+          return const SizedBox.shrink();
+        }
 
         return const Padding(
           padding: EdgeInsets.only(top: 10),
@@ -303,15 +307,15 @@ class ProfileTabView extends StatelessWidget {
           ),
         ];
 
-        // Backend now sends `role` in getProfile. Only Super Admin users can
-        // manage Agency & Host flows, so normal users should not see this entry.
-        if (session.isSuperAdmin) {
+        if (session.isSuperAdmin || session.isAgency) {
           actions
             ..add(Spacing.h10)
             ..add(
               Expanded(
                 child: _actionCard(
-                  title: 'Agency &\nHost',
+                  title: session.isSuperAdmin
+                      ? 'Super Admin\nDashboard'
+                      : 'Agency\nDashboard',
                   trailing: const Icon(
                     Icons.groups_rounded,
                     color: kColorWhite,
@@ -319,7 +323,9 @@ class ProfileTabView extends StatelessWidget {
                   ),
                   start: kColorProfileActionPinkStart,
                   end: kColorProfileActionPinkEnd,
-                  onTap: _openAgencyHostSheet,
+                  onTap: () => session.isSuperAdmin
+                      ? Get.toNamed(Routes.SUPER_ADMIN_DASHBOARD)
+                      : Get.toNamed(Routes.AGENCY_OWNER),
                 ),
               ),
             );
@@ -327,96 +333,6 @@ class ProfileTabView extends StatelessWidget {
 
         return Row(children: actions);
       },
-    );
-  }
-
-  void _openAgencyHostSheet() {
-    Get.bottomSheet(
-      Container(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-        decoration: const BoxDecoration(
-          color: Color(0xFF161622),
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(24),
-            topRight: Radius.circular(24),
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.white24,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Spacing.v20,
-            const SemiBoldText(
-              text: 'Agency & Host',
-              fontSize: 16,
-              color: kColorWhite,
-            ),
-            Spacing.v20,
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: kColorPrimary.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.video_call_rounded,
-                  color: kColorPrimary,
-                ),
-              ),
-              title: const SemiBoldText(
-                text: 'Join an Agency (Host)',
-                fontSize: 13,
-                color: kColorWhite,
-              ),
-              subtitle: const AppText(
-                text: 'Register as a streamer to start broadcasting.',
-                fontSize: 11,
-                color: Colors.white54,
-              ),
-              onTap: () {
-                Get.back();
-                Get.toNamed(Routes.AGENCY_ACCESS, arguments: {'mode': 'host'});
-              },
-            ),
-            const Divider(color: Colors.white10),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.purple.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.business_rounded,
-                  color: Colors.purpleAccent,
-                ),
-              ),
-              title: const SemiBoldText(
-                text: 'Agency Owner Dashboard',
-                fontSize: 13,
-                color: kColorWhite,
-              ),
-              subtitle: const AppText(
-                text: 'Manage your agency, invite codes, & host earnings.',
-                fontSize: 11,
-                color: Colors.white54,
-              ),
-              onTap: () {
-                Get.back();
-                Get.toNamed(Routes.AGENCY_ACCESS, arguments: {'mode': 'owner'});
-              },
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -701,13 +617,33 @@ class _ProfileBackgroundShell extends StatelessWidget {
 class _BecomeSuperAdminButtonState extends State<_BecomeSuperAdminButton> {
   final UserRepo _userRepo = UserRepo();
   bool _isLoading = false;
+  final List<File> _documents = <File>[];
+  final TextEditingController _noteController = TextEditingController();
+
+  @override
+  void dispose() {
+    _noteController.dispose();
+    super.dispose();
+  }
 
   Future<void> _submitRequest() async {
     if (_isLoading) return;
+    final shouldSubmit = await _showDocumentForm();
+    if (shouldSubmit != true) return;
+
+    if (_documents.isEmpty) {
+      _showError('Please upload at least one verification document.');
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
-      final response = await _userRepo.requestSuperAdmin(isShowLoader: true);
+      final response = await _userRepo.requestSuperAdmin(
+        documents: List<File>.from(_documents),
+        note: _noteController.text,
+        isShowLoader: true,
+      );
       final link = _findFirstLink(response);
 
       if (link != null) {
@@ -720,6 +656,134 @@ class _BecomeSuperAdminButtonState extends State<_BecomeSuperAdminButton> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<bool?> _showDocumentForm() {
+    return showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF161622),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                18,
+                20,
+                MediaQuery.viewInsetsOf(context).bottom + 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: kColorWhite.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                  Spacing.v16,
+                  const SemiBoldText(
+                    text: 'Become Super Admin',
+                    fontSize: TextStyles.k18FontSize,
+                    color: kColorWhite,
+                  ),
+                  Spacing.v6,
+                  const AppText(
+                    text:
+                        'Upload verification documents. Admin will review and approve or reject your request.',
+                    fontSize: TextStyles.k12FontSize,
+                    color: Colors.white70,
+                  ),
+                  Spacing.v16,
+                  TextField(
+                    controller: _noteController,
+                    minLines: 2,
+                    maxLines: 3,
+                    style: TextStyles.kRegularPoppins(
+                      fontSize: TextStyles.k14FontSize,
+                      colors: kColorWhite,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Add a short note (optional)',
+                      hintStyle: TextStyles.kRegularPoppins(
+                        fontSize: TextStyles.k12FontSize,
+                        colors: Colors.white54,
+                      ),
+                      filled: true,
+                      fillColor: kColorWhite.withValues(alpha: 0.08),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide(
+                          color: kColorWhite.withValues(alpha: 0.14),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Spacing.v12,
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final paths = await FileUtils.pickFilePaths();
+                      if (paths.isEmpty) return;
+                      setSheetState(() {
+                        _documents
+                          ..clear()
+                          ..addAll(paths.map(File.new));
+                      });
+                    },
+                    icon: const Icon(Icons.upload_file_rounded),
+                    label: Text(
+                      _documents.isEmpty
+                          ? 'Upload documents'
+                          : '${_documents.length} document(s) selected',
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: kColorWhite,
+                      side: BorderSide(
+                        color: kColorWhite.withValues(alpha: 0.25),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                  if (_documents.isNotEmpty) ...[
+                    Spacing.v10,
+                    ..._documents
+                        .take(3)
+                        .map(
+                          (file) => Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: AppText(
+                              text: file.path.split('/').last,
+                              fontSize: TextStyles.k10FontSize,
+                              color: Colors.white60,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                  ],
+                  Spacing.v16,
+                  appButton(
+                    onPressed: () => Navigator.of(sheetContext).pop(true),
+                    buttonText: 'Submit Request',
+                    buttonColor: kColorPrimary,
+                    borderRadius: 14,
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   String? _findFirstLink(Object? value) {
@@ -763,6 +827,8 @@ class _BecomeSuperAdminButtonState extends State<_BecomeSuperAdminButton> {
   }
 
   void _showSuccess(String message) {
+    _documents.clear();
+    _noteController.clear();
     if (Get.isRegistered<AlertMessageUtils>()) {
       Get.find<AlertMessageUtils>().showSuccessSnackBar(message);
     } else {
