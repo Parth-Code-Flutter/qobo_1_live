@@ -15,7 +15,7 @@ import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
-import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
+import 'package:qobo_one_live/utils/app_dialogs/audio_room_feedback_dialog.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_media_utils.dart';
@@ -1169,23 +1169,33 @@ class LiveBroadcastController extends GetxController {
   }
 
   void _showRemovedFromRoomDialog(String? message) {
-    final context = Get.overlayContext ?? Get.context;
-    if (context == null) return;
-
-    CommonAppDialog.show(
-      context,
+    _showCommonFeedbackDialog(
       title: 'Removed from room',
       message: message?.trim().isNotEmpty == true
           ? message!.trim()
           : 'You were removed from this room.',
       barrierDismissible: false,
-      actions: [
-        CommonAppDialogAction(label: 'OK', onPressed: _noop),
-      ],
+      tone: AudioRoomFeedbackTone.removed,
     );
   }
 
-  static void _noop() {}
+  void _showCommonFeedbackDialog({
+    required String title,
+    required String message,
+    bool barrierDismissible = true,
+    AudioRoomFeedbackTone tone = AudioRoomFeedbackTone.moderation,
+  }) {
+    final context = Get.overlayContext ?? Get.context;
+    if (context == null) return;
+
+    AudioRoomFeedbackDialog.show(
+      context,
+      title: title,
+      message: message,
+      tone: tone,
+      barrierDismissible: barrierDismissible,
+    );
+  }
 
   String _currentUserId() {
     if (!Get.isRegistered<UserSessionController>()) return '';
@@ -1317,6 +1327,7 @@ class LiveBroadcastController extends GetxController {
   }
 
   Future<void> kickAudioRoomUser(AudioRoomSeatModel seat) async {
+    final memberName = seat.name.trim();
     await _runSeatAction(
       label: 'Kick off',
       action: () => _roomRepo.kickParticipant(
@@ -1324,6 +1335,10 @@ class LiveBroadcastController extends GetxController {
         targetUserId: seat.userId,
         isShowLoader: true,
       ),
+      successMessage: memberName.isNotEmpty
+          ? '$memberName was removed from the room.'
+          : 'Member was removed from the room.',
+      showSuccessDialog: true,
     );
   }
 
@@ -1378,18 +1393,24 @@ class LiveBroadcastController extends GetxController {
     required String label,
     required Future<Map<String, dynamic>?> Function() action,
     String? successMessage,
+    bool showSuccessDialog = false,
   }) async {
     final response = await action();
     if (_isApiSuccess(response)) {
       if (Get.isBottomSheetOpen == true) Get.back();
       await loadAudioRoomSeats();
-      Get.snackbar(
-        label,
-        successMessage ?? '$label updated successfully.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.black87,
-        colorText: kColorWhite,
-      );
+      final message = successMessage ?? '$label updated successfully.';
+      if (showSuccessDialog) {
+        _showCommonFeedbackDialog(title: label, message: message);
+      } else {
+        Get.snackbar(
+          label,
+          message,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.black87,
+          colorText: kColorWhite,
+        );
+      }
       return;
     }
 
