@@ -13,6 +13,7 @@ import 'package:qobo_one_live/app/user_flow/wallet/bindings/wallet_binding.dart'
 import 'package:qobo_one_live/app/user_flow/wallet/views/wallet_view.dart';
 import 'package:qobo_one_live/utils/alert_message_utils/alert_message_utils.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
+import 'package:qobo_one_live/utils/app_dialogs/audio_room_feedback_dialog.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
@@ -644,13 +645,19 @@ class _BecomeSuperAdminButtonState extends State<_BecomeSuperAdminButton> {
         note: _noteController.text,
         isShowLoader: true,
       );
-      final link = _findFirstLink(response);
+      if (response == null) {
+        _showError('Could not send request. Please try again.');
+        return;
+      }
 
+      final link = _findFirstLink(response);
       if (link != null) {
         await FileUtils.openFileOrLink(link);
-      } else {
-        _showSuccess(_readMessage(response) ?? 'Request sent successfully.');
+        return;
       }
+
+      // Prefer dialog over toast so API message / status are easy to read.
+      _showResponseDialog(response);
     } catch (_) {
       _showError('Could not send request. Please try again.');
     } finally {
@@ -826,14 +833,20 @@ class _BecomeSuperAdminButtonState extends State<_BecomeSuperAdminButton> {
     return message == null || message.isEmpty ? null : message;
   }
 
-  void _showSuccess(String message) {
+  /// Shows only the API message in the room-style feedback dialog.
+  void _showResponseDialog(Map<String, dynamic> response) {
+    if (!mounted) return;
+
     _documents.clear();
     _noteController.clear();
-    if (Get.isRegistered<AlertMessageUtils>()) {
-      Get.find<AlertMessageUtils>().showSuccessSnackBar(message);
-    } else {
-      Get.snackbar('Success', message);
-    }
+
+    AudioRoomFeedbackDialog.show(
+      context,
+      title: 'Super Admin Request',
+      message: _readMessage(response) ?? 'Request processed successfully.',
+      tone: AudioRoomFeedbackTone.info,
+      barrierDismissible: false,
+    );
   }
 
   void _showError(String message) {

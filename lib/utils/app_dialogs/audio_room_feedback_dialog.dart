@@ -5,13 +5,16 @@ import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
-/// Visual tone for audio-room moderation / removal feedback.
+/// Visual tone for room-style feedback dialogs.
 enum AudioRoomFeedbackTone {
   /// Host successfully removed a member.
   moderation,
 
   /// Viewer was removed from the room.
   removed,
+
+  /// General success / info (e.g. Super Admin request status).
+  info,
 }
 
 /// Styled room dialog for kick-off and removal feedback (dark glass + gradient CTA).
@@ -139,6 +142,13 @@ class AudioRoomFeedbackDialog extends StatelessWidget {
           iconGradient: [Color(0xFFFF5A7A), Color(0xFF8E1B85)],
           glow: Color(0xFFFF5A7A),
           buttonGradient: [Color(0xFF8E1B85), Color(0xFFE12BC5)],
+        );
+      case AudioRoomFeedbackTone.info:
+        return const _DialogPalette(
+          icon: Icons.workspace_premium_rounded,
+          iconGradient: [Color(0xFFE12BC5), Color(0xFF8E1B85)],
+          glow: _accentPurple,
+          buttonGradient: [_accentPurple, _accentPink],
         );
     }
   }
