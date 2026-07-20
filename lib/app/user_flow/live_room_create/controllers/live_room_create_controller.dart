@@ -62,6 +62,40 @@ class LiveRoomCreateController extends GetxController {
         roomType.value = args['type'].toString();
       }
     }
+
+    // Audio/video rooms use the host profile as the room identity — no manual title.
+    if (!isLiveStreamingMode) {
+      _applyCreatorRoomTitle();
+    }
+  }
+
+  /// Session used for host avatar / id / auto room title.
+  UserSessionController? get _session {
+    if (!Get.isRegistered<UserSessionController>()) return null;
+    return Get.find<UserSessionController>();
+  }
+
+  /// Room title derived from the logged-in creator (e.g. "Kirit's Room").
+  String get creatorRoomTitle {
+    final name = _session?.displayName.trim();
+    if (name == null || name.isEmpty) return 'My Room';
+    return "$name's Room";
+  }
+
+  String get creatorDisplayName => _session?.displayName ?? 'User';
+
+  String get creatorUserId {
+    final id = _session?.userId.trim() ?? '';
+    return id.isEmpty ? '—' : id;
+  }
+
+  String? get creatorAvatarUrl => _session?.displayPictureUrl;
+
+  String get creatorFrameUrl => _session?.profileFrameUrl ?? '';
+
+  /// Keeps [streamNameController] in sync for the create API payload.
+  void _applyCreatorRoomTitle() {
+    streamNameController.text = creatorRoomTitle;
   }
 
   void _generateLiveStreamingId() {
@@ -172,9 +206,11 @@ class LiveRoomCreateController extends GetxController {
   }
 
   Future<void> createRoom(BuildContext context) async {
+    // Title always comes from the creator profile — no manual Room Name field.
+    _applyCreatorRoomTitle();
     final roomTitle = streamNameController.text.trim();
     if (roomTitle.isEmpty) {
-      AppToast.showError(context, 'Please enter a room name');
+      AppToast.showError(context, 'Unable to resolve your profile name');
       return;
     }
 
