@@ -11,7 +11,8 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import '../controllers/discover_public_profile_controller.dart';
 
 /// Dating-style full profile for a Discover user (`GET /api/user/public/:id`).
-class DiscoverPublicProfileView extends GetView<DiscoverPublicProfileController> {
+class DiscoverPublicProfileView
+    extends GetView<DiscoverPublicProfileController> {
   const DiscoverPublicProfileView({super.key});
 
   static const _hiddenKeys = {
@@ -42,47 +43,35 @@ class DiscoverPublicProfileView extends GetView<DiscoverPublicProfileController>
                 child: CircularProgressIndicator(color: kColorWhite),
               );
             }
-            if (user == null) {
-              return _emptyState(context);
-            }
+            if (user == null) return _emptyState();
+
             return Column(
               children: [
-                _topBar(context, user),
+                _topBar(user),
                 Expanded(
                   child: RefreshIndicator(
                     color: kColorPrimary,
                     onRefresh: controller.loadProfile,
                     child: ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
                       children: [
                         _heroCard(user),
                         Spacing.v16,
                         _actionButtons(context, user),
-                        Spacing.v16,
+                        Spacing.v12,
+                        _connectionBanner(user),
                         if (user.bio.trim().isNotEmpty) ...[
-                          _sectionCard(
-                            title: 'About',
-                            child: AppText(
-                              text: user.bio.trim(),
-                              fontSize: TextStyles.k14FontSize,
-                              color: kColorWhite.withValues(alpha: 0.88),
-                            ),
-                          ),
                           Spacing.v12,
+                          _aboutCard(user.bio.trim()),
                         ],
-                        _sectionCard(
-                          title: 'Profile',
-                          child: Column(
-                            children: [
-                              ..._profileRows(user),
-                            ],
-                          ),
-                        ),
-                        if (_extraRows().isNotEmpty) ...[
+                        Spacing.v12,
+                        _highlightsCard(user),
+                        if (_extraRows(user).isNotEmpty) ...[
                           Spacing.v12,
                           _sectionCard(
                             title: 'More details',
-                            child: Column(children: _extraRows()),
+                            icon: Icons.auto_awesome_rounded,
+                            child: Column(children: _extraRows(user)),
                           ),
                         ],
                       ],
@@ -97,7 +86,7 @@ class DiscoverPublicProfileView extends GetView<DiscoverPublicProfileController>
     );
   }
 
-  Widget _emptyState(BuildContext context) {
+  Widget _emptyState() {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -117,22 +106,35 @@ class DiscoverPublicProfileView extends GetView<DiscoverPublicProfileController>
     );
   }
 
-  Widget _topBar(BuildContext context, SocialUserCard user) {
+  Widget _topBar(SocialUserCard user) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 4, 12, 4),
+      padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
       child: Row(
         children: [
-          IconButton(
-            onPressed: () => Get.back(),
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: kColorWhite),
+          _glassIconButton(
+            icon: Icons.arrow_back_ios_new_rounded,
+            onTap: () => Get.back(),
           ),
+          Spacing.h10,
           Expanded(
-            child: SemiBoldText(
-              text: user.name,
-              fontSize: TextStyles.k18FontSize,
-              color: kColorWhite,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SemiBoldText(
+                  text: user.name,
+                  fontSize: TextStyles.k18FontSize,
+                  color: kColorWhite,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                AppText(
+                  text: _subtitle(user),
+                  fontSize: TextStyles.k10FontSize,
+                  color: kColorWhite.withValues(alpha: 0.62),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
           if (controller.isLoading.value)
@@ -143,131 +145,291 @@ class DiscoverPublicProfileView extends GetView<DiscoverPublicProfileController>
                 strokeWidth: 2,
                 color: kColorWhite,
               ),
+            )
+          else
+            _glassIconButton(
+              icon: Icons.refresh_rounded,
+              onTap: controller.loadProfile,
             ),
         ],
       ),
     );
   }
 
+  Widget _glassIconButton({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: Ink(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: kColorWhite.withValues(alpha: 0.10),
+            border: Border.all(color: kColorWhite.withValues(alpha: 0.16)),
+          ),
+          child: Icon(icon, size: 18, color: kColorWhite),
+        ),
+      ),
+    );
+  }
+
   Widget _heroCard(SocialUserCard user) {
     final photo = resolveUserAvatarUrl(user.displayPicture);
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(28),
-      child: SizedBox(
-        height: 420,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (photo != null)
-              Image.network(
-                photo,
-                fit: BoxFit.cover,
-                alignment: Alignment.topCenter,
-                errorBuilder: (_, __, ___) => _heroFallback(user),
-              )
-            else
-              _heroFallback(user),
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Color(0x33000000),
-                    Color(0x00000000),
-                    Color(0xCC120822),
-                  ],
-                  stops: [0, 0.45, 1],
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFF2D7B).withValues(alpha: 0.30),
+            blurRadius: 30,
+            offset: const Offset(0, 16),
+          ),
+          BoxShadow(
+            color: const Color(0xFF5B6CFF).withValues(alpha: 0.18),
+            blurRadius: 22,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(32),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFFF4DC4),
+              Color(0xFF7B5CFF),
+              Color(0xFF2ED3FF),
+            ],
+          ),
+        ),
+        padding: const EdgeInsets.all(2.5),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(30),
+          child: SizedBox(
+            height: 440,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (photo != null)
+                  Image.network(
+                    photo,
+                    fit: BoxFit.cover,
+                    alignment: Alignment.topCenter,
+                    errorBuilder: (_, __, ___) => _heroFallback(user),
+                  )
+                else
+                  _heroFallback(user),
+                const DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0x66000000),
+                        Color(0x00000000),
+                        Color(0x99120822),
+                        Color(0xF2160822),
+                      ],
+                      stops: [0, 0.32, 0.7, 1],
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            Positioned(
-              left: 18,
-              right: 18,
-              bottom: 18,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: SemiBoldText(
-                          text: user.name,
-                          fontSize: TextStyles.k28FontSize,
-                          color: kColorWhite,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (user.gender.isNotEmpty)
-                        Icon(
-                          _genderIcon(user.gender),
-                          color: kColorWhite.withValues(alpha: 0.9),
-                        ),
-                    ],
+                Positioned(
+                  top: -40,
+                  right: -20,
+                  child: _glowBlob(
+                    const Color(0xFFFF4DC4),
+                    size: 160,
+                    alpha: 0.34,
                   ),
-                  Spacing.v8,
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      if (user.level > 0) _chip('Lv ${user.level}'),
-                      if (user.isVip) _chip('VIP', accent: true),
-                      if (user.country.isNotEmpty) _chip(user.country),
-                      if (user.isMutual)
-                        _chip('Mutual', accent: true)
-                      else if (user.isFollowing)
-                        _chip('Following')
-                      else if (user.isFollower)
-                        _chip('Follows you'),
-                    ],
+                ),
+                Positioned(
+                  left: -28,
+                  bottom: 70,
+                  child: _glowBlob(
+                    const Color(0xFF2ED3FF),
+                    size: 130,
+                    alpha: 0.22,
                   ),
-                  Spacing.v12,
-                  Row(
+                ),
+                Positioned(
+                  top: 14,
+                  left: 14,
+                  child: Row(
                     children: [
-                      _statPill('${user.followersCount}', 'Followers'),
-                      Spacing.h8,
-                      _statPill('${user.followingCount}', 'Following'),
-                      if (user.coinsPerSecond > 0) ...[
+                      if (user.isVip) ...[
+                        _chip(
+                          'VIP',
+                          Icons.workspace_premium_rounded,
+                          accent: true,
+                        ),
                         Spacing.h8,
-                        _statPill(
-                          '${user.coinsPerSecond.toStringAsFixed(0)}/s',
-                          'Coins',
+                      ],
+                      if (user.isFavourite)
+                        _chip(
+                          'Favourite',
+                          Icons.favorite_rounded,
+                          accent: true,
+                        ),
+                    ],
+                  ),
+                ),
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFF4DC4), Color(0xFFFF9A3D)],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(
+                            0xFFFF4DC4,
+                          ).withValues(alpha: 0.45),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
                         ),
                       ],
+                    ),
+                    child: FramedUserAvatar(
+                      name: user.name,
+                      imageUrl: user.displayPicture,
+                      frameUrl: user.avatarFrameUrl,
+                      frameSeed: user.id,
+                      size: 52,
+                      fontSize: TextStyles.k12FontSize,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 18,
+                  right: 18,
+                  bottom: 18,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Expanded(
+                            child: SemiBoldText(
+                              text: user.name,
+                              fontSize: TextStyles.k28FontSize,
+                              color: kColorWhite,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          _genderBadge(user.gender),
+                        ],
+                      ),
+                      Spacing.v10,
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          if (user.level > 0)
+                            _chip(
+                              'Lv ${user.level}',
+                              Icons.military_tech_rounded,
+                            ),
+                          if (user.country.isNotEmpty)
+                            _chip(user.country, Icons.public_rounded),
+                          if (user.isMutual)
+                            _chip(
+                              'Mutual',
+                              Icons.favorite_rounded,
+                              accent: true,
+                            )
+                          else if (user.isFollowing)
+                            _chip(
+                              'Following',
+                              Icons.person_add_alt_1_rounded,
+                            )
+                          else if (user.isFollower)
+                            _chip(
+                              'Follows you',
+                              Icons.arrow_downward_rounded,
+                            ),
+                          if (user.canMessage)
+                            _chip(
+                              'Can message',
+                              Icons.chat_bubble_rounded,
+                              accent: true,
+                            ),
+                        ],
+                      ),
+                      Spacing.v12,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _statPill(
+                              '${user.followersCount}',
+                              'Followers',
+                              Icons.people_alt_rounded,
+                            ),
+                          ),
+                          Spacing.h8,
+                          Expanded(
+                            child: _statPill(
+                              '${user.followingCount}',
+                              'Following',
+                              Icons.person_outline_rounded,
+                            ),
+                          ),
+                          if (user.coinsPerSecond > 0) ...[
+                            Spacing.h8,
+                            Expanded(
+                              child: _statPill(
+                                '${user.coinsPerSecond.toStringAsFixed(0)}/s',
+                                'Coins',
+                                Icons.monetization_on_rounded,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            Positioned(
-              top: 14,
-              right: 14,
-              child: FramedUserAvatar(
-                name: user.name,
-                imageUrl: user.displayPicture,
-                frameUrl: user.avatarFrameUrl,
-                frameSeed: user.id,
-                size: 52,
-                fontSize: TextStyles.k12FontSize,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 
   Widget _heroFallback(SocialUserCard user) {
-    return ColoredBox(
-      color: const Color(0xFF2A1248),
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF3A1658), Color(0xFF1A0E32), Color(0xFF0E1A3A)],
+        ),
+      ),
       child: Center(
-        child: AppUserAvatar(
+        child: FramedUserAvatar(
           name: user.name,
+          imageUrl: user.displayPicture,
+          frameUrl: user.avatarFrameUrl,
+          frameSeed: user.id,
           size: 120,
           fontSize: TextStyles.k32FontSize,
-          backgroundColor: kColorWhite.withValues(alpha: 0.12),
-          textColor: kColorWhite,
         ),
       ),
     );
@@ -282,7 +444,28 @@ class DiscoverPublicProfileView extends GetView<DiscoverPublicProfileController>
             icon: user.isFollowing
                 ? Icons.check_rounded
                 : Icons.person_add_alt_1_rounded,
-            outlined: user.isFollowing,
+            gradient: user.isFollowing
+                ? LinearGradient(
+                    colors: [
+                      kColorWhite.withValues(alpha: 0.16),
+                      kColorWhite.withValues(alpha: 0.08),
+                    ],
+                  )
+                : const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFFFF4DC4),
+                      Color(0xFFFF2D7B),
+                      Color(0xFFFF6A3D),
+                    ],
+                  ),
+            glow: const Color(0xFFFF2D7B),
+            border: user.isFollowing
+                ? Border.all(
+                    color: kColorProfileChipPinkStart.withValues(alpha: 0.55),
+                  )
+                : null,
             loading: controller.isFollowProcessing.value,
             onTap: () => controller.toggleFollow(context),
           ),
@@ -292,7 +475,31 @@ class DiscoverPublicProfileView extends GetView<DiscoverPublicProfileController>
           child: _GradientActionButton(
             label: 'Message',
             icon: Icons.chat_bubble_rounded,
-            accent: true,
+            gradient: user.canMessage
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF7B5CFF),
+                      Color(0xFF4F7CFF),
+                      Color(0xFF2ED3FF),
+                    ],
+                  )
+                : LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color(0xFF7B5CFF).withValues(alpha: 0.42),
+                      const Color(0xFF2ED3FF).withValues(alpha: 0.28),
+                    ],
+                  ),
+            glow: const Color(0xFF5B6CFF),
+            border: user.canMessage
+                ? null
+                : Border.all(
+                    color: const Color(0xFF8FA8FF).withValues(alpha: 0.45),
+                  ),
+            textAlpha: user.canMessage ? 1 : 0.78,
             onTap: () => controller.openChat(context),
           ),
         ),
@@ -300,65 +507,241 @@ class DiscoverPublicProfileView extends GetView<DiscoverPublicProfileController>
     );
   }
 
-  Widget _sectionCard({required String title, required Widget child}) {
+  Widget _connectionBanner(SocialUserCard user) {
+    final String text;
+    final IconData icon;
+    final List<Color> colors;
+
+    if (user.canMessage) {
+      text = 'You’re connected — say hi anytime';
+      icon = Icons.favorite_rounded;
+      colors = const [Color(0xFFFF4DC4), Color(0xFFFF6A3D)];
+    } else if (user.isFollowing) {
+      text = 'Waiting for them to follow you back';
+      icon = Icons.hourglass_top_rounded;
+      colors = const [Color(0xFF7B5CFF), Color(0xFF4F7CFF)];
+    } else if (user.isFollower) {
+      text = 'They follow you — follow back to chat';
+      icon = Icons.waving_hand_rounded;
+      colors = const [Color(0xFFFF9A3D), Color(0xFFFF5E7A)];
+    } else {
+      text = 'Follow to connect — message when either follows';
+      icon = Icons.bolt_rounded;
+      colors = const [Color(0xFF7B5CFF), Color(0xFF2ED3FF)];
+    }
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: kColorWhite.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
+        borderRadius: BorderRadius.circular(18),
+        gradient: LinearGradient(
+          colors: [
+            colors.first.withValues(alpha: 0.22),
+            colors.last.withValues(alpha: 0.12),
+          ],
+        ),
+        border: Border.all(color: colors.first.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(colors: colors),
+            ),
+            child: Icon(icon, size: 16, color: kColorWhite),
+          ),
+          Spacing.h10,
+          Expanded(
+            child: AppText(
+              text: text,
+              fontSize: TextStyles.k12FontSize,
+              color: kColorWhite.withValues(alpha: 0.9),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _aboutCard(String bio) {
+    return _sectionCard(
+      title: 'About',
+      icon: Icons.format_quote_rounded,
+      child: AppText(
+        text: bio,
+        fontSize: TextStyles.k14FontSize,
+        color: kColorWhite.withValues(alpha: 0.9),
+      ),
+    );
+  }
+
+  Widget _highlightsCard(SocialUserCard user) {
+    final tiles = <_HighlightTile>[
+      _HighlightTile(
+        icon: Icons.wc_rounded,
+        label: 'Gender',
+        value: _prettyGender(user.gender),
+        colors: const [Color(0xFFFF4DC4), Color(0xFFFF6A3D)],
+      ),
+      _HighlightTile(
+        icon: Icons.military_tech_rounded,
+        label: 'Level',
+        value: user.level > 0 ? '${user.level}' : '—',
+        colors: const [Color(0xFFFF9A3D), Color(0xFFFF5E7A)],
+      ),
+      _HighlightTile(
+        icon: Icons.public_rounded,
+        label: 'Country',
+        value: user.country.trim().isEmpty ? '—' : user.country.trim(),
+        colors: const [Color(0xFF7B5CFF), Color(0xFF4F7CFF)],
+      ),
+      _HighlightTile(
+        icon: Icons.workspace_premium_rounded,
+        label: 'VIP',
+        value: user.isVip ? 'Yes' : 'No',
+        colors: const [Color(0xFFFFD54F), Color(0xFFFF8F00)],
+      ),
+      _HighlightTile(
+        icon: Icons.favorite_rounded,
+        label: 'Connection',
+        value: _connectionLabel(user),
+        colors: const [Color(0xFFFF4DC4), Color(0xFF7B5CFF)],
+      ),
+      _HighlightTile(
+        icon: Icons.chat_bubble_rounded,
+        label: 'Messaging',
+        value: user.canMessage ? 'Open' : 'Locked',
+        colors: const [Color(0xFF4F7CFF), Color(0xFF2ED3FF)],
+      ),
+    ];
+
+    return _sectionCard(
+      title: 'Highlights',
+      icon: Icons.auto_awesome_rounded,
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: tiles.length,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          childAspectRatio: 1.55,
+        ),
+        itemBuilder: (_, index) => _highlightTile(tiles[index]),
+      ),
+    );
+  }
+
+  Widget _highlightTile(_HighlightTile tile) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            tile.colors.first.withValues(alpha: 0.22),
+            tile.colors.last.withValues(alpha: 0.10),
+          ],
+        ),
+        border: Border.all(color: tile.colors.first.withValues(alpha: 0.28)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(colors: tile.colors),
+            ),
+            child: Icon(tile.icon, size: 15, color: kColorWhite),
+          ),
+          const Spacer(),
+          AppText(
+            text: tile.label,
+            fontSize: TextStyles.k10FontSize,
+            color: kColorWhite.withValues(alpha: 0.62),
+          ),
+          Spacing.v2,
           SemiBoldText(
-            text: title,
+            text: tile.value,
             fontSize: TextStyles.k14FontSize,
             color: kColorWhite,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          Spacing.v10,
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionCard({
+    required String title,
+    required IconData icon,
+    required Widget child,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            kColorWhite.withValues(alpha: 0.12),
+            kColorWhite.withValues(alpha: 0.05),
+          ],
+        ),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.18),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [Color(0xFFFF4DC4), Color(0xFF7B5CFF)],
+                  ),
+                ),
+                child: Icon(icon, size: 14, color: kColorWhite),
+              ),
+              Spacing.h8,
+              SemiBoldText(
+                text: title,
+                fontSize: TextStyles.k14FontSize,
+                color: kColorWhite,
+              ),
+            ],
+          ),
+          Spacing.v12,
           child,
         ],
       ),
     );
   }
 
-  List<Widget> _profileRows(SocialUserCard user) {
-    final rows = <MapEntry<String, String>>[
-      if (user.gender.isNotEmpty) MapEntry('Gender', user.gender),
-      if (user.country.isNotEmpty) MapEntry('Country', user.country),
-      if (user.level > 0) MapEntry('Level', '${user.level}'),
-      MapEntry('Followers', '${user.followersCount}'),
-      MapEntry('Following', '${user.followingCount}'),
-      if (user.coins > 0) MapEntry('Coins', user.coins.toStringAsFixed(0)),
-      if (user.coinsPerSecond > 0)
-        MapEntry('Coins / sec', user.coinsPerSecond.toStringAsFixed(0)),
-      MapEntry('VIP', user.isVip ? 'Yes' : 'No'),
-      MapEntry('Favourite', user.isFavourite ? 'Yes' : 'No'),
-      MapEntry(
-        'Connection',
-        user.isMutual
-            ? 'Mutual'
-            : user.isFollowing
-            ? 'Following'
-            : user.isFollower
-            ? 'Follows you'
-            : 'None',
-      ),
-      MapEntry('Can message', user.canMessage ? 'Yes' : 'No'),
-      if (user.id.isNotEmpty) MapEntry('User ID', user.id),
-    ];
-
-    return [
-      for (var i = 0; i < rows.length; i++) ...[
-        _detailRow(rows[i].key, rows[i].value),
-        if (i != rows.length - 1) Spacing.v8,
-      ],
-    ];
-  }
-
-  List<Widget> _extraRows() {
+  List<Widget> _extraRows(SocialUserCard user) {
     final known = {
       'id',
       'name',
@@ -394,78 +777,178 @@ class DiscoverPublicProfileView extends GetView<DiscoverPublicProfileController>
       extras.add(MapEntry(_labelize(key), value));
     }
 
+    // Keep User ID as a soft footer detail when extras exist or alone.
+    if (user.id.isNotEmpty) {
+      extras.add(MapEntry('User ID', user.id));
+    }
+
     return [
       for (var i = 0; i < extras.length; i++) ...[
         _detailRow(extras[i].key, extras[i].value),
-        if (i != extras.length - 1) Spacing.v8,
+        if (i != extras.length - 1) Spacing.v10,
       ],
     ];
   }
 
   Widget _detailRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 118,
-          child: AppText(
-            text: label,
-            fontSize: TextStyles.k12FontSize,
-            color: kColorWhite.withValues(alpha: 0.55),
-          ),
-        ),
-        Expanded(
-          child: AppText(
-            text: value,
-            fontSize: TextStyles.k12FontSize,
-            color: kColorWhite.withValues(alpha: 0.92),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _chip(String label, {bool accent = false}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: accent
-            ? kColorPrimary.withValues(alpha: 0.85)
-            : kColorWhite.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: SemiBoldText(
-        text: label,
-        fontSize: TextStyles.k10FontSize,
-        color: kColorWhite,
-      ),
-    );
-  }
-
-  Widget _statPill(String value, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: kColorWhite.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
+        color: kColorWhite.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SemiBoldText(
-            text: value,
-            fontSize: TextStyles.k12FontSize,
-            color: kColorWhite,
+          SizedBox(
+            width: 110,
+            child: AppText(
+              text: label,
+              fontSize: TextStyles.k12FontSize,
+              color: kColorWhite.withValues(alpha: 0.55),
+            ),
           ),
-          Spacing.h4,
-          AppText(
-            text: label,
-            fontSize: TextStyles.k10FontSize,
-            color: kColorWhite.withValues(alpha: 0.7),
+          Expanded(
+            child: AppText(
+              text: value,
+              fontSize: TextStyles.k12FontSize,
+              color: kColorWhite.withValues(alpha: 0.92),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _chip(String label, IconData icon, {bool accent = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        gradient: accent
+            ? const LinearGradient(
+                colors: [Color(0xFFFF4DC4), Color(0xFFFF6A3D)],
+              )
+            : null,
+        color: accent ? null : kColorWhite.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(20),
+        border: accent
+            ? null
+            : Border.all(color: kColorWhite.withValues(alpha: 0.18)),
+        boxShadow: accent
+            ? [
+                BoxShadow(
+                  color: const Color(0xFFFF2D7B).withValues(alpha: 0.35),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: kColorWhite),
+          Spacing.h4,
+          SemiBoldText(
+            text: label,
+            fontSize: TextStyles.k10FontSize,
+            color: kColorWhite,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _statPill(String value, String label, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      decoration: BoxDecoration(
+        color: kColorWhite.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.14)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: const Color(0xFFFF9AD5)),
+          Spacing.h6,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SemiBoldText(
+                  text: value,
+                  fontSize: TextStyles.k12FontSize,
+                  color: kColorWhite,
+                ),
+                AppText(
+                  text: label,
+                  fontSize: TextStyles.k8FontSize,
+                  color: kColorWhite.withValues(alpha: 0.68),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _genderBadge(String gender) {
+    if (gender.trim().isEmpty) return const SizedBox.shrink();
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: kColorWhite.withValues(alpha: 0.16),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.28)),
+      ),
+      child: Icon(_genderIcon(gender), size: 18, color: kColorWhite),
+    );
+  }
+
+  Widget _glowBlob(Color color, {required double size, required double alpha}) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [color.withValues(alpha: alpha), Colors.transparent],
+        ),
+      ),
+    );
+  }
+
+  String _subtitle(SocialUserCard user) {
+    final parts = <String>[];
+    if (user.level > 0) parts.add('Lv ${user.level}');
+    if (user.country.trim().isNotEmpty) parts.add(user.country.trim());
+    if (user.isMutual) {
+      parts.add('Mutual');
+    } else if (user.isFollowing) {
+      parts.add('Following');
+    }
+    return parts.isEmpty ? 'Discover profile' : parts.join(' · ');
+  }
+
+  String _connectionLabel(SocialUserCard user) {
+    if (user.isMutual) return 'Mutual';
+    if (user.isFollowing) return 'Following';
+    if (user.isFollower) return 'Follower';
+    return 'None';
+  }
+
+  String _prettyGender(String gender) {
+    final raw = gender.trim();
+    if (raw.isEmpty || raw == 'null') return '—';
+    if (raw.toLowerCase() == 'not_specified') return 'Not specified';
+    return raw
+        .replaceAll('_', ' ')
+        .split(RegExp(r'\s+'))
+        .map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
+        .join(' ');
   }
 
   IconData _genderIcon(String gender) {
@@ -492,7 +975,6 @@ class DiscoverPublicProfileView extends GetView<DiscoverPublicProfileController>
     if (value is String) {
       final t = value.trim();
       if (t.isEmpty || t == 'null') return null;
-      // Skip raw URLs already shown in the hero.
       if (t.startsWith('http') &&
           (t.contains('cloudinary') || t.contains('image'))) {
         return null;
@@ -501,7 +983,7 @@ class DiscoverPublicProfileView extends GetView<DiscoverPublicProfileController>
     }
     if (value is Map) {
       final nested = value['name'] ?? value['image'] ?? value['title'];
-      return _stringify(nested) ?? value.toString();
+      return _stringify(nested);
     }
     if (value is List) {
       if (value.isEmpty) return null;
@@ -511,71 +993,82 @@ class DiscoverPublicProfileView extends GetView<DiscoverPublicProfileController>
   }
 }
 
+class _HighlightTile {
+  const _HighlightTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.colors,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final List<Color> colors;
+}
+
 class _GradientActionButton extends StatelessWidget {
   const _GradientActionButton({
     required this.label,
     required this.icon,
+    required this.gradient,
+    required this.glow,
     required this.onTap,
-    this.outlined = false,
-    this.accent = false,
+    this.border,
+    this.textAlpha = 1,
     this.loading = false,
   });
 
   final String label;
   final IconData icon;
+  final Gradient gradient;
+  final Color glow;
   final VoidCallback onTap;
-  final bool outlined;
-  final bool accent;
+  final Border? border;
+  final double textAlpha;
   final bool loading;
 
   @override
   Widget build(BuildContext context) {
+    final textColor = kColorWhite.withValues(alpha: textAlpha);
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: loading ? null : onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         child: Ink(
           height: 52,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: outlined
-                ? null
-                : LinearGradient(
-                    colors: accent
-                        ? [
-                            kColorBottomNavHeart,
-                            kColorBottomNavHeart.withValues(alpha: 0.82),
-                          ]
-                        : const [
-                            kColorProfileActionPinkStart,
-                            kColorProfileActionPinkEnd,
-                          ],
-                  ),
-            color: outlined ? kColorWhite.withValues(alpha: 0.08) : null,
-            border: outlined
-                ? Border.all(color: kColorWhite.withValues(alpha: 0.22))
-                : null,
+            borderRadius: BorderRadius.circular(18),
+            gradient: gradient,
+            border: border,
+            boxShadow: [
+              BoxShadow(
+                color: glow.withValues(alpha: 0.42),
+                blurRadius: 16,
+                offset: const Offset(0, 7),
+              ),
+            ],
           ),
           child: Center(
             child: loading
-                ? const SizedBox(
+                ? SizedBox(
                     width: 22,
                     height: 22,
                     child: CircularProgressIndicator(
                       strokeWidth: 2.2,
-                      color: kColorWhite,
+                      color: textColor,
                     ),
                   )
                 : Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(icon, size: 18, color: kColorWhite),
+                      Icon(icon, size: 18, color: textColor),
                       Spacing.h8,
                       SemiBoldText(
                         text: label,
                         fontSize: TextStyles.k14FontSize,
-                        color: kColorWhite,
+                        color: textColor,
                       ),
                     ],
                   ),
