@@ -18,6 +18,7 @@ import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_media_utils.dart';
+import 'package:qobo_one_live/utils/zego_engine_utils.dart';
 import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 import 'package:zego_uikit_prebuilt_live_streaming/zego_uikit_prebuilt_live_streaming.dart';
 
@@ -92,6 +93,9 @@ class LiveBroadcastController extends GetxController {
   VoidCallback? _viewerCountListener;
   var _exitReported = false;
   var _hostEndConfirmed = false;
+  /// After join, used to auto-close the room when seat sync shows removal/kick.
+  var _roomMembershipConfirmed = false;
+  var _currentUserOccupiedMicSeat = false;
 
   @override
   void onInit() {
@@ -120,6 +124,9 @@ class LiveBroadcastController extends GetxController {
       final initialSeats = _parseAudioSeats(_roomData);
       if (initialSeats.isNotEmpty) {
         audioRoomSeats.assignAll(initialSeats);
+      }
+      if (!isHost.value) {
+        _roomMembershipConfirmed = true;
       }
       _startSeatRefreshPolling();
     }
@@ -956,7 +963,7 @@ class LiveBroadcastController extends GetxController {
   }
 
   Future<void> loadAudioRoomSeats({bool showErrors = false}) async {
-    if (!isAudioVideoRoom) return;
+    if (!isAudioVideoRoom || _exitReported) return;
     if (isLoadingAudioSeats.value) return;
     final apiRoomId = audioRoomApiId;
     if (apiRoomId.isEmpty) {
@@ -975,6 +982,17 @@ class LiveBroadcastController extends GetxController {
         audioRoomSeats.assignAll(
           seats.isNotEmpty ? seats : _buildFallbackAudioSeats(),
         );
+        await _syncRoomMembershipFromSeatsResponse(
+          response?['data'],
+          seats.isNotEmpty ? seats : audioRoomSeats.toList(),
+        );
+        return;
+      }
+
+      if (_shouldTreatSeatsResponseAsRemoved(response)) {
+        await _forceLeaveRoomBecauseRemoved(
+          message: response?['message']?.toString(),
+        );
         return;
       }
 
@@ -987,6 +1005,209 @@ class LiveBroadcastController extends GetxController {
     } finally {
       isLoadingAudioSeats.value = false;
     }
+  }
+
+  /// Polls seat API to detect when the current viewer was kicked/removed.
+  Future<void> _syncRoomMembershipFromSeatsResponse(
+    dynamic data,
+    List<AudioRoomSeatModel> seats,
+  ) async {
+    if (isHost.value || _exitReported) return;
+
+    final myId = _currentUserId();
+    final onMicSeat = myId.isNotEmpty &&
+        seats.any(
+          (seat) => seat.occupied && _userIdsMatch(seat.userId, myId),
+        );
+
+    if (onMicSeat) {
+      _currentUserOccupiedMicSeat = true;
+      _roomMembershipConfirmed = true;
+      return;
+    }
+
+    final inRoom = _parseCurrentUserInRoomFromSeatsData(data, seats);
+    if (inRoom == true) {
+      _roomMembershipConfirmed = true;
+      return;
+    }
+    if (inRoom == false && _roomMembershipConfirmed) {
+      await _forceLeaveRoomBecauseRemoved();
+      return;
+    }
+
+    // Mic speaker kicked off the stage — no longer appears on any seat.
+    if (_currentUserOccupiedMicSeat && _roomMembershipConfirmed) {
+      await _forceLeaveRoomBecauseRemoved();
+    }
+  }
+
+  bool? _parseCurrentUserInRoomFromSeatsData(
+    dynamic data,
+    List<AudioRoomSeatModel> seats,
+  ) {
+    final myId = _currentUserId();
+    if (myId.isEmpty) return null;
+
+    if (data is Map) {
+      final map = Map<String, dynamic>.from(data);
+
+      for (final key in const [
+        'isInRoom',
+        'inRoom',
+        'currentUserInRoom',
+        'isParticipant',
+      ]) {
+        if (map.containsKey(key)) {
+          return _coerceNullableBool(map[key]);
+        }
+      }
+
+      for (final key in const ['kickedId', 'removedUserId', 'targetUserId']) {
+        final removedId = map[key]?.toString().trim() ?? '';
+        if (removedId.isNotEmpty && _userIdsMatch(removedId, myId)) {
+          return false;
+        }
+      }
+
+      final room = map['room'];
+      if (room is Map) {
+        final status = room['status']?.toString().toLowerCase();
+        if (status == 'ended' || status == 'closed') return false;
+      }
+
+      final currentUser = map['currentUser'] ?? map['participant'] ?? map['membership'];
+      if (currentUser is Map) {
+        final userMap = Map<String, dynamic>.from(currentUser);
+        if (userMap['kicked'] == true || userMap['removed'] == true) {
+          return false;
+        }
+        for (final key in const ['isInRoom', 'inRoom', 'isActive', 'isParticipant']) {
+          if (userMap.containsKey(key)) {
+            return _coerceNullableBool(userMap[key]);
+          }
+        }
+      }
+
+      for (final key in const [
+        'participants',
+        'members',
+        'usersInRoom',
+        'onlineUsers',
+        'listeners',
+        'viewers',
+      ]) {
+        final list = map[key];
+        if (list is! List || list.isEmpty) continue;
+
+        final ids = <String>{};
+        for (final item in list) {
+          if (item is Map) {
+            final id = _readParticipantId(Map<String, dynamic>.from(item));
+            if (id != null) ids.add(id);
+          } else {
+            final id = item?.toString().trim();
+            if (id != null && id.isNotEmpty) ids.add(id);
+          }
+        }
+        if (ids.isNotEmpty) {
+          return ids.any((id) => _userIdsMatch(id, myId));
+        }
+      }
+    }
+
+    for (final seat in seats) {
+      if (seat.occupied && _userIdsMatch(seat.userId, myId)) {
+        return true;
+      }
+    }
+
+    return null;
+  }
+
+  bool _shouldTreatSeatsResponseAsRemoved(Map<String, dynamic>? response) {
+    if (isHost.value || !_roomMembershipConfirmed || _exitReported) {
+      return false;
+    }
+
+    final message = response?['message']?.toString().toLowerCase() ?? '';
+    const keywords = [
+      'kick',
+      'removed',
+      'not in room',
+      'not a member',
+      'no longer',
+      'forbidden',
+      'access denied',
+    ];
+    return keywords.any(message.contains);
+  }
+
+  Future<void> _forceLeaveRoomBecauseRemoved({String? message}) async {
+    if (_exitReported || isHost.value) return;
+    _exitReported = true;
+    _stopSeatRefreshPolling();
+
+    if (Get.isBottomSheetOpen == true) Get.back();
+    if (Get.isDialogOpen == true) Get.back();
+
+    await ZegoEngineUtils.resetForRoomProject().timeout(
+      const Duration(milliseconds: 700),
+      onTimeout: () {},
+    );
+
+    Get.snackbar(
+      'Removed from room',
+      message?.trim().isNotEmpty == true
+          ? message!.trim()
+          : 'You were removed from this room.',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: const Color(0xFFD32F2F),
+      colorText: kColorWhite,
+    );
+
+    await Future<void>.delayed(const Duration(milliseconds: 80));
+    final poppedLiveRoute = _popLiveBroadcastRoute();
+    if (!poppedLiveRoute) {
+      Get.offAllNamed(Routes.BOTTOM_NAV);
+    }
+  }
+
+  String _currentUserId() {
+    if (!Get.isRegistered<UserSessionController>()) return '';
+    return Get.find<UserSessionController>().userId.trim();
+  }
+
+  String? _readParticipantId(Map<String, dynamic> raw) {
+    for (final key in const [
+      'userId',
+      'user_id',
+      'id',
+      '_id',
+      'targetUserId',
+      'target_user_id',
+    ]) {
+      final value = raw[key]?.toString().trim();
+      if (value != null && value.isNotEmpty && value != 'null') return value;
+    }
+    return null;
+  }
+
+  bool _userIdsMatch(String left, String right) {
+    final a = left.trim();
+    final b = right.trim();
+    if (a.isEmpty || b.isEmpty) return false;
+    return a == b ||
+        ZegoLiveIdUtils.sanitizeUserId(a) == ZegoLiveIdUtils.sanitizeUserId(b);
+  }
+
+  bool? _coerceNullableBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    final text = value?.toString().trim().toLowerCase();
+    if (text == 'true' || text == '1') return true;
+    if (text == 'false' || text == '0') return false;
+    return null;
   }
 
   Future<void> loadAudioInviteCandidates({
