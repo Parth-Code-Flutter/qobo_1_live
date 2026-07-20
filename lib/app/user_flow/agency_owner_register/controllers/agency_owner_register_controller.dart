@@ -10,6 +10,7 @@ import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/agency_session_controller.dart';
 import 'package:qobo_one_live/utils/app_dialogs/common_giffy_dialog.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_media_picker.dart';
+import 'package:qobo_one_live/utils/files_utils/file_utils.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/validations/text_field_validations.dart';
 
@@ -20,17 +21,47 @@ class AgencyOwnerRegisterController extends GetxController {
   final agencyNameController = TextEditingController();
   final ownerNameController = TextEditingController();
   final whatsappController = TextEditingController();
+  final emailController = TextEditingController();
+  final countryCodeController = TextEditingController(text: '+91');
+  final passwordController = TextEditingController();
+  final countryController = TextEditingController();
+  final stateController = TextEditingController();
+  final cityController = TextEditingController();
+  final addressController = TextEditingController();
 
   final agencyLogo = Rxn<File>();
+  final docPhotoFront = Rxn<File>();
+  final docPhotoBack = Rxn<File>();
   final isSubmitLoading = false.obs;
+  final isPublicInvite = false.obs;
+  final invitedBy = ''.obs;
 
   final ImagePicker _imagePicker = ImagePicker();
+
+  @override
+  void onInit() {
+    super.onInit();
+    final args = Get.arguments;
+    final argInvitedBy = args is Map ? args['invitedBy']?.toString() : null;
+    final paramInvitedBy =
+        Get.parameters['invitedBy'] ?? Get.parameters['invited_by'];
+    final value = (argInvitedBy ?? paramInvitedBy ?? '').trim();
+    invitedBy.value = value;
+    isPublicInvite.value = value.isNotEmpty;
+  }
 
   @override
   void onClose() {
     agencyNameController.dispose();
     ownerNameController.dispose();
     whatsappController.dispose();
+    emailController.dispose();
+    countryCodeController.dispose();
+    passwordController.dispose();
+    countryController.dispose();
+    stateController.dispose();
+    cityController.dispose();
+    addressController.dispose();
     super.onClose();
   }
 
@@ -38,12 +69,25 @@ class AgencyOwnerRegisterController extends GetxController {
     final source = await CommonMediaPicker.show(context);
     if (source == null) return;
 
-    final file = await _imagePicker.pickImage(
-      source: source,
-      imageQuality: 85,
-    );
+    final file = await _imagePicker.pickImage(source: source, imageQuality: 85);
     if (file == null) return;
     agencyLogo.value = File(file.path);
+  }
+
+  Future<void> pickDocumentFront(BuildContext context) async {
+    final file = await _pickSingleDocument(context);
+    if (file != null) docPhotoFront.value = file;
+  }
+
+  Future<void> pickDocumentBack(BuildContext context) async {
+    final file = await _pickSingleDocument(context);
+    if (file != null) docPhotoBack.value = file;
+  }
+
+  Future<File?> _pickSingleDocument(BuildContext context) async {
+    final paths = await FileUtils.pickFilePaths();
+    if (paths.isEmpty) return null;
+    return File(paths.first);
   }
 
   String? validateAgencyName(BuildContext context, String? value) {
@@ -57,6 +101,15 @@ class AgencyOwnerRegisterController extends GetxController {
 
   String? validateWhatsApp(BuildContext context, String? value) {
     return Validate.phone10DigitValidation(context, value ?? '');
+  }
+
+  String? validateEmail(BuildContext context, String? value) {
+    return Validate.emailValidation(context, value ?? '');
+  }
+
+  String? validateRequired(String label, String? value) {
+    if ((value ?? '').trim().isEmpty) return '$label is required';
+    return null;
   }
 
   Future<void> onSubmitPressed(BuildContext context) async {
@@ -77,12 +130,14 @@ class AgencyOwnerRegisterController extends GetxController {
     final session = Get.find<AgencySessionController>();
 
     try {
-      final response = await _agencyRepo.registerAgency(
-        agencyName: agencyName,
-        ownerName: ownerName,
-        ownerWhatsapp: phone,
-        isShowLoader: false,
-      );
+      final response = isPublicInvite.value
+          ? await _submitPublicAgencyRegistration(context)
+          : await _agencyRepo.registerAgency(
+              agencyName: agencyName,
+              ownerName: ownerName,
+              ownerWhatsapp: phone,
+              isShowLoader: false,
+            );
 
       final data = response?['data'];
       if (isAgencyApiSuccess(response) && data is Map) {
@@ -96,20 +151,28 @@ class AgencyOwnerRegisterController extends GetxController {
 
         final status = map['status']?.toString() ?? '';
         final isPending = isAgencyStatusPending(status);
+        final publicInvite = isPublicInvite.value;
 
         await CommonGiffyDialog.showSuccess(
           context,
-          title: isPending ? 'Application Submitted' : 'Agency Registered',
-          subtitle: isPending
+          title: publicInvite || isPending
+              ? 'Application Submitted'
+              : 'Agency Registered',
+          subtitle: publicInvite
+              ? (response?['message']?.toString() ??
+                    'Your agency application is pending super admin approval. Please login after approval.')
+              : isPending
               ? (response?['message']?.toString() ??
                     'Your agency "$agencyName" is pending approval. Check the dashboard for status updates.')
               : (response?['message']?.toString() ??
                     'Your agency "$agencyName" is active. Open the dashboard to manage hosts and revenue.'),
-          buttonText: 'Open Dashboard',
+          buttonText: publicInvite ? 'Back to Login' : 'Open Dashboard',
           gifAssetPath: kGifCongratulation,
           onPressed: () {
             Get.back<void>();
-            Get.offNamed(Routes.AGENCY_OWNER);
+            Get.offNamed(
+              publicInvite ? Routes.AUTH_LOGIN : Routes.AGENCY_OWNER,
+            );
           },
         );
         return;
@@ -128,5 +191,40 @@ class AgencyOwnerRegisterController extends GetxController {
         AppToast.showError(context, 'Failed to register agency. Try again.');
       }
     }
+  }
+
+  Future<Map<String, dynamic>?> _submitPublicAgencyRegistration(
+    BuildContext context,
+  ) async {
+    final front = docPhotoFront.value;
+    final back = docPhotoBack.value;
+    if (agencyLogo.value == null) {
+      isSubmitLoading.value = false;
+      AppToast.showError(context, 'Please upload agency logo.');
+      return null;
+    }
+    if (front == null || back == null) {
+      isSubmitLoading.value = false;
+      AppToast.showError(context, 'Please upload both document photos.');
+      return null;
+    }
+
+    return _agencyRepo.registerAgencyPublic(
+      agencyName: agencyNameController.text,
+      ownerName: ownerNameController.text,
+      email: emailController.text,
+      phone: whatsappController.text,
+      countryCode: countryCodeController.text,
+      password: passwordController.text,
+      invitedBy: invitedBy.value,
+      country: countryController.text,
+      state: stateController.text,
+      city: cityController.text,
+      address: addressController.text,
+      agencyLogo: agencyLogo.value,
+      docPhotoFront: front,
+      docPhotoBack: back,
+      isShowLoader: false,
+    );
   }
 }

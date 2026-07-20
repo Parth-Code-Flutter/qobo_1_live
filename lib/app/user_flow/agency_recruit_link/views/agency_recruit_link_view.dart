@@ -38,11 +38,17 @@ class AgencyRecruitLinkView extends GetView<AgencyRecruitLinkController> {
                 decoration: BoxDecoration(
                   color: kColorPrimary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: kColorPrimary.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: kColorPrimary.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Column(
                   children: [
-                    const Icon(Icons.people_alt_rounded, size: 48, color: kColorPrimary),
+                    const Icon(
+                      Icons.people_alt_rounded,
+                      size: 48,
+                      color: kColorPrimary,
+                    ),
                     Spacing.v16,
                     const SemiBoldText(
                       text: 'Recruit New Hosts',
@@ -51,7 +57,8 @@ class AgencyRecruitLinkView extends GetView<AgencyRecruitLinkController> {
                     ),
                     Spacing.v8,
                     const AppText(
-                      text: 'Share your exclusive code or link with hosts so they can apply directly under your agency.',
+                      text:
+                          'Share your exclusive code or link with hosts so they can apply directly under your agency.',
                       fontSize: TextStyles.k14FontSize,
                       color: kColorHint,
                       align: TextAlign.center,
@@ -65,9 +72,22 @@ class AgencyRecruitLinkView extends GetView<AgencyRecruitLinkController> {
               _buildLinkSection(context),
               const Spacer(),
               appButton(
+                onPressed: () => controller.shareOnWhatsApp(context),
+                buttonText: 'Share Host Link on WhatsApp',
+                buttonColor: kColorPrimary,
+                buttonIcon: const Icon(
+                  Icons.ios_share_rounded,
+                  color: kColorWhite,
+                  size: 18,
+                ),
+              ),
+              Spacing.v12,
+              appButton(
                 onPressed: () => Get.toNamed(Routes.AGENCY_HOST_LIST),
                 buttonText: 'View My Hosts',
-                buttonColor: kColorPrimary,
+                isGradient: false,
+                buttonColor: kColorWhite,
+                textColor: kColorPrimary,
               ),
               Spacing.v12,
               appButton(
@@ -112,14 +132,20 @@ class AgencyRecruitLinkView extends GetView<AgencyRecruitLinkController> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Obx(() => SemiBoldText(
-                text: controller.agencyCode.value,
-                fontSize: TextStyles.k18FontSize,
-                color: kColorPrimary,
-              )),
+              Obx(
+                () => SemiBoldText(
+                  text: controller.agencyCode.value,
+                  fontSize: TextStyles.k18FontSize,
+                  color: kColorPrimary,
+                ),
+              ),
               GestureDetector(
                 onTap: () => controller.copyCode(context),
-                child: const Icon(Icons.copy_rounded, color: kColorPrimary, size: 24),
+                child: const Icon(
+                  Icons.copy_rounded,
+                  color: kColorPrimary,
+                  size: 24,
+                ),
               ),
             ],
           ),
@@ -148,18 +174,24 @@ class AgencyRecruitLinkView extends GetView<AgencyRecruitLinkController> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Obx(() => AppText(
-                  text: controller.recruitLink.value,
-                  fontSize: TextStyles.k14FontSize,
-                  color: kColorPrimary,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                )),
+                child: Obx(
+                  () => AppText(
+                    text: controller.recruitLink.value,
+                    fontSize: TextStyles.k14FontSize,
+                    color: kColorPrimary,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ),
               Spacing.h12,
               GestureDetector(
                 onTap: () => controller.copyLink(context),
-                child: const Icon(Icons.copy_rounded, color: kColorPrimary, size: 24),
+                child: const Icon(
+                  Icons.copy_rounded,
+                  color: kColorPrimary,
+                  size: 24,
+                ),
               ),
             ],
           ),

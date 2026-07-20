@@ -47,7 +47,8 @@ class AgencyRepo {
       'address': address.trim(),
       if (countryId != null && countryId.trim().isNotEmpty)
         'countryId': countryId.trim(),
-      if (stateId != null && stateId.trim().isNotEmpty) 'stateId': stateId.trim(),
+      if (stateId != null && stateId.trim().isNotEmpty)
+        'stateId': stateId.trim(),
       'city': city.trim(),
       'interests': category.trim(),
       if (dob != null && dob.trim().isNotEmpty) 'dob': dob.trim(),
@@ -161,14 +162,67 @@ class AgencyRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
-  /// Calls `GET /api/agency/generate-link?agency_id=...` to generate an invite link.
-  Future<Map<String, dynamic>?> generateInviteLink({
-    required String agencyId,
+  /// `POST /api/agency/register-public` — public agency invite registration.
+  ///
+  /// This is used when a Super Admin shares an agency onboarding link. It does
+  /// not require the user to be logged in, but the backend still accepts the
+  /// standard auth headers when present.
+  Future<Map<String, dynamic>?> registerAgencyPublic({
+    required String agencyName,
+    required String ownerName,
+    required String email,
+    required String phone,
+    required String countryCode,
+    required String password,
+    required String invitedBy,
+    required String country,
+    required String state,
+    required String city,
+    required String address,
+    File? agencyLogo,
+    required File docPhotoFront,
+    required File docPhotoBack,
     bool isShowLoader = true,
   }) async {
+    final response = await _apiService.multipartFormRequest(
+      endPoint: AgencyEndpoints.registerAgencyPublic,
+      fields: {
+        'agency_name': agencyName.trim(),
+        'owner_name': ownerName.trim(),
+        'email': email.trim(),
+        'phone': phone.trim(),
+        'countryCode': countryCode.trim(),
+        'password': password,
+        'invitedBy': invitedBy.trim(),
+        'country': country.trim(),
+        'state': state.trim(),
+        'city': city.trim(),
+        'address': address.trim(),
+      },
+      namedFiles: {
+        if (agencyLogo != null) 'agency_logo': agencyLogo,
+        'doc_photo_front': docPhotoFront,
+        'doc_photo_back': docPhotoBack,
+      },
+      method: 'POST',
+      isShowLoader: isShowLoader,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// Calls `GET /api/agency/generate-link?agency_id=...` to generate an invite link.
+  Future<Map<String, dynamic>?> generateInviteLink({
+    String? agencyId,
+    bool isShowLoader = true,
+  }) async {
+    final id = agencyId?.trim();
+    final endpoint = id != null && id.isNotEmpty
+        ? '${AgencyEndpoints.generateLink}?agency_id=${Uri.encodeComponent(id)}'
+        : AgencyEndpoints.generateLink;
     final response = await _apiService.getRequest(
-      endPoint:
-          '${AgencyEndpoints.generateLink}?agency_id=${Uri.encodeComponent(agencyId)}',
+      endPoint: endpoint,
       isShowLoader: isShowLoader,
     );
 
@@ -188,7 +242,8 @@ class AgencyRepo {
       params['agency_id'] = id;
     }
     final response = await _apiService.getRequest(
-      endPoint: '${AgencyEndpoints.hostList}?${Uri(queryParameters: params).query}',
+      endPoint:
+          '${AgencyEndpoints.hostList}?${Uri(queryParameters: params).query}',
       isShowLoader: isShowLoader,
     );
 

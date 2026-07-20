@@ -154,6 +154,9 @@ class AgencyEndpoints {
   /// POST /api/agency/register
   static const String registerAgency = '/api/agency/register';
 
+  /// POST /api/agency/register-public
+  static const String registerAgencyPublic = '/api/agency/register-public';
+
   /// GET /api/agency/dashboard
   static const String dashboard = '/api/agency/dashboard';
 
