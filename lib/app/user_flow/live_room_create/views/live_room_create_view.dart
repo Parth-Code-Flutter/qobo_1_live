@@ -34,6 +34,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
                   title: controller.isLiveStreamingMode
                       ? 'Live Streaming'
                       : 'Create Room',
+                  showCreatorProfile: !controller.isLiveStreamingMode,
                 ),
                 Expanded(
                   child: SingleChildScrollView(
@@ -102,9 +103,9 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Host identity is fixed for this create flow — no Room Name field.
-        _creatorProfileCard(),
-        Spacing.v16,
+        // Host profile lives in the app bar — form starts with cover + setup.
+        _sectionLabel('Stream Cover'),
+        Spacing.v10,
         _coverPicker(context),
         Spacing.v20,
         _sectionLabel('Room Type', required: true),
@@ -169,7 +170,11 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
           isGradient: true,
           buttonIcon: const Padding(
             padding: EdgeInsets.only(right: 8),
-            child: Icon(Icons.rocket_launch_rounded, color: kColorWhite, size: 20),
+            child: Icon(
+              Icons.rocket_launch_rounded,
+              color: kColorWhite,
+              size: 20,
+            ),
           ),
           gradientColors: const [
             Color(0xFFFF4DC4),
@@ -179,152 +184,6 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
         ),
         Spacing.v12,
       ],
-    );
-  }
-
-  /// Compact host card — avatar, id, and auto room title.
-  Widget _creatorProfileCard() {
-    final session = Get.isRegistered<UserSessionController>()
-        ? Get.find<UserSessionController>()
-        : Get.put(UserSessionController(), permanent: true);
-
-    return GetBuilder<UserSessionController>(
-      init: session,
-      builder: (_) {
-        return Container(
-          padding: const EdgeInsets.all(2.2),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFFFF4DC4), Color(0xFF7B5CFF), Color(0xFF2ED3FF)],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFFFF2D7B).withValues(alpha: 0.28),
-                blurRadius: 22,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  const Color(0xFF241038),
-                  LiveRoomUiColors.cardSurface.withValues(alpha: 0.96),
-                ],
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(2.5),
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [Color(0xFFFF4DC4), Color(0xFFFF9A3D)],
-                    ),
-                  ),
-                  child: FramedUserAvatar(
-                    name: controller.creatorDisplayName,
-                    imageUrl: controller.creatorAvatarUrl,
-                    frameUrl: controller.creatorFrameUrl,
-                    frameSeed: controller.creatorUserId,
-                    size: 52,
-                    fontSize: TextStyles.k14FontSize,
-                  ),
-                ),
-                Spacing.h12,
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SemiBoldText(
-                        text: controller.creatorDisplayName,
-                        fontSize: TextStyles.k16FontSize,
-                        color: kColorWhite,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Spacing.v4,
-                      AppText(
-                        text: 'ID · ${controller.creatorUserId}',
-                        fontSize: TextStyles.k12FontSize,
-                        color: kColorWhite.withValues(alpha: 0.68),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Spacing.v8,
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
-                          gradient: LinearGradient(
-                            colors: [
-                              const Color(0xFFFF4DC4).withValues(alpha: 0.28),
-                              const Color(0xFF7B5CFF).withValues(alpha: 0.22),
-                            ],
-                          ),
-                          border: Border.all(
-                            color: const Color(
-                              0xFFFF4DC4,
-                            ).withValues(alpha: 0.35),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.auto_awesome_rounded,
-                              size: 12,
-                              color: Color(0xFFFF9AD5),
-                            ),
-                            Spacing.h6,
-                            Flexible(
-                              child: SemiBoldText(
-                                text: controller.creatorRoomTitle,
-                                fontSize: TextStyles.k10FontSize,
-                                color: kColorWhite,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: kColorWhite.withValues(alpha: 0.08),
-                    border: Border.all(
-                      color: kColorWhite.withValues(alpha: 0.12),
-                    ),
-                  ),
-                  child: Icon(
-                    Icons.verified_rounded,
-                    size: 18,
-                    color: const Color(0xFF2ED3FF).withValues(alpha: 0.95),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 
@@ -472,43 +331,101 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
     );
   }
 
-  Widget _header({required String title}) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-      child: Row(
-        children: [
-          Material(
-            color: Colors.transparent,
-            shape: const CircleBorder(),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: Get.back,
-              customBorder: const CircleBorder(),
-              child: Ink(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: kColorWhite.withValues(alpha: 0.08),
-                  border: Border.all(
-                    color: kColorWhite.withValues(alpha: 0.12),
-                  ),
-                ),
-                child: const Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  color: kColorWhite,
-                  size: 16,
+  Widget _header({
+    required String title,
+    bool showCreatorProfile = false,
+  }) {
+    if (!showCreatorProfile) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+        child: Row(
+          children: [
+            _backButton(),
+            Spacing.h10,
+            SemiBoldText(
+              text: title,
+              fontSize: TextStyles.k18FontSize,
+              color: kColorWhite,
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Audio/video create: host profile in the app bar (no body profile card).
+    final session = Get.isRegistered<UserSessionController>()
+        ? Get.find<UserSessionController>()
+        : Get.put(UserSessionController(), permanent: true);
+
+    return GetBuilder<UserSessionController>(
+      init: session,
+      builder: (_) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 14, 8),
+          child: Row(
+            children: [
+              _backButton(),
+              Spacing.h10,
+              FramedUserAvatar(
+                name: controller.creatorDisplayName,
+                imageUrl: controller.creatorAvatarUrl,
+                frameUrl: controller.creatorFrameUrl,
+                frameSeed: controller.creatorUserId,
+                size: 36,
+                fontSize: TextStyles.k10FontSize,
+              ),
+              Spacing.h10,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SemiBoldText(
+                      text: controller.creatorDisplayName,
+                      fontSize: TextStyles.k18FontSize,
+                      color: kColorWhite,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Spacing.v4,
+                    SemiBoldText(
+                      text: controller.creatorRoomTitle,
+                      fontSize: TextStyles.k14FontSize,
+                      color: const Color(0xFFFF9AD5),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
               ),
-            ),
+            ],
           ),
-          Spacing.h10,
-          SemiBoldText(
-            text: title,
-            fontSize: TextStyles.k18FontSize,
+        );
+      },
+    );
+  }
+
+  Widget _backButton() {
+    return Material(
+      color: Colors.transparent,
+      shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: Get.back,
+        customBorder: const CircleBorder(),
+        child: Ink(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: kColorWhite.withValues(alpha: 0.08),
+            border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
+          ),
+          child: const Icon(
+            Icons.arrow_back_ios_new_rounded,
             color: kColorWhite,
+            size: 16,
           ),
-        ],
+        ),
       ),
     );
   }
@@ -544,31 +461,34 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
     );
   }
 
-  /// Compact cover picker — gradient frame, less empty space.
+  /// 16:9 cover picker with a clear empty state and change/remove actions.
   Widget _coverPicker(BuildContext context) {
     return Obx(() {
       final coverPath = controller.selectedCoverPath.value;
       final hasCover = coverPath != null && coverPath.isNotEmpty;
+
       return GestureDetector(
         onTap: () => controller.pickRoomCover(context),
-        child: Container(
-          height: 118,
-          padding: const EdgeInsets.all(2),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: hasCover
-                  ? const [Color(0xFFFF4DC4), Color(0xFF7B5CFF)]
-                  : [
-                      kColorWhite.withValues(alpha: 0.18),
-                      kColorWhite.withValues(alpha: 0.06),
-                    ],
+        child: AspectRatio(
+          aspectRatio: 16 / 9,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: hasCover
+                    ? const Color(0xFFFF4DC4).withValues(alpha: 0.55)
+                    : kColorWhite.withValues(alpha: 0.14),
+                width: 1.4,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.22),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(18),
+            clipBehavior: Clip.antiAlias,
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -576,11 +496,11 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
                   Image.file(
                     File(coverPath),
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _coverPlaceholder(),
+                    errorBuilder: (_, __, ___) => _coverEmptyState(),
                   )
                 else
-                  _coverPlaceholder(),
-                if (hasCover)
+                  _coverEmptyState(),
+                if (hasCover) ...[
                   Positioned.fill(
                     child: DecoratedBox(
                       decoration: BoxDecoration(
@@ -588,49 +508,58 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            Colors.transparent,
+                            Colors.black.withValues(alpha: 0.05),
                             Colors.black.withValues(alpha: 0.55),
                           ],
                         ),
                       ),
                     ),
                   ),
-                Positioned(
-                  left: 14,
-                  right: hasCover ? 54 : 14,
-                  bottom: 12,
-                  child: SemiBoldText(
-                    text: hasCover ? 'Tap to change cover' : 'Add stream cover',
-                    fontSize: TextStyles.k12FontSize,
-                    color: kColorWhite,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  Positioned(
+                    left: 14,
+                    bottom: 12,
+                    right: 56,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SemiBoldText(
+                          text: 'Stream cover',
+                          fontSize: TextStyles.k14FontSize,
+                          color: kColorWhite,
+                        ),
+                        Spacing.v2,
+                        AppText(
+                          text: 'Tap to change',
+                          fontSize: TextStyles.k10FontSize,
+                          color: kColorWhite.withValues(alpha: 0.72),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                if (hasCover)
                   Positioned(
                     right: 10,
                     top: 10,
                     child: GestureDetector(
                       onTap: controller.clearRoomCover,
                       child: Container(
-                        width: 32,
-                        height: 32,
+                        width: 34,
+                        height: 34,
                         decoration: BoxDecoration(
-                          color: kColorBlack.withValues(alpha: 0.5),
+                          color: kColorBlack.withValues(alpha: 0.55),
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: kColorWhite.withValues(alpha: 0.2),
+                            color: kColorWhite.withValues(alpha: 0.22),
                           ),
                         ),
                         child: const Icon(
                           Icons.close_rounded,
                           color: kColorWhite,
-                          size: 16,
+                          size: 18,
                         ),
                       ),
                     ),
                   ),
+                ],
               ],
             ),
           ),
@@ -639,7 +568,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
     });
   }
 
-  Widget _coverPlaceholder() {
+  Widget _coverEmptyState() {
     return DecoratedBox(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -656,34 +585,40 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 46,
-            height: 46,
+            width: 56,
+            height: 56,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [
-                  const Color(0xFFFF4DC4).withValues(alpha: 0.35),
-                  const Color(0xFF7B5CFF).withValues(alpha: 0.28),
-                ],
+              gradient: const LinearGradient(
+                colors: [Color(0xFFFF4DC4), Color(0xFF7B5CFF)],
               ),
-              border: Border.all(
-                color: kColorWhite.withValues(alpha: 0.16),
-              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFF2D7B).withValues(alpha: 0.35),
+                  blurRadius: 14,
+                  offset: const Offset(0, 6),
+                ),
+              ],
             ),
             child: const Icon(
               Icons.add_a_photo_rounded,
               color: kColorWhite,
-              size: 22,
+              size: 24,
             ),
           ),
-          Spacing.v8,
+          Spacing.v12,
+          const SemiBoldText(
+            text: 'Add Stream Cover',
+            fontSize: TextStyles.k14FontSize,
+            color: kColorWhite,
+          ),
+          Spacing.v4,
           AppText(
-            text: 'Recommended 16:9',
+            text: 'Recommended 16:9 · Tap to upload',
             fontSize: TextStyles.k10FontSize,
-            color: kColorWhite.withValues(alpha: 0.55),
+            color: kColorWhite.withValues(alpha: 0.58),
             align: TextAlign.center,
           ),
-          Spacing.v16,
         ],
       ),
     );
