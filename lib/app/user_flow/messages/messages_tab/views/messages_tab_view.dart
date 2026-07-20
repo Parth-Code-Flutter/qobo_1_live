@@ -14,7 +14,10 @@ import '../widgets/message_inbox_tile_widget.dart';
 import '../widgets/messages_common_widgets.dart';
 
 class MessagesTabView extends GetView<MessagesTabController> {
-  const MessagesTabView({super.key});
+  const MessagesTabView({super.key, this.showBackButton = false});
+
+  /// When opened from a live/audio room, show back so the user returns to the room.
+  final bool showBackButton;
 
   @override
   Widget build(BuildContext context) {
@@ -78,6 +81,19 @@ class MessagesTabView extends GetView<MessagesTabController> {
         final avatarUrl = session.displayPictureUrl;
         return Row(
           children: [
+            if (showBackButton) ...[
+              IconButton(
+                onPressed: Get.back,
+                icon: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: kColorWhite,
+                  size: 20,
+                ),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              ),
+              Spacing.h4,
+            ],
             FramedUserAvatar(
               name: session.displayName,
               imageUrl: avatarUrl,

@@ -27,6 +27,7 @@ abstract class Routes {
   static const JOIN_LIVE = _Paths.JOIN_LIVE;
   static const LIVE_ROOM_CREATE = _Paths.LIVE_ROOM_CREATE;
   static const LIVE_BROADCAST = _Paths.LIVE_BROADCAST;
+  static const MESSAGES_LIST = _Paths.MESSAGES_LIST;
   static const CHAT_DETAIL = _Paths.CHAT_DETAIL;
   static const CHAT_CONTACT_PROFILE = _Paths.CHAT_CONTACT_PROFILE;
   static const CHAT_VOICE_CALL = _Paths.CHAT_VOICE_CALL;
@@ -82,6 +83,7 @@ abstract class _Paths {
   static const JOIN_LIVE = '/join-live';
   static const LIVE_ROOM_CREATE = '/live-room-create';
   static const LIVE_BROADCAST = '/live-broadcast';
+  static const MESSAGES_LIST = '/messages-list';
   static const CHAT_DETAIL = '/chat-detail';
   static const CHAT_CONTACT_PROFILE = '/chat-contact-profile';
   static const CHAT_VOICE_CALL = '/chat-voice-call';

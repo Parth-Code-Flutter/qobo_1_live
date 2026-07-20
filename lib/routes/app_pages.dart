@@ -47,6 +47,8 @@ import '../app/user_flow/live_broadcast/bindings/live_broadcast_binding.dart';
 import '../app/user_flow/live_broadcast/views/live_broadcast_view.dart';
 import '../app/user_flow/messages/chat_detail/bindings/chat_detail_binding.dart';
 import '../app/user_flow/messages/chat_detail/views/chat_detail_view.dart';
+import '../app/user_flow/messages/messages_tab/bindings/messages_tab_binding.dart';
+import '../app/user_flow/messages/messages_tab/views/messages_tab_view.dart';
 import '../app/user_flow/messages/chat_contact_profile/bindings/chat_contact_profile_binding.dart';
 import '../app/user_flow/messages/chat_contact_profile/views/chat_contact_profile_view.dart';
 import '../app/user_flow/messages/chat_voice_call/bindings/chat_voice_call_binding.dart';
@@ -222,6 +224,11 @@ class AppPages {
       name: _Paths.LIVE_BROADCAST,
       page: () => const LiveBroadcastView(),
       binding: LiveBroadcastBinding(),
+    ),
+    GetPage(
+      name: _Paths.MESSAGES_LIST,
+      page: () => const MessagesTabView(showBackButton: true),
+      binding: MessagesTabBinding(),
     ),
     GetPage(
       name: _Paths.CHAT_DETAIL,

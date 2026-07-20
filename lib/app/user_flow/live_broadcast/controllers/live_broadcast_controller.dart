@@ -869,6 +869,18 @@ class LiveBroadcastController extends GetxController {
     }
   }
 
+  /// Opens 1:1 chat with an audio-room seat member from the member sheet.
+  Future<void> openChatWithSeatMember(
+    BuildContext context, {
+    required AudioRoomSeatModel seat,
+  }) async {
+    await openChatWithViewer(context, {
+      'targetId': seat.userId,
+      'name': seat.name,
+      'avatarUrl': seat.avatarUrl,
+    });
+  }
+
   /// Opens 1:1 chat with a viewer/host from the live room list.
   Future<void> openChatWithViewer(
     BuildContext context,

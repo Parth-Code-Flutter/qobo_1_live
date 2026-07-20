@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
@@ -196,6 +198,7 @@ class _ControlButton extends StatelessWidget {
     required this.onTap,
     this.active = false,
     this.emphasized = false,
+    this.accentGradient,
   });
 
   final IconData icon;
@@ -204,6 +207,7 @@ class _ControlButton extends StatelessWidget {
   final VoidCallback? onTap;
   final bool active;
   final bool emphasized;
+  final Gradient? accentGradient;
 
   @override
   Widget build(BuildContext context) {
@@ -224,12 +228,16 @@ class _ControlButton extends StatelessWidget {
                   height: size,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: emphasized
-                        ? const LinearGradient(
-                            colors: [kColorProfileFeatureBlue, kColorPrimary],
-                          )
-                        : null,
-                    color: emphasized
+                    gradient: accentGradient ??
+                        (emphasized
+                            ? const LinearGradient(
+                                colors: [
+                                  kColorProfileFeatureBlue,
+                                  kColorPrimary,
+                                ],
+                              )
+                            : null),
+                    color: accentGradient != null || emphasized
                         ? null
                         : active
                         ? kColorWhite
@@ -241,7 +249,7 @@ class _ControlButton extends StatelessWidget {
                   child: Icon(
                     icon,
                     size: compact ? 19 : 22,
-                    color: emphasized
+                    color: accentGradient != null || emphasized
                         ? kColorWhite
                         : active
                         ? kColorPrimary
@@ -643,12 +651,22 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
               ),
             ),
             _SeatActionData(
+              icon: Icons.chat_bubble_outline_rounded,
+              label: 'Message',
+              onTap: () => _openMessage(context),
+            ),
+            _SeatActionData(
               icon: Icons.card_giftcard_rounded,
               label: 'Gift',
               onTap: _openGift,
             ),
           ]
         : [
+            _SeatActionData(
+              icon: Icons.chat_bubble_outline_rounded,
+              label: 'Message',
+              onTap: () => _openMessage(context),
+            ),
             _SeatActionData(
               icon: Icons.card_giftcard_rounded,
               label: 'Send gift',
@@ -703,7 +721,7 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
                       AppText(
                         text: isHostView
                             ? 'Manage this room member'
-                            : 'Send an individual gift',
+                            : 'Connect with this room member',
                         fontSize: TextStyles.k12FontSize,
                         color: kColorWhite.withValues(alpha: 0.62),
                       ),
@@ -723,6 +741,29 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _openMessage(BuildContext context) {
+    final receiverId = seat.userId.trim();
+    if (receiverId.isEmpty) {
+      Get.back();
+      Get.snackbar(
+        'Message unavailable',
+        'This user id is missing from the room member data.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFF1E1E2D),
+        colorText: kColorWhite,
+      );
+      return;
+    }
+
+    Get.back();
+    unawaited(
+      controller.openChatWithSeatMember(
+        context,
+        seat: seat,
       ),
     );
   }
