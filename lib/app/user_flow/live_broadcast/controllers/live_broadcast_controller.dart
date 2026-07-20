@@ -1186,12 +1186,19 @@ class LiveBroadcastController extends GetxController {
           );
 
     final seats = <AudioRoomSeatModel>[];
+    seats.add(_resolveHostSeat(seatsByNo[1]));
+    final hostUserId = receiverId.value.trim();
     for (var seatNo = 2; seatNo <= maxSeat; seatNo++) {
-      seats.add(seatsByNo[seatNo] ?? AudioRoomSeatModel.empty(seatNo));
+      final seat = seatsByNo[seatNo] ?? AudioRoomSeatModel.empty(seatNo);
+      if (hostUserId.isNotEmpty && seat.userId.trim() == hostUserId) {
+        seats.add(AudioRoomSeatModel.empty(seatNo));
+        continue;
+      }
+      seats.add(seat);
     }
 
-    final hostSeat = seatsByNo[1];
-    if (hostSeat != null && hostSeat.occupied) {
+    final hostSeat = seats.first;
+    if (hostSeat.occupied) {
       if (hostSeat.name.trim().isNotEmpty) hostName.value = hostSeat.name;
       if (hostSeat.avatarUrl?.trim().isNotEmpty == true) {
         hostAvatarUrl.value = hostSeat.avatarUrl;
@@ -1203,6 +1210,29 @@ class LiveBroadcastController extends GetxController {
     }
 
     return seats;
+  }
+
+  AudioRoomSeatModel _resolveHostSeat(AudioRoomSeatModel? apiHostSeat) {
+    if (apiHostSeat != null && apiHostSeat.occupied) {
+      return apiHostSeat.isHost
+          ? apiHostSeat
+          : apiHostSeat.copyWith(role: 'host');
+    }
+
+    final hostId = receiverId.value.trim();
+    final name = hostName.value.trim();
+    if (hostId.isNotEmpty || name.isNotEmpty) {
+      return AudioRoomSeatModel(
+        seatNo: 1,
+        userId: hostId,
+        name: name.isNotEmpty ? name : 'Host',
+        avatarUrl: hostAvatarUrl.value,
+        avatarFrameUrl: hostAvatarFrameUrl.value,
+        role: 'host',
+      );
+    }
+
+    return AudioRoomSeatModel.empty(1);
   }
 
   List<AudioRoomSeatModel> _withCurrentUserFrame(
@@ -1258,17 +1288,20 @@ class LiveBroadcastController extends GetxController {
 
   List<AudioRoomSeatModel> _buildFallbackAudioSeats() {
     final maxSeats = _readSeatConfig(_roomData);
-    final seats = <AudioRoomSeatModel>[];
+    final seats = <AudioRoomSeatModel>[_resolveHostSeat(null)];
     var seatNo = 2;
+    final hostUserId = receiverId.value.trim();
 
     for (final viewer in liveViewers) {
       if (seatNo > maxSeats) break;
       if (viewer['isHost'] == true) continue;
+      final viewerId =
+          viewer['targetId']?.toString() ?? viewer['id']?.toString() ?? '';
+      if (hostUserId.isNotEmpty && viewerId.trim() == hostUserId) continue;
       seats.add(
         AudioRoomSeatModel(
           seatNo: seatNo,
-          userId:
-              viewer['targetId']?.toString() ?? viewer['id']?.toString() ?? '',
+          userId: viewerId,
           name: viewer['name']?.toString() ?? 'Member',
           avatarUrl: viewer['avatarUrl']?.toString(),
           diamonds: 0,
