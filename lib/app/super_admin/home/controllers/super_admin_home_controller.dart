@@ -4,8 +4,8 @@ import 'package:qobo_one_live/app/super_admin/models/super_admin_models.dart';
 import 'package:qobo_one_live/repo/agency/agency_api_utils.dart';
 import 'package:qobo_one_live/repo/super_admin/super_admin_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
-import 'package:qobo_one_live/utils/files_utils/file_utils.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
+import 'package:share_plus/share_plus.dart';
 
 /// Shared data + API actions for Super Admin Dashboard / Agency / Host tabs.
 ///
@@ -28,6 +28,7 @@ class SuperAdminHomeController extends GetxController {
   final agencyStatusFilter = 'pending'.obs;
   final hostStatusFilter = ''.obs;
   final generatedAgencyLink = ''.obs;
+  final isGeneratingAgencyLink = false.obs;
 
   @override
   void onInit() {
@@ -139,32 +140,48 @@ class SuperAdminHomeController extends GetxController {
   }
 
   Future<void> generateAgencyLink() async {
-    final context = Get.context;
-    final response = await _repo.generateAgencyLink();
-    final data = response?['data'];
-    if (!isAgencyApiSuccess(response) || data is! Map) {
-      if (context != null) {
-        AppToast.showError(
-          context,
-          agencyApiMessage(response) ?? 'Could not generate link.',
-        );
+    if (isGeneratingAgencyLink.value) return;
+    isGeneratingAgencyLink.value = true;
+    try {
+      final response = await _repo.generateAgencyLink();
+      final data = response?['data'];
+      if (!isAgencyApiSuccess(response) || data is! Map) {
+        final ctx = Get.context;
+        if (ctx != null) {
+          AppToast.showError(
+            ctx,
+            agencyApiMessage(response) ?? 'Could not generate link.',
+          );
+        }
+        return;
       }
-      return;
-    }
 
-    final link = data['link']?.toString().trim() ?? '';
-    final text = (data['whatsappText']?.toString().trim().isNotEmpty == true)
-        ? data['whatsappText'].toString().trim()
-        : link;
-    generatedAgencyLink.value = link;
-    await Clipboard.setData(ClipboardData(text: text));
-    if (link.isNotEmpty) {
-      await FileUtils.openFileOrLink(
-        'https://wa.me/?text=${Uri.encodeComponent(text)}',
+      final link = data['link']?.toString().trim() ?? '';
+      final text = (data['whatsappText']?.toString().trim().isNotEmpty == true)
+          ? data['whatsappText'].toString().trim()
+          : (link.isNotEmpty
+                ? 'Join as an agency on Qobo One Live: $link'
+                : '');
+      if (text.isEmpty) {
+        final ctx = Get.context;
+        if (ctx != null) {
+          AppToast.showError(ctx, 'Invite link is empty.');
+        }
+        return;
+      }
+
+      generatedAgencyLink.value = link;
+      await Clipboard.setData(ClipboardData(text: text));
+      // Native share sheet (WhatsApp, Messages, Mail, etc.).
+      await SharePlus.instance.share(
+        ShareParams(text: text, subject: 'Agency invite'),
       );
-    }
-    if (context != null) {
-      AppToast.showSuccess(context, 'Agency invite copied.');
+      final ctx = Get.context;
+      if (ctx != null) {
+        AppToast.showSuccess(ctx, 'Invite ready to share.');
+      }
+    } finally {
+      isGeneratingAgencyLink.value = false;
     }
   }
 

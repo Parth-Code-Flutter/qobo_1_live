@@ -13,6 +13,11 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
   const SuperAdminDashboardTabView({super.key});
 
+  static const _gold = Color(0xFFFFD166);
+  static const _violet = Color(0xFF9C6BFF);
+  static const _mint = Color(0xFF4ADE80);
+  static const _rose = Color(0xFFFF6B8A);
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -41,7 +46,7 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
                     physics: const AlwaysScrollableScrollPhysics(
                       parent: BouncingScrollPhysics(),
                     ),
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
                     children: [
                       if (controller.error.value.isNotEmpty) ...[
                         SuperAdminGlassCard(
@@ -51,14 +56,14 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
                             color: const Color(0xFFFF8A80),
                           ),
                         ),
-                        Spacing.v12,
+                        Spacing.v10,
                       ],
                       _statsGrid(),
-                      Spacing.v16,
+                      Spacing.v12,
                       _inviteCard(),
-                      Spacing.v16,
+                      Spacing.v12,
                       _commissionsCard(),
-                      Spacing.v16,
+                      Spacing.v12,
                       _topAgenciesCard(),
                     ],
                   ),
@@ -82,117 +87,211 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
   Widget _statsGrid() {
     return Obx(() {
       final stats = controller.stats.value;
-      // (label, value, icon, accent color) per stat tile.
       final items = [
         (
           'Agencies',
           stats?.totalAgencies ?? 0,
           Icons.business_rounded,
-          const Color(0xFF9C6BFF),
+          _violet,
         ),
         (
           'Active Hosts',
           stats?.activeHosts ?? 0,
           Icons.video_camera_front_rounded,
-          const Color(0xFF4ADE80),
+          _mint,
         ),
         (
-          'Pending Agencies',
+          'Pending',
           stats?.pendingAgencies ?? 0,
           Icons.pending_actions_rounded,
-          const Color(0xFFFFD166),
+          _gold,
         ),
         (
           'Live Now',
           stats?.liveHostsNow ?? 0,
           Icons.sensors_rounded,
-          const Color(0xFFFF6B8A),
+          _rose,
         ),
       ];
-      return GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: items.length,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 10,
-          crossAxisSpacing: 10,
-          mainAxisExtent: 92,
-        ),
-        itemBuilder: (_, index) {
-          final item = items[index];
-          final accent = item.$4;
-          return SuperAdminGlassCard(
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: accent.withValues(alpha: 0.18),
-                    border: Border.all(color: accent.withValues(alpha: 0.4)),
-                  ),
-                  child: Icon(item.$3, color: accent, size: 20),
-                ),
-                Spacing.h10,
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      BoldText(
-                        text: '${item.$2}',
-                        fontSize: TextStyles.k20FontSize,
-                        color: kColorWhite,
-                      ),
-                      AppText(
-                        text: item.$1,
-                        fontSize: TextStyles.k10FontSize,
-                        color: Colors.white70,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
+
+      // Two fixed rows avoid GridView shrink-wrap leaving a tall empty gap.
+      return Column(
+        children: [
+          Row(
+            children: [
+              Expanded(child: _statTile(items[0])),
+              Spacing.h10,
+              Expanded(child: _statTile(items[1])),
+            ],
+          ),
+          Spacing.v10,
+          Row(
+            children: [
+              Expanded(child: _statTile(items[2])),
+              Spacing.h10,
+              Expanded(child: _statTile(items[3])),
+            ],
+          ),
+        ],
       );
     });
   }
 
-  Widget _inviteCard() {
+  Widget _statTile(
+    (String, int, IconData, Color) item,
+  ) {
+    final accent = item.$4;
     return SuperAdminGlassCard(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       child: Row(
         children: [
-          const Icon(Icons.link_rounded, color: Color(0xFFFFD166), size: 30),
-          Spacing.h12,
-          const Expanded(
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  accent.withValues(alpha: 0.45),
+                  accent.withValues(alpha: 0.12),
+                ],
+              ),
+              border: Border.all(color: accent.withValues(alpha: 0.55)),
+              boxShadow: [
+                BoxShadow(
+                  color: accent.withValues(alpha: 0.28),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Icon(item.$3, color: accent, size: 18),
+          ),
+          Spacing.h10,
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SemiBoldText(
+                BoldText(
+                  text: '${item.$2}',
+                  fontSize: TextStyles.k20FontSize,
+                  color: kColorWhite,
+                ),
+                AppText(
+                  text: item.$1,
+                  fontSize: TextStyles.k10FontSize,
+                  color: Colors.white70,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _inviteCard() {
+    return SuperAdminGlassCard(
+      padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  _gold.withValues(alpha: 0.35),
+                  _gold.withValues(alpha: 0.08),
+                ],
+              ),
+              border: Border.all(color: _gold.withValues(alpha: 0.45)),
+            ),
+            child: const Icon(Icons.link_rounded, color: _gold, size: 22),
+          ),
+          Spacing.h12,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SemiBoldText(
                   text: 'Invite Agency',
                   fontSize: TextStyles.k14FontSize,
                   color: kColorWhite,
                 ),
-                AppText(
-                  text: 'Generate link and share on WhatsApp',
+                Spacing.v2,
+                const AppText(
+                  text: 'Create a link and share anywhere',
                   fontSize: TextStyles.k10FontSize,
                   color: Colors.white70,
                 ),
               ],
             ),
           ),
-          TextButton(
-            onPressed: controller.generateAgencyLink,
-            child: const SemiBoldText(
-              text: 'Generate',
-              fontSize: TextStyles.k12FontSize,
-              color: Color(0xFFFFD166),
-            ),
-          ),
+          Spacing.h8,
+          Obx(() {
+            final busy = controller.isGeneratingAgencyLink.value;
+            return Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: busy ? null : controller.generateAgencyLink,
+                borderRadius: BorderRadius.circular(22),
+                child: Ink(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(22),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFFE08A), Color(0xFFFFD166)],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _gold.withValues(alpha: 0.35),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    child: busy
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Color(0xFF1A1200),
+                            ),
+                          )
+                        : const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.ios_share_rounded,
+                                size: 15,
+                                color: Color(0xFF1A1200),
+                              ),
+                              SizedBox(width: 6),
+                              SemiBoldText(
+                                text: 'Generate',
+                                fontSize: TextStyles.k12FontSize,
+                                color: Color(0xFF1A1200),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -206,12 +305,20 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
       return SuperAdminGlassCard(
         child: Row(
           children: [
-            CircleAvatar(
-              backgroundColor: const Color(0xFFFFD166).withValues(alpha: 0.2),
-              child: const Icon(
-                Icons.payments_rounded,
-                color: Color(0xFFFFD166),
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [
+                    _gold.withValues(alpha: 0.4),
+                    _gold.withValues(alpha: 0.1),
+                  ],
+                ),
+                border: Border.all(color: _gold.withValues(alpha: 0.45)),
               ),
+              child: const Icon(Icons.payments_rounded, color: _gold, size: 22),
             ),
             Spacing.h12,
             Expanded(
@@ -226,10 +333,10 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
                   Spacing.v4,
                   SemiBoldText(
                     text: total.toStringAsFixed(2),
-                    fontSize: TextStyles.k18FontSize,
+                    fontSize: TextStyles.k20FontSize,
                     color: kColorWhite,
                   ),
-                  Spacing.v4,
+                  Spacing.v2,
                   AppText(
                     text: 'This month · ${month.toStringAsFixed(2)}',
                     fontSize: TextStyles.k10FontSize,
@@ -247,48 +354,106 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
   Widget _topAgenciesCard() {
     return Obx(() {
       final top = controller.stats.value?.topAgencies ?? const [];
-      if (top.isEmpty) return const SizedBox.shrink();
       return SuperAdminGlassCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SemiBoldText(
-              text: 'Top agencies',
-              fontSize: TextStyles.k14FontSize,
-              color: kColorWhite,
+            Row(
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    color: _violet.withValues(alpha: 0.2),
+                    border: Border.all(color: _violet.withValues(alpha: 0.4)),
+                  ),
+                  child: const Icon(
+                    Icons.emoji_events_rounded,
+                    color: _violet,
+                    size: 16,
+                  ),
+                ),
+                Spacing.h8,
+                const SemiBoldText(
+                  text: 'Top agencies',
+                  fontSize: TextStyles.k14FontSize,
+                  color: kColorWhite,
+                ),
+              ],
             ),
             Spacing.v12,
-            ...top.map(
-              (agency) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SemiBoldText(
-                            text: agency.name,
-                            fontSize: TextStyles.k12FontSize,
-                            color: kColorWhite,
-                          ),
-                          AppText(
-                            text: agency.code,
-                            fontSize: TextStyles.k10FontSize,
-                            color: Colors.white60,
-                          ),
-                        ],
+            if (top.isEmpty)
+              const SuperAdminEmptyState(
+                icon: Icons.apartment_rounded,
+                title: 'No top agencies yet',
+                subtitle: 'Agency rankings will appear once commissions start.',
+              )
+            else
+              ...top.asMap().entries.map((entry) {
+                final index = entry.key;
+                final agency = entry.value;
+                final isLast = index == top.length - 1;
+                return Padding(
+                  padding: EdgeInsets.only(bottom: isLast ? 0 : 10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: kColorWhite.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: kColorWhite.withValues(alpha: 0.08),
                       ),
                     ),
-                    SemiBoldText(
-                      text: agency.totalCommissionEarned.toStringAsFixed(1),
-                      fontSize: TextStyles.k12FontSize,
-                      color: const Color(0xFFFFD166),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 28,
+                          height: 28,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: _gold.withValues(alpha: 0.15),
+                          ),
+                          child: SemiBoldText(
+                            text: '${index + 1}',
+                            fontSize: TextStyles.k12FontSize,
+                            color: _gold,
+                          ),
+                        ),
+                        Spacing.h10,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SemiBoldText(
+                                text: agency.name,
+                                fontSize: TextStyles.k12FontSize,
+                                color: kColorWhite,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              AppText(
+                                text: agency.code,
+                                fontSize: TextStyles.k10FontSize,
+                                color: Colors.white60,
+                              ),
+                            ],
+                          ),
+                        ),
+                        SemiBoldText(
+                          text: agency.totalCommissionEarned.toStringAsFixed(1),
+                          fontSize: TextStyles.k12FontSize,
+                          color: _gold,
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-            ),
+                  ),
+                );
+              }),
           ],
         ),
       );
