@@ -177,6 +177,8 @@ class AgencyEndpoints {
 }
 
 /// Central place for super-admin mobile dashboard endpoints.
+///
+/// Spec: `super_admin_mobile_api_handover_v1.md`
 class SuperAdminEndpoints {
   SuperAdminEndpoints._();
 
@@ -186,11 +188,31 @@ class SuperAdminEndpoints {
   /// GET /api/super-admin/agencies
   static const String agencies = '/api/super-admin/agencies';
 
+  /// GET /api/super-admin/agencies/:agencyId
+  static String agencyDetail(String agencyId) =>
+      '/api/super-admin/agencies/${agencyId.trim()}';
+
+  /// GET /api/super-admin/agencies/:agencyId/hosts
+  static String agencyHosts(String agencyId) =>
+      '/api/super-admin/agencies/${agencyId.trim()}/hosts';
+
+  /// PATCH /api/super-admin/agencies/:agencyId/commission
+  static String agencyCommission(String agencyId) =>
+      '/api/super-admin/agencies/${agencyId.trim()}/commission';
+
   /// POST /api/super-admin/agency/process
   static const String processAgency = '/api/super-admin/agency/process';
 
   /// GET /api/super-admin/hosts/track
   static const String hostsTrack = '/api/super-admin/hosts/track';
+
+  /// GET /api/super-admin/hosts/:hostId
+  static String hostDetail(String hostId) =>
+      '/api/super-admin/hosts/${hostId.trim()}';
+
+  /// POST /api/super-admin/hosts/:hostId/status
+  static String hostStatus(String hostId) =>
+      '/api/super-admin/hosts/${hostId.trim()}/status';
 
   /// GET /api/super-admin/agency/generate-link
   static const String generateAgencyLink =

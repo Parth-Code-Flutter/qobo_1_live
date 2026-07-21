@@ -58,6 +58,8 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
                       _inviteCard(),
                       Spacing.v16,
                       _commissionsCard(),
+                      Spacing.v16,
+                      _topAgenciesCard(),
                     ],
                   ),
                 );
@@ -101,10 +103,10 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
           const Color(0xFFFFD166),
         ),
         (
-          'Pending Hosts',
-          stats?.pendingHosts ?? 0,
-          Icons.person_add_alt_rounded,
-          const Color(0xFF62C6FF),
+          'Live Now',
+          stats?.liveHostsNow ?? 0,
+          Icons.sensors_rounded,
+          const Color(0xFFFF6B8A),
         ),
       ];
       return GridView.builder(
@@ -198,7 +200,9 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
 
   Widget _commissionsCard() {
     return Obx(() {
-      final total = controller.stats.value?.totalCommissions ?? 0;
+      final stats = controller.stats.value;
+      final total = stats?.totalCommissions ?? 0;
+      final month = stats?.commissionsThisMonth ?? 0;
       return SuperAdminGlassCard(
         child: Row(
           children: [
@@ -225,7 +229,64 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
                     fontSize: TextStyles.k18FontSize,
                     color: kColorWhite,
                   ),
+                  Spacing.v4,
+                  AppText(
+                    text: 'This month · ${month.toStringAsFixed(2)}',
+                    fontSize: TextStyles.k10FontSize,
+                    color: Colors.white60,
+                  ),
                 ],
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _topAgenciesCard() {
+    return Obx(() {
+      final top = controller.stats.value?.topAgencies ?? const [];
+      if (top.isEmpty) return const SizedBox.shrink();
+      return SuperAdminGlassCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SemiBoldText(
+              text: 'Top agencies',
+              fontSize: TextStyles.k14FontSize,
+              color: kColorWhite,
+            ),
+            Spacing.v12,
+            ...top.map(
+              (agency) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SemiBoldText(
+                            text: agency.name,
+                            fontSize: TextStyles.k12FontSize,
+                            color: kColorWhite,
+                          ),
+                          AppText(
+                            text: agency.code,
+                            fontSize: TextStyles.k10FontSize,
+                            color: Colors.white60,
+                          ),
+                        ],
+                      ),
+                    ),
+                    SemiBoldText(
+                      text: agency.totalCommissionEarned.toStringAsFixed(1),
+                      fontSize: TextStyles.k12FontSize,
+                      color: const Color(0xFFFFD166),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

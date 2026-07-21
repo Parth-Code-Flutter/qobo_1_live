@@ -116,3 +116,127 @@ class SuperAdminEmptyState extends StatelessWidget {
     );
   }
 }
+
+/// Colored status pill used on Super Admin list + detail screens.
+class SuperAdminStatusPill extends StatelessWidget {
+  const SuperAdminStatusPill({super.key, required this.status});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = status.toLowerCase();
+    final color = value == 'pending'
+        ? const Color(0xFFFFD166)
+        : (value == 'approved' || value == 'active')
+        ? const Color(0xFF4ADE80)
+        : value == 'suspended' || value == 'inactive'
+        ? const Color(0xFFFFB74D)
+        : const Color(0xFFFF8A80);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.45)),
+      ),
+      child: SemiBoldText(
+        text: status,
+        fontSize: TextStyles.k10FontSize,
+        color: color,
+      ),
+    );
+  }
+}
+
+/// Small network doc / image preview tile.
+class SuperAdminDocThumb extends StatelessWidget {
+  const SuperAdminDocThumb({super.key, required this.label, required this.url});
+
+  final String label;
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppText(
+            text: label,
+            fontSize: TextStyles.k10FontSize,
+            color: Colors.white70,
+          ),
+          Spacing.v6,
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: AspectRatio(
+              aspectRatio: 1.4,
+              child: url.isEmpty
+                  ? Container(
+                      color: kColorWhite.withValues(alpha: 0.08),
+                      alignment: Alignment.center,
+                      child: const Icon(
+                        Icons.image_not_supported_outlined,
+                        color: Colors.white38,
+                      ),
+                    )
+                  : Image.network(
+                      url,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: kColorWhite.withValues(alpha: 0.08),
+                        alignment: Alignment.center,
+                        child: const Icon(
+                          Icons.broken_image_outlined,
+                          color: Colors.white38,
+                        ),
+                      ),
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Key/value row for detail screens.
+class SuperAdminInfoRow extends StatelessWidget {
+  const SuperAdminInfoRow({
+    super.key,
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    if (value.trim().isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 108,
+            child: AppText(
+              text: label,
+              fontSize: TextStyles.k12FontSize,
+              color: Colors.white54,
+            ),
+          ),
+          Expanded(
+            child: SemiBoldText(
+              text: value,
+              fontSize: TextStyles.k12FontSize,
+              color: kColorWhite,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

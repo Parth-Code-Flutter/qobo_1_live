@@ -1,7 +1,6 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/super_admin/agency/views/super_admin_agency_tab_view.dart';
 import 'package:qobo_one_live/app/super_admin/bottom_nav/controllers/super_admin_bottom_nav_controller.dart';
@@ -13,11 +12,10 @@ import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
-/// Super Admin bottom nav shell — same chrome as user [BottomNavView].
+/// Super Admin bottom nav shell — same chrome as user [BottomNavView],
+/// with per-tab accent colors for icons.
 class SuperAdminBottomNavView extends GetView<SuperAdminBottomNavController> {
   const SuperAdminBottomNavView({super.key});
-
-  static const double _iconSize = 18;
 
   @override
   Widget build(BuildContext context) {
@@ -73,20 +71,18 @@ class SuperAdminBottomNavView extends GetView<SuperAdminBottomNavController> {
                 child: Obx(
                   () => Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: List.generate(
-                      controller.items.length,
-                      (index) => Expanded(
+                    children: List.generate(controller.items.length, (index) {
+                      final item = controller.items[index];
+                      return Expanded(
                         child: _SuperAdminNavTab(
-                          label: controller.items[index].label,
-                          iconPath: controller.items[index].iconPath,
-                          selectedIconPath:
-                              controller.items[index].selectedIconPath,
+                          label: item.label,
+                          icon: item.icon,
+                          accent: item.accent,
                           selected: controller.selectedIndex.value == index,
-                          iconSize: _iconSize,
                           onTap: () => controller.onNavBarTabSelected(index),
                         ),
-                      ),
-                    ),
+                      );
+                    }),
                   ),
                 ),
               ),
@@ -101,53 +97,66 @@ class SuperAdminBottomNavView extends GetView<SuperAdminBottomNavController> {
 class _SuperAdminNavTab extends StatelessWidget {
   const _SuperAdminNavTab({
     required this.label,
-    required this.iconPath,
-    required this.selectedIconPath,
+    required this.icon,
+    required this.accent,
     required this.selected,
-    required this.iconSize,
     required this.onTap,
   });
 
   final String label;
-  final String iconPath;
-  final String selectedIconPath;
+  final IconData icon;
+  final Color accent;
   final bool selected;
-  final double iconSize;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final displayIconPath = selected ? selectedIconPath : iconPath;
-    final color = selected ? kColorWhite : Colors.white.withValues(alpha: 0.42);
+    final iconColor = selected ? accent : accent.withValues(alpha: 0.45);
+    final labelColor = selected ? accent : Colors.white.withValues(alpha: 0.42);
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        splashColor: Colors.white.withValues(alpha: 0.08),
+        splashColor: accent.withValues(alpha: 0.12),
         highlightColor: Colors.transparent,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SvgPicture.asset(
-              displayIconPath,
-              width: iconSize,
-              height: iconSize,
-              fit: BoxFit.contain,
-              colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: selected
+                    ? accent.withValues(alpha: 0.18)
+                    : Colors.transparent,
+                boxShadow: selected
+                    ? [
+                        BoxShadow(
+                          color: accent.withValues(alpha: 0.35),
+                          blurRadius: 12,
+                          spreadRadius: 0.5,
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Icon(icon, size: 22, color: iconColor),
             ),
-            Spacing.v6,
+            Spacing.v4,
             AppText(
               text: label,
               fontSize: TextStyles.k10FontSize,
               style: selected
                   ? TextStyles.kSemiBoldPoppins(
-                      fontSize: TextStyles.k12FontSize,
-                      colors: kColorWhite,
+                      fontSize: TextStyles.k10FontSize,
+                      colors: labelColor,
                     )
                   : TextStyles.kRegularPoppins(
                       fontSize: TextStyles.k10FontSize,
-                      colors: Colors.white.withValues(alpha: 0.45),
+                      colors: labelColor,
                     ),
             ),
           ],

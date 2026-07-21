@@ -15,7 +15,7 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
   const SuperAdminAgencyTabView({super.key});
 
-  static const _filters = ['pending', 'approved', 'rejected', 'all'];
+  static const _filters = ['pending', 'approved', 'suspended', 'all'];
 
   @override
   Widget build(BuildContext context) {
@@ -91,7 +91,7 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
   static const _filterIcons = <String, IconData>{
     'pending': Icons.hourglass_top_rounded,
     'approved': Icons.verified_rounded,
-    'rejected': Icons.cancel_rounded,
+    'suspended': Icons.pause_circle_filled_rounded,
     'all': Icons.grid_view_rounded,
   };
 
@@ -180,106 +180,94 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
     SuperAdminAgencyItem agency,
     bool processing,
   ) {
-    return SuperAdminGlassCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => controller.openAgencyDetail(agency),
+        borderRadius: BorderRadius.circular(18),
+        child: SuperAdminGlassCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SafeNetworkAvatar(
-                url: agency.ownerAvatar,
-                size: 46,
-                fallback: CircleAvatar(
-                  radius: 23,
-                  backgroundColor: kColorPrimary,
-                  child: Text(
-                    agency.ownerName.isNotEmpty
-                        ? agency.ownerName.characters.first
-                        : 'A',
-                  ),
-                ),
-              ),
-              Spacing.h10,
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SemiBoldText(
-                      text: agency.name,
-                      fontSize: TextStyles.k14FontSize,
-                      color: kColorWhite,
+              Row(
+                children: [
+                  SafeNetworkAvatar(
+                    url: agency.ownerAvatar,
+                    size: 46,
+                    fallback: CircleAvatar(
+                      radius: 23,
+                      backgroundColor: kColorPrimary,
+                      child: Text(
+                        agency.ownerName.isNotEmpty
+                            ? agency.ownerName.characters.first
+                            : 'A',
+                      ),
                     ),
-                    AppText(
-                      text: '${agency.ownerName} • ${agency.code}',
-                      fontSize: TextStyles.k10FontSize,
-                      color: Colors.white70,
+                  ),
+                  Spacing.h10,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SemiBoldText(
+                          text: agency.name,
+                          fontSize: TextStyles.k14FontSize,
+                          color: kColorWhite,
+                        ),
+                        AppText(
+                          text: '${agency.ownerName} • ${agency.code}',
+                          fontSize: TextStyles.k10FontSize,
+                          color: Colors.white70,
+                        ),
+                      ],
+                    ),
+                  ),
+                  SuperAdminStatusPill(status: agency.status),
+                ],
+              ),
+              Spacing.v12,
+              AppText(
+                text:
+                    '${agency.hostCount} hosts • ${agency.pendingHostsCount} pending hosts',
+                fontSize: TextStyles.k12FontSize,
+                color: Colors.white70,
+              ),
+              if (agency.isPending) ...[
+                Spacing.v12,
+                Row(
+                  children: [
+                    Expanded(
+                      child: _actionButton(
+                        label: 'Reject',
+                        icon: Icons.close_rounded,
+                        color: const Color(0xFFFF8A80).withValues(alpha: 0.16),
+                        borderColor: const Color(
+                          0xFFFF8A80,
+                        ).withValues(alpha: 0.4),
+                        foreground: const Color(0xFFFF8A80),
+                        onTap: processing
+                            ? null
+                            : () => _confirmReject(context, agency),
+                      ),
+                    ),
+                    Spacing.h10,
+                    Expanded(
+                      child: _actionButton(
+                        label: processing ? 'Wait...' : 'Approve',
+                        icon: Icons.check_rounded,
+                        color: const Color(0xFF2E9E5B),
+                        foreground: kColorWhite,
+                        onTap: processing
+                            ? null
+                            : () => controller.approveAgency(agency),
+                      ),
                     ),
                   ],
                 ),
-              ),
-              _statusPill(agency.status),
+              ],
             ],
           ),
-          Spacing.v12,
-          AppText(
-            text:
-                '${agency.hostCount} hosts • ${agency.pendingHostsCount} pending hosts',
-            fontSize: TextStyles.k12FontSize,
-            color: Colors.white70,
-          ),
-          if (agency.isPending) ...[
-            Spacing.v12,
-            Row(
-              children: [
-                Expanded(
-                  child: _actionButton(
-                    label: 'Reject',
-                    icon: Icons.close_rounded,
-                    color: const Color(0xFFFF8A80).withValues(alpha: 0.16),
-                    borderColor: const Color(0xFFFF8A80).withValues(alpha: 0.4),
-                    foreground: const Color(0xFFFF8A80),
-                    onTap: processing
-                        ? null
-                        : () => _confirmReject(context, agency),
-                  ),
-                ),
-                Spacing.h10,
-                Expanded(
-                  child: _actionButton(
-                    label: processing ? 'Wait...' : 'Approve',
-                    icon: Icons.check_rounded,
-                    color: const Color(0xFF2E9E5B),
-                    foreground: kColorWhite,
-                    onTap: processing
-                        ? null
-                        : () => controller.approveAgency(agency),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _statusPill(String status) {
-    final color = status.toLowerCase() == 'pending'
-        ? const Color(0xFFFFD166)
-        : status.toLowerCase() == 'approved'
-        ? const Color(0xFF4ADE80)
-        : const Color(0xFFFF8A80);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.18),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.45)),
-      ),
-      child: SemiBoldText(
-        text: status,
-        fontSize: TextStyles.k10FontSize,
-        color: color,
+        ),
       ),
     );
   }

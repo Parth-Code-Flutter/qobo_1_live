@@ -33,7 +33,7 @@ class SuperAdminSettingsTabView extends StatelessWidget {
               title: 'Settings',
               subtitle: 'Account and session controls',
             ),
-            Spacing.v10,
+            Spacing.v12,
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: GetBuilder<UserSessionController>(

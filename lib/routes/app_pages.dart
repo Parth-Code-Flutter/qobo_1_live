@@ -103,6 +103,10 @@ import '../app/user_flow/super_admin_dashboard/bindings/super_admin_dashboard_bi
 import '../app/user_flow/super_admin_dashboard/views/super_admin_dashboard_view.dart';
 import '../app/super_admin/bottom_nav/bindings/super_admin_bottom_nav_binding.dart';
 import '../app/super_admin/bottom_nav/views/super_admin_bottom_nav_view.dart';
+import '../app/super_admin/agency_detail/bindings/super_admin_agency_detail_binding.dart';
+import '../app/super_admin/agency_detail/views/super_admin_agency_detail_view.dart';
+import '../app/super_admin/host_detail/bindings/super_admin_host_detail_binding.dart';
+import '../app/super_admin/host_detail/views/super_admin_host_detail_view.dart';
 
 part 'app_routes.dart';
 
@@ -367,6 +371,16 @@ class AppPages {
       name: _Paths.SUPER_ADMIN_BOTTOM_NAV,
       page: () => const SuperAdminBottomNavView(),
       binding: SuperAdminBottomNavBinding(),
+    ),
+    GetPage(
+      name: _Paths.SUPER_ADMIN_AGENCY_DETAIL,
+      page: () => const SuperAdminAgencyDetailView(),
+      binding: SuperAdminAgencyDetailBinding(),
+    ),
+    GetPage(
+      name: _Paths.SUPER_ADMIN_HOST_DETAIL,
+      page: () => const SuperAdminHostDetailView(),
+      binding: SuperAdminHostDetailBinding(),
     ),
   ];
 }

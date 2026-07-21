@@ -1,6 +1,6 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/super_admin/home/controllers/super_admin_home_controller.dart';
-import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
@@ -20,22 +20,21 @@ class SuperAdminBottomNavController extends GetxController {
   static const int hostTabIndex = 2;
   static const int settingsTabIndex = 3;
 
-  /// Four modules from the Super Admin guide.
-  final items =
-      const <({String label, String iconPath, String selectedIconPath})>[
-        (
-          label: 'Dashboard',
-          iconPath: kIconDiscover,
-          selectedIconPath: kIconDiscoverEnable,
-        ),
-        (label: 'Agency', iconPath: kIconFamily, selectedIconPath: kIconFamily),
-        (label: 'Host', iconPath: kIconMike, selectedIconPath: kIconMike),
-        (
-          label: 'Settings',
-          iconPath: kIconUser,
-          selectedIconPath: kIconUserEnable,
-        ),
-      ];
+  /// Four modules — each tab gets a distinct accent for colorful icons.
+  final items = const <({String label, IconData icon, Color accent})>[
+    (
+      label: 'Dashboard',
+      icon: Icons.dashboard_rounded,
+      accent: Color(0xFF7C9CFF),
+    ),
+    (label: 'Agency', icon: Icons.business_rounded, accent: Color(0xFFFF8AD8)),
+    (label: 'Host', icon: Icons.mic_rounded, accent: Color(0xFF5CE1B0)),
+    (
+      label: 'Settings',
+      icon: Icons.settings_rounded,
+      accent: Color(0xFFFFD166),
+    ),
+  ];
 
   @override
   void onInit() {

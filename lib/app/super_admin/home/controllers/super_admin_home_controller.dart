@@ -3,17 +3,13 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/app/super_admin/models/super_admin_models.dart';
 import 'package:qobo_one_live/repo/agency/agency_api_utils.dart';
 import 'package:qobo_one_live/repo/super_admin/super_admin_repo.dart';
+import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/utils/files_utils/file_utils.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 
 /// Shared data + API actions for Super Admin Dashboard / Agency / Host tabs.
 ///
-/// Wired to guide endpoints:
-/// - `GET /api/super-admin/dashboard`
-/// - `GET /api/super-admin/agencies`
-/// - `POST /api/super-admin/agency/process`
-/// - `GET /api/super-admin/hosts/track`
-/// - `GET /api/super-admin/agency/generate-link`
+/// Spec: `super_admin_mobile_api_handover_v1.md`
 class SuperAdminHomeController extends GetxController {
   SuperAdminHomeController({SuperAdminRepo? repo})
     : _repo = repo ?? SuperAdminRepo();
@@ -30,6 +26,7 @@ class SuperAdminHomeController extends GetxController {
   final trackedHosts = <SuperAdminTrackedHost>[].obs;
   final processingAgencyId = ''.obs;
   final agencyStatusFilter = 'pending'.obs;
+  final hostStatusFilter = ''.obs;
   final generatedAgencyLink = ''.obs;
 
   @override
@@ -64,17 +61,12 @@ class SuperAdminHomeController extends GetxController {
         status: agencyStatusFilter.value,
         isShowLoader: showLoader,
       );
-      final data = response?['data'];
-      if (isAgencyApiSuccess(response) && data is List) {
-        agencies.assignAll(
-          data
-              .whereType<Map>()
-              .map(
-                (e) =>
-                    SuperAdminAgencyItem.fromJson(Map<String, dynamic>.from(e)),
-              )
-              .toList(),
+      if (isAgencyApiSuccess(response)) {
+        final maps = extractSuperAdminListMaps(
+          response?['data'],
+          nestedKey: 'agencies',
         );
+        agencies.assignAll(maps.map(SuperAdminAgencyItem.fromJson).toList());
         return;
       }
       agencies.clear();
@@ -93,18 +85,17 @@ class SuperAdminHomeController extends GetxController {
   Future<void> loadTrackedHosts({bool showLoader = true}) async {
     isLoadingHosts.value = true;
     try {
-      final response = await _repo.getTrackedHosts(isShowLoader: showLoader);
-      final data = response?['data'];
-      if (isAgencyApiSuccess(response) && data is List) {
+      final response = await _repo.getTrackedHosts(
+        status: hostStatusFilter.value,
+        isShowLoader: showLoader,
+      );
+      if (isAgencyApiSuccess(response)) {
+        final maps = extractSuperAdminListMaps(
+          response?['data'],
+          nestedKey: 'hosts',
+        );
         trackedHosts.assignAll(
-          data
-              .whereType<Map>()
-              .map(
-                (e) => SuperAdminTrackedHost.fromJson(
-                  Map<String, dynamic>.from(e),
-                ),
-              )
-              .toList(),
+          maps.map(SuperAdminTrackedHost.fromJson).toList(),
         );
         return;
       }
@@ -114,6 +105,26 @@ class SuperAdminHomeController extends GetxController {
     } finally {
       isLoadingHosts.value = false;
     }
+  }
+
+  Future<void> changeHostFilter(String status) async {
+    hostStatusFilter.value = status;
+    await loadTrackedHosts(showLoader: false);
+  }
+
+  /// Opens agency detail screen (`GET /agencies/:id`).
+  void openAgencyDetail(SuperAdminAgencyItem agency) {
+    if (agency.id.isEmpty) return;
+    Get.toNamed(
+      Routes.SUPER_ADMIN_AGENCY_DETAIL,
+      arguments: {'agencyId': agency.id},
+    );
+  }
+
+  /// Opens host detail screen (`GET /hosts/:id`).
+  void openHostDetail(SuperAdminTrackedHost host) {
+    if (host.id.isEmpty) return;
+    Get.toNamed(Routes.SUPER_ADMIN_HOST_DETAIL, arguments: {'hostId': host.id});
   }
 
   Future<void> approveAgency(SuperAdminAgencyItem agency) async {
