@@ -31,68 +31,100 @@ class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [_roomTop, _roomMid, _roomBottom],
-          stops: [0, 0.46, 1],
-        ),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final compact = constraints.maxWidth < 390;
-            return Stack(
-              children: [
-                CustomScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  slivers: [
-                    SliverPadding(
-                      padding: EdgeInsets.fromLTRB(
-                        compact ? 10 : 12,
-                        compact ? 12 : 14,
-                        compact ? 10 : 12,
-                        // Keep the last seat row reachable above the chat
-                        // feed + input + control dock.
-                        compact ? 296 : 312,
-                      ),
-                      sliver: SliverList(
-                        delegate: SliverChildListDelegate.fixed([
-                          _RoomHeader(compact: compact),
-                          SizedBox(height: compact ? 14 : 16),
-                          _MemberGrid(compact: compact),
-                        ]),
-                      ),
-                    ),
-                  ],
-                ),
-                Positioned(
-                  left: compact ? 10 : 16,
-                  right: compact ? 10 : 16,
-                  bottom: 8,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Room chat feed + input, mirroring the live streaming
-                      // chat so everyone in the audio room can talk directly.
-                      _AudioRoomChatFeed(compact: compact),
-                      SizedBox(height: compact ? 6 : 8),
-                      _AudioRoomChatInput(compact: compact),
-                      SizedBox(height: compact ? 6 : 8),
-                      _AudioRoomBottomControls(compact: compact),
+    return Obx(() {
+      final bgUrl = controller.roomBackgroundUrl.value;
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [_roomTop, _roomMid, _roomBottom],
+                stops: [0, 0.46, 1],
+              ),
+            ),
+          ),
+          if (bgUrl != null && bgUrl.isNotEmpty)
+            Positioned.fill(
+              child: Image.network(
+                bgUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
+            ),
+          if (bgUrl != null && bgUrl.isNotEmpty)
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.42),
+                      Colors.black.withValues(alpha: 0.55),
+                      Colors.black.withValues(alpha: 0.72),
                     ],
                   ),
                 ),
-              ],
-            );
-          },
-        ),
-      ),
-    );
+              ),
+            ),
+          SafeArea(
+            bottom: false,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxWidth < 390;
+                return Stack(
+                  children: [
+                    CustomScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      slivers: [
+                        SliverPadding(
+                          padding: EdgeInsets.fromLTRB(
+                            compact ? 10 : 12,
+                            compact ? 12 : 14,
+                            compact ? 10 : 12,
+                            // Keep the last seat row reachable above the chat
+                            // feed + input + control dock.
+                            compact ? 296 : 312,
+                          ),
+                          sliver: SliverList(
+                            delegate: SliverChildListDelegate.fixed([
+                              _RoomHeader(compact: compact),
+                              SizedBox(height: compact ? 14 : 16),
+                              _MemberGrid(compact: compact),
+                            ]),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Positioned(
+                      left: compact ? 10 : 16,
+                      right: compact ? 10 : 16,
+                      bottom: 8,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Room chat feed + input, mirroring the live streaming
+                          // chat so everyone in the audio room can talk directly.
+                          _AudioRoomChatFeed(compact: compact),
+                          SizedBox(height: compact ? 6 : 8),
+                          _AudioRoomChatInput(compact: compact),
+                          SizedBox(height: compact ? 6 : 8),
+                          _AudioRoomBottomControls(compact: compact),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+      );
+    });
   }
 }
 
@@ -644,6 +676,14 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
               onTap: () => controller.shareRoom(),
               compact: compact,
             ),
+            if (controller.isHost.value) ...[
+              Spacing.h8,
+              _CircleButton(
+                icon: Icons.wallpaper_rounded,
+                onTap: controller.openRoomBackgroundSheet,
+                compact: compact,
+              ),
+            ],
             Spacing.h8,
             _HeaderMetric(
               icon: Icons.local_fire_department_rounded,

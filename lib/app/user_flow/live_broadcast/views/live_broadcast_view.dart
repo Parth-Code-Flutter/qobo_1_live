@@ -167,70 +167,121 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
       if (controller.isAudioVideoRoom && !controller.isVideoRoom) {
         return const SizedBox.shrink();
       }
-      if (!controller.canSendGifts) {
+
+      final showGifts = controller.canSendGifts;
+      final showBackground =
+          controller.isHost.value && controller.isAudioVideoRoom;
+      if (!showGifts && !showBackground) {
         return const SizedBox.shrink();
       }
 
-      // Keep gifts outside Zego's menu bars so call controls stay unchanged.
+      // Keep gifts / host tools outside Zego's menu bars so call controls stay
+      // unchanged.
       return Positioned(
         right: 14,
         bottom: 108,
         child: SafeArea(
           minimum: const EdgeInsets.only(bottom: 4),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: controller.openGiftsSheet,
-              borderRadius: BorderRadius.circular(28),
-              child: Container(
-                height: 52,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: _surface,
-                  borderRadius: BorderRadius.circular(28),
-                  border: Border.all(
-                    color: kColorWhite.withValues(alpha: 0.08),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (showBackground) ...[
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: controller.openRoomBackgroundSheet,
+                    borderRadius: BorderRadius.circular(28),
+                    child: Container(
+                      height: 48,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: BoxDecoration(
+                        color: _surface,
+                        borderRadius: BorderRadius.circular(28),
+                        border: Border.all(
+                          color: kColorWhite.withValues(alpha: 0.08),
+                        ),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.wallpaper_rounded,
+                            color: Color(0xFF7AD7FF),
+                            size: 18,
+                          ),
+                          SizedBox(width: 8),
+                          SemiBoldText(
+                            text: 'Theme',
+                            fontSize: TextStyles.k12FontSize,
+                            color: kColorWhite,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.22),
-                      blurRadius: 18,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.diamond_rounded,
-                      color: kColorWalletAmount,
-                      size: 18,
-                    ),
-                    Spacing.h6,
-                    SemiBoldText(
-                      text: formatLedgerAmount(controller.coinsBalance.value),
-                      fontSize: TextStyles.k12FontSize,
-                      color: kColorWhite,
-                    ),
-                    Spacing.h10,
-                    Container(
-                      width: 34,
-                      height: 34,
-                      decoration: const BoxDecoration(
-                        color: _accent,
-                        shape: BoxShape.circle,
+                if (showGifts) Spacing.v10,
+              ],
+              if (showGifts)
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: controller.openGiftsSheet,
+                    borderRadius: BorderRadius.circular(28),
+                    child: Container(
+                      height: 52,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: _surface,
+                        borderRadius: BorderRadius.circular(28),
+                        border: Border.all(
+                          color: kColorWhite.withValues(alpha: 0.08),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.22),
+                            blurRadius: 18,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
                       ),
-                      child: const Icon(
-                        Icons.card_giftcard_rounded,
-                        color: kColorWhite,
-                        size: 18,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.diamond_rounded,
+                            color: kColorWalletAmount,
+                            size: 18,
+                          ),
+                          Spacing.h6,
+                          SemiBoldText(
+                            text: formatLedgerAmount(
+                              controller.coinsBalance.value,
+                            ),
+                            fontSize: TextStyles.k12FontSize,
+                            color: kColorWhite,
+                          ),
+                          Spacing.h10,
+                          Container(
+                            width: 34,
+                            height: 34,
+                            decoration: const BoxDecoration(
+                              color: _accent,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.card_giftcard_rounded,
+                              color: kColorWhite,
+                              size: 18,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
+            ],
           ),
         ),
       );

@@ -11,11 +11,10 @@ import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_cont
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
-/// Socket.IO connection for authenticated users (follower live-stream alerts).
+/// Socket.IO connection for authenticated users.
 ///
-/// Contract (backend guide):
-/// - On connect: `socket.emit('register_user', currentUserId)`
-/// - Listen: `socket.on('host_live_started', …)` → in-app Join banner
+/// - `register_user` + `host_live_started` → follower live alerts
+/// - `join_room` / `leave_room` + `room_background_updated` → live room themes
 class UserRealtimeSocketService extends GetxController {
   UserRealtimeSocketService({
     RoomInvitePushHandler? roomInviteHandler,
@@ -25,6 +24,10 @@ class UserRealtimeSocketService extends GetxController {
 
   io.Socket? _socket;
   bool _connecting = false;
+  String? _joinedRoomId;
+
+  final _roomBackgroundListeners =
+      <void Function(Map<String, dynamic> data)>{};
 
   /// Ensures a singleton exists and connects when the user is logged in.
   static Future<void> ensureConnected() async {
@@ -52,6 +55,7 @@ class UserRealtimeSocketService extends GetxController {
 
     if (_socket?.connected == true) {
       _socket!.emit('register_user', userId);
+      _rejoinActiveRoom();
       return;
     }
     if (_connecting) return;
@@ -75,14 +79,17 @@ class UserRealtimeSocketService extends GetxController {
       socket.onConnect((_) {
         LoggerUtils.logInfo('RealtimeSocket: connected');
         socket.emit('register_user', userId);
+        _rejoinActiveRoom();
       });
 
       socket.onReconnect((_) {
         LoggerUtils.logInfo('RealtimeSocket: reconnected');
         socket.emit('register_user', userId);
+        _rejoinActiveRoom();
       });
 
       socket.on('host_live_started', _onHostLiveStarted);
+      socket.on('room_background_updated', _onRoomBackgroundUpdated);
 
       socket.onDisconnect((_) {
         LoggerUtils.logInfo('RealtimeSocket: disconnected');
@@ -100,15 +107,76 @@ class UserRealtimeSocketService extends GetxController {
     }
   }
 
+  /// Subscribe to a room channel so host theme changes reach this device.
+  Future<void> joinRoomChannel(String roomId) async {
+    final id = roomId.trim();
+    if (id.isEmpty) return;
+    await ensureConnected();
+    _joinedRoomId = id;
+    final socket = _socket;
+    if (socket == null || !socket.connected) return;
+    // Emit both common aliases — backend may accept either.
+    socket.emit('join_room', id);
+    socket.emit('joinRoom', id);
+    LoggerUtils.logInfo('RealtimeSocket: joined room channel $id');
+  }
+
+  Future<void> leaveRoomChannel([String? roomId]) async {
+    final id = (roomId ?? _joinedRoomId)?.trim() ?? '';
+    final socket = _socket;
+    if (id.isNotEmpty && socket != null && socket.connected) {
+      socket.emit('leave_room', id);
+      socket.emit('leaveRoom', id);
+      LoggerUtils.logInfo('RealtimeSocket: left room channel $id');
+    }
+    if (roomId == null || roomId.trim() == _joinedRoomId) {
+      _joinedRoomId = null;
+    }
+  }
+
+  void addRoomBackgroundListener(
+    void Function(Map<String, dynamic> data) listener,
+  ) {
+    _roomBackgroundListeners.add(listener);
+  }
+
+  void removeRoomBackgroundListener(
+    void Function(Map<String, dynamic> data) listener,
+  ) {
+    _roomBackgroundListeners.remove(listener);
+  }
+
   Future<void> disconnect() async {
     final socket = _socket;
     _socket = null;
     if (socket == null) return;
     try {
       socket.off('host_live_started');
+      socket.off('room_background_updated');
       socket.dispose();
     } catch (e) {
       LoggerUtils.logWarning('RealtimeSocket: disconnect error — $e');
+    }
+  }
+
+  void _rejoinActiveRoom() {
+    final id = _joinedRoomId?.trim();
+    final socket = _socket;
+    if (id == null || id.isEmpty || socket == null || !socket.connected) return;
+    socket.emit('join_room', id);
+    socket.emit('joinRoom', id);
+  }
+
+  void _onRoomBackgroundUpdated(dynamic raw) {
+    final data = _asStringKeyedMap(raw);
+    if (data.isEmpty) return;
+    LoggerUtils.logInfo('RealtimeSocket: room_background_updated data=$data');
+    for (final listener in List.of(_roomBackgroundListeners)) {
+      try {
+        listener(data);
+      } catch (e) {
+        LoggerUtils.logWarning('RealtimeSocket: background listener error — $e');
+      }
     }
   }
 

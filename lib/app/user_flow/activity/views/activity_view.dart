@@ -29,6 +29,10 @@ class ActivityView extends GetView<ActivityController> {
           );
         }
 
+        if (controller.activities.isEmpty) {
+          return _buildEmptyState();
+        }
+
         return ListView.separated(
           padding: const EdgeInsets.all(16),
           itemCount: controller.activities.length,
@@ -148,6 +152,63 @@ class ActivityView extends GetView<ActivityController> {
           },
         );
       }),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 96,
+              height: 96,
+              decoration: BoxDecoration(
+                color: kColorPrimary.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.local_fire_department_rounded,
+                size: 44,
+                color: kColorPrimary.withValues(alpha: 0.85),
+              ),
+            ),
+            Spacing.v20,
+            const SemiBoldText(
+              text: 'No hot activities yet',
+              fontSize: TextStyles.k18FontSize,
+              color: kColorText,
+              align: TextAlign.center,
+            ),
+            Spacing.v8,
+            AppText(
+              text:
+                  'New events and challenges will show up here. Check back soon!',
+              fontSize: TextStyles.k12FontSize,
+              color: kColorHint,
+              align: TextAlign.center,
+            ),
+            Spacing.v24,
+            SizedBox(
+              height: 44,
+              width: 160,
+              child: appButton(
+                onPressed: controller.fetchActivities,
+                buttonText: 'Refresh',
+                buttonColor: kColorPrimary,
+                textColor: kColorWhite,
+                borderRadius: 22,
+                textStyle: TextStyles.kSemiBoldPoppins(
+                  fontSize: TextStyles.k12FontSize,
+                  colors: kColorWhite,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -131,6 +131,12 @@ class RoomEndpoints {
   /// GET /api/room/zego-token
   static const String zegoToken = '/api/room/zego-token';
 
+  /// GET /api/room/backgrounds — active themes hosts can apply
+  static const String backgrounds = '/api/room/backgrounds';
+
+  /// POST /api/room/change-background — host updates the live room backdrop
+  static const String changeBackground = '/api/room/change-background';
+
   /// POST /api/room/kick
   static const String kick = '/api/room/kick';
 
@@ -460,6 +466,18 @@ class UserEndpoints {
 
   /// GET /api/user/visitors
   static const String visitors = '/api/user/visitors';
+
+  /// GET /api/user/friends — mutual follow connections
+  static const String friends = '/api/user/friends';
+
+  /// GET /api/user/followers
+  static const String followers = '/api/user/followers';
+
+  /// GET /api/user/following
+  static const String following = '/api/user/following';
+
+  /// POST /api/user/record-visit — increment another user's visitor count
+  static const String recordVisit = '/api/user/record-visit';
 
   /// GET /api/user/level
   static const String level = '/api/user/level';

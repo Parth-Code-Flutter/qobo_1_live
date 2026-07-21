@@ -320,6 +320,87 @@ class UserRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
+  /// `GET /api/user/friends` — mutual follow connections.
+  Future<Map<String, dynamic>?> getFriends({
+    int page = 1,
+    int limit = 20,
+    bool isShowLoader = false,
+  }) async {
+    return _getPagedSocialList(
+      endPoint: UserEndpoints.friends,
+      page: page,
+      limit: limit,
+      isShowLoader: isShowLoader,
+    );
+  }
+
+  /// `GET /api/user/followers`.
+  Future<Map<String, dynamic>?> getFollowers({
+    int page = 1,
+    int limit = 20,
+    bool isShowLoader = false,
+  }) async {
+    return _getPagedSocialList(
+      endPoint: UserEndpoints.followers,
+      page: page,
+      limit: limit,
+      isShowLoader: isShowLoader,
+    );
+  }
+
+  /// `GET /api/user/following`.
+  Future<Map<String, dynamic>?> getFollowing({
+    int page = 1,
+    int limit = 20,
+    bool isShowLoader = false,
+  }) async {
+    return _getPagedSocialList(
+      endPoint: UserEndpoints.following,
+      page: page,
+      limit: limit,
+      isShowLoader: isShowLoader,
+    );
+  }
+
+  /// `POST /api/user/record-visit` — count a visit on another user's profile.
+  Future<Map<String, dynamic>?> recordProfileVisit({
+    required String targetId,
+    bool isShowLoader = false,
+  }) async {
+    final id = targetId.trim();
+    if (id.isEmpty) return null;
+    final response = await _apiService.postRequest(
+      endPoint: UserEndpoints.recordVisit,
+      requestModel: <String, dynamic>{
+        'target_id': id,
+        'targetId': id,
+      },
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  Future<Map<String, dynamic>?> _getPagedSocialList({
+    required String endPoint,
+    required int page,
+    required int limit,
+    required bool isShowLoader,
+  }) async {
+    final query = Uri(
+      queryParameters: <String, String>{
+        'page': '$page',
+        'limit': '$limit',
+      },
+    ).query;
+    final response = await _apiService.getRequest(
+      endPoint: '$endPoint?$query',
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
   Future<Map<String, dynamic>?> getSettings({bool isShowLoader = true}) async {
     final response = await _apiService.getRequest(
       endPoint: UserEndpoints.settings,

@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:qobo_one_live/repo/user/user_repo.dart';
+import 'package:qobo_one_live/utils/api_image_utils.dart';
 
 class VisitorsController extends GetxController {
   VisitorsController({UserRepo? userRepo}) : _userRepo = userRepo ?? UserRepo();
@@ -32,7 +33,11 @@ class VisitorsController extends GetxController {
                   visitor['id']?.toString() ??
                   '',
               'name': visitor['name']?.toString() ?? 'Unknown User',
-              'avatarUrl': visitor['displayPicture']?.toString() ?? '',
+              'avatarUrl':
+                  ApiImageUtils.normalize(
+                    visitor['displayPicture']?.toString(),
+                  ) ??
+                  '',
               'country': visitor['country']?.toString() ?? '',
               'level': _toInt(visitor['level']),
               'vip': visitor['vip']?.toString() ?? '',
@@ -41,6 +46,8 @@ class VisitorsController extends GetxController {
             };
           }),
         );
+      } else {
+        visitors.clear();
       }
     } finally {
       isLoading.value = false;

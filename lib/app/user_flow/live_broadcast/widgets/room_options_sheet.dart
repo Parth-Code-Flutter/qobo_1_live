@@ -27,6 +27,11 @@ class RoomOptionsSheet extends StatelessWidget {
                 'color': const Color(0xFFE12BC5),
               },
             {
+              'icon': Icons.wallpaper_rounded,
+              'label': 'Background',
+              'color': const Color(0xFF7AD7FF),
+            },
+            {
               'icon': Icons.mic_off_rounded,
               'label': 'Mute All',
               'color': kColorWhite,
@@ -124,6 +129,13 @@ class RoomOptionsSheet extends StatelessWidget {
                         Future.delayed(const Duration(milliseconds: 120), () {
                           Get.find<LiveBroadcastController>()
                               .openLiveFiltersSheet();
+                        });
+                      }
+                    } else if (opt['label'] == 'Background') {
+                      if (Get.isRegistered<LiveBroadcastController>()) {
+                        Future.delayed(const Duration(milliseconds: 120), () {
+                          Get.find<LiveBroadcastController>()
+                              .openRoomBackgroundSheet();
                         });
                       }
                     } else if (opt['label'] == 'Share') {

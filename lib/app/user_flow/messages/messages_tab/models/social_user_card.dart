@@ -78,11 +78,20 @@ class SocialUserCard {
   factory SocialUserCard.fromJson(Map<String, dynamic> json) {
     final isFollowing = json['isFollowing'] == true;
     final isFollower = json['isFollower'] == true;
-    final isMutual = json['isMutual'] == true || (isFollowing && isFollower);
+    // Friends API may only send `isFriend: true` for mutuals.
+    final isMutual =
+        json['isMutual'] == true ||
+        json['isFriend'] == true ||
+        (isFollowing && isFollower);
     final apiCanMessage = json['canMessage'] == true;
 
+    // Visitors list uses `userId` for the person; friends/follow lists use `id`.
+    final userId = json['userId']?.toString().trim() ?? '';
+    final rowId = json['id']?.toString().trim() ?? '';
+    final id = userId.isNotEmpty ? userId : rowId;
+
     return SocialUserCard(
-      id: json['id']?.toString() ?? '',
+      id: id,
       name: json['name']?.toString().trim().isNotEmpty == true
           ? json['name'].toString().trim()
           : 'User',
@@ -94,8 +103,8 @@ class SocialUserCard {
       country: json['country']?.toString() ?? '',
       level: _toInt(json['level']),
       bio: json['bio']?.toString() ?? '',
-      isFollowing: isFollowing,
-      isFollower: isFollower,
+      isFollowing: isFollowing || isMutual,
+      isFollower: isFollower || isMutual,
       isMutual: isMutual,
       canMessage: apiCanMessage || isFollowing || isFollower || isMutual,
       isVip: json['isVip'] == true,
@@ -116,7 +125,8 @@ class SocialUserCard {
           .toList();
     }
     if (data is Map) {
-      final users = data['users'];
+      // New social list APIs nest rows under `items`; older ones use `users`.
+      final users = data['items'] ?? data['users'] ?? data['list'];
       if (users is List) {
         return users
             .whereType<Map>()

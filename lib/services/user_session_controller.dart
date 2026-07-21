@@ -50,6 +50,34 @@ class UserSessionController extends GetxController {
   bool get isAgency => role.toLowerCase() == 'agency';
   bool get isHost => role.toLowerCase() == 'host';
 
+  /// Profile header counters — prefer backend `formatted*` strings (e.g. "2K").
+  String get formattedVisitors => _formattedSocialStat(
+    formattedKeys: const ['formattedVisitors', 'stats.formattedVisitors'],
+    countKeys: const ['visitorsCount', 'stats.visitors'],
+  );
+
+  String get formattedFriends => _formattedSocialStat(
+    formattedKeys: const ['formattedFriends', 'stats.formattedFriends'],
+    countKeys: const ['friendsCount', 'stats.friends'],
+  );
+
+  String get formattedFollowing => _formattedSocialStat(
+    formattedKeys: const ['formattedFollowing', 'stats.formattedFollowing'],
+    countKeys: const ['followingCount', 'stats.following'],
+  );
+
+  String get formattedFollowers => _formattedSocialStat(
+    formattedKeys: const ['formattedFollowers', 'stats.formattedFollowers'],
+    countKeys: const ['followersCount', 'stats.followers'],
+  );
+
+  String get levelBadge {
+    final badge = _stringValueFromProfile(const ['levelBadge', 'level_badge']);
+    if (badge.isNotEmpty) return badge;
+    final level = _intFromProfile(const ['level']);
+    return 'LV.$level';
+  }
+
   String get displayName {
     if (userName.isNotEmpty) return userName;
     if (email.isNotEmpty) return email;
@@ -87,7 +115,11 @@ class UserSessionController extends GetxController {
 
   Future<void> saveProfile(Map<String, dynamic> data) async {
     _profileData = Map<String, dynamic>.from(data);
-    await _storage.writeJsonStorage(kStorageUserData, _profileData!);
+    try {
+      await _storage.writeJsonStorage(kStorageUserData, _profileData!);
+    } catch (_) {
+      // Keep the in-memory profile even if secure storage is unavailable.
+    }
     update();
   }
 
@@ -164,6 +196,54 @@ class UserSessionController extends GetxController {
   String _cleanString(dynamic value) {
     if (value == null) return '';
     return value.toString().trim();
+  }
+
+  /// Reads a formatted social counter, falling back to a compact count string.
+  String _formattedSocialStat({
+    required List<String> formattedKeys,
+    required List<String> countKeys,
+  }) {
+    final formatted = _stringValueFromProfile(formattedKeys);
+    if (formatted.isNotEmpty && formatted.toLowerCase() != 'null') {
+      return formatted;
+    }
+    return _compactCount(_intFromProfile(countKeys));
+  }
+
+  int _intFromProfile(List<String> keys) {
+    for (final key in keys) {
+      final raw = _readProfileValue(_profileData, key);
+      if (raw is int) return raw;
+      if (raw is num) return raw.toInt();
+      final nested = _profileData?['user'];
+      if (nested is Map) {
+        final nestedRaw = _readProfileValue(nested, key);
+        if (nestedRaw is int) return nestedRaw;
+        if (nestedRaw is num) return nestedRaw.toInt();
+        final nestedParsed = int.tryParse(nestedRaw?.toString() ?? '');
+        if (nestedParsed != null) return nestedParsed;
+      }
+      final parsed = int.tryParse(raw?.toString() ?? '');
+      if (parsed != null) return parsed;
+    }
+    return 0;
+  }
+
+  /// Compact display when the API omits `formatted*` (e.g. 10400 → 10.4K).
+  String _compactCount(int value) {
+    if (value < 1000) return '$value';
+    if (value < 1000000) {
+      return _formatWithSuffix(value / 1000, 'K');
+    }
+    return _formatWithSuffix(value / 1000000, 'M');
+  }
+
+  String _formatWithSuffix(double value, String suffix) {
+    final oneDecimal = (value * 10).round() / 10;
+    if (oneDecimal == oneDecimal.roundToDouble()) {
+      return '${oneDecimal.toInt()}$suffix';
+    }
+    return '${oneDecimal.toStringAsFixed(1)}$suffix';
   }
 
   LocalStorage get _storage => LocalStorage.shared;

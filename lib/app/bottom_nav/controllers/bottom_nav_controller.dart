@@ -35,6 +35,7 @@ class BottomNavController extends GetxController {
   static const int roomsTabIndex = 1;
   static const int goLiveTabIndex = 2;
   static const int messagesTabIndex = 3;
+  static const int profileTabIndex = 4;
 
   /// Bottom-nav tabs.
   final items =
@@ -149,6 +150,10 @@ class BottomNavController extends GetxController {
     if (index == messagesTabIndex &&
         Get.isRegistered<MessagesTabController>()) {
       Get.find<MessagesTabController>().fetchInbox();
+    }
+    // Refresh social counters (Visitors / Friends / Following / Followers).
+    if (index == profileTabIndex) {
+      unawaited(_userSession.refreshProfileFromApi(isShowLoader: false));
     }
   }
 

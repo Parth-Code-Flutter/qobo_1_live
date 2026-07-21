@@ -34,16 +34,7 @@ class FollowListView extends GetView<FollowListController> {
                   child: CircularProgressIndicator(color: kColorPrimary),
                 );
               }
-              if (controller.tabIndex.value == 0) {
-                return _buildList(
-                  controller.followingList,
-                  isFollowingTab: true,
-                );
-              }
-              return _buildList(
-                controller.followersList,
-                isFollowingTab: false,
-              );
+              return _buildList(controller.listForCurrentTab());
             }),
           ),
         ],
@@ -53,13 +44,19 @@ class FollowListView extends GetView<FollowListController> {
 
   Widget _buildTabs() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Obx(
         () => Row(
           children: [
-            Expanded(child: _tabButton('Following', 0)),
-            Spacing.h16,
-            Expanded(child: _tabButton('Followers', 1)),
+            Expanded(child: _tabButton('Friends', FollowListController.friendsTab)),
+            Spacing.h8,
+            Expanded(
+              child: _tabButton('Following', FollowListController.followingTab),
+            ),
+            Spacing.h8,
+            Expanded(
+              child: _tabButton('Followers', FollowListController.followersTab),
+            ),
           ],
         ),
       ),
@@ -79,7 +76,7 @@ class FollowListView extends GetView<FollowListController> {
         child: Center(
           child: SemiBoldText(
             text: title,
-            fontSize: TextStyles.k14FontSize,
+            fontSize: TextStyles.k12FontSize,
             color: isSelected ? kColorWhite : kColorText,
           ),
         ),
@@ -87,7 +84,7 @@ class FollowListView extends GetView<FollowListController> {
     );
   }
 
-  Widget _buildList(List<SocialUserCard> users, {required bool isFollowingTab}) {
+  Widget _buildList(List<SocialUserCard> users) {
     if (users.isEmpty) {
       return Center(
         child: AppText(
@@ -110,6 +107,11 @@ class FollowListView extends GetView<FollowListController> {
         itemBuilder: (context, index) {
           final user = users[index];
           final isProcessing = controller.processingFollowId.value == user.id;
+          final subtitle = [
+            if (user.country.isNotEmpty) user.country,
+            if (user.level > 0) 'Level ${user.level}',
+            if (user.isMutual) 'Friends',
+          ].join(' · ');
 
           return Row(
             children: [
@@ -128,10 +130,10 @@ class FollowListView extends GetView<FollowListController> {
                       fontSize: TextStyles.k14FontSize,
                       color: kColorText,
                     ),
-                    if (user.level > 0) ...[
+                    if (subtitle.isNotEmpty) ...[
                       Spacing.v4,
                       AppText(
-                        text: 'Level ${user.level}',
+                        text: subtitle,
                         fontSize: TextStyles.k12FontSize,
                         color: kColorHint,
                       ),
@@ -146,10 +148,7 @@ class FollowListView extends GetView<FollowListController> {
                 child: appButton(
                   onPressed: isProcessing
                       ? () {}
-                      : () => controller.toggleFollow(
-                          user,
-                          isFollowingTab: isFollowingTab,
-                        ),
+                      : () => controller.toggleFollow(user),
                   buttonText: isProcessing
                       ? '...'
                       : (user.isFollowing ? 'Following' : 'Follow'),

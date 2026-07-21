@@ -12,7 +12,9 @@ import 'package:qobo_one_live/repo/economy/economy_repo.dart';
 import 'package:qobo_one_live/repo/chat/chat_navigation_helper.dart';
 import 'package:qobo_one_live/repo/room/room_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/services/realtime/user_realtime_socket_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
+import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_dialogs/audio_room_feedback_dialog.dart';
@@ -24,10 +26,12 @@ import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 import 'package:zego_uikit_prebuilt_live_streaming/zego_uikit_prebuilt_live_streaming.dart';
 
 import '../models/audio_room_models.dart';
+import '../models/room_background_theme.dart';
 import '../utils/live_room_profile_utils.dart';
 import '../widgets/gifts_bottom_sheet.dart';
 import '../widgets/live_filters_sheet.dart';
 import '../widgets/live_viewers_sheet.dart';
+import '../widgets/room_background_sheet.dart';
 
 class LiveBroadcastController extends GetxController {
   LiveBroadcastController({
@@ -82,9 +86,17 @@ class LiveBroadcastController extends GetxController {
   final liveBlush = 12.obs;
   final liveSharpen = 15.obs;
 
+  /// Active room backdrop (audio rooms); synced via API + Socket.IO.
+  final roomBackgroundUrl = RxnString();
+  final roomBackgroundId = RxnString();
+  final roomBackgroundCatalog = <RoomBackgroundTheme>[].obs;
+  final isLoadingRoomBackgrounds = false.obs;
+  final isChangingRoomBackground = false.obs;
+
   Map<String, dynamic> _roomData = {};
   StreamSubscription<List<ZegoInRoomMessage>>? _messageSub;
   StreamSubscription<List<ZegoUIKitUser>>? _userSub;
+  void Function(Map<String, dynamic>)? _roomBackgroundSocketListener;
 
   /// Dedupes audio-room gift celebrations triggered by Zego gift chat events.
   String? _lastCelebratedGiftKey;
@@ -118,6 +130,7 @@ class LiveBroadcastController extends GetxController {
       }
     }
     _hydrateHostProfile();
+    _hydrateRoomBackground();
     _validateStreamingInput();
     loadWalletBalance();
     loadGiftCatalog();
@@ -130,8 +143,23 @@ class LiveBroadcastController extends GetxController {
         _roomMembershipConfirmed = true;
       }
       _startSeatRefreshPolling();
+      _bindRoomBackgroundSocket();
     }
     chatMessages.clear();
+  }
+
+  void _hydrateRoomBackground() {
+    final url = ApiImageUtils.normalize(
+      readRoomField(_roomData, [
+        'backgroundImage',
+        'background_image',
+        'backgroundUrl',
+        'background_url',
+      ]),
+    );
+    final id = readRoomField(_roomData, ['backgroundId', 'background_id']);
+    roomBackgroundUrl.value = (url != null && url.isNotEmpty) ? url : null;
+    roomBackgroundId.value = (id != null && id.isNotEmpty) ? id : null;
   }
 
   void _hydrateHostProfile() {
@@ -832,6 +860,159 @@ class LiveBroadcastController extends GetxController {
     );
   }
 
+  void openRoomBackgroundSheet() {
+    if (!isHost.value || !isAudioVideoRoom) {
+      Get.snackbar(
+        'Background',
+        'Only the host can change the room background.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.black87,
+        colorText: kColorWhite,
+      );
+      return;
+    }
+    if (Get.isBottomSheetOpen == true) Get.back();
+    Future.delayed(const Duration(milliseconds: 120), () {
+      Get.bottomSheet(
+        const RoomBackgroundSheet(),
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+      );
+    });
+  }
+
+  Future<void> loadRoomBackgroundCatalog() async {
+    if (isLoadingRoomBackgrounds.value) return;
+    isLoadingRoomBackgrounds.value = true;
+    try {
+      final response = await _roomRepo.getRoomBackgrounds(isShowLoader: false);
+      if (_isApiSuccess(response)) {
+        roomBackgroundCatalog.assignAll(
+          RoomBackgroundTheme.listFromResponse(response?['data'] ?? response),
+        );
+      }
+    } finally {
+      isLoadingRoomBackgrounds.value = false;
+    }
+  }
+
+  Future<void> applyRoomBackground(RoomBackgroundTheme theme) async {
+    if (!isHost.value || isChangingRoomBackground.value) return;
+    final apiRoomId = audioRoomApiId;
+    if (apiRoomId.isEmpty || theme.id.isEmpty) {
+      Get.snackbar(
+        'Background',
+        'Room id is missing for this background change.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFFD32F2F),
+        colorText: kColorWhite,
+      );
+      return;
+    }
+
+    isChangingRoomBackground.value = true;
+    try {
+      final response = await _roomRepo.changeRoomBackground(
+        roomId: apiRoomId,
+        backgroundId: theme.id,
+        isShowLoader: false,
+      );
+      if (_isApiSuccess(response)) {
+        final data = response?['data'];
+        if (data is Map) {
+          _applyRoomBackgroundFromMap(Map<String, dynamic>.from(data));
+        } else {
+          roomBackgroundUrl.value = theme.imageUrl;
+          roomBackgroundId.value = theme.id;
+        }
+        if (Get.isBottomSheetOpen == true) Get.back();
+        Get.snackbar(
+          'Background',
+          'Room background updated',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.black87,
+          colorText: kColorWhite,
+        );
+      } else {
+        _showRoomApiError(
+          'Background',
+          response,
+          'Unable to update room background.',
+        );
+      }
+    } finally {
+      isChangingRoomBackground.value = false;
+    }
+  }
+
+  void _bindRoomBackgroundSocket() {
+    final apiRoomId = audioRoomApiId;
+    if (apiRoomId.isEmpty) return;
+
+    _unbindRoomBackgroundSocket();
+    _roomBackgroundSocketListener = (data) {
+      final eventRoomId =
+          (data['roomId'] ?? data['room_id'])?.toString().trim() ?? '';
+      final localZegoId = roomId.value.trim();
+      if (eventRoomId.isNotEmpty &&
+          eventRoomId != apiRoomId &&
+          eventRoomId != localZegoId) {
+        return;
+      }
+      _applyRoomBackgroundFromMap(data);
+    };
+
+    unawaited(() async {
+      await UserRealtimeSocketService.ensureConnected();
+      if (!Get.isRegistered<UserRealtimeSocketService>()) return;
+      final socket = Get.find<UserRealtimeSocketService>();
+      final listener = _roomBackgroundSocketListener;
+      if (listener == null) return;
+      socket.addRoomBackgroundListener(listener);
+      await socket.joinRoomChannel(apiRoomId);
+    }());
+  }
+
+  void _unbindRoomBackgroundSocket() {
+    final listener = _roomBackgroundSocketListener;
+    _roomBackgroundSocketListener = null;
+    if (!Get.isRegistered<UserRealtimeSocketService>()) return;
+    final socket = Get.find<UserRealtimeSocketService>();
+    if (listener != null) {
+      socket.removeRoomBackgroundListener(listener);
+    }
+    unawaited(socket.leaveRoomChannel());
+  }
+
+  void _applyRoomBackgroundFromMap(Map<String, dynamic> data) {
+    final url = ApiImageUtils.normalize(
+      readRoomField(data, [
+        'backgroundImage',
+        'background_image',
+        'backgroundUrl',
+        'background_url',
+        'image',
+      ]),
+    );
+    final id = readRoomField(data, ['backgroundId', 'background_id']);
+    if (url != null && url.isNotEmpty) {
+      roomBackgroundUrl.value = url;
+    }
+    if (id != null && id.isNotEmpty) {
+      roomBackgroundId.value = id;
+    }
+  }
+
+  void _hydrateBackgroundFromSeatsPayload(dynamic data) {
+    if (data is! Map) return;
+    final map = Map<String, dynamic>.from(data);
+    final nested = map['room'];
+    if (nested is Map) {
+      _applyRoomBackgroundFromMap(Map<String, dynamic>.from(nested));
+    }
+    _applyRoomBackgroundFromMap(map);
+  }
+
   Future<void> setLiveBeautyEnabled(bool value) async {
     liveBeautyEnabled.value = value;
     await _applyLiveBeauty();
@@ -991,6 +1172,7 @@ class LiveBroadcastController extends GetxController {
         audioRoomSeats.assignAll(
           seats.isNotEmpty ? seats : _buildFallbackAudioSeats(),
         );
+        _hydrateBackgroundFromSeatsPayload(response?['data']);
         await _syncRoomMembershipFromSeatsResponse(
           response?['data'],
           seats.isNotEmpty ? seats : audioRoomSeats.toList(),
@@ -2084,6 +2266,7 @@ class LiveBroadcastController extends GetxController {
   @override
   void onClose() {
     _stopSeatRefreshPolling();
+    _unbindRoomBackgroundSocket();
     _messageSub?.cancel();
     _userSub?.cancel();
     if (_viewerCountListener != null) {

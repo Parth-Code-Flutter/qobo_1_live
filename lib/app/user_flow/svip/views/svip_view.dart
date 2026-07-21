@@ -153,7 +153,8 @@ class SvipView extends GetView<SvipController> {
             itemCount: controller.privileges.length,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              childAspectRatio: 1.25,
+              // Tall enough for a two-line title + two-line description.
+              childAspectRatio: 0.98,
               crossAxisSpacing: 10,
               mainAxisSpacing: 10,
             ),
@@ -161,7 +162,7 @@ class SvipView extends GetView<SvipController> {
               final privilege = controller.privileges[index];
               final Color color = privilege['color'] as Color;
               return Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: kColorWhite,
                   borderRadius: BorderRadius.circular(16),
@@ -175,10 +176,9 @@ class SvipView extends GetView<SvipController> {
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(6),
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: color.withValues(alpha: 0.12),
                         shape: BoxShape.circle,
@@ -189,19 +189,23 @@ class SvipView extends GetView<SvipController> {
                         size: 20,
                       ),
                     ),
-                    Spacing.v8,
+                    Spacing.v10,
                     SemiBoldText(
                       text: privilege['title'] as String,
                       fontSize: TextStyles.k14FontSize,
                       color: kColorText,
-                    ),
-                    Spacing.v2,
-                    AppText(
-                      text: privilege['desc'] as String,
-                      fontSize: 10,
-                      color: kColorHint,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
+                    ),
+                    Spacing.v4,
+                    Flexible(
+                      child: AppText(
+                        text: privilege['desc'] as String,
+                        fontSize: 11,
+                        color: kColorHint,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),
@@ -214,100 +218,116 @@ class SvipView extends GetView<SvipController> {
   }
 
   Widget _buildPlansSection() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(left: 4, bottom: 12),
-            child: SemiBoldText(
-              text: 'Choose Your Membership',
-              fontSize: TextStyles.k18FontSize,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(left: 20, bottom: 12),
+          child: SemiBoldText(
+            text: 'Choose Your Membership',
+            fontSize: TextStyles.k18FontSize,
+            color: kColorText,
+          ),
+        ),
+        // Plans come from the API and can be many — scroll horizontally
+        // instead of squeezing them all into one row.
+        SizedBox(
+          height: 150,
+          child: Obx(
+            () => ListView.separated(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: controller.plans.length,
+              separatorBuilder: (_, __) => Spacing.h10,
+              itemBuilder: (context, index) {
+                final plan = controller.plans[index];
+                return Obx(() {
+                  final isSelected =
+                      controller.selectedPlan.value == plan['id'];
+                  return _planCard(plan, isSelected);
+                });
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _planCard(Map<String, dynamic> plan, bool isSelected) {
+    final saving = (plan['saving'] as String? ?? '').trim();
+    final badgeLabel = saving.toLowerCase() == 'active'
+        ? 'Popular'
+        : saving.isEmpty
+        ? 'Standard'
+        : saving;
+
+    return GestureDetector(
+      onTap: () => controller.selectPlan(plan['id']),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        width: 116,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? const Color(0xFFFFD700).withValues(alpha: 0.08)
+              : kColorWhite,
+          border: Border.all(
+            color: isSelected ? const Color(0xFFFFD700) : Colors.transparent,
+            width: 1.5,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: kColorBlack.withValues(alpha: 0.03),
+              blurRadius: 6,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? const Color(0xFFFFD700).withValues(alpha: 0.18)
+                    : const Color(0xFFF3F3F3),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                badgeLabel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 9,
+                  color: isSelected ? const Color(0xFFD4AF37) : kColorHint,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            Spacing.v10,
+            SemiBoldText(
+              text: plan['duration'] as String,
+              fontSize: TextStyles.k14FontSize,
               color: kColorText,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-          ),
-          Obx(
-            () => Row(
-              children: controller.plans.map((plan) {
-                final isSelected = controller.selectedPlan.value == plan['id'];
-                return Expanded(
-                  child: GestureDetector(
-                    onTap: () => controller.selectPlan(plan['id']),
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? const Color(0xFFFFD700).withValues(alpha: 0.05)
-                            : kColorWhite,
-                        border: Border.all(
-                          color: isSelected
-                              ? const Color(0xFFFFD700)
-                              : Colors.transparent,
-                          width: 1.5,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: kColorBlack.withValues(alpha: 0.02),
-                            blurRadius: 6,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? const Color(
-                                      0xFFFFD700,
-                                    ).withValues(alpha: 0.15)
-                                  : const Color(0xFFF3F3F3),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              plan['saving'] as String,
-                              style: TextStyle(
-                                fontSize: 9,
-                                color: isSelected
-                                    ? const Color(0xFFD4AF37)
-                                    : kColorHint,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          Spacing.v8,
-                          SemiBoldText(
-                            text: plan['duration'] as String,
-                            fontSize: TextStyles.k14FontSize,
-                            color: kColorText,
-                          ),
-                          Spacing.v4,
-                          BoldText(
-                            text: '${plan['price']}',
-                            fontSize: TextStyles.k16FontSize,
-                            color: const Color(0xFFD4AF37),
-                          ),
-                          const AppText(
-                            text: 'Coins',
-                            fontSize: 9,
-                            color: kColorHint,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
+            Spacing.v6,
+            BoldText(
+              text: '${plan['price']}',
+              fontSize: TextStyles.k16FontSize,
+              color: const Color(0xFFD4AF37),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-          ),
-        ],
+            Spacing.v2,
+            const AppText(text: 'Coins', fontSize: 10, color: kColorHint),
+          ],
+        ),
       ),
     );
   }

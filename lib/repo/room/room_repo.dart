@@ -550,4 +550,43 @@ class RoomRepo {
     if (response == null) return null;
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
+
+  /// `GET /api/room/backgrounds` — active catalog themes for hosts.
+  Future<Map<String, dynamic>?> getRoomBackgrounds({
+    bool isShowLoader = false,
+  }) async {
+    final response = await _apiService.getRequest(
+      endPoint: RoomEndpoints.backgrounds,
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// `POST /api/room/change-background` — host applies a catalog theme (or URL).
+  Future<Map<String, dynamic>?> changeRoomBackground({
+    required String roomId,
+    String? backgroundId,
+    String? backgroundImage,
+    bool isShowLoader = true,
+  }) async {
+    final id = roomId.trim();
+    if (id.isEmpty) return null;
+    final bgId = backgroundId?.trim();
+    final image = backgroundImage?.trim();
+    final response = await _apiService.postRequest(
+      endPoint: RoomEndpoints.changeBackground,
+      requestModel: <String, dynamic>{
+        'room_id': id,
+        'roomId': id,
+        if (bgId != null && bgId.isNotEmpty) 'background_id': bgId,
+        if (bgId != null && bgId.isNotEmpty) 'backgroundId': bgId,
+        if (image != null && image.isNotEmpty) 'image': image,
+        if (image != null && image.isNotEmpty) 'backgroundImage': image,
+      },
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
 }

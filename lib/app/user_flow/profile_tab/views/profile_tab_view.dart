@@ -146,7 +146,7 @@ class ProfileTabView extends StatelessWidget {
                               runSpacing: 8,
                               children: [
                                 _smallChip(
-                                  text: 'LV.0',
+                                  text: session.levelBadge,
                                   start: kColorProfileChipPinkStart,
                                   end: kColorProfileChipPinkEnd,
                                 ),
@@ -179,31 +179,39 @@ class ProfileTabView extends StatelessWidget {
                     ],
                   ),
                   Spacing.v16,
+                  // Counts come from GET /api/user/profile (formatted* / *Count).
                   Row(
                     children: [
                       _statBlock(
-                        '2K',
+                        session.formattedVisitors,
                         'Visitors',
                         onTap: () => Get.toNamed(Routes.VISITORS),
                       ),
                       _statDivider(),
-                      _statBlock('1K', 'Friends'),
-                      _statDivider(),
                       _statBlock(
-                        '1K',
-                        'Following',
+                        session.formattedFriends,
+                        'Friends',
                         onTap: () => Get.toNamed(
-                          '/follow-list',
+                          Routes.FOLLOW_LIST,
                           arguments: const {'initialTab': 0},
                         ),
                       ),
                       _statDivider(),
                       _statBlock(
-                        '10K',
+                        session.formattedFollowing,
+                        'Following',
+                        onTap: () => Get.toNamed(
+                          Routes.FOLLOW_LIST,
+                          arguments: const {'initialTab': 1},
+                        ),
+                      ),
+                      _statDivider(),
+                      _statBlock(
+                        session.formattedFollowers,
                         'Followers',
                         onTap: () => Get.toNamed(
-                          '/follow-list',
-                          arguments: const {'initialTab': 1},
+                          Routes.FOLLOW_LIST,
+                          arguments: const {'initialTab': 2},
                         ),
                       ),
                     ],

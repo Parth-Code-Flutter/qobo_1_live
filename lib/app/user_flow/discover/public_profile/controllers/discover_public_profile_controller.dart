@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/discover/discover_tab/controllers/discover_tab_controller.dart';
@@ -52,6 +54,9 @@ class DiscoverPublicProfileController extends GetxController {
 
     isLoading.value = true;
     try {
+      // Count this open toward the other user's Visitors total.
+      unawaited(_recordVisit(id));
+
       final response = await _userRepo.getPublicProfile(
         userId: id,
         isShowLoader: false,
@@ -75,6 +80,14 @@ class DiscoverPublicProfileController extends GetxController {
       }
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  Future<void> _recordVisit(String targetId) async {
+    try {
+      await _userRepo.recordProfileVisit(targetId: targetId);
+    } catch (_) {
+      // Visit tracking must never block opening the public profile.
     }
   }
 
