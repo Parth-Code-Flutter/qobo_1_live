@@ -288,8 +288,17 @@ class LiveRoomController extends GetxController {
     Get.toNamed(Routes.LIVE_ROOM_CREATE, arguments: {'type': 'AUDIO'});
   }
 
+  /// True for `/api/room/list` items with `type == "live_stream"`.
+  bool _isLiveStreamType(String? type) {
+    final normalized = type?.trim().toLowerCase() ?? '';
+    return normalized == 'live_stream' ||
+        normalized == 'livestream' ||
+        normalized == 'live-stream';
+  }
+
   Map<String, dynamic> _mapRoom(Map room) {
     final type = room['type']?.toString().toUpperCase() ?? 'VIDEO';
+    final isLiveStream = _isLiveStreamType(room['type']?.toString());
     final rankBadge = room['roomRankBadge'];
     final image = ApiImageUtils.normalize(
       room['coverImage']?.toString() ??
@@ -311,10 +320,11 @@ class LiveRoomController extends GetxController {
       'id': room['_id'] ?? room['id'] ?? '',
       'roomData': Map<String, dynamic>.from(room),
       'nameAge': seats == 0 ? title : '$title, $seats Seats',
+      // Live streams get an explicit badge so they read as live in the grid.
       'badge': rankBadge is Map
           ? (rankBadge['label']?.toString() ?? type)
-          : type,
-      'roomType': type,
+          : (isLiveStream ? 'LIVE STREAM' : type),
+      'roomType': isLiveStream ? 'LIVE_STREAM' : type,
       'location':
           room['countryName']?.toString() ??
           room['countryCode']?.toString() ??
@@ -540,6 +550,10 @@ class LiveRoomController extends GetxController {
   }
 
   void joinRoom(Map<String, dynamic> room) {
+    if (room['roomType'] == 'LIVE_STREAM') {
+      unawaited(_joinLiveStreamFromList(room));
+      return;
+    }
     Get.toNamed(
       Routes.LIVE_BROADCAST,
       arguments: {
@@ -548,6 +562,60 @@ class LiveRoomController extends GetxController {
         'roomData': room['roomData'],
       },
     );
+  }
+
+  /// Opens a `type == "live_stream"` list item in the live streaming UI
+  /// (ZegoUIKitPrebuiltLiveStreaming) as an audience member.
+  Future<void> _joinLiveStreamFromList(Map<String, dynamic> room) async {
+    final raw = room['roomData'] is Map
+        ? Map<String, dynamic>.from(room['roomData'] as Map)
+        : <String, dynamic>{};
+    final payload = _normalizeLiveStreamListPayload(raw);
+
+    if (_text(payload['zegoLiveId']) == null) {
+      final context = Get.context;
+      if (context != null) {
+        AppToast.showError(context, 'Live stream id is missing for this room');
+      }
+      return;
+    }
+
+    // Live streams run on the live Zego project, not the rooms project.
+    await ZegoEngineUtils.resetForLiveProject().timeout(
+      const Duration(milliseconds: 700),
+      onTimeout: () {},
+    );
+    Get.toNamed(
+      Routes.LIVE_BROADCAST,
+      arguments: {'isHost': false, 'roomType': 'VIDEO', 'roomData': payload},
+    );
+  }
+
+  /// Ensures the payload is tagged as a live stream and carries a Zego live id
+  /// under the keys the broadcast screen resolves for audience join.
+  Map<String, dynamic> _normalizeLiveStreamListPayload(
+    Map<String, dynamic> raw,
+  ) {
+    final payload = Map<String, dynamic>.from(raw);
+    payload['type'] = 'live_stream';
+
+    final streamingId =
+        _text(payload['zegoLiveId']) ??
+        _text(payload['zego_live_id']) ??
+        _text(payload['channelName']) ??
+        _text(payload['channel_name']) ??
+        _text(payload['liveStreamingId']) ??
+        _text(payload['live_streaming_id']) ??
+        _text(payload['liveStreamId']) ??
+        _text(payload['liveId']) ??
+        _text(payload['_id']) ??
+        _text(payload['id']);
+    final zegoId = ZegoLiveIdUtils.sanitize(streamingId ?? '');
+    if (zegoId.isNotEmpty) {
+      payload['zegoLiveId'] = zegoId;
+      payload.putIfAbsent('channelName', () => zegoId);
+    }
+    return payload;
   }
 
   Future<void> joinTypedRoom(

@@ -44,9 +44,9 @@ class PushNotificationService {
   /// Called by [pushNotificationBackgroundHandler] in a background isolate.
   ///
   /// Shows an actionable local notification for known push types
-  /// (`room_invite`, `room_created`, `live_streaming_created`, `general`,
-  /// `custom`) so Android data-only messages can expose Join / Reject or
-  /// Join / Dismiss buttons.
+  /// (`room_invite`, `room_created`, `live_streaming_created`,
+  /// `live_stream_started`, `general`, `custom`) so Android data-only messages
+  /// can expose Join / Reject or Join / Dismiss buttons.
   static Future<void> handleBackgroundMessage(RemoteMessage message) async {
     try {
       if (Firebase.apps.isEmpty) {
@@ -348,8 +348,9 @@ class PushNotificationService {
               '${roomTitle?.isNotEmpty == true ? ': $roomTitle' : ''}',
         );
       case PushNotificationTypes.liveStreamingCreated:
+      case PushNotificationTypes.liveStreamStarted:
         return (
-          title: 'Live Stream Alert',
+          title: 'Live Stream Alert! 🔴',
           body: '$hostLabel started a live video stream'
               '${roomTitle?.isNotEmpty == true ? ': $roomTitle' : ''}',
         );
@@ -367,7 +368,8 @@ class PushNotificationService {
         return 'Room Invitation';
       case PushNotificationTypes.roomCreated:
       case PushNotificationTypes.liveStreamingCreated:
-        return 'Live Stream Alert';
+      case PushNotificationTypes.liveStreamStarted:
+        return 'Live Stream Alert! 🔴';
       default:
         return 'Notification';
     }

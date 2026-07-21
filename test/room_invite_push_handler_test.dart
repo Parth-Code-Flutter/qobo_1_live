@@ -63,8 +63,51 @@ void main() {
       expect(payload, isNotNull);
       expect(payload!.isBroadcastAlert, isTrue);
       expect(payload.isDirectInvite, isFalse);
-      expect(payload.bannerTitle, 'Live Stream Alert');
-      expect(payload.bannerBody, contains('live video stream'));
+      expect(payload.isLiveStreamAlert, isTrue);
+      expect(payload.bannerTitle, 'Live Stream Alert! 🔴');
+      expect(payload.bannerBody, contains('is now live'));
+    });
+
+    test('parses live_stream_started follower alert from handover guide', () {
+      final payload = RoomInvitePushPayload.tryParse(
+        {
+          'type': 'live_stream_started',
+          'event': 'host_live_started',
+          'room_id': '63742a9a-645a-42e2-8469-4ba806bfa741',
+          'roomId': '63742a9a-645a-42e2-8469-4ba806bfa741',
+          'room_type': 'live_stream',
+          'host_id': 'idc8991071',
+          'host_name': 'Kirit',
+          'title': 'Evening Music & Chat',
+          'message': 'Kirit is now live! Join the stream.',
+        },
+        title: 'Live Stream Alert! 🔴',
+        body: 'Kirit has started a live stream: "Evening Music & Chat"',
+      );
+
+      expect(payload, isNotNull);
+      expect(payload!.isLiveStreamAlert, isTrue);
+      expect(payload.isBroadcastAlert, isTrue);
+      expect(payload.roomId, '63742a9a-645a-42e2-8469-4ba806bfa741');
+      expect(payload.roomType, 'live_stream');
+      expect(payload.hostName, 'Kirit');
+      expect(payload.bannerTitle, 'Live Stream Alert! 🔴');
+      expect(payload.bannerBody, contains('Evening Music'));
+    });
+
+    test('maps host_live_started event-only payloads to live_stream_started', () {
+      final payload = RoomInvitePushPayload.tryParse({
+        'event': 'host_live_started',
+        'room_id': 'room-live-2',
+        'hostName': 'Yasmin',
+        'message': 'Yasmin is now live!',
+      });
+
+      expect(payload, isNotNull);
+      expect(payload!.type, PushNotificationTypes.liveStreamStarted);
+      expect(payload.isLiveStreamAlert, isTrue);
+      expect(payload.hostName, 'Yasmin');
+      expect(payload.bannerBody, 'Yasmin is now live!');
     });
 
     test('parses general/custom without room_id', () {
@@ -159,7 +202,7 @@ void main() {
       );
 
       final display = PushNotificationService.displayCopyFor(message);
-      expect(display.title, 'Live Stream Alert');
+      expect(display.title, 'Live Stream Alert! 🔴');
       expect(display.body, contains('live video stream'));
       expect(display.body, contains('Friday Live'));
     });
@@ -203,10 +246,22 @@ void main() {
         PushNotificationTypes.isJoinDismiss('live_streaming_created'),
         isTrue,
       );
+      expect(
+        PushNotificationTypes.isJoinDismiss('live_stream_started'),
+        isTrue,
+      );
+      expect(
+        PushNotificationTypes.isLiveStreamAlert('live_stream_started'),
+        isTrue,
+      );
       expect(PushNotificationTypes.isJoinDismiss('general'), isTrue);
       expect(PushNotificationTypes.isJoinDismiss('custom'), isTrue);
       expect(PushNotificationTypes.requiresRoomId('general'), isFalse);
       expect(PushNotificationTypes.requiresRoomId('room_created'), isTrue);
+      expect(
+        PushNotificationTypes.requiresRoomId('live_stream_started'),
+        isTrue,
+      );
     });
   });
 }

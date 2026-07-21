@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -54,7 +55,9 @@ class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
                         compact ? 10 : 12,
                         compact ? 12 : 14,
                         compact ? 10 : 12,
-                        compact ? 132 : 140,
+                        // Keep the last seat row reachable above the chat
+                        // feed + input + control dock.
+                        compact ? 296 : 312,
                       ),
                       sliver: SliverList(
                         delegate: SliverChildListDelegate.fixed([
@@ -70,7 +73,19 @@ class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
                   left: compact ? 10 : 16,
                   right: compact ? 10 : 16,
                   bottom: 8,
-                  child: _AudioRoomBottomControls(compact: compact),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Room chat feed + input, mirroring the live streaming
+                      // chat so everyone in the audio room can talk directly.
+                      _AudioRoomChatFeed(compact: compact),
+                      SizedBox(height: compact ? 6 : 8),
+                      _AudioRoomChatInput(compact: compact),
+                      SizedBox(height: compact ? 6 : 8),
+                      _AudioRoomBottomControls(compact: compact),
+                    ],
+                  ),
                 ),
               ],
             );
@@ -134,6 +149,185 @@ class _AudioRoomBottomControls extends GetView<LiveBroadcastController> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Scrolling room chat feed shown above the control dock (live-stream style).
+class _AudioRoomChatFeed extends GetView<LiveBroadcastController> {
+  const _AudioRoomChatFeed({required this.compact});
+
+  final bool compact;
+
+  static const _bubbleColor = Color(0xB31A1030);
+  static const _giftBubbleColor = Color(0xCC4E2E90);
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: compact ? 128 : 146,
+      child: Obx(() {
+        if (controller.chatMessages.isEmpty) {
+          return Align(
+            alignment: Alignment.bottomLeft,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: _bubbleColor,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: AppText(
+                text: controller.isZegoConnected.value
+                    ? 'Say hi to everyone...'
+                    : 'Connecting to room chat...',
+                fontSize: TextStyles.k12FontSize,
+                color: kColorWhite.withValues(alpha: 0.72),
+              ),
+            ),
+          );
+        }
+
+        return ListView.separated(
+          reverse: true, // Newest message pinned at the bottom.
+          padding: const EdgeInsets.only(top: 10),
+          itemCount: controller.chatMessages.length,
+          separatorBuilder: (_, __) => Spacing.v6,
+          itemBuilder: (_, index) {
+            // List is reversed, so map back to the original order.
+            final actualIndex = controller.chatMessages.length - 1 - index;
+            final msg = controller.chatMessages[actualIndex];
+            final sender = msg['sender']?.toString() ?? '';
+            final text = msg['message']?.toString() ?? '';
+            final isSystem = msg['isSystem'] == true;
+            final isTranslated = msg['isTranslated'] == true;
+            final translation = msg['translation']?.toString() ?? '';
+            final displayMessage = isTranslated && translation.isNotEmpty
+                ? translation
+                : text;
+
+            return Align(
+              alignment: Alignment.centerLeft,
+              child: GestureDetector(
+                onTap: isSystem
+                    ? null
+                    : () => controller.translateMessage(actualIndex),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isSystem ? _giftBubbleColor : _bubbleColor,
+                    borderRadius: BorderRadius.circular(18),
+                    border: isSystem
+                        ? Border.all(color: const Color(0xFF7D5BFF))
+                        : null,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: RichText(
+                          text: TextSpan(
+                            children: [
+                              TextSpan(
+                                text: isSystem ? '' : '$sender: ',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: sender == 'You'
+                                      ? const Color(0xFFFF8AC0)
+                                      : const Color(0xFFFF79B4),
+                                  fontSize: 13,
+                                ),
+                              ),
+                              TextSpan(
+                                text: displayMessage,
+                                style: TextStyle(
+                                  color: isSystem
+                                      ? Colors.amberAccent
+                                      : kColorWhite,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (!isSystem && translation.isNotEmpty) ...[
+                        Spacing.h6,
+                        Icon(
+                          Icons.translate_rounded,
+                          size: 12,
+                          color: isTranslated ? kColorPrimary : Colors.white38,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      }),
+    );
+  }
+}
+
+/// Chat input bar so every room member can send messages directly.
+class _AudioRoomChatInput extends GetView<LiveBroadcastController> {
+  const _AudioRoomChatInput({required this.compact});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: AppTextField(
+            controller: controller.chatTextController,
+            hintText: 'Say something...',
+            fillColor: const Color(0xE61A1030),
+            inputBorderRadius: BorderRadius.circular(24),
+            borderColor: kColorWhite.withValues(alpha: 0.08),
+            padding: EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: compact ? 10 : 12,
+            ),
+            textStyle: TextStyles.kRegularPoppins(
+              colors: kColorWhite,
+              fontSize: 14,
+            ),
+            hintStyle: TextStyles.kRegularPoppins(
+              colors: kColorWhite.withValues(alpha: 0.5),
+              fontSize: 14,
+            ),
+            textInputAction: TextInputAction.send,
+            onSubmitted: (_) => controller.sendMessage(),
+          ),
+        ),
+        Spacing.h8,
+        InkWell(
+          onTap: controller.sendMessage,
+          borderRadius: BorderRadius.circular(24),
+          child: Container(
+            width: compact ? 42 : 46,
+            height: compact ? 42 : 46,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                colors: [kColorProfileFeatureBlue, kColorPrimary],
+              ),
+              border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
+            ),
+            child: const Icon(
+              Icons.send_rounded,
+              color: kColorWhite,
+              size: 20,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -11,6 +11,7 @@ class AppTextField extends StatelessWidget {
     super.key,
     this.controller,
     this.onChanged,
+    this.onSubmitted,
     this.validator,
     this.value,
     this.hintText,
@@ -52,6 +53,8 @@ class AppTextField extends StatelessWidget {
 
   final TextEditingController? controller;
   final void Function(String value)? onChanged;
+  /// Called when the keyboard action button (e.g. send/done) is pressed.
+  final void Function(String value)? onSubmitted;
   final String? Function(String? value)? validator;
   final String? value;
   final String? hintText;
@@ -143,6 +146,7 @@ class AppTextField extends StatelessWidget {
             keyboardType: textInputType,
             textCapitalization: textCapitalization ?? TextCapitalization.sentences,
             onChanged: onChanged,
+            onFieldSubmitted: onSubmitted,
             textInputAction: textInputAction ?? TextInputAction.next,
             maxLength: maxLength,
             initialValue: value,

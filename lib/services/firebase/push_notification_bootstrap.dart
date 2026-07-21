@@ -1,6 +1,7 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:push_notification_service/push_notification_service.dart';
+import 'package:qobo_one_live/services/firebase/fcm_token_sync_service.dart';
 import 'package:qobo_one_live/services/firebase/firebase_bootstrap.dart';
 import 'package:qobo_one_live/services/firebase/room_invite_push_handler.dart';
 import 'package:qobo_one_live/utils/app_widgets/room_invite_in_app_banner.dart';
@@ -57,10 +58,12 @@ abstract final class PushNotificationBootstrap {
         },
         onToken: (token) {
           LoggerUtils.logInfo('Push token ready (${token.length} chars)');
+          FcmTokenSyncService.ensureSynced();
         },
         onTokenRefresh: (token) {
           LoggerUtils.logInfo('Push token refreshed (${token.length} chars)');
-          // TODO: sync refreshed token with backend profile/device APIs.
+          // Keep backend in sync so follower live-stream pushes stay deliverable.
+          FcmTokenSyncService.ensureSynced();
         },
         onNotificationTap: (message) {
           LoggerUtils.logInfo(

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/repo/user/user_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/services/firebase/fcm_token_sync_service.dart';
+import 'package:qobo_one_live/services/realtime/user_realtime_socket_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 
 class SettingsController extends GetxController {
@@ -91,6 +93,10 @@ class SettingsController extends GetxController {
   }
 
   void onLogoutTap() async {
+    await UserRealtimeSocketService.ensureDisconnected();
+    if (Get.isRegistered<FcmTokenSyncService>()) {
+      Get.find<FcmTokenSyncService>().clearCachedToken();
+    }
     await _userSession.clearSession();
     Get.offAllNamed(Routes.AUTH_LOGIN);
   }

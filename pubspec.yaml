@@ -72,7 +72,9 @@ dependencies:
   push_notification_service:
     path: packages/push_notification_service
   just_audio: 0.10.5
-  audio_session: ^0.2.3
+  audio_session: 0.2.3
+  # Realtime follower alerts (`host_live_started`) from the backend Socket.IO server.
+  socket_io_client: ^3.1.2
 
 dev_dependencies:
   flutter_test:

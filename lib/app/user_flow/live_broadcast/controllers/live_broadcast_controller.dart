@@ -285,9 +285,15 @@ class LiveBroadcastController extends GetxController {
   void _bindZegoListeners() {
     final zego = ZegoUIKitPrebuiltLiveStreamingController();
 
+    // Listen on the base UIKit message bus instead of the prebuilt facade
+    // (`zego.message.stream()`): the facade's internal relay can bind before
+    // the Zego core streams exist (engine re-init between room/live App IDs),
+    // which silently drops peer chat + gift events for everyone in the live.
+    // Binding here is safe because this runs after the room is logged in.
     _messageSub?.cancel();
-    _messageSub = zego.message.stream().listen(_syncChatFromZego);
-    _syncChatFromZego(zego.message.list());
+    final kit = ZegoUIKit();
+    _messageSub = kit.getInRoomMessageListStream().listen(_syncChatFromZego);
+    _syncChatFromZego(kit.getInRoomMessages());
 
     _userSub?.cancel();
     _userSub = zego.user.stream(includeFakeUser: false).listen(_syncViewers);
@@ -571,8 +577,13 @@ class LiveBroadcastController extends GetxController {
     }
 
     try {
-      final sent = await ZegoUIKitPrebuiltLiveStreamingController().message
-          .send(moderatedText);
+      // Group-call (audio/video) rooms have no live-streaming facade mounted,
+      // so their chat must go through the base UIKit message bus directly.
+      final sent = isGroupCallRoom
+          ? await ZegoUIKit().sendInRoomMessage(moderatedText)
+          : await ZegoUIKitPrebuiltLiveStreamingController().message.send(
+              moderatedText,
+            );
       if (!sent) {
         Get.snackbar(
           'Message not sent',
@@ -739,13 +750,10 @@ class LiveBroadcastController extends GetxController {
         soundUrl: soundUrl,
       );
       if (isZegoConnected.value) {
-        if (isGroupCallRoom) {
-          unawaited(ZegoUIKit().sendInRoomMessage(giftLabel));
-        } else {
-          unawaited(
-            ZegoUIKitPrebuiltLiveStreamingController().message.send(giftLabel),
-          );
-        }
+        // Send on the base UIKit bus for every room kind. The live-streaming
+        // facade (`message.send`) can silently no-op when its internal
+        // enable-chat relay is not wired, so peers never receive the gift.
+        unawaited(ZegoUIKit().sendInRoomMessage(giftLabel));
       } else {
         chatMessages.add({
           'sender': 'You',
@@ -2060,6 +2068,13 @@ class LiveBroadcastController extends GetxController {
 
   bool _isAudioVideoRoomPayload() {
     final type = readRoomField(_roomData, ['type', 'roomType'])?.toLowerCase();
+    // `type == "live_stream"` rooms must always open the live streaming UI,
+    // even when the payload also carries backend room-id keys.
+    if (type == 'live_stream' ||
+        type == 'livestream' ||
+        type == 'live-stream') {
+      return false;
+    }
     return type == 'audio' ||
         type == 'video' ||
         _roomData.containsKey('room_id') ||

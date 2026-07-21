@@ -95,6 +95,13 @@ class RoomInvitePushHandler {
       return;
     }
 
+    // Live-stream follower alerts open the streaming viewer directly.
+    // Audio/video room invites still go through the room join API.
+    if (payload.isLiveStreamAlert) {
+      await _openLiveStream(payload, sourceMessage: sourceMessage);
+      return;
+    }
+
     final response = await _roomRepo.joinRoom(
       roomId: payload.roomId,
       invitationId: payload.hasInvitationId ? payload.invitationId : null,
@@ -132,6 +139,48 @@ class RoomInvitePushHandler {
         arguments: {
           'isHost': false,
           'roomType': roomType == 'AUDIO' ? 'AUDIO' : 'VIDEO',
+          'roomData': roomData,
+        },
+      );
+    });
+  }
+
+  /// Opens the live-streaming UI for follower `live_stream_started` alerts.
+  Future<void> _openLiveStream(
+    RoomInvitePushPayload payload, {
+    PushNotificationMessage? sourceMessage,
+  }) async {
+    if (sourceMessage != null) {
+      await PushNotificationService.instance.cancelLocalNotification(
+        sourceMessage,
+      );
+    }
+
+    final roomData = <String, dynamic>{
+      'type': 'live_stream',
+      'room_id': payload.roomId,
+      'id': payload.roomId,
+      'zegoLiveId': payload.roomId,
+      'channelName': payload.roomId,
+      'liveStreamingId': payload.roomId,
+      'name': payload.roomTitle,
+      'title': payload.roomTitle,
+      'hostId': payload.hostId,
+      'hostName': payload.hostName,
+      'isLive': true,
+    };
+
+    await ZegoEngineUtils.resetForLiveProject().timeout(
+      const Duration(milliseconds: 700),
+      onTimeout: () {},
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Get.toNamed(
+        Routes.LIVE_BROADCAST,
+        arguments: {
+          'isHost': false,
+          'roomType': 'VIDEO',
           'roomData': roomData,
         },
       );

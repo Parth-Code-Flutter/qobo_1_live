@@ -36,6 +36,12 @@ class RoomInvitePushPayload {
   /// Join + Dismiss broadcast types (`room_created`, live stream, general…).
   bool get isBroadcastAlert => PushNotificationTypes.isJoinDismiss(type);
 
+  /// Opens the live-streaming viewer (not the audio/video room call UI).
+  bool get isLiveStreamAlert =>
+      PushNotificationTypes.isLiveStreamAlert(type) ||
+      roomType == 'live_stream' ||
+      roomType == 'livestream';
+
   bool get hasInvitationId => invitationId.isNotEmpty;
   bool get hasRoomId => roomId.isNotEmpty;
 
@@ -53,7 +59,8 @@ class RoomInvitePushPayload {
         return 'Room Invitation';
       case PushNotificationTypes.roomCreated:
       case PushNotificationTypes.liveStreamingCreated:
-        return 'Live Stream Alert';
+      case PushNotificationTypes.liveStreamStarted:
+        return 'Live Stream Alert! 🔴';
       case PushNotificationTypes.general:
       case PushNotificationTypes.custom:
         return 'Notification';
@@ -71,7 +78,8 @@ class RoomInvitePushPayload {
       case PushNotificationTypes.roomCreated:
         return '$hostName started a $roomType room: "$roomTitle"';
       case PushNotificationTypes.liveStreamingCreated:
-        return '$hostName started a live video stream: "$roomTitle"';
+      case PushNotificationTypes.liveStreamStarted:
+        return '$hostName is now live! Join "$roomTitle"';
       case PushNotificationTypes.general:
       case PushNotificationTypes.custom:
         return roomTitle.isNotEmpty && roomTitle != 'Live room'
@@ -88,18 +96,28 @@ class RoomInvitePushPayload {
     String title = '',
     String body = '',
   }) {
-    final type = _text(data['type'])?.toLowerCase() ?? '';
-    if (!PushNotificationTypes.all.contains(type)) return null;
+    // Prefer `type`; fall back to `event` from the follower-notification guide.
+    final type = (_text(data['type']) ?? _text(data['event']))?.toLowerCase() ??
+        '';
+    final normalizedType = type == 'host_live_started'
+        ? PushNotificationTypes.liveStreamStarted
+        : type;
+    if (!PushNotificationTypes.all.contains(normalizedType)) return null;
 
     final roomId = _text(data['room_id']) ?? _text(data['roomId']) ?? '';
-    if (PushNotificationTypes.requiresRoomId(type) && roomId.isEmpty) {
+    if (PushNotificationTypes.requiresRoomId(normalizedType) &&
+        roomId.isEmpty) {
       return null;
     }
 
     return RoomInvitePushPayload(
-      type: type,
+      type: normalizedType,
       roomId: roomId,
-      roomType: (_text(data['room_type']) ?? _text(data['roomType']) ?? 'video')
+      roomType: (_text(data['room_type']) ??
+              _text(data['roomType']) ??
+              (PushNotificationTypes.isLiveStreamAlert(normalizedType)
+                  ? 'live_stream'
+                  : 'video'))
           .toLowerCase(),
       hostId: _text(data['host_id']) ?? _text(data['hostId']) ?? '',
       hostName: _text(data['host_name']) ?? _text(data['hostName']) ?? 'Host',
@@ -112,7 +130,9 @@ class RoomInvitePushPayload {
       invitationId: _text(data['invitation_id']) ?? '',
       expiresAt: _parseExpiresAt(_text(data['expires_at'])),
       title: title,
-      body: body,
+      body: body.isNotEmpty
+          ? body
+          : (_text(data['message']) ?? ''),
     );
   }
 

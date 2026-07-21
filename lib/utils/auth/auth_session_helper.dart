@@ -5,6 +5,8 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/local_storage_constants.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
+import 'package:qobo_one_live/services/firebase/fcm_token_sync_service.dart';
+import 'package:qobo_one_live/services/realtime/user_realtime_socket_service.dart';
 import 'package:qobo_one_live/utils/auth/role_home_route.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 import 'package:qobo_one_live/utils/profile/stored_profile_map.dart';
@@ -68,6 +70,9 @@ abstract final class AuthSessionHelper {
       }
       // Fire-and-forget — chat screens retry if this fails.
       unawaited(Get.find<ChatSessionService>().ensureSignedIn());
+      // Follower live alerts: register device token + open realtime socket.
+      unawaited(FcmTokenSyncService.ensureSynced());
+      unawaited(UserRealtimeSocketService.ensureConnected());
 
       if (!context.mounted) return;
       AppToast.showSuccess(
