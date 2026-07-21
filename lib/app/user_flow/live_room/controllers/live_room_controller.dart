@@ -460,21 +460,47 @@ class LiveRoomController extends GetxController {
     final map = raw is Map
         ? Map<String, dynamic>.from(raw)
         : <String, dynamic>{};
-    final zegoId = ZegoLiveIdUtils.sanitize(
-      _text(map['zegoLiveId']) ??
-          _text(map['zego_live_id']) ??
-          _text(map['liveStreamingId']) ??
-          _text(map['live_streaming_id']) ??
-          liveId,
-    );
+    final nestedRoom = map['room'] is Map
+        ? Map<String, dynamic>.from(map['room'] as Map)
+        : map['liveStreaming'] is Map
+        ? Map<String, dynamic>.from(map['liveStreaming'] as Map)
+        : const <String, dynamic>{};
+    // Audience joining from the room list / push alerts only knows the backend
+    // room id, so the host must publish the Zego stream on that same id.
+    // Otherwise viewers land in an empty Zego room (no video, count stays 1,
+    // gifts/chat never reach the host).
+    final backendRoomId =
+        _text(map['room_id']) ??
+        _text(map['roomId']) ??
+        _text(map['_id']) ??
+        _text(map['id']) ??
+        _text(nestedRoom['room_id']) ??
+        _text(nestedRoom['roomId']) ??
+        _text(nestedRoom['_id']) ??
+        _text(nestedRoom['id']);
+    // Backend resource id for `/api/live-streaming/end` — keep it separate
+    // from the Zego channel id.
+    final apiStreamingId =
+        _text(map['liveStreamingId']) ??
+        _text(map['live_streaming_id']) ??
+        liveId;
+    final zegoId = ZegoLiveIdUtils.sanitize(backendRoomId ?? apiStreamingId);
     final session = Get.isRegistered<UserSessionController>()
         ? Get.find<UserSessionController>()
         : null;
 
     map['name'] = _text(map['name']) ?? title;
     map['title'] = _text(map['title']) ?? title;
-    map['liveStreamingId'] = zegoId;
+    // Explicit type keeps the broadcast screen on the live streaming UI even
+    // though the payload now carries backend room-id keys.
+    map['type'] = 'live_stream';
+    map['liveStreamingId'] = apiStreamingId;
     map['zegoLiveId'] = zegoId;
+    map['channelName'] = zegoId;
+    if (backendRoomId != null) {
+      map['room_id'] = backendRoomId;
+      map.putIfAbsent('id', () => backendRoomId);
+    }
     map['isLive'] = true;
     map.putIfAbsent('hostId', () => session?.userId ?? '');
     map.putIfAbsent('hostName', () => session?.displayName ?? title);
@@ -492,6 +518,7 @@ class LiveRoomController extends GetxController {
     return {
       'name': title,
       'title': title,
+      'type': 'live_stream',
       'liveStreamingId': zegoId,
       'zegoLiveId': zegoId,
       'onlyFollows': false,
@@ -532,20 +559,18 @@ class LiveRoomController extends GetxController {
     final id = liveStreamId.trim();
     if (id.isEmpty) return;
 
-    Get.toNamed(
-      Routes.LIVE_BROADCAST,
-      arguments: {
-        'isHost': false,
-        'roomType': 'VIDEO',
+    // Manual join targets Go Live streams, which run on the live Zego project
+    // and must open the live streaming UI (not the group-call room UI).
+    unawaited(
+      _joinLiveStreamFromList({
+        'roomType': 'LIVE_STREAM',
         'roomData': {
           'id': id,
           'room_id': id,
-          'zegoLiveId': id,
-          'channelName': id,
-          'name': 'Manual Live',
-          'type': 'VIDEO',
+          'name': 'Live',
+          'type': 'live_stream',
         },
-      },
+      }),
     );
   }
 
@@ -599,7 +624,14 @@ class LiveRoomController extends GetxController {
     final payload = Map<String, dynamic>.from(raw);
     payload['type'] = 'live_stream';
 
+    // Hosts publish on the backend room id (see _normalizeLiveStreamingPayload),
+    // so audience must resolve the same id first. Zego-specific keys are only a
+    // fallback for payloads without a backend room id.
     final streamingId =
+        _text(payload['room_id']) ??
+        _text(payload['roomId']) ??
+        _text(payload['_id']) ??
+        _text(payload['id']) ??
         _text(payload['zegoLiveId']) ??
         _text(payload['zego_live_id']) ??
         _text(payload['channelName']) ??
@@ -607,13 +639,11 @@ class LiveRoomController extends GetxController {
         _text(payload['liveStreamingId']) ??
         _text(payload['live_streaming_id']) ??
         _text(payload['liveStreamId']) ??
-        _text(payload['liveId']) ??
-        _text(payload['_id']) ??
-        _text(payload['id']);
+        _text(payload['liveId']);
     final zegoId = ZegoLiveIdUtils.sanitize(streamingId ?? '');
     if (zegoId.isNotEmpty) {
       payload['zegoLiveId'] = zegoId;
-      payload.putIfAbsent('channelName', () => zegoId);
+      payload['channelName'] = zegoId;
     }
     return payload;
   }

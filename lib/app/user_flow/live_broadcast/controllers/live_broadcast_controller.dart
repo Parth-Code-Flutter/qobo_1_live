@@ -144,8 +144,22 @@ class LiveBroadcastController extends GetxController {
       }
       _startSeatRefreshPolling();
       _bindRoomBackgroundSocket();
+    } else if (!isHost.value) {
+      // Live-stream audience: report the join so backend viewer/heat counts
+      // move. Group-call rooms already do this via joinTypedRoom.
+      _reportLiveStreamViewerJoin();
     }
     chatMessages.clear();
+  }
+
+  void _reportLiveStreamViewerJoin() {
+    final backendRoomId = _extractBackendRoomId(_roomData)?.trim();
+    if (backendRoomId == null || backendRoomId.isEmpty) return;
+    unawaited(
+      _roomRepo
+          .joinRoom(roomId: backendRoomId, isShowLoader: false)
+          .catchError((_) => null),
+    );
   }
 
   void _hydrateRoomBackground() {
@@ -530,12 +544,8 @@ class LiveBroadcastController extends GetxController {
       return;
     }
 
-    if (!isGroupCallRoom && !isHost.value && !hasExplicitStreamingId.value) {
-      connectionIssue.value =
-          'This room has only backend room id. Audience join needs zegoLiveId/channelName from API.';
-      return;
-    }
-
+    // Hosts publish live streams on the backend room id, so audience payloads
+    // that only carry a backend room id can still join the right Zego channel.
     connectionIssue.value = '';
   }
 
@@ -721,7 +731,11 @@ class LiveBroadcastController extends GetxController {
     }
 
     final giftId = gift['id']?.trim() ?? '';
-    final currentRoomId = roomId.value.trim();
+    // Backend gift API needs the real room id (with dashes), not the
+    // sanitized Zego channel id.
+    final currentRoomId = audioRoomApiId.isNotEmpty
+        ? audioRoomApiId
+        : roomId.value.trim();
     final currentReceiverId =
         selectedGiftReceiverId.value?.trim().isNotEmpty == true
         ? selectedGiftReceiverId.value!.trim()
@@ -2235,11 +2249,24 @@ class LiveBroadcastController extends GetxController {
   }
 
   String get liveStreamingApiId {
-    return (_extractStreamingId(_roomData) ?? roomId.value).trim();
+    // The Zego channel now runs on the backend room id, so the
+    // `/api/live-streaming/end` resource id must be read from the dedicated
+    // liveStreamingId keys before any Zego channel keys.
+    final apiId = _firstNonEmpty(_roomData, const [
+      'liveStreamingId',
+      'livestreamingId',
+      'live_streaming_id',
+      'liveStreamId',
+      'live_id',
+      'liveId',
+    ]);
+    return (apiId ?? _extractStreamingId(_roomData) ?? roomId.value).trim();
   }
 
+  /// Reports audience leave for group-call rooms and live streams so backend
+  /// viewer/heat counts stay in sync with joins.
   Future<void> _reportAudioVideoRoomExit() async {
-    if (isHost.value || _exitReported || !_isAudioVideoRoomPayload()) return;
+    if (isHost.value || _exitReported) return;
     _exitReported = true;
     _stopSeatRefreshPolling();
     final backendRoomId = _extractBackendRoomId(_roomData);
