@@ -55,6 +55,7 @@ abstract class Routes {
   static const COIN_SELLER = _Paths.COIN_SELLER;
   static const AGENCY_OWNER = _Paths.AGENCY_OWNER;
   static const SUPER_ADMIN_DASHBOARD = _Paths.SUPER_ADMIN_DASHBOARD;
+  static const SUPER_ADMIN_BOTTOM_NAV = _Paths.SUPER_ADMIN_BOTTOM_NAV;
 }
 
 abstract class _Paths {
@@ -111,4 +112,5 @@ abstract class _Paths {
   static const COIN_SELLER = '/coin-seller';
   static const AGENCY_OWNER = '/agency-owner';
   static const SUPER_ADMIN_DASHBOARD = '/super-admin-dashboard';
+  static const SUPER_ADMIN_BOTTOM_NAV = '/super-admin-bottom-nav';
 }

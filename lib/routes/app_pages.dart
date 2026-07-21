@@ -101,6 +101,8 @@ import '../app/user_flow/agency_owner_dashboard/bindings/agency_owner_dashboard_
 import '../app/user_flow/agency_owner_dashboard/views/agency_owner_dashboard_view.dart';
 import '../app/user_flow/super_admin_dashboard/bindings/super_admin_dashboard_binding.dart';
 import '../app/user_flow/super_admin_dashboard/views/super_admin_dashboard_view.dart';
+import '../app/super_admin/bottom_nav/bindings/super_admin_bottom_nav_binding.dart';
+import '../app/super_admin/bottom_nav/views/super_admin_bottom_nav_view.dart';
 
 part 'app_routes.dart';
 
@@ -360,6 +362,11 @@ class AppPages {
       name: _Paths.SUPER_ADMIN_DASHBOARD,
       page: () => const SuperAdminDashboardView(),
       binding: SuperAdminDashboardBinding(),
+    ),
+    GetPage(
+      name: _Paths.SUPER_ADMIN_BOTTOM_NAV,
+      page: () => const SuperAdminBottomNavView(),
+      binding: SuperAdminBottomNavBinding(),
     ),
   ];
 }

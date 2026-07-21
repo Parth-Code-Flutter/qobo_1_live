@@ -12,11 +12,11 @@ import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/constants/local_storage_constants.dart';
 import 'package:qobo_one_live/app/auth/signUp/widgets/email_otp_dialog.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
-import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_response_utils.dart';
 import 'package:qobo_one_live/utils/app_dialogs/common_giffy_dialog.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_media_picker.dart';
+import 'package:qobo_one_live/utils/auth/role_home_route.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 import 'package:qobo_one_live/utils/geo/country_state_selection_mixin.dart';
 import 'package:qobo_one_live/utils/profile/stored_profile_map.dart';
@@ -339,14 +339,14 @@ class UpdateProfileController extends GetxController
             gifAssetPath: kGifCongratulation,
             onPressed: () {
               // Dialog closes first in CommonGiffyDialog, then navigation runs.
-              Get.offAllNamed(Routes.BOTTOM_NAV);
+              unawaited(RoleHomeRoute.goHome());
             },
           );
           return;
         }
 
         AppToast.showSuccess(context, message);
-        Get.offAllNamed(Routes.BOTTOM_NAV);
+        await RoleHomeRoute.goHome();
       } else {
         AppToast.showError(context, message);
       }

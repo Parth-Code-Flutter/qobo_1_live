@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/local_storage_constants.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
+import 'package:qobo_one_live/utils/auth/role_home_route.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 import 'package:qobo_one_live/utils/profile/stored_profile_map.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
@@ -45,15 +46,20 @@ abstract final class AuthSessionHelper {
 
     if (statusCode == 1) {
       final storage = LocalStorage.shared;
+      var homeRoute = Routes.BOTTOM_NAV;
 
-      if (data is Map<String, dynamic>) {
+      if (data is Map) {
         // Flatten `{ "user": {...}, "token": "..." }` so [UserSessionController] reads top-level keys.
-        final merged = coalesceStoredProfileMap(data);
+        final merged = coalesceStoredProfileMap(Map<String, dynamic>.from(data));
         final token = extractToken(merged);
         if (token.isNotEmpty) {
           await storage.writeStringStorage(kStorageToken, token);
         }
         await storage.writeJsonStorage(kStorageUserData, merged);
+        // Role from login (`super_admin` | `agency` | `host` | `user`) picks the shell.
+        homeRoute = await RoleHomeRoute.resolveAfterLogin(merged);
+      } else {
+        homeRoute = await RoleHomeRoute.resolve();
       }
       await storage.writeBoolStorage(kStorageIsLoggedIn, true);
 
@@ -68,7 +74,7 @@ abstract final class AuthSessionHelper {
         context,
         message?.isNotEmpty == true ? message! : successFallbackMessage,
       );
-      Get.offAllNamed(Routes.BOTTOM_NAV);
+      Get.offAllNamed(homeRoute);
     } else {
       AppToast.showError(
         context,

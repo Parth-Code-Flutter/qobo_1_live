@@ -325,7 +325,7 @@ class ProfileTabView extends StatelessWidget {
                   start: kColorProfileActionPinkStart,
                   end: kColorProfileActionPinkEnd,
                   onTap: () => session.isSuperAdmin
-                      ? Get.toNamed(Routes.SUPER_ADMIN_DASHBOARD)
+                      ? Get.offAllNamed(Routes.SUPER_ADMIN_BOTTOM_NAV)
                       : Get.toNamed(Routes.AGENCY_OWNER),
                 ),
               ),
