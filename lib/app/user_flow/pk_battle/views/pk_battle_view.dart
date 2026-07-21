@@ -34,7 +34,9 @@ class PKBattleView extends GetView<PKBattleController> {
           case PKState.inBattle:
             return _buildInBattleScreen();
           case PKState.completed:
-            return const Center(child: CircularProgressIndicator(color: kColorPrimary));
+            return const Center(
+              child: CircularProgressIndicator(color: kColorPrimary),
+            );
         }
       }),
     );
@@ -74,7 +76,10 @@ class PKBattleView extends GetView<PKBattleController> {
               Spacing.v6,
               Text(
                 'Instantly find an active host to challenge right now!',
-                style: TextStyle(color: kColorWhite.withValues(alpha: 0.8), fontSize: 12),
+                style: TextStyle(
+                  color: kColorWhite.withValues(alpha: 0.8),
+                  fontSize: 12,
+                ),
               ),
               Spacing.v16,
               SizedBox(
@@ -105,8 +110,14 @@ class PKBattleView extends GetView<PKBattleController> {
             borderColor: Colors.transparent,
             inputBorderRadius: BorderRadius.circular(16),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            textStyle: TextStyles.kRegularPoppins(colors: kColorWhite, fontSize: 13),
-            hintStyle: TextStyles.kRegularPoppins(colors: Colors.white54, fontSize: 13),
+            textStyle: TextStyles.kRegularPoppins(
+              colors: kColorWhite,
+              fontSize: 13,
+            ),
+            hintStyle: TextStyles.kRegularPoppins(
+              colors: Colors.white54,
+              fontSize: 13,
+            ),
             prefix: Icon(Icons.search, color: Colors.grey.shade400),
             onChanged: (val) => controller.searchQuery.value = val,
           ),
@@ -140,7 +151,9 @@ class PKBattleView extends GetView<PKBattleController> {
                   itemBuilder: (context, index) {
                     final opp = controller.filteredOpponents[index];
                     final bool isOnline = opp['isOnline'] ?? false;
-                    final bool hasVip = (opp['vip'] ?? '').toString().isNotEmpty;
+                    final bool hasVip = (opp['vip'] ?? '')
+                        .toString()
+                        .isNotEmpty;
 
                     return Container(
                       padding: const EdgeInsets.all(12),
@@ -148,7 +161,9 @@ class PKBattleView extends GetView<PKBattleController> {
                         color: const Color(0xFF161622),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: isOnline ? Colors.green.withValues(alpha: 0.15) : Colors.transparent,
+                          color: isOnline
+                              ? Colors.green.withValues(alpha: 0.15)
+                              : Colors.transparent,
                         ),
                       ),
                       child: Row(
@@ -159,7 +174,7 @@ class PKBattleView extends GetView<PKBattleController> {
                             children: [
                               CircleAvatar(
                                 radius: 24,
-                                backgroundImage: AssetImage(opp['avatar']),
+                                backgroundImage: _imageProvider(opp['avatar']),
                               ),
                               Positioned(
                                 right: 2,
@@ -168,9 +183,14 @@ class PKBattleView extends GetView<PKBattleController> {
                                   width: 10,
                                   height: 10,
                                   decoration: BoxDecoration(
-                                    color: isOnline ? Colors.green : Colors.grey,
+                                    color: isOnline
+                                        ? Colors.green
+                                        : Colors.grey,
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: const Color(0xFF161622), width: 1.5),
+                                    border: Border.all(
+                                      color: const Color(0xFF161622),
+                                      width: 1.5,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -195,14 +215,23 @@ class PKBattleView extends GetView<PKBattleController> {
                                     if (hasVip) ...[
                                       Spacing.h6,
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 5,
+                                          vertical: 2,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: Colors.amber,
-                                          borderRadius: BorderRadius.circular(4),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
                                         ),
                                         child: Text(
                                           opp['vip'],
-                                          style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.black),
+                                          style: const TextStyle(
+                                            fontSize: 8,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.black,
+                                          ),
                                         ),
                                       ),
                                     ],
@@ -212,22 +241,38 @@ class PKBattleView extends GetView<PKBattleController> {
                                 Row(
                                   children: [
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
                                       decoration: BoxDecoration(
-                                        color: kColorPrimary.withValues(alpha: 0.15),
+                                        color: kColorPrimary.withValues(
+                                          alpha: 0.15,
+                                        ),
                                         borderRadius: BorderRadius.circular(6),
                                       ),
                                       child: Text(
                                         'Lv.${opp['level']}',
-                                        style: const TextStyle(fontSize: 9, color: kColorPrimary, fontWeight: FontWeight.bold),
+                                        style: const TextStyle(
+                                          fontSize: 9,
+                                          color: kColorPrimary,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
                                     Spacing.h8,
-                                    Icon(Icons.people, color: Colors.white38, size: 12),
+                                    Icon(
+                                      Icons.people,
+                                      color: Colors.white38,
+                                      size: 12,
+                                    ),
                                     Spacing.h4,
                                     Text(
                                       opp['followers'],
-                                      style: const TextStyle(fontSize: 10, color: Colors.white38),
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.white38,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -240,9 +285,13 @@ class PKBattleView extends GetView<PKBattleController> {
                             height: 32,
                             width: 86,
                             child: appButton(
-                              onPressed: isOnline ? () => controller.sendInvitation(opp) : () {},
+                              onPressed: isOnline
+                                  ? () => controller.sendInvitation(opp)
+                                  : () {},
                               buttonText: 'Challenge',
-                              buttonColor: isOnline ? kColorPrimary : Colors.grey.shade800,
+                              buttonColor: isOnline
+                                  ? kColorPrimary
+                                  : Colors.grey.shade800,
                               borderRadius: 16,
                               textStyle: TextStyles.kBoldPoppins(
                                 fontSize: TextStyles.k12FontSize,
@@ -267,7 +316,10 @@ class PKBattleView extends GetView<PKBattleController> {
         children: [
           Icon(Icons.person_search_rounded, color: Colors.white10, size: 64),
           Spacing.v12,
-          const Text('No online hosts match your query', style: TextStyle(color: Colors.white38, fontSize: 13)),
+          const Text(
+            'No online hosts match your query',
+            style: TextStyle(color: Colors.white38, fontSize: 13),
+          ),
         ],
       ),
     );
@@ -289,7 +341,10 @@ class PKBattleView extends GetView<PKBattleController> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: kColorPrimary.withValues(alpha: 0.05),
-                  border: Border.all(color: kColorPrimary.withValues(alpha: 0.2), width: 1.5),
+                  border: Border.all(
+                    color: kColorPrimary.withValues(alpha: 0.2),
+                    width: 1.5,
+                  ),
                 ),
               ),
               Container(
@@ -298,7 +353,10 @@ class PKBattleView extends GetView<PKBattleController> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: kColorPrimary.withValues(alpha: 0.08),
-                  border: Border.all(color: kColorPrimary.withValues(alpha: 0.35), width: 1.5),
+                  border: Border.all(
+                    color: kColorPrimary.withValues(alpha: 0.35),
+                    width: 1.5,
+                  ),
                 ),
               ),
               const CircleAvatar(
@@ -320,7 +378,10 @@ class PKBattleView extends GetView<PKBattleController> {
             color: kColorWhite,
           ),
           Spacing.v8,
-          const Text('Connecting to active streamers...', style: TextStyle(color: Colors.white38, fontSize: 12)),
+          const Text(
+            'Connecting to active streamers...',
+            style: TextStyle(color: Colors.white38, fontSize: 12),
+          ),
           Spacing.v32,
           appButton(
             onPressed: () {
@@ -332,7 +393,10 @@ class PKBattleView extends GetView<PKBattleController> {
             borderRadius: 20,
             buttonHeight: 40,
             buttonWidth: 180,
-            textStyle: TextStyles.kBoldPoppins(fontSize: TextStyles.k12FontSize, colors: Colors.redAccent),
+            textStyle: TextStyles.kBoldPoppins(
+              fontSize: TextStyles.k12FontSize,
+              colors: Colors.redAccent,
+            ),
           ),
         ],
       ),
@@ -348,7 +412,10 @@ class PKBattleView extends GetView<PKBattleController> {
         decoration: BoxDecoration(
           color: const Color(0xFF161622),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: kColorPrimary.withValues(alpha: 0.3), width: 1.5),
+          border: Border.all(
+            color: kColorPrimary.withValues(alpha: 0.3),
+            width: 1.5,
+          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -364,14 +431,21 @@ class PKBattleView extends GetView<PKBattleController> {
                 children: [
                   Icon(Icons.bolt, color: Colors.amber, size: 16),
                   SizedBox(width: 4),
-                  Text('CHALLENGE REQUEST', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 11)),
+                  Text(
+                    'CHALLENGE REQUEST',
+                    style: TextStyle(
+                      color: Colors.amber,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                    ),
+                  ),
                 ],
               ),
             ),
             Spacing.v24,
             CircleAvatar(
               radius: 48,
-              backgroundImage: AssetImage(controller.currentOpponentAvatar.value),
+              backgroundImage: controller.opponentImageProvider,
             ),
             Spacing.v16,
             SemiBoldText(
@@ -384,27 +458,41 @@ class PKBattleView extends GetView<PKBattleController> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: kColorPrimary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     'Lv.${controller.currentOpponentLevel.value}',
-                    style: const TextStyle(fontSize: 10, color: kColorPrimary, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: kColorPrimary,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 if (controller.currentOpponentVip.value.isNotEmpty) ...[
                   Spacing.h8,
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.amber,
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       controller.currentOpponentVip.value,
-                      style: const TextStyle(fontSize: 8, color: Colors.black, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 8,
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
@@ -456,7 +544,7 @@ class PKBattleView extends GetView<PKBattleController> {
         children: [
           CircleAvatar(
             radius: 48,
-            backgroundImage: AssetImage(controller.currentOpponentAvatar.value),
+            backgroundImage: controller.opponentImageProvider,
           ),
           Spacing.v16,
           SemiBoldText(
@@ -465,7 +553,10 @@ class PKBattleView extends GetView<PKBattleController> {
             color: kColorWhite,
           ),
           Spacing.v8,
-          const Text('Waiting for opponent to accept...', style: TextStyle(color: Colors.white38, fontSize: 12)),
+          const Text(
+            'Waiting for opponent to accept...',
+            style: TextStyle(color: Colors.white38, fontSize: 12),
+          ),
           Spacing.v32,
           const CircularProgressIndicator(color: kColorPrimary),
           Spacing.v40,
@@ -477,7 +568,10 @@ class PKBattleView extends GetView<PKBattleController> {
             borderRadius: 20,
             buttonHeight: 40,
             buttonWidth: 160,
-            textStyle: TextStyles.kBoldPoppins(fontSize: TextStyles.k12FontSize, colors: Colors.redAccent),
+            textStyle: TextStyles.kBoldPoppins(
+              fontSize: TextStyles.k12FontSize,
+              colors: Colors.redAccent,
+            ),
           ),
         ],
       ),
@@ -489,14 +583,16 @@ class PKBattleView extends GetView<PKBattleController> {
     return Column(
       children: [
         Spacing.v12,
-        
+
         // Timer countdown header
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           decoration: BoxDecoration(
             color: const Color(0xFFFF9900).withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFFF9900).withValues(alpha: 0.3)),
+            border: Border.all(
+              color: const Color(0xFFFF9900).withValues(alpha: 0.3),
+            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -525,11 +621,19 @@ class PKBattleView extends GetView<PKBattleController> {
                 children: [
                   Text(
                     'Me: ${controller.myPoints.value} Pts',
-                    style: const TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold, fontSize: 13),
+                    style: const TextStyle(
+                      color: Colors.blueAccent,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
                   ),
                   Text(
                     'Opponent: ${controller.opponentPoints.value} Pts',
-                    style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 13),
+                    style: const TextStyle(
+                      color: Colors.redAccent,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
                   ),
                 ],
               ),
@@ -593,32 +697,53 @@ class PKBattleView extends GetView<PKBattleController> {
                         Positioned.fill(
                           child: Opacity(
                             opacity: 0.15,
-                            child: Image.asset('assets/images/temp_img_3.png', fit: BoxFit.cover),
+                            child: Image.asset(
+                              'assets/images/temp_img_3.png',
+                              fit: BoxFit.cover,
+                            ),
                           ),
                         ),
                         Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const CircleAvatar(
+                            CircleAvatar(
                               radius: 30,
-                              backgroundImage: AssetImage('assets/images/temp_img_2.png'),
+                              backgroundImage: controller.myImageProvider,
                             ),
                             Spacing.v8,
-                            const Text('Me (Host)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                            const Text(
+                              'Me (Host)',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
                           ],
                         ),
                         // Winner status banner
-                        if (controller.myPoints.value >= controller.opponentPoints.value)
+                        if (controller.myPoints.value >=
+                            controller.opponentPoints.value)
                           Positioned(
                             top: 8,
                             left: 8,
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.blueAccent,
                                 borderRadius: BorderRadius.circular(6),
                               ),
-                              child: const Text('WINNING', style: TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.bold)),
+                              child: const Text(
+                                'WINNING',
+                                style: TextStyle(
+                                  fontSize: 8,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                           ),
                       ],
@@ -640,7 +765,9 @@ class PKBattleView extends GetView<PKBattleController> {
                         Positioned.fill(
                           child: Opacity(
                             opacity: 0.25,
-                            child: Image.asset(controller.currentOpponentAvatar.value, fit: BoxFit.cover),
+                            child: _avatarBackdrop(
+                              controller.currentOpponentAvatar.value,
+                            ),
                           ),
                         ),
                         Column(
@@ -648,24 +775,42 @@ class PKBattleView extends GetView<PKBattleController> {
                           children: [
                             CircleAvatar(
                               radius: 30,
-                              backgroundImage: AssetImage(controller.currentOpponentAvatar.value),
+                              backgroundImage: controller.opponentImageProvider,
                             ),
                             Spacing.v8,
-                            Text(controller.currentOpponentName.value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                            Text(
+                              controller.currentOpponentName.value,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
                           ],
                         ),
                         // Winner status banner
-                        if (controller.opponentPoints.value > controller.myPoints.value)
+                        if (controller.opponentPoints.value >
+                            controller.myPoints.value)
                           Positioned(
                             top: 8,
                             left: 8,
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.redAccent,
                                 borderRadius: BorderRadius.circular(6),
                               ),
-                              child: const Text('WINNING', style: TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.bold)),
+                              child: const Text(
+                                'WINNING',
+                                style: TextStyle(
+                                  fontSize: 8,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                           ),
                       ],
@@ -701,11 +846,19 @@ class PKBattleView extends GetView<PKBattleController> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue.withValues(alpha: 0.15),
                         foregroundColor: Colors.blueAccent,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 10),
                       ),
                       onPressed: () => controller.simulateGift(100, true),
-                      child: const Text('+100 Rose', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                      child: const Text(
+                        '+100 Rose',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                   Spacing.h8,
@@ -714,11 +867,19 @@ class PKBattleView extends GetView<PKBattleController> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.cyan.withValues(alpha: 0.15),
                         foregroundColor: Colors.cyan,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 10),
                       ),
                       onPressed: () => controller.simulateGift(500, true),
-                      child: const Text('+500 Diamond', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                      child: const Text(
+                        '+500 Diamond',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                   Spacing.h8,
@@ -727,11 +888,19 @@ class PKBattleView extends GetView<PKBattleController> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red.withValues(alpha: 0.15),
                         foregroundColor: Colors.redAccent,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 10),
                       ),
                       onPressed: () => controller.simulateGift(300, false),
-                      child: const Text('+300 Opponent', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                      child: const Text(
+                        '+300 Opponent',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -741,5 +910,22 @@ class PKBattleView extends GetView<PKBattleController> {
         ),
       ],
     );
+  }
+
+  ImageProvider _imageProvider(dynamic value) {
+    final image = value?.toString().trim() ?? '';
+    if (image.startsWith('http')) return NetworkImage(image);
+    if (image.isNotEmpty) return AssetImage(image);
+    return const AssetImage('assets/images/temp_img_2.png');
+  }
+
+  Widget _avatarBackdrop(String image) {
+    if (image.trim().startsWith('http')) {
+      return Image.network(image, fit: BoxFit.cover);
+    }
+    if (image.trim().isNotEmpty) {
+      return Image.asset(image, fit: BoxFit.cover);
+    }
+    return Image.asset('assets/images/temp_img_2.png', fit: BoxFit.cover);
   }
 }

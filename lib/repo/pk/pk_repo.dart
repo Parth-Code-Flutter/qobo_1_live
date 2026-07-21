@@ -25,12 +25,18 @@ class PkRepo {
 
   /// Calls `POST /api/pk/send-request` to challenge a target room to a PK battle.
   Future<Map<String, dynamic>?> sendPkRequest({
+    required String roomId,
     required String targetRoomId,
+    int duration = 300,
     bool isShowLoader = true,
   }) async {
     final response = await _apiService.postRequest(
       endPoint: PkEndpoints.sendRequest,
-      requestModel: <String, dynamic>{'target_room_id': targetRoomId},
+      requestModel: <String, dynamic>{
+        'room_id': roomId,
+        'target_room_id': targetRoomId,
+        'duration': duration,
+      },
       isShowLoader: isShowLoader,
     );
 
@@ -40,15 +46,19 @@ class PkRepo {
 
   /// Calls `POST /api/pk/accept-reject` to accept or reject a PK request.
   Future<Map<String, dynamic>?> acceptRejectPkRequest({
+    required String roomId,
     required String requestId,
     required String action, // 'accept' or 'reject'
+    int duration = 300,
     bool isShowLoader = true,
   }) async {
     final response = await _apiService.postRequest(
       endPoint: PkEndpoints.acceptReject,
       requestModel: <String, dynamic>{
+        'room_id': roomId,
         'request_id': requestId,
         'action': action,
+        'duration': duration,
       },
       isShowLoader: isShowLoader,
     );

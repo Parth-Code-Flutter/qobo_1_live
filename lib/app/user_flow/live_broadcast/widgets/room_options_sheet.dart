@@ -107,7 +107,18 @@ class RoomOptionsSheet extends StatelessWidget {
                   onTap: () {
                     Get.back(); // close sheet
                     if (opt['label'] == 'PK Battle') {
-                      Get.toNamed(Routes.PK_BATTLE);
+                      final liveController =
+                          Get.isRegistered<LiveBroadcastController>()
+                          ? Get.find<LiveBroadcastController>()
+                          : null;
+                      Get.toNamed(
+                        Routes.PK_BATTLE,
+                        arguments: {
+                          'room_id': liveController?.roomId.value ?? '',
+                          'title': liveController?.streamTitle.value ?? '',
+                          'name': liveController?.hostName.value ?? '',
+                        },
+                      );
                     } else if (opt['label'] == 'Filters') {
                       if (Get.isRegistered<LiveBroadcastController>()) {
                         Future.delayed(const Duration(milliseconds: 120), () {
