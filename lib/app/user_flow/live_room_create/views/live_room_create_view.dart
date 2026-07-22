@@ -21,34 +21,71 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: LiveRoomUiColors.screenGradientBottom,
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
-        ),
-        child: SafeArea(
-          child: Obx(
-            () => Column(
-              children: [
-                _header(
-                  title: controller.isLiveStreamingMode
-                      ? 'Live Streaming'
-                      : 'Create Room',
-                  showCreatorProfile: !controller.isLiveStreamingMode,
-                ),
-                Expanded(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                    child: controller.isLiveStreamingMode
-                        ? _liveStreamingForm(context)
-                        : _audioVideoRoomForm(context),
+      body: Obx(() {
+        // Preview the selected room background on this create screen
+        // (audio + video share the same create form).
+        final previewUrl = controller.selectedBackgroundImage.value?.trim();
+        final hasPreview =
+            previewUrl != null &&
+            previewUrl.isNotEmpty &&
+            !controller.isLiveStreamingMode;
+
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            Positioned.fill(
+              child: hasPreview
+                  ? Image.network(
+                      previewUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Image.asset(
+                        kImgBG,
+                        fit: BoxFit.cover,
+                      ),
+                    )
+                  : Image.asset(kImgBG, fit: BoxFit.cover),
+            ),
+            // Keep form readable over bright background photos.
+            if (hasPreview)
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.55),
+                        Colors.black.withValues(alpha: 0.72),
+                        Colors.black.withValues(alpha: 0.82),
+                      ],
+                    ),
                   ),
                 ),
-              ],
+              ),
+            SafeArea(
+              child: Column(
+                children: [
+                  _header(
+                    title: controller.isLiveStreamingMode
+                        ? 'Live Streaming'
+                        : 'Create Room',
+                    showCreatorProfile: !controller.isLiveStreamingMode,
+                  ),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                      child: controller.isLiveStreamingMode
+                          ? _liveStreamingForm(context)
+                          : _audioVideoRoomForm(context),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ),
-      ),
+          ],
+        );
+      }),
     );
   }
 
@@ -546,10 +583,14 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
   }
 
   /// One selectable room-background thumbnail.
+  ///
+  /// Border lives on an outer box so `clipBehavior` does not chop it into a
+  /// bottom-only line (common Flutter quirk with border + Clip.antiAlias).
   Widget _backgroundTile({
     required RoomBackgroundTheme theme,
     required bool selected,
   }) {
+    const selectedPink = Color(0xFFFF4DC4);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -558,91 +599,107 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
           width: 112,
+          padding: EdgeInsets.all(selected ? 2.5 : 1.2),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: selected
-                  ? const Color(0xFFFF4DC4)
-                  : kColorWhite.withValues(alpha: 0.12),
-              width: selected ? 2.4 : 1,
-            ),
+            gradient: selected
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFFF4DC4), Color(0xFF9B5CFF)],
+                  )
+                : null,
+            border: selected
+                ? null
+                : Border.all(
+                    color: kColorWhite.withValues(alpha: 0.18),
+                    width: 1.2,
+                  ),
             boxShadow: selected
                 ? [
                     BoxShadow(
-                      color: const Color(0xFFFF2D7B).withValues(alpha: 0.28),
-                      blurRadius: 12,
+                      color: selectedPink.withValues(alpha: 0.35),
+                      blurRadius: 14,
                       offset: const Offset(0, 5),
                     ),
                   ]
                 : null,
           ),
-          clipBehavior: Clip.antiAlias,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Image.network(
-                theme.imageUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => ColoredBox(
-                  color: LiveRoomUiColors.cardSurface,
-                  child: Icon(
-                    Icons.image_not_supported_outlined,
-                    color: kColorWhite.withValues(alpha: 0.45),
-                  ),
-                ),
-              ),
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Colors.transparent, Color(0xDD0A0614)],
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(selected ? 13.5 : 14.5),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.network(
+                  theme.imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => ColoredBox(
+                    color: LiveRoomUiColors.cardSurface,
+                    child: Icon(
+                      Icons.image_not_supported_outlined,
+                      color: kColorWhite.withValues(alpha: 0.45),
                     ),
                   ),
-                  child: SemiBoldText(
-                    text: theme.name,
-                    fontSize: TextStyles.k10FontSize,
-                    color: kColorWhite,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
                 ),
-              ),
-              if (theme.isDefault)
-                Positioned(
-                  top: 6,
-                  left: 6,
+                Align(
+                  alignment: Alignment.bottomCenter,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
+                    width: double.infinity,
+                    padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Color(0xDD0A0614)],
+                      ),
                     ),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.55),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const AppText(
-                      text: 'Default',
-                      fontSize: 9,
+                    child: SemiBoldText(
+                      text: theme.name,
+                      fontSize: TextStyles.k10FontSize,
                       color: kColorWhite,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ),
-              if (selected)
-                const Positioned(
-                  top: 6,
-                  right: 6,
-                  child: Icon(
-                    Icons.check_circle_rounded,
-                    color: Color(0xFFFF4DC4),
-                    size: 20,
+                if (theme.isDefault)
+                  Positioned(
+                    top: 6,
+                    left: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.55),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const AppText(
+                        text: 'Default',
+                        fontSize: 9,
+                        color: kColorWhite,
+                      ),
+                    ),
                   ),
-                ),
-            ],
+                if (selected)
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.black.withValues(alpha: 0.35),
+                      ),
+                      child: const Icon(
+                        Icons.check_circle_rounded,
+                        color: selectedPink,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

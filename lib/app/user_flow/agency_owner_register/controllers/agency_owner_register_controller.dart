@@ -96,12 +96,15 @@ class AgencyOwnerRegisterController extends GetxController {
   }
 
   String? validateAgencyName(BuildContext context, String? value) {
-    if ((value ?? '').trim().isEmpty) return 'Agency name is required';
-    return null;
+    return Validate.agencyNameValidation(context, value ?? '');
   }
 
   String? validateOwnerName(BuildContext context, String? value) {
-    return Validate.nameValidation(context, value ?? '');
+    return Validate.nameValidation(
+      context,
+      value ?? '',
+      label: 'Owner name',
+    );
   }
 
   String? validateWhatsApp(BuildContext context, String? value) {
@@ -110,6 +113,14 @@ class AgencyOwnerRegisterController extends GetxController {
 
   String? validateEmail(BuildContext context, String? value) {
     return Validate.emailValidation(context, value ?? '');
+  }
+
+  String? validatePassword(BuildContext context, String? value) {
+    return Validate.passwordValidation(context, value ?? '', minLength: 6);
+  }
+
+  String? validateCountryCode(BuildContext context, String? value) {
+    return Validate.countryCodeValidation(context, value ?? '');
   }
 
   String? validateRequired(String label, String? value) {
@@ -125,7 +136,9 @@ class AgencyOwnerRegisterController extends GetxController {
 
     final agencyName = agencyNameController.text.trim();
     final ownerName = ownerNameController.text.trim();
-    final phone = whatsappController.text.trim();
+    // Keep only digits for WhatsApp / mobile (enforced as 10 digits).
+    final phone = whatsappController.text.trim().replaceAll(RegExp(r'\D'), '');
+    whatsappController.text = phone;
 
     isSubmitLoading.value = true;
 

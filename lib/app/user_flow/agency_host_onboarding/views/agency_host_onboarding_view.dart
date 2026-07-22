@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
@@ -290,8 +291,14 @@ class AgencyHostOnboardingView extends GetView<AgencyHostOnboardingController> {
         validator: (v) => controller.validateWhatsApp(context, v),
         hintText: '10-digit mobile number',
         borderColor: kColorHint,
-        textInputType: TextInputType.phone,
+        textInputType: TextInputType.number,
         textInputAction: TextInputAction.next,
+        maxLength: 10,
+        showCounter: false,
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(10),
+        ],
         prefix: _fieldIcon(Icons.phone_android_outlined),
       ),
     );

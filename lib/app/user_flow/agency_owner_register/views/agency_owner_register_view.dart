@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
@@ -69,7 +70,11 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
                                           .validateAgencyName(context, v),
                                       hintText: 'Enter agency name',
                                       borderColor: kColorHint,
+                                      maxLength: 80,
+                                      showCounter: false,
                                       textInputAction: TextInputAction.next,
+                                      textCapitalization:
+                                          TextCapitalization.words,
                                       prefix: _fieldIcon(
                                         Icons.business_rounded,
                                       ),
@@ -84,7 +89,11 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
                                           .validateOwnerName(context, v),
                                       hintText: 'Enter your name',
                                       borderColor: kColorHint,
+                                      maxLength: 60,
+                                      showCounter: false,
                                       textInputAction: TextInputAction.next,
+                                      textCapitalization:
+                                          TextCapitalization.words,
                                       prefix: _fieldIcon(
                                         Icons.person_outline_rounded,
                                       ),
@@ -98,8 +107,14 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
                                           .validateWhatsApp(context, v),
                                       hintText: '10-digit mobile number',
                                       borderColor: kColorHint,
-                                      textInputType: TextInputType.phone,
+                                      textInputType: TextInputType.number,
                                       textInputAction: TextInputAction.done,
+                                      maxLength: 10,
+                                      showCounter: false,
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.digitsOnly,
+                                        LengthLimitingTextInputFormatter(10),
+                                      ],
                                       prefix: _fieldIcon(
                                         Icons.phone_android_outlined,
                                       ),
@@ -281,11 +296,17 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
         Spacing.v6,
         AppTextField(
           controller: controller.countryCodeController,
-          validator: (v) => controller.validateRequired('Country code', v),
+          validator: (v) => controller.validateCountryCode(context, v),
           hintText: '+91',
           borderColor: kColorHint,
           textInputType: TextInputType.phone,
           textInputAction: TextInputAction.next,
+          maxLength: 5,
+          showCounter: false,
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[+\d]')),
+            LengthLimitingTextInputFormatter(5),
+          ],
           prefix: _fieldIcon(Icons.public_rounded),
         ),
         Spacing.v16,
@@ -293,11 +314,13 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
         Spacing.v6,
         AppTextField(
           controller: controller.passwordController,
-          validator: (v) => controller.validateRequired('Password', v),
-          hintText: 'Create password',
+          validator: (v) => controller.validatePassword(context, v),
+          hintText: 'Min. 6 characters',
           borderColor: kColorHint,
           obscureText: true,
           textInputAction: TextInputAction.next,
+          maxLength: 32,
+          showCounter: false,
           prefix: _fieldIcon(Icons.lock_outline_rounded),
         ),
         Spacing.v16,

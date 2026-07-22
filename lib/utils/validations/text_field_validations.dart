@@ -14,13 +14,15 @@ const String kEmptyOtp = 'OTP is required';
 const String kValidOtp = 'Please enter a valid OTP';
 const String kOtpNumbersOnly = 'OTP must contain numbers only';
 const String kEmptyOrgId = 'Organization ID is required';
+const String kPhone10Digits = 'Please enter a valid 10-digit phone number';
 
 class Validate {
   /// EMAIL ID VALIDATION
   static emailValidation(BuildContext context, String v) {
-    if (v.trim().isEmpty) {
+    final email = v.trim();
+    if (email.isEmpty) {
       return kEmptyEmail;
-    } else if (!v.isEmail) {
+    } else if (!email.isEmail) {
       return kValidEmail;
     } else {
       return null;
@@ -38,13 +40,16 @@ class Validate {
     }
   }
 
-  /// 10-DIGIT PHONE NUMBER VALIDATION
+  /// 10-DIGIT PHONE / WHATSAPP VALIDATION (digits only).
   static phone10DigitValidation(BuildContext context, String v) {
-    final phone = v.trim();
+    final phone = v.trim().replaceAll(RegExp(r'\D'), '');
     if (phone.isEmpty) {
       return kEmptyPhone;
-    } else if (!RegExp(r'^\d{10}$').hasMatch(phone)) {
-      return 'Please enter a valid 10-digit phone number';
+    } else if (phone.length != 10) {
+      return kPhone10Digits;
+    } else if (!RegExp(r'^[6-9]\d{9}$').hasMatch(phone)) {
+      // Indian mobile numbers typically start with 6–9.
+      return kPhone10Digits;
     } else {
       return null;
     }
@@ -52,22 +57,50 @@ class Validate {
 
   /// NAME VALIDATION
   static nameValidation(BuildContext context, String v,
-      {bool isOrgId = false}) {
-    if (v.isEmpty) {
-      return isOrgId ? kEmptyOrgId : kEmptyName;
-    } else {
-      return null;
+      {bool isOrgId = false, String label = 'Name'}) {
+    final name = v.trim();
+    if (name.isEmpty) {
+      return isOrgId ? kEmptyOrgId : '$label is required';
     }
+    if (name.length < 2) {
+      return 'Enter at least 2 characters';
+    }
+    if (!RegExp(r"^[a-zA-Z\s.'.-]+$").hasMatch(name)) {
+      return 'Enter a valid $label';
+    }
+    return null;
+  }
+
+  /// Agency / business display name.
+  static agencyNameValidation(BuildContext context, String v) {
+    final name = v.trim();
+    if (name.isEmpty) return 'Agency name is required';
+    if (name.length < 2) return 'Agency name must be at least 2 characters';
+    if (name.length > 80) return 'Agency name must be under 80 characters';
+    return null;
   }
 
   /// PASSWORD VALIDATION
   static passwordValidation(BuildContext context, String v,
-      {String? customMsg}) {
-    if (v.isEmpty) {
+      {String? customMsg, int minLength = 6}) {
+    final password = v.trim();
+    if (password.isEmpty) {
       return customMsg ?? kEmptyPassword;
-    } else {
-      return null;
     }
+    if (password.length < minLength) {
+      return 'Password must be at least $minLength characters';
+    }
+    return null;
+  }
+
+  /// Country dial code like `+91` or `91`.
+  static countryCodeValidation(BuildContext context, String v) {
+    final code = v.trim();
+    if (code.isEmpty) return 'Country code is required';
+    if (!RegExp(r'^\+?\d{1,4}$').hasMatch(code)) {
+      return 'Enter a valid country code (e.g. +91)';
+    }
+    return null;
   }
 
   /// CONFIRM PASSWORD VALIDATION

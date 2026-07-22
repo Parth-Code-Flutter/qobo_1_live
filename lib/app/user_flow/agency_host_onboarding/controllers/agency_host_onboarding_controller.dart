@@ -176,7 +176,11 @@ class AgencyHostOnboardingController extends GetxController
   }
 
   String? validateHostName(BuildContext context, String? value) {
-    return Validate.nameValidation(context, value ?? '');
+    return Validate.nameValidation(
+      context,
+      value ?? '',
+      label: 'Host name',
+    );
   }
 
   String? validateBirthday(String? value) {
@@ -296,7 +300,9 @@ class AgencyHostOnboardingController extends GetxController
     }
 
     isSubmitLoading.value = true;
-    final whatsapp = whatsAppController.text.trim();
+    final whatsapp =
+        whatsAppController.text.trim().replaceAll(RegExp(r'\D'), '');
+    whatsAppController.text = whatsapp;
     final country = selectedCountry.value!;
     final state = selectedState.value!;
     final response = await _agencyRepo.hostOnboarding(
