@@ -316,7 +316,9 @@ class DiscoverTabController extends GetxController {
       fallbackRoom: room,
       fallbackRoomId: roomId,
     );
-    final roomType = _text(payload['type'])?.toUpperCase() ?? 'VIDEO';
+    final rawType = _text(payload['type'])?.toUpperCase() ?? 'VIDEO';
+    final roomType = rawType == 'AUDIO' ? 'AUDIO' : 'VIDEO';
+    payload['type'] = roomType.toLowerCase();
     await ZegoEngineUtils.resetForRoomProject().timeout(
       const Duration(milliseconds: 700),
       onTimeout: () {},

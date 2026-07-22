@@ -202,12 +202,12 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
         Spacing.v28,
         appButton(
           onPressed: () => controller.createRoom(context),
-          buttonText: 'Go Live Now',
+          buttonText: 'Create Room',
           isGradient: true,
           buttonIcon: const Padding(
             padding: EdgeInsets.only(right: 8),
             child: Icon(
-              Icons.rocket_launch_rounded,
+              Icons.meeting_room_rounded,
               color: kColorWhite,
               size: 20,
             ),

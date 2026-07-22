@@ -462,7 +462,11 @@ class LiveRoomController extends GetxController {
       AppToast.showSuccess(context, successMessage);
       Get.offNamed(
         Routes.LIVE_BROADCAST,
-        arguments: {'isHost': true, 'roomType': 'VIDEO', 'roomData': roomData},
+        arguments: {
+          'isHost': true,
+          'roomType': 'LIVE_STREAM',
+          'roomData': roomData,
+        },
       );
     } finally {
       isStartingLiveStream.value = false;
@@ -634,7 +638,11 @@ class LiveRoomController extends GetxController {
     );
     Get.toNamed(
       Routes.LIVE_BROADCAST,
-      arguments: {'isHost': false, 'roomType': 'VIDEO', 'roomData': payload},
+      arguments: {
+        'isHost': false,
+        'roomType': 'LIVE_STREAM',
+        'roomData': payload,
+      },
     );
   }
 
@@ -696,7 +704,11 @@ class LiveRoomController extends GetxController {
       fallbackRoom: room,
       fallbackRoomId: roomId,
     );
-    final roomType = _text(payload['type'])?.toUpperCase() ?? 'VIDEO';
+    final rawType = _text(payload['type'])?.toUpperCase() ?? 'VIDEO';
+    // Live-stream list items use a dedicated join path; party rooms must open
+    // group-call UI as AUDIO or VIDEO only.
+    final roomType = rawType == 'AUDIO' ? 'AUDIO' : 'VIDEO';
+    payload['type'] = roomType.toLowerCase();
     await ZegoEngineUtils.resetForRoomProject().timeout(
       const Duration(milliseconds: 700),
       onTimeout: () {},

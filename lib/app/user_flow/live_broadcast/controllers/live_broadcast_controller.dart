@@ -271,19 +271,38 @@ class LiveBroadcastController extends GetxController {
     connectionIssue.value = '';
   }
 
-  bool get isVideoRoom => roomType.value.toUpperCase() != 'AUDIO';
+  /// Live streaming (one-to-many Zego live) — not an audio/video party room.
+  bool get isLiveStreamingSession {
+    final nav = _normalizedNavRoomType;
+    if (nav == 'LIVE_STREAM' || nav == 'LIVESTREAM') return true;
+    return _isLiveStreamPayloadType(
+      readRoomField(_roomData, ['type', 'roomType'])?.toLowerCase(),
+    );
+  }
 
-  bool get isAudioVideoRoom => _isAudioVideoRoomPayload();
-
-  bool get isAudioRoom {
+  /// Video party room (group call with camera) — false for audio rooms and
+  /// true for live streams only so the live overlay hides the audio stage.
+  bool get isVideoRoom {
+    if (isLiveStreamingSession) return true;
+    if (!isAudioVideoRoom) return roomType.value.toUpperCase() != 'AUDIO';
+    if (_normalizedNavRoomType == 'AUDIO') return false;
+    if (_normalizedNavRoomType == 'VIDEO') return true;
     final payloadType = readRoomField(_roomData, [
       'type',
       'roomType',
     ])?.toLowerCase();
-    return roomType.value.toUpperCase() == 'AUDIO' || payloadType == 'audio';
+    return payloadType != 'audio';
   }
 
+  /// Audio / video party rooms use Zego group-call UI — never live streaming.
+  bool get isAudioVideoRoom => _isAudioVideoRoomPayload();
+
+  bool get isAudioRoom => isAudioVideoRoom && !isVideoRoom;
+
   bool get isGroupCallRoom => isAudioVideoRoom;
+
+  String get _normalizedNavRoomType =>
+      roomType.value.toUpperCase().replaceAll('-', '_').replaceAll(' ', '_');
 
   /// Hosts and viewers can open the gift sheet in audio/video/group rooms.
   bool get canSendGifts => true;
@@ -1985,7 +2004,7 @@ class LiveBroadcastController extends GetxController {
 
   void leaveRoom() {
     if (isHost.value) {
-      if (_isAudioVideoRoomPayload()) {
+      if (isAudioVideoRoom) {
         confirmEndRoom();
       } else {
         confirmEndLiveStream();
@@ -1998,18 +2017,22 @@ class LiveBroadcastController extends GetxController {
   }
 
   void confirmEndRoom() {
+    final isVideo = isVideoRoom;
+    final title = isVideo ? 'End video room?' : 'End audio room?';
+    final body = isVideo
+        ? 'This will end the video room for everyone and close the session.'
+        : 'This will end the audio room for everyone and close the session.';
     Get.dialog(
       AlertDialog(
         backgroundColor: const Color(0xFF1D102F),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const SemiBoldText(
-          text: 'End audio room?',
+        title: SemiBoldText(
+          text: title,
           fontSize: TextStyles.k18FontSize,
           color: kColorWhite,
         ),
         content: AppText(
-          text:
-              'This will end the room for everyone and close the live session.',
+          text: body,
           fontSize: TextStyles.k12FontSize,
           color: kColorWhite.withValues(alpha: 0.72),
         ),
@@ -2261,19 +2284,25 @@ class LiveBroadcastController extends GetxController {
     await _roomRepo.leaveRoom(roomId: backendRoomId, isShowLoader: false);
   }
 
+  bool _isLiveStreamPayloadType(String? type) {
+    return type == 'live_stream' ||
+        type == 'livestream' ||
+        type == 'live-stream';
+  }
+
+  /// Party rooms (AUDIO/VIDEO) use group-call UI. Live streams use the separate
+  /// live-streaming UI. Navigation `roomType` AUDIO/VIDEO wins when the create
+  /// API omits `type` / `roomId` keys; explicit `live_stream` payload still
+  /// forces live UI for list/push joins that pass a generic VIDEO nav type.
   bool _isAudioVideoRoomPayload() {
     final type = readRoomField(_roomData, ['type', 'roomType'])?.toLowerCase();
-    // `type == "live_stream"` rooms must always open the live streaming UI,
-    // even when the payload also carries backend room-id keys.
-    if (type == 'live_stream' ||
-        type == 'livestream' ||
-        type == 'live-stream') {
-      return false;
-    }
-    return type == 'audio' ||
-        type == 'video' ||
-        _roomData.containsKey('room_id') ||
-        _roomData.containsKey('roomId');
+    if (_isLiveStreamPayloadType(type)) return false;
+
+    final nav = _normalizedNavRoomType;
+    if (nav == 'LIVE_STREAM' || nav == 'LIVESTREAM') return false;
+    if (nav == 'AUDIO' || nav == 'VIDEO') return true;
+
+    return type == 'audio' || type == 'video';
   }
 
   @override

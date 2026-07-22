@@ -180,7 +180,7 @@ class RoomInvitePushHandler {
         Routes.LIVE_BROADCAST,
         arguments: {
           'isHost': false,
-          'roomType': 'VIDEO',
+          'roomType': 'LIVE_STREAM',
           'roomData': roomData,
         },
       );

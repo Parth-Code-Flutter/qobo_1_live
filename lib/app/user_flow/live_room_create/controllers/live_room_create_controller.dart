@@ -204,9 +204,14 @@ class LiveRoomCreateController extends GetxController {
   }
 
   void _openZegoHost(Map<String, dynamic> roomData) {
+    roomData['type'] = 'live_stream';
     Get.offNamed(
       Routes.LIVE_BROADCAST,
-      arguments: {'isHost': true, 'roomType': 'VIDEO', 'roomData': roomData},
+      arguments: {
+        'isHost': true,
+        'roomType': 'LIVE_STREAM',
+        'roomData': roomData,
+      },
     );
   }
 
@@ -218,6 +223,7 @@ class LiveRoomCreateController extends GetxController {
         : null;
     return {
       'name': name,
+      'type': 'live_stream',
       'liveStreamingId': id,
       'zegoLiveId': id,
       'onlyFollows': onlyFollows.value,
@@ -241,7 +247,8 @@ class LiveRoomCreateController extends GetxController {
     }
 
     final maxSeats = int.tryParse(seatCount.value) ?? 8;
-    final isVideo = roomType.value.toUpperCase() == 'VIDEO';
+    final selectedType = roomType.value.trim().toUpperCase();
+    final isVideo = selectedType == 'VIDEO';
     bool granted;
     if (isVideo) {
       granted = await LiveStreamingPermissions.ensureHostVideoPermissions(
@@ -257,7 +264,7 @@ class LiveRoomCreateController extends GetxController {
     final response = await _roomRepo.createRoom(
       name: roomTitle,
       title: roomTitle,
-      type: roomType.value,
+      type: selectedType,
       country: selectedRegion.value,
       maxSeats: maxSeats,
       category: categories[selectedCategoryIndex.value],
@@ -274,12 +281,16 @@ class LiveRoomCreateController extends GetxController {
         response!['message']?.toString() ?? 'Room created successfully!',
       );
       await ZegoEngineUtils.resetForRoomProject();
-      final roomData = _mergeBackgroundIntoRoomData(response['data']);
+      final roomData = _normalizeCreatedRoomData(
+        response['data'],
+        selectedType: selectedType,
+      );
       Get.offNamed(
         Routes.LIVE_BROADCAST,
         arguments: {
           'isHost': true,
-          'roomType': roomType.value,
+          // Always AUDIO/VIDEO so broadcast opens group-call UI, not live stream.
+          'roomType': isVideo ? 'VIDEO' : 'AUDIO',
           'roomData': roomData,
         },
       );
@@ -291,11 +302,43 @@ class LiveRoomCreateController extends GetxController {
     }
   }
 
-  /// Ensures the live room opens with the theme picked on create.
-  Map<String, dynamic> _mergeBackgroundIntoRoomData(dynamic raw) {
-    final map = raw is Map
+  /// Ensures create-room opens the correct party-room UI even when the API
+  /// nests the room object or omits `type` / `room_id` aliases.
+  Map<String, dynamic> _normalizeCreatedRoomData(
+    dynamic raw, {
+    required String selectedType,
+  }) {
+    final root = raw is Map
         ? Map<String, dynamic>.from(raw)
         : <String, dynamic>{};
+    final nestedRoom = root['room'] is Map
+        ? Map<String, dynamic>.from(root['room'] as Map)
+        : const <String, dynamic>{};
+    final map = <String, dynamic>{
+      ...root,
+      if (nestedRoom.isNotEmpty) ...nestedRoom,
+    };
+
+    final partyType = selectedType.toLowerCase() == 'audio' ? 'audio' : 'video';
+    // Client selection wins — never let a mistyped API `type` open live UI.
+    map['type'] = partyType;
+    map['roomType'] = partyType;
+
+    final roomId =
+        _text(map['room_id']) ??
+        _text(map['roomId']) ??
+        _text(map['_id']) ??
+        _text(map['id']) ??
+        _text(root['room_id']) ??
+        _text(root['roomId']) ??
+        _text(root['_id']) ??
+        _text(root['id']);
+    if (roomId != null) {
+      map['room_id'] = roomId;
+      map['roomId'] = roomId;
+      map.putIfAbsent('id', () => roomId);
+    }
+
     final bgId = selectedBackgroundId.value?.trim();
     final bgImage = selectedBackgroundImage.value?.trim();
     if (bgId != null && bgId.isNotEmpty) {
@@ -307,6 +350,12 @@ class LiveRoomCreateController extends GetxController {
       map.putIfAbsent('background_image', () => bgImage);
     }
     return map;
+  }
+
+  String? _text(dynamic value) {
+    final text = value?.toString().trim();
+    if (text == null || text.isEmpty || text == 'null') return null;
+    return text;
   }
 
   bool _isSuccess(Map<String, dynamic>? response) {
@@ -330,6 +379,7 @@ class LiveRoomCreateController extends GetxController {
     );
 
     map['name'] = map['name'] ?? name;
+    map['type'] = 'live_stream';
     map['liveStreamingId'] = zegoId;
     map['zegoLiveId'] = zegoId;
     map['onlyFollows'] = map['onlyFollows'] ?? onlyFollows.value;
