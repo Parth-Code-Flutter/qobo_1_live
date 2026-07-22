@@ -27,6 +27,7 @@ class AgencyHostModel {
     this.gmail = '',
     this.category = '',
     this.reason,
+    this.createdAt = '',
   });
 
   final String id;
@@ -44,6 +45,7 @@ class AgencyHostModel {
   final String gmail;
   final String category;
   final String? reason;
+  final String createdAt;
 
   bool get isPending => isHostStatusPending(status);
   bool get isActive => isHostStatusActive(status);
@@ -69,6 +71,7 @@ class AgencyHostModel {
       gmail: demo.gmail,
       category: demo.category,
       reason: demo.reason,
+      createdAt: demo.createdAt,
     );
   }
 
@@ -99,8 +102,9 @@ class AgencyHostListController extends GetxController {
   /// Minimum nodes drawn on the tree so 1–2 hosts still show the full network.
   static const minTreeVisualSlots = 8;
 
-  /// Host-list API filter — active/approved hosts only (matches dashboard View all).
-  static const String hostListStatus = 'active';
+  /// Host-list API filter — guide statuses: pending | approved | rejected.
+  /// Tree UI still renders active/approved hosts only.
+  static const String hostListStatus = 'all';
 
   final AgencyRepo _agencyRepo = AgencyRepo();
 
@@ -193,15 +197,10 @@ class AgencyHostListController extends GetxController {
         status: hostListStatus,
         isShowLoader: false,
       );
-      final data = response?['data'];
-      if (isAgencyApiSuccess(response) && data is List) {
+      final hosts = _hostsFromResponse(response);
+      if (isAgencyApiSuccess(response) && hosts != null) {
         loadedFromApi = true;
-        _applyHosts(
-          data
-              .whereType<Map>()
-              .map((e) => AgencyHostModel.fromApi(Map<String, dynamic>.from(e)))
-              .toList(),
-        );
+        _applyHosts(hosts);
         if (seq == _fetchSeq) {
           isLoading.value = false;
         }
@@ -233,8 +232,24 @@ class AgencyHostListController extends GetxController {
     return [];
   }
 
+  /// Accepts both `data: []` and wrapped `{ hosts|items|list: [] }` envelopes.
+  List<AgencyHostModel>? _hostsFromResponse(Map<String, dynamic>? response) {
+    final data = response?['data'];
+    final list = data is List
+        ? data
+        : data is Map
+        ? (data['hosts'] ?? data['items'] ?? data['list'] ?? data['data'])
+        : null;
+    if (list is! List) return null;
+    return list
+        .whereType<Map>()
+        .map((e) => AgencyHostModel.fromApi(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
   void _applyHosts(List<AgencyHostModel> hosts) {
-    hostList.assignAll(hosts.where((h) => h.isActive));
+    // Keep the full registry (pending/approved/rejected). Tree uses actives.
+    hostList.assignAll(hosts);
     _buildMapHosts();
   }
 
@@ -344,6 +359,7 @@ class AgencyHostListController extends GetxController {
       final response = await _agencyRepo.approveHostApplication(
         applicationId: id,
         coinsPerSecond: host.coinsPerSecond > 0 ? host.coinsPerSecond : 5,
+        note: 'Approved by Agency Owner',
       );
       if (isAgencyApiSuccess(response)) {
         hostList.removeWhere((h) => h.reviewApplicationId == id);

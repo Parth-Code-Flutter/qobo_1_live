@@ -116,6 +116,11 @@ class BottomNavController extends GetxController {
   }
 
   Future<void> _prefetchAgencySession() async {
+    // Isolation: only agency owners hydrate `/api/agency/dashboard`.
+    final userSession = Get.isRegistered<UserSessionController>()
+        ? Get.find<UserSessionController>()
+        : null;
+    if (userSession == null || !userSession.isAgency) return;
     if (!Get.isRegistered<AgencySessionController>()) return;
     await Get.find<AgencySessionController>().ensureHydratedFromDashboard();
   }

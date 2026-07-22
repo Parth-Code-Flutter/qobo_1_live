@@ -42,7 +42,12 @@ abstract final class RoleHomeRoute {
     if (session.isSuperAdmin) {
       return Routes.SUPER_ADMIN_BOTTOM_NAV;
     }
-    // Agency / host / user keep the standard consumer bottom nav for now.
+    // Isolation: agency owners only use the agency owner shell — never the
+    // consumer bottom nav (guide: agency_super_admin_isolation_flow_v1.md).
+    if (session.isAgency) {
+      return Routes.AGENCY_OWNER;
+    }
+    // Host / user keep the standard consumer bottom nav.
     return Routes.BOTTOM_NAV;
   }
 }

@@ -30,4 +30,15 @@ void main() {
     expect(route, Routes.BOTTOM_NAV);
     expect(Get.find<UserSessionController>().isSuperAdmin, isFalse);
   });
+
+  test('agency role resolves to agency owner shell', () async {
+    Get.put(UserSessionController(), permanent: true);
+    final route = await RoleHomeRoute.resolveAfterLogin(<String, dynamic>{
+      'id': 'u3',
+      'name': 'Agency Owner',
+      'role': 'agency',
+    });
+    expect(route, Routes.AGENCY_OWNER);
+    expect(Get.find<UserSessionController>().isAgency, isTrue);
+  });
 }

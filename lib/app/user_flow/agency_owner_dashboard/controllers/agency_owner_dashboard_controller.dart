@@ -5,6 +5,8 @@ import 'package:qobo_one_live/repo/agency/agency_api_utils.dart';
 import 'package:qobo_one_live/repo/agency/agency_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/agency_session_controller.dart';
+import 'package:qobo_one_live/services/user_session_controller.dart';
+import 'package:qobo_one_live/utils/auth/role_home_route.dart';
 
 class AgencyOwnerDashboardController extends GetxController {
   final AgencyRepo _agencyRepo = AgencyRepo();
@@ -22,7 +24,19 @@ class AgencyOwnerDashboardController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    if (!_assertAgencyOwnerAccess()) return;
     loadDashboard();
+  }
+
+  /// Isolation: super admin / host must not use agency-owner APIs or shell.
+  bool _assertAgencyOwnerAccess() {
+    if (!Get.isRegistered<UserSessionController>()) return true;
+    final session = Get.find<UserSessionController>();
+    if (session.isAgency || session.role.isEmpty) return true;
+    // Mid-registration users may still open status/dashboard after apply.
+    if (session.role.toLowerCase() == 'user') return true;
+    RoleHomeRoute.goHome();
+    return false;
   }
 
   Future<void> loadDashboard({bool showLoader = true}) async {

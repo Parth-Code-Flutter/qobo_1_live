@@ -293,9 +293,12 @@ class AgencyRepo {
     String? note,
     bool isShowLoader = true,
   }) async {
+    // Guide always expects coins_per_second; note is optional.
     final body = <String, dynamic>{
-      if (coinsPerSecond != null) 'coins_per_second': coinsPerSecond,
-      if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+      'coins_per_second': coinsPerSecond ?? 5,
+      'note': (note != null && note.trim().isNotEmpty)
+          ? note.trim()
+          : 'Approved by Agency Owner',
     };
     final response = await _apiService.postRequest(
       endPoint:

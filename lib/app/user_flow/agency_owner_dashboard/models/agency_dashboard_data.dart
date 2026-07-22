@@ -184,6 +184,9 @@ AgencyHostRevenueDemo parseHostFromApi(Map<String, dynamic> json) {
         json['interest']?.toString() ??
         '',
     reason: json['reason']?.toString(),
+    createdAt: json['createdAt']?.toString() ??
+        json['created_at']?.toString() ??
+        '',
   );
 }
 

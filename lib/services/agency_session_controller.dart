@@ -7,6 +7,7 @@ import 'package:qobo_one_live/app/user_flow/agency_owner_status/models/agency_ow
 import 'package:qobo_one_live/constants/local_storage_constants.dart';
 import 'package:qobo_one_live/repo/agency/agency_api_utils.dart';
 import 'package:qobo_one_live/repo/agency/agency_repo.dart';
+import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 
 /// Agency owner session: application review state + approved agency context.
@@ -78,12 +79,18 @@ class AgencySessionController extends GetxController {
   }
 
   /// Loads agency id/name/hosts from dashboard when memory session is empty (cold start).
+  ///
+  /// Isolation: only `agency` (and mid-registration `user`) may hit this endpoint.
   Future<void> ensureHydratedFromDashboard({bool forceRefresh = false}) async {
     await loadFromStorage();
 
     if (!forceRefresh &&
         agencyId.value.trim().isNotEmpty &&
         hasApprovedAgency) {
+      return;
+    }
+
+    if (!_mayFetchAgencyDashboard()) {
       return;
     }
 
@@ -98,6 +105,15 @@ class AgencySessionController extends GetxController {
     } finally {
       _hydrateInFlight = null;
     }
+  }
+
+  /// Blocks `super_admin` / `host` from agency-owner dashboard APIs.
+  bool _mayFetchAgencyDashboard() {
+    if (!Get.isRegistered<UserSessionController>()) return true;
+    final role = Get.find<UserSessionController>().role.toLowerCase();
+    if (role.isEmpty) return true;
+    // Agency owners, and users mid-registration (role still `user`).
+    return role == 'agency' || role == 'user';
   }
 
   Future<void> _fetchDashboardIntoSession() async {

@@ -138,6 +138,7 @@ class AgencyHostRevenueDemo {
     this.gmail = '',
     this.category = '',
     this.reason,
+    this.createdAt = '',
   });
 
   final String id;
@@ -155,6 +156,7 @@ class AgencyHostRevenueDemo {
   final String gmail;
   final String category;
   final String? reason;
+  final String createdAt;
 }
 
 class AgencyRevenueHistoryDemo {

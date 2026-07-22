@@ -64,6 +64,7 @@ class AgencyPendingHostsController extends GetxController {
       final response = await _agencyRepo.approveHostApplication(
         applicationId: id,
         coinsPerSecond: host.coinsPerSecond > 0 ? host.coinsPerSecond : 5,
+        note: 'Approved by Agency Owner',
       );
       if (isAgencyApiSuccess(response)) {
         Get.snackbar(
