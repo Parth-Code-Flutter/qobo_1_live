@@ -5,13 +5,22 @@ import 'package:qobo_one_live/repo/agency/agency_api_utils.dart';
 import 'package:qobo_one_live/repo/agency/agency_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/agency_session_controller.dart';
+import 'package:qobo_one_live/services/chat/chat_session_service.dart';
+import 'package:qobo_one_live/services/firebase/fcm_token_sync_service.dart';
+import 'package:qobo_one_live/services/realtime/user_realtime_socket_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/auth/role_home_route.dart';
+import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 
 class AgencyOwnerDashboardController extends GetxController {
   final AgencyRepo _agencyRepo = AgencyRepo();
 
   AgencySessionController get _session => Get.find<AgencySessionController>();
+
+  UserSessionController get _userSession =>
+      Get.isRegistered<UserSessionController>()
+      ? Get.find<UserSessionController>()
+      : Get.put(UserSessionController(), permanent: true);
 
   final isLoading = true.obs;
   final loadError = ''.obs;
@@ -20,6 +29,7 @@ class AgencyOwnerDashboardController extends GetxController {
   final isApplicationPending = false.obs;
   final pendingAgencyName = ''.obs;
   final pendingMessage = ''.obs;
+  final isLoggingOut = false.obs;
 
   @override
   void onInit() {
@@ -175,5 +185,34 @@ class AgencyOwnerDashboardController extends GetxController {
 
   void openHostDetail(AgencyHostRevenueDemo host) {
     openHostList();
+  }
+
+  /// Edit profile (same update-profile screen as consumer / super admin).
+  void openEditProfile() {
+    Get.toNamed(Routes.UPDATE_PROFILE);
+  }
+
+  /// Clears agency + user session and returns to login (same path as bottom nav).
+  Future<void> logout() async {
+    if (isLoggingOut.value) return;
+    isLoggingOut.value = true;
+    try {
+      final storage = LocalStorage.shared;
+      if (Get.isRegistered<ChatSessionService>()) {
+        await Get.find<ChatSessionService>().signOut();
+      }
+      await UserRealtimeSocketService.ensureDisconnected();
+      if (Get.isRegistered<FcmTokenSyncService>()) {
+        Get.find<FcmTokenSyncService>().clearCachedToken();
+      }
+      if (Get.isRegistered<AgencySessionController>()) {
+        await Get.find<AgencySessionController>().clearAgency();
+      }
+      await _userSession.clearSession();
+      await storage.clearAllData();
+      Get.offAllNamed(Routes.AUTH_LOGIN);
+    } finally {
+      isLoggingOut.value = false;
+    }
   }
 }

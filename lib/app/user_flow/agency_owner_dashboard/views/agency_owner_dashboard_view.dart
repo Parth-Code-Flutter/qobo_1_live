@@ -7,7 +7,9 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/repo/agency/agency_api_utils.dart';
 import 'package:qobo_one_live/services/agency_session_controller.dart';
+import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -95,6 +97,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
   }
 
   Widget _header() {
+    final canPop = Get.key.currentState?.canPop() ?? false;
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
       child: ClipRRect(
@@ -110,7 +113,11 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
             ),
             child: Row(
               children: [
-                _iconButton(Icons.arrow_back_ios_new_rounded, Get.back),
+                // Agency login lands here via offAllNamed — hide back when root.
+                if (canPop)
+                  _iconButton(Icons.arrow_back_ios_new_rounded, Get.back)
+                else
+                  const SizedBox(width: 40, height: 40),
                 const Expanded(
                   child: Column(
                     children: [
@@ -128,11 +135,51 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
                   ),
                 ),
                 _iconButton(Icons.insights_rounded, controller.openRevenue),
+                _profileIconButton(),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  /// App-bar profile avatar — opens account / tools sheet.
+  Widget _profileIconButton() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _openAccountMenu,
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.all(4),
+          child: GetBuilder<UserSessionController>(
+            init: Get.isRegistered<UserSessionController>()
+                ? Get.find<UserSessionController>()
+                : Get.put(UserSessionController(), permanent: true),
+            builder: (session) {
+              return FramedUserAvatar(
+                name: session.displayName.isNotEmpty
+                    ? session.displayName
+                    : controller.displayOwnerName,
+                imageUrl: session.displayPictureUrl,
+                frameUrl: session.profileFrameUrl,
+                frameSeed: session.userId,
+                size: 34,
+                fontSize: TextStyles.k10FontSize,
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openAccountMenu() {
+    Get.bottomSheet(
+      _AgencyAccountMenuSheet(controller: controller),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
     );
   }
 
@@ -1334,5 +1381,240 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
       buf.write(s[i]);
     }
     return buf.toString();
+  }
+}
+
+/// Account / tools sheet opened from the agency dashboard profile avatar.
+class _AgencyAccountMenuSheet extends StatelessWidget {
+  const _AgencyAccountMenuSheet({required this.controller});
+
+  final AgencyOwnerDashboardController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final session = Get.isRegistered<UserSessionController>()
+        ? Get.find<UserSessionController>()
+        : null;
+    final name = session?.displayName.isNotEmpty == true
+        ? session!.displayName
+        : controller.displayOwnerName;
+    final subtitle = session?.email.isNotEmpty == true
+        ? session!.email
+        : (session?.phone.isNotEmpty == true
+              ? session!.phone
+              : controller.displayAgencyCode);
+
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(_DashUi.radiusLg),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xE6120B24),
+                borderRadius: BorderRadius.circular(_DashUi.radiusLg),
+                border: Border.all(color: _DashUi.glassBorder),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Spacing.v10,
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: kColorWhite.withValues(alpha: 0.28),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 16, 18, 8),
+                    child: Row(
+                      children: [
+                        FramedUserAvatar(
+                          name: name,
+                          imageUrl: session?.displayPictureUrl,
+                          frameUrl: session?.profileFrameUrl,
+                          frameSeed: session?.userId,
+                          size: 52,
+                          fontSize: TextStyles.k14FontSize,
+                        ),
+                        Spacing.h12,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SemiBoldText(
+                                text: name,
+                                fontSize: TextStyles.k16FontSize,
+                                color: kColorWhite,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Spacing.v4,
+                              AppText(
+                                text: subtitle,
+                                fontSize: TextStyles.k12FontSize,
+                                color: _DashUi.textMuted,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Spacing.v6,
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _DashUi.accentViolet.withValues(
+                                    alpha: 0.28,
+                                  ),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: SemiBoldText(
+                                  text: session?.role.isNotEmpty == true
+                                      ? session!.role
+                                      : 'agency',
+                                  fontSize: TextStyles.k10FontSize,
+                                  color: kColorWhite,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(color: Color(0x22FFFFFF), height: 1),
+                  _menuTile(
+                    icon: Icons.manage_accounts_rounded,
+                    title: 'Edit profile',
+                    subtitle: 'Name, photo, and account details',
+                    onTap: () {
+                      Get.back<void>();
+                      controller.openEditProfile();
+                    },
+                  ),
+                  _menuTile(
+                    icon: Icons.link_rounded,
+                    title: 'Recruit hosts',
+                    subtitle: 'Share your agency invite link',
+                    onTap: () {
+                      Get.back<void>();
+                      controller.openRecruitLink();
+                    },
+                  ),
+                  _menuTile(
+                    icon: Icons.hub_rounded,
+                    title: 'Host network',
+                    subtitle: 'Active hosts under your agency',
+                    onTap: () {
+                      Get.back<void>();
+                      controller.openHostList();
+                    },
+                  ),
+                  _menuTile(
+                    icon: Icons.pending_actions_rounded,
+                    title: 'Pending applications',
+                    subtitle: 'Approve or reject host requests',
+                    onTap: () {
+                      Get.back<void>();
+                      controller.openPendingHosts();
+                    },
+                  ),
+                  _menuTile(
+                    icon: Icons.insights_rounded,
+                    title: 'Revenue details',
+                    subtitle: 'Earnings and payout overview',
+                    onTap: () {
+                      Get.back<void>();
+                      controller.openRevenue();
+                    },
+                  ),
+                  const Divider(color: Color(0x22FFFFFF), height: 1),
+                  Obx(() {
+                    final busy = controller.isLoggingOut.value;
+                    return _menuTile(
+                      icon: Icons.logout_rounded,
+                      title: busy ? 'Logging out…' : 'Log out',
+                      subtitle: 'Sign out of this agency account',
+                      destructive: true,
+                      onTap: busy
+                          ? null
+                          : () async {
+                              Get.back<void>();
+                              await controller.logout();
+                            },
+                    );
+                  }),
+                  Spacing.v8,
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _menuTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    VoidCallback? onTap,
+    bool destructive = false,
+  }) {
+    final accent = destructive ? const Color(0xFFFF6B8A) : kColorWhite;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: (destructive ? accent : _DashUi.accentViolet)
+                      .withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: accent, size: 20),
+              ),
+              Spacing.h12,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SemiBoldText(
+                      text: title,
+                      fontSize: TextStyles.k14FontSize,
+                      color: accent,
+                    ),
+                    Spacing.v2,
+                    AppText(
+                      text: subtitle,
+                      fontSize: TextStyles.k10FontSize,
+                      color: _DashUi.textSoft,
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: kColorWhite.withValues(alpha: 0.35),
+                size: 22,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

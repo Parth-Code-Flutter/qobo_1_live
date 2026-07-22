@@ -23,6 +23,8 @@ class RoomRepo {
     String? category,
     String? coverImage,
     String? coverImageFilePath,
+    String? backgroundId,
+    String? backgroundImage,
     bool isPrivate = false,
     bool isShowLoader = true,
   }) async {
@@ -31,6 +33,8 @@ class RoomRepo {
         : title.trim();
     final trimmedCategory = category?.trim();
     final trimmedCoverImage = coverImage?.trim();
+    final trimmedBackgroundId = backgroundId?.trim();
+    final trimmedBackgroundImage = backgroundImage?.trim();
     final fields = <String, dynamic>{
       'title': roomTitle,
       'name': roomTitle,
@@ -45,6 +49,15 @@ class RoomRepo {
         'category': trimmedCategory,
       if (trimmedCoverImage != null && trimmedCoverImage.isNotEmpty)
         'coverImage': trimmedCoverImage,
+      if (trimmedBackgroundId != null && trimmedBackgroundId.isNotEmpty) ...{
+        'backgroundId': trimmedBackgroundId,
+        'background_id': trimmedBackgroundId,
+      },
+      if (trimmedBackgroundImage != null &&
+          trimmedBackgroundImage.isNotEmpty) ...{
+        'backgroundImage': trimmedBackgroundImage,
+        'background_image': trimmedBackgroundImage,
+      },
     };
     final coverFilePath = coverImageFilePath?.trim();
     final coverFile = coverFilePath == null || coverFilePath.isEmpty

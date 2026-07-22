@@ -52,6 +52,17 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
                     Spacing.v28,
                     Center(child: _profileImagePicker(context)),
                     Spacing.v28,
+                    Obx(
+                      () => !controller.isComeFromOtpScreen.value
+                          ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _adsBannerSection(context),
+                                Spacing.v20,
+                              ],
+                            )
+                          : const SizedBox.shrink(),
+                    ),
                     _userNameField(context),
                     Obx(
                       () => controller.isComeFromOtpScreen.value
@@ -120,6 +131,178 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
         color: kColorText,
       ),
     );
+  }
+
+  Widget _adsBannerSection(BuildContext context) {
+    return Obx(() {
+      final banners = controller.adBanners.toList();
+      final loading = controller.isLoadingAdBanners.value;
+      final applying = controller.isApplyingBanner.value;
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SemiBoldText(
+            text: 'Cover banner',
+            fontSize: TextStyles.k14FontSize,
+            color: kColorText,
+          ),
+          Spacing.v6,
+          AppText(
+            text: 'Pick a banner from the ads catalog for your profile cover',
+            fontSize: TextStyles.k12FontSize,
+            color: kColorHint,
+          ),
+          Spacing.v12,
+          if (loading && banners.isEmpty)
+            const SizedBox(
+              height: 96,
+              child: Center(
+                child: CircularProgressIndicator(color: kColorPrimary),
+              ),
+            )
+          else if (banners.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF7F7FB),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE6E6EE)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.image_outlined, color: kColorHint, size: 22),
+                  Spacing.h10,
+                  const Expanded(
+                    child: AppText(
+                      text: 'No banners available right now.',
+                      fontSize: TextStyles.k12FontSize,
+                      color: kColorHint,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: controller.loadAdBanners,
+                    child: const SemiBoldText(
+                      text: 'Retry',
+                      fontSize: TextStyles.k12FontSize,
+                      color: kColorPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            SizedBox(
+              height: 118,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                itemCount: banners.length,
+                separatorBuilder: (_, __) => Spacing.h10,
+                itemBuilder: (context, index) {
+                  final banner = banners[index];
+                  final selected =
+                      controller.selectedAdBannerId.value == banner.id ||
+                      controller.selectedPosterUrl.value == banner.imageUrl;
+                  return GestureDetector(
+                    onTap: applying
+                        ? null
+                        : () => controller.selectAdBanner(context, banner),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      width: 168,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: selected
+                              ? kColorPrimary
+                              : const Color(0xFFE6E6EE),
+                          width: selected ? 2 : 1,
+                        ),
+                        boxShadow: selected
+                            ? [
+                                BoxShadow(
+                                  color: kColorPrimary.withValues(alpha: 0.18),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.network(
+                            banner.imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => ColoredBox(
+                              color: const Color(0xFFF0F0F5),
+                              child: Icon(
+                                Icons.broken_image_outlined,
+                                color: kColorHint.withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ),
+                          Align(
+                            alignment: Alignment.bottomCenter,
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.fromLTRB(8, 14, 8, 8),
+                              decoration: const BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.transparent,
+                                    Color(0xCC101018),
+                                  ],
+                                ),
+                              ),
+                              child: SemiBoldText(
+                                text: banner.title,
+                                fontSize: TextStyles.k10FontSize,
+                                color: kColorWhite,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                          if (selected)
+                            const Positioned(
+                              top: 6,
+                              right: 6,
+                              child: Icon(
+                                Icons.check_circle_rounded,
+                                color: kColorPrimary,
+                                size: 20,
+                              ),
+                            ),
+                          if (applying && selected)
+                            ColoredBox(
+                              color: Colors.black.withValues(alpha: 0.35),
+                              child: const Center(
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: kColorWhite,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+        ],
+      );
+    });
   }
 
   Widget _profileImagePicker(BuildContext context) {

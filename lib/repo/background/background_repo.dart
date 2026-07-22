@@ -3,6 +3,12 @@ import 'package:qobo_one_live/services/api_service.dart';
 import 'package:qobo_one_live/utils/api_response_utils.dart';
 
 /// Profile background storefront and backpack API calls.
+///
+/// Spec: `profile_backgrounds_integration_guide.md`
+/// - `GET  /api/background/shop`
+/// - `POST /api/background/buy` `{ backgroundId }`
+/// - `GET  /api/background/my-backpack`
+/// - `POST /api/background/equip` `{ backpackItemId, equip }`
 class BackgroundRepo {
   BackgroundRepo({ApiService? apiService})
     : _apiService = apiService ?? ApiService();
@@ -26,9 +32,14 @@ class BackgroundRepo {
     required String backgroundId,
     bool isShowLoader = true,
   }) async {
+    final id = backgroundId.trim();
+    if (id.isEmpty) return null;
     final response = await _apiService.postRequest(
       endPoint: BackgroundEndpoints.buy,
-      requestModel: <String, dynamic>{'background_id': backgroundId},
+      requestModel: <String, dynamic>{
+        // Spec: profile_backgrounds_integration_guide.md
+        'backgroundId': id,
+      },
       isShowLoader: isShowLoader,
     );
     if (response == null) return null;
@@ -53,10 +64,13 @@ class BackgroundRepo {
     required bool equip,
     bool isShowLoader = true,
   }) async {
+    final id = backpackItemId.trim();
+    if (id.isEmpty) return null;
     final response = await _apiService.postRequest(
       endPoint: BackgroundEndpoints.equip,
       requestModel: <String, dynamic>{
-        'backpack_item_id': backpackItemId,
+        // Spec: profile_backgrounds_integration_guide.md
+        'backpackItemId': id,
         'equip': equip,
       },
       isShowLoader: isShowLoader,

@@ -723,6 +723,7 @@ class _PurchasedBackgroundCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isEquipped = background['isEquipped'] == true;
+    final isExpired = background['isExpired'] == true;
     final imageUrl = background['imageUrl']?.toString().trim() ?? '';
 
     return AnimatedContainer(
@@ -754,15 +755,25 @@ class _PurchasedBackgroundCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: isEquipped
+                color: isExpired
+                    ? Colors.redAccent.withValues(alpha: 0.15)
+                    : isEquipped
                     ? Colors.green
                     : kColorPrimary.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: AppText(
-                text: isEquipped ? 'ACTIVE' : 'OWNED',
+                text: isExpired
+                    ? 'EXPIRED'
+                    : isEquipped
+                    ? 'ACTIVE'
+                    : 'OWNED',
                 fontSize: 9,
-                color: isEquipped ? kColorWhite : kColorPrimary,
+                color: isExpired
+                    ? Colors.redAccent
+                    : isEquipped
+                    ? kColorWhite
+                    : kColorPrimary,
               ),
             ),
           ),
@@ -834,14 +845,30 @@ class _PurchasedBackgroundCard extends StatelessWidget {
             width: double.infinity,
             height: 34,
             child: appButton(
-              onPressed: onEquip,
-              buttonText: isEquipped ? 'Unequip' : 'Equip Background',
-              buttonColor: isEquipped ? const Color(0xFFF1E6B8) : kColorPrimary,
-              textColor: isEquipped ? kColorText : kColorWhite,
+              onPressed: isExpired ? () {} : onEquip,
+              buttonText: isExpired
+                  ? 'Expired'
+                  : isEquipped
+                  ? 'Unequip'
+                  : 'Equip Background',
+              buttonColor: isExpired
+                  ? const Color(0xFFE8E8E8)
+                  : isEquipped
+                  ? const Color(0xFFF1E6B8)
+                  : kColorPrimary,
+              textColor: isExpired
+                  ? kColorHint
+                  : isEquipped
+                  ? kColorText
+                  : kColorWhite,
               borderRadius: 17,
               textStyle: TextStyles.kSemiBoldPoppins(
                 fontSize: TextStyles.k12FontSize,
-                colors: isEquipped ? kColorText : kColorWhite,
+                colors: isExpired
+                    ? kColorHint
+                    : isEquipped
+                    ? kColorText
+                    : kColorWhite,
               ),
             ),
           ),

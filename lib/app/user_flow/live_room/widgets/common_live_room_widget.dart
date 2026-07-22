@@ -83,7 +83,8 @@ class CommonLiveRoomWidget extends StatelessWidget {
                 ),
               ),
               const Positioned(left: 10, top: 10, child: _LiveBadge()),
-              Positioned(right: 10, top: 10, child: _topBadge()),
+              if (badgeText.trim().isNotEmpty)
+                Positioned(right: 10, top: 10, child: _topBadge()),
               if (isFavorite)
                 Positioned(
                   right: 10,

@@ -183,6 +183,7 @@ class DiscoverPublicProfileView
 
   Widget _heroCard(SocialUserCard user) {
     final photo = resolveUserAvatarUrl(user.displayPicture);
+    final backgroundUrl = user.profileBackgroundUrl?.trim() ?? '';
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(32),
@@ -220,15 +221,41 @@ class DiscoverPublicProfileView
             child: Stack(
               fit: StackFit.expand,
               children: [
+                if (backgroundUrl.isNotEmpty)
+                  Image.network(
+                    backgroundUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  ),
                 if (photo != null)
                   Image.network(
                     photo,
                     fit: BoxFit.cover,
                     alignment: Alignment.topCenter,
-                    errorBuilder: (_, __, ___) => _heroFallback(user),
+                    errorBuilder: (_, __, ___) => backgroundUrl.isEmpty
+                        ? _heroFallback(user)
+                        : ColoredBox(
+                            color: Colors.black.withValues(alpha: 0.15),
+                          ),
                   )
-                else
+                else if (backgroundUrl.isEmpty)
                   _heroFallback(user),
+                // Soft wash so an equipped profileBackground peeks around
+                // edges when a portrait photo is also present.
+                if (backgroundUrl.isNotEmpty && photo != null)
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: 0.08),
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.35),
+                        ],
+                      ),
+                    ),
+                  ),
                 const DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(

@@ -63,6 +63,17 @@ class AuthEndpoints {
   static const String followUnfollow = '/api/user/follow-unfollow';
 }
 
+/// Admin ads / banners catalog (`api_documentation` §7.11).
+class AdsEndpoints {
+  AdsEndpoints._();
+
+  /// GET /api/admin/ads-config — list banner ads
+  static const String adsConfig = '/api/admin/ads-config';
+
+  /// POST /api/admin/ad-action?action=add&id=uuid — manage ads (admin)
+  static const String adAction = '/api/admin/ad-action';
+}
+
 /// Central place for room related API endpoints.
 class RoomEndpoints {
   RoomEndpoints._();

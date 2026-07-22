@@ -45,11 +45,17 @@ class AgencyHostOnboardingController extends GetxController
   final isAgencyCodeLocked = false.obs;
   final isAgencyCodePrefilling = false.obs;
 
+  /// True when a super admin opened this form from the Host tab FAB —
+  /// success should return to the super admin shell, not the status screen.
+  final isFromSuperAdmin = false.obs;
+
   final ImagePicker _imagePicker = ImagePicker();
 
   @override
   void onInit() {
     super.onInit();
+    final args = Get.arguments;
+    isFromSuperAdmin.value = args is Map && args['fromSuperAdmin'] == true;
     _prefillAgencyCode();
   }
 
@@ -331,16 +337,24 @@ class AgencyHostOnboardingController extends GetxController
         );
         return;
       }
+      final fromSuperAdmin = isFromSuperAdmin.value;
       await CommonGiffyDialog.showSuccess(
         context,
         title: 'Application Submitted',
-        subtitle:
-            agencyApiMessage(response) ??
-            'Your host application has been submitted successfully!',
-        buttonText: 'Check Status',
+        subtitle: fromSuperAdmin
+            ? (agencyApiMessage(response) ??
+                  'Host application submitted. It appears in the Host tab once the agency approves it.')
+            : (agencyApiMessage(response) ??
+                  'Your host application has been submitted successfully!'),
+        buttonText: fromSuperAdmin ? 'Done' : 'Check Status',
         gifAssetPath: kGifCongratulation,
         onPressed: () {
           Get.back<void>();
+          if (fromSuperAdmin) {
+            // Back to the super admin shell; the Host tab refreshes there.
+            Get.back<void>();
+            return;
+          }
           Get.offNamed(
             Routes.AGENCY_HOST_STATUS,
             arguments: {'application_id': appId, 'phone': whatsapp},

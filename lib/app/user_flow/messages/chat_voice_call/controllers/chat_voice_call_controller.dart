@@ -12,6 +12,8 @@ import 'package:qobo_one_live/services/chat/chat_inbox_preview.dart';
 import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
+import 'package:qobo_one_live/utils/ui_utils/gift_celebration_overlay.dart';
+import 'package:qobo_one_live/utils/ui_utils/gift_chat_celebration_tracker.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_media_utils.dart';
 import 'package:qobo_one_live/utils/zego_call_id_utils.dart';
 import 'package:qobo_one_live/utils/zego_engine_utils.dart';
@@ -63,9 +65,9 @@ class ChatVoiceCallController extends GetxController {
 
   /// Peer gift celebration via Zego in-room messages (same markers as live rooms).
   StreamSubscription<List<ZegoInRoomMessage>>? _giftMessageSub;
-  final Set<String> _seenGiftMessageKeys = <String>{};
-  bool _giftChatBootstrapDone = false;
-  String? _lastCelebratedGiftKey;
+  final GiftChatCelebrationTracker _giftCelebrationTracker =
+      GiftChatCelebrationTracker();
+  bool _giftListenerBound = false;
 
   String get zegoUserId {
     if (!Get.isRegistered<UserSessionController>()) {
@@ -189,7 +191,7 @@ class ChatVoiceCallController extends GetxController {
     hasPeerJoined.value = true;
     _billingStartedAt ??= DateTime.now();
     // Engine is usually ready once the peer is in — (re)bind gift messages.
-    _bindGiftMessageListener();
+    _bindGiftMessageListener(force: true);
   }
 
   void onZegoError(Object error) {
@@ -226,6 +228,8 @@ class ChatVoiceCallController extends GetxController {
   void onClose() {
     _ticker?.cancel();
     _giftMessageSub?.cancel();
+    _giftCelebrationTracker.reset();
+    GiftCelebrationOverlay.dismiss();
     unawaited(_recordCallIfNeeded());
     super.onClose();
   }
@@ -292,7 +296,6 @@ class ChatVoiceCallController extends GetxController {
     );
     if (isEconomyApiSuccess(response)) {
       await loadWalletBalance();
-      if (Get.isBottomSheetOpen == true) Get.back<void>();
 
       final animationUrl = GiftMediaUtils.animationUrlFromResponse(
         response,
@@ -300,20 +303,23 @@ class ChatVoiceCallController extends GetxController {
       );
       final soundUrl = GiftMediaUtils.soundUrlFromResponse(response, gift);
 
-      // Sender celebration (SVGA + sound from gift-list / send-gift response).
-      GiftMediaUtils.showCelebration(
-        giftName: gift['name'],
-        animationUrl: animationUrl,
-        soundUrl: soundUrl,
+      // Match live/audio rooms: dismiss sheet, then celebrate for both sides.
+      unawaited(
+        GiftMediaUtils.dismissSheetThenCelebrate(
+          giftName: gift['name'],
+          animationUrl: animationUrl,
+          soundUrl: soundUrl,
+        ),
       );
 
-      // Notify the peer so they can play the same animation on their call UI.
+      // Notify the peer so they play the same animation on their call UI.
       final giftLabel = GiftMediaUtils.buildChatLabel(
         giftName: gift['name'],
         giftIcon: gift['icon'],
         animationUrl: animationUrl,
         soundUrl: soundUrl,
       );
+      _bindGiftMessageListener(force: true);
       unawaited(
         ZegoUIKit().sendInRoomMessage(giftLabel).catchError((_) => false),
       );
@@ -327,17 +333,21 @@ class ChatVoiceCallController extends GetxController {
   }
 
   /// Subscribes to Zego in-room messages for peer gift celebrations.
-  void _bindGiftMessageListener() {
-    // Keep a single subscription so rebinds do not re-play old gift messages.
-    if (_giftMessageSub != null) return;
+  ///
+  /// [force] rebinds after the call engine becomes ready (peer join / reconnect).
+  void _bindGiftMessageListener({bool force = false}) {
+    if (_giftListenerBound && !force) return;
     try {
       final zego = ZegoUIKit();
+      _giftMessageSub?.cancel();
       _giftMessageSub = zego.getInRoomMessageListStream().listen(
         _maybeCelebrateIncomingGift,
       );
+      _giftListenerBound = true;
       _maybeCelebrateIncomingGift(zego.getInRoomMessages());
     } catch (error) {
       // Call engine may not be ready yet — retry when the peer joins.
+      _giftListenerBound = false;
       LoggerUtils.logInfo(
         'ChatVoiceCallController: gift message bind deferred ($error)',
       );
@@ -346,34 +356,18 @@ class ChatVoiceCallController extends GetxController {
 
   /// Plays celebration for peer gift chat events (skips own send duplicates).
   void _maybeCelebrateIncomingGift(List<ZegoInRoomMessage> messages) {
-    final giftMessages = messages
-        .where((m) => GiftMediaUtils.isGiftChatMessage(m.message))
-        .toList();
-
-    if (!_giftChatBootstrapDone) {
-      for (final message in giftMessages) {
-        _seenGiftMessageKeys.add('${message.messageID}_${message.timestamp}');
-      }
-      _giftChatBootstrapDone = true;
-      return;
-    }
-    if (giftMessages.isEmpty) return;
-
-    final myUserId = zegoUserId;
-    for (var i = giftMessages.length - 1; i >= 0; i--) {
-      final message = giftMessages[i];
-      final key = '${message.messageID}_${message.timestamp}';
-      if (!_seenGiftMessageKeys.add(key)) continue;
-      if (key == _lastCelebratedGiftKey) continue;
-
-      final senderId = ZegoLiveIdUtils.sanitizeUserId(message.user.id);
-      final isMine = senderId.isNotEmpty && senderId == myUserId;
-      if (isMine) continue;
-
-      _lastCelebratedGiftKey = key;
-      GiftMediaUtils.showCelebrationFromChatLabel(message.message);
-      return;
-    }
+    _giftCelebrationTracker.onGiftMessages(
+      myUserId: zegoUserId,
+      events: messages
+          .where((m) => GiftMediaUtils.isGiftChatMessage(m.message))
+          .map(
+            (m) => (
+              key: '${m.messageID}_${m.timestamp}',
+              senderId: ZegoLiveIdUtils.sanitizeUserId(m.user.id),
+              message: m.message,
+            ),
+          ),
+    );
   }
 
   void _startTicker() {

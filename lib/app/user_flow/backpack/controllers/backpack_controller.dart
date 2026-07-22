@@ -249,7 +249,15 @@ class BackpackController extends GetxController {
 
     for (final raw in _extractList(response?['data']).whereType<Map>()) {
       final item = Map<String, dynamic>.from(raw);
-      final backgroundDetails = item['backgroundDetails'];
+      final itemType = item['itemType']?.toString().toUpperCase() ?? '';
+      if (itemType.isNotEmpty &&
+          itemType != 'PROFILE_BACKGROUND' &&
+          itemType != 'BACKGROUND') {
+        continue;
+      }
+
+      final backgroundDetails =
+          item['backgroundDetails'] ?? item['background_details'];
       final background = backgroundDetails is Map
           ? Map<String, dynamic>.from(backgroundDetails)
           : const <String, dynamic>{};
@@ -258,7 +266,9 @@ class BackpackController extends GetxController {
 
       final name = background['name']?.toString() ?? 'Profile Background';
       final isEquipped = item['isEquipped'] == true;
-      if (isEquipped) {
+      final expiresAt = item['expiresAt']?.toString() ?? '';
+      final isExpired = _isExpired(expiresAt);
+      if (isEquipped && !isExpired) {
         activeBackgroundId = itemId;
         activeBackgroundName = name;
       }
@@ -266,7 +276,10 @@ class BackpackController extends GetxController {
       backgrounds.add({
         'id': itemId,
         'backgroundId':
-            background['id']?.toString() ?? item['itemId']?.toString() ?? '',
+            background['id']?.toString() ??
+            item['itemId']?.toString() ??
+            item['item_id']?.toString() ??
+            '',
         'name': name,
         'icon': kIconMall,
         'imageUrl':
@@ -281,12 +294,20 @@ class BackpackController extends GetxController {
             ) ??
             '',
         'quantity': 1,
-        'description': _itemExpiryLabel(item['expiresAt']),
-        'isEquipped': isEquipped,
-        'expiresAt': item['expiresAt']?.toString() ?? '',
+        'description': isExpired
+            ? 'Expired'
+            : _itemExpiryLabel(expiresAt),
+        'isEquipped': isEquipped && !isExpired,
+        'isExpired': isExpired,
+        'expiresAt': expiresAt,
+        'durationDays': _toInt(
+          background['durationDays'] ?? background['duration_days'],
+        ),
+        'category': background['category']?.toString() ?? '',
       });
     }
 
+    // Always clear the loading placeholder, even when inventory is empty.
     final merged = Map<int, List<Map<String, dynamic>>>.from(mockItems);
     merged[5] = backgrounds;
     mockItems.assignAll(merged);
@@ -354,7 +375,7 @@ class BackpackController extends GetxController {
       equip: shouldEquip,
       isShowLoader: true,
     );
-    if (response == null || response['statusCode'] == 0) {
+    if (!_isSuccess(response)) {
       _showBackpackDialog('Could not update this frame.');
       return;
     }
@@ -371,13 +392,26 @@ class BackpackController extends GetxController {
     required String itemId,
     required String name,
   }) async {
+    final items = mockItems[5] ?? const <Map<String, dynamic>>[];
+    Map<String, dynamic>? target;
+    for (final item in items) {
+      if (item['id']?.toString() == itemId) {
+        target = item;
+        break;
+      }
+    }
+    if (target?['isExpired'] == true) {
+      _showBackpackDialog('This background has expired.');
+      return;
+    }
+
     final shouldEquip = equippedBackground.value != itemId;
     final response = await _backgroundRepo.equipBackground(
       backpackItemId: itemId,
       equip: shouldEquip,
       isShowLoader: true,
     );
-    if (response == null || response['statusCode'] == 0) {
+    if (!_isSuccess(response)) {
       _showBackpackDialog('Could not update this background.');
       return;
     }
@@ -413,7 +447,12 @@ class BackpackController extends GetxController {
   List _extractList(dynamic value) {
     if (value is List) return value;
     if (value is Map) {
-      final nested = value['items'] ?? value['frames'] ?? value['data'];
+      final nested =
+          value['items'] ??
+          value['backgrounds'] ??
+          value['frames'] ??
+          value['data'] ??
+          value['list'];
       if (nested is List) return nested;
     }
     return const [];
@@ -426,9 +465,31 @@ class BackpackController extends GetxController {
   }
 
   String _itemExpiryLabel(dynamic value) {
-    final text = value?.toString() ?? '';
-    if (text.trim().isEmpty || text == 'null') return 'Purchased item';
-    return 'Expires $text';
+    final text = value?.toString().trim() ?? '';
+    if (text.isEmpty || text == 'null') return 'Purchased item';
+    final date = DateTime.tryParse(text);
+    if (date == null) return 'Expires $text';
+    final local = date.toLocal();
+    final y = local.year.toString().padLeft(4, '0');
+    final m = local.month.toString().padLeft(2, '0');
+    final d = local.day.toString().padLeft(2, '0');
+    return 'Expires $y-$m-$d';
+  }
+
+  bool _isSuccess(Map<String, dynamic>? response) {
+    if (response == null) return false;
+    final code = response['statusCode'];
+    if (code == 1 || code == 200 || code == 201) return true;
+    final data = response['data'];
+    return data is Map && data['success'] == true;
+  }
+
+  bool _isExpired(String raw) {
+    final text = raw.trim();
+    if (text.isEmpty || text == 'null') return false;
+    final date = DateTime.tryParse(text);
+    if (date == null) return false;
+    return date.toUtc().isBefore(DateTime.now().toUtc());
   }
 
   int _toInt(dynamic value) {

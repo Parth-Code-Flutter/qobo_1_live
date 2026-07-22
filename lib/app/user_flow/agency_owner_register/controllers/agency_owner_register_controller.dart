@@ -36,6 +36,10 @@ class AgencyOwnerRegisterController extends GetxController {
   final isPublicInvite = false.obs;
   final invitedBy = ''.obs;
 
+  /// True when a super admin opened this form from the Agency tab FAB —
+  /// success should return to the super admin shell, not the login screen.
+  final isFromSuperAdmin = false.obs;
+
   final ImagePicker _imagePicker = ImagePicker();
 
   @override
@@ -48,6 +52,7 @@ class AgencyOwnerRegisterController extends GetxController {
     final value = (argInvitedBy ?? paramInvitedBy ?? '').trim();
     invitedBy.value = value;
     isPublicInvite.value = value.isNotEmpty;
+    isFromSuperAdmin.value = args is Map && args['fromSuperAdmin'] == true;
   }
 
   @override
@@ -152,13 +157,17 @@ class AgencyOwnerRegisterController extends GetxController {
         final status = map['status']?.toString() ?? '';
         final isPending = isAgencyStatusPending(status);
         final publicInvite = isPublicInvite.value;
+        final fromSuperAdmin = isFromSuperAdmin.value;
 
         await CommonGiffyDialog.showSuccess(
           context,
           title: publicInvite || isPending
               ? 'Application Submitted'
               : 'Agency Registered',
-          subtitle: publicInvite
+          subtitle: fromSuperAdmin
+              ? (response?['message']?.toString() ??
+                    'Agency "$agencyName" was created and is pending in the Agency tab. Approve it to activate the owner account.')
+              : publicInvite
               ? (response?['message']?.toString() ??
                     'Your agency application is pending super admin approval. Please login after approval.')
               : isPending
@@ -166,10 +175,19 @@ class AgencyOwnerRegisterController extends GetxController {
                     'Your agency "$agencyName" is pending approval. Check the dashboard for status updates.')
               : (response?['message']?.toString() ??
                     'Your agency "$agencyName" is active. Open the dashboard to manage hosts and revenue.'),
-          buttonText: publicInvite ? 'Back to Login' : 'Open Dashboard',
+          buttonText: fromSuperAdmin
+              ? 'Done'
+              : publicInvite
+              ? 'Back to Login'
+              : 'Open Dashboard',
           gifAssetPath: kGifCongratulation,
           onPressed: () {
             Get.back<void>();
+            if (fromSuperAdmin) {
+              // Back to the super admin shell; the Agency tab refreshes there.
+              Get.back<void>();
+              return;
+            }
             Get.offNamed(
               publicInvite ? Routes.AUTH_LOGIN : Routes.AGENCY_OWNER,
             );

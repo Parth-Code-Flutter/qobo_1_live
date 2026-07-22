@@ -1,3 +1,4 @@
+import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/live_broadcast/utils/live_room_profile_utils.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_celebration_overlay.dart';
@@ -145,6 +146,25 @@ abstract final class GiftMediaUtils {
       giftName: giftName,
       svgaUrl: anim.isNotEmpty ? anim : null,
       soundUrl: sound.isNotEmpty ? sound : null,
+    );
+  }
+
+  /// Audio-room timing for every surface: close gift sheet first so it never
+  /// covers the celebration, then play SVGA/sound after a short settle delay.
+  static Future<void> dismissSheetThenCelebrate({
+    String? giftName,
+    String? animationUrl,
+    String? soundUrl,
+    Duration delay = const Duration(milliseconds: 300),
+  }) async {
+    if (Get.isBottomSheetOpen == true) {
+      Get.back<void>();
+    }
+    await Future<void>.delayed(delay);
+    showCelebration(
+      giftName: giftName,
+      animationUrl: animationUrl,
+      soundUrl: soundUrl,
     );
   }
 

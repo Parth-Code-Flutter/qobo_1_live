@@ -223,6 +223,8 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
                     ),
                   ),
                   SuperAdminStatusPill(status: agency.status),
+                  Spacing.h6,
+                  _manageButton(context, agency, processing),
                 ],
               ),
               Spacing.v12,
@@ -307,6 +309,263 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
         ),
       ),
     );
+  }
+
+  /// Edit / delete entry point on each agency card.
+  Widget _manageButton(
+    BuildContext context,
+    SuperAdminAgencyItem agency,
+    bool processing,
+  ) {
+    return InkWell(
+      onTap: processing ? null : () => _openManageSheet(context, agency),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: kColorWhite.withValues(alpha: 0.10),
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.16)),
+        ),
+        child: const Icon(
+          Icons.more_vert_rounded,
+          size: 18,
+          color: Colors.white70,
+        ),
+      ),
+    );
+  }
+
+  void _openManageSheet(BuildContext context, SuperAdminAgencyItem agency) {
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
+        decoration: const BoxDecoration(
+          color: Color(0xFF1A1B4B),
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Spacing.v12,
+            SemiBoldText(
+              text: agency.name,
+              fontSize: TextStyles.k16FontSize,
+              color: kColorWhite,
+            ),
+            AppText(
+              text: 'Code ${agency.code.isEmpty ? '—' : agency.code}'
+                  ' • ${agency.status}',
+              fontSize: TextStyles.k12FontSize,
+              color: Colors.white60,
+            ),
+            Spacing.v12,
+            if (agency.isPending)
+              _sheetAction(
+                icon: Icons.check_circle_rounded,
+                color: const Color(0xFF4ADE80),
+                label: 'Approve agency',
+                onTap: () {
+                  Get.back();
+                  controller.approveAgency(agency);
+                },
+              ),
+            if (agency.isSuspended)
+              _sheetAction(
+                icon: Icons.play_circle_fill_rounded,
+                color: const Color(0xFF4ADE80),
+                label: 'Reactivate agency',
+                onTap: () {
+                  Get.back();
+                  controller.activateAgency(agency);
+                },
+              ),
+            if (agency.isApproved)
+              _sheetAction(
+                icon: Icons.pause_circle_filled_rounded,
+                color: const Color(0xFFFFB74D),
+                label: 'Suspend agency',
+                onTap: () async {
+                  Get.back();
+                  final reason = await _askReason(
+                    context,
+                    title: 'Suspend agency?',
+                    hint: 'Reason (optional)',
+                    confirmLabel: 'Suspend',
+                  );
+                  if (reason == null) return;
+                  await controller.suspendAgency(agency, reason);
+                },
+              ),
+            _sheetAction(
+              icon: Icons.percent_rounded,
+              color: const Color(0xFF7C9CFF),
+              label: 'Edit commission rate',
+              onTap: () async {
+                Get.back();
+                final rate = await _askCommission(context, agency);
+                if (rate == null) return;
+                await controller.updateAgencyCommission(agency, rate);
+              },
+            ),
+            _sheetAction(
+              icon: Icons.delete_forever_rounded,
+              color: const Color(0xFFFF8A80),
+              label: 'Delete agency',
+              onTap: () async {
+                Get.back();
+                final reason = await _askReason(
+                  context,
+                  title: 'Delete agency?',
+                  subtitle:
+                      'The agency is rejected and removed from active lists.',
+                  hint: 'Reason (optional)',
+                  confirmLabel: 'Delete',
+                );
+                if (reason == null) return;
+                await controller.deleteAgency(agency, reason);
+              },
+            ),
+          ],
+        ),
+      ),
+      backgroundColor: Colors.transparent,
+    );
+  }
+
+  Widget _sheetAction({
+    required IconData icon,
+    required Color color,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: kColorWhite.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            child: Row(
+              children: [
+                Icon(icon, size: 20, color: color),
+                Spacing.h10,
+                SemiBoldText(
+                  text: label,
+                  fontSize: TextStyles.k12FontSize,
+                  color: kColorWhite,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Reason dialog for suspend/delete. Returns null when cancelled;
+  /// empty string means confirmed without a reason.
+  Future<String?> _askReason(
+    BuildContext context, {
+    required String title,
+    String? subtitle,
+    required String hint,
+    required String confirmLabel,
+  }) async {
+    final reasonController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: kColorWhite,
+        title: Text(title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (subtitle != null) ...[
+              Text(subtitle, style: const TextStyle(fontSize: 13)),
+              const SizedBox(height: 10),
+            ],
+            TextField(
+              controller: reasonController,
+              decoration: InputDecoration(hintText: hint),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(confirmLabel),
+          ),
+        ],
+      ),
+    );
+    final reason = reasonController.text.trim();
+    reasonController.dispose();
+    return confirmed == true ? reason : null;
+  }
+
+  /// Commission dialog — user types a percentage, API expects a fraction.
+  Future<double?> _askCommission(
+    BuildContext context,
+    SuperAdminAgencyItem agency,
+  ) async {
+    final rateController = TextEditingController(
+      text: (agency.commissionRate * 100).toStringAsFixed(1),
+    );
+    final rate = await showDialog<double>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: kColorWhite,
+        title: const Text('Commission rate'),
+        content: TextField(
+          controller: rateController,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(
+            hintText: 'e.g. 12.5',
+            suffixText: '%',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              final percent = double.tryParse(rateController.text.trim());
+              if (percent == null || percent < 0 || percent > 100) return;
+              Navigator.of(dialogContext).pop(percent / 100);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    rateController.dispose();
+    return rate;
   }
 
   Future<void> _confirmReject(

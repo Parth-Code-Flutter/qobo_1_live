@@ -10,9 +10,13 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/constants/local_storage_constants.dart';
+import 'package:qobo_one_live/app/user_flow/update_profile/models/ad_banner_item.dart';
+import 'package:qobo_one_live/app/user_flow/update_profile/models/request/update_profile_request_model.dart';
 import 'package:qobo_one_live/app/auth/signUp/widgets/email_otp_dialog.dart';
+import 'package:qobo_one_live/repo/ads/ads_repo.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
+import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/api_response_utils.dart';
 import 'package:qobo_one_live/utils/app_dialogs/common_giffy_dialog.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_media_picker.dart';
@@ -27,10 +31,12 @@ import 'package:qobo_one_live/utils/validations/text_field_validations.dart';
 /// Controller for update profile flow (wire API + state here).
 class UpdateProfileController extends GetxController
     with CountryStateSelectionMixin {
-  UpdateProfileController({AuthRepo? authRepo})
-    : _authRepo = authRepo ?? AuthRepo();
+  UpdateProfileController({AuthRepo? authRepo, AdsRepo? adsRepo})
+    : _authRepo = authRepo ?? AuthRepo(),
+      _adsRepo = adsRepo ?? AdsRepo();
 
   final AuthRepo _authRepo;
+  final AdsRepo _adsRepo;
   final UserSessionController _userSession =
       Get.isRegistered<UserSessionController>()
       ? Get.find<UserSessionController>()
@@ -59,6 +65,13 @@ class UpdateProfileController extends GetxController
   final ImagePicker _imagePicker = ImagePicker();
   String _lastVerifiedEmail = '';
 
+  /// Ads banner catalog from `GET /api/admin/ads-config`.
+  final adBanners = <AdBannerItem>[].obs;
+  final isLoadingAdBanners = false.obs;
+  final selectedAdBannerId = RxnString();
+  final selectedPosterUrl = RxnString();
+  final isApplyingBanner = false.obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -78,6 +91,9 @@ class UpdateProfileController extends GetxController
     }
     emailController.addListener(_resetEmailVerificationWhenChanged);
     _prefillFromStoredProfile();
+    if (!isComeFromOtpScreen.value) {
+      loadAdBanners();
+    }
   }
 
   /// Prefills profile fields for edit flow (skips OTP onboarding flow).
@@ -111,6 +127,74 @@ class UpdateProfileController extends GetxController
 
     _prefillAgeAndDob(data);
     hasAcceptedTerms.value = true;
+
+    final poster = ApiImageUtils.normalize(
+      firstPresent(data, const ['poster', 'posterUrl', 'poster_url'])
+          ?.toString(),
+    );
+    if (poster != null && poster.isNotEmpty) {
+      selectedPosterUrl.value = poster;
+    }
+  }
+
+  Future<void> loadAdBanners() async {
+    if (isLoadingAdBanners.value) return;
+    isLoadingAdBanners.value = true;
+    try {
+      final response = await _adsRepo.getAdsConfig(isShowLoader: false);
+      final banners = AdBannerItem.listFromResponse(
+        response?['data'] ?? response,
+      );
+      adBanners.assignAll(banners);
+
+      final currentPoster = selectedPosterUrl.value;
+      if (currentPoster != null && currentPoster.isNotEmpty) {
+        for (final banner in banners) {
+          if (banner.imageUrl == currentPoster) {
+            selectedAdBannerId.value = banner.id;
+            break;
+          }
+        }
+      }
+    } finally {
+      isLoadingAdBanners.value = false;
+    }
+  }
+
+  Future<void> selectAdBanner(BuildContext context, AdBannerItem banner) async {
+    if (isApplyingBanner.value) return;
+    selectedAdBannerId.value = banner.id;
+    selectedPosterUrl.value = banner.imageUrl;
+
+    isApplyingBanner.value = true;
+    try {
+      final response = await _authRepo.updateProfile(
+        request: UpdateProfileRequestModel(poster: banner.imageUrl),
+        isShowLoader: false,
+      );
+      if (!context.mounted) return;
+      if (response == null || response.statusCode != 1) {
+        AppToast.showError(
+          context,
+          response?.message.trim().isNotEmpty == true
+              ? response!.message.trim()
+              : 'Could not apply banner. It will still be sent on Update.',
+        );
+        return;
+      }
+      await UpdateProfileApiHelper.persistUserToSession(response);
+      final root = _userSession.profileData;
+      if (root != null) {
+        final updated = Map<String, dynamic>.from(root);
+        updated['poster'] = banner.imageUrl;
+        updated['posterUrl'] = banner.imageUrl;
+        await _userSession.saveProfile(updated);
+      }
+      if (!context.mounted) return;
+      AppToast.showSuccess(context, 'Cover banner updated');
+    } finally {
+      isApplyingBanner.value = false;
+    }
   }
 
   void _prefillAgeAndDob(Map<String, dynamic> data) {
@@ -298,6 +382,7 @@ class UpdateProfileController extends GetxController
         genderLabel: selectedGender.value,
         dob: selectedBirthdate.value,
         displayPicture: selectedProfileMedia.value,
+        poster: selectedPosterUrl.value,
         country: country?.name,
         countryId: country?.id,
         state: state?.name,

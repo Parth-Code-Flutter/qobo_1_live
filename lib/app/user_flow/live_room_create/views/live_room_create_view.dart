@@ -1,7 +1,6 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/app/user_flow/live_broadcast/models/room_background_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
@@ -103,10 +102,10 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Host profile lives in the app bar — form starts with cover + setup.
-        _sectionLabel('Stream Cover'),
+        // Host profile is in the app bar — start with room background + setup.
+        _sectionLabel('Room Background'),
         Spacing.v10,
-        _coverPicker(context),
+        _backgroundBannerPicker(),
         Spacing.v20,
         _sectionLabel('Room Type', required: true),
         Spacing.v10,
@@ -461,165 +460,191 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
     );
   }
 
-  /// 16:9 cover picker with a clear empty state and change/remove actions.
-  Widget _coverPicker(BuildContext context) {
+  /// Horizontal catalog from `GET /api/room/backgrounds`.
+  Widget _backgroundBannerPicker() {
     return Obx(() {
-      final coverPath = controller.selectedCoverPath.value;
-      final hasCover = coverPath != null && coverPath.isNotEmpty;
+      // Touch the selection obs first so Obx always rebuilds on tap.
+      final selectedId = controller.selectedBackgroundId.value;
 
-      return GestureDetector(
-        onTap: () => controller.pickRoomCover(context),
-        child: AspectRatio(
-          aspectRatio: 16 / 9,
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: hasCover
-                    ? const Color(0xFFFF4DC4).withValues(alpha: 0.55)
-                    : kColorWhite.withValues(alpha: 0.14),
-                width: 1.4,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.22),
-                  blurRadius: 16,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                if (hasCover)
-                  Image.file(
-                    File(coverPath),
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _coverEmptyState(),
-                  )
-                else
-                  _coverEmptyState(),
-                if (hasCover) ...[
-                  Positioned.fill(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.black.withValues(alpha: 0.05),
-                            Colors.black.withValues(alpha: 0.55),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    left: 14,
-                    bottom: 12,
-                    right: 56,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SemiBoldText(
-                          text: 'Stream cover',
-                          fontSize: TextStyles.k14FontSize,
-                          color: kColorWhite,
-                        ),
-                        Spacing.v2,
-                        AppText(
-                          text: 'Tap to change',
-                          fontSize: TextStyles.k10FontSize,
-                          color: kColorWhite.withValues(alpha: 0.72),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Positioned(
-                    right: 10,
-                    top: 10,
-                    child: GestureDetector(
-                      onTap: controller.clearRoomCover,
-                      child: Container(
-                        width: 34,
-                        height: 34,
-                        decoration: BoxDecoration(
-                          color: kColorBlack.withValues(alpha: 0.55),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: kColorWhite.withValues(alpha: 0.22),
-                          ),
-                        ),
-                        child: const Icon(
-                          Icons.close_rounded,
-                          color: kColorWhite,
-                          size: 18,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ],
+      if (controller.isLoadingBackgrounds.value &&
+          controller.roomBackgrounds.isEmpty) {
+        return Container(
+          height: 118,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: LiveRoomUiColors.cardSurface.withValues(alpha: 0.7),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: kColorWhite.withValues(alpha: 0.1)),
+          ),
+          child: const SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.2,
+              color: Color(0xFFFF4DC4),
             ),
           ),
+        );
+      }
+
+      final themes = controller.roomBackgrounds.toList();
+      if (themes.isEmpty) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+          decoration: BoxDecoration(
+            color: LiveRoomUiColors.cardSurface.withValues(alpha: 0.7),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: kColorWhite.withValues(alpha: 0.1)),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.wallpaper_rounded,
+                color: kColorWhite.withValues(alpha: 0.55),
+                size: 22,
+              ),
+              Spacing.h10,
+              Expanded(
+                child: AppText(
+                  text: 'No room backgrounds available yet.',
+                  fontSize: TextStyles.k12FontSize,
+                  color: kColorWhite.withValues(alpha: 0.65),
+                ),
+              ),
+              GestureDetector(
+                onTap: controller.loadRoomBackgrounds,
+                child: const SemiBoldText(
+                  text: 'Retry',
+                  fontSize: TextStyles.k12FontSize,
+                  color: Color(0xFFFF9AD5),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+
+      return SizedBox(
+        height: 132,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          itemCount: themes.length,
+          separatorBuilder: (_, __) => Spacing.h10,
+          itemBuilder: (context, index) {
+            final theme = themes[index];
+            return _backgroundTile(
+              theme: theme,
+              selected: selectedId != null &&
+                  selectedId.isNotEmpty &&
+                  selectedId == theme.id,
+            );
+          },
         ),
       );
     });
   }
 
-  Widget _coverEmptyState() {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF2A1248),
-            LiveRoomUiColors.cardSurface,
-            const Color(0xFF15102A),
-          ],
-        ),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [Color(0xFFFF4DC4), Color(0xFF7B5CFF)],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFFF2D7B).withValues(alpha: 0.35),
-                  blurRadius: 14,
-                  offset: const Offset(0, 6),
+  /// One selectable room-background thumbnail.
+  Widget _backgroundTile({
+    required RoomBackgroundTheme theme,
+    required bool selected,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => controller.selectBackground(theme),
+        borderRadius: BorderRadius.circular(16),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          width: 112,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: selected
+                  ? const Color(0xFFFF4DC4)
+                  : kColorWhite.withValues(alpha: 0.12),
+              width: selected ? 2.4 : 1,
+            ),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFFFF2D7B).withValues(alpha: 0.28),
+                      blurRadius: 12,
+                      offset: const Offset(0, 5),
+                    ),
+                  ]
+                : null,
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.network(
+                theme.imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => ColoredBox(
+                  color: LiveRoomUiColors.cardSurface,
+                  child: Icon(
+                    Icons.image_not_supported_outlined,
+                    color: kColorWhite.withValues(alpha: 0.45),
+                  ),
                 ),
-              ],
-            ),
-            child: const Icon(
-              Icons.add_a_photo_rounded,
-              color: kColorWhite,
-              size: 24,
-            ),
+              ),
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.transparent, Color(0xDD0A0614)],
+                    ),
+                  ),
+                  child: SemiBoldText(
+                    text: theme.name,
+                    fontSize: TextStyles.k10FontSize,
+                    color: kColorWhite,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+              if (theme.isDefault)
+                Positioned(
+                  top: 6,
+                  left: 6,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.55),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const AppText(
+                      text: 'Default',
+                      fontSize: 9,
+                      color: kColorWhite,
+                    ),
+                  ),
+                ),
+              if (selected)
+                const Positioned(
+                  top: 6,
+                  right: 6,
+                  child: Icon(
+                    Icons.check_circle_rounded,
+                    color: Color(0xFFFF4DC4),
+                    size: 20,
+                  ),
+                ),
+            ],
           ),
-          Spacing.v12,
-          const SemiBoldText(
-            text: 'Add Stream Cover',
-            fontSize: TextStyles.k14FontSize,
-            color: kColorWhite,
-          ),
-          Spacing.v4,
-          AppText(
-            text: 'Recommended 16:9 · Tap to upload',
-            fontSize: TextStyles.k10FontSize,
-            color: kColorWhite.withValues(alpha: 0.58),
-            align: TextAlign.center,
-          ),
-        ],
+        ),
       ),
     );
   }

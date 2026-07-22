@@ -291,7 +291,19 @@ class LiveViewerProfileDialog extends GetView<LiveBroadcastController> {
                       icon: Icons.card_giftcard_rounded,
                       label: 'Gift',
                       isPrimary: true,
-                      onTap: controller.openGiftsSheet,
+                      onTap: () {
+                        // Target this viewer (user scope), same as audio seat Gift.
+                        final receiverId =
+                            viewer['targetId']?.toString().trim().isNotEmpty ==
+                                true
+                            ? viewer['targetId'].toString()
+                            : viewer['id']?.toString() ?? '';
+                        controller.openGiftsSheet(
+                          receiverId: receiverId,
+                          receiverName: name,
+                          roomGift: false,
+                        );
+                      },
                     ),
                   ),
                 ],

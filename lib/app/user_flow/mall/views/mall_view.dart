@@ -454,15 +454,23 @@ class MallView extends GetView<MallController> {
               activePreview != null && activePreview['id'] == item['id'];
           final isOwned = item['isOwned'] == true;
           final isEquipped = item['isEquipped'] == true;
+          final isExpired = item['isExpired'] == true;
+          final isPlaceholder = item['isPlaceholder'] == true;
           final usesBackpackFlow = isFrameTab || isBackgroundTab;
-          final buttonText = usesBackpackFlow
-              ? isOwned
+          final buttonText = isPlaceholder
+              ? 'Unavailable'
+              : usesBackpackFlow
+              ? isExpired
+                    ? '${item['price']} Coins'
+                    : isOwned
                     ? 'Open Backpack'
                     : '${item['price']} Coins'
               : '${item['price']} Coins';
 
           return GestureDetector(
-            onTap: () => controller.selectedPreviewItem.value = item,
+            onTap: isPlaceholder
+                ? null
+                : () => controller.selectedPreviewItem.value = item,
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -504,21 +512,27 @@ class MallView extends GetView<MallController> {
                     AppText(
                       text: item['category']?.toString() ?? 'Premium',
                       fontSize: 10,
-                      color: isEquipped ? Colors.green : kColorHint,
+                      color: isEquipped
+                          ? Colors.green
+                          : isExpired
+                          ? const Color(0xFFE57373)
+                          : kColorHint,
                     ),
                   ],
                   Spacing.v2,
                   AppText(
                     text: 'Validity: ${item['duration']}',
                     fontSize: 10,
-                    color: kColorHint,
+                    color: isExpired ? const Color(0xFFE57373) : kColorHint,
                   ),
                   Spacing.v10,
                   SizedBox(
                     height: 36,
                     width: double.infinity,
                     child: appButton(
-                      onPressed: () => controller.buyItem(item),
+                      onPressed: isPlaceholder
+                          ? () {}
+                          : () => controller.buyItem(item),
                       buttonText: buttonText,
                       buttonColor: isEquipped
                           ? Colors.green

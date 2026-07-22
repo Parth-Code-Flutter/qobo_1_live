@@ -10,6 +10,7 @@ class UpdateProfileRequestModel {
     this.gender,
     this.dob,
     this.displayPicture,
+    this.poster,
     this.relationshipStatus,
     this.languages,
     this.interests,
@@ -28,6 +29,8 @@ class UpdateProfileRequestModel {
   /// `YYYY-MM-DD`
   final String? dob;
   final File? displayPicture;
+  /// Catalog / remote poster URL (ads banner selection).
+  final String? poster;
   final String? relationshipStatus;
   /// CSV or JSON array string — we send CSV (e.g. `English, Hindi`).
   final String? languages;
@@ -46,6 +49,8 @@ class UpdateProfileRequestModel {
       'email': email?.trim(),
       'gender': gender?.trim(),
       'dob': dob?.trim(),
+      'poster': poster?.trim(),
+      'posterUrl': poster?.trim(),
       'relationshipStatus': relationshipStatus?.trim(),
       'languages': languages?.trim(),
       'interests': interests?.trim(),

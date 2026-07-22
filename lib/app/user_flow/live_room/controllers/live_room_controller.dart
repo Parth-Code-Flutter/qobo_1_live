@@ -296,6 +296,25 @@ class LiveRoomController extends GetxController {
         normalized == 'live-stream';
   }
 
+  /// Grid top-right badge — omit live_stream type strings from the listing.
+  String _listingBadgeLabel({
+    required dynamic rankBadge,
+    required String type,
+    required bool isLiveStream,
+  }) {
+    final raw = rankBadge is Map ? rankBadge['label']?.toString() : null;
+    final label = (raw != null && raw.trim().isNotEmpty) ? raw.trim() : null;
+    if (label != null) {
+      if (_isLiveStreamType(label) ||
+          label.toUpperCase().replaceAll(' ', '_') == 'LIVE_STREAM') {
+        return '';
+      }
+      return label;
+    }
+    if (isLiveStream) return '';
+    return type;
+  }
+
   Map<String, dynamic> _mapRoom(Map room) {
     final type = room['type']?.toString().toUpperCase() ?? 'VIDEO';
     final isLiveStream = _isLiveStreamType(room['type']?.toString());
@@ -320,10 +339,13 @@ class LiveRoomController extends GetxController {
       'id': room['_id'] ?? room['id'] ?? '',
       'roomData': Map<String, dynamic>.from(room),
       'nameAge': seats == 0 ? title : '$title, $seats Seats',
-      // Live streams get an explicit badge so they read as live in the grid.
-      'badge': rankBadge is Map
-          ? (rankBadge['label']?.toString() ?? type)
-          : (isLiveStream ? 'LIVE STREAM' : type),
+      // Rank badge only — never show raw `live_stream` as a card label
+      // (green LIVE pill already marks live rooms).
+      'badge': _listingBadgeLabel(
+        rankBadge: rankBadge,
+        type: type,
+        isLiveStream: isLiveStream,
+      ),
       'roomType': isLiveStream ? 'LIVE_STREAM' : type,
       'location':
           room['countryName']?.toString() ??

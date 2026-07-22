@@ -40,11 +40,13 @@ class UserSessionController extends GetxController {
   String get profileBackgroundUrl => _stringValueFromProfile(const [
     'profileBackgroundUrl',
     'profile_background_url',
-    'profileBackground',
-    'profile_background',
+    'profileBackground.image',
+    'profile_background.image',
     'backgroundUrl',
     'background_url',
-    'profileBackground.image',
+    // Map objects last so we extract nested `image` via `_readProfileValue`.
+    'profileBackground',
+    'profile_background',
   ]);
   bool get isSuperAdmin => role.toLowerCase() == 'super_admin';
   bool get isAgency => role.toLowerCase() == 'agency';

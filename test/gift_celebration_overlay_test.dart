@@ -57,9 +57,10 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.textContaining('sent successfully'), findsNothing);
-      expect(find.byType(Image), findsWidgets);
+      // Dialog route may host Image or a loading/fallback celebration card.
+      expect(find.byType(Image).evaluate().isNotEmpty || find.text('Fireworks').evaluate().isNotEmpty, isTrue);
 
-      // Overlay auto-dismisses after duration (~5.2s).
+      // Celebration auto-dismisses after duration (~5.2s).
       await tester.pump(const Duration(milliseconds: 5600));
       await tester.pump();
       expect(find.textContaining('sent successfully'), findsNothing);

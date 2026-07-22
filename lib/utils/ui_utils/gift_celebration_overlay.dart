@@ -8,10 +8,13 @@ import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_sound_player.dart';
 import 'package:flutter_svga/flutter_svga.dart';
 
-/// Full-screen celebration overlay shown after a successful gift send.
+/// Full-screen celebration shown after a successful gift send (or peer receive).
 ///
 /// Prefer [svgaUrl] from the gift-list API `animationUrl` field.
 /// Local SVGA / GIF assets remain available as optional fallbacks only.
+///
+/// Uses a transparent dialog route so the animation sits above Zego
+/// PlatformViews (video room, live stream, 1:1 video) as well as Flutter UI.
 class GiftCelebrationOverlay {
   GiftCelebrationOverlay._();
 
@@ -21,6 +24,7 @@ class GiftCelebrationOverlay {
   static const String loveGiftAsset = kGifLoveGift;
 
   static OverlayEntry? _activeEntry;
+  static BuildContext? _dialogContext;
 
   /// Shows a non-blocking full-screen gift celebration over the current route.
   ///
@@ -32,28 +36,74 @@ class GiftCelebrationOverlay {
     String? svgaAsset,
     String? gifAsset,
   }) {
-    // Prefer navigator context — Get.overlayContext is the Overlay itself, and
-    // Overlay.maybeOf(overlayContext) returns null (no Overlay ancestor).
-    final context = Get.context ?? Get.key.currentContext;
-    if (context == null) return;
-
-    final overlay =
-        Overlay.maybeOf(context, rootOverlay: true) ??
-        Navigator.maybeOf(context, rootNavigator: true)?.overlay;
-    if (overlay == null) return;
-
     // Replace any in-flight celebration so rapid gift sends stay stable.
-    _activeEntry?.remove();
-    _activeEntry = OverlayEntry(
-      builder: (_) => _GiftCelebrationView(
-        giftName: giftName?.trim().isNotEmpty == true
-            ? giftName!.trim()
-            : 'Gift',
+    dismiss();
+
+    final name = giftName?.trim().isNotEmpty == true
+        ? giftName!.trim()
+        : 'Gift';
+
+    Widget buildView({required VoidCallback onCompleted}) {
+      return _GiftCelebrationView(
+        giftName: name,
         svgaUrl: svgaUrl?.trim(),
         soundUrl: soundUrl?.trim(),
         // Local SVGA asset path kept for optional fallback; prefer svgaUrl.
         svgaAsset: svgaAsset?.trim(),
         gifAsset: gifAsset,
+        onCompleted: onCompleted,
+      );
+    }
+
+    // Transparent dialog route draws above native video surfaces (PlatformView).
+    // OverlayEntry alone can sit under Zego video on Android.
+    BuildContext? navigatorContext;
+    try {
+      navigatorContext = Get.context ?? Get.key.currentContext;
+    } catch (_) {
+      // Binding may be unavailable in pure unit tests — skip UI safely.
+      navigatorContext = null;
+    }
+    if (navigatorContext != null) {
+      Get.dialog<void>(
+        barrierColor: Colors.transparent,
+        barrierDismissible: false,
+        useSafeArea: false,
+        Builder(
+          builder: (dialogContext) {
+            _dialogContext = dialogContext;
+            return buildView(
+              onCompleted: () {
+                if (dialogContext.mounted &&
+                    Navigator.of(dialogContext).canPop()) {
+                  Navigator.of(dialogContext).pop();
+                }
+                if (_dialogContext == dialogContext) {
+                  _dialogContext = null;
+                }
+              },
+            );
+          },
+        ),
+      );
+      return;
+    }
+
+    // Fallback when Get/Navigator is not ready (rare; e.g. early tests).
+    BuildContext? context;
+    try {
+      context = Get.key.currentContext;
+    } catch (_) {
+      return;
+    }
+    if (context == null) return;
+    final overlay =
+        Overlay.maybeOf(context, rootOverlay: true) ??
+        Navigator.maybeOf(context, rootNavigator: true)?.overlay;
+    if (overlay == null) return;
+
+    _activeEntry = OverlayEntry(
+      builder: (_) => buildView(
         onCompleted: () {
           _activeEntry?.remove();
           _activeEntry = null;
@@ -61,6 +111,24 @@ class GiftCelebrationOverlay {
       ),
     );
     overlay.insert(_activeEntry!);
+  }
+
+  /// Removes any active celebration (dialog or overlay entry).
+  static void dismiss() {
+    final dialogContext = _dialogContext;
+    _dialogContext = null;
+    try {
+      if (dialogContext != null &&
+          dialogContext.mounted &&
+          Navigator.of(dialogContext).canPop()) {
+        Navigator.of(dialogContext).pop();
+      }
+    } catch (_) {
+      // Ignore when binding/navigator is gone (tests / route teardown).
+    }
+
+    _activeEntry?.remove();
+    _activeEntry = null;
   }
 }
 
@@ -221,7 +289,9 @@ class _GiftCelebrationViewState extends State<_GiftCelebrationView>
   Widget build(BuildContext context) {
     final top = MediaQuery.paddingOf(context).top + 18;
     final size = MediaQuery.sizeOf(context);
-    return Positioned.fill(
+    // SizedBox.expand works inside both OverlayEntry stacks and dialog routes
+    // (Positioned.fill alone breaks when shown via Get.dialog).
+    return SizedBox.expand(
       child: IgnorePointer(
         // Touches pass through so hosts/viewers can keep using the room UI.
         child: AnimatedBuilder(

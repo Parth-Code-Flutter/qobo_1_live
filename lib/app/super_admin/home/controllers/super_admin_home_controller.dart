@@ -4,6 +4,7 @@ import 'package:qobo_one_live/app/super_admin/models/super_admin_models.dart';
 import 'package:qobo_one_live/repo/agency/agency_api_utils.dart';
 import 'package:qobo_one_live/repo/super_admin/super_admin_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -25,6 +26,7 @@ class SuperAdminHomeController extends GetxController {
   final agencies = <SuperAdminAgencyItem>[].obs;
   final trackedHosts = <SuperAdminTrackedHost>[].obs;
   final processingAgencyId = ''.obs;
+  final processingHostId = ''.obs;
   final agencyStatusFilter = 'pending'.obs;
   final hostStatusFilter = ''.obs;
   final generatedAgencyLink = ''.obs;
@@ -137,6 +139,132 @@ class SuperAdminHomeController extends GetxController {
     String feedback,
   ) async {
     await _processAgency(agency, 'rejected', feedback: feedback);
+  }
+
+  Future<void> suspendAgency(
+    SuperAdminAgencyItem agency,
+    String feedback,
+  ) async {
+    await _processAgency(agency, 'suspended', feedback: feedback);
+  }
+
+  Future<void> activateAgency(SuperAdminAgencyItem agency) async {
+    await _processAgency(agency, 'active');
+  }
+
+  /// The backend has no hard-delete endpoint; rejecting removes the agency
+  /// from the operational lists (`POST /agency/process` with `rejected`).
+  Future<void> deleteAgency(SuperAdminAgencyItem agency, String reason) async {
+    await _processAgency(
+      agency,
+      'rejected',
+      feedback: reason.isEmpty ? 'Removed by super admin' : reason,
+    );
+  }
+
+  /// `PATCH /agencies/:id/commission` — [rate] is a fraction (0.12 = 12%).
+  Future<void> updateAgencyCommission(
+    SuperAdminAgencyItem agency,
+    double rate,
+  ) async {
+    if (agency.id.isEmpty) return;
+    final context = Get.context;
+    processingAgencyId.value = agency.id;
+    try {
+      final response = await _repo.updateAgencyCommission(
+        agencyId: agency.id,
+        commissionRate: rate,
+      );
+      if (isAgencyApiSuccess(response)) {
+        if (context != null) {
+          AppToast.showSuccess(
+            context,
+            agencyApiMessage(response) ?? 'Commission updated.',
+          );
+        }
+        await loadAgencies(showLoader: false);
+        return;
+      }
+      if (context != null) {
+        AppToast.showError(
+          context,
+          agencyApiMessage(response) ?? 'Could not update commission.',
+        );
+      }
+    } finally {
+      processingAgencyId.value = '';
+    }
+  }
+
+  /// `POST /hosts/:hostId/status` — status: active | suspended | inactive.
+  /// `inactive` is the closest the backend offers to deleting a host.
+  Future<void> setHostStatus(
+    SuperAdminTrackedHost host,
+    String status, {
+    String? reason,
+  }) async {
+    if (host.id.isEmpty) return;
+    final context = Get.context;
+    processingHostId.value = host.id;
+    try {
+      final response = await _repo.updateHostStatus(
+        hostId: host.id,
+        status: status,
+        reason: reason,
+      );
+      if (isAgencyApiSuccess(response)) {
+        if (context != null) {
+          AppToast.showSuccess(
+            context,
+            agencyApiMessage(response) ?? 'Host marked $status.',
+          );
+        }
+        await loadTrackedHosts(showLoader: false);
+        await loadDashboardStats(showLoader: false);
+        return;
+      }
+      if (context != null) {
+        AppToast.showError(
+          context,
+          agencyApiMessage(response) ?? 'Could not update host.',
+        );
+      }
+    } finally {
+      processingHostId.value = '';
+    }
+  }
+
+  /// FAB → agency creation form (`POST /api/agency/register-public`), with
+  /// invitedBy prefilled from the super admin account. Refreshes on return.
+  Future<void> openCreateAgency() async {
+    var invitedBy = '';
+    if (Get.isRegistered<UserSessionController>()) {
+      final session = Get.find<UserSessionController>();
+      await session.loadFromStorage();
+      invitedBy = session.email.trim().isNotEmpty
+          ? session.email.trim()
+          : session.userId.trim();
+    }
+    await Get.toNamed(
+      Routes.AGENCY_OWNER_REGISTER,
+      arguments: {
+        'invitedBy': invitedBy.isEmpty ? 'super_admin' : invitedBy,
+        'fromSuperAdmin': true,
+      },
+    );
+    await loadAgencies(showLoader: false);
+    await loadDashboardStats(showLoader: false);
+  }
+
+  /// FAB → host onboarding form (`POST /api/agency/host-onboarding`). The
+  /// super admin types the target agency code. Refreshes on return.
+  Future<void> openCreateHost() async {
+    await Get.toNamed(
+      Routes.AGENCY_HOST_ONBOARDING,
+      arguments: {'fromSuperAdmin': true},
+    );
+    await loadTrackedHosts(showLoader: false);
+    await loadDashboardStats(showLoader: false);
   }
 
   Future<void> generateAgencyLink() async {

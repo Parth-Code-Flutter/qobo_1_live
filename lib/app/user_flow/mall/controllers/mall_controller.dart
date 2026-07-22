@@ -5,6 +5,7 @@ import 'package:qobo_one_live/repo/background/background_repo.dart';
 import 'package:qobo_one_live/repo/economy/economy_repo.dart';
 import 'package:qobo_one_live/repo/frame/frame_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_dialogs/common_giffy_dialog.dart';
 
@@ -207,14 +208,22 @@ class MallController extends GetxController {
       final backgroundId = raw['id']?.toString() ?? '';
       if (backgroundId.isEmpty) continue;
 
+      final status = raw['status']?.toString().toLowerCase() ?? 'active';
+      if (status.isNotEmpty && status != 'active') continue;
+
       final purchased = purchasedByBackgroundId[backgroundId];
-      final durationDays = _toInt(raw['durationDays']);
+      final durationDays = _toInt(raw['durationDays'] ?? raw['duration_days']);
       final category = raw['category']?.toString() ?? 'Premium';
       final imageUrl = ApiImageUtils.normalize(
         raw['image']?.toString() ??
             raw['imageUrl']?.toString() ??
             raw['previewUrl']?.toString(),
       );
+      final expiresAt = purchased?['expiresAt']?.toString() ?? '';
+      final isExpired = _isExpired(expiresAt);
+      final isOwned = purchased != null && !isExpired;
+      final isEquipped =
+          purchased?['isEquipped'] == true && isOwned && !isExpired;
 
       backgrounds.add({
         'id': backgroundId,
@@ -222,26 +231,80 @@ class MallController extends GetxController {
         'icon': kIconMall,
         'imageUrl': imageUrl,
         'price': _toInt(raw['price']),
-        'duration': durationDays > 0 ? '$durationDays days' : 'Limited time',
+        'duration': _backgroundValidityLabel(
+          durationDays: durationDays,
+          expiresAt: expiresAt,
+          isOwned: purchased != null,
+          isExpired: isExpired,
+        ),
         'durationDays': durationDays,
         'category': category,
-        'status': raw['status']?.toString() ?? 'active',
+        'status': status.isEmpty ? 'active' : status,
         'description': 'Premium $category background for your profile.',
-        'isOwned': purchased != null,
-        'isEquipped': purchased?['isEquipped'] == true,
+        'isOwned': isOwned,
+        'isExpired': isExpired,
+        'isEquipped': isEquipped,
         'backpackItemId': purchased?['id']?.toString(),
-        'expiresAt': purchased?['expiresAt']?.toString(),
+        'expiresAt': expiresAt,
       });
     }
 
-    if (backgrounds.isEmpty) return;
-
+    // Always replace the loading placeholder — even when the catalog is empty.
     final merged = Map<int, List<Map<String, dynamic>>>.from(storeItems);
-    merged[4] = backgrounds;
+    merged[4] = backgrounds.isEmpty
+        ? [
+            {
+              'id': 'background_empty',
+              'name': 'No backgrounds yet',
+              'icon': kIconMall,
+              'price': 0,
+              'duration': 'Check back soon',
+              'description':
+                  'The profile background shop has no active items right now.',
+              'isOwned': false,
+              'isEquipped': false,
+              'isPlaceholder': true,
+            },
+          ]
+        : backgrounds;
     storeItems.assignAll(merged);
   }
 
+  String _backgroundValidityLabel({
+    required int durationDays,
+    required String expiresAt,
+    required bool isOwned,
+    required bool isExpired,
+  }) {
+    if (isExpired) return 'Expired';
+    if (isOwned && expiresAt.trim().isNotEmpty && expiresAt != 'null') {
+      return 'Expires ${_formatExpiryDate(expiresAt)}';
+    }
+    if (durationDays > 0) return '$durationDays days';
+    return 'Limited time';
+  }
+
+  String _formatExpiryDate(String raw) {
+    final date = DateTime.tryParse(raw.trim());
+    if (date == null) return raw;
+    final local = date.toLocal();
+    final y = local.year.toString().padLeft(4, '0');
+    final m = local.month.toString().padLeft(2, '0');
+    final d = local.day.toString().padLeft(2, '0');
+    return '$y-$m-$d';
+  }
+
+  bool _isExpired(String raw) {
+    final text = raw.trim();
+    if (text.isEmpty || text == 'null') return false;
+    final date = DateTime.tryParse(text);
+    if (date == null) return false;
+    return date.toUtc().isBefore(DateTime.now().toUtc());
+  }
+
   Future<void> buyItem(Map<String, dynamic> item) async {
+    if (item['isPlaceholder'] == true) return;
+
     if (selectedTab.value == 1) {
       if (item['isOwned'] == true) {
         // Purchased frames are managed from Backpack so Mall remains focused
@@ -254,6 +317,13 @@ class MallController extends GetxController {
     }
 
     if (selectedTab.value == 4) {
+      if (item['isExpired'] == true) {
+        Get.snackbar(
+          'Mall',
+          'This background expired. Buy it again to use it.',
+        );
+        return;
+      }
       if (item['isOwned'] == true) {
         await Get.toNamed(Routes.BACKPACK);
       } else {
@@ -320,6 +390,9 @@ class MallController extends GetxController {
 
     await _fetchBackgroundShop();
     selectTab(4);
+    if (Get.isRegistered<UserSessionController>()) {
+      await Get.find<UserSessionController>().refreshProfileFromApi();
+    }
     await _showPurchaseSuccessDialog(name: name, price: price);
   }
 
@@ -423,10 +496,20 @@ class MallController extends GetxController {
     final result = <String, Map<String, dynamic>>{};
     for (final raw in items.whereType<Map>()) {
       final item = Map<String, dynamic>.from(raw);
-      final backgroundDetails = item['backgroundDetails'];
+      final itemType = item['itemType']?.toString().toUpperCase() ?? '';
+      if (itemType.isNotEmpty &&
+          itemType != 'PROFILE_BACKGROUND' &&
+          itemType != 'BACKGROUND') {
+        continue;
+      }
+      final backgroundDetails =
+          item['backgroundDetails'] ?? item['background_details'];
       final backgroundId =
           item['itemId']?.toString() ??
-          (backgroundDetails is Map ? backgroundDetails['id']?.toString() : null);
+          item['item_id']?.toString() ??
+          (backgroundDetails is Map
+              ? backgroundDetails['id']?.toString()
+              : null);
       if (backgroundId != null && backgroundId.isNotEmpty) {
         result[backgroundId] = item;
       }
@@ -437,7 +520,12 @@ class MallController extends GetxController {
   List _extractList(dynamic value) {
     if (value is List) return value;
     if (value is Map) {
-      final nested = value['items'] ?? value['frames'] ?? value['data'];
+      final nested =
+          value['items'] ??
+          value['backgrounds'] ??
+          value['frames'] ??
+          value['data'] ??
+          value['list'];
       if (nested is List) return nested;
     }
     return const [];

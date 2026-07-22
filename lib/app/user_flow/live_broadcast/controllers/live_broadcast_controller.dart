@@ -20,6 +20,8 @@ import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_dialogs/audio_room_feedback_dialog.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/utils/ui_utils/gift_celebration_overlay.dart';
+import 'package:qobo_one_live/utils/ui_utils/gift_chat_celebration_tracker.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_media_utils.dart';
 import 'package:qobo_one_live/utils/zego_engine_utils.dart';
 import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
@@ -98,10 +100,9 @@ class LiveBroadcastController extends GetxController {
   StreamSubscription<List<ZegoUIKitUser>>? _userSub;
   void Function(Map<String, dynamic>)? _roomBackgroundSocketListener;
 
-  /// Dedupes audio-room gift celebrations triggered by Zego gift chat events.
-  String? _lastCelebratedGiftKey;
-  final Set<String> _seenGiftMessageKeys = <String>{};
-  bool _giftChatBootstrapDone = false;
+  /// Dedupes gift celebrations triggered by Zego gift chat events (all room kinds).
+  final GiftChatCelebrationTracker _giftCelebrationTracker =
+      GiftChatCelebrationTracker();
   Timer? _seatRefreshTimer;
   VoidCallback? _viewerCountListener;
   var _exitReported = false;
@@ -417,40 +418,24 @@ class LiveBroadcastController extends GetxController {
     _maybeCelebrateIncomingGift(messages, myId);
   }
 
-  /// Plays the gift SVGA/sound for peer (non-self) gift chat events in any room.
+  /// Plays the gift SVGA/sound for peer (non-self) gift chat events in any room
+  /// (audio, video, live stream). Same protocol as 1:1 calls.
   void _maybeCelebrateIncomingGift(
     List<ZegoInRoomMessage> messages,
     String myUserId,
   ) {
-    final giftMessages = messages
-        .where((m) => GiftMediaUtils.isGiftChatMessage(m.message))
-        .toList();
-    // First sync after join: mark existing gifts as seen (no replay/pop).
-    if (!_giftChatBootstrapDone) {
-      for (final message in giftMessages) {
-        _seenGiftMessageKeys.add('${message.messageID}_${message.timestamp}');
-      }
-      _giftChatBootstrapDone = true;
-      return;
-    }
-    if (giftMessages.isEmpty) return;
-
-    // Celebrate only newly arrived peer gift messages (newest first).
-    for (var i = giftMessages.length - 1; i >= 0; i--) {
-      final message = giftMessages[i];
-      final key = '${message.messageID}_${message.timestamp}';
-      if (!_seenGiftMessageKeys.add(key)) continue;
-      if (key == _lastCelebratedGiftKey) continue;
-
-      final senderId = ZegoLiveIdUtils.sanitizeUserId(message.user.id);
-      final isMine = senderId.isNotEmpty && senderId == myUserId;
-      // Sender already celebrates on send-gift API success — skip duplicates.
-      if (isMine) continue;
-
-      _lastCelebratedGiftKey = key;
-      GiftMediaUtils.showCelebrationFromChatLabel(message.message);
-      return;
-    }
+    _giftCelebrationTracker.onGiftMessages(
+      myUserId: myUserId,
+      events: messages
+          .where((m) => GiftMediaUtils.isGiftChatMessage(m.message))
+          .map(
+            (m) => (
+              key: '${m.messageID}_${m.timestamp}',
+              senderId: ZegoLiveIdUtils.sanitizeUserId(m.user.id),
+              message: m.message,
+            ),
+          ),
+    );
   }
 
   Map<String, dynamic> _mapZegoMessage(
@@ -765,55 +750,56 @@ class LiveBroadcastController extends GetxController {
     );
 
     if (isEconomyApiSuccess(response)) {
-      // Audio rooms close the sheet first so the overlay is not covered.
-      final showAudioRoomGiftAnimation = isAudioRoom;
       final animationUrl = GiftMediaUtils.animationUrlFromResponse(
         response,
         gift,
       );
       final soundUrl = GiftMediaUtils.soundUrlFromResponse(response, gift);
-      if (showAudioRoomGiftAnimation) {
-        Get.back();
-        await Future<void>.delayed(const Duration(milliseconds: 300));
-        GiftMediaUtils.showCelebration(
+
+      // Same timing as audio rooms for video / live / group: close the sheet
+      // first so it never covers the SVGA celebration on either side.
+      unawaited(
+        GiftMediaUtils.dismissSheetThenCelebrate(
           giftName: gift['name'],
           animationUrl: animationUrl,
           soundUrl: soundUrl,
-        );
-      }
+        ),
+      );
 
       unawaited(loadWalletBalance());
 
-      // Broadcast gift markers so peers (audio + video + group) can celebrate.
+      // Broadcast gift markers so every peer in the Zego room can celebrate.
       final giftLabel = GiftMediaUtils.buildChatLabel(
         giftName: gift['name'],
         giftIcon: gift['icon'],
         animationUrl: animationUrl,
         soundUrl: soundUrl,
       );
-      if (isZegoConnected.value) {
-        // Send on the base UIKit bus for every room kind. The live-streaming
-        // facade (`message.send`) can silently no-op when its internal
-        // enable-chat relay is not wired, so peers never receive the gift.
-        unawaited(ZegoUIKit().sendInRoomMessage(giftLabel));
-      } else {
-        chatMessages.add({
-          'sender': 'You',
-          'message': stripGiftAnimMarker(giftLabel),
-          'translation': '',
-          'isTranslated': false,
-          'isSystem': true,
-        });
-      }
-
-      if (!showAudioRoomGiftAnimation) {
-        Get.back();
-        GiftMediaUtils.showCelebration(
-          giftName: gift['name'],
-          animationUrl: animationUrl,
-          soundUrl: soundUrl,
-        );
-      }
+      // Always try the base UIKit bus. The live-streaming facade
+      // (`message.send`) can silently no-op when its chat relay is unwired.
+      unawaited(
+        ZegoUIKit()
+            .sendInRoomMessage(giftLabel)
+            .then((sent) {
+              if (sent) return;
+              chatMessages.add({
+                'sender': 'You',
+                'message': stripGiftAnimMarker(giftLabel),
+                'translation': '',
+                'isTranslated': false,
+                'isSystem': true,
+              });
+            })
+            .catchError((_) {
+              chatMessages.add({
+                'sender': 'You',
+                'message': stripGiftAnimMarker(giftLabel),
+                'translation': '',
+                'isTranslated': false,
+                'isSystem': true,
+              });
+            }),
+      );
     } else {
       Get.snackbar(
         'Gift not sent',
@@ -2296,6 +2282,8 @@ class LiveBroadcastController extends GetxController {
     _unbindRoomBackgroundSocket();
     _messageSub?.cancel();
     _userSub?.cancel();
+    _giftCelebrationTracker.reset();
+    GiftCelebrationOverlay.dismiss();
     if (_viewerCountListener != null) {
       try {
         ZegoUIKitPrebuiltLiveStreamingController().user.countNotifier

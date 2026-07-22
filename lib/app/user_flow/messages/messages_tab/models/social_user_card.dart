@@ -7,6 +7,7 @@ class SocialUserCard {
     required this.name,
     this.displayPicture,
     this.avatarFrameUrl,
+    this.profileBackgroundUrl,
     this.gender = '',
     this.country = '',
     this.level = 0,
@@ -27,6 +28,7 @@ class SocialUserCard {
   final String name;
   final String? displayPicture;
   final String? avatarFrameUrl;
+  final String? profileBackgroundUrl;
   final String gender;
   final String country;
   final int level;
@@ -50,12 +52,16 @@ class SocialUserCard {
     Object? isFavourite = _copyWithUnset,
     int? followersCount,
     int? followingCount,
+    Object? profileBackgroundUrl = _copyWithUnset,
   }) {
     return SocialUserCard(
       id: id,
       name: name,
       displayPicture: displayPicture,
       avatarFrameUrl: avatarFrameUrl,
+      profileBackgroundUrl: identical(profileBackgroundUrl, _copyWithUnset)
+          ? this.profileBackgroundUrl
+          : profileBackgroundUrl as String?,
       gender: gender,
       country: country,
       level: level,
@@ -68,6 +74,8 @@ class SocialUserCard {
       isFavourite: identical(isFavourite, _copyWithUnset)
           ? this.isFavourite
           : isFavourite as bool,
+      coins: coins,
+      coinsPerSecond: coinsPerSecond,
       followersCount: followersCount ?? this.followersCount,
       followingCount: followingCount ?? this.followingCount,
     );
@@ -99,6 +107,9 @@ class SocialUserCard {
         json['displayPicture']?.toString(),
       ),
       avatarFrameUrl: ApiImageUtils.normalize(_readAvatarFrameUrl(json)),
+      profileBackgroundUrl: ApiImageUtils.normalize(
+        _readProfileBackgroundUrl(json),
+      ),
       gender: json['gender']?.toString() ?? '',
       country: json['country']?.toString() ?? '',
       level: _toInt(json['level']),
@@ -172,6 +183,38 @@ class SocialUserCard {
       }
     }
 
+    return null;
+  }
+
+  /// Equipped theme from `profileBackground` on profile / public profile APIs.
+  static String? _readProfileBackgroundUrl(Map<String, dynamic> json) {
+    final direct =
+        json['profileBackgroundUrl'] ??
+        json['profile_background_url'] ??
+        json['backgroundUrl'] ??
+        json['background_url'];
+    final directText = direct?.toString().trim();
+    if (directText != null && directText.isNotEmpty && directText != 'null') {
+      return directText;
+    }
+
+    final nested =
+        json['profileBackground'] ?? json['profile_background'];
+    if (nested is Map) {
+      final image =
+          nested['image'] ??
+          nested['imageUrl'] ??
+          nested['url'] ??
+          nested['backgroundImage'];
+      final imageText = image?.toString().trim();
+      if (imageText != null && imageText.isNotEmpty && imageText != 'null') {
+        return imageText;
+      }
+    }
+    if (nested is String) {
+      final text = nested.trim();
+      if (text.isNotEmpty && text != 'null') return text;
+    }
     return null;
   }
 }

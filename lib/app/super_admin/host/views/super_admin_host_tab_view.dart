@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/super_admin/home/controllers/super_admin_home_controller.dart';
+import 'package:qobo_one_live/app/super_admin/models/super_admin_models.dart';
 import 'package:qobo_one_live/app/super_admin/widgets/super_admin_glass_card.dart';
 import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui_kit.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
@@ -155,6 +156,8 @@ class SuperAdminHostTabView extends GetView<SuperAdminHomeController> {
                                     color: const Color(0xFFFFD166),
                                   ),
                                 ),
+                                Spacing.h6,
+                                _manageButton(context, host),
                               ],
                             ),
                           ),
@@ -236,6 +239,220 @@ class SuperAdminHostTabView extends GetView<SuperAdminHomeController> {
         );
       }),
     );
+  }
+
+  /// Edit / delete entry point on each host card.
+  Widget _manageButton(BuildContext context, SuperAdminTrackedHost host) {
+    return Obx(() {
+      final processing = controller.processingHostId.value == host.id;
+      return InkWell(
+        onTap: processing ? null : () => _openManageSheet(context, host),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: kColorWhite.withValues(alpha: 0.10),
+            border: Border.all(color: kColorWhite.withValues(alpha: 0.16)),
+          ),
+          child: processing
+              ? const Padding(
+                  padding: EdgeInsets.all(7),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white70,
+                  ),
+                )
+              : const Icon(
+                  Icons.more_vert_rounded,
+                  size: 18,
+                  color: Colors.white70,
+                ),
+        ),
+      );
+    });
+  }
+
+  /// Status actions from `POST /api/super-admin/hosts/:hostId/status`.
+  /// `inactive` is the backend's closest equivalent to deleting a host.
+  void _openManageSheet(BuildContext context, SuperAdminTrackedHost host) {
+    final status = host.status.toLowerCase();
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
+        decoration: const BoxDecoration(
+          color: Color(0xFF1A1B4B),
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Spacing.v12,
+            SemiBoldText(
+              text: host.name,
+              fontSize: TextStyles.k16FontSize,
+              color: kColorWhite,
+            ),
+            AppText(
+              text:
+                  'Agency ${host.agencyCode.isEmpty ? '—' : host.agencyCode}'
+                  ' • ${host.status}',
+              fontSize: TextStyles.k12FontSize,
+              color: Colors.white60,
+            ),
+            Spacing.v12,
+            if (status != 'active')
+              _sheetAction(
+                icon: Icons.play_circle_fill_rounded,
+                color: const Color(0xFF4ADE80),
+                label: 'Activate host',
+                onTap: () {
+                  Get.back();
+                  controller.setHostStatus(host, 'active');
+                },
+              ),
+            if (status != 'suspended')
+              _sheetAction(
+                icon: Icons.pause_circle_filled_rounded,
+                color: const Color(0xFFFFB74D),
+                label: 'Suspend host',
+                onTap: () async {
+                  Get.back();
+                  final reason = await _askReason(
+                    context,
+                    title: 'Suspend host?',
+                    hint: 'Reason (optional)',
+                    confirmLabel: 'Suspend',
+                  );
+                  if (reason == null) return;
+                  await controller.setHostStatus(
+                    host,
+                    'suspended',
+                    reason: reason,
+                  );
+                },
+              ),
+            if (status != 'inactive')
+              _sheetAction(
+                icon: Icons.delete_forever_rounded,
+                color: const Color(0xFFFF8A80),
+                label: 'Delete host',
+                onTap: () async {
+                  Get.back();
+                  final reason = await _askReason(
+                    context,
+                    title: 'Delete host?',
+                    subtitle:
+                        'The host is marked inactive and can no longer stream.',
+                    hint: 'Reason (optional)',
+                    confirmLabel: 'Delete',
+                  );
+                  if (reason == null) return;
+                  await controller.setHostStatus(
+                    host,
+                    'inactive',
+                    reason: reason,
+                  );
+                },
+              ),
+          ],
+        ),
+      ),
+      backgroundColor: Colors.transparent,
+    );
+  }
+
+  Widget _sheetAction({
+    required IconData icon,
+    required Color color,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: kColorWhite.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            child: Row(
+              children: [
+                Icon(icon, size: 20, color: color),
+                Spacing.h10,
+                SemiBoldText(
+                  text: label,
+                  fontSize: TextStyles.k12FontSize,
+                  color: kColorWhite,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Returns null when cancelled; empty string means confirmed w/o reason.
+  Future<String?> _askReason(
+    BuildContext context, {
+    required String title,
+    String? subtitle,
+    required String hint,
+    required String confirmLabel,
+  }) async {
+    final reasonController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: kColorWhite,
+        title: Text(title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (subtitle != null) ...[
+              Text(subtitle, style: const TextStyle(fontSize: 13)),
+              const SizedBox(height: 10),
+            ],
+            TextField(
+              controller: reasonController,
+              decoration: InputDecoration(hintText: hint),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(confirmLabel),
+          ),
+        ],
+      ),
+    );
+    final reason = reasonController.text.trim();
+    reasonController.dispose();
+    return confirmed == true ? reason : null;
   }
 
   String _formatSeconds(double seconds) {

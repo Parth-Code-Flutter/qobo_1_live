@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/app/super_admin/agency/views/super_admin_agency_tab_view.dart';
 import 'package:qobo_one_live/app/super_admin/bottom_nav/controllers/super_admin_bottom_nav_controller.dart';
 import 'package:qobo_one_live/app/super_admin/dashboard/views/super_admin_dashboard_tab_view.dart';
+import 'package:qobo_one_live/app/super_admin/home/controllers/super_admin_home_controller.dart';
 import 'package:qobo_one_live/app/super_admin/host/views/super_admin_host_tab_view.dart';
 import 'package:qobo_one_live/app/super_admin/settings/views/super_admin_settings_tab_view.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
@@ -39,6 +40,34 @@ class SuperAdminBottomNavView extends GetView<SuperAdminBottomNavController> {
           default:
             return Spacing.shrink;
         }
+      }),
+      // Create actions: + on Agency tab registers a new agency,
+      // + on Host tab submits a new host application.
+      floatingActionButton: Obx(() {
+        final index = controller.selectedIndex.value;
+        final isAgencyTab =
+            index == SuperAdminBottomNavController.agencyTabIndex;
+        final isHostTab = index == SuperAdminBottomNavController.hostTabIndex;
+        if (!isAgencyTab && !isHostTab) return const SizedBox.shrink();
+
+        final home = Get.find<SuperAdminHomeController>();
+        final accent = isAgencyTab
+            ? const Color(0xFFFF8AD8)
+            : const Color(0xFF5CE1B0);
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: FloatingActionButton(
+            heroTag: 'super_admin_create_fab',
+            tooltip: isAgencyTab ? 'Create agency' : 'Create host',
+            backgroundColor: accent,
+            foregroundColor: const Color(0xFF121644),
+            shape: const CircleBorder(),
+            onPressed: isAgencyTab
+                ? home.openCreateAgency
+                : home.openCreateHost,
+            child: const Icon(Icons.add_rounded, size: 30),
+          ),
+        );
       }),
       bottomNavigationBar: ClipRect(
         child: BackdropFilter(

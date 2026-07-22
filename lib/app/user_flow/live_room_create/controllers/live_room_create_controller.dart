@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:qobo_one_live/app/user_flow/live_broadcast/models/room_background_theme.dart';
 import 'package:qobo_one_live/repo/room/room_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
@@ -19,13 +19,18 @@ class LiveRoomCreateController extends GetxController {
   final mode = LiveRoomCreateMode.audioVideoRoom.obs;
   final liveStreamingId = ''.obs;
   final onlyFollows = false.obs;
-  final selectedCoverPath = RxnString();
 
   final roomType = 'AUDIO'.obs;
   final seatCount = '8'.obs;
   final isPrivate = false.obs;
   final selectedCategoryIndex = 0.obs;
   final selectedRegion = 'IN'.obs;
+
+  /// Catalog from `GET /api/room/backgrounds` for create-room banner pick.
+  final roomBackgrounds = <RoomBackgroundTheme>[].obs;
+  final isLoadingBackgrounds = false.obs;
+  final selectedBackgroundId = RxnString();
+  final selectedBackgroundImage = RxnString();
 
   static const categories = <String>[
     'Just Chat',
@@ -43,7 +48,6 @@ class LiveRoomCreateController extends GetxController {
   ];
 
   final RoomRepo _roomRepo = RoomRepo();
-  final ImagePicker _imagePicker = ImagePicker();
 
   bool get isLiveStreamingMode =>
       mode.value == LiveRoomCreateMode.liveStreaming;
@@ -66,6 +70,7 @@ class LiveRoomCreateController extends GetxController {
     // Audio/video rooms use the host profile as the room identity — no manual title.
     if (!isLiveStreamingMode) {
       _applyCreatorRoomTitle();
+      loadRoomBackgrounds();
     }
   }
 
@@ -118,23 +123,44 @@ class LiveRoomCreateController extends GetxController {
 
   void setOnlyFollows(bool value) => onlyFollows.value = value;
 
-  Future<void> pickRoomCover(BuildContext context) async {
+  Future<void> loadRoomBackgrounds() async {
+    if (isLoadingBackgrounds.value) return;
+    isLoadingBackgrounds.value = true;
     try {
-      final picked = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 82,
-        maxWidth: 1280,
-      );
-      if (picked == null) return;
-      selectedCoverPath.value = picked.path;
-    } catch (_) {
-      if (!context.mounted) return;
-      AppToast.showError(context, 'Unable to open media picker');
+      final response = await _roomRepo.getRoomBackgrounds(isShowLoader: false);
+      if (_isSuccess(response)) {
+        final themes = RoomBackgroundTheme.listFromResponse(
+          response?['data'] ?? response,
+        );
+        roomBackgrounds.assignAll(themes);
+        if (themes.isEmpty) return;
+
+        final currentId = selectedBackgroundId.value;
+        final stillValid =
+            currentId != null &&
+            currentId.isNotEmpty &&
+            themes.any((t) => t.id == currentId);
+        if (stillValid) return;
+
+        final preferred = themes.firstWhere(
+          (t) => t.isDefault,
+          orElse: () => themes.first,
+        );
+        selectBackground(preferred);
+      }
+    } finally {
+      isLoadingBackgrounds.value = false;
     }
   }
 
-  void clearRoomCover() {
-    selectedCoverPath.value = null;
+  /// Updates the selected room-background thumbnail (pink border + check).
+  void selectBackground(RoomBackgroundTheme theme) {
+    final id = theme.id.trim();
+    if (id.isEmpty) return;
+    // Always assign so Obx rebuilds even if the same image URL is reused.
+    selectedBackgroundId.value = id;
+    selectedBackgroundImage.value = theme.imageUrl;
+    selectedBackgroundId.refresh();
   }
 
   /// Host starts a Zego live stream (from Live Rooms → Go Live).
@@ -235,7 +261,8 @@ class LiveRoomCreateController extends GetxController {
       country: selectedRegion.value,
       maxSeats: maxSeats,
       category: categories[selectedCategoryIndex.value],
-      coverImageFilePath: selectedCoverPath.value,
+      backgroundId: selectedBackgroundId.value,
+      backgroundImage: selectedBackgroundImage.value,
       isPrivate: isPrivate.value,
     );
 
@@ -247,12 +274,13 @@ class LiveRoomCreateController extends GetxController {
         response!['message']?.toString() ?? 'Room created successfully!',
       );
       await ZegoEngineUtils.resetForRoomProject();
+      final roomData = _mergeBackgroundIntoRoomData(response['data']);
       Get.offNamed(
         Routes.LIVE_BROADCAST,
         arguments: {
           'isHost': true,
           'roomType': roomType.value,
-          'roomData': response['data'],
+          'roomData': roomData,
         },
       );
     } else {
@@ -261,6 +289,24 @@ class LiveRoomCreateController extends GetxController {
         response?['message']?.toString() ?? 'Failed to create room',
       );
     }
+  }
+
+  /// Ensures the live room opens with the theme picked on create.
+  Map<String, dynamic> _mergeBackgroundIntoRoomData(dynamic raw) {
+    final map = raw is Map
+        ? Map<String, dynamic>.from(raw)
+        : <String, dynamic>{};
+    final bgId = selectedBackgroundId.value?.trim();
+    final bgImage = selectedBackgroundImage.value?.trim();
+    if (bgId != null && bgId.isNotEmpty) {
+      map.putIfAbsent('backgroundId', () => bgId);
+      map.putIfAbsent('background_id', () => bgId);
+    }
+    if (bgImage != null && bgImage.isNotEmpty) {
+      map.putIfAbsent('backgroundImage', () => bgImage);
+      map.putIfAbsent('background_image', () => bgImage);
+    }
+    return map;
   }
 
   bool _isSuccess(Map<String, dynamic>? response) {
