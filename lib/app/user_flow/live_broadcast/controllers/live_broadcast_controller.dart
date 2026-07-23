@@ -301,6 +301,22 @@ class LiveBroadcastController extends GetxController {
 
   bool get isGroupCallRoom => isAudioVideoRoom;
 
+  /// True when the logged-in user occupies a mic seat marked admin by
+  /// `GET /api/room/seats` (`isAdmin: true`).
+  bool get isCurrentUserRoomAdmin {
+    final myId = _currentUserId();
+    if (myId.isEmpty) return false;
+    for (final seat in audioRoomSeats) {
+      if (!seat.occupied || !seat.isAdmin) continue;
+      if (_userIdsMatch(seat.userId, myId)) return true;
+    }
+    return false;
+  }
+
+  /// Host or room admin — can mute/kick/manage members and change background.
+  bool get canManageAudioRoomMembers =>
+      isHost.value || isCurrentUserRoomAdmin;
+
   String get _normalizedNavRoomType =>
       roomType.value.toUpperCase().replaceAll('-', '_').replaceAll(' ', '_');
 
@@ -880,10 +896,10 @@ class LiveBroadcastController extends GetxController {
   }
 
   void openRoomBackgroundSheet() {
-    if (!isHost.value || !isAudioVideoRoom) {
+    if (!canManageAudioRoomMembers || !isAudioVideoRoom) {
       Get.snackbar(
         'Background',
-        'Only the host can change the room background.',
+        'Only the host or room admins can change the room background.',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.black87,
         colorText: kColorWhite,
@@ -916,7 +932,7 @@ class LiveBroadcastController extends GetxController {
   }
 
   Future<void> applyRoomBackground(RoomBackgroundTheme theme) async {
-    if (!isHost.value || isChangingRoomBackground.value) return;
+    if (!canManageAudioRoomMembers || isChangingRoomBackground.value) return;
     final apiRoomId = audioRoomApiId;
     if (apiRoomId.isEmpty || theme.id.isEmpty) {
       Get.snackbar(

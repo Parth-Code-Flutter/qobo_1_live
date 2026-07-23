@@ -676,7 +676,7 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
               onTap: () => controller.shareRoom(),
               compact: compact,
             ),
-            if (controller.isHost.value) ...[
+            if (controller.canManageAudioRoomMembers) ...[
               Spacing.h8,
               _CircleButton(
                 icon: Icons.wallpaper_rounded,
@@ -845,9 +845,12 @@ class _MemberSeat extends GetView<LiveBroadcastController> {
   }
 
   void _openSeatActions(BuildContext context) {
-    if (controller.isHost.value && seat.isHost) return;
+    if (seat.isHost) return;
     Get.bottomSheet(
-      _AudioSeatActionsSheet(seat: seat, isHostView: controller.isHost.value),
+      _AudioSeatActionsSheet(
+        seat: seat,
+        isHostView: controller.canManageAudioRoomMembers,
+      ),
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
     );
