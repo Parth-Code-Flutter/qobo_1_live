@@ -697,6 +697,7 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
                 icon: Icons.power_settings_new_rounded,
                 onTap: controller.confirmEndRoom,
                 compact: compact,
+                iconColor: const Color(0xFFFF3B5C),
               ),
             ],
           ],
@@ -1636,12 +1637,14 @@ class _CircleButton extends StatelessWidget {
     required this.onTap,
     required this.compact,
     this.filled = true,
+    this.iconColor = kColorWhite,
   });
 
   final IconData icon;
   final VoidCallback onTap;
   final bool compact;
   final bool filled;
+  final Color iconColor;
 
   @override
   Widget build(BuildContext context) {
@@ -1658,7 +1661,7 @@ class _CircleButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: kColorWhite.withValues(alpha: 0.06)),
         ),
-        child: Icon(icon, color: kColorWhite, size: compact ? 22 : 24),
+        child: Icon(icon, color: iconColor, size: compact ? 22 : 24),
       ),
     );
   }

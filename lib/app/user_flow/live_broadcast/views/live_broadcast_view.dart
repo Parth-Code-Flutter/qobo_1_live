@@ -916,9 +916,11 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
           onTap: controller.shareRoom,
         ),
         SizedBox(width: compact ? 5 : 8),
+        // Same end control as audio/video rooms (red power icon).
         _topIconButton(
-          Icons.close_rounded,
+          Icons.power_settings_new_rounded,
           compact: compact,
+          iconColor: const Color(0xFFFF3B5C),
           onTap: controller.leaveRoom,
         ),
       ],
@@ -963,6 +965,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
   Widget _topIconButton(
     IconData icon, {
     bool compact = false,
+    Color iconColor = kColorWhite,
     VoidCallback? onTap,
   }) {
     return GestureDetector(
@@ -975,7 +978,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
           shape: BoxShape.circle,
           border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
         ),
-        child: Icon(icon, color: kColorWhite, size: compact ? 19 : 22),
+        child: Icon(icon, color: iconColor, size: compact ? 19 : 22),
       ),
     );
   }
