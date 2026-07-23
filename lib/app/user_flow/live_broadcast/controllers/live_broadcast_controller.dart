@@ -1666,19 +1666,46 @@ class LiveBroadcastController extends GetxController {
             (max, value) => value > max ? value : max,
           );
 
-    final seats = <AudioRoomSeatModel>[];
-    seats.add(_resolveHostSeat(seatsByNo[1]));
-    final hostUserId = receiverId.value.trim();
+    final hostSeat = _pinHostToFirstSeat(seatsByNo.values.toList());
+    final hostUserId = hostSeat.userId.trim().isNotEmpty
+        ? hostSeat.userId.trim()
+        : receiverId.value.trim();
+
+    // Whoever was wrongly sitting in API seat 1 (not the host) gets moved
+    // to the first free seat so the host always owns seat 1 in the UI.
+    AudioRoomSeatModel? displacedSeat1;
+    final apiSeat1 = seatsByNo[1];
+    if (apiSeat1 != null &&
+        apiSeat1.occupied &&
+        !_isSameRoomUser(apiSeat1.userId, hostUserId)) {
+      displacedSeat1 = apiSeat1;
+    }
+
+    final seats = <AudioRoomSeatModel>[hostSeat];
     for (var seatNo = 2; seatNo <= maxSeat; seatNo++) {
       final seat = seatsByNo[seatNo] ?? AudioRoomSeatModel.empty(seatNo);
-      if (hostUserId.isNotEmpty && seat.userId.trim() == hostUserId) {
+      if (_isSameRoomUser(seat.userId, hostUserId)) {
         seats.add(AudioRoomSeatModel.empty(seatNo));
         continue;
       }
       seats.add(seat);
     }
 
-    final hostSeat = seats.first;
+    if (displacedSeat1 != null) {
+      final emptyIndex = seats.indexWhere(
+        (seat) => seat.seatNo > 1 && !seat.occupied,
+      );
+      if (emptyIndex >= 0) {
+        final emptySeatNo = seats[emptyIndex].seatNo;
+        seats[emptyIndex] = displacedSeat1.copyWith(
+          seatNo: emptySeatNo,
+          role: displacedSeat1.role.toLowerCase() == 'host'
+              ? 'speaker'
+              : displacedSeat1.role,
+        );
+      }
+    }
+
     if (hostSeat.occupied) {
       if (hostSeat.name.trim().isNotEmpty) hostName.value = hostSeat.name;
       if (hostSeat.avatarUrl?.trim().isNotEmpty == true) {
@@ -1687,17 +1714,85 @@ class LiveBroadcastController extends GetxController {
       if (hostSeat.avatarFrameUrl?.trim().isNotEmpty == true) {
         hostAvatarFrameUrl.value = hostSeat.avatarFrameUrl;
       }
-      if (receiverId.value.trim().isEmpty) receiverId.value = hostSeat.userId;
+      if (receiverId.value.trim().isEmpty && hostSeat.userId.trim().isNotEmpty) {
+        receiverId.value = hostSeat.userId;
+      }
     }
 
     return seats;
   }
 
+  /// Always place the room host in seat 1 for host and audience UIs.
+  AudioRoomSeatModel _pinHostToFirstSeat(List<AudioRoomSeatModel> occupied) {
+    final knownHostId = receiverId.value.trim();
+    final myId = _currentUserId();
+
+    AudioRoomSeatModel? hostFromSeats;
+    for (final seat in occupied) {
+      if (!seat.occupied) continue;
+      // When I am the room host, my mic seat is always seat 1.
+      if (isHost.value &&
+          myId.isNotEmpty &&
+          _userIdsMatch(seat.userId, myId)) {
+        hostFromSeats = seat;
+        break;
+      }
+    }
+    if (hostFromSeats == null) {
+      for (final seat in occupied) {
+        if (!seat.occupied) continue;
+        if (seat.role.toLowerCase() == 'host') {
+          hostFromSeats = seat;
+          break;
+        }
+      }
+    }
+    if (hostFromSeats == null && knownHostId.isNotEmpty) {
+      for (final seat in occupied) {
+        if (!seat.occupied) continue;
+        if (_userIdsMatch(seat.userId, knownHostId)) {
+          hostFromSeats = seat;
+          break;
+        }
+      }
+    }
+
+    if (hostFromSeats != null) {
+      return hostFromSeats.copyWith(seatNo: 1, role: 'host');
+    }
+
+    if (isHost.value && myId.isNotEmpty) {
+      final session = Get.isRegistered<UserSessionController>()
+          ? Get.find<UserSessionController>()
+          : null;
+      return AudioRoomSeatModel(
+        seatNo: 1,
+        userId: myId,
+        name: (session?.displayName.trim().isNotEmpty == true)
+            ? session!.displayName
+            : (hostName.value.trim().isNotEmpty ? hostName.value : 'Host'),
+        avatarUrl: session?.displayPictureUrl ?? hostAvatarUrl.value,
+        avatarFrameUrl: session?.profileFrameUrl.trim().isNotEmpty == true
+            ? session!.profileFrameUrl
+            : hostAvatarFrameUrl.value,
+        role: 'host',
+        isAdmin: true,
+      );
+    }
+
+    return _resolveHostSeat(null);
+  }
+
+  bool _isSameRoomUser(String left, String right) {
+    final a = left.trim();
+    final b = right.trim();
+    if (a.isEmpty || b.isEmpty) return false;
+    return _userIdsMatch(a, b);
+  }
+
   AudioRoomSeatModel _resolveHostSeat(AudioRoomSeatModel? apiHostSeat) {
     if (apiHostSeat != null && apiHostSeat.occupied) {
-      return apiHostSeat.isHost
-          ? apiHostSeat
-          : apiHostSeat.copyWith(role: 'host');
+      return apiHostSeat.copyWith(seatNo: 1, role: 'host');
     }
 
     final hostId = receiverId.value.trim();
@@ -1769,7 +1864,7 @@ class LiveBroadcastController extends GetxController {
 
   List<AudioRoomSeatModel> _buildFallbackAudioSeats() {
     final maxSeats = _readSeatConfig(_roomData);
-    final seats = <AudioRoomSeatModel>[_resolveHostSeat(null)];
+    final seats = <AudioRoomSeatModel>[_pinHostToFirstSeat(const [])];
     var seatNo = 2;
     final hostUserId = receiverId.value.trim();
 
@@ -1778,7 +1873,7 @@ class LiveBroadcastController extends GetxController {
       if (viewer['isHost'] == true) continue;
       final viewerId =
           viewer['targetId']?.toString() ?? viewer['id']?.toString() ?? '';
-      if (hostUserId.isNotEmpty && viewerId.trim() == hostUserId) continue;
+      if (_isSameRoomUser(viewerId, hostUserId)) continue;
       seats.add(
         AudioRoomSeatModel(
           seatNo: seatNo,
