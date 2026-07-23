@@ -317,7 +317,8 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
     return Obx(() {
       final File? localPoster = controller.selectedPosterMedia.value;
       final String netPoster = controller.posterUrl.value;
-      final bool isUploading = controller.isPosterUploading.value;
+      final bool isBusy = controller.isPosterUploading.value ||
+          controller.isApplyingCoverBackground.value;
       final bool hasPoster =
           localPoster != null || netPoster.trim().isNotEmpty;
 
@@ -327,9 +328,9 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
           clipBehavior: Clip.none,
           children: [
             GestureDetector(
-              onTap: isUploading
+              onTap: isBusy
                   ? null
-                  : () => controller.pickPosterMedia(context),
+                  : () => controller.openCoverBackgroundSheet(context),
               child: SizedBox(
                 height: bannerHeight,
                 width: double.infinity,
@@ -355,7 +356,7 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
                       bottom: 14,
                       child: _coverEditButton(),
                     ),
-                    if (isUploading)
+                    if (isBusy)
                       ColoredBox(
                         color: kColorBlack.withValues(alpha: 0.35),
                         child: const Center(
@@ -405,7 +406,7 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
             ),
             Spacing.v6,
             AppText(
-              text: 'Add cover photo',
+              text: 'Choose a cover background',
               fontSize: TextStyles.k12FontSize,
               color: kColorWhite.withValues(alpha: 0.92),
             ),
@@ -426,7 +427,7 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
       child: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.camera_alt_rounded, color: kColorWhite, size: 14),
+          Icon(Icons.wallpaper_rounded, color: kColorWhite, size: 14),
           SizedBox(width: 6),
           AppText(
             text: 'Edit cover',
