@@ -15,6 +15,7 @@ import 'package:zego_uikit/zego_uikit.dart';
 import '../controllers/live_broadcast_controller.dart';
 import '../models/audio_room_models.dart';
 import '../utils/audio_room_seat_layout.dart';
+import 'room_options_sheet.dart';
 
 class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
   const AudioRoomStageOverlay({super.key});
@@ -177,6 +178,20 @@ class _AudioRoomBottomControls extends GetView<LiveBroadcastController> {
                 coins: controller.coinsBalance.value,
                 onTap: controller.openGiftsSheet,
               ),
+            ),
+            _ControlButton(
+              icon: Icons.more_horiz_rounded,
+              label: 'More',
+              compact: compact,
+              onTap: () {
+                Get.bottomSheet(
+                  RoomOptionsSheet(
+                    isHost: controller.isHost.value,
+                    isVideoRoom: controller.isVideoRoom,
+                  ),
+                  backgroundColor: Colors.transparent,
+                );
+              },
             ),
           ],
         ),

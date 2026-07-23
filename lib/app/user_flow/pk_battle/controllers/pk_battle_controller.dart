@@ -403,7 +403,13 @@ class PKBattleController extends GetxController {
 
     if (Get.isRegistered<LiveBroadcastController>()) {
       final live = Get.find<LiveBroadcastController>();
-      if (myRoomId.value.isEmpty) myRoomId.value = live.roomId.value;
+      // Prefer backend room id so /api/pk/* matches the active live room.
+      final backendRoomId = live.audioRoomApiId.trim();
+      if (backendRoomId.isNotEmpty) {
+        myRoomId.value = backendRoomId;
+      } else if (myRoomId.value.isEmpty) {
+        myRoomId.value = live.roomId.value;
+      }
       if (myRoomName.value == 'My Room') {
         myRoomName.value = live.streamTitle.value.isNotEmpty
             ? live.streamTitle.value

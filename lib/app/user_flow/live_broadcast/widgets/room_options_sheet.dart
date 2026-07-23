@@ -116,10 +116,26 @@ class RoomOptionsSheet extends StatelessWidget {
                           Get.isRegistered<LiveBroadcastController>()
                           ? Get.find<LiveBroadcastController>()
                           : null;
+                      // PK APIs need the backend room id (with dashes), not the
+                      // sanitized Zego channel id used for call login.
+                      final roomId = (liveController?.audioRoomApiId.trim().isNotEmpty ==
+                              true)
+                          ? liveController!.audioRoomApiId.trim()
+                          : (liveController?.roomId.value.trim() ?? '');
+                      if (roomId.isEmpty) {
+                        Get.snackbar(
+                          'PK Battle',
+                          'Room id is missing. Rejoin the room and try again.',
+                          snackPosition: SnackPosition.BOTTOM,
+                          backgroundColor: Colors.black87,
+                          colorText: kColorWhite,
+                        );
+                        return;
+                      }
                       Get.toNamed(
                         Routes.PK_BATTLE,
                         arguments: {
-                          'room_id': liveController?.roomId.value ?? '',
+                          'room_id': roomId,
                           'title': liveController?.streamTitle.value ?? '',
                           'name': liveController?.hostName.value ?? '',
                         },
