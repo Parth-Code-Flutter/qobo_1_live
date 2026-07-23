@@ -51,6 +51,7 @@ class PKBattleController extends GetxController {
   void onInit() {
     super.onInit();
     _hydrateContext();
+    unawaited(_restoreActiveState());
     loadOpponents(isShowLoader: false);
     debounce(
       searchQuery,
@@ -211,7 +212,56 @@ class PKBattleController extends GetxController {
   }
 
   void cancelOutgoing() {
+    unawaited(_cancelOutgoingRequest());
+  }
+
+  Future<void> _cancelOutgoingRequest() async {
+    final requestId = currentRequestId.value.trim().isNotEmpty
+        ? currentRequestId.value.trim()
+        : myRoomId.value.trim();
+    final roomId = currentOpponentRoomId.value.trim().isNotEmpty
+        ? currentOpponentRoomId.value.trim()
+        : myRoomId.value.trim();
+
+    if (myRoomId.value.isNotEmpty && requestId.isNotEmpty) {
+      final response = await _pkRepo.cancelPkRequest(
+        roomId: roomId.isNotEmpty ? roomId : myRoomId.value,
+        requestId: requestId,
+        isShowLoader: true,
+      );
+      if (!_isSuccess(response)) {
+        _showError(_message(response, 'Unable to cancel PK request.'));
+      } else {
+        _showInfo(_message(response, 'PK request cancelled.'));
+      }
+    }
+
     pkState.value = PKState.idle;
+    currentRequestId.value = '';
+  }
+
+  Future<void> forceEndBattle({String reason = 'host_leave'}) async {
+    final battleId = currentBattleId.value.trim();
+    if (battleId.isEmpty || myRoomId.value.isEmpty) {
+      endBattle();
+      return;
+    }
+
+    final response = await _pkRepo.endPkBattle(
+      battleId: battleId,
+      roomId: myRoomId.value,
+      reason: reason,
+      isShowLoader: true,
+    );
+    if (!_isSuccess(response)) {
+      _showError(_message(response, 'Unable to end PK battle.'));
+    }
+    endBattle(
+      winnerId: _readNullableText(_asMap(response?['data']), [
+        'winnerId',
+        'winner_id',
+      ]),
+    );
   }
 
   void startBattle() {
@@ -358,13 +408,25 @@ class PKBattleController extends GetxController {
       'request_id',
       'sender_room_id',
     ]);
-    currentOpponentRoomId.value = _readText(payload, ['sender_room_id']);
+    currentOpponentRoomId.value = _readText(payload, [
+      'sender_room_id',
+      'opponent_room_id',
+    ]);
     currentOpponentName.value =
         _readText(payload, ['sender_host_name', 'senderName']).isNotEmpty
         ? _readText(payload, ['sender_host_name', 'senderName'])
         : 'PK Opponent';
+    currentOpponentAvatar.value = _readText(payload, [
+      'sender_avatar',
+      'avatar',
+    ]);
     timerSeconds.value =
-        int.tryParse(payload['duration']?.toString() ?? '') ?? 300;
+        int.tryParse(
+          payload['battle_duration']?.toString() ??
+              payload['duration']?.toString() ??
+              '',
+        ) ??
+        300;
     pkState.value = PKState.incomingRequest;
   }
 
@@ -374,8 +436,23 @@ class PKBattleController extends GetxController {
       'opponentRoomId',
       'opponent_room_id',
     ]);
+    if (currentOpponentRoomId.value.isEmpty) {
+      final room1 = _readText(payload, ['room1Id', 'room1_id']);
+      final room2 = _readText(payload, ['room2Id', 'room2_id']);
+      currentOpponentRoomId.value =
+          room1 == myRoomId.value ? room2 : room1;
+    }
+    currentOpponentName.value =
+        _readText(payload, [
+          'opponent_host_name',
+          'sender_host_name',
+        ]).isNotEmpty
+        ? _readText(payload, ['opponent_host_name', 'sender_host_name'])
+        : currentOpponentName.value;
     timerSeconds.value =
-        int.tryParse(payload['duration']?.toString() ?? '') ?? 300;
+        int.tryParse(payload['duration']?.toString() ?? '') ??
+        timerSeconds.value;
+    _applyScores(payload);
     _startLocalBattleClock();
     _startStatusPolling();
     pkState.value = PKState.inBattle;
@@ -390,6 +467,21 @@ class PKBattleController extends GetxController {
     endBattle(winnerId: _readNullableText(payload, ['winnerId', 'winner_id']));
   }
 
+  void handlePkRejected(Map<String, dynamic> payload) {
+    pkState.value = PKState.idle;
+    currentRequestId.value = '';
+    _showInfo('Your PK request was rejected.');
+  }
+
+  void handlePkCancelled(Map<String, dynamic> payload) {
+    if (pkState.value == PKState.incomingRequest ||
+        pkState.value == PKState.outgoingRequest) {
+      pkState.value = PKState.idle;
+      currentRequestId.value = '';
+      _showInfo('The PK request was cancelled.');
+    }
+  }
+
   void _hydrateContext() {
     final args = Get.arguments;
     if (args is Map) {
@@ -399,6 +491,19 @@ class PKBattleController extends GetxController {
           _readText(argsMap, ['title', 'name', 'roomName']).isNotEmpty
           ? _readText(argsMap, ['title', 'name', 'roomName'])
           : myRoomName.value;
+
+      if (argsMap['incoming_pk'] == true ||
+          _readText(argsMap, ['type']).toLowerCase() == 'pk_request') {
+        handleIncomingPkRequest(argsMap);
+      } else {
+        final lifecycle = _readText(argsMap, ['lifecycle_type', 'type'])
+            .toLowerCase();
+        if (lifecycle == 'pk_started' || lifecycle == 'pk_accepted') {
+          handlePkStarted(argsMap);
+        } else if (lifecycle == 'pk_completed') {
+          handlePkCompleted(argsMap);
+        }
+      }
     }
 
     if (Get.isRegistered<LiveBroadcastController>()) {
@@ -431,6 +536,53 @@ class PKBattleController extends GetxController {
     }
   }
 
+  Future<void> _restoreActiveState() async {
+    if (myRoomId.value.isEmpty) return;
+    if (pkState.value != PKState.idle) return;
+
+    final response = await _pkRepo.getActivePk(
+      roomId: myRoomId.value,
+      isShowLoader: false,
+    );
+    if (!_isSuccess(response)) return;
+
+    final data = _asMap(response?['data']);
+    final battle = _asMap(data['battle']);
+    final request = _asMap(data['request']);
+
+    if (battle.isNotEmpty &&
+        (_readText(battle, ['id', 'battle_id', 'battleId']).isNotEmpty)) {
+      handlePkStarted(battle);
+      return;
+    }
+
+    if (request.isNotEmpty) {
+      final status = _readText(request, ['status']).toLowerCase();
+      if (status == 'pending') {
+        // If we are the target, show incoming; else outgoing wait.
+        final target =
+            _readText(request, ['target_room_id', 'targetRoomId']);
+        if (target.isNotEmpty && target == myRoomId.value) {
+          handleIncomingPkRequest({
+            ...request,
+            'sender_room_id': _readText(request, [
+              'request_id',
+              'room_id',
+              'sender_room_id',
+            ]),
+          });
+        } else {
+          currentRequestId.value = _readText(request, [
+            'request_id',
+            'room_id',
+          ]);
+          currentOpponentRoomId.value = target;
+          pkState.value = PKState.outgoingRequest;
+        }
+      }
+    }
+  }
+
   void _startBattleFromPayload(Map<String, dynamic> data) {
     currentBattleId.value = _readText(data, ['id', 'battleId', 'battle_id']);
     battleStatus.value = _readText(data, ['status']);
@@ -458,7 +610,7 @@ class PKBattleController extends GetxController {
         timerSeconds.value--;
       } else {
         timer.cancel();
-        if (pkState.value == PKState.inBattle) endBattle();
+        // Winner comes from server (`pk_completed` / status poll).
       }
     });
   }
@@ -477,8 +629,13 @@ class PKBattleController extends GetxController {
       final data = _asMap(response?['data']);
       _applyScores(data);
       battleStatus.value = _readText(data, ['status']);
+      final remaining = int.tryParse(data['remainingSeconds']?.toString() ?? '');
+      if (remaining != null && remaining >= 0) {
+        timerSeconds.value = remaining;
+      }
       if (battleStatus.value.toLowerCase() == 'completed' ||
-          battleStatus.value.toLowerCase() == 'ended') {
+          battleStatus.value.toLowerCase() == 'ended' ||
+          battleStatus.value.toLowerCase() == 'cancelled') {
         endBattle(winnerId: _readNullableText(data, ['winnerId', 'winner_id']));
       }
     });

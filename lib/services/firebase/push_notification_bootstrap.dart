@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:push_notification_service/push_notification_service.dart';
 import 'package:qobo_one_live/services/firebase/fcm_token_sync_service.dart';
 import 'package:qobo_one_live/services/firebase/firebase_bootstrap.dart';
+import 'package:qobo_one_live/services/firebase/pk_battle_push_handler.dart';
 import 'package:qobo_one_live/services/firebase/room_invite_push_handler.dart';
 import 'package:qobo_one_live/utils/app_widgets/room_invite_in_app_banner.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
@@ -16,6 +17,7 @@ abstract final class PushNotificationBootstrap {
   static bool _backgroundHandlerRegistered = false;
   static final RoomInvitePushHandler _roomInviteHandler =
       RoomInvitePushHandler();
+  static final PkBattlePushHandler _pkBattleHandler = PkBattlePushHandler();
 
   /// Registers the top-level FCM background handler once.
   ///
@@ -49,8 +51,9 @@ abstract final class PushNotificationBootstrap {
           );
         },
         // Branded Join/Dismiss card while the app is open (OS tray buttons
-        // cannot use app gradients).
-        onForegroundActionableMessage: (message) {
+        // cannot use app gradients). PK uses Accept/Reject tray actions.
+        onForegroundActionableMessage: (message) async {
+          if (PkBattlePushHandler.isPkMessage(message)) return false;
           return RoomInviteInAppBanner.tryShow(
             message,
             handler: _roomInviteHandler,
@@ -69,10 +72,23 @@ abstract final class PushNotificationBootstrap {
           LoggerUtils.logInfo(
             'Push tapped: ${message.title} | ${message.data}',
           );
+          if (PkBattlePushHandler.isPkMessage(message)) {
+            _pkBattleHandler.handleNotificationTap(message);
+            return;
+          }
           _roomInviteHandler.handleNotificationTap(message);
         },
         onNotificationAction: (actionId, message) {
           LoggerUtils.logInfo('Push action=$actionId | data=${message.data}');
+          if (PkBattlePushHandler.isPkMessage(message) ||
+              actionId == PushNotificationActions.acceptPk ||
+              actionId == PushNotificationActions.rejectPk) {
+            _pkBattleHandler.handleNotificationAction(
+              actionId: actionId,
+              message: message,
+            );
+            return;
+          }
           _roomInviteHandler.handleNotificationAction(
             actionId: actionId,
             message: message,

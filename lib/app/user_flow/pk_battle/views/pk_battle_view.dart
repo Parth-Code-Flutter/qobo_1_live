@@ -905,6 +905,25 @@ class PKBattleView extends GetView<PKBattleController> {
                   ),
                 ],
               ),
+              Spacing.v12,
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.redAccent,
+                    side: const BorderSide(color: Colors.redAccent),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  onPressed: () => controller.forceEndBattle(),
+                  child: const Text(
+                    'End Battle',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                ),
+              ),
             ],
           ),
         ),

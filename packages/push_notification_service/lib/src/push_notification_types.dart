@@ -22,6 +22,24 @@ abstract final class PushNotificationTypes {
   /// Alias of [general] used by some admin dispatches.
   static const String custom = 'custom';
 
+  /// Incoming PK challenge for the opponent host.
+  static const String pkRequest = 'pk_request';
+
+  /// Challenger notified that opponent accepted.
+  static const String pkAccepted = 'pk_accepted';
+
+  /// Challenger notified that opponent rejected.
+  static const String pkRejected = 'pk_rejected';
+
+  /// Opponent notified that challenger cancelled.
+  static const String pkCancelled = 'pk_cancelled';
+
+  /// Both hosts — battle is active.
+  static const String pkStarted = 'pk_started';
+
+  /// Both hosts — battle finished.
+  static const String pkCompleted = 'pk_completed';
+
   /// All types the app currently handles.
   static const Set<String> all = {
     roomInvite,
@@ -30,6 +48,12 @@ abstract final class PushNotificationTypes {
     liveStreamStarted,
     general,
     custom,
+    pkRequest,
+    pkAccepted,
+    pkRejected,
+    pkCancelled,
+    pkStarted,
+    pkCompleted,
   };
 
   /// Direct invite that can be rejected on the server.
@@ -42,6 +66,19 @@ abstract final class PushNotificationTypes {
       type == liveStreamStarted ||
       type == general ||
       type == custom;
+
+  /// PK challenge that shows Accept + Reject.
+  static bool isPkRequest(String type) => type == pkRequest;
+
+  /// Other PK lifecycle pushes (open arena / refresh state).
+  static bool isPkLifecycle(String type) =>
+      type == pkAccepted ||
+      type == pkRejected ||
+      type == pkCancelled ||
+      type == pkStarted ||
+      type == pkCompleted;
+
+  static bool isPkType(String type) => isPkRequest(type) || isPkLifecycle(type);
 
   /// True when the push should open the live-streaming (not room-call) UI.
   static bool isLiveStreamAlert(String type) =>

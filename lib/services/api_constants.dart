@@ -352,8 +352,17 @@ class PkEndpoints {
   /// POST /api/pk/accept-reject
   static const String acceptReject = '/api/pk/accept-reject';
 
+  /// POST /api/pk/cancel-request
+  static const String cancelRequest = '/api/pk/cancel-request';
+
+  /// POST /api/pk/end
+  static const String endBattle = '/api/pk/end';
+
   /// GET /api/pk/status
   static const String status = '/api/pk/status';
+
+  /// GET /api/pk/active?room_id=...
+  static const String active = '/api/pk/active';
 
   /// POST /api/pk/dating-onboarding
   static const String callOnboarding = '/api/pk/dating-onboarding';

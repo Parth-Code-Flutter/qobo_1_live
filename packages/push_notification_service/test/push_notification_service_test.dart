@@ -64,5 +64,13 @@ void main() {
       PushNotificationService.actionSetForData({'type': 'custom'}),
       PushNotificationActionSet.joinDismiss,
     );
+    expect(
+      PushNotificationService.actionSetForData({'type': 'pk_request'}),
+      PushNotificationActionSet.pkAcceptReject,
+    );
+    expect(
+      PushNotificationService.actionSetForData({'type': 'pk_started'}),
+      PushNotificationActionSet.none,
+    );
   });
 }

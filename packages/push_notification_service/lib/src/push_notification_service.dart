@@ -308,6 +308,9 @@ class PushNotificationService {
     if (PushNotificationTypes.isDirectInvite(type)) {
       return PushNotificationActionSet.joinReject;
     }
+    if (PushNotificationTypes.isPkRequest(type)) {
+      return PushNotificationActionSet.pkAcceptReject;
+    }
     if (PushNotificationTypes.isJoinDismiss(type)) {
       return PushNotificationActionSet.joinDismiss;
     }
@@ -354,6 +357,42 @@ class PushNotificationService {
           body: '$hostLabel started a live video stream'
               '${roomTitle?.isNotEmpty == true ? ': $roomTitle' : ''}',
         );
+      case PushNotificationTypes.pkRequest:
+        final sender =
+            message.data['sender_host_name']?.toString().trim().isNotEmpty ==
+                true
+            ? message.data['sender_host_name']!.toString().trim()
+            : 'A host';
+        final senderRoom =
+            message.data['sender_room_title']?.toString().trim().isNotEmpty ==
+                true
+            ? message.data['sender_room_title']!.toString().trim()
+            : 'their room';
+        return (
+          title: 'PK Battle Challenge',
+          body: '$sender challenged you from "$senderRoom"',
+        );
+      case PushNotificationTypes.pkAccepted:
+      case PushNotificationTypes.pkStarted:
+        return (
+          title: 'PK Battle Started',
+          body: 'Your PK battle is now live. Open the arena to compete!',
+        );
+      case PushNotificationTypes.pkRejected:
+        return (
+          title: 'PK Challenge Declined',
+          body: 'Your PK request was rejected.',
+        );
+      case PushNotificationTypes.pkCancelled:
+        return (
+          title: 'PK Challenge Cancelled',
+          body: 'The PK request was cancelled.',
+        );
+      case PushNotificationTypes.pkCompleted:
+        return (
+          title: 'PK Battle Finished',
+          body: 'The PK battle has ended. Check the results!',
+        );
       case PushNotificationTypes.general:
       case PushNotificationTypes.custom:
         return (title: 'Notification', body: '');
@@ -370,6 +409,17 @@ class PushNotificationService {
       case PushNotificationTypes.liveStreamingCreated:
       case PushNotificationTypes.liveStreamStarted:
         return 'Live Stream Alert! 🔴';
+      case PushNotificationTypes.pkRequest:
+        return 'PK Battle Challenge';
+      case PushNotificationTypes.pkAccepted:
+      case PushNotificationTypes.pkStarted:
+        return 'PK Battle Started';
+      case PushNotificationTypes.pkRejected:
+        return 'PK Challenge Declined';
+      case PushNotificationTypes.pkCancelled:
+        return 'PK Challenge Cancelled';
+      case PushNotificationTypes.pkCompleted:
+        return 'PK Battle Finished';
       default:
         return 'Notification';
     }

@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:push_notification_service/push_notification_service.dart';
 import 'package:qobo_one_live/services/api_constants.dart';
+import 'package:qobo_one_live/services/firebase/pk_battle_push_handler.dart';
 import 'package:qobo_one_live/services/firebase/room_invite_push_handler.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/room_invite_in_app_banner.dart';
@@ -15,12 +16,16 @@ import 'package:socket_io_client/socket_io_client.dart' as io;
 ///
 /// - `register_user` + `host_live_started` → follower live alerts
 /// - `join_room` / `leave_room` + `room_background_updated` → live room themes
+/// - `pk_*` events → PK battle realtime (request / scores / complete)
 class UserRealtimeSocketService extends GetxController {
   UserRealtimeSocketService({
     RoomInvitePushHandler? roomInviteHandler,
-  }) : _roomInviteHandler = roomInviteHandler ?? RoomInvitePushHandler();
+    PkBattlePushHandler? pkBattleHandler,
+  }) : _roomInviteHandler = roomInviteHandler ?? RoomInvitePushHandler(),
+       _pkBattleHandler = pkBattleHandler ?? PkBattlePushHandler();
 
   final RoomInvitePushHandler _roomInviteHandler;
+  final PkBattlePushHandler _pkBattleHandler;
 
   io.Socket? _socket;
   bool _connecting = false;
@@ -90,6 +95,13 @@ class UserRealtimeSocketService extends GetxController {
 
       socket.on('host_live_started', _onHostLiveStarted);
       socket.on('room_background_updated', _onRoomBackgroundUpdated);
+      socket.on('pk_request', (raw) => _onPkNamed('pk_request', raw));
+      socket.on('pk_started', (raw) => _onPkNamed('pk_started', raw));
+      socket.on('pk_accepted', (raw) => _onPkNamed('pk_accepted', raw));
+      socket.on('pk_rejected', (raw) => _onPkNamed('pk_rejected', raw));
+      socket.on('pk_cancelled', (raw) => _onPkNamed('pk_cancelled', raw));
+      socket.on('pk_score_update', (raw) => _onPkNamed('pk_score_update', raw));
+      socket.on('pk_completed', (raw) => _onPkNamed('pk_completed', raw));
 
       socket.onDisconnect((_) {
         LoggerUtils.logInfo('RealtimeSocket: disconnected');
@@ -153,6 +165,13 @@ class UserRealtimeSocketService extends GetxController {
     try {
       socket.off('host_live_started');
       socket.off('room_background_updated');
+      socket.off('pk_request');
+      socket.off('pk_started');
+      socket.off('pk_accepted');
+      socket.off('pk_rejected');
+      socket.off('pk_cancelled');
+      socket.off('pk_score_update');
+      socket.off('pk_completed');
       socket.dispose();
     } catch (e) {
       LoggerUtils.logWarning('RealtimeSocket: disconnect error — $e');
@@ -178,6 +197,17 @@ class UserRealtimeSocketService extends GetxController {
         LoggerUtils.logWarning('RealtimeSocket: background listener error — $e');
       }
     }
+  }
+
+  void _onPkNamed(String event, dynamic raw) {
+    final data = _asStringKeyedMap(raw);
+    if (data.isEmpty && event.isEmpty) return;
+    final payload = <String, dynamic>{
+      ...data,
+      if (data['type'] == null || data['type'].toString().trim().isEmpty)
+        'type': event,
+    };
+    unawaited(_pkBattleHandler.handleSocketEvent(event, payload));
   }
 
   void _onHostLiveStarted(dynamic raw) {

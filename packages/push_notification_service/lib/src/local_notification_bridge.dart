@@ -73,6 +73,25 @@ class LocalNotificationBridge {
             ),
           ],
         ),
+        DarwinNotificationCategory(
+          PushNotificationActions.pkRequestCategory,
+          actions: <DarwinNotificationAction>[
+            DarwinNotificationAction.plain(
+              PushNotificationActions.acceptPk,
+              'Accept',
+              options: <DarwinNotificationActionOption>{
+                DarwinNotificationActionOption.foreground,
+              },
+            ),
+            DarwinNotificationAction.plain(
+              PushNotificationActions.rejectPk,
+              'Reject',
+              options: <DarwinNotificationActionOption>{
+                DarwinNotificationActionOption.destructive,
+              },
+            ),
+          ],
+        ),
       ],
     );
 
@@ -135,6 +154,8 @@ class LocalNotificationBridge {
             ? 'Tap Join Now to enter'
             : actionSet == PushNotificationActionSet.joinDismiss
             ? 'Tap Join Now to enter'
+            : actionSet == PushNotificationActionSet.pkAcceptReject
+            ? 'Accept or reject this PK challenge'
             : null,
       ),
       autoCancel: true,
@@ -149,6 +170,8 @@ class LocalNotificationBridge {
           PushNotificationActions.roomInviteCategory,
         PushNotificationActionSet.joinDismiss =>
           PushNotificationActions.roomBroadcastCategory,
+        PushNotificationActionSet.pkAcceptReject =>
+          PushNotificationActions.pkRequestCategory,
         PushNotificationActionSet.none => null,
       },
     );
@@ -217,6 +240,23 @@ class LocalNotificationBridge {
             PushNotificationActions.dismissRoom,
             'Dismiss',
             icon: DrawableResourceAndroidBitmap('ic_notif_dismiss'),
+            cancelNotification: true,
+          ),
+        ];
+      case PushNotificationActionSet.pkAcceptReject:
+        return const <AndroidNotificationAction>[
+          AndroidNotificationAction(
+            PushNotificationActions.acceptPk,
+            'Accept',
+            icon: DrawableResourceAndroidBitmap('ic_notif_join'),
+            showsUserInterface: true,
+            cancelNotification: true,
+          ),
+          AndroidNotificationAction(
+            PushNotificationActions.rejectPk,
+            'Reject',
+            icon: DrawableResourceAndroidBitmap('ic_notif_reject'),
+            showsUserInterface: true,
             cancelNotification: true,
           ),
         ];

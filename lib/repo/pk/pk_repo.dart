@@ -67,6 +67,46 @@ class PkRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
+  /// Calls `POST /api/pk/cancel-request` to cancel an outgoing challenge.
+  Future<Map<String, dynamic>?> cancelPkRequest({
+    required String roomId,
+    required String requestId,
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: PkEndpoints.cancelRequest,
+      requestModel: <String, dynamic>{
+        'room_id': roomId,
+        'request_id': requestId,
+      },
+      isShowLoader: isShowLoader,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// Calls `POST /api/pk/end` to force-end an active battle.
+  Future<Map<String, dynamic>?> endPkBattle({
+    required String battleId,
+    required String roomId,
+    String reason = 'host_leave',
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: PkEndpoints.endBattle,
+      requestModel: <String, dynamic>{
+        'battle_id': battleId,
+        'room_id': roomId,
+        'reason': reason,
+      },
+      isShowLoader: isShowLoader,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
   /// Calls `GET /api/pk/status?battle_id=...`.
   Future<Map<String, dynamic>?> getPkStatus({
     required String battleId,
@@ -75,6 +115,22 @@ class PkRepo {
     final response = await _apiService.getRequest(
       endPoint:
           '${PkEndpoints.status}?battle_id=${Uri.encodeComponent(battleId)}',
+      isShowLoader: isShowLoader,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// Calls `GET /api/pk/active?room_id=...` for pending request / active battle.
+  Future<Map<String, dynamic>?> getActivePk({
+    required String roomId,
+    bool isShowLoader = false,
+  }) async {
+    final id = roomId.trim();
+    if (id.isEmpty) return null;
+    final response = await _apiService.getRequest(
+      endPoint: '${PkEndpoints.active}?room_id=${Uri.encodeComponent(id)}',
       isShowLoader: isShowLoader,
     );
 

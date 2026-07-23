@@ -3,6 +3,7 @@
 /// Backend iOS payloads should set `aps.category` to:
 /// - [roomInviteCategory] for `room_invite` (Join + Reject)
 /// - [roomBroadcastCategory] for Join + Dismiss types
+/// - [pkRequestCategory] for `pk_request` (Accept + Reject)
 abstract final class PushNotificationActions {
   PushNotificationActions._();
 
@@ -13,6 +14,9 @@ abstract final class PushNotificationActions {
   /// (`room_created`, `live_streaming_created`, `general`, `custom`).
   static const String roomBroadcastCategory = 'ROOM_BROADCAST';
 
+  /// APNs / local-notification category for PK challenges.
+  static const String pkRequestCategory = 'PK_REQUEST';
+
   /// Accept / join the invited (or broadcast) room.
   static const String joinRoom = 'JOIN_ROOM';
 
@@ -21,6 +25,12 @@ abstract final class PushNotificationActions {
 
   /// Local-only dismiss for Join + Dismiss broadcast alerts.
   static const String dismissRoom = 'DISMISS_ROOM';
+
+  /// Accept an incoming PK challenge.
+  static const String acceptPk = 'ACCEPT_PK';
+
+  /// Reject an incoming PK challenge.
+  static const String rejectPk = 'REJECT_PK';
 }
 
 /// Which action buttons to attach to a local notification.
@@ -30,6 +40,9 @@ enum PushNotificationActionSet {
 
   /// Broadcast / admin alert → Join + Dismiss.
   joinDismiss,
+
+  /// PK challenge (`pk_request`) → Accept + Reject.
+  pkAcceptReject,
 
   /// No action buttons.
   none,
