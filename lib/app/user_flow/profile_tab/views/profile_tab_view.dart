@@ -433,6 +433,10 @@ class ProfileTabView extends StatelessWidget {
         Color(0xFFE5009E),
         Color(0xFFFF54C8),
       ], onTapRoute: Routes.CALL),
+      _ProfileFeatureItem('Coin Seller', kIconCoin2, const [
+        Color(0xFFFFB020),
+        Color(0xFFFF6B00),
+      ], onTapRoute: Routes.COIN_SELLER),
       _ProfileFeatureItem(
         'Customer\nservice',
         kIconCustomerService,

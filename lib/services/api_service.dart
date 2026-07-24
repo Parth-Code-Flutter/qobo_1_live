@@ -67,10 +67,16 @@ class ApiService {
     dynamic requestModel,
     bool isShowLoader = true,
     bool isLoginCall = false,
+    /// When set, used as `Authorization: Bearer …` instead of the user token.
+    String? bearerToken,
+    /// When true, 401 does not log out the main app session (e.g. seller portal).
+    bool skipUnauthorizedHandling = false,
     // Map<String, String>? headers,
   }) async {
-    // Check if session is expired (skip for login calls)
-    if (!isLoginCall && !ErrorHandlerUtils.shouldMakeApiCall()) {
+    // Check if session is expired (skip for login calls / explicit bearer)
+    if (!isLoginCall &&
+        bearerToken == null &&
+        !ErrorHandlerUtils.shouldMakeApiCall()) {
       LoggerUtils.logWarning('POST request blocked - session expired');
       if (isShowLoader) {
         Get.find<AlertMessageUtils>().hideProgressDialog();
@@ -87,7 +93,10 @@ class ApiService {
     }
 
     // headers ??= {'Content-Type': 'application/json'};
-    if (!isLoginCall) {
+    final overrideToken = bearerToken?.trim() ?? '';
+    if (overrideToken.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $overrideToken';
+    } else if (!isLoginCall) {
       var authHeaders = await HeaderData().headers();
       headers.addAll(authHeaders);
     }
@@ -119,7 +128,10 @@ class ApiService {
       var response = await http.post(url, body: body, headers: headers);
       
       // Check for 401 error globally (both HTTP and body statusCode)
-      if (_checkAndHandle401(response, isLoginCall: isLoginCall)) {
+      if (_checkAndHandle401(
+        response,
+        isLoginCall: isLoginCall || skipUnauthorizedHandling,
+      )) {
         return null;
       }
       
@@ -181,10 +193,12 @@ class ApiService {
     Map<String, String>? queryParams,
     bool isShowLoader = true,
     String? baseUrl,
+    String? bearerToken,
+    bool skipUnauthorizedHandling = false,
     // Map<String, String>? headers,
   }) async {
     // Check if session is expired
-    if (!ErrorHandlerUtils.shouldMakeApiCall()) {
+    if (bearerToken == null && !ErrorHandlerUtils.shouldMakeApiCall()) {
       LoggerUtils.logWarning('GET request blocked - session expired');
       if (isShowLoader) {
         Get.find<AlertMessageUtils>().hideProgressDialog();
@@ -201,7 +215,16 @@ class ApiService {
     }
 
     // headers ??= {'Content-Type': 'application/json'};
-    var headers = await HeaderData().headers();
+    final overrideToken = bearerToken?.trim() ?? '';
+    final Map<String, String> headers;
+    if (overrideToken.isNotEmpty) {
+      headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $overrideToken',
+      };
+    } else {
+      headers = await HeaderData().headers();
+    }
 
     var domainUrl = baseUrl ?? ApiConstants.baseUrl;
 
@@ -215,7 +238,10 @@ class ApiService {
       var response = await http.get(uri, headers: headers);
       
       // Check for 401 error globally (both HTTP and body statusCode)
-      if (_checkAndHandle401(response)) {
+      if (_checkAndHandle401(
+        response,
+        isLoginCall: skipUnauthorizedHandling,
+      )) {
         return null;
       }
       

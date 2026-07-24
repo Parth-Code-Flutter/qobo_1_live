@@ -187,6 +187,46 @@ class LocalStorage extends GetxController {
     }
   }
 
+  /// Persist coin-seller portal JWT (does not replace the end-user token).
+  Future<void> saveSellerSession({
+    required String token,
+    required Map<String, dynamic> admin,
+  }) async {
+    try {
+      await writeStringStorage(kStorageSellerToken, token.trim());
+      await writeJsonStorage(kStorageSellerAdmin, admin);
+    } catch (ex) {
+      LoggerUtils.logException('saveSellerSession', ex);
+    }
+  }
+
+  Future<String> getSellerToken() async {
+    try {
+      return await getStringFromStorage(kStorageSellerToken);
+    } catch (ex) {
+      LoggerUtils.logException('getSellerToken', ex);
+      return '';
+    }
+  }
+
+  Future<Map<String, dynamic>?> getSellerAdmin() async {
+    try {
+      return await getJsonFromStorage(kStorageSellerAdmin);
+    } catch (ex) {
+      LoggerUtils.logException('getSellerAdmin', ex);
+      return null;
+    }
+  }
+
+  Future<void> clearSellerSession() async {
+    try {
+      await _mEncryptedStorage.delete(key: kStorageSellerToken);
+      await _mEncryptedStorage.delete(key: kStorageSellerAdmin);
+    } catch (ex) {
+      LoggerUtils.logException('clearSellerSession', ex);
+    }
+  }
+
   /// check if user is logged in
   Future<bool> isLoggedIn() async {
     try {

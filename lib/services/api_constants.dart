@@ -305,6 +305,20 @@ class EconomyEndpoints {
   static const String sellerDashboard = '/api/economy/seller/dashboard';
 }
 
+/// Coin Seller Portal (`seller_admin`) under `/api/admin/...`.
+class SellerPortalEndpoints {
+  SellerPortalEndpoints._();
+
+  /// POST /api/admin/login
+  static const String login = '/api/admin/login';
+
+  /// GET /api/admin/seller-portal/dashboard
+  static const String dashboard = '/api/admin/seller-portal/dashboard';
+
+  /// POST /api/admin/seller-portal/sell
+  static const String sell = '/api/admin/seller-portal/sell';
+}
+
 /// Central place for avatar frame storefront API endpoints.
 class FrameEndpoints {
   FrameEndpoints._();

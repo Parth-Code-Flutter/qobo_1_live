@@ -4,6 +4,9 @@ const String kStorageIsEmployee = 'is_employee_in';
 const String kStorageIsClient = 'is_client_in';
 
 const String kStorageToken = 'token';
+/// Separate JWT for coin-seller portal (`/api/admin/login` → `seller_admin`).
+const String kStorageSellerToken = 'seller_token';
+const String kStorageSellerAdmin = 'seller_admin_data';
 const String kStorageUserData = 'user_data';
 const String kStorageAdminUserData = 'admin_user_data';
 const String kStorageEmployeeUserData = 'employee_user_data';
