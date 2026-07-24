@@ -5,6 +5,7 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -222,11 +223,7 @@ class DiscoverPublicProfileView
               fit: StackFit.expand,
               children: [
                 if (backgroundUrl.isNotEmpty)
-                  Image.network(
-                    backgroundUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                  ),
+                  ProfileBackgroundMedia(url: backgroundUrl),
                 if (photo != null)
                   Image.network(
                     photo,

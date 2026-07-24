@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -232,16 +233,9 @@ class _CoverBackgroundCard extends StatelessWidget {
                           color: kColorWhite,
                         ),
                       )
-                    : Image.network(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => ColoredBox(
-                          color: kColorPrimary.withValues(alpha: 0.2),
-                          child: const Icon(
-                            Icons.broken_image_outlined,
-                            color: kColorWhite,
-                          ),
-                        ),
+                    : ProfileBackgroundMedia(
+                        url: imageUrl,
+                        showLoadingIndicator: false,
                       ),
               ),
               Padding(

@@ -19,11 +19,13 @@ import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/country_state_picker_sheet.dart';
 import 'package:qobo_one_live/utils/app_dialogs/common_radio_choice_dialog.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_media_picker.dart';
+import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
 import 'package:qobo_one_live/utils/geo/country_state_selection_mixin.dart';
 import 'package:qobo_one_live/utils/profile/stored_profile_map.dart';
 import 'package:qobo_one_live/utils/profile/update_profile_api_helper.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/validations/text_field_validations.dart';
+import 'package:flutter_svga/flutter_svga.dart';
 
 import '../widgets/profile_cover_background_sheet.dart';
 
@@ -788,8 +790,20 @@ class UserBasicProfileController extends GetxController
           purchasedById,
         ),
       );
+      _prefetchCoverSvga(purchasedCoverBackgrounds);
+      _prefetchCoverSvga(shopCoverBackgrounds);
     } finally {
       isLoadingCoverBackgrounds.value = false;
+    }
+  }
+
+  /// Warm SVGA disk cache while the picker is open so equip feels instant.
+  void _prefetchCoverSvga(List<Map<String, dynamic>> items) {
+    for (final item in items) {
+      final url = item['imageUrl']?.toString().trim() ?? '';
+      if (!ProfileBackgroundMedia.isSvgaUrl(url)) continue;
+      if (!url.startsWith('http://') && !url.startsWith('https://')) continue;
+      unawaited(SVGAParser.shared.decodeFromURL(url));
     }
   }
 
@@ -812,12 +826,16 @@ class UserBasicProfileController extends GetxController
       return;
     }
 
+    // Instant cover update — do not wait for equip/refresh APIs.
+    _syncCoverPreview(imageUrl);
+    if (Get.isBottomSheetOpen == true) Get.back();
+
     isApplyingCoverBackground.value = true;
     try {
       final response = await _backgroundRepo.equipBackground(
         backpackItemId: backpackItemId,
         equip: true,
-        isShowLoader: true,
+        isShowLoader: false,
       );
       if (!_isBackgroundApiSuccess(response)) {
         _coverToast(
@@ -827,8 +845,8 @@ class UserBasicProfileController extends GetxController
         return;
       }
 
-      await _refreshCoverAfterBackgroundChange(previewUrl: imageUrl);
-      if (Get.isBottomSheetOpen == true) Get.back();
+      // Sync session / purchased list in the background; preview already shows.
+      unawaited(_refreshCoverAfterBackgroundChange(previewUrl: imageUrl));
       _coverToast('Cover updated to "$name".');
     } finally {
       isApplyingCoverBackground.value = false;
@@ -886,7 +904,20 @@ class UserBasicProfileController extends GetxController
     selectedPosterMedia.value = null;
     await _ensureSession().refreshProfileFromApi();
     final sessionBg = _ensureSession().profileBackgroundUrl.trim();
-    _syncCoverPreview(sessionBg.isNotEmpty ? sessionBg : previewUrl);
+    final normalizedSession =
+        ApiImageUtils.normalize(sessionBg)?.trim() ?? '';
+    final normalizedPreview =
+        ApiImageUtils.normalize(previewUrl)?.trim() ?? '';
+    // Prefer session URL when present; keep optimistic preview otherwise.
+    // Avoid pointless reloads when the URL is unchanged.
+    final next = normalizedSession.isNotEmpty
+        ? normalizedSession
+        : normalizedPreview;
+    if (next.isNotEmpty && next != posterUrl.value) {
+      _syncCoverPreview(next);
+    } else if (next.isNotEmpty && posterUrl.value.isEmpty) {
+      _syncCoverPreview(next);
+    }
     await loadCoverBackgrounds();
   }
 
@@ -926,9 +957,13 @@ class UserBasicProfileController extends GetxController
       final imageUrl =
           ApiImageUtils.normalize(
             _firstText([
+              background['animationUrl'],
+              background['svgaUrl'],
+              background['svga'],
               background['image'],
               background['imageUrl'],
               background['previewUrl'],
+              item['animationUrl'],
               item['image'],
               item['imageUrl'],
             ]),
@@ -979,9 +1014,14 @@ class UserBasicProfileController extends GetxController
         'name': raw['name']?.toString() ?? 'Profile Background',
         'imageUrl':
             ApiImageUtils.normalize(
-              raw['image']?.toString() ??
-                  raw['imageUrl']?.toString() ??
-                  raw['previewUrl']?.toString(),
+              _firstText([
+                raw['animationUrl'],
+                raw['svgaUrl'],
+                raw['svga'],
+                raw['image'],
+                raw['imageUrl'],
+                raw['previewUrl'],
+              ]),
             ) ??
             '',
         'price': _toInt(raw['price']),

@@ -14,6 +14,7 @@ class NetworkSvgaWidget extends StatefulWidget {
     required this.fallback,
     this.fit = BoxFit.contain,
     this.loading,
+    this.showLoadingIndicator = true,
   });
 
   final String url;
@@ -22,6 +23,9 @@ class NetworkSvgaWidget extends StatefulWidget {
   final BoxFit fit;
   final Widget fallback;
   final Widget? loading;
+
+  /// When false, loading keeps [loading] / empty box instead of a spinner.
+  final bool showLoadingIndicator;
 
   @override
   State<NetworkSvgaWidget> createState() => _NetworkSvgaWidgetState();
@@ -102,6 +106,13 @@ class _NetworkSvgaWidgetState extends State<NetworkSvgaWidget>
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
+      if (!widget.showLoadingIndicator) {
+        return SizedBox(
+          width: widget.width,
+          height: widget.height,
+          child: widget.loading,
+        );
+      }
       return SizedBox(
         width: widget.width,
         height: widget.height,

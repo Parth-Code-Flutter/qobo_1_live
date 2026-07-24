@@ -17,6 +17,7 @@ import 'package:qobo_one_live/utils/app_dialogs/audio_room_feedback_dialog.dart'
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
 import 'package:qobo_one_live/utils/files_utils/file_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -588,39 +589,42 @@ class _ProfileBackgroundShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasBackground = backgroundUrl.trim().isNotEmpty;
 
-    // The equipped background sits behind profile details only. A dark overlay
-    // keeps name, ID, chips, and stats readable on bright uploaded images.
-    return Container(
+    // Equipped background (SVGA or static image) sits behind profile details.
+    // A dark overlay keeps name, ID, chips, and stats readable.
+    return SizedBox(
       width: double.infinity,
-      decoration: BoxDecoration(
+      child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
-        border: hasBackground
-            ? Border.all(color: kColorWhite.withValues(alpha: 0.16))
-            : null,
-        image: hasBackground
-            ? DecorationImage(
-                image: NetworkImage(backgroundUrl),
-                fit: BoxFit.cover,
-              )
-            : null,
-      ),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          gradient: hasBackground
-              ? LinearGradient(
-                  colors: [
-                    kColorBlack.withValues(alpha: 0.18),
-                    kColorBlack.withValues(alpha: 0.52),
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                )
-              : null,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
-          child: child,
+        child: Stack(
+          fit: StackFit.passthrough,
+          children: [
+            if (hasBackground)
+              Positioned.fill(
+                child: ProfileBackgroundMedia(url: backgroundUrl),
+              ),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                border: hasBackground
+                    ? Border.all(color: kColorWhite.withValues(alpha: 0.16))
+                    : null,
+                gradient: hasBackground
+                    ? LinearGradient(
+                        colors: [
+                          kColorBlack.withValues(alpha: 0.18),
+                          kColorBlack.withValues(alpha: 0.52),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      )
+                    : null,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+                child: child,
+              ),
+            ),
+          ],
         ),
       ),
     );

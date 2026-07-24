@@ -12,6 +12,7 @@ import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
+import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -317,55 +318,60 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
     return Obx(() {
       final File? localPoster = controller.selectedPosterMedia.value;
       final String netPoster = controller.posterUrl.value;
-      final bool isBusy = controller.isPosterUploading.value ||
-          controller.isApplyingCoverBackground.value;
+      final bool isUploading = controller.isPosterUploading.value;
       final bool hasPoster =
           localPoster != null || netPoster.trim().isNotEmpty;
 
       return SizedBox(
         height: bannerHeight + avatarOverhang,
+        width: double.infinity,
         child: Stack(
           clipBehavior: Clip.none,
           children: [
             GestureDetector(
-              onTap: isBusy
+              onTap: isUploading
                   ? null
                   : () => controller.openCoverBackgroundSheet(context),
               child: SizedBox(
                 height: bannerHeight,
                 width: double.infinity,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    if (localPoster != null)
-                      Image.file(localPoster, fit: BoxFit.cover)
-                    else if (netPoster.isNotEmpty)
-                      Image.network(
-                        netPoster,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _emptyCoverPlaceholder(),
-                      )
-                    else
-                      _emptyCoverPlaceholder(),
-                    if (!hasPoster)
-                      Container(
-                        color: kColorBlack.withValues(alpha: 0.04),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
+                  ),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (localPoster != null)
+                        Image.file(localPoster, fit: BoxFit.cover)
+                      else if (netPoster.isNotEmpty)
+                        ProfileBackgroundMedia(
+                          url: netPoster,
+                          showLoadingIndicator: false,
+                        )
+                      else
+                        _emptyCoverPlaceholder(),
+                      if (!hasPoster)
+                        Container(
+                          color: kColorBlack.withValues(alpha: 0.04),
+                        ),
+                      Positioned(
+                        right: 14,
+                        bottom: 14,
+                        child: _coverEditButton(),
                       ),
-                    Positioned(
-                      right: 14,
-                      bottom: 14,
-                      child: _coverEditButton(),
-                    ),
-                    if (isBusy)
-                      ColoredBox(
-                        color: kColorBlack.withValues(alpha: 0.35),
-                        child: const Center(
-                          child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation(kColorPrimary),
+                      if (isUploading)
+                        ColoredBox(
+                          color: kColorBlack.withValues(alpha: 0.35),
+                          child: const Center(
+                            child: CircularProgressIndicator(
+                              valueColor:
+                                  AlwaysStoppedAnimation(kColorPrimary),
+                            ),
                           ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
