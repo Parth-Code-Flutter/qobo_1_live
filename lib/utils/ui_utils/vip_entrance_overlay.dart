@@ -1,15 +1,16 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_svga/flutter_svga.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
-import 'package:qobo_one_live/utils/app_widgets/network_svga_widget.dart';
 import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
+import 'package:qobo_one_live/utils/svga_network_loader.dart';
 
-/// Full-screen VIP entrance shown when `vip_user_joined` fires in a room.
+/// Full-screen VIP entrance (gift-style) when a VIP joins audio/video/live.
 class VipEntranceOverlay {
   VipEntranceOverlay._();
 
@@ -19,7 +20,7 @@ class VipEntranceOverlay {
     required String userName,
     String? avatarUrl,
     String? vipFrameUrl,
-    Duration displayFor = const Duration(milliseconds: 4200),
+    Duration displayFor = const Duration(milliseconds: 5200),
   }) {
     dismiss();
 
@@ -37,8 +38,9 @@ class VipEntranceOverlay {
     }
     if (navigatorContext == null) return;
 
+    // Transparent barrier (same as gifts) so SVGA sits above Zego PlatformViews.
     Get.dialog<void>(
-      barrierColor: Colors.black54,
+      barrierColor: Colors.black45,
       barrierDismissible: true,
       useSafeArea: false,
       Builder(
@@ -102,15 +104,21 @@ class _VipEntranceViewState extends State<_VipEntranceView>
   Timer? _timer;
   SVGAAnimationController? _svgaController;
   bool _svgaReady = false;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _fade = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 420),
+      duration: const Duration(milliseconds: 360),
     )..forward();
-    _loadSvga();
+    unawaited(_loadSvga());
+  }
+
+  /// Start the dismiss clock only after media is ready (or failed) — gifts do this.
+  void _scheduleDismiss() {
+    _timer?.cancel();
     _timer = Timer(widget.displayFor, () {
       if (!mounted) return;
       _fade.reverse().whenComplete(widget.onCompleted);
@@ -118,25 +126,58 @@ class _VipEntranceViewState extends State<_VipEntranceView>
   }
 
   Future<void> _loadSvga() async {
-    final url = widget.vipFrameUrl?.trim() ?? '';
-    if (url.isEmpty || !ProfileBackgroundMedia.isSvgaUrl(url)) return;
-    if (!url.startsWith('http')) return;
-
+    final raw = widget.vipFrameUrl?.trim() ?? '';
+    final url = ApiImageUtils.normalize(raw)?.trim() ?? raw;
     final controller = SVGAAnimationController(vsync: this);
     _svgaController = controller;
+
     try {
-      final item = await SVGAParser.shared.decodeFromURL(url);
+      MovieEntity? videoItem;
+
+      // Prefer network VIP entrance URL (any http(s) path — Cloudinary often
+      // omits `.svga` in the path).
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        try {
+          videoItem = await SvgaNetworkLoader.decode(url);
+        } catch (error) {
+          if (kDebugMode) {
+            debugPrint('VIP entrance network SVGA failed: $error');
+          }
+        }
+      }
+
+      // Bundled fallback when Render/CDN upload is missing (common 404).
+      videoItem ??= await SVGAParser.shared.decodeFromAssets(
+        ProfileBackgroundMedia.kProfileSvgaFallbackAsset,
+      );
+
       if (!mounted || _svgaController != controller) {
-        item.dispose();
+        videoItem.dispose();
         return;
       }
-      controller.videoItem = item;
+
+      controller.videoItem = videoItem;
       controller.muted = true;
-      controller.repeat();
-      setState(() => _svgaReady = true);
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _svgaReady = false);
+      controller
+        ..reset()
+        ..repeat();
+      setState(() {
+        _svgaReady = true;
+        _isLoading = false;
+      });
+      _scheduleDismiss();
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('VIP entrance SVGA failed entirely: $error');
+      }
+      if (!mounted || _svgaController != controller) return;
+      controller.dispose();
+      _svgaController = null;
+      setState(() {
+        _svgaReady = false;
+        _isLoading = false;
+      });
+      _scheduleDismiss();
     }
   }
 
@@ -151,7 +192,6 @@ class _VipEntranceViewState extends State<_VipEntranceView>
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
-    final frameUrl = widget.vipFrameUrl?.trim() ?? '';
 
     return FadeTransition(
       opacity: _fade,
@@ -164,43 +204,36 @@ class _VipEntranceViewState extends State<_VipEntranceView>
               Center(
                 child: SizedBox(
                   width: size.width,
-                  height: size.height * 0.55,
+                  height: size.height * 0.72,
                   child: SVGAImage(
                     _svgaController!,
                     fit: BoxFit.contain,
+                    preferredSize: Size(size.width, size.height * 0.72),
                     clearsAfterStop: false,
                   ),
                 ),
               )
-            else if (frameUrl.isNotEmpty &&
-                !ProfileBackgroundMedia.isSvgaUrl(frameUrl))
-              Center(
-                child: NetworkSvgaWidget(
-                  url: frameUrl,
-                  width: size.width * 0.7,
-                  height: size.width * 0.7,
-                  fit: BoxFit.contain,
-                  showLoadingIndicator: false,
-                  fallback: Image.network(
-                    frameUrl,
-                    width: size.width * 0.55,
-                    height: size.width * 0.55,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+            else if (_isLoading)
+              const Center(
+                child: SizedBox(
+                  width: 36,
+                  height: 36,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.4,
+                    color: Color(0xFFFFD700),
                   ),
                 ),
               ),
             Align(
-              alignment: const Alignment(0, 0.72),
+              alignment: const Alignment(0, 0.78),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  FramedUserAvatar(
+                  // Do not pass vipFrameUrl as avatar ring — it's a full entrance.
+                  AppUserAvatar(
                     name: widget.userName,
                     imageUrl: widget.avatarUrl,
                     size: 72,
-                    frameUrl: frameUrl.isNotEmpty ? frameUrl : null,
-                    frameSeed: widget.userName,
                   ),
                   const SizedBox(height: 12),
                   Container(

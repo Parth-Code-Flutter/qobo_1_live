@@ -35,7 +35,8 @@ When a user successfully joins an audio room, video room, or live stream, the ba
   }
   ```
 - **Mobile Responsibility**:
-  - Listen for the `vip_user_joined` socket event.
+  - Listen for the `vip_user_joined` socket event in audio, video, and live rooms.
+  - Also read `isVIP` + `vipFrameUrl` from `GET /api/room/seats` and play the entrance **once** when a VIP newly appears on a seat (same room session; not replayed for users already present when you join).
   - When this event is received, display an animated VIP Entrance UI over the room (e.g. playing the SVGA frame animation, showing the user's name and avatar entering the room).
 
 ## 3. Admin Panel Management

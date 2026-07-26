@@ -5,11 +5,13 @@ class AudioRoomSeatModel {
     this.name = '',
     this.avatarUrl,
     this.avatarFrameUrl,
+    this.vipFrameUrl,
     this.role = 'empty',
     this.diamonds = 0,
     this.isMuted = false,
     this.isLocked = false,
     this.isAdmin = false,
+    this.isVip = false,
   });
 
   factory AudioRoomSeatModel.empty(int seatNo) =>
@@ -66,6 +68,22 @@ class AudioRoomSeatModel {
           'frameUrl',
           'frame_url',
         ]);
+    final vipFrame =
+        _readString(raw, const [
+          'vipFrameUrl',
+          'vip_frame_url',
+          'vipFrame',
+          'vip_frame',
+        ]) ??
+        _readString(occupantMap, const [
+          'vipFrameUrl',
+          'vip_frame_url',
+          'vipFrame',
+          'vip_frame',
+        ]);
+    final isVip = _readBool(raw, const ['isVIP', 'isVip', 'is_vip']) ||
+        (occupantMap != null &&
+            _readBool(occupantMap, const ['isVIP', 'isVip', 'is_vip']));
 
     return AudioRoomSeatModel(
       seatNo: _readInt(raw, const ['seatNo', 'seat_id', 'seatId', 'seat']) ?? 0,
@@ -73,6 +91,7 @@ class AudioRoomSeatModel {
       name: name,
       avatarUrl: avatar,
       avatarFrameUrl: avatarFrame,
+      vipFrameUrl: vipFrame,
       role:
           _readString(raw, const ['role', 'type']) ??
           (userId.isEmpty ? 'empty' : 'speaker'),
@@ -81,6 +100,7 @@ class AudioRoomSeatModel {
       isMuted: _readBool(raw, const ['isMuted', 'muted', 'micMuted']),
       isLocked: _readBool(raw, const ['isLocked', 'locked']),
       isAdmin: _readBool(raw, const ['isAdmin', 'admin']),
+      isVip: isVip,
     );
   }
 
@@ -89,11 +109,15 @@ class AudioRoomSeatModel {
   final String name;
   final String? avatarUrl;
   final String? avatarFrameUrl;
+
+  /// Full-screen entrance SVGA from `GET /api/room/seats` when [isVip] is true.
+  final String? vipFrameUrl;
   final String role;
   final int diamonds;
   final bool isMuted;
   final bool isLocked;
   final bool isAdmin;
+  final bool isVip;
 
   bool get occupied => userId.trim().isNotEmpty || name.trim().isNotEmpty;
   bool get isHost => role.toLowerCase() == 'host' || seatNo == 1;
@@ -104,11 +128,13 @@ class AudioRoomSeatModel {
     String? name,
     String? avatarUrl,
     String? avatarFrameUrl,
+    String? vipFrameUrl,
     String? role,
     int? diamonds,
     bool? isMuted,
     bool? isLocked,
     bool? isAdmin,
+    bool? isVip,
   }) {
     return AudioRoomSeatModel(
       seatNo: seatNo ?? this.seatNo,
@@ -116,11 +142,13 @@ class AudioRoomSeatModel {
       name: name ?? this.name,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       avatarFrameUrl: avatarFrameUrl ?? this.avatarFrameUrl,
+      vipFrameUrl: vipFrameUrl ?? this.vipFrameUrl,
       role: role ?? this.role,
       diamonds: diamonds ?? this.diamonds,
       isMuted: isMuted ?? this.isMuted,
       isLocked: isLocked ?? this.isLocked,
       isAdmin: isAdmin ?? this.isAdmin,
+      isVip: isVip ?? this.isVip,
     );
   }
 }

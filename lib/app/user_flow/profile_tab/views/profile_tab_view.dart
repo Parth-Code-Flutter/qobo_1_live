@@ -224,7 +224,7 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () => Get.toNamed(Routes.USER_BASIC_PROFILE),
+                        onTap: () => _openBasicProfileAndRefresh(),
                         child: const Padding(
                           padding: EdgeInsets.only(right: 4),
                           child: Icon(
@@ -585,6 +585,17 @@ class _ProfileTabViewState extends State<ProfileTabView> {
         ],
       ),
     );
+  }
+
+  /// Edit Profile → always refresh session on return (updated or just back).
+  Future<void> _openBasicProfileAndRefresh() async {
+    await Get.toNamed(Routes.USER_BASIC_PROFILE);
+    final session = _resolveUserSession();
+    await session.refreshProfileFromApi(isShowLoader: false);
+    // Cover / VIP fields may only exist on backpack seats — fill if profile omits them.
+    if (session.profileBackgroundUrl.trim().isEmpty) {
+      await session.syncEquippedProfileBackgroundFromBackpack();
+    }
   }
 
   UserSessionController _resolveUserSession() {

@@ -105,6 +105,11 @@ class LiveBroadcastController extends GetxController {
   /// Dedupes gift celebrations triggered by Zego gift chat events (all room kinds).
   final GiftChatCelebrationTracker _giftCelebrationTracker =
       GiftChatCelebrationTracker();
+
+  /// Play VIP entrance SVGA only once per user for this room session.
+  final Set<String> _vipEntrancePlayedUserIds = <String>{};
+  var _vipSeatEntranceBaselineReady = false;
+
   Timer? _seatRefreshTimer;
   VoidCallback? _viewerCountListener;
   var _exitReported = false;
@@ -141,16 +146,21 @@ class LiveBroadcastController extends GetxController {
       final initialSeats = _parseAudioSeats(_roomData);
       if (initialSeats.isNotEmpty) {
         audioRoomSeats.assignAll(initialSeats);
+        _seedVipEntranceBaselineFromSeats(initialSeats);
       }
       if (!isHost.value) {
         _roomMembershipConfirmed = true;
       }
       _startSeatRefreshPolling();
       _bindRoomBackgroundSocket();
-    } else if (!isHost.value) {
-      // Live-stream audience: report the join so backend viewer/heat counts
-      // move. Group-call rooms already do this via joinTypedRoom.
-      _reportLiveStreamViewerJoin();
+    } else {
+      // Live stream: still listen for VIP join entrance (gift-style overlay).
+      _bindVipEntranceSocketOnly();
+      if (!isHost.value) {
+        // Live-stream audience: report the join so backend viewer/heat counts
+        // move. Group-call rooms already do this via joinTypedRoom.
+        _reportLiveStreamViewerJoin();
+      }
     }
     chatMessages.clear();
   }
@@ -999,35 +1009,7 @@ class LiveBroadcastController extends GetxController {
       _applyRoomBackgroundFromMap(data);
     };
 
-    _vipUserJoinedSocketListener = (data) {
-      final eventRoomId =
-          (data['roomId'] ?? data['room_id'])?.toString().trim() ?? '';
-      final localZegoId = roomId.value.trim();
-      if (eventRoomId.isNotEmpty &&
-          eventRoomId != apiRoomId &&
-          eventRoomId != localZegoId) {
-        return;
-      }
-      final userName =
-          (data['user_name'] ?? data['userName'] ?? data['name'])
-              ?.toString()
-              .trim() ??
-          'VIP Member';
-      final avatar =
-          (data['avatar'] ?? data['displayPicture'] ?? data['display_picture'])
-              ?.toString();
-      final frameUrl =
-          (data['vip_frame_url'] ??
-                  data['vipFrameUrl'] ??
-                  data['frame_url'] ??
-                  data['frameUrl'])
-              ?.toString();
-      VipEntranceOverlay.show(
-        userName: userName,
-        avatarUrl: avatar,
-        vipFrameUrl: frameUrl,
-      );
-    };
+    _vipUserJoinedSocketListener = _buildVipUserJoinedListener(apiRoomId);
 
     unawaited(() async {
       await UserRealtimeSocketService.ensureConnected();
@@ -1043,6 +1025,125 @@ class LiveBroadcastController extends GetxController {
       }
       await socket.joinRoomChannel(apiRoomId);
     }());
+  }
+
+  /// Live streams have no seat poll — VIP entrance comes from the socket only.
+  void _bindVipEntranceSocketOnly() {
+    final apiRoomId =
+        _extractBackendRoomId(_roomData)?.trim() ?? audioRoomApiId;
+    if (apiRoomId.isEmpty) return;
+
+    _unbindRoomBackgroundSocket();
+    _vipUserJoinedSocketListener = _buildVipUserJoinedListener(apiRoomId);
+
+    unawaited(() async {
+      await UserRealtimeSocketService.ensureConnected();
+      if (!Get.isRegistered<UserRealtimeSocketService>()) return;
+      final socket = Get.find<UserRealtimeSocketService>();
+      final vipListener = _vipUserJoinedSocketListener;
+      if (vipListener != null) {
+        socket.addVipUserJoinedListener(vipListener);
+      }
+      await socket.joinRoomChannel(apiRoomId);
+    }());
+  }
+
+  void Function(Map<String, dynamic>) _buildVipUserJoinedListener(
+    String apiRoomId,
+  ) {
+    return (data) {
+      final eventRoomId =
+          (data['roomId'] ?? data['room_id'])?.toString().trim() ?? '';
+      final localZegoId = roomId.value.trim();
+      if (eventRoomId.isNotEmpty &&
+          eventRoomId != apiRoomId &&
+          eventRoomId != localZegoId) {
+        return;
+      }
+      final userId =
+          (data['user_id'] ?? data['userId'] ?? data['id'])?.toString().trim() ??
+          '';
+      final userName =
+          (data['user_name'] ?? data['userName'] ?? data['name'])
+              ?.toString()
+              .trim() ??
+          'VIP Member';
+      final avatar =
+          (data['avatar'] ?? data['displayPicture'] ?? data['display_picture'])
+              ?.toString();
+      final frameUrl =
+          (data['vip_frame_url'] ??
+                  data['vipFrameUrl'] ??
+                  data['frame_url'] ??
+                  data['frameUrl'])
+              ?.toString();
+      _playVipEntranceOnce(
+        userId: userId.isNotEmpty ? userId : '$userName|$frameUrl',
+        userName: userName,
+        avatarUrl: avatar,
+        vipFrameUrl: frameUrl,
+      );
+    };
+  }
+
+  /// First seats snapshot only seeds dedupe — skip people already in the room.
+  void _seedVipEntranceBaselineFromSeats(List<AudioRoomSeatModel> seats) {
+    for (final seat in seats) {
+      final userId = seat.userId.trim();
+      if (userId.isEmpty) continue;
+      if (!seat.isVip && (seat.vipFrameUrl?.trim().isEmpty ?? true)) continue;
+      _vipEntrancePlayedUserIds.add(userId);
+    }
+    _vipSeatEntranceBaselineReady = true;
+  }
+
+  /// After baseline, play entrance for VIPs who newly appear on seats.
+  void _maybePlayVipEntrancesFromSeats(List<AudioRoomSeatModel> seats) {
+    if (!_vipSeatEntranceBaselineReady) {
+      _seedVipEntranceBaselineFromSeats(seats);
+      return;
+    }
+
+    final presentIds = seats
+        .map((s) => s.userId.trim())
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    // Allow a re-join to animate again after the VIP leaves the seat grid.
+    _vipEntrancePlayedUserIds.removeWhere((id) => !presentIds.contains(id));
+
+    for (final seat in seats) {
+      final userId = seat.userId.trim();
+      final frameUrl = seat.vipFrameUrl?.trim() ?? '';
+      if (userId.isEmpty || frameUrl.isEmpty) continue;
+      if (!seat.isVip) continue;
+      _playVipEntranceOnce(
+        userId: userId,
+        userName: seat.name,
+        avatarUrl: seat.avatarUrl,
+        vipFrameUrl: frameUrl,
+      );
+    }
+  }
+
+  void _playVipEntranceOnce({
+    required String userId,
+    required String userName,
+    String? avatarUrl,
+    String? vipFrameUrl,
+  }) {
+    final id = userId.trim();
+    final frame =
+        ApiImageUtils.normalize(vipFrameUrl?.trim())?.trim() ??
+        vipFrameUrl?.trim() ??
+        '';
+    if (id.isEmpty || frame.isEmpty) return;
+    if (!_vipEntrancePlayedUserIds.add(id)) return;
+
+    VipEntranceOverlay.show(
+      userName: userName,
+      avatarUrl: avatarUrl,
+      vipFrameUrl: frame,
+    );
   }
 
   void _unbindRoomBackgroundSocket() {
@@ -1250,6 +1351,9 @@ class LiveBroadcastController extends GetxController {
           seats.isNotEmpty ? seats : _buildFallbackAudioSeats(),
         );
         _hydrateBackgroundFromSeatsPayload(response?['data']);
+        _maybePlayVipEntrancesFromSeats(
+          seats.isNotEmpty ? seats : audioRoomSeats.toList(),
+        );
         await _syncRoomMembershipFromSeatsResponse(
           response?['data'],
           seats.isNotEmpty ? seats : audioRoomSeats.toList(),
@@ -2462,6 +2566,9 @@ class LiveBroadcastController extends GetxController {
   void onClose() {
     _stopSeatRefreshPolling();
     _unbindRoomBackgroundSocket();
+    _vipEntrancePlayedUserIds.clear();
+    _vipSeatEntranceBaselineReady = false;
+    VipEntranceOverlay.dismiss();
     _messageSub?.cancel();
     _userSub?.cancel();
     _giftCelebrationTracker.reset();
