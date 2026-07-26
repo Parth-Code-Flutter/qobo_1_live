@@ -6,6 +6,7 @@ import 'package:qobo_one_live/repo/user/user_repo.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
+import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
 
 class BackpackController extends GetxController {
   BackpackController({
@@ -302,6 +303,20 @@ class BackpackController extends GetxController {
               ]),
             ) ??
             '',
+        'previewImageUrl':
+            ApiImageUtils.normalize(
+              _firstNonSvgaText([
+                background['previewUrl'],
+                background['thumbnail'],
+                background['thumbnailUrl'],
+                background['coverImage'],
+                background['image'],
+                background['imageUrl'],
+                item['image'],
+                item['imageUrl'],
+              ]),
+            ) ??
+            '',
         'quantity': 1,
         'description': isExpired
             ? 'Expired'
@@ -528,6 +543,18 @@ class BackpackController extends GetxController {
     for (final value in values) {
       final text = value?.toString().trim() ?? '';
       if (text.isNotEmpty && text != 'null') return text;
+    }
+    return null;
+  }
+
+  /// Same as [_firstText] but skips `.svga` URLs — used to find a real static
+  /// thumbnail distinct from the animated file for SVGA-failure fallback.
+  String? _firstNonSvgaText(Iterable<dynamic> values) {
+    for (final value in values) {
+      final text = value?.toString().trim() ?? '';
+      if (text.isEmpty || text == 'null') continue;
+      if (ProfileBackgroundMedia.isSvgaUrl(text)) continue;
+      return text;
     }
     return null;
   }

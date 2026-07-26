@@ -5,6 +5,7 @@ import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/repo/background/background_repo.dart';
 import 'package:qobo_one_live/services/api_constants.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
+import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 
 /// Centralized, app-wide user session store.
@@ -57,6 +58,12 @@ class UserSessionController extends GetxController {
     // Map objects last so we extract nested `image` via `_readProfileValue`.
     'profileBackground',
     'profile_background',
+  ]);
+
+  /// Static thumbnail for the equipped cover when the animated `.svga` 404s.
+  String get profileBackgroundPreviewUrl => _stringValueFromProfile(const [
+    'profileBackgroundPreviewUrl',
+    'profile_background_preview_url',
   ]);
   bool get isSuperAdmin => role.toLowerCase() == 'super_admin';
   bool get isAgency => role.toLowerCase() == 'agency';
@@ -156,15 +163,14 @@ class UserSessionController extends GetxController {
     if (data == null) return false;
 
     await saveProfile(data);
-    // getProfile may omit equipped cover URL — fill from backpack when needed.
-    if (profileBackgroundUrl.trim().isEmpty) {
-      await syncEquippedProfileBackgroundFromBackpack();
-    }
+    // getProfile often omits cover media — merge equipped backpack URL + preview.
+    await syncEquippedProfileBackgroundFromBackpack();
     return true;
   }
 
   /// Reads `GET /api/background/my-backpack` and stores the equipped cover URL
-  /// so Profile tab / Basic Profile show SVGA and image backgrounds correctly.
+  /// (plus a static preview when available) so Profile tab / Basic Profile can
+  /// still show distinct art when Render 404s the `.svga` upload.
   Future<void> syncEquippedProfileBackgroundFromBackpack() async {
     if (_syncingEquippedBackground) return;
     _syncingEquippedBackground = true;
@@ -197,9 +203,30 @@ class UserSessionController extends GetxController {
         );
         if (url == null || url.isEmpty) break;
 
+        final preview = ApiImageUtils.normalize(
+          _firstNonSvga([
+            background['previewUrl'],
+            background['thumbnail'],
+            background['thumbnailUrl'],
+            background['coverImage'],
+            background['image'],
+            background['imageUrl'],
+            raw['previewUrl'],
+            raw['thumbnail'],
+            raw['thumbnailUrl'],
+            raw['image'],
+            raw['imageUrl'],
+          ]),
+        );
+
         final updated = Map<String, dynamic>.from(_profileData ?? {});
         updated['profileBackgroundUrl'] = url;
         updated['poster'] = url;
+        if (preview != null && preview.isNotEmpty) {
+          updated['profileBackgroundPreviewUrl'] = preview;
+        } else {
+          updated.remove('profileBackgroundPreviewUrl');
+        }
         await saveProfile(updated);
         break;
       }
@@ -214,6 +241,16 @@ class UserSessionController extends GetxController {
     for (final value in values) {
       final text = value?.toString().trim() ?? '';
       if (text.isNotEmpty && text != 'null') return text;
+    }
+    return null;
+  }
+
+  String? _firstNonSvga(List<dynamic> values) {
+    for (final value in values) {
+      final text = value?.toString().trim() ?? '';
+      if (text.isEmpty || text == 'null') continue;
+      if (ProfileBackgroundMedia.isSvgaUrl(text)) continue;
+      return text;
     }
     return null;
   }

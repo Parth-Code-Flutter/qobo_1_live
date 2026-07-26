@@ -6,19 +6,19 @@ import 'package:qobo_one_live/utils/app_widgets/network_svga_widget.dart';
 /// otherwise shows a normal network image.
 ///
 /// Shop/backpack return both types in the same `image` field — detect by
-/// extension (`.svga` vs jpg/png/…). Parent must give a tight height so SVGA
-/// and static images share the same banner size.
+/// extension (`.svga` vs jpg/png/…). Each URL is loaded/cached independently
+/// so different backpack items never share one fallback animation.
 class ProfileBackgroundMedia extends StatelessWidget {
   const ProfileBackgroundMedia({
     super.key,
     required this.url,
     this.fit = BoxFit.cover,
     this.showLoadingIndicator = true,
-    this.svgaFallbackAsset = kProfileSvgaFallbackAsset,
+    this.svgaFallbackAsset,
+    this.previewImageUrl,
   });
 
-  /// Bundled SVGA used when the API/CDN `.svga` URL is missing (404).
-  /// Render ephemeral disks often lose uploaded backgrounds after redeploy.
+  /// Optional bundled asset only for non-catalog surfaces (e.g. VIP entrance).
   static const String kProfileSvgaFallbackAsset =
       'assets/gif/profile_cover_fallback.svga';
 
@@ -30,6 +30,11 @@ class ProfileBackgroundMedia extends StatelessWidget {
 
   /// Optional bundled `.svga` played when [url] cannot be downloaded.
   final String? svgaFallbackAsset;
+
+  /// Real, item-specific static thumbnail (never `.svga`). Shown instead of
+  /// the generic placeholder when the animated [url] 404s, so backpack tiles
+  /// still show distinct art instead of one shared fallback animation.
+  final String? previewImageUrl;
 
   static bool isKnownStaticMedia(String value) {
     final path = _pathOf(value);
@@ -49,6 +54,12 @@ class ProfileBackgroundMedia extends StatelessWidget {
     return path.toLowerCase().split('?').first;
   }
 
+  Color _accentForUrl(String source) {
+    final hash = source.hashCode;
+    final hue = (hash % 360).abs().toDouble();
+    return HSLColor.fromAHSL(1, hue, 0.45, 0.28).toColor();
+  }
+
   @override
   Widget build(BuildContext context) {
     final source = ApiImageUtils.normalize(url)?.trim() ?? url.trim();
@@ -64,32 +75,69 @@ class ProfileBackgroundMedia extends StatelessWidget {
             ? constraints.maxHeight
             : 150.0;
 
-        Widget placeholder({required IconData icon}) {
+        Widget placeholder({required IconData icon, String? label}) {
           return ColoredBox(
-            color: Colors.black26,
+            color: _accentForUrl(source),
             child: SizedBox(
               width: width,
               height: height,
               child: Center(
-                child: Icon(icon, color: Colors.white54, size: 28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, color: Colors.white70, size: 28),
+                    if (label != null) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        label,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
           );
         }
 
-        // Lock both media types to the parent box so layout never jumps.
         if (isSvgaUrl(source)) {
+          final preview =
+              ApiImageUtils.normalize(previewImageUrl)?.trim() ?? '';
+          final retryPlaceholder = placeholder(
+            icon: Icons.refresh_rounded,
+            label: 'Tap to retry SVGA',
+          );
+          // Prefer a real static thumbnail over the generic placeholder so
+          // different backpack items still look distinct when the `.svga`
+          // upload 404s (Render's ephemeral disk can lose uploaded files).
+          final svgaFallback = (preview.isNotEmpty && !isSvgaUrl(preview))
+              ? Image.network(
+                  preview,
+                  fit: fit,
+                  width: width,
+                  height: height,
+                  gaplessPlayback: true,
+                  errorBuilder: (_, __, ___) => retryPlaceholder,
+                )
+              : retryPlaceholder;
+
           return SizedBox(
             width: width,
             height: height,
             child: ClipRect(
               child: NetworkSvgaWidget(
+                key: ValueKey('svga_$source'),
                 url: source,
                 width: width,
                 height: height,
                 fit: fit,
                 fallbackAsset: svgaFallbackAsset,
-                fallback: placeholder(icon: Icons.broken_image_outlined),
+                fallback: svgaFallback,
                 showLoadingIndicator: showLoadingIndicator,
                 loading: showLoadingIndicator
                     ? null
@@ -109,8 +157,10 @@ class ProfileBackgroundMedia extends StatelessWidget {
               width: width,
               height: height,
               gaplessPlayback: true,
-              errorBuilder: (_, __, ___) =>
-                  placeholder(icon: Icons.broken_image_outlined),
+              errorBuilder: (_, __, ___) => placeholder(
+                icon: Icons.broken_image_outlined,
+                label: 'Image unavailable',
+              ),
             ),
           ),
         );

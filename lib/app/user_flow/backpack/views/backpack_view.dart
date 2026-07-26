@@ -745,6 +745,8 @@ class _PurchasedBackgroundCard extends StatelessWidget {
     final isEquipped = background['isEquipped'] == true;
     final isExpired = background['isExpired'] == true;
     final imageUrl = background['imageUrl']?.toString().trim() ?? '';
+    final previewImageUrl =
+        background['previewImageUrl']?.toString().trim() ?? '';
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 220),
@@ -819,6 +821,7 @@ class _PurchasedBackgroundCard extends StatelessWidget {
                     ProfileBackgroundMedia(
                       url: imageUrl,
                       showLoadingIndicator: true,
+                      previewImageUrl: previewImageUrl,
                     ),
                   DecoratedBox(
                     decoration: BoxDecoration(

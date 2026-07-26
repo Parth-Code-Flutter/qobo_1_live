@@ -36,5 +36,30 @@ void main() {
         isTrue,
       );
     });
+
+    test('treats query-string svga urls as animated', () {
+      expect(
+        ProfileBackgroundMedia.isSvgaUrl(
+          'https://cdn.example.com/cover.svga?v=2',
+        ),
+        isTrue,
+      );
+      expect(
+        ProfileBackgroundMedia.isSvgaUrl(
+          'https://cdn.example.com/cover.png?format=svga',
+        ),
+        isFalse,
+      );
+    });
+
+    test('static preview candidates are never svga', () {
+      const svga =
+          'https://my-backend-api-960q.onrender.com/uploads/backgrounds/image-1.svga';
+      const png =
+          'https://my-backend-api-960q.onrender.com/uploads/backgrounds/image-1.png';
+      expect(ProfileBackgroundMedia.isSvgaUrl(svga), isTrue);
+      expect(ProfileBackgroundMedia.isSvgaUrl(png), isFalse);
+      expect(ProfileBackgroundMedia.isKnownStaticMedia(png), isTrue);
+    });
   });
 }

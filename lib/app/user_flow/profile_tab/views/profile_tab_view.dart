@@ -54,6 +54,11 @@ class _ProfileTabViewState extends State<ProfileTabView> {
         final backgroundUrl =
             ApiImageUtils.normalize(session.profileBackgroundUrl)?.trim() ??
             '';
+        final backgroundPreviewUrl =
+            ApiImageUtils.normalize(
+              session.profileBackgroundPreviewUrl,
+            )?.trim() ??
+            '';
         final hasEquippedCover = backgroundUrl.isNotEmpty;
 
         return Stack(
@@ -67,6 +72,7 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                   url: backgroundUrl,
                   fit: BoxFit.cover,
                   showLoadingIndicator: false,
+                  previewImageUrl: backgroundPreviewUrl,
                 ),
               )
             else

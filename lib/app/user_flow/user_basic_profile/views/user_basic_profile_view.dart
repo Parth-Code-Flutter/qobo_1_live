@@ -318,6 +318,7 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
     return Obx(() {
       final File? localPoster = controller.selectedPosterMedia.value;
       final String netPoster = controller.posterUrl.value;
+      final String posterPreview = controller.posterPreviewUrl.value;
       final bool isUploading = controller.isPosterUploading.value;
       final bool hasPoster =
           localPoster != null || netPoster.trim().isNotEmpty;
@@ -348,6 +349,7 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
                         ProfileBackgroundMedia(
                           url: netPoster,
                           showLoadingIndicator: true,
+                          previewImageUrl: posterPreview,
                         )
                       else
                         _emptyCoverPlaceholder(),

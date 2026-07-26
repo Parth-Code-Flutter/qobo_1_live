@@ -6,9 +6,9 @@ import 'package:qobo_one_live/utils/svga_network_loader.dart';
 
 /// Reusable SVGA player for API-driven animated assets.
 ///
-/// Loads network `.svga` first. If the CDN/API file is missing (common on
-/// ephemeral Render disks), optionally plays [fallbackAsset] so cover tiles
-/// and profile banners still show a looping animation.
+/// Matches gift / VIP-frame SVGA lifecycle: dispose the previous controller
+/// before creating a new one, then decode and [repeat]. Optional
+/// [fallbackAsset] is only for non-catalog surfaces (e.g. VIP entrance).
 class NetworkSvgaWidget extends StatefulWidget {
   const NetworkSvgaWidget({
     super.key,
@@ -20,6 +20,7 @@ class NetworkSvgaWidget extends StatefulWidget {
     this.loading,
     this.showLoadingIndicator = true,
     this.fallbackAsset,
+    this.onRetry,
   });
 
   final String url;
@@ -35,12 +36,15 @@ class NetworkSvgaWidget extends StatefulWidget {
   /// When false, loading keeps [loading] / empty box instead of a spinner.
   final bool showLoadingIndicator;
 
+  /// Optional tap-to-retry when load failed.
+  final VoidCallback? onRetry;
+
   @override
   State<NetworkSvgaWidget> createState() => _NetworkSvgaWidgetState();
 }
 
 class _NetworkSvgaWidgetState extends State<NetworkSvgaWidget>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   SVGAAnimationController? _controller;
   bool _isLoading = true;
   bool _hasFailed = false;
@@ -57,8 +61,6 @@ class _NetworkSvgaWidgetState extends State<NetworkSvgaWidget>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.url != widget.url ||
         oldWidget.fallbackAsset != widget.fallbackAsset) {
-      _controller?.dispose();
-      _controller = null;
       _isLoading = true;
       _hasFailed = false;
       _load();
@@ -69,13 +71,20 @@ class _NetworkSvgaWidgetState extends State<NetworkSvgaWidget>
   void dispose() {
     _loadToken++;
     _controller?.dispose();
+    _controller = null;
     super.dispose();
   }
 
   Future<void> _load() async {
     final token = ++_loadToken;
-    final controller = SVGAAnimationController(vsync: this);
+
+    // Same as gift icons / avatar frames: release the old ticker first.
+    // Creating a new controller before dispose crashes SingleTicker / leaks
+    // tickers when the user taps "retry" while a load is in flight.
     _controller?.dispose();
+    _controller = null;
+
+    final controller = SVGAAnimationController(vsync: this);
     _controller = controller;
 
     try {
@@ -87,6 +96,7 @@ class _NetworkSvgaWidgetState extends State<NetworkSvgaWidget>
       }
 
       controller.videoItem = videoItem;
+      // Catalog / cover SVGAs are decorative — mute embedded audio.
       controller.muted = true;
       controller
         ..reset()
@@ -113,13 +123,20 @@ class _NetworkSvgaWidgetState extends State<NetworkSvgaWidget>
   }
 
   Future<MovieEntity> _decodeBestSource() async {
-    final url = ApiImageUtils.normalize(widget.url)?.trim() ?? widget.url.trim();
+    final url =
+        ApiImageUtils.normalize(widget.url)?.trim() ?? widget.url.trim();
     if (url.startsWith('http://') || url.startsWith('https://')) {
       try {
+        // SvgaNetworkLoader already tries https/http variants and never
+        // caches error bodies. Do NOT fall back to the package's own
+        // `decodeFromURL` here — it skips status-code checks and always
+        // writes the (possibly 404 HTML) response into the shared SVGA
+        // cache, which just adds noisy FormatExceptions for a URL that is
+        // genuinely missing on the server.
         return await SvgaNetworkLoader.decode(url);
       } catch (error) {
         if (kDebugMode) {
-          debugPrint('SVGA network decode failed, trying fallback: $error');
+          debugPrint('SVGA network decode failed, trying asset fallback: $error');
         }
       }
     }
@@ -130,6 +147,15 @@ class _NetworkSvgaWidgetState extends State<NetworkSvgaWidget>
     }
 
     throw StateError('No playable SVGA source for $url');
+  }
+
+  void _retry() {
+    setState(() {
+      _isLoading = true;
+      _hasFailed = false;
+    });
+    widget.onRetry?.call();
+    _load();
   }
 
   @override
@@ -157,7 +183,17 @@ class _NetworkSvgaWidgetState extends State<NetworkSvgaWidget>
       );
     }
 
-    if (_hasFailed || _controller == null) return widget.fallback;
+    if (_hasFailed || _controller == null) {
+      return GestureDetector(
+        onTap: _retry,
+        behavior: HitTestBehavior.opaque,
+        child: SizedBox(
+          width: widget.width,
+          height: widget.height,
+          child: widget.fallback,
+        ),
+      );
+    }
 
     return SizedBox(
       width: widget.width,

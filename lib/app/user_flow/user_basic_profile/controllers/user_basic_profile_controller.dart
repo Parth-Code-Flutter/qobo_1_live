@@ -62,6 +62,8 @@ class UserBasicProfileController extends GetxController
   final selectedProfileMedia = Rxn<File>();
   final selectedPosterMedia = Rxn<File>();
   final posterUrl = ''.obs;
+  /// Static thumbnail for [posterUrl] when the animated cover `.svga` 404s.
+  final posterPreviewUrl = ''.obs;
   final isPosterUploading = false.obs;
   final isSubmitLoading = false.obs;
 
@@ -371,6 +373,22 @@ class UserBasicProfileController extends GetxController
       final sessionBg = _ensureSession().profileBackgroundUrl.trim();
       if (sessionBg.isNotEmpty) posterUrl.value = sessionBg;
     }
+    final preview = ApiImageUtils.normalize(
+      _firstProfileText(data, const [
+        'profileBackgroundPreviewUrl',
+        'profile_background_preview_url',
+      ]),
+    );
+    final sessionPreview = _ensureSession().profileBackgroundPreviewUrl.trim();
+    posterPreviewUrl.value =
+        (preview != null &&
+            preview.isNotEmpty &&
+            !ProfileBackgroundMedia.isSvgaUrl(preview))
+        ? preview
+        : (sessionPreview.isNotEmpty &&
+              !ProfileBackgroundMedia.isSvgaUrl(sessionPreview))
+        ? sessionPreview
+        : '';
 
     final genderLabel = genderLabelFromStored(
       firstPresent(data, const ['gender', 'sex']),
@@ -795,12 +813,6 @@ class UserBasicProfileController extends GetxController
       _syncEquippedCoverFromPurchased();
       _prefetchCoverSvga(purchasedCoverBackgrounds);
       _prefetchCoverSvga(shopCoverBackgrounds);
-      // Warm bundled fallback so 404 CDN covers still animate immediately.
-      unawaited(
-        SvgaNetworkLoader.prefetchAsset(
-          ProfileBackgroundMedia.kProfileSvgaFallbackAsset,
-        ),
-      );
     } finally {
       isLoadingCoverBackgrounds.value = false;
     }
@@ -811,7 +823,10 @@ class UserBasicProfileController extends GetxController
       if (item['isEquipped'] != true) continue;
       final url = item['imageUrl']?.toString().trim() ?? '';
       if (url.isEmpty) return;
-      _syncCoverPreview(url);
+      _syncCoverPreview(
+        url,
+        previewImageUrl: item['previewImageUrl']?.toString(),
+      );
       return;
     }
   }
@@ -831,6 +846,7 @@ class UserBasicProfileController extends GetxController
     final backpackItemId = item['id']?.toString().trim() ?? '';
     final name = item['name']?.toString() ?? 'Profile Background';
     final imageUrl = item['imageUrl']?.toString() ?? '';
+    final previewImageUrl = item['previewImageUrl']?.toString() ?? '';
     if (backpackItemId.isEmpty) {
       _coverToast('This background is missing an id.', isError: true);
       return;
@@ -840,14 +856,14 @@ class UserBasicProfileController extends GetxController
       return;
     }
     if (item['isEquipped'] == true) {
-      _syncCoverPreview(imageUrl);
+      _syncCoverPreview(imageUrl, previewImageUrl: previewImageUrl);
       if (Get.isBottomSheetOpen == true) Get.back();
       _coverToast('"$name" is already your cover.');
       return;
     }
 
     // Instant cover update — do not wait for equip/refresh APIs.
-    _syncCoverPreview(imageUrl);
+    _syncCoverPreview(imageUrl, previewImageUrl: previewImageUrl);
     if (Get.isBottomSheetOpen == true) Get.back();
 
     isApplyingCoverBackground.value = true;
@@ -866,7 +882,12 @@ class UserBasicProfileController extends GetxController
       }
 
       // Sync session / purchased list in the background; preview already shows.
-      unawaited(_refreshCoverAfterBackgroundChange(previewUrl: imageUrl));
+      unawaited(
+        _refreshCoverAfterBackgroundChange(
+          previewUrl: imageUrl,
+          previewImageUrl: previewImageUrl,
+        ),
+      );
       _coverToast('Cover updated to "$name".');
     } finally {
       isApplyingCoverBackground.value = false;
@@ -920,12 +941,14 @@ class UserBasicProfileController extends GetxController
 
   Future<void> _refreshCoverAfterBackgroundChange({
     required String previewUrl,
+    String? previewImageUrl,
   }) async {
     selectedPosterMedia.value = null;
     final normalizedPreview =
         ApiImageUtils.normalize(previewUrl)?.trim() ?? '';
     await _ensureSession().refreshProfileFromApi();
-    final sessionBg = _ensureSession().profileBackgroundUrl.trim();
+    final session = _ensureSession();
+    final sessionBg = session.profileBackgroundUrl.trim();
     final normalizedSession =
         ApiImageUtils.normalize(sessionBg)?.trim() ?? '';
     // Prefer session URL when present. If getProfile drops the field, keep the
@@ -933,20 +956,38 @@ class UserBasicProfileController extends GetxController
     final next = normalizedSession.isNotEmpty
         ? normalizedSession
         : normalizedPreview;
+    final sessionStatic = session.profileBackgroundPreviewUrl.trim();
+    final staticPreview = sessionStatic.isNotEmpty
+        ? sessionStatic
+        : previewImageUrl;
     if (next.isNotEmpty) {
-      _syncCoverPreview(next);
+      _syncCoverPreview(next, previewImageUrl: staticPreview);
     }
     await loadCoverBackgrounds();
   }
 
-  void _syncCoverPreview(String url) {
+  void _syncCoverPreview(String url, {String? previewImageUrl}) {
     final normalized = ApiImageUtils.normalize(url)?.trim() ?? '';
     if (normalized.isEmpty) return;
     posterUrl.value = normalized;
+
+    final rawPreview = ApiImageUtils.normalize(previewImageUrl)?.trim() ?? '';
+    final staticPreview =
+        (rawPreview.isNotEmpty &&
+            !ProfileBackgroundMedia.isSvgaUrl(rawPreview))
+        ? rawPreview
+        : '';
+    posterPreviewUrl.value = staticPreview;
+
     final session = _ensureSession();
     final updated = Map<String, dynamic>.from(session.profileData ?? {});
     updated['profileBackgroundUrl'] = normalized;
     updated['poster'] = normalized;
+    if (staticPreview.isNotEmpty) {
+      updated['profileBackgroundPreviewUrl'] = staticPreview;
+    } else {
+      updated.remove('profileBackgroundPreviewUrl');
+    }
     unawaited(session.saveProfile(updated));
   }
 
@@ -987,6 +1028,25 @@ class UserBasicProfileController extends GetxController
             ]),
           ) ??
           '';
+      // Distinct static thumbnail (never `.svga`) so covers show real per-item
+      // media instead of a shared placeholder when the animated file 404s.
+      final previewImageUrl =
+          ApiImageUtils.normalize(
+            _firstNonSvgaText([
+              background['previewUrl'],
+              background['thumbnail'],
+              background['thumbnailUrl'],
+              background['coverImage'],
+              background['image'],
+              background['imageUrl'],
+              item['previewUrl'],
+              item['thumbnail'],
+              item['thumbnailUrl'],
+              item['image'],
+              item['imageUrl'],
+            ]),
+          ) ??
+          '';
 
       rows.add({
         'id': itemId,
@@ -997,6 +1057,7 @@ class UserBasicProfileController extends GetxController
             '',
         'name': background['name']?.toString() ?? 'Profile Background',
         'imageUrl': imageUrl,
+        'previewImageUrl': previewImageUrl,
         'category': background['category']?.toString() ?? '',
         'duration': isExpired ? 'Expired' : _expiryLabel(expiresAt),
         'isEquipped': isEquipped,
@@ -1039,6 +1100,18 @@ class UserBasicProfileController extends GetxController
                 raw['image'],
                 raw['imageUrl'],
                 raw['previewUrl'],
+              ]),
+            ) ??
+            '',
+        'previewImageUrl':
+            ApiImageUtils.normalize(
+              _firstNonSvgaText([
+                raw['previewUrl'],
+                raw['thumbnail'],
+                raw['thumbnailUrl'],
+                raw['coverImage'],
+                raw['image'],
+                raw['imageUrl'],
               ]),
             ) ??
             '',
@@ -1100,6 +1173,18 @@ class UserBasicProfileController extends GetxController
     for (final value in values) {
       final text = value?.toString().trim();
       if (text != null && text.isNotEmpty && text != 'null') return text;
+    }
+    return null;
+  }
+
+  /// Same as [_firstText] but skips `.svga` URLs — used to find a real static
+  /// thumbnail distinct from the animated file for SVGA-failure fallback.
+  String? _firstNonSvgaText(List<dynamic> values) {
+    for (final value in values) {
+      final text = value?.toString().trim();
+      if (text == null || text.isEmpty || text == 'null') continue;
+      if (ProfileBackgroundMedia.isSvgaUrl(text)) continue;
+      return text;
     }
     return null;
   }

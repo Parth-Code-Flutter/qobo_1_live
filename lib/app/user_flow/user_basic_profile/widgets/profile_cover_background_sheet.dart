@@ -227,6 +227,7 @@ class _CoverBackgroundCardState extends State<_CoverBackgroundCard>
     final item = widget.item;
     final name = item['name']?.toString() ?? 'Background';
     final imageUrl = item['imageUrl']?.toString() ?? '';
+    final previewImageUrl = item['previewImageUrl']?.toString() ?? '';
     final meta = item['duration']?.toString() ?? '';
     final category = item['category']?.toString() ?? '';
     final isEquipped = item['isEquipped'] == true;
@@ -276,6 +277,12 @@ class _CoverBackgroundCardState extends State<_CoverBackgroundCard>
                             url: imageUrl,
                             fit: BoxFit.cover,
                             showLoadingIndicator: true,
+                            // Never share one fallback SVGA across tiles —
+                            // each backpack item must use its own API URL.
+                            svgaFallbackAsset: null,
+                            // Real per-item static thumbnail, shown when the
+                            // `.svga` upload 404s instead of a generic tile.
+                            previewImageUrl: previewImageUrl,
                           ),
                           if (isSvga)
                             Positioned(
