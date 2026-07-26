@@ -21,7 +21,7 @@ class FrameRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
-  /// Calls `POST /api/frame/buy` to purchase one avatar frame.
+  /// Calls `POST /api/frame/buy-frame` to purchase one avatar / VIP frame.
   Future<Map<String, dynamic>?> buyFrame({
     required String frameId,
     bool isShowLoader = true,

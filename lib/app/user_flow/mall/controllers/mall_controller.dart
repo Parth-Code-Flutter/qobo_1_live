@@ -361,6 +361,10 @@ class MallController extends GetxController {
 
     await _fetchFrameShop();
     selectTab(1);
+    if (Get.isRegistered<UserSessionController>()) {
+      // VIP frames auto-equip on buy — refresh so profile avatar updates.
+      await Get.find<UserSessionController>().refreshProfileFromApi();
+    }
     await _showPurchaseSuccessDialog(name: name, price: price);
   }
 

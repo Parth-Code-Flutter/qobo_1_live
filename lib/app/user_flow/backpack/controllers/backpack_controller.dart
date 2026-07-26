@@ -191,6 +191,8 @@ class BackpackController extends GetxController {
       if (itemId.isEmpty) continue;
 
       final name = frame['name']?.toString() ?? 'Avatar Frame';
+      final category = frame['category']?.toString() ?? '';
+      final isVip = category.trim().toLowerCase() == 'vip';
       final isEquipped = item['isEquipped'] == true;
       if (isEquipped) {
         activeFrameId = itemId;
@@ -201,6 +203,8 @@ class BackpackController extends GetxController {
         'id': itemId,
         'frameId': frame['id']?.toString() ?? item['itemId']?.toString() ?? '',
         'name': name,
+        'category': category,
+        'isVip': isVip,
         'icon': kIconUserLevel,
         // `/my-backpack` may return an animated SVGA frame. Keep the static
         // image fields as fallback for older purchased-frame records.
@@ -228,7 +232,9 @@ class BackpackController extends GetxController {
             ) ??
             '',
         'quantity': 1,
-        'description': _frameExpiryLabel(item['expiresAt']),
+        'description': isVip
+            ? 'VIP · auto-equipped'
+            : _frameExpiryLabel(item['expiresAt']),
         'isEquipped': isEquipped,
         'expiresAt': item['expiresAt']?.toString() ?? '',
       });
@@ -325,7 +331,7 @@ class BackpackController extends GetxController {
         categoryId == 5 && equippedBackground.value == itemId;
 
     if (categoryId == 2) {
-      await _equipAvatarFrame(itemId: itemId, name: name);
+      await _equipAvatarFrame(item: item);
       return;
     } else if (categoryId == 5) {
       await _equipProfileBackground(itemId: itemId, name: name);
@@ -366,9 +372,21 @@ class BackpackController extends GetxController {
   }
 
   Future<void> _equipAvatarFrame({
-    required String itemId,
-    required String name,
+    required Map<String, dynamic> item,
   }) async {
+    final itemId = item['id']?.toString() ?? '';
+    final name = item['name']?.toString() ?? 'Avatar Frame';
+    if (itemId.isEmpty) return;
+
+    // VIP frames are auto-equipped by the backend after purchase.
+    if (item['isVip'] == true ||
+        item['category']?.toString().trim().toLowerCase() == 'vip') {
+      _showBackpackDialog(
+        'VIP frames equip automatically after purchase and cannot be changed here.',
+      );
+      return;
+    }
+
     final shouldEquip = equippedFrame.value != itemId;
     final response = await _frameRepo.equipFrame(
       backpackItemId: itemId,

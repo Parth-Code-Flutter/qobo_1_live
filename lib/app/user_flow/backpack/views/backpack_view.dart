@@ -502,6 +502,7 @@ class _PurchasedFrameCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isEquipped = frame['isEquipped'] == true;
+    final isVip = frame['isVip'] == true;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 220),
       padding: const EdgeInsets.all(12),
@@ -537,15 +538,25 @@ class _PurchasedFrameCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: isEquipped
+                color: isVip
+                    ? const Color(0xFFFFD700)
+                    : isEquipped
                     ? Colors.green
                     : kColorPrimary.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: AppText(
-                text: isEquipped ? 'ACTIVE' : 'OWNED',
+                text: isVip
+                    ? (isEquipped ? 'VIP ACTIVE' : 'VIP')
+                    : isEquipped
+                    ? 'ACTIVE'
+                    : 'OWNED',
                 fontSize: 9,
-                color: isEquipped ? kColorWhite : kColorPrimary,
+                color: isVip
+                    ? kColorText
+                    : isEquipped
+                    ? kColorWhite
+                    : kColorPrimary,
               ),
             ),
           ),
@@ -576,14 +587,22 @@ class _PurchasedFrameCard extends StatelessWidget {
             width: double.infinity,
             height: 34,
             child: appButton(
-              onPressed: onEquip,
-              buttonText: isEquipped ? 'Unequip' : 'Equip Frame',
-              buttonColor: isEquipped ? const Color(0xFFF1E6B8) : kColorPrimary,
-              textColor: isEquipped ? kColorText : kColorWhite,
+              onPressed: isVip ? () {} : onEquip,
+              buttonText: isVip
+                  ? 'Auto VIP'
+                  : isEquipped
+                  ? 'Unequip'
+                  : 'Equip Frame',
+              buttonColor: isVip
+                  ? const Color(0xFFFFF1C1)
+                  : isEquipped
+                  ? const Color(0xFFF1E6B8)
+                  : kColorPrimary,
+              textColor: isVip || isEquipped ? kColorText : kColorWhite,
               borderRadius: 17,
               textStyle: TextStyles.kSemiBoldPoppins(
                 fontSize: TextStyles.k12FontSize,
-                colors: isEquipped ? kColorText : kColorWhite,
+                colors: isVip || isEquipped ? kColorText : kColorWhite,
               ),
             ),
           ),

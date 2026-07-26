@@ -23,6 +23,7 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_celebration_overlay.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_chat_celebration_tracker.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_media_utils.dart';
+import 'package:qobo_one_live/utils/ui_utils/vip_entrance_overlay.dart';
 import 'package:qobo_one_live/utils/zego_engine_utils.dart';
 import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 import 'package:zego_uikit_prebuilt_live_streaming/zego_uikit_prebuilt_live_streaming.dart';
@@ -99,6 +100,7 @@ class LiveBroadcastController extends GetxController {
   StreamSubscription<List<ZegoInRoomMessage>>? _messageSub;
   StreamSubscription<List<ZegoUIKitUser>>? _userSub;
   void Function(Map<String, dynamic>)? _roomBackgroundSocketListener;
+  void Function(Map<String, dynamic>)? _vipUserJoinedSocketListener;
 
   /// Dedupes gift celebrations triggered by Zego gift chat events (all room kinds).
   final GiftChatCelebrationTracker _giftCelebrationTracker =
@@ -997,24 +999,64 @@ class LiveBroadcastController extends GetxController {
       _applyRoomBackgroundFromMap(data);
     };
 
+    _vipUserJoinedSocketListener = (data) {
+      final eventRoomId =
+          (data['roomId'] ?? data['room_id'])?.toString().trim() ?? '';
+      final localZegoId = roomId.value.trim();
+      if (eventRoomId.isNotEmpty &&
+          eventRoomId != apiRoomId &&
+          eventRoomId != localZegoId) {
+        return;
+      }
+      final userName =
+          (data['user_name'] ?? data['userName'] ?? data['name'])
+              ?.toString()
+              .trim() ??
+          'VIP Member';
+      final avatar =
+          (data['avatar'] ?? data['displayPicture'] ?? data['display_picture'])
+              ?.toString();
+      final frameUrl =
+          (data['vip_frame_url'] ??
+                  data['vipFrameUrl'] ??
+                  data['frame_url'] ??
+                  data['frameUrl'])
+              ?.toString();
+      VipEntranceOverlay.show(
+        userName: userName,
+        avatarUrl: avatar,
+        vipFrameUrl: frameUrl,
+      );
+    };
+
     unawaited(() async {
       await UserRealtimeSocketService.ensureConnected();
       if (!Get.isRegistered<UserRealtimeSocketService>()) return;
       final socket = Get.find<UserRealtimeSocketService>();
-      final listener = _roomBackgroundSocketListener;
-      if (listener == null) return;
-      socket.addRoomBackgroundListener(listener);
+      final bgListener = _roomBackgroundSocketListener;
+      final vipListener = _vipUserJoinedSocketListener;
+      if (bgListener != null) {
+        socket.addRoomBackgroundListener(bgListener);
+      }
+      if (vipListener != null) {
+        socket.addVipUserJoinedListener(vipListener);
+      }
       await socket.joinRoomChannel(apiRoomId);
     }());
   }
 
   void _unbindRoomBackgroundSocket() {
-    final listener = _roomBackgroundSocketListener;
+    final bgListener = _roomBackgroundSocketListener;
+    final vipListener = _vipUserJoinedSocketListener;
     _roomBackgroundSocketListener = null;
+    _vipUserJoinedSocketListener = null;
     if (!Get.isRegistered<UserRealtimeSocketService>()) return;
     final socket = Get.find<UserRealtimeSocketService>();
-    if (listener != null) {
-      socket.removeRoomBackgroundListener(listener);
+    if (bgListener != null) {
+      socket.removeRoomBackgroundListener(bgListener);
+    }
+    if (vipListener != null) {
+      socket.removeVipUserJoinedListener(vipListener);
     }
     unawaited(socket.leaveRoomChannel());
   }

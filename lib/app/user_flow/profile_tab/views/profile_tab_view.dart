@@ -414,6 +414,10 @@ class ProfileTabView extends StatelessWidget {
         Color(0xFF15BDE6),
         Color(0xFF17D7C4),
       ], onTapRoute: Routes.SVIP),
+      _ProfileFeatureItem('VIP Frames', kIconSVIP, const [
+        Color(0xFFFFB020),
+        Color(0xFFFFD700),
+      ], onTapRoute: Routes.VIP_STORE),
       _ProfileFeatureItem('Activity', kIconActivity, const [
         Color(0xFF43D40A),
         Color(0xFF80F20A),

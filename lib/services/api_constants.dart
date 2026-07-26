@@ -326,8 +326,8 @@ class FrameEndpoints {
   /// GET /api/frame/shop
   static const String shop = '/api/frame/shop';
 
-  /// POST /api/frame/buy
-  static const String buy = '/api/frame/buy';
+  /// POST /api/frame/buy-frame (VIP Frames + standard avatar frames)
+  static const String buy = '/api/frame/buy-frame';
 
   /// GET /api/frame/my-backpack
   static const String myBackpack = '/api/frame/my-backpack';

@@ -17,6 +17,7 @@ import 'package:socket_io_client/socket_io_client.dart' as io;
 /// - `register_user` + `host_live_started` → follower live alerts
 /// - `join_room` / `leave_room` + `room_background_updated` → live room themes
 /// - `pk_*` events → PK battle realtime (request / scores / complete)
+/// - `vip_user_joined` → VIP frame entrance overlay in rooms
 class UserRealtimeSocketService extends GetxController {
   UserRealtimeSocketService({
     RoomInvitePushHandler? roomInviteHandler,
@@ -32,6 +33,8 @@ class UserRealtimeSocketService extends GetxController {
   String? _joinedRoomId;
 
   final _roomBackgroundListeners =
+      <void Function(Map<String, dynamic> data)>{};
+  final _vipUserJoinedListeners =
       <void Function(Map<String, dynamic> data)>{};
 
   /// Ensures a singleton exists and connects when the user is logged in.
@@ -102,6 +105,7 @@ class UserRealtimeSocketService extends GetxController {
       socket.on('pk_cancelled', (raw) => _onPkNamed('pk_cancelled', raw));
       socket.on('pk_score_update', (raw) => _onPkNamed('pk_score_update', raw));
       socket.on('pk_completed', (raw) => _onPkNamed('pk_completed', raw));
+      socket.on('vip_user_joined', _onVipUserJoined);
 
       socket.onDisconnect((_) {
         LoggerUtils.logInfo('RealtimeSocket: disconnected');
@@ -158,6 +162,18 @@ class UserRealtimeSocketService extends GetxController {
     _roomBackgroundListeners.remove(listener);
   }
 
+  void addVipUserJoinedListener(
+    void Function(Map<String, dynamic> data) listener,
+  ) {
+    _vipUserJoinedListeners.add(listener);
+  }
+
+  void removeVipUserJoinedListener(
+    void Function(Map<String, dynamic> data) listener,
+  ) {
+    _vipUserJoinedListeners.remove(listener);
+  }
+
   Future<void> disconnect() async {
     final socket = _socket;
     _socket = null;
@@ -172,6 +188,7 @@ class UserRealtimeSocketService extends GetxController {
       socket.off('pk_cancelled');
       socket.off('pk_score_update');
       socket.off('pk_completed');
+      socket.off('vip_user_joined');
       socket.dispose();
     } catch (e) {
       LoggerUtils.logWarning('RealtimeSocket: disconnect error — $e');
@@ -195,6 +212,19 @@ class UserRealtimeSocketService extends GetxController {
         listener(data);
       } catch (e) {
         LoggerUtils.logWarning('RealtimeSocket: background listener error — $e');
+      }
+    }
+  }
+
+  void _onVipUserJoined(dynamic raw) {
+    final data = _asStringKeyedMap(raw);
+    if (data.isEmpty) return;
+    LoggerUtils.logInfo('RealtimeSocket: vip_user_joined data=$data');
+    for (final listener in List.of(_vipUserJoinedListeners)) {
+      try {
+        listener(data);
+      } catch (e) {
+        LoggerUtils.logWarning('RealtimeSocket: vip join listener error — $e');
       }
     }
   }

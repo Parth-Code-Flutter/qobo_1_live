@@ -1,95 +1,44 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/repo/economy/economy_repo.dart';
+import 'package:qobo_one_live/repo/frame/frame_repo.dart';
+import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/services/user_session_controller.dart';
+import 'package:qobo_one_live/utils/api_image_utils.dart';
+import 'package:qobo_one_live/app/user_flow/wallet/bindings/wallet_binding.dart';
+import 'package:qobo_one_live/app/user_flow/wallet/views/wallet_view.dart';
 
+/// VIP Frames shop (Profile → VIP Frames).
+///
+/// Buys via `POST /api/frame/buy-frame`. Backend auto-equips VIP frames —
+/// no manual equip/unequip on mobile.
 class VipStoreController extends GetxController {
+  VipStoreController({
+    FrameRepo? frameRepo,
+    EconomyRepo? economyRepo,
+  })  : _frameRepo = frameRepo ?? FrameRepo(),
+        _economyRepo = economyRepo ?? EconomyRepo();
+
+  final FrameRepo _frameRepo;
+  final EconomyRepo _economyRepo;
+
   final isLoading = false.obs;
+  final isPurchasing = false.obs;
+  final userCoins = 0.obs;
+  final loadError = ''.obs;
+  final vipFrames = <Map<String, dynamic>>[].obs;
 
-  // Active category index: 0 = Entrances, 1 = Avatar Rings, 2 = Chat Bubbles
-  final selectedCategory = 0.obs;
-
-  // Mock User Coin balance
-  final userCoins = 8500.obs;
-
-  // Mock Shop items
-  final entranceEffects = <Map<String, dynamic>>[
-    {
-      'title': 'Royal Supercar',
-      'desc': 'Arrive in the live room with a roaring luxury sports car animation.',
-      'price': 5000,
-      'duration': '30 Days',
-      'tag': 'Legendary',
-      'icon': 'sports_car_rounded',
-      'isOwned': false,
-    },
-    {
-      'title': 'Golden Phoenix',
-      'desc': 'Unleash a fiery golden phoenix bird entrance effect.',
-      'price': 12000,
-      'duration': '30 Days',
-      'tag': 'Mythic',
-      'icon': 'wb_sunny_rounded',
-      'isOwned': false,
-    },
-    {
-      'title': 'Glitch Portal',
-      'desc': 'Emerge out of a high-tech neon digital glitch portal.',
-      'price': 2500,
-      'duration': '30 Days',
-      'tag': 'Epic',
-      'icon': 'electric_bolt_rounded',
-      'isOwned': false,
-    },
-  ].obs;
-
-  final avatarRings = <Map<String, dynamic>>[
-    {
-      'title': 'Crown Prince Frame',
-      'desc': 'Surround your avatar with a sparkling ruby crown and gold ring.',
-      'price': 1500,
-      'duration': '7 Days',
-      'tag': 'Epic',
-      'icon': 'brightness_high_rounded',
-      'isOwned': false,
-    },
-    {
-      'title': 'Cyber Neon Ring',
-      'desc': 'An animated neon future blue ring that pulses over your profile.',
-      'price': 3000,
-      'duration': '7 Days',
-      'tag': 'Legendary',
-      'icon': 'change_circle_rounded',
-      'isOwned': false,
-    },
-    {
-      'title': 'Pink Sakura Halo',
-      'desc': 'A gentle, falling cherry blossom petals ring for your profile.',
-      'price': 800,
-      'duration': '7 Days',
-      'tag': 'Rare',
-      'icon': 'filter_vintage_rounded',
-      'isOwned': false,
-    },
-  ].obs;
-
-  final chatBubbles = <Map<String, dynamic>>[
-    {
-      'title': 'Cyber Matrix Bubble',
-      'desc': 'Give your chat messages a dynamic digital green code pattern background.',
-      'price': 1800,
-      'duration': '30 Days',
-      'tag': 'Epic',
-      'icon': 'chat_bubble_rounded',
-      'isOwned': false,
-    },
-    {
-      'title': 'Sweet Heart Bubble',
-      'desc': 'Send messages inside a cute pink bubble scattered with mini-hearts.',
-      'price': 600,
-      'duration': '30 Days',
-      'tag': 'Rare',
-      'icon': 'favorite_rounded',
-      'isOwned': false,
-    },
-  ].obs;
+  String get formattedCoins {
+    final digits = userCoins.value.toString();
+    final buffer = StringBuffer();
+    for (var i = 0; i < digits.length; i++) {
+      final reverseIndex = digits.length - i;
+      buffer.write(digits[i]);
+      if (reverseIndex > 1 && reverseIndex % 3 == 1) buffer.write(',');
+    }
+    return buffer.toString();
+  }
 
   @override
   void onInit() {
@@ -97,53 +46,259 @@ class VipStoreController extends GetxController {
     loadStore();
   }
 
-  void loadStore() async {
+  Future<void> loadStore({bool showLoader = false}) async {
     isLoading.value = true;
-    await Future.delayed(const Duration(milliseconds: 600));
-    isLoading.value = false;
+    loadError.value = '';
+    try {
+      await Future.wait([
+        _fetchWalletBalance(showLoader: showLoader),
+        _fetchVipFrames(showLoader: showLoader),
+      ]);
+    } catch (_) {
+      if (vipFrames.isEmpty) {
+        loadError.value = 'Network error. Pull to refresh and try again.';
+      }
+    } finally {
+      isLoading.value = false;
+    }
   }
 
-  void purchaseItem(int index) {
-    List<Map<String, dynamic>> list;
-    if (selectedCategory.value == 0) {
-      list = entranceEffects;
-    } else if (selectedCategory.value == 1) {
-      list = avatarRings;
-    } else {
-      list = chatBubbles;
+  Future<void> _fetchWalletBalance({bool showLoader = false}) async {
+    final wallet = await _economyRepo.getWalletBalances(
+      isShowLoader: showLoader,
+    );
+    final data = wallet?['data'];
+    if (data is Map) {
+      userCoins.value = _toInt(data['coins']);
+    }
+  }
+
+  Future<void> _fetchVipFrames({bool showLoader = false}) async {
+    final shopResponse = await _frameRepo.getShopFrames(
+      isShowLoader: showLoader,
+    );
+    if (shopResponse == null) {
+      loadError.value = 'Unable to reach frame shop. Please try again.';
+      return;
+    }
+    if (!_isSuccess(shopResponse) && _extractList(shopResponse['data']).isEmpty) {
+      loadError.value =
+          shopResponse['message']?.toString() ?? 'Could not load VIP frames.';
+      return;
     }
 
-    final item = list[index];
+    final backpackResponse = await _frameRepo.getMyBackpack(
+      isShowLoader: false,
+    );
+    final ownedByFrameId = _ownedByFrameId(
+      _extractList(backpackResponse?['data']),
+    );
+    final frames = <Map<String, dynamic>>[];
 
+    for (final raw in _extractList(shopResponse['data']).whereType<Map>()) {
+      final category = raw['category']?.toString().trim() ?? '';
+      if (!_isVipCategory(category)) continue;
+
+      final status = raw['status']?.toString().toLowerCase() ?? 'active';
+      if (status.isNotEmpty && status != 'active') continue;
+
+      final frameId = raw['id']?.toString().trim() ?? '';
+      if (frameId.isEmpty) continue;
+
+      final owned = ownedByFrameId[frameId];
+      final durationDays = _toInt(raw['durationDays'] ?? raw['duration_days']);
+      final animationUrl = ApiImageUtils.normalize(
+        _firstText([
+          raw['animationUrl'],
+          raw['animation_url'],
+          raw['svgaUrl'],
+          raw['svga_url'],
+        ]),
+      );
+      final imageUrl = ApiImageUtils.normalize(
+        _firstText([
+          raw['previewUrl'],
+          raw['imageUrl'],
+          raw['image'],
+          raw['iconUrl'],
+        ]),
+      );
+      final mediaCandidate = animationUrl ?? imageUrl ?? '';
+      final isSvga = mediaCandidate.toLowerCase().contains('.svga');
+      final descRaw = raw['description']?.toString().trim() ?? '';
+
+      frames.add({
+        'id': frameId,
+        'name': raw['name']?.toString().trim().isNotEmpty == true
+            ? raw['name'].toString().trim()
+            : 'VIP Frame',
+        'desc': descRaw.isNotEmpty
+            ? descRaw
+            : 'Auto-equipped VIP frame for your profile and room entrance.',
+        'price': _toInt(raw['price']),
+        'duration': durationDays > 0 ? '$durationDays Days' : 'Limited time',
+        'category': category,
+        'tag': 'VIP',
+        'svgaUrl': isSvga ? mediaCandidate : (animationUrl ?? ''),
+        'imageUrl': isSvga
+            ? (imageUrl != null && imageUrl != mediaCandidate ? imageUrl : '')
+            : (imageUrl ?? ''),
+        'isOwned': owned != null,
+        'isEquipped': owned?['isEquipped'] == true,
+        'expiresAt': owned?['expiresAt']?.toString() ?? '',
+      });
+    }
+
+    vipFrames.assignAll(frames);
+    if (frames.isEmpty) {
+      loadError.value = '';
+    }
+  }
+
+  Future<void> purchaseFrame(Map<String, dynamic> item) async {
+    if (isPurchasing.value) return;
     if (item['isOwned'] == true) {
       Get.snackbar(
-        'Already Owned',
-        'You already own the "${item['title']}" package!',
+        'VIP Frames',
+        'You already own "${item['name']}". VIP frames equip automatically.',
         snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.black87,
+        colorText: kColorWhite,
       );
       return;
     }
 
-    final int price = item['price'] as int;
-    if (userCoins.value >= price) {
-      userCoins.value -= price;
-      
-      // Update owned state reactively
-      final Map<String, dynamic> updatedItem = Map.from(item);
-      updatedItem['isOwned'] = true;
-      list[index] = updatedItem;
+    final price = _toInt(item['price']);
+    final name = item['name']?.toString() ?? 'VIP Frame';
+    final frameId = item['id']?.toString().trim() ?? '';
+    if (frameId.isEmpty) return;
+
+    if (userCoins.value < price) {
+      final need = price - userCoins.value;
+      final goWallet = await Get.dialog<bool>(
+        AlertDialog(
+          title: const Text('Insufficient Coins'),
+          content: Text(
+            'You need $need more coins to buy "$name". Recharge now?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Get.back(result: false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Get.back(result: true),
+              child: const Text('Recharge'),
+            ),
+          ],
+        ),
+      );
+      if (goWallet == true) {
+        await Get.to(() => const WalletView(), binding: WalletBinding());
+        await _fetchWalletBalance();
+      }
+      return;
+    }
+
+    isPurchasing.value = true;
+    try {
+      final response = await _frameRepo.buyFrame(
+        frameId: frameId,
+        isShowLoader: true,
+      );
+      if (!_isSuccess(response)) {
+        Get.snackbar(
+          'VIP Frames',
+          response?['message']?.toString() ?? 'Could not purchase "$name".',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.redAccent,
+          colorText: kColorWhite,
+        );
+        return;
+      }
+
+      final data = response?['data'];
+      if (data is Map && data['remainingCoins'] != null) {
+        userCoins.value = _toInt(data['remainingCoins']);
+      } else {
+        userCoins.value = (userCoins.value - price).clamp(0, 1 << 30);
+      }
+
+      // Backend auto-equips VIP frames — refresh profile so avatar updates.
+      if (Get.isRegistered<UserSessionController>()) {
+        await Get.find<UserSessionController>().refreshProfileFromApi();
+      }
+      await loadStore();
 
       Get.snackbar(
-        'Purchase Success!',
-        'You purchased "${item['title']}" for $price Coins!',
+        'VIP Frames',
+        '"$name" purchased and equipped automatically.',
         snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green.shade700,
+        colorText: kColorWhite,
       );
-    } else {
-      Get.snackbar(
-        'Insufficient Balance',
-        'You need ${price - userCoins.value} more Coins to purchase this item.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+    } finally {
+      isPurchasing.value = false;
     }
+  }
+
+  void openBackpack() => Get.toNamed(Routes.BACKPACK);
+
+  Map<String, Map<String, dynamic>> _ownedByFrameId(List items) {
+    final result = <String, Map<String, dynamic>>{};
+    for (final raw in items.whereType<Map>()) {
+      final item = Map<String, dynamic>.from(raw);
+      final details = item['frameDetails'] ?? item['frame_details'];
+      final frame = details is Map
+          ? Map<String, dynamic>.from(details)
+          : const <String, dynamic>{};
+      final frameId =
+          frame['id']?.toString() ??
+          item['itemId']?.toString() ??
+          item['item_id']?.toString() ??
+          '';
+      if (frameId.isEmpty) continue;
+      result[frameId] = item;
+    }
+    return result;
+  }
+
+  List _extractList(dynamic data) {
+    if (data is List) return data;
+    if (data is Map) {
+      final nested =
+          data['frames'] ?? data['items'] ?? data['list'] ?? data['data'];
+      if (nested is List) return nested;
+    }
+    return const [];
+  }
+
+  static bool _isVipCategory(String category) =>
+      category.trim().toLowerCase() == 'vip';
+
+  bool _isSuccess(Map<String, dynamic>? response) {
+    if (response == null) return false;
+    if (response['success'] == true) return true;
+    final code = response['statusCode'];
+    return code == 1 ||
+        code == 200 ||
+        code == 201 ||
+        code?.toString() == '1' ||
+        code?.toString() == '200' ||
+        code?.toString() == '201';
+  }
+
+  int _toInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.round();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  String? _firstText(List<dynamic> values) {
+    for (final value in values) {
+      final text = value?.toString().trim();
+      if (text != null && text.isNotEmpty && text != 'null') return text;
+    }
+    return null;
   }
 }
