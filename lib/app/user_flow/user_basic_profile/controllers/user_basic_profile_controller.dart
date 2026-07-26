@@ -25,7 +25,7 @@ import 'package:qobo_one_live/utils/profile/stored_profile_map.dart';
 import 'package:qobo_one_live/utils/profile/update_profile_api_helper.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/validations/text_field_validations.dart';
-import 'package:flutter_svga/flutter_svga.dart';
+import 'package:qobo_one_live/utils/svga_network_loader.dart';
 
 import '../widgets/profile_cover_background_sheet.dart';
 
@@ -790,20 +790,40 @@ class UserBasicProfileController extends GetxController
           purchasedById,
         ),
       );
+      // Keep Profile tab + Basic Profile in sync with the equipped backpack item
+      // (API often returns both `.svga` and image URLs in the same `image` field).
+      _syncEquippedCoverFromPurchased();
       _prefetchCoverSvga(purchasedCoverBackgrounds);
       _prefetchCoverSvga(shopCoverBackgrounds);
+      // Warm bundled fallback so 404 CDN covers still animate immediately.
+      unawaited(
+        SvgaNetworkLoader.prefetchAsset(
+          ProfileBackgroundMedia.kProfileSvgaFallbackAsset,
+        ),
+      );
     } finally {
       isLoadingCoverBackgrounds.value = false;
+    }
+  }
+
+  void _syncEquippedCoverFromPurchased() {
+    for (final item in purchasedCoverBackgrounds) {
+      if (item['isEquipped'] != true) continue;
+      final url = item['imageUrl']?.toString().trim() ?? '';
+      if (url.isEmpty) return;
+      _syncCoverPreview(url);
+      return;
     }
   }
 
   /// Warm SVGA disk cache while the picker is open so equip feels instant.
   void _prefetchCoverSvga(List<Map<String, dynamic>> items) {
     for (final item in items) {
-      final url = item['imageUrl']?.toString().trim() ?? '';
+      final url =
+          ApiImageUtils.normalize(item['imageUrl']?.toString())?.trim() ?? '';
       if (!ProfileBackgroundMedia.isSvgaUrl(url)) continue;
-      if (!url.startsWith('http://') && !url.startsWith('https://')) continue;
-      unawaited(SVGAParser.shared.decodeFromURL(url));
+      // Safe prefetch — never caches 404 HTML like decodeFromURL can.
+      unawaited(SvgaNetworkLoader.prefetch(url));
     }
   }
 
@@ -902,20 +922,18 @@ class UserBasicProfileController extends GetxController
     required String previewUrl,
   }) async {
     selectedPosterMedia.value = null;
+    final normalizedPreview =
+        ApiImageUtils.normalize(previewUrl)?.trim() ?? '';
     await _ensureSession().refreshProfileFromApi();
     final sessionBg = _ensureSession().profileBackgroundUrl.trim();
     final normalizedSession =
         ApiImageUtils.normalize(sessionBg)?.trim() ?? '';
-    final normalizedPreview =
-        ApiImageUtils.normalize(previewUrl)?.trim() ?? '';
-    // Prefer session URL when present; keep optimistic preview otherwise.
-    // Avoid pointless reloads when the URL is unchanged.
+    // Prefer session URL when present. If getProfile drops the field, keep the
+    // optimistic cover so Profile tab does not go blank after equip.
     final next = normalizedSession.isNotEmpty
         ? normalizedSession
         : normalizedPreview;
-    if (next.isNotEmpty && next != posterUrl.value) {
-      _syncCoverPreview(next);
-    } else if (next.isNotEmpty && posterUrl.value.isEmpty) {
+    if (next.isNotEmpty) {
       _syncCoverPreview(next);
     }
     await loadCoverBackgrounds();

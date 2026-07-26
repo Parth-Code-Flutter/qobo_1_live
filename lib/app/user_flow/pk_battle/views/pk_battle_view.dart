@@ -240,6 +240,34 @@ class PKBattleView extends GetView<PKBattleController> {
                                 Spacing.v4,
                                 Row(
                                   children: [
+                                    if ((opp['room_type'] ?? '')
+                                        .toString()
+                                        .isNotEmpty) ...[
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.08,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          '${opp['room_type']}'
+                                              .toUpperCase(),
+                                          style: const TextStyle(
+                                            fontSize: 9,
+                                            color: Colors.white70,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                      Spacing.h8,
+                                    ],
                                     Container(
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 6,
@@ -648,7 +676,10 @@ class PKBattleView extends GetView<PKBattleController> {
                   child: Row(
                     children: [
                       Flexible(
-                        flex: (controller.myPercentage * 100).toInt(),
+                        flex: ((controller.myPercentage * 100).round()).clamp(
+                          1,
+                          99,
+                        ),
                         child: Container(
                           decoration: const BoxDecoration(
                             gradient: LinearGradient(
@@ -658,7 +689,8 @@ class PKBattleView extends GetView<PKBattleController> {
                         ),
                       ),
                       Flexible(
-                        flex: ((1 - controller.myPercentage) * 100).toInt(),
+                        flex: (((1 - controller.myPercentage) * 100).round())
+                            .clamp(1, 99),
                         child: Container(
                           decoration: const BoxDecoration(
                             gradient: LinearGradient(
@@ -671,6 +703,17 @@ class PKBattleView extends GetView<PKBattleController> {
                   ),
                 ),
               ),
+              if (controller.lastGiftSummary.value.isNotEmpty) ...[
+                Spacing.v8,
+                Text(
+                  controller.lastGiftSummary.value,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white54,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -822,7 +865,7 @@ class PKBattleView extends GetView<PKBattleController> {
           ),
         ),
 
-        // TESTING CONTROL BOX: Simulator buttons to increase points
+        // Scores come from backend gift → PK scoring (`pk_score_update`).
         Container(
           margin: const EdgeInsets.all(16),
           padding: const EdgeInsets.all(16),
@@ -834,76 +877,15 @@ class PKBattleView extends GetView<PKBattleController> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SemiBoldText(
-                text: 'Gift Combat Simulator (Testing)',
+                text: 'Gift combat is live',
                 fontSize: TextStyles.k12FontSize,
                 color: Colors.white70,
               ),
-              Spacing.v12,
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue.withValues(alpha: 0.15),
-                        foregroundColor: Colors.blueAccent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                      ),
-                      onPressed: () => controller.simulateGift(100, true),
-                      child: const Text(
-                        '+100 Rose',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  Spacing.h8,
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.cyan.withValues(alpha: 0.15),
-                        foregroundColor: Colors.cyan,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                      ),
-                      onPressed: () => controller.simulateGift(500, true),
-                      child: const Text(
-                        '+500 Diamond',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  Spacing.h8,
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red.withValues(alpha: 0.15),
-                        foregroundColor: Colors.redAccent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                      ),
-                      onPressed: () => controller.simulateGift(300, false),
-                      child: const Text(
-                        '+300 Opponent',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+              Spacing.v8,
+              const Text(
+                'Audience gifts in either room update PK scores automatically. '
+                'Stay in your live room and keep receiving gifts to win.',
+                style: TextStyle(color: Colors.white38, fontSize: 11),
               ),
               Spacing.v12,
               SizedBox(

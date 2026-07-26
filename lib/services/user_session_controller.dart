@@ -2,7 +2,9 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/local_storage_constants.dart';
 import 'package:qobo_one_live/constants/status_code_constants.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
+import 'package:qobo_one_live/repo/background/background_repo.dart';
 import 'package:qobo_one_live/services/api_constants.dart';
+import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 
 /// Centralized, app-wide user session store.
@@ -10,11 +12,16 @@ import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_cont
 /// Keeps profile data in memory for fast access and syncs it with local storage
 /// so any screen can read user info without repeating storage/API parsing logic.
 class UserSessionController extends GetxController {
-  UserSessionController({AuthRepo? authRepo})
-    : _authRepo = authRepo ?? AuthRepo();
+  UserSessionController({
+    AuthRepo? authRepo,
+    BackgroundRepo? backgroundRepo,
+  }) : _authRepo = authRepo ?? AuthRepo(),
+       _backgroundRepo = backgroundRepo ?? BackgroundRepo();
 
   final AuthRepo _authRepo;
+  final BackgroundRepo _backgroundRepo;
   Map<String, dynamic>? _profileData;
+  bool _syncingEquippedBackground = false;
 
   Map<String, dynamic>? get profileData => _profileData;
   String get userId => _stringValue('id');
@@ -42,6 +49,9 @@ class UserSessionController extends GetxController {
     'profile_background_url',
     'profileBackground.image',
     'profile_background.image',
+    'profileBackground.animationUrl',
+    'profileBackground.svgaUrl',
+    'profile_background.animationUrl',
     'backgroundUrl',
     'background_url',
     // Map objects last so we extract nested `image` via `_readProfileValue`.
@@ -146,7 +156,66 @@ class UserSessionController extends GetxController {
     if (data == null) return false;
 
     await saveProfile(data);
+    // getProfile may omit equipped cover URL — fill from backpack when needed.
+    if (profileBackgroundUrl.trim().isEmpty) {
+      await syncEquippedProfileBackgroundFromBackpack();
+    }
     return true;
+  }
+
+  /// Reads `GET /api/background/my-backpack` and stores the equipped cover URL
+  /// so Profile tab / Basic Profile show SVGA and image backgrounds correctly.
+  Future<void> syncEquippedProfileBackgroundFromBackpack() async {
+    if (_syncingEquippedBackground) return;
+    _syncingEquippedBackground = true;
+    try {
+      final response = await _backgroundRepo.getMyBackpack(isShowLoader: false);
+      final rawData = response?['data'];
+      final items = rawData is List
+          ? rawData
+          : (rawData is Map && rawData['items'] is List)
+          ? rawData['items'] as List
+          : const [];
+
+      for (final raw in items.whereType<Map>()) {
+        if (raw['isEquipped'] != true) continue;
+        final details = raw['backgroundDetails'] ?? raw['background_details'];
+        final background = details is Map
+            ? Map<String, dynamic>.from(details)
+            : const <String, dynamic>{};
+        final url = ApiImageUtils.normalize(
+          _firstNonEmpty([
+            background['animationUrl'],
+            background['svgaUrl'],
+            background['svga'],
+            background['image'],
+            background['imageUrl'],
+            background['previewUrl'],
+            raw['image'],
+            raw['imageUrl'],
+          ]),
+        );
+        if (url == null || url.isEmpty) break;
+
+        final updated = Map<String, dynamic>.from(_profileData ?? {});
+        updated['profileBackgroundUrl'] = url;
+        updated['poster'] = url;
+        await saveProfile(updated);
+        break;
+      }
+    } catch (_) {
+      // Cover sync is best-effort; keep existing session values.
+    } finally {
+      _syncingEquippedBackground = false;
+    }
+  }
+
+  String? _firstNonEmpty(List<dynamic> values) {
+    for (final value in values) {
+      final text = value?.toString().trim() ?? '';
+      if (text.isNotEmpty && text != 'null') return text;
+    }
+    return null;
   }
 
   Future<void> clearSession() async {
@@ -187,7 +256,11 @@ class UserSessionController extends GetxController {
     }
     final value = source[key];
     if (value is Map) {
-      return value['image'] ??
+      return value['animationUrl'] ??
+          value['svgaUrl'] ??
+          value['svga'] ??
+          value['image'] ??
+          value['imageUrl'] ??
           value['url'] ??
           value['frameUrl'] ??
           value['frame_url'];

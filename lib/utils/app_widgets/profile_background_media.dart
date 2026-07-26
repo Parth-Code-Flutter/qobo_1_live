@@ -1,25 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/network_svga_widget.dart';
 
 /// Profile / cover background that plays SVGA when the URL is animated,
 /// otherwise shows a normal network image.
 ///
-/// Only `.svga` URLs use the SVGA player (avoids slow failed decodes on
-/// extensionless image CDNs). Parent must give a tight height so SVGA and
-/// static images share the same banner size.
+/// Shop/backpack return both types in the same `image` field — detect by
+/// extension (`.svga` vs jpg/png/…). Parent must give a tight height so SVGA
+/// and static images share the same banner size.
 class ProfileBackgroundMedia extends StatelessWidget {
   const ProfileBackgroundMedia({
     super.key,
     required this.url,
     this.fit = BoxFit.cover,
-    this.showLoadingIndicator = false,
+    this.showLoadingIndicator = true,
+    this.svgaFallbackAsset = kProfileSvgaFallbackAsset,
   });
+
+  /// Bundled SVGA used when the API/CDN `.svga` URL is missing (404).
+  /// Render ephemeral disks often lose uploaded backgrounds after redeploy.
+  static const String kProfileSvgaFallbackAsset =
+      'assets/gif/profile_cover_fallback.svga';
 
   final String url;
   final BoxFit fit;
 
-  /// Cover banners stay quiet while SVGA bytes load (use sheet spinner only).
+  /// When true, SVGA shows a spinner while bytes download/decode.
   final bool showLoadingIndicator;
+
+  /// Optional bundled `.svga` played when [url] cannot be downloaded.
+  final String? svgaFallbackAsset;
 
   static bool isKnownStaticMedia(String value) {
     final path = _pathOf(value);
@@ -41,7 +51,7 @@ class ProfileBackgroundMedia extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final source = url.trim();
+    final source = ApiImageUtils.normalize(url)?.trim() ?? url.trim();
     if (source.isEmpty) return const SizedBox.shrink();
 
     return LayoutBuilder(
@@ -54,40 +64,55 @@ class ProfileBackgroundMedia extends StatelessWidget {
             ? constraints.maxHeight
             : 150.0;
 
-        final image = Image.network(
-          source,
-          fit: fit,
-          width: width,
-          height: height,
-          gaplessPlayback: true,
-          errorBuilder: (_, __, ___) => ColoredBox(
+        Widget placeholder({required IconData icon}) {
+          return ColoredBox(
             color: Colors.black26,
-            child: SizedBox(width: width, height: height),
-          ),
-        );
+            child: SizedBox(
+              width: width,
+              height: height,
+              child: Center(
+                child: Icon(icon, color: Colors.white54, size: 28),
+              ),
+            ),
+          );
+        }
 
         // Lock both media types to the parent box so layout never jumps.
-        final child = isSvgaUrl(source)
-            ? NetworkSvgaWidget(
+        if (isSvgaUrl(source)) {
+          return SizedBox(
+            width: width,
+            height: height,
+            child: ClipRect(
+              child: NetworkSvgaWidget(
                 url: source,
                 width: width,
                 height: height,
                 fit: fit,
-                fallback: image,
+                fallbackAsset: svgaFallbackAsset,
+                fallback: placeholder(icon: Icons.broken_image_outlined),
                 showLoadingIndicator: showLoadingIndicator,
                 loading: showLoadingIndicator
                     ? null
-                    : ColoredBox(
-                        color: Colors.black26,
-                        child: SizedBox(width: width, height: height),
-                      ),
-              )
-            : image;
+                    : placeholder(icon: Icons.auto_awesome_outlined),
+              ),
+            ),
+          );
+        }
 
         return SizedBox(
           width: width,
           height: height,
-          child: ClipRect(child: child),
+          child: ClipRect(
+            child: Image.network(
+              source,
+              fit: fit,
+              width: width,
+              height: height,
+              gaplessPlayback: true,
+              errorBuilder: (_, __, ___) =>
+                  placeholder(icon: Icons.broken_image_outlined),
+            ),
+          ),
         );
       },
     );

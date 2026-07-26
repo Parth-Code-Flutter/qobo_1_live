@@ -291,6 +291,9 @@ class BackpackController extends GetxController {
         'imageUrl':
             ApiImageUtils.normalize(
               _firstText([
+                background['animationUrl'],
+                background['svgaUrl'],
+                background['svga'],
                 background['image'],
                 background['imageUrl'],
                 background['previewUrl'],

@@ -6,6 +6,7 @@ import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/app_widgets/network_svga_widget.dart';
+import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
@@ -800,6 +801,7 @@ class _PurchasedBackgroundCard extends StatelessWidget {
             child: Container(
               width: double.infinity,
               margin: const EdgeInsets.symmetric(vertical: 8),
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 gradient: imageUrl.isEmpty
@@ -809,36 +811,40 @@ class _PurchasedBackgroundCard extends StatelessWidget {
                         end: Alignment.bottomRight,
                       )
                     : null,
-                image: imageUrl.isNotEmpty
-                    ? DecorationImage(
-                        image: NetworkImage(imageUrl),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
               ),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  gradient: LinearGradient(
-                    colors: [
-                      kColorBlack.withValues(alpha: 0.04),
-                      kColorBlack.withValues(alpha: 0.42),
-                    ],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                ),
-                child: const Center(
-                  child: CircleAvatar(
-                    radius: 24,
-                    backgroundColor: kColorAvatarFallbackBg,
-                    child: SemiBoldText(
-                      text: 'U',
-                      fontSize: TextStyles.k16FontSize,
-                      color: kColorWhite,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (imageUrl.isNotEmpty)
+                    ProfileBackgroundMedia(
+                      url: imageUrl,
+                      showLoadingIndicator: true,
+                    ),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      gradient: LinearGradient(
+                        colors: [
+                          kColorBlack.withValues(alpha: 0.04),
+                          kColorBlack.withValues(alpha: 0.42),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                    ),
+                    child: const Center(
+                      child: CircleAvatar(
+                        radius: 24,
+                        backgroundColor: kColorAvatarFallbackBg,
+                        child: SemiBoldText(
+                          text: 'U',
+                          fontSize: TextStyles.k16FontSize,
+                          color: kColorWhite,
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                ],
               ),
             ),
           ),

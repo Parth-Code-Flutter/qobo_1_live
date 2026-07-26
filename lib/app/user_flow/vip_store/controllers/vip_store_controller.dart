@@ -8,10 +8,11 @@ import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/app/user_flow/wallet/bindings/wallet_binding.dart';
 import 'package:qobo_one_live/app/user_flow/wallet/views/wallet_view.dart';
+import 'package:qobo_one_live/app/user_flow/vip_store/widgets/vip_purchase_success_dialog.dart';
 
 /// VIP Frames shop (Profile → VIP Frames).
 ///
-/// Buys via `POST /api/frame/buy-frame`. Backend auto-equips VIP frames —
+/// Buys via `POST /api/frame/buy`. Backend auto-equips VIP frames —
 /// no manual equip/unequip on mobile.
 class VipStoreController extends GetxController {
   VipStoreController({
@@ -230,12 +231,11 @@ class VipStoreController extends GetxController {
       }
       await loadStore();
 
-      Get.snackbar(
-        'VIP Frames',
-        '"$name" purchased and equipped automatically.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green.shade700,
-        colorText: kColorWhite,
+      await VipPurchaseSuccessDialog.show(
+        name: name,
+        imageUrl: item['imageUrl']?.toString().trim() ?? '',
+        svgaUrl: item['svgaUrl']?.toString().trim() ?? '',
+        durationLabel: item['duration']?.toString(),
       );
     } finally {
       isPurchasing.value = false;

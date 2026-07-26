@@ -23,10 +23,27 @@ import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 /// Profile tab view (temporary) with shared background art.
-class ProfileTabView extends StatelessWidget {
+class ProfileTabView extends StatefulWidget {
   const ProfileTabView({super.key, required this.onLogoutPressed});
 
   final VoidCallback onLogoutPressed;
+
+  @override
+  State<ProfileTabView> createState() => _ProfileTabViewState();
+}
+
+class _ProfileTabViewState extends State<ProfileTabView> {
+  @override
+  void initState() {
+    super.initState();
+    // Cold start: getProfile may omit cover URL while backpack has isEquipped.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final session = _resolveUserSession();
+      if (session.profileBackgroundUrl.trim().isEmpty) {
+        session.syncEquippedProfileBackgroundFromBackpack();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +68,7 @@ class ProfileTabView extends StatelessWidget {
                 _settingsRow(),
                 Spacing.v12,
                 appButton(
-                  onPressed: onLogoutPressed,
+                  onPressed: widget.onLogoutPressed,
                   buttonText: LocaleKeys.logoutButtonText.tr,
                   isGradient: false,
                   buttonColor: kColorPrimary,

@@ -6,7 +6,7 @@ The backend handles the automatic activation and deactivation of VIP frames, so 
 ## 1. Purchasing a VIP Frame
 VIP Frames are purchased using the existing Avatar Frame purchase API. The backend automatically detects if the frame's `category` is `"VIP"`. 
 
-- **Endpoint**: `POST /api/frame/buy-frame`
+- **Endpoint**: `POST /api/frame/buy`
 - **Request Body**:
   ```json
   {

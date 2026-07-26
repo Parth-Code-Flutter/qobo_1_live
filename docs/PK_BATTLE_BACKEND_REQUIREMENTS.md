@@ -2,8 +2,8 @@
 
 **App:** `qobo_one_live` (Flutter)  
 **Audience:** Backend team  
-**Date:** 2026-07-23  
-**Status:** Mobile has PK Arena UI + REST stubs. **Push / Socket / scoring / cancel / end APIs are not wired.** This doc defines what backend must provide so the full PK flow works end-to-end.
+**Date:** 2026-07-23 (status updated 2026-07-26)  
+**Status:** Backend PK Battle integration is **complete** (REST, Socket.IO `pk_*`, FCM, 120s request expiry, gift→score). Prefer `docs/api/PK_BATTLE_API_AND_MOBILE_HANDOFF.md` as the live contract. This file is retained for historical context.
 
 ---
 
@@ -46,19 +46,9 @@ Mobile always passes the **backend room UUID** (`room_id` with dashes), **not** 
 | `POST` | `/api/pk/accept-reject` | Accept or reject incoming challenge | Wired (UI exists; **incoming delivery missing**) |
 | `GET` | `/api/pk/status?battle_id={id}` | Poll scores / status every ~2s during battle | Wired |
 
-### 2.3 What mobile does **not** have yet
+### 2.3 Historical gaps (now closed on mobile + backend)
 
-| Capability | Mobile today |
-|------------|--------------|
-| FCM push for PK challenge / started / ended | **Missing** — no `type` in `PushNotificationTypes` |
-| Push tap → open PK Arena / Accept sheet | **Missing** |
-| Socket.IO PK events | **Missing** — no `pk_*` listeners |
-| Gift → PK score contribution API | **Missing** — UI has local `simulateGift` only |
-| Cancel outgoing request API | **Missing** — UI only resets local state |
-| Explicit end-battle API | **Missing** — client ends on timer / status poll |
-| Opponent host FCM when they are outside PK screen | **Missing** — without this, Accept flow cannot start |
-
-Controller stubs exist (`handleIncomingPkRequest`, `handlePkStarted`, `handlePkScoreUpdate`, `handlePkCompleted`) but **nothing invokes them** from FCM/Socket yet. Backend should still ship the payloads below so mobile can wire handlers next.
+Earlier mobile builds were missing FCM/socket wiring and used a local gift simulator. Current app wires REST + Socket `pk_*` + FCM, restores via `/api/pk/active`, and trusts backend gift→score updates (`pk_score_update` / `lastGift`).
 
 ---
 

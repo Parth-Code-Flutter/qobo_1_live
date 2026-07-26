@@ -15,6 +15,20 @@ class ApiImageUtils {
       return raw.replaceFirst('https://localhost:5000', ApiConstants.baseUrl);
     }
     if (raw.startsWith('/')) return '${ApiConstants.baseUrl}$raw';
+
+    // Background / frame uploads often arrive as `http://` while the app and
+    // ATS/cleartext rules expect HTTPS for the same Render host.
+    if (raw.startsWith('http://')) {
+      final uri = Uri.tryParse(raw);
+      final apiHost = Uri.tryParse(ApiConstants.baseUrl)?.host;
+      if (uri != null &&
+          apiHost != null &&
+          apiHost.isNotEmpty &&
+          uri.host == apiHost) {
+        return raw.replaceFirst('http://', 'https://');
+      }
+    }
+
     if (raw.startsWith('http')) return raw;
     return '${ApiConstants.baseUrl}/$raw';
   }

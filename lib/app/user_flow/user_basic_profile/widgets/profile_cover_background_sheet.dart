@@ -9,6 +9,9 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import '../controllers/user_basic_profile_controller.dart';
 
 /// Edit-cover picker: owned profile backgrounds + shop purchases.
+///
+/// Grid tiles play SVGA when `image` ends with `.svga`, otherwise show a
+/// static network image — same field shape as the backpack API.
 class ProfileCoverBackgroundSheet
     extends GetView<UserBasicProfileController> {
   const ProfileCoverBackgroundSheet({super.key});
@@ -127,8 +130,8 @@ class ProfileCoverBackgroundSheet
 
       final isPurchasedTab = controller.coverBackgroundTab.value == 0;
       final items = isPurchasedTab
-          ? controller.purchasedCoverBackgrounds
-          : controller.shopCoverBackgrounds;
+          ? controller.purchasedCoverBackgrounds.toList(growable: false)
+          : controller.shopCoverBackgrounds.toList(growable: false);
 
       if (items.isEmpty) {
         return Center(
@@ -146,51 +149,82 @@ class ProfileCoverBackgroundSheet
         );
       }
 
-      return GridView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 0.72,
-        ),
-        itemCount: items.length,
-        itemBuilder: (context, index) {
-          final item = items[index];
-          return _CoverBackgroundCard(
-            item: item,
-            isShop: !isPurchasedTab,
-            busy: controller.isApplyingCoverBackground.value,
-            onTap: () {
-              if (controller.isApplyingCoverBackground.value) return;
-              if (isPurchasedTab) {
-                controller.applyPurchasedCoverBackground(item);
-              } else {
-                controller.purchaseCoverBackground(item);
-              }
-            },
-          );
-        },
-      );
+      // Ignore pointer while equip/buy runs — avoid rebuilding every tile's SVGA.
+      return Obx(() {
+        final busy = controller.isApplyingCoverBackground.value;
+        return IgnorePointer(
+          ignoring: busy,
+          child: Stack(
+            children: [
+              GridView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                addAutomaticKeepAlives: true,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 0.72,
+                ),
+                itemCount: items.length,
+                itemBuilder: (context, index) {
+                  final item = items[index];
+                  final id = item['id']?.toString() ?? '$index';
+                  return _CoverBackgroundCard(
+                    key: ValueKey('cover_$id'),
+                    item: item,
+                    isShop: !isPurchasedTab,
+                    onTap: () {
+                      if (controller.isApplyingCoverBackground.value) return;
+                      if (isPurchasedTab) {
+                        controller.applyPurchasedCoverBackground(item);
+                      } else {
+                        controller.purchaseCoverBackground(item);
+                      }
+                    },
+                  );
+                },
+              ),
+              if (busy)
+                const ColoredBox(
+                  color: Color(0x33000000),
+                  child: Center(
+                    child: CircularProgressIndicator(color: kColorPrimary),
+                  ),
+                ),
+            ],
+          ),
+        );
+      });
     });
   }
 }
 
-class _CoverBackgroundCard extends StatelessWidget {
+class _CoverBackgroundCard extends StatefulWidget {
   const _CoverBackgroundCard({
+    super.key,
     required this.item,
     required this.isShop,
-    required this.busy,
     required this.onTap,
   });
 
   final Map<String, dynamic> item;
   final bool isShop;
-  final bool busy;
   final VoidCallback onTap;
 
   @override
+  State<_CoverBackgroundCard> createState() => _CoverBackgroundCardState();
+}
+
+class _CoverBackgroundCardState extends State<_CoverBackgroundCard>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
+
+    final item = widget.item;
     final name = item['name']?.toString() ?? 'Background';
     final imageUrl = item['imageUrl']?.toString() ?? '';
     final meta = item['duration']?.toString() ?? '';
@@ -199,15 +233,16 @@ class _CoverBackgroundCard extends StatelessWidget {
     final price = item['price'] is int
         ? item['price'] as int
         : int.tryParse(item['price']?.toString() ?? '') ?? 0;
+    final isSvga = ProfileBackgroundMedia.isSvgaUrl(imageUrl);
 
-    final cta = isShop
+    final cta = widget.isShop
         ? (price > 0 ? '$price Coins' : 'Buy')
         : (isEquipped ? 'Equipped' : 'Use cover');
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: busy ? null : onTap,
+        onTap: widget.onTap,
         borderRadius: BorderRadius.circular(18),
         child: Container(
           decoration: BoxDecoration(
@@ -233,9 +268,36 @@ class _CoverBackgroundCard extends StatelessWidget {
                           color: kColorWhite,
                         ),
                       )
-                    : ProfileBackgroundMedia(
-                        url: imageUrl,
-                        showLoadingIndicator: false,
+                    : Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          ProfileBackgroundMedia(
+                            key: ValueKey('cover_media_$imageUrl'),
+                            url: imageUrl,
+                            fit: BoxFit.cover,
+                            showLoadingIndicator: true,
+                          ),
+                          if (isSvga)
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: kColorBlack.withValues(alpha: 0.55),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const AppText(
+                                  text: 'SVGA',
+                                  fontSize: 9,
+                                  color: kColorWhite,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
               ),
               Padding(
@@ -270,11 +332,11 @@ class _CoverBackgroundCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: isEquipped
                             ? kColorPrimary
-                            : isShop
+                            : widget.isShop
                             ? Colors.white.withValues(alpha: 0.08)
                             : kColorPrimary.withValues(alpha: 0.85),
                         borderRadius: BorderRadius.circular(12),
-                        border: isShop && !isEquipped
+                        border: widget.isShop && !isEquipped
                             ? Border.all(
                                 color: kColorPrimary.withValues(alpha: 0.55),
                               )

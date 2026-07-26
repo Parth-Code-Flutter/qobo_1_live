@@ -2,6 +2,8 @@
 
 This guide details the complete API endpoints, data formats, Push Notifications (FCM), and real-time Socket.io protocols for integrating **PK Battles** in both the Mobile client and the Admin Panel.
 
+> **Backend status (2026-07-26):** PK Battle REST, Socket.IO (`pk_*`), FCM, pending-request persistence (120s expiry), and gift→score scoring are implemented and aligned with the mobile handoff in `docs/api/PK_BATTLE_API_AND_MOBILE_HANDOFF.md`.
+
 ---
 
 ## **1. PK Battle Flow Overview**
@@ -36,21 +38,29 @@ sequenceDiagram
 ## **2. Mobile API Endpoints (`/api/pk/...`)**
 
 ### **A. Search for Opponent**
-Find an active live/audio room of the same category to challenge.
+Find active live/audio rooms eligible for PK (excludes current room and rooms already in battle).
 * **Endpoint**: `GET /api/pk/search?room_id=<my-room-uuid>`
 * **Headers**: `Authorization: Bearer <token>`
-* **Response (`200 OK`)**:
+* **Response (`200 OK`)** — preferred shape (`data.rooms` array):
   ```json
   {
     "success": true,
     "message": "Opponents found",
     "data": {
-      "room_id": "opponent-room-uuid-string",
-      "name": "Opponent Room Title"
+      "rooms": [
+        {
+          "room_id": "opponent-room-uuid",
+          "title": "Opponent Room Title",
+          "hostName": "Host name",
+          "avatar": "https://...",
+          "coverImage": "https://...",
+          "room_type": "audio"
+        }
+      ]
     }
   }
   ```
-
+* Mobile also accepts a single room object or `data.opponents` for backward compatibility.
 ### **B. Send PK Request**
 Sends a challenge invitation to the opponent host.
 * **Endpoint**: `POST /api/pk/send-request`
@@ -128,8 +138,8 @@ Cancel an outgoing pending PK challenge.
 * **Request Body**:
   ```json
   {
-    "room_id": "target-room-uuid-string", // Target room or initiator
-    "request_id": "challenger-room-uuid-string"
+    "room_id": "challenger-room-uuid-string",
+    "request_id": "pk-request-uuid-string"
   }
   ```
 * **Response (`200 OK`)**:
@@ -138,12 +148,12 @@ Cancel an outgoing pending PK challenge.
     "success": true,
     "message": "PK request cancelled",
     "data": {
-      "request_id": "challenger-room-uuid-string",
+      "request_id": "pk-request-uuid-string",
       "status": "cancelled"
     }
   }
   ```
-
+* Pending requests auto-expire after **120 seconds** on the backend.
 ### **E. End Active Battle**
 Host-forced or server-forced end of battle.
 * **Endpoint**: `POST /api/pk/end`
@@ -270,7 +280,7 @@ Fetch any currently active PK battle or pending request for the room.
 
 ### **E. Score Updated (`pk_score_update`)**
 * **Emitted to**: Both Room IDs
-* **Triggered by**: Sending a virtual gift in either room during an active PK battle.
+* **Triggered by**: Sending a virtual gift in either room during an active PK battle (gift coin value is added to that room’s PK score).
 * **Payload**:
   ```json
   {
@@ -278,7 +288,16 @@ Fetch any currently active PK battle or pending request for the room.
     "room1Id": "uuid-a",
     "room2Id": "uuid-b",
     "room1Score": 1250,
-    "room2Score": 980
+    "room2Score": 980,
+    "remainingSeconds": 190,
+    "lastGift": {
+      "sender_id": "user-id",
+      "sender_name": "Viewer name",
+      "receiver_room_id": "uuid-a",
+      "gift_id": "gift-id",
+      "gift_name": "Rose",
+      "coin_value": 100
+    }
   }
   ```
 

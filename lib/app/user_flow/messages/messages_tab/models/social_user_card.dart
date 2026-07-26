@@ -202,6 +202,9 @@ class SocialUserCard {
         json['profileBackground'] ?? json['profile_background'];
     if (nested is Map) {
       final image =
+          nested['animationUrl'] ??
+          nested['svgaUrl'] ??
+          nested['svga'] ??
           nested['image'] ??
           nested['imageUrl'] ??
           nested['url'] ??

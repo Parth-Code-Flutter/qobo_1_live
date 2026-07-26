@@ -347,7 +347,7 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
                       else if (netPoster.isNotEmpty)
                         ProfileBackgroundMedia(
                           url: netPoster,
-                          showLoadingIndicator: false,
+                          showLoadingIndicator: true,
                         )
                       else
                         _emptyCoverPlaceholder(),

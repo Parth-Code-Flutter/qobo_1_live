@@ -29,6 +29,25 @@ class PkBattlePushHandler {
       return;
     }
 
+    if (type == PushNotificationTypes.pkRejected ||
+        type == PushNotificationTypes.pkCancelled) {
+      if (Get.isRegistered<PKBattleController>()) {
+        final pk = Get.find<PKBattleController>();
+        if (type == PushNotificationTypes.pkRejected) {
+          pk.handlePkRejected(message.data);
+        } else {
+          pk.handlePkCancelled(message.data);
+        }
+      } else {
+        _toast(
+          type == PushNotificationTypes.pkRejected
+              ? 'Your PK request was rejected.'
+              : 'The PK request was cancelled.',
+        );
+      }
+      return;
+    }
+
     await _openArenaFromLifecycle(message.data, type: type);
   }
 
@@ -87,6 +106,14 @@ class PkBattlePushHandler {
 
     if (type == PushNotificationTypes.pkRequest) {
       await _openIncomingChallenge(data);
+      return;
+    }
+    if (type == PushNotificationTypes.pkRejected) {
+      _toast('Your PK request was rejected.');
+      return;
+    }
+    if (type == PushNotificationTypes.pkCancelled) {
+      _toast('The PK request was cancelled.');
       return;
     }
     if (type == PushNotificationTypes.pkStarted ||
