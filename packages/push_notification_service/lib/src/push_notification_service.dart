@@ -311,6 +311,9 @@ class PushNotificationService {
     if (PushNotificationTypes.isPkRequest(type)) {
       return PushNotificationActionSet.pkAcceptReject;
     }
+    if (PushNotificationTypes.isJoinRequest(type)) {
+      return PushNotificationActionSet.joinApproveReject;
+    }
     if (PushNotificationTypes.isJoinDismiss(type)) {
       return PushNotificationActionSet.joinDismiss;
     }
@@ -393,6 +396,32 @@ class PushNotificationService {
           title: 'PK Battle Finished',
           body: 'The PK battle has ended. Check the results!',
         );
+      case PushNotificationTypes.joinRequest:
+        final requester =
+            message.data['requester_name']?.toString().trim().isNotEmpty == true
+            ? message.data['requester_name']!.toString().trim()
+            : 'Someone';
+        return (
+          title: 'Join Request',
+          body: '$requester wants to join "$roomLabel"',
+        );
+      case PushNotificationTypes.joinApproved:
+        return (
+          title: 'Join Approved',
+          body: 'Host approved your request. Tap to join.',
+        );
+      case PushNotificationTypes.joinRejected:
+        return (
+          title: 'Join Declined',
+          body: message.data['message']?.toString().trim().isNotEmpty == true
+              ? message.data['message']!.toString().trim()
+              : 'Host declined your request to join',
+        );
+      case PushNotificationTypes.joinRequestExpired:
+        return (
+          title: 'Request Expired',
+          body: 'Your join request expired. Try again.',
+        );
       case PushNotificationTypes.general:
       case PushNotificationTypes.custom:
         return (title: 'Notification', body: '');
@@ -420,6 +449,14 @@ class PushNotificationService {
         return 'PK Challenge Cancelled';
       case PushNotificationTypes.pkCompleted:
         return 'PK Battle Finished';
+      case PushNotificationTypes.joinRequest:
+        return 'Join Request';
+      case PushNotificationTypes.joinApproved:
+        return 'Join Approved';
+      case PushNotificationTypes.joinRejected:
+        return 'Join Declined';
+      case PushNotificationTypes.joinRequestExpired:
+        return 'Request Expired';
       default:
         return 'Notification';
     }

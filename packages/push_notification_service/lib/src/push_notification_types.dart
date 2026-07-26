@@ -40,6 +40,21 @@ abstract final class PushNotificationTypes {
   /// Both hosts — battle finished.
   static const String pkCompleted = 'pk_completed';
 
+  /// Host receives a viewer join-request (Approve / Reject).
+  static const String joinRequest = 'join_request';
+
+  /// Viewer notified that host approved admission.
+  static const String joinApproved = 'join_approved';
+
+  /// Viewer notified that host rejected admission.
+  static const String joinRejected = 'join_rejected';
+
+  /// Viewer (and optionally host) notified that the request timed out.
+  static const String joinRequestExpired = 'join_request_expired';
+
+  /// Host notified that the viewer cancelled their join request.
+  static const String joinRequestCancelled = 'join_request_cancelled';
+
   /// All types the app currently handles.
   static const Set<String> all = {
     roomInvite,
@@ -54,6 +69,11 @@ abstract final class PushNotificationTypes {
     pkCancelled,
     pkStarted,
     pkCompleted,
+    joinRequest,
+    joinApproved,
+    joinRejected,
+    joinRequestExpired,
+    joinRequestCancelled,
   };
 
   /// Direct invite that can be rejected on the server.
@@ -79,6 +99,19 @@ abstract final class PushNotificationTypes {
       type == pkCompleted;
 
   static bool isPkType(String type) => isPkRequest(type) || isPkLifecycle(type);
+
+  /// Host inbox for pending room/live admission.
+  static bool isJoinRequest(String type) => type == joinRequest;
+
+  /// Viewer-side join-request lifecycle events.
+  static bool isJoinRequestLifecycle(String type) =>
+      type == joinApproved ||
+      type == joinRejected ||
+      type == joinRequestExpired ||
+      type == joinRequestCancelled;
+
+  static bool isJoinRequestType(String type) =>
+      isJoinRequest(type) || isJoinRequestLifecycle(type);
 
   /// True when the push should open the live-streaming (not room-call) UI.
   static bool isLiveStreamAlert(String type) =>

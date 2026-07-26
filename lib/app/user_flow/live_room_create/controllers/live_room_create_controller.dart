@@ -23,6 +23,7 @@ class LiveRoomCreateController extends GetxController {
   final roomType = 'AUDIO'.obs;
   final seatCount = '8'.obs;
   final isPrivate = false.obs;
+  final joinApprovalRequired = false.obs;
   final selectedCategoryIndex = 0.obs;
   final selectedRegion = 'IN'.obs;
 
@@ -121,6 +122,8 @@ class LiveRoomCreateController extends GetxController {
 
   void setPrivate(bool value) => isPrivate.value = value;
 
+  void setJoinApprovalRequired(bool value) => joinApprovalRequired.value = value;
+
   void setOnlyFollows(bool value) => onlyFollows.value = value;
 
   Future<void> loadRoomBackgrounds() async {
@@ -175,6 +178,7 @@ class LiveRoomCreateController extends GetxController {
       name: name,
       liveStreamingId: liveStreamingId.value,
       onlyFollows: onlyFollows.value,
+      joinApprovalRequired: joinApprovalRequired.value,
     );
 
     if (!context.mounted) return;
@@ -227,6 +231,7 @@ class LiveRoomCreateController extends GetxController {
       'liveStreamingId': id,
       'zegoLiveId': id,
       'onlyFollows': onlyFollows.value,
+      'joinApprovalRequired': joinApprovalRequired.value,
       'isLive': true,
       if (session != null) ...{
         'hostId': session.userId,
@@ -271,6 +276,7 @@ class LiveRoomCreateController extends GetxController {
       backgroundId: selectedBackgroundId.value,
       backgroundImage: selectedBackgroundImage.value,
       isPrivate: isPrivate.value,
+      joinApprovalRequired: joinApprovalRequired.value,
     );
 
     if (!context.mounted) return;
@@ -338,6 +344,9 @@ class LiveRoomCreateController extends GetxController {
       map['roomId'] = roomId;
       map.putIfAbsent('id', () => roomId);
     }
+    map['joinApprovalRequired'] =
+        map['joinApprovalRequired'] ?? joinApprovalRequired.value;
+    map['isPrivate'] = map['isPrivate'] ?? isPrivate.value;
 
     final bgId = selectedBackgroundId.value?.trim();
     final bgImage = selectedBackgroundImage.value?.trim();
@@ -383,6 +392,8 @@ class LiveRoomCreateController extends GetxController {
     map['liveStreamingId'] = zegoId;
     map['zegoLiveId'] = zegoId;
     map['onlyFollows'] = map['onlyFollows'] ?? onlyFollows.value;
+    map['joinApprovalRequired'] =
+        map['joinApprovalRequired'] ?? joinApprovalRequired.value;
 
     final session = Get.isRegistered<UserSessionController>()
         ? Get.find<UserSessionController>()

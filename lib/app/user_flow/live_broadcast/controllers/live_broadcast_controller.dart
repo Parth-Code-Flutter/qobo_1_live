@@ -13,10 +13,12 @@ import 'package:qobo_one_live/repo/chat/chat_navigation_helper.dart';
 import 'package:qobo_one_live/repo/room/room_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/realtime/user_realtime_socket_service.dart';
+import 'package:qobo_one_live/services/room/join_approval_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/join_request_in_app_banner.dart';
 import 'package:qobo_one_live/utils/app_dialogs/audio_room_feedback_dialog.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -96,6 +98,10 @@ class LiveBroadcastController extends GetxController {
   final isLoadingRoomBackgrounds = false.obs;
   final isChangingRoomBackground = false.obs;
 
+  /// Host inbox for viewers waiting on join approval.
+  final pendingJoinRequests = <Map<String, dynamic>>[].obs;
+  final joinApprovalRequired = false.obs;
+
   Map<String, dynamic> _roomData = {};
   StreamSubscription<List<ZegoInRoomMessage>>? _messageSub;
   StreamSubscription<List<ZegoUIKitUser>>? _userSub;
@@ -137,6 +143,8 @@ class LiveBroadcastController extends GetxController {
         roomId.value = ZegoLiveIdUtils.sanitize(rawId);
       }
     }
+    joinApprovalRequired.value =
+        JoinApprovalService.isApprovalRequired(_roomData);
     _hydrateHostProfile();
     _hydrateRoomBackground();
     _validateStreamingInput();
@@ -168,11 +176,65 @@ class LiveBroadcastController extends GetxController {
   void _reportLiveStreamViewerJoin() {
     final backendRoomId = _extractBackendRoomId(_roomData)?.trim();
     if (backendRoomId == null || backendRoomId.isEmpty) return;
+    final joinRequestId =
+        _roomData['join_request_id']?.toString().trim() ??
+        _roomData['joinRequestId']?.toString().trim();
     unawaited(
       _roomRepo
-          .joinRoom(roomId: backendRoomId, isShowLoader: false)
+          .joinRoom(
+            roomId: backendRoomId,
+            joinRequestId:
+                (joinRequestId != null && joinRequestId.isNotEmpty)
+                ? joinRequestId
+                : null,
+            sessionType: 'live_stream',
+            isShowLoader: false,
+          )
           .catchError((_) => null),
     );
+  }
+
+  void upsertPendingJoinRequest(Map<String, dynamic> request) {
+    final requestId =
+        request['request_id']?.toString().trim() ??
+        request['requestId']?.toString().trim() ??
+        '';
+    if (requestId.isEmpty) return;
+    final next = List<Map<String, dynamic>>.from(pendingJoinRequests);
+    final index = next.indexWhere(
+      (item) =>
+          (item['request_id']?.toString() ?? item['requestId']?.toString()) ==
+          requestId,
+    );
+    if (index >= 0) {
+      next[index] = {...next[index], ...request};
+    } else {
+      next.insert(0, Map<String, dynamic>.from(request));
+    }
+    pendingJoinRequests.assignAll(next);
+  }
+
+  void removePendingJoinRequest(String requestId) {
+    final id = requestId.trim();
+    if (id.isEmpty) return;
+    pendingJoinRequests.removeWhere(
+      (item) =>
+          (item['request_id']?.toString() ?? item['requestId']?.toString()) ==
+          id,
+    );
+  }
+
+  Future<void> openJoinRequestsSheet() async {
+    final roomApiId = audioRoomApiId.trim().isNotEmpty
+        ? audioRoomApiId.trim()
+        : roomId.value.trim();
+    if (roomApiId.isEmpty) return;
+    await JoinRequestsSheet.show(roomId: roomApiId);
+  }
+
+  void setJoinApprovalRequired(bool value) {
+    joinApprovalRequired.value = value;
+    _roomData['joinApprovalRequired'] = value;
   }
 
   void _hydrateRoomBackground() {

@@ -100,6 +100,24 @@ class RoomEndpoints {
   /// POST /api/room/join
   static const String joinRoom = '/api/room/join';
 
+  /// POST /api/room/join-request — viewer asks host for admission
+  static const String joinRequest = '/api/room/join-request';
+
+  /// POST /api/room/join-request/respond — host approve/reject
+  static const String joinRequestRespond = '/api/room/join-request/respond';
+
+  /// POST /api/room/join-request/cancel — viewer cancels pending request
+  static const String joinRequestCancel = '/api/room/join-request/cancel';
+
+  /// GET /api/room/join-request/status?request_id=
+  static const String joinRequestStatus = '/api/room/join-request/status';
+
+  /// GET /api/room/join-requests?room_id=&status=pending
+  static const String joinRequests = '/api/room/join-requests';
+
+  /// POST /api/room/settings — mid-session room flags (e.g. joinApprovalRequired)
+  static const String roomSettings = '/api/room/settings';
+
   /// POST /api/room/leave
   static const String leaveRoom = '/api/room/leave';
 

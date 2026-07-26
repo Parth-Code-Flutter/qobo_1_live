@@ -42,6 +42,11 @@ class RoomOptionsSheet extends StatelessWidget {
               'color': kColorWhite,
             },
             {
+              'icon': Icons.how_to_reg_rounded,
+              'label': 'Join Requests',
+              'color': const Color(0xFFFF3EA5),
+            },
+            {
               'icon': Icons.pan_tool_rounded,
               'label': 'Clear Seats',
               'color': kColorWhite,
@@ -152,6 +157,13 @@ class RoomOptionsSheet extends StatelessWidget {
                         Future.delayed(const Duration(milliseconds: 120), () {
                           Get.find<LiveBroadcastController>()
                               .openRoomBackgroundSheet();
+                        });
+                      }
+                    } else if (opt['label'] == 'Join Requests') {
+                      if (Get.isRegistered<LiveBroadcastController>()) {
+                        Future.delayed(const Duration(milliseconds: 120), () {
+                          Get.find<LiveBroadcastController>()
+                              .openJoinRequestsSheet();
                         });
                       }
                     } else if (opt['label'] == 'Share') {

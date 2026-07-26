@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:push_notification_service/push_notification_service.dart';
 import 'package:qobo_one_live/services/api_constants.dart';
+import 'package:qobo_one_live/services/firebase/join_request_push_handler.dart';
 import 'package:qobo_one_live/services/firebase/pk_battle_push_handler.dart';
 import 'package:qobo_one_live/services/firebase/room_invite_push_handler.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
@@ -17,16 +18,20 @@ import 'package:socket_io_client/socket_io_client.dart' as io;
 /// - `register_user` + `host_live_started` → follower live alerts
 /// - `join_room` / `leave_room` + `room_background_updated` → live room themes
 /// - `pk_*` events → PK battle realtime (request / scores / complete)
+/// - `join_*` events → host join-approval realtime
 /// - `vip_user_joined` → VIP frame entrance overlay in rooms
 class UserRealtimeSocketService extends GetxController {
   UserRealtimeSocketService({
     RoomInvitePushHandler? roomInviteHandler,
     PkBattlePushHandler? pkBattleHandler,
+    JoinRequestPushHandler? joinRequestHandler,
   }) : _roomInviteHandler = roomInviteHandler ?? RoomInvitePushHandler(),
-       _pkBattleHandler = pkBattleHandler ?? PkBattlePushHandler();
+       _pkBattleHandler = pkBattleHandler ?? PkBattlePushHandler(),
+       _joinRequestHandler = joinRequestHandler ?? JoinRequestPushHandler();
 
   final RoomInvitePushHandler _roomInviteHandler;
   final PkBattlePushHandler _pkBattleHandler;
+  final JoinRequestPushHandler _joinRequestHandler;
 
   io.Socket? _socket;
   bool _connecting = false;
@@ -105,6 +110,17 @@ class UserRealtimeSocketService extends GetxController {
       socket.on('pk_cancelled', (raw) => _onPkNamed('pk_cancelled', raw));
       socket.on('pk_score_update', (raw) => _onPkNamed('pk_score_update', raw));
       socket.on('pk_completed', (raw) => _onPkNamed('pk_completed', raw));
+      socket.on('join_request', (raw) => _onJoinNamed('join_request', raw));
+      socket.on('join_approved', (raw) => _onJoinNamed('join_approved', raw));
+      socket.on('join_rejected', (raw) => _onJoinNamed('join_rejected', raw));
+      socket.on(
+        'join_request_expired',
+        (raw) => _onJoinNamed('join_request_expired', raw),
+      );
+      socket.on(
+        'join_request_cancelled',
+        (raw) => _onJoinNamed('join_request_cancelled', raw),
+      );
       socket.on('vip_user_joined', _onVipUserJoined);
 
       socket.onDisconnect((_) {
@@ -188,6 +204,11 @@ class UserRealtimeSocketService extends GetxController {
       socket.off('pk_cancelled');
       socket.off('pk_score_update');
       socket.off('pk_completed');
+      socket.off('join_request');
+      socket.off('join_approved');
+      socket.off('join_rejected');
+      socket.off('join_request_expired');
+      socket.off('join_request_cancelled');
       socket.off('vip_user_joined');
       socket.dispose();
     } catch (e) {
@@ -238,6 +259,17 @@ class UserRealtimeSocketService extends GetxController {
         'type': event,
     };
     unawaited(_pkBattleHandler.handleSocketEvent(event, payload));
+  }
+
+  void _onJoinNamed(String event, dynamic raw) {
+    final data = _asStringKeyedMap(raw);
+    if (data.isEmpty && event.isEmpty) return;
+    final payload = <String, dynamic>{
+      ...data,
+      if (data['type'] == null || data['type'].toString().trim().isEmpty)
+        'type': event,
+    };
+    unawaited(_joinRequestHandler.handleSocketEvent(event, payload));
   }
 
   void _onHostLiveStarted(dynamic raw) {

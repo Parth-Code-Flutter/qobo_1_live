@@ -3,8 +3,10 @@ import 'package:flutter/foundation.dart';
 import 'package:push_notification_service/push_notification_service.dart';
 import 'package:qobo_one_live/services/firebase/fcm_token_sync_service.dart';
 import 'package:qobo_one_live/services/firebase/firebase_bootstrap.dart';
+import 'package:qobo_one_live/services/firebase/join_request_push_handler.dart';
 import 'package:qobo_one_live/services/firebase/pk_battle_push_handler.dart';
 import 'package:qobo_one_live/services/firebase/room_invite_push_handler.dart';
+import 'package:qobo_one_live/utils/app_widgets/join_request_in_app_banner.dart';
 import 'package:qobo_one_live/utils/app_widgets/room_invite_in_app_banner.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 
@@ -18,6 +20,8 @@ abstract final class PushNotificationBootstrap {
   static final RoomInvitePushHandler _roomInviteHandler =
       RoomInvitePushHandler();
   static final PkBattlePushHandler _pkBattleHandler = PkBattlePushHandler();
+  static final JoinRequestPushHandler _joinRequestHandler =
+      JoinRequestPushHandler();
 
   /// Registers the top-level FCM background handler once.
   ///
@@ -54,6 +58,12 @@ abstract final class PushNotificationBootstrap {
         // cannot use app gradients). PK uses Accept/Reject tray actions.
         onForegroundActionableMessage: (message) async {
           if (PkBattlePushHandler.isPkMessage(message)) return false;
+          if (JoinRequestPushHandler.isJoinRequestMessage(message)) {
+            return JoinRequestInAppBanner.tryShow(
+              message,
+              handler: _joinRequestHandler,
+            );
+          }
           return RoomInviteInAppBanner.tryShow(
             message,
             handler: _roomInviteHandler,
@@ -76,6 +86,10 @@ abstract final class PushNotificationBootstrap {
             _pkBattleHandler.handleNotificationTap(message);
             return;
           }
+          if (JoinRequestPushHandler.isJoinRequestMessage(message)) {
+            _joinRequestHandler.handleNotificationTap(message);
+            return;
+          }
           _roomInviteHandler.handleNotificationTap(message);
         },
         onNotificationAction: (actionId, message) {
@@ -84,6 +98,15 @@ abstract final class PushNotificationBootstrap {
               actionId == PushNotificationActions.acceptPk ||
               actionId == PushNotificationActions.rejectPk) {
             _pkBattleHandler.handleNotificationAction(
+              actionId: actionId,
+              message: message,
+            );
+            return;
+          }
+          if (JoinRequestPushHandler.isJoinRequestMessage(message) ||
+              actionId == PushNotificationActions.approveJoin ||
+              actionId == PushNotificationActions.rejectJoin) {
+            _joinRequestHandler.handleNotificationAction(
               actionId: actionId,
               message: message,
             );

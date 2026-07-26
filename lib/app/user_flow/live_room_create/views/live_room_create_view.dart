@@ -116,6 +116,8 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
         ),
         Spacing.v16,
         _onlyFollowsToggle(),
+        Spacing.v12,
+        _joinApprovalToggle(),
         Spacing.v24,
         appButton(
           onPressed: () => controller.startLiveStreaming(context),
@@ -199,6 +201,8 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
         ),
         Spacing.v16,
         _privacyToggle(),
+        Spacing.v12,
+        _joinApprovalToggle(),
         Spacing.v28,
         appButton(
           onPressed: () => controller.createRoom(context),
@@ -356,6 +360,55 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
             () => Switch(
               value: controller.onlyFollows.value,
               onChanged: controller.setOnlyFollows,
+              activeColor: kColorWhite,
+              activeTrackColor: LiveRoomUiColors.goLiveGradientStart,
+              inactiveThumbColor: kColorWhite,
+              inactiveTrackColor: LiveRoomUiColors.chipInactiveBg,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _joinApprovalToggle() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: LiveRoomUiColors.cardSurface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: LiveRoomUiColors.cardBorder),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.how_to_reg_rounded,
+            color: kColorWhite,
+            size: 20,
+          ),
+          Spacing.h12,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SemiBoldText(
+                  text: 'Require Join Approval',
+                  fontSize: TextStyles.k14FontSize,
+                  color: kColorWhite,
+                ),
+                Spacing.v2,
+                const AppText(
+                  text: 'Viewers wait until you approve their request',
+                  fontSize: TextStyles.k10FontSize,
+                  color: kColorHint,
+                ),
+              ],
+            ),
+          ),
+          Obx(
+            () => Switch(
+              value: controller.joinApprovalRequired.value,
+              onChanged: controller.setJoinApprovalRequired,
               activeColor: kColorWhite,
               activeTrackColor: LiveRoomUiColors.goLiveGradientStart,
               inactiveThumbColor: kColorWhite,

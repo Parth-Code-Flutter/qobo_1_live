@@ -18,6 +18,7 @@ import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/chat/chat_call_launcher.dart';
 import 'package:qobo_one_live/services/chat/chat_call_service.dart';
 import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
+import 'package:qobo_one_live/services/room/join_approval_service.dart';
 import 'package:qobo_one_live/utils/app_widgets/country_state_picker_sheet.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/zego_engine_utils.dart';
@@ -300,7 +301,15 @@ class DiscoverTabController extends GetxController {
       return;
     }
 
-    final response = await _roomRepo.joinRoom(roomId: roomId);
+    final response = await JoinApprovalService().joinWithApprovalGate(
+      roomId: roomId,
+      sessionType: JoinApprovalService.sessionTypeFor(
+        type: room['type']?.toString(),
+        roomType: isAudioRoomMode ? 'AUDIO' : 'VIDEO',
+      ),
+      roomHint: room,
+      isShowLoader: true,
+    );
     if (!context.mounted) return;
 
     if (!_isRoomApiSuccess(response)) {

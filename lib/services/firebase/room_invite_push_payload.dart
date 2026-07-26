@@ -104,6 +104,7 @@ class RoomInvitePushPayload {
         : type;
     if (!PushNotificationTypes.all.contains(normalizedType)) return null;
     if (PushNotificationTypes.isPkType(normalizedType)) return null;
+    if (PushNotificationTypes.isJoinRequestType(normalizedType)) return null;
 
     final roomId = _text(data['room_id']) ?? _text(data['roomId']) ?? '';
     if (PushNotificationTypes.requiresRoomId(normalizedType) &&

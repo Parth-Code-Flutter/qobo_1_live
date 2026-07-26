@@ -26,6 +26,7 @@ class RoomRepo {
     String? backgroundId,
     String? backgroundImage,
     bool isPrivate = false,
+    bool joinApprovalRequired = false,
     bool isShowLoader = true,
   }) async {
     final roomTitle = (title == null || title.trim().isEmpty)
@@ -45,6 +46,7 @@ class RoomRepo {
       'maxSeats': maxSeats,
       'seatConfig': maxSeats,
       'isPrivate': isPrivate,
+      'joinApprovalRequired': joinApprovalRequired,
       if (trimmedCategory != null && trimmedCategory.isNotEmpty)
         'category': trimmedCategory,
       if (trimmedCoverImage != null && trimmedCoverImage.isNotEmpty)
@@ -115,6 +117,7 @@ class RoomRepo {
     required String name,
     required String liveStreamingId,
     required bool onlyFollows,
+    bool joinApprovalRequired = false,
     bool isShowLoader = true,
   }) async {
     final response = await _apiService.postRequest(
@@ -123,6 +126,7 @@ class RoomRepo {
         'name': name,
         'liveStreamingId': liveStreamingId,
         'onlyFollows': onlyFollows,
+        'joinApprovalRequired': joinApprovalRequired,
       },
       isShowLoader: isShowLoader,
       isLoginCall: false,
@@ -240,14 +244,19 @@ class RoomRepo {
   ///
   /// Pass [invitationId] when joining from a direct `room_invite` push so the
   /// backend can grant private-room access without a password.
+  /// Pass [joinRequestId] after host approval when `joinApprovalRequired` is on.
   Future<Map<String, dynamic>?> joinRoom({
     required String roomId,
     String? password,
     String? invitationId,
+    String? joinRequestId,
+    String? sessionType,
     bool isShowLoader = true,
   }) async {
     final trimmedPassword = password?.trim();
     final trimmedInvitationId = invitationId?.trim();
+    final trimmedJoinRequestId = joinRequestId?.trim();
+    final trimmedSessionType = sessionType?.trim();
     final body = <String, dynamic>{
       'roomId': roomId,
       'room_id': roomId,
@@ -255,6 +264,10 @@ class RoomRepo {
         'password': trimmedPassword,
       if (trimmedInvitationId != null && trimmedInvitationId.isNotEmpty)
         'invitation_id': trimmedInvitationId,
+      if (trimmedJoinRequestId != null && trimmedJoinRequestId.isNotEmpty)
+        'join_request_id': trimmedJoinRequestId,
+      if (trimmedSessionType != null && trimmedSessionType.isNotEmpty)
+        'session_type': trimmedSessionType,
     };
     final response = await _apiService.postRequest(
       endPoint: RoomEndpoints.joinRoom,
@@ -262,6 +275,123 @@ class RoomRepo {
       isShowLoader: isShowLoader,
     );
 
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// `POST /api/room/join-request` — ask host for admission.
+  Future<Map<String, dynamic>?> createJoinRequest({
+    required String roomId,
+    required String sessionType,
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: RoomEndpoints.joinRequest,
+      requestModel: <String, dynamic>{
+        'room_id': roomId,
+        'roomId': roomId,
+        'session_type': sessionType.trim(),
+      },
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// `POST /api/room/join-request/respond` — host approve/reject.
+  Future<Map<String, dynamic>?> respondToJoinRequest({
+    required String roomId,
+    required String requestId,
+    required String action,
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: RoomEndpoints.joinRequestRespond,
+      requestModel: <String, dynamic>{
+        'room_id': roomId,
+        'roomId': roomId,
+        'request_id': requestId,
+        'requestId': requestId,
+        'action': action.trim().toLowerCase(),
+      },
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// `POST /api/room/join-request/cancel` — viewer cancels pending request.
+  Future<Map<String, dynamic>?> cancelJoinRequest({
+    required String roomId,
+    required String requestId,
+    bool isShowLoader = false,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: RoomEndpoints.joinRequestCancel,
+      requestModel: <String, dynamic>{
+        'room_id': roomId,
+        'roomId': roomId,
+        'request_id': requestId,
+        'requestId': requestId,
+      },
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// `GET /api/room/join-request/status?request_id=`
+  Future<Map<String, dynamic>?> getJoinRequestStatus({
+    required String requestId,
+    bool isShowLoader = false,
+  }) async {
+    final id = requestId.trim();
+    if (id.isEmpty) return null;
+    final response = await _apiService.getRequest(
+      endPoint:
+          '${RoomEndpoints.joinRequestStatus}?request_id=${Uri.encodeComponent(id)}',
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// `GET /api/room/join-requests?room_id=&status=pending`
+  Future<Map<String, dynamic>?> listJoinRequests({
+    required String roomId,
+    String status = 'pending',
+    bool isShowLoader = false,
+  }) async {
+    final id = roomId.trim();
+    if (id.isEmpty) return null;
+    final params = <String, String>{
+      'room_id': id,
+      if (status.trim().isNotEmpty) 'status': status.trim(),
+    };
+    final response = await _apiService.getRequest(
+      endPoint: '${RoomEndpoints.joinRequests}?${Uri(queryParameters: params).query}',
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// `POST /api/room/settings` — toggle mid-session flags.
+  Future<Map<String, dynamic>?> updateRoomSettings({
+    required String roomId,
+    bool? joinApprovalRequired,
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: RoomEndpoints.roomSettings,
+      requestModel: <String, dynamic>{
+        'room_id': roomId,
+        'roomId': roomId,
+        if (joinApprovalRequired != null)
+          'joinApprovalRequired': joinApprovalRequired,
+      },
+      isShowLoader: isShowLoader,
+    );
     if (response == null) return null;
     return ApiResponseUtils.tryDecodeMap(response.body);
   }

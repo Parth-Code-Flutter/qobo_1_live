@@ -4,6 +4,7 @@ import 'package:push_notification_service/push_notification_service.dart';
 import 'package:qobo_one_live/repo/room/room_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/firebase/room_invite_push_payload.dart';
+import 'package:qobo_one_live/services/room/join_approval_service.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/zego_engine_utils.dart';
@@ -102,9 +103,17 @@ class RoomInvitePushHandler {
       return;
     }
 
-    final response = await _roomRepo.joinRoom(
+    final response = await JoinApprovalService().joinWithApprovalGate(
       roomId: payload.roomId,
+      sessionType: JoinApprovalService.sessionTypeFor(
+        roomType: payload.roomType,
+        isLiveStream: payload.isLiveStreamAlert,
+      ),
       invitationId: payload.hasInvitationId ? payload.invitationId : null,
+      roomHint: <String, dynamic>{
+        'room_id': payload.roomId,
+        'type': payload.roomType,
+      },
       isShowLoader: true,
     );
 
@@ -150,6 +159,37 @@ class RoomInvitePushHandler {
     RoomInvitePushPayload payload, {
     PushNotificationMessage? sourceMessage,
   }) async {
+    final roomHint = <String, dynamic>{
+      'room_id': payload.roomId,
+      'type': 'live_stream',
+    };
+
+    final response = await JoinApprovalService().joinWithApprovalGate(
+      roomId: payload.roomId,
+      sessionType: 'live_stream',
+      invitationId: payload.hasInvitationId ? payload.invitationId : null,
+      roomHint: roomHint,
+      isShowLoader: true,
+    );
+
+    if (!_isApiSuccess(response)) {
+      final status = response?['data'] is Map
+          ? (response!['data'] as Map)['status']?.toString().toLowerCase()
+          : null;
+      final blocked = JoinApprovalService.isApprovalRequiredError(response) ||
+          status == 'rejected' ||
+          status == 'blocked' ||
+          status == 'expired' ||
+          status == 'cancelled';
+      if (blocked) {
+        _showFeedback(
+          response?['message']?.toString() ?? 'Could not join live stream',
+        );
+        return;
+      }
+      // Legacy open rooms: continue even if optional join reporting failed.
+    }
+
     if (sourceMessage != null) {
       await PushNotificationService.instance.cancelLocalNotification(
         sourceMessage,
@@ -169,6 +209,20 @@ class RoomInvitePushHandler {
       'hostName': payload.hostName,
       'isLive': true,
     };
+    if (_isApiSuccess(response) && response?['data'] is Map) {
+      final joined = Map<String, dynamic>.from(response!['data'] as Map);
+      roomData.addAll(joined);
+      if (joined['room'] is Map) {
+        roomData.addAll(Map<String, dynamic>.from(joined['room'] as Map));
+      }
+      roomData['type'] = 'live_stream';
+      final joinRequestId =
+          joined['join_request_id']?.toString() ??
+          joined['request_id']?.toString();
+      if (joinRequestId != null && joinRequestId.isNotEmpty) {
+        roomData['join_request_id'] = joinRequestId;
+      }
+    }
 
     await ZegoEngineUtils.resetForLiveProject().timeout(
       const Duration(milliseconds: 700),

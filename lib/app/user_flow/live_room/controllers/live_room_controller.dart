@@ -12,6 +12,7 @@ import 'package:qobo_one_live/repo/activity/activity_repo.dart';
 import 'package:qobo_one_live/repo/room/room_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
+import 'package:qobo_one_live/services/room/join_approval_service.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_dialogs/live_stream_access_denied_dialog.dart';
 import 'package:qobo_one_live/utils/live_streaming_permissions.dart';
@@ -605,12 +606,70 @@ class LiveRoomController extends GetxController {
       unawaited(_joinLiveStreamFromList(room));
       return;
     }
+    // Audio/video list cards may skip join API historically; gate approval first.
+    unawaited(_joinAudioVideoFromList(room));
+  }
+
+  Future<void> _joinAudioVideoFromList(Map<String, dynamic> room) async {
+    final roomData = room['roomData'] is Map
+        ? Map<String, dynamic>.from(room['roomData'] as Map)
+        : Map<String, dynamic>.from(room);
+    final roomId = _roomId(roomData);
+    if (roomId.isEmpty) {
+      final context = Get.context;
+      if (context != null) {
+        AppToast.showError(context, 'Room id is missing');
+      }
+      return;
+    }
+
+    final sessionType = JoinApprovalService.sessionTypeFor(
+      roomType: room['roomType']?.toString() ?? roomData['type']?.toString(),
+    );
+    final response = await JoinApprovalService().joinWithApprovalGate(
+      roomId: roomId,
+      sessionType: sessionType,
+      roomHint: roomData,
+      isShowLoader: true,
+    );
+    final context = Get.context;
+    if (!_isRoomApiSuccess(response)) {
+      if (context != null) {
+        AppToast.showError(
+          context,
+          response?['message']?.toString() ?? 'Could not join room',
+        );
+      }
+      return;
+    }
+
+    final payload = _normalizeJoinPayload(
+      response?['data'],
+      fallbackRoom: roomData,
+      fallbackRoomId: roomId,
+    );
+    final rawType = _text(payload['type'])?.toUpperCase() ??
+        (room['roomType'] == 'AUDIO' ? 'AUDIO' : 'VIDEO');
+    final roomType = rawType == 'AUDIO' ? 'AUDIO' : 'VIDEO';
+    payload['type'] = roomType.toLowerCase();
+    if (response?['data'] is Map) {
+      final data = Map<String, dynamic>.from(response!['data'] as Map);
+      final joinRequestId =
+          _text(data['join_request_id']) ?? _text(data['request_id']);
+      if (joinRequestId != null) {
+        payload['join_request_id'] = joinRequestId;
+      }
+    }
+    await ZegoEngineUtils.resetForRoomProject().timeout(
+      const Duration(milliseconds: 700),
+      onTimeout: () {},
+    );
     Get.toNamed(
       Routes.LIVE_BROADCAST,
       arguments: {
         'isHost': false,
-        'roomType': room['roomType'] == 'AUDIO' ? 'AUDIO' : 'VIDEO',
-        'roomData': room['roomData'],
+        'roomType': roomType,
+        'roomData': payload,
       },
     );
   }
@@ -622,6 +681,49 @@ class LiveRoomController extends GetxController {
         ? Map<String, dynamic>.from(room['roomData'] as Map)
         : <String, dynamic>{};
     final payload = _normalizeLiveStreamListPayload(raw);
+    final roomId = _roomId(payload);
+    if (roomId.isEmpty && _text(payload['zegoLiveId']) == null) {
+      final context = Get.context;
+      if (context != null) {
+        AppToast.showError(context, 'Live stream id is missing for this room');
+      }
+      return;
+    }
+
+    // Gate Zego entry when host requires join approval.
+    if (roomId.isNotEmpty &&
+        (JoinApprovalService.isApprovalRequired(payload) ||
+            JoinApprovalService.isApprovalRequired(room))) {
+      final response = await JoinApprovalService().joinWithApprovalGate(
+        roomId: roomId,
+        sessionType: 'live_stream',
+        roomHint: payload,
+        forceApprovalFlow: true,
+        isShowLoader: true,
+      );
+      final context = Get.context;
+      if (!_isRoomApiSuccess(response)) {
+        if (context != null) {
+          AppToast.showError(
+            context,
+            response?['message']?.toString() ?? 'Could not join live stream',
+          );
+        }
+        return;
+      }
+      final joined = _normalizeJoinPayload(
+        response?['data'],
+        fallbackRoom: payload,
+        fallbackRoomId: roomId,
+      );
+      payload.addAll(joined);
+      payload['type'] = 'live_stream';
+      payload['join_request_id'] =
+          _text(payload['join_request_id']) ??
+          (response?['data'] is Map
+              ? _text((response!['data'] as Map)['request_id'])
+              : null);
+    }
 
     if (_text(payload['zegoLiveId']) == null) {
       final context = Get.context;
@@ -688,7 +790,15 @@ class LiveRoomController extends GetxController {
       return;
     }
 
-    final response = await _roomRepo.joinRoom(roomId: roomId);
+    final response = await JoinApprovalService().joinWithApprovalGate(
+      roomId: roomId,
+      sessionType: JoinApprovalService.sessionTypeFor(
+        type: room['type']?.toString(),
+        roomType: isRoomsAudioMode ? 'AUDIO' : 'VIDEO',
+      ),
+      roomHint: room,
+      isShowLoader: true,
+    );
     if (!context.mounted) return;
 
     if (!_isRoomApiSuccess(response)) {

@@ -17,6 +17,9 @@ abstract final class PushNotificationActions {
   /// APNs / local-notification category for PK challenges.
   static const String pkRequestCategory = 'PK_REQUEST';
 
+  /// APNs / local-notification category for host join approval.
+  static const String joinRequestCategory = 'JOIN_REQUEST';
+
   /// Accept / join the invited (or broadcast) room.
   static const String joinRoom = 'JOIN_ROOM';
 
@@ -31,6 +34,12 @@ abstract final class PushNotificationActions {
 
   /// Reject an incoming PK challenge.
   static const String rejectPk = 'REJECT_PK';
+
+  /// Host approves a viewer join request.
+  static const String approveJoin = 'APPROVE_JOIN';
+
+  /// Host rejects a viewer join request.
+  static const String rejectJoin = 'REJECT_JOIN';
 }
 
 /// Which action buttons to attach to a local notification.
@@ -43,6 +52,9 @@ enum PushNotificationActionSet {
 
   /// PK challenge (`pk_request`) → Accept + Reject.
   pkAcceptReject,
+
+  /// Host join request (`join_request`) → Approve + Reject.
+  joinApproveReject,
 
   /// No action buttons.
   none,

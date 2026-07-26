@@ -69,6 +69,10 @@ void main() {
       PushNotificationActionSet.pkAcceptReject,
     );
     expect(
+      PushNotificationService.actionSetForData({'type': 'join_request'}),
+      PushNotificationActionSet.joinApproveReject,
+    );
+    expect(
       PushNotificationService.actionSetForData({'type': 'pk_started'}),
       PushNotificationActionSet.none,
     );
