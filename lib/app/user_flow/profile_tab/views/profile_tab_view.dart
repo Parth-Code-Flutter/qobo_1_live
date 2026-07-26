@@ -48,93 +48,133 @@ class _ProfileTabViewState extends State<ProfileTabView> {
   @override
   Widget build(BuildContext context) {
     final userSession = _resolveUserSession();
-    return Container(
-      decoration: const BoxDecoration(
-        image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                _profileHero(userSession),
-                _superAdminAction(userSession),
-                Spacing.v12,
-                _profileActionCards(userSession),
-                Spacing.v12,
-                _profileFeatureGrid(),
-                Spacing.v20,
-                _settingsRow(),
-                Spacing.v12,
-                appButton(
-                  onPressed: widget.onLogoutPressed,
-                  buttonText: LocaleKeys.logoutButtonText.tr,
-                  isGradient: false,
-                  buttonColor: kColorPrimary,
-                  borderRadius: 14,
-                  buttonIcon: Padding(
-                    padding: const EdgeInsets.only(right: 12),
-                    child: const Icon(
-                      Icons.logout,
-                      color: kColorWhite,
-                      size: 18,
-                    ),
-                  ),
-                ),
-                Spacing.v20,
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _profileHero(UserSessionController userSession) {
     return GetBuilder<UserSessionController>(
       init: userSession,
       builder: (session) {
-        final imageUrl = session.displayPictureUrl;
-        final profileBackgroundUrl =
-            ApiImageUtils.normalize(session.profileBackgroundUrl) ?? '';
-        return LayoutBuilder(
-          builder: (_, constraints) {
-            final isCompact = constraints.maxWidth < 360;
-            final avatarSize = isCompact ? 74.0 : 88.0;
-            final avatarFrameSize = avatarSize * 1.34;
-            return _ProfileBackgroundShell(
-              backgroundUrl: profileBackgroundUrl,
-              child: Column(
-                children: [
-                  Row(
+        final backgroundUrl =
+            ApiImageUtils.normalize(session.profileBackgroundUrl)?.trim() ??
+            '';
+        final hasEquippedCover = backgroundUrl.isNotEmpty;
+
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            // Equipped Edit Cover fills the whole Profile tab; else app art.
+            if (hasEquippedCover)
+              Positioned.fill(
+                child: ProfileBackgroundMedia(
+                  key: ValueKey('profile_tab_bg_$backgroundUrl'),
+                  url: backgroundUrl,
+                  fit: BoxFit.cover,
+                  showLoadingIndicator: false,
+                ),
+              )
+            else
+              const Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    image: DecorationImage(
+                      image: AssetImage(kImgBG),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+              ),
+            // Soft wash so feature tiles / logout stay readable on SVGA covers.
+            if (hasEquippedCover)
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        kColorBlack.withValues(alpha: 0.28),
+                        kColorBlack.withValues(alpha: 0.55),
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                  ),
+                ),
+              ),
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                child: SingleChildScrollView(
+                  child: Column(
                     children: [
-                      SizedBox(
-                        width: avatarFrameSize,
-                        height: avatarFrameSize,
-                        child: Center(
-                          // Key remounts the avatar when the frame URL changes
-                          // so the loader appears while the new asset loads.
-                          child: FramedUserAvatar(
-                            key: ValueKey(
-                              'profile_frame_${session.profileFrameUrl}',
-                            ),
-                            name: session.displayName,
-                            imageUrl: imageUrl,
-                            size: avatarSize,
-                            frameUrl: session.profileFrameUrl,
-                            frameSeed: session.userId.isNotEmpty
-                                ? session.userId
-                                : session.displayName,
-                            fontSize: isCompact
-                                ? TextStyles.k14FontSize
-                                : TextStyles.k18FontSize,
+                      _profileHero(session),
+                      _superAdminAction(session),
+                      Spacing.v12,
+                      _profileActionCards(session),
+                      Spacing.v12,
+                      _profileFeatureGrid(),
+                      Spacing.v20,
+                      _settingsRow(),
+                      Spacing.v12,
+                      appButton(
+                        onPressed: widget.onLogoutPressed,
+                        buttonText: LocaleKeys.logoutButtonText.tr,
+                        isGradient: false,
+                        buttonColor: kColorPrimary,
+                        borderRadius: 14,
+                        buttonIcon: Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: const Icon(
+                            Icons.logout,
+                            color: kColorWhite,
+                            size: 18,
                           ),
                         ),
                       ),
-                      Spacing.h12,
-                      Expanded(
-                        child: Column(
+                      Spacing.v20,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _profileHero(UserSessionController session) {
+    final imageUrl = session.displayPictureUrl;
+    return LayoutBuilder(
+      builder: (_, constraints) {
+        final isCompact = constraints.maxWidth < 360;
+        final avatarSize = isCompact ? 74.0 : 88.0;
+        final avatarFrameSize = avatarSize * 1.34;
+        // Cover media is full-tab now — hero is only identity content.
+        return _ProfileHeroCard(
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  SizedBox(
+                    width: avatarFrameSize,
+                    height: avatarFrameSize,
+                    child: Center(
+                      child: FramedUserAvatar(
+                        key: ValueKey(
+                          'profile_frame_${session.profileFrameUrl}',
+                        ),
+                        name: session.displayName,
+                        imageUrl: imageUrl,
+                        size: avatarSize,
+                        frameUrl: session.profileFrameUrl,
+                        frameSeed: session.userId.isNotEmpty
+                            ? session.userId
+                            : session.displayName,
+                        fontSize: isCompact
+                            ? TextStyles.k14FontSize
+                            : TextStyles.k18FontSize,
+                      ),
+                    ),
+                  ),
+                  Spacing.h12,
+                  Expanded(
+                    child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             BoldText(
@@ -239,8 +279,6 @@ class _ProfileTabViewState extends State<ProfileTabView> {
             );
           },
         );
-      },
-    );
   }
 
   Widget _smallChip({
@@ -597,55 +635,25 @@ class _BecomeSuperAdminButton extends StatefulWidget {
       _BecomeSuperAdminButtonState();
 }
 
-class _ProfileBackgroundShell extends StatelessWidget {
-  const _ProfileBackgroundShell({
-    required this.backgroundUrl,
-    required this.child,
-  });
+class _ProfileHeroCard extends StatelessWidget {
+  const _ProfileHeroCard({required this.child});
 
-  final String backgroundUrl;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    final hasBackground = backgroundUrl.trim().isNotEmpty;
-
-    // Equipped background (SVGA or static image) sits behind profile details.
-    // A dark overlay keeps name, ID, chips, and stats readable.
+    // Full-tab cover sits behind this card; keep a light glass shell for stats.
     return SizedBox(
       width: double.infinity,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Stack(
-          fit: StackFit.passthrough,
-          children: [
-            if (hasBackground)
-              Positioned.fill(
-                child: ProfileBackgroundMedia(url: backgroundUrl),
-              ),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                border: hasBackground
-                    ? Border.all(color: kColorWhite.withValues(alpha: 0.16))
-                    : null,
-                gradient: hasBackground
-                    ? LinearGradient(
-                        colors: [
-                          kColorBlack.withValues(alpha: 0.18),
-                          kColorBlack.withValues(alpha: 0.52),
-                        ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                      )
-                    : null,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
-                child: child,
-              ),
-            ),
-          ],
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.16)),
+          color: kColorBlack.withValues(alpha: 0.22),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+          child: child,
         ),
       ),
     );
