@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
@@ -10,6 +11,7 @@ import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:zego_uikit/zego_uikit.dart';
 
 import '../controllers/live_broadcast_controller.dart';
@@ -867,6 +869,7 @@ class _MemberSeat extends GetView<LiveBroadcastController> {
         isHostView: controller.canManageAudioRoomMembers,
       ),
       backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.55),
       isScrollControlled: true,
     );
   }
@@ -875,126 +878,550 @@ class _MemberSeat extends GetView<LiveBroadcastController> {
 class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
   const _AudioSeatActionsSheet({required this.seat, required this.isHostView});
 
+  static const _frameRed = Color(0xFF8E1B24);
+  static const _goldBright = Color(0xFFFFD56A);
+  static const _goldDeep = Color(0xFFC4891A);
+  static const _goldChampagne = Color(0xFFF6E7C3);
+  static const _ink = Color(0xFF2A1A12);
+
   final AudioRoomSeatModel seat;
   final bool isHostView;
 
   @override
   Widget build(BuildContext context) {
-    final actions = isHostView
-        ? [
-            _SeatActionData(
-              icon: seat.isMuted ? Icons.mic_rounded : Icons.mic_off_rounded,
-              label: seat.isMuted ? 'Unmute' : 'Mute',
-              onTap: () => controller.updateAudioSeatMic(
-                seat: seat,
-                mute: !seat.isMuted,
-              ),
-            ),
-            _SeatActionData(
-              icon: Icons.person_remove_rounded,
-              label: 'Kick off',
-              onTap: () => controller.kickAudioRoomUser(seat),
-            ),
-            _SeatActionData(
-              icon: Icons.admin_panel_settings_rounded,
-              label: seat.isAdmin ? 'Remove admin' : 'Make admin',
-              onTap: () => controller.setAudioRoomAdmin(
-                seat: seat,
-                makeAdmin: !seat.isAdmin,
-              ),
-            ),
-            _SeatActionData(
-              icon: Icons.chat_bubble_outline_rounded,
-              label: 'Message',
-              onTap: () => _openMessage(context),
-            ),
-            _SeatActionData(
-              icon: Icons.card_giftcard_rounded,
-              label: 'Gift',
-              onTap: _openGift,
-            ),
-          ]
-        : [
-            _SeatActionData(
-              icon: Icons.chat_bubble_outline_rounded,
-              label: 'Message',
-              onTap: () => _openMessage(context),
-            ),
-            _SeatActionData(
-              icon: Icons.card_giftcard_rounded,
-              label: 'Send gift',
-              onTap: _openGift,
-            ),
-          ];
+    final actions = _buildActions(context);
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 28),
-      decoration: const BoxDecoration(
-        color: Color(0xFF1D222B),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        10,
+        0,
+        10,
+        MediaQuery.paddingOf(context).bottom + 10,
       ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: kColorWhite.withValues(alpha: 0.20),
-                borderRadius: BorderRadius.circular(2),
+      child: _OrnateMemberProfileCard(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _dragHandle(),
+              Spacing.v10,
+              _avatarHero(),
+              Spacing.v8,
+              _roleRibbon(),
+              Spacing.v10,
+              _nameRow(),
+              Spacing.v8,
+              _idRow(context),
+              Spacing.v10,
+              _tagPills(),
+              Spacing.v12,
+              _collectionRow(
+                title: 'Badge',
+                background: const Color(0xFF4A4A52),
+                child: _badgeIcons(),
               ),
-            ),
-            Spacing.v16,
-            Row(
-              children: [
-                _PremiumAvatarFrame(
-                  name: seat.name,
-                  imageUrl: seat.avatarUrl,
-                  frameUrl: seat.avatarFrameUrl,
-                  muted: seat.isMuted,
-                  isHost: seat.isHost,
-                  seatNo: seat.seatNo,
-                ),
-                Spacing.h12,
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SemiBoldText(
-                        text: seat.name,
-                        fontSize: TextStyles.k16FontSize,
-                        color: kColorWhite,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Spacing.v4,
-                      AppText(
-                        text: isHostView
-                            ? 'Manage this room member'
-                            : 'Connect with this room member',
-                        fontSize: TextStyles.k12FontSize,
-                        color: kColorWhite.withValues(alpha: 0.62),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            Row(
-              children: actions
-                  .map(
-                    (action) =>
-                        Expanded(child: _SeatActionButton(action: action)),
-                  )
-                  .toList(),
+              Spacing.v10,
+              _collectionRow(
+                title: 'Room',
+                background: const Color(0xFFF08FA8),
+                child: _roomStatsRow(),
+              ),
+              Spacing.v12,
+              _actionsGrid(actions),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<_SeatActionData> _buildActions(BuildContext context) {
+    if (isHostView) {
+      return [
+        _SeatActionData(
+          icon: seat.isMuted ? Icons.mic_rounded : Icons.mic_off_rounded,
+          label: seat.isMuted ? 'Unmute' : 'Mute',
+          accent: const Color(0xFF7AD7FF),
+          onTap: () => controller.updateAudioSeatMic(
+            seat: seat,
+            mute: !seat.isMuted,
+          ),
+        ),
+        _SeatActionData(
+          icon: Icons.person_remove_rounded,
+          label: 'Kick off',
+          accent: const Color(0xFFFF6B6B),
+          onTap: () => controller.kickAudioRoomUser(seat),
+        ),
+        _SeatActionData(
+          icon: Icons.admin_panel_settings_rounded,
+          label: seat.isAdmin ? 'Remove admin' : 'Make admin',
+          accent: _goldBright,
+          onTap: () => controller.setAudioRoomAdmin(
+            seat: seat,
+            makeAdmin: !seat.isAdmin,
+          ),
+        ),
+        _SeatActionData(
+          icon: Icons.chat_bubble_outline_rounded,
+          label: 'Message',
+          accent: const Color(0xFFFF8FB8),
+          onTap: () => _openMessage(context),
+        ),
+        _SeatActionData(
+          icon: Icons.card_giftcard_rounded,
+          label: 'Gift',
+          accent: const Color(0xFFFFB347),
+          onTap: _openGift,
+        ),
+      ];
+    }
+
+    return [
+      _SeatActionData(
+        icon: Icons.chat_bubble_outline_rounded,
+        label: 'Message',
+        accent: const Color(0xFFFF8FB8),
+        onTap: () => _openMessage(context),
+      ),
+      _SeatActionData(
+        icon: Icons.card_giftcard_rounded,
+        label: 'Send gift',
+        accent: const Color(0xFFFFB347),
+        onTap: _openGift,
+      ),
+    ];
+  }
+
+  Widget _dragHandle() {
+    return Container(
+      width: 42,
+      height: 4,
+      decoration: BoxDecoration(
+        color: _frameRed.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(99),
+      ),
+    );
+  }
+
+  Widget _avatarHero() {
+    return Center(
+      child: _PremiumAvatarFrame(
+        name: seat.name,
+        imageUrl: seat.avatarUrl,
+        frameUrl: seat.avatarFrameUrl,
+        muted: seat.isMuted,
+        isHost: seat.isHost,
+        seatNo: seat.seatNo,
+        frameSize: 148,
+        avatarSize: 82,
+      ),
+    );
+  }
+
+  Widget _roleRibbon() {
+    final label = seat.isHost
+        ? 'Room Host'
+        : seat.isAdmin
+        ? 'Room Admin'
+        : seat.isVip
+        ? 'VIP Member'
+        : 'Room Member';
+
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 5),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFB71C1C), Color(0xFF8E1B24), Color(0xFFB71C1C)],
+          ),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: _goldBright, width: 1.2),
+          boxShadow: [
+            BoxShadow(
+              color: _frameRed.withValues(alpha: 0.35),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
             ),
           ],
         ),
+        child: SemiBoldText(
+          text: label,
+          fontSize: TextStyles.k12FontSize,
+          color: _goldChampagne,
+        ),
       ),
+    );
+  }
+
+  Widget _nameRow() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (seat.isVip) ...[
+          Icon(Icons.workspace_premium_rounded, size: 18, color: _goldDeep),
+          Spacing.h4,
+        ],
+        Flexible(
+          child: SemiBoldText(
+            text: seat.name,
+            fontSize: TextStyles.k18FontSize,
+            color: _ink,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            align: TextAlign.center,
+          ),
+        ),
+        if (seat.isAdmin) ...[
+          Spacing.h4,
+          Icon(Icons.shield_rounded, size: 17, color: const Color(0xFF7B5CFF)),
+        ],
+        if (seat.diamonds > 0) ...[
+          Spacing.h4,
+          Icon(Icons.diamond_rounded, size: 16, color: const Color(0xFF2ED3FF)),
+        ],
+      ],
+    );
+  }
+
+  Widget _idRow(BuildContext context) {
+    final id = seat.userId.trim();
+    final displayId = id.isEmpty ? '—' : id;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Icon(Icons.badge_rounded, size: 16, color: Color(0xFFFF4DC4)),
+        Spacing.h4,
+        Flexible(
+          child: AppText(
+            text: displayId,
+            fontSize: TextStyles.k12FontSize,
+            color: _ink.withValues(alpha: 0.82),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        if (id.isNotEmpty) ...[
+          Spacing.h4,
+          GestureDetector(
+            onTap: () {
+              Clipboard.setData(ClipboardData(text: id));
+              AppToast.showSuccess(context, 'ID copied');
+            },
+            child: Icon(
+              Icons.copy_rounded,
+              size: 15,
+              color: _ink.withValues(alpha: 0.55),
+            ),
+          ),
+        ],
+        Spacing.h8,
+        _levelMedallion(seat.diamonds),
+        if (seat.seatNo > 0) ...[
+          Spacing.h6,
+          _levelMedallion(seat.seatNo, accent: const Color(0xFF7B5CFF)),
+        ],
+      ],
+    );
+  }
+
+  Widget _levelMedallion(int value, {Color accent = const Color(0xFFFFB347)}) {
+    return Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [accent, accent.withValues(alpha: 0.72)],
+        ),
+        border: Border.all(color: _goldChampagne, width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: accent.withValues(alpha: 0.35),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      alignment: Alignment.center,
+      child: SemiBoldText(
+        text: '$value',
+        fontSize: TextStyles.k10FontSize,
+        color: kColorWhite,
+      ),
+    );
+  }
+
+  Widget _tagPills() {
+    final tags = <_MemberTagPill>[
+      if (seat.isAdmin)
+        const _MemberTagPill(
+          label: 'Admin',
+          colors: [Color(0xFF9C6BFF), Color(0xFF6A3DFF)],
+          icon: Icons.shield_rounded,
+        ),
+      if (seat.isVip)
+        const _MemberTagPill(
+          label: 'VIP',
+          colors: [Color(0xFFFFB347), Color(0xFFFF6B35)],
+          icon: Icons.workspace_premium_rounded,
+        ),
+      if (seat.isMuted)
+        const _MemberTagPill(
+          label: 'Muted',
+          colors: [Color(0xFFFF6B6B), Color(0xFFC62828)],
+          icon: Icons.mic_off_rounded,
+        ),
+      if (seat.seatNo > 0)
+        _MemberTagPill(
+          label: 'Seat ${seat.seatNo}',
+          colors: const [Color(0xFF2ED3FF), Color(0xFF1A9FD4)],
+          icon: Icons.event_seat_rounded,
+        ),
+    ];
+
+    if (tags.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 8,
+      runSpacing: 8,
+      children: tags.map(_tagPill).toList(),
+    );
+  }
+
+  Widget _tagPill(_MemberTagPill tag) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(colors: tag.colors),
+        boxShadow: [
+          BoxShadow(
+            color: tag.colors.first.withValues(alpha: 0.28),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(tag.icon, size: 14, color: kColorWhite),
+          Spacing.h4,
+          SemiBoldText(
+            text: tag.label,
+            fontSize: TextStyles.k10FontSize,
+            color: kColorWhite,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _collectionRow({
+    required String title,
+    required Color background,
+    required Widget child,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.22)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 54,
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: 15,
+                fontStyle: FontStyle.italic,
+                fontWeight: FontWeight.w700,
+                color: kColorWhite.withValues(alpha: 0.95),
+                shadows: [
+                  Shadow(
+                    color: Colors.black.withValues(alpha: 0.25),
+                    offset: const Offset(0, 1),
+                    blurRadius: 2,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Expanded(child: child),
+        ],
+      ),
+    );
+  }
+
+  Widget _badgeIcons() {
+    final badges = <Widget>[
+      if (seat.isAdmin)
+        _badgeIcon(Icons.shield_rounded, const Color(0xFF7B5CFF)),
+      if (seat.isVip)
+        _badgeIcon(Icons.workspace_premium_rounded, const Color(0xFFFFB347)),
+      if (seat.isMuted)
+        _badgeIcon(Icons.mic_off_rounded, const Color(0xFFFF6B6B))
+      else
+        _badgeIcon(Icons.mic_rounded, const Color(0xFF2FE56E)),
+      if (seat.diamonds > 0)
+        _badgeIcon(Icons.diamond_rounded, const Color(0xFF2ED3FF)),
+    ];
+
+    if (badges.isEmpty) {
+      return AppText(
+        text: 'No badges yet',
+        fontSize: TextStyles.k10FontSize,
+        color: kColorWhite.withValues(alpha: 0.75),
+      );
+    }
+
+    return Row(
+      children: [
+        for (var i = 0; i < badges.length; i++) ...[
+          if (i > 0) Spacing.h8,
+          badges[i],
+        ],
+      ],
+    );
+  }
+
+  Widget _badgeIcon(IconData icon, Color color) {
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: kColorWhite.withValues(alpha: 0.14),
+        border: Border.all(color: color.withValues(alpha: 0.65)),
+      ),
+      child: Icon(icon, size: 18, color: color),
+    );
+  }
+
+  Widget _roomStatsRow() {
+    return Row(
+      children: [
+        _statChip(
+          icon: Icons.diamond_rounded,
+          label: '${seat.diamonds}',
+          color: const Color(0xFF2ED3FF),
+        ),
+        Spacing.h8,
+        _statChip(
+          icon: Icons.event_seat_rounded,
+          label: 'Seat ${seat.seatNo}',
+          color: const Color(0xFFFFB347),
+        ),
+        const Spacer(),
+        Icon(
+          Icons.chevron_right_rounded,
+          color: kColorWhite.withValues(alpha: 0.8),
+          size: 22,
+        ),
+      ],
+    );
+  }
+
+  Widget _statChip({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: kColorWhite.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          Spacing.h4,
+          SemiBoldText(
+            text: label,
+            fontSize: TextStyles.k10FontSize,
+            color: kColorWhite,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _actionsGrid(List<_SeatActionData> actions) {
+    if (actions.length <= 2) {
+      return Row(
+        children: actions
+            .map(
+              (action) => Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: _SeatActionButton(action: action),
+                ),
+              ),
+            )
+            .toList(),
+      );
+    }
+
+    // Host manage: 3 + remaining in a calm two-row grid.
+    final top = actions.take(3).toList();
+    final bottom = actions.skip(3).toList();
+    return Column(
+      children: [
+        Row(
+          children: top
+              .map(
+                (action) => Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: _SeatActionButton(action: action),
+                  ),
+                ),
+              )
+              .toList(),
+        ),
+        if (bottom.isNotEmpty) ...[
+          Spacing.v12,
+          Row(
+            children: [
+              ...bottom.map(
+                (action) => Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: _SeatActionButton(action: action),
+                  ),
+                ),
+              ),
+              // Keep second row visually balanced when it has fewer tiles.
+              if (bottom.length < 3)
+                ...List.generate(
+                  3 - bottom.length,
+                  (_) => const Expanded(child: SizedBox()),
+                ),
+            ],
+          ),
+        ],
+      ],
     );
   }
 
@@ -1047,11 +1474,13 @@ class _SeatActionData {
     required this.icon,
     required this.label,
     required this.onTap,
+    required this.accent,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final Color accent;
 }
 
 class _SeatActionButton extends StatelessWidget {
@@ -1061,33 +1490,195 @@ class _SeatActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: action.onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 3),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: kColorWhite.withValues(alpha: 0.08),
-                shape: BoxShape.circle,
-                border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: action.onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: kColorWhite,
+                  border: Border.all(
+                    color: action.accent.withValues(alpha: 0.55),
+                    width: 1.4,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: action.accent.withValues(alpha: 0.22),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Icon(action.icon, color: action.accent, size: 23),
               ),
-              child: Icon(action.icon, color: kColorWhite, size: 22),
+              Spacing.v6,
+              SemiBoldText(
+                text: action.label,
+                fontSize: TextStyles.k10FontSize,
+                color: const Color(0xFF2A1A12),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                align: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MemberTagPill {
+  const _MemberTagPill({
+    required this.label,
+    required this.colors,
+    required this.icon,
+  });
+
+  final String label;
+  final List<Color> colors;
+  final IconData icon;
+}
+
+/// Ornate red/gold profile card shell — matches premium room-member reference.
+class _OrnateMemberProfileCard extends StatelessWidget {
+  const _OrnateMemberProfileCard({required this.child});
+
+  static const _salmon = Color(0xFFF2B8A7);
+  static const _salmonDeep = Color(0xFFE89B88);
+  static const _frameRed = Color(0xFF8E1B24);
+  static const _frameRedDark = Color(0xFF5C0D14);
+  static const _goldBright = Color(0xFFFFD56A);
+  static const _goldDeep = Color(0xFFC4891A);
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: _frameRed.withValues(alpha: 0.35),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.25),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              _frameRedDark,
+              _frameRed,
+              _goldDeep,
+              _frameRed,
+              _frameRedDark,
+            ],
+            stops: [0.0, 0.22, 0.5, 0.78, 1.0],
+          ),
+        ),
+        padding: const EdgeInsets.all(5),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            gradient: const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [_goldBright, _goldDeep, _goldBright],
             ),
-            Spacing.v6,
-            AppText(
-              text: action.label,
-              fontSize: 9,
-              color: kColorWhite.withValues(alpha: 0.78),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              align: TextAlign.center,
+          ),
+          padding: const EdgeInsets.all(2.5),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Stack(
+              children: [
+                const Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [_salmon, _salmonDeep, _salmon],
+                        stops: [0.0, 0.55, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: 3,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          _goldBright.withValues(alpha: 0.0),
+                          _goldBright.withValues(alpha: 0.85),
+                          _goldBright.withValues(alpha: 0.0),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 6,
+                  top: 28,
+                  bottom: 28,
+                  child: _sidePillar(),
+                ),
+                Positioned(
+                  right: 6,
+                  top: 28,
+                  bottom: 28,
+                  child: _sidePillar(),
+                ),
+                child,
+              ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _sidePillar() {
+    return Container(
+      width: 5,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(3),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            _goldBright.withValues(alpha: 0.15),
+            _goldBright.withValues(alpha: 0.55),
+            _goldDeep.withValues(alpha: 0.45),
+            _goldBright.withValues(alpha: 0.15),
           ],
         ),
       ),
