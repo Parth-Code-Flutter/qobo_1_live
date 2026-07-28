@@ -25,7 +25,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
       resizeToAvoidBottomInset: true,
       body: GestureDetector(
         onTap: _dismissKeyboard,
-        behavior: HitTestBehavior.opaque,
+        behavior: HitTestBehavior.deferToChild,
         child: Container(
           decoration: const BoxDecoration(
             image: DecorationImage(
@@ -306,19 +306,11 @@ class CoinSellerView extends GetView<CoinSellerController> {
           ),
           Spacing.v8,
           Expanded(
-            child: NotificationListener<ScrollNotification>(
-              onNotification: (notification) {
-                if (notification is ScrollStartNotification) {
-                  _dismissKeyboard();
-                }
-                return false;
-              },
-              child: TabBarView(
-                children: [
-                  _transferPanel(context),
-                  _transactionsPanel(context),
-                ],
-              ),
+            child: TabBarView(
+              children: [
+                _transferPanel(context),
+                _transactionsPanel(context),
+              ],
             ),
           ),
         ],
@@ -535,11 +527,19 @@ class CoinSellerView extends GetView<CoinSellerController> {
             Spacing.v16,
             _buyerSelector(context),
             Spacing.v12,
-            _field(Icons.toll_rounded, controller.coinsController,
-                'Coin amount', number: true),
+            _field(
+              Icons.monetization_on_rounded,
+              controller.coinsController,
+              'Coins',
+              number: true,
+            ),
             Spacing.v12,
-            _field(Icons.currency_rupee_rounded, controller.priceController,
-                'Price (INR)', decimal: true),
+            _field(
+              Icons.currency_rupee_rounded,
+              controller.priceController,
+              'Price (INR)',
+              decimal: true,
+            ),
             Spacing.v16,
             Container(
               padding: const EdgeInsets.all(10),
@@ -726,41 +726,26 @@ class CoinSellerView extends GetView<CoinSellerController> {
     bool number = false,
     bool decimal = false,
   }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 40,
-          height: 48,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white12),
-          ),
-          alignment: Alignment.center,
-          child: Icon(icon, size: 18, color: CoinSellerUi.gold),
-        ),
-        Spacing.h10,
-        Expanded(
-          child: AppTextField(
-            controller: ctrl,
-            hintText: hint,
-            textInputType: number
-                ? TextInputType.number
-                : decimal
-                    ? const TextInputType.numberWithOptions(decimal: true)
-                    : TextInputType.text,
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _dismissKeyboard(),
-            fillColor: Colors.white.withValues(alpha: 0.06),
-            borderColor: Colors.white12,
-            textStyle: TextStyles.kRegularPoppins(
-              colors: kColorWhite,
-              fontSize: 13,
-            ),
-          ),
-        ),
-      ],
+    return AppTextField(
+      controller: ctrl,
+      hintText: hint,
+      textInputType: number
+          ? TextInputType.number
+          : decimal
+              ? const TextInputType.numberWithOptions(decimal: true)
+              : TextInputType.text,
+      textInputAction: TextInputAction.done,
+      onSubmitted: (_) => _dismissKeyboard(),
+      fillColor: Colors.white.withValues(alpha: 0.06),
+      borderColor: Colors.white12,
+      textStyle: TextStyles.kRegularPoppins(
+        colors: kColorWhite,
+        fontSize: 13,
+      ),
+      prefix: Padding(
+        padding: const EdgeInsets.only(left: 12, right: 8),
+        child: Icon(icon, size: 20, color: CoinSellerUi.gold),
+      ),
     );
   }
 
