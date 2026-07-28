@@ -713,6 +713,7 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
                 if (controller.isHost.value) ...[
                   Spacing.h8,
                   SessionEarningsBadge(
+                    key: controller.sessionEarningsBadgeKey,
                     tracker: controller.sessionEarnings,
                     compact: compact,
                     maxWidth: earningsMaxWidth,

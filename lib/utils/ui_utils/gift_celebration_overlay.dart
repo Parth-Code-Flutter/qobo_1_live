@@ -22,6 +22,41 @@ class GiftCelebrationOverlay {
 
   static OverlayEntry? _activeEntry;
   static BuildContext? _dialogContext;
+  static Completer<void>? _activeCompleter;
+
+  /// True while a gift SVGA/badge celebration dialog is on screen.
+  static bool get isShowing =>
+      _activeCompleter != null && !_activeCompleter!.isCompleted;
+
+  /// Resolves when the current gift celebration finishes (or after [timeout]).
+  ///
+  /// Used to sequence follow-up UI (e.g. host coin-fly) after the gift SVGA.
+  static Future<void> waitUntilIdle({
+    Duration timeout = const Duration(seconds: 10),
+  }) async {
+    final completer = _activeCompleter;
+    if (completer == null || completer.isCompleted) return;
+    try {
+      await completer.future.timeout(timeout);
+    } on TimeoutException {
+      // Do not block coin-fly forever if celebration never dismisses.
+    }
+  }
+
+  static void _beginCycle() {
+    if (_activeCompleter != null && !_activeCompleter!.isCompleted) {
+      _activeCompleter!.complete();
+    }
+    _activeCompleter = Completer<void>();
+  }
+
+  static void _endCycle() {
+    final completer = _activeCompleter;
+    if (completer != null && !completer.isCompleted) {
+      completer.complete();
+    }
+    _activeCompleter = null;
+  }
 
   /// Shows a non-blocking full-screen gift celebration over the current route.
   ///
@@ -35,6 +70,7 @@ class GiftCelebrationOverlay {
   }) {
     // Replace any in-flight celebration so rapid gift sends stay stable.
     dismiss();
+    _beginCycle();
 
     final name = giftName?.trim().isNotEmpty == true
         ? giftName!.trim()
@@ -50,6 +86,16 @@ class GiftCelebrationOverlay {
         gifAsset: gifAsset,
         onCompleted: onCompleted,
       );
+    }
+
+    void finishAndDismissDialog(BuildContext dialogContext) {
+      if (dialogContext.mounted && Navigator.of(dialogContext).canPop()) {
+        Navigator.of(dialogContext).pop();
+      }
+      if (_dialogContext == dialogContext) {
+        _dialogContext = null;
+      }
+      _endCycle();
     }
 
     // Transparent dialog route draws above native video surfaces (PlatformView).
@@ -70,15 +116,7 @@ class GiftCelebrationOverlay {
           builder: (dialogContext) {
             _dialogContext = dialogContext;
             return buildView(
-              onCompleted: () {
-                if (dialogContext.mounted &&
-                    Navigator.of(dialogContext).canPop()) {
-                  Navigator.of(dialogContext).pop();
-                }
-                if (_dialogContext == dialogContext) {
-                  _dialogContext = null;
-                }
-              },
+              onCompleted: () => finishAndDismissDialog(dialogContext),
             );
           },
         ),
@@ -91,19 +129,27 @@ class GiftCelebrationOverlay {
     try {
       context = Get.key.currentContext;
     } catch (_) {
+      _endCycle();
       return;
     }
-    if (context == null) return;
+    if (context == null) {
+      _endCycle();
+      return;
+    }
     final overlay =
         Overlay.maybeOf(context, rootOverlay: true) ??
         Navigator.maybeOf(context, rootNavigator: true)?.overlay;
-    if (overlay == null) return;
+    if (overlay == null) {
+      _endCycle();
+      return;
+    }
 
     _activeEntry = OverlayEntry(
       builder: (_) => buildView(
         onCompleted: () {
           _activeEntry?.remove();
           _activeEntry = null;
+          _endCycle();
         },
       ),
     );
@@ -126,6 +172,7 @@ class GiftCelebrationOverlay {
 
     _activeEntry?.remove();
     _activeEntry = null;
+    _endCycle();
   }
 }
 

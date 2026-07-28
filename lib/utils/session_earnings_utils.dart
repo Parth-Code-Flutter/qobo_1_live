@@ -1,3 +1,4 @@
+import 'package:qobo_one_live/app/user_flow/live_broadcast/utils/live_room_profile_utils.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/services/session/session_earnings_tracker.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_media_utils.dart';
@@ -129,17 +130,21 @@ abstract final class SessionEarningsUtils {
 
   /// Peer gift chat line — estimate host/callee share from catalog when API
   /// response is only available on the sender device.
-  static void ingestIncomingGiftChat({
+  ///
+  /// Returns coins applied to [tracker] (0 when nothing earned).
+  static int ingestIncomingGiftChat({
     required SessionEarningsTracker tracker,
     required String chatMessage,
     required List<Map<String, String>> giftCatalog,
     required bool earnsGift,
   }) {
-    if (!earnsGift || !GiftMediaUtils.isGiftChatMessage(chatMessage)) return;
+    if (!earnsGift || !GiftMediaUtils.isGiftChatMessage(chatMessage)) return 0;
     final price = _giftPriceFromCatalog(giftCatalog, chatMessage);
     if (price != null && price > 0) {
       tracker.applyDelta(coins: price);
+      return price;
     }
+    return 0;
   }
 
   static int? _giftPriceFromCatalog(
@@ -147,12 +152,39 @@ abstract final class SessionEarningsUtils {
     String chatMessage,
   ) {
     final name = GiftMediaUtils.giftNameFromChatLabel(chatMessage).toLowerCase();
-    if (name.isEmpty) return null;
-    for (final gift in catalog) {
-      if ((gift['name'] ?? '').trim().toLowerCase() == name) {
-        return int.tryParse(gift['price'] ?? '0');
+    if (name.isNotEmpty && name != 'gift') {
+      for (final gift in catalog) {
+        if ((gift['name'] ?? '').trim().toLowerCase() == name) {
+          return int.tryParse(gift['price'] ?? '0');
+        }
       }
     }
+
+    // Chat may show a generic "sent gift" label — match via embedded SVGA URL.
+    final animUrl = parseGiftAnimUrl(chatMessage)?.trim();
+    if (animUrl != null && animUrl.isNotEmpty) {
+      for (final gift in catalog) {
+        final catalogAnim = (gift['animationUrl'] ?? '').trim();
+        if (catalogAnim.isEmpty) continue;
+        if (animUrl == catalogAnim ||
+            animUrl.endsWith(catalogAnim.split('/').last)) {
+          return int.tryParse(gift['price'] ?? '0');
+        }
+      }
+    }
+
+    final soundUrl = parseGiftSoundUrl(chatMessage)?.trim();
+    if (soundUrl != null && soundUrl.isNotEmpty) {
+      for (final gift in catalog) {
+        final catalogSound = (gift['soundUrl'] ?? '').trim();
+        if (catalogSound.isEmpty) continue;
+        if (soundUrl == catalogSound ||
+            soundUrl.endsWith(catalogSound.split('/').last)) {
+          return int.tryParse(gift['price'] ?? '0');
+        }
+      }
+    }
+
     return null;
   }
 

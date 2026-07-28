@@ -661,6 +661,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                 return Padding(
                   padding: const EdgeInsets.only(top: 10),
                   child: SessionEarningsHostBanner(
+                    key: controller.sessionEarningsBadgeKey,
                     tracker: controller.sessionEarnings,
                     compact: isCompact,
                     onWithdraw: controller.openWithdrawalWallet,

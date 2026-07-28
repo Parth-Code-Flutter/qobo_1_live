@@ -27,6 +27,7 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_celebration_overlay.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_chat_celebration_tracker.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_media_utils.dart';
+import 'package:qobo_one_live/utils/ui_utils/coin_fly_overlay.dart';
 import 'package:qobo_one_live/utils/ui_utils/vip_entrance_overlay.dart';
 import 'package:qobo_one_live/utils/zego_engine_utils.dart';
 import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
@@ -79,6 +80,8 @@ class LiveBroadcastController extends GetxController {
   final coinsBalance = 0.obs;
   final diamondsBalance = 0.obs;
   final sessionEarnings = SessionEarningsTracker();
+  /// Target for gullak-style coin fly animation into the host earnings pill.
+  final sessionEarningsBadgeKey = GlobalKey(debugLabel: 'sessionEarningsBadge');
   final giftCatalog = <Map<String, String>>[].obs;
   final isLoadingGifts = false.obs;
   final selectedGiftReceiverId = RxnString();
@@ -614,14 +617,49 @@ class LiveBroadcastController extends GetxController {
           ),
       onPeerGift: isHost.value
           ? (event) {
-              SessionEarningsUtils.ingestIncomingGiftChat(
-                tracker: sessionEarnings,
-                chatMessage: event.message,
-                giftCatalog: giftCatalog.toList(),
-                earnsGift: true,
-              );
+              unawaited(_handleHostIncomingGift(event.message));
             }
           : null,
+    );
+  }
+
+  Future<void> _handleHostIncomingGift(String chatMessage) async {
+    if (!isHost.value) return;
+
+    final before = sessionEarnings.displayCoins;
+    var earned = SessionEarningsUtils.ingestIncomingGiftChat(
+      tracker: sessionEarnings,
+      chatMessage: chatMessage,
+      giftCatalog: giftCatalog.toList(),
+      earnsGift: true,
+    );
+
+    if (earned <= 0) {
+      await _refreshSessionEarnings();
+      earned = sessionEarnings.displayCoins - before;
+    }
+
+    // Gift SVGA plays first (started by GiftChatCelebrationTracker); coin-fly
+    // starts only after that celebration dismisses.
+    await GiftCelebrationOverlay.waitUntilIdle();
+    if (!isHost.value || _exitReported) return;
+
+    _playHostCoinFlyAnimation(earned > 0 ? earned : 0);
+  }
+
+  void _playHostCoinFlyAnimation(int earnedCoins) {
+    if (!isHost.value) return;
+    final visualCount = earnedCoins > 0
+        ? (6 + (earnedCoins / 15).ceil()).clamp(6, 16)
+        : 10;
+    unawaited(
+      CoinFlyOverlay.show(
+        targetKey: sessionEarningsBadgeKey,
+        coinCount: visualCount,
+        earnedAmount: earnedCoins,
+        // Short settle after gift dialog closes — gift already finished.
+        delay: const Duration(milliseconds: 220),
+      ),
     );
   }
 
@@ -2726,6 +2764,7 @@ class LiveBroadcastController extends GetxController {
 
   @override
   void onClose() {
+    CoinFlyOverlay.dismiss();
     _stopSeatRefreshPolling();
     _stopSessionEarningsPolling();
     _unbindRoomBackgroundSocket();
