@@ -156,17 +156,33 @@ abstract final class SessionEarningsUtils {
     return null;
   }
 
-  static String formatAmount(int value) {
+  /// Compact amount for tight pills (app bar badges, call chips).
+  static String formatAmountForPill(int value) {
     if (value >= 1000000) {
       final millions = value / 1000000;
       return '${millions >= 10 ? millions.round() : millions.toStringAsFixed(1)}M';
     }
+    if (value >= 10000) {
+      return '${(value / 1000).round()}k';
+    }
     if (value >= 1000) {
       final thousands = value / 1000;
-      return '${thousands >= 10 ? thousands.round() : thousands.toStringAsFixed(1)}k';
+      return thousands == thousands.roundToDouble()
+          ? '${thousands.round()}k'
+          : '${thousands.toStringAsFixed(1)}k';
     }
     return value.toString();
   }
+
+  /// Readable amount for wider banners (commas, no abbreviation under 100k).
+  static String formatAmountForBanner(int value) {
+    if (value >= 100000) {
+      return formatAmountForPill(value);
+    }
+    return formatLedgerAmount(value);
+  }
+
+  static String formatAmount(int value) => formatAmountForPill(value);
 
   static Map<String, dynamic> _asMap(dynamic value) {
     if (value is Map<String, dynamic>) return value;

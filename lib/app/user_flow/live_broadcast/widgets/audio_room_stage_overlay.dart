@@ -647,81 +647,91 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
           ],
         ),
         constraints: BoxConstraints(minHeight: compact ? 58 : 64),
-        child: Row(
-          children: [
-            _CircleButton(
-              icon: Icons.arrow_back_ios_new_rounded,
-              onTap: controller.leaveRoom,
-              compact: compact,
-              filled: false,
-            ),
-            Spacing.h8,
-            AppUserAvatar(
-              name: controller.hostName.value,
-              imageUrl: controller.hostAvatarUrl.value,
-              size: compact ? 40 : 44,
-              border: Border.all(color: kColorWhite, width: 1.5),
-            ),
-            Spacing.h10,
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SemiBoldText(
-                    text: title,
-                    fontSize: compact
-                        ? TextStyles.k14FontSize
-                        : TextStyles.k16FontSize,
-                    color: AudioRoomStageOverlay._ink,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final earningsMaxWidth = (constraints.maxWidth * 0.17).clamp(
+              52.0,
+              compact ? 64.0 : 72.0,
+            );
+
+            return Row(
+              children: [
+                _CircleButton(
+                  icon: Icons.arrow_back_ios_new_rounded,
+                  onTap: controller.leaveRoom,
+                  compact: compact,
+                  filled: false,
+                ),
+                Spacing.h8,
+                AppUserAvatar(
+                  name: controller.hostName.value,
+                  imageUrl: controller.hostAvatarUrl.value,
+                  size: compact ? 40 : 44,
+                  border: Border.all(color: kColorWhite, width: 1.5),
+                ),
+                Spacing.h10,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SemiBoldText(
+                        text: title,
+                        fontSize: compact
+                            ? TextStyles.k14FontSize
+                            : TextStyles.k16FontSize,
+                        color: AudioRoomStageOverlay._ink,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Spacing.v2,
+                      AppText(
+                        text: 'Room Id : ${roomId.isEmpty ? '--' : roomId}',
+                        fontSize: compact
+                            ? TextStyles.k10FontSize
+                            : TextStyles.k12FontSize,
+                        color: kColorWhite.withValues(alpha: 0.82),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
-                  Spacing.v2,
-                  AppText(
-                    text: 'Room Id : ${roomId.isEmpty ? '--' : roomId}',
-                    fontSize: compact
-                        ? TextStyles.k10FontSize
-                        : TextStyles.k12FontSize,
-                    color: kColorWhite.withValues(alpha: 0.82),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                ),
+                _CircleButton(
+                  icon: Icons.share_rounded,
+                  onTap: () => controller.shareRoom(),
+                  compact: compact,
+                ),
+                if (controller.canManageAudioRoomMembers) ...[
+                  Spacing.h8,
+                  _CircleButton(
+                    icon: Icons.wallpaper_rounded,
+                    onTap: controller.openRoomBackgroundSheet,
+                    compact: compact,
                   ),
                 ],
-              ),
-            ),
-            _CircleButton(
-              icon: Icons.share_rounded,
-              onTap: () => controller.shareRoom(),
-              compact: compact,
-            ),
-            if (controller.canManageAudioRoomMembers) ...[
-              Spacing.h8,
-              _CircleButton(
-                icon: Icons.wallpaper_rounded,
-                onTap: controller.openRoomBackgroundSheet,
-                compact: compact,
-              ),
-            ],
-            if (controller.isHost.value) ...[
-              Spacing.h8,
-              SessionEarningsBadge(
-                tracker: controller.sessionEarnings,
-                compact: compact,
-                icon: Icons.monetization_on_rounded,
-                iconColor: const Color(0xFFFFA10A),
-              ),
-            ],
-            if (controller.isHost.value) ...[
-              Spacing.h8,
-              _CircleButton(
-                icon: Icons.power_settings_new_rounded,
-                onTap: controller.confirmEndRoom,
-                compact: compact,
-                iconColor: const Color(0xFFFF3B5C),
-              ),
-            ],
-          ],
+                if (controller.isHost.value) ...[
+                  Spacing.h8,
+                  SessionEarningsBadge(
+                    tracker: controller.sessionEarnings,
+                    compact: compact,
+                    maxWidth: earningsMaxWidth,
+                    icon: Icons.monetization_on_rounded,
+                    iconColor: const Color(0xFFFFA10A),
+                  ),
+                ],
+                if (controller.isHost.value) ...[
+                  Spacing.h8,
+                  _CircleButton(
+                    icon: Icons.power_settings_new_rounded,
+                    onTap: controller.confirmEndRoom,
+                    compact: compact,
+                    iconColor: const Color(0xFFFF3B5C),
+                  ),
+                ],
+              ],
+            );
+          },
         ),
       );
     });

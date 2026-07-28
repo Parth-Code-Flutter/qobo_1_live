@@ -169,14 +169,14 @@ class ChatVoiceCallController extends GetxController {
   String get billingAmountLabel {
     if (!hasPeerJoined.value) return '0';
     if (isCaller.value) {
-      return '-${formatLedgerAmount(estimatedCoinDelta)}';
+      return '-${SessionEarningsUtils.formatAmountForPill(estimatedCoinDelta)}';
     }
-    return '+${formatLedgerAmount(sessionTotalCoinsEarned)}';
+    return '+${SessionEarningsUtils.formatAmountForPill(sessionTotalCoinsEarned)}';
   }
 
   String get sessionEarningsSubtitle => isCaller.value
-      ? 'Remaining ${formatLedgerAmount(estimatedRemainingCoins)}'
-      : 'Session ${formatLedgerAmount(sessionTotalCoinsEarned)}';
+      ? 'Remaining ${SessionEarningsUtils.formatAmountForPill(estimatedRemainingCoins)}'
+      : 'Session ${SessionEarningsUtils.formatAmountForPill(sessionTotalCoinsEarned)}';
 
   void onCallUserEntered(String userId) {
     final rawEnteredId = userId.trim();

@@ -1096,21 +1096,27 @@ class _CoinsPanel extends StatelessWidget {
           ),
           Spacing.v2,
           connected
-              ? Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.diamond_rounded,
-                      color: Colors.amber,
-                      size: 14,
-                    ),
-                    Spacing.h2,
-                    SemiBoldText(
-                      text: controller.billingAmountLabel,
-                      fontSize: TextStyles.k12FontSize,
-                      color: kColorWhite,
-                    ),
-                  ],
+              ? FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.diamond_rounded,
+                        color: Colors.amber,
+                        size: 14,
+                      ),
+                      Spacing.h2,
+                      SemiBoldText(
+                        text: controller.billingAmountLabel,
+                        fontSize: TextStyles.k12FontSize,
+                        color: kColorWhite,
+                        maxLines: 1,
+                        overflow: TextOverflow.clip,
+                      ),
+                    ],
+                  ),
                 )
               : const SemiBoldText(
                   text: 'No charge',

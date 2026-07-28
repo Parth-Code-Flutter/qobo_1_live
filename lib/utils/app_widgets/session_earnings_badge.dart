@@ -13,6 +13,7 @@ class SessionEarningsBadge extends StatelessWidget {
     super.key,
     required this.tracker,
     this.compact = false,
+    this.maxWidth,
     this.icon = Icons.monetization_on_rounded,
     this.iconColor,
     this.textColor,
@@ -22,43 +23,62 @@ class SessionEarningsBadge extends StatelessWidget {
 
   final SessionEarningsTracker tracker;
   final bool compact;
+  /// Caps pill width so large counts never push sibling header actions off-screen.
+  final double? maxWidth;
   final IconData icon;
   final Color? iconColor;
   final Color? textColor;
   final Color? backgroundColor;
   final Color? borderColor;
 
+  double get _defaultMaxWidth => compact ? 60 : 68;
+
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final amount = SessionEarningsUtils.formatAmount(tracker.displayCoins);
-      return Container(
-        height: compact ? 36 : 42,
-        padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 12),
-        decoration: BoxDecoration(
-          color: backgroundColor ?? Colors.black.withValues(alpha: 0.22),
-          borderRadius: BorderRadius.circular(compact ? 10 : 12),
-          border: Border.all(
-            color: borderColor ?? kColorWhite.withValues(alpha: 0.08),
+      final amount = SessionEarningsUtils.formatAmountForPill(
+        tracker.displayCoins,
+      );
+      final iconSize = compact ? 14.0 : 16.0;
+      final fontSize = compact
+          ? TextStyles.k10FontSize
+          : TextStyles.k12FontSize;
+
+      return ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth ?? _defaultMaxWidth),
+        child: Container(
+          height: compact ? 36 : 42,
+          padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 10),
+          decoration: BoxDecoration(
+            color: backgroundColor ?? Colors.black.withValues(alpha: 0.22),
+            borderRadius: BorderRadius.circular(compact ? 10 : 12),
+            border: Border.all(
+              color: borderColor ?? kColorWhite.withValues(alpha: 0.08),
+            ),
           ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: compact ? 14 : 16,
-              color: iconColor ?? const Color(0xFFFFA10A),
+          alignment: Alignment.center,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.center,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
+                  size: iconSize,
+                  color: iconColor ?? const Color(0xFFFFA10A),
+                ),
+                const SizedBox(width: 4),
+                AppText(
+                  text: amount,
+                  fontSize: fontSize,
+                  color: textColor ?? kColorWhite,
+                  maxLines: 1,
+                  overflow: TextOverflow.clip,
+                ),
+              ],
             ),
-            Spacing.h4,
-            AppText(
-              text: amount,
-              fontSize: compact
-                  ? TextStyles.k10FontSize
-                  : TextStyles.k12FontSize,
-              color: textColor ?? kColorWhite,
-            ),
-          ],
+          ),
         ),
       );
     });
@@ -143,7 +163,7 @@ class SessionEarningsHostBanner extends StatelessWidget {
                     children: [
                       Flexible(
                         child: SemiBoldText(
-                          text: SessionEarningsUtils.formatAmount(
+                          text: SessionEarningsUtils.formatAmountForBanner(
                             tracker.displayCoins,
                           ),
                           fontSize: compact
