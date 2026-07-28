@@ -921,49 +921,399 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
   @override
   Widget build(BuildContext context) {
     final actions = _buildActions(context);
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.75;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(
-        10,
-        0,
-        10,
-        MediaQuery.paddingOf(context).bottom + 10,
-      ),
-      child: _OrnateMemberProfileCard(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
+      padding: EdgeInsets.fromLTRB(10, 0, 10, bottomInset + 10),
+      child: SizedBox(
+        height: maxHeight,
+        child: _OrnateMemberProfileCard(
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             children: [
-              _dragHandle(),
-              Spacing.v10,
-              _avatarHero(),
-              Spacing.v8,
-              _roleRibbon(),
-              Spacing.v10,
-              _nameRow(),
-              Spacing.v8,
-              _idRow(context),
-              Spacing.v10,
-              _tagPills(),
-              Spacing.v12,
-              _collectionRow(
-                title: 'Badge',
-                background: const Color(0xFF4A4A52),
-                child: _badgeIcons(),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: SizedBox(height: 4),
               ),
-              Spacing.v10,
-              _collectionRow(
-                title: 'Room',
-                background: const Color(0xFFF08FA8),
-                child: _roomStatsRow(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                child: _dragHandle(),
               ),
-              Spacing.v12,
-              _actionsGrid(actions),
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _profileStage(),
+                      Spacing.v8,
+                      _roleRibbon(),
+                      Spacing.v12,
+                      _identityBlock(context),
+                      Spacing.v12,
+                      _badgeShowcase(),
+                      Spacing.v10,
+                      _collectionRow(
+                        title: 'Room',
+                        background: const Color(0xFFF08FA8),
+                        child: _roomStatsRow(),
+                      ),
+                      Spacing.v16,
+                      _actionsGrid(actions),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  /// Center avatar with icon-only floating orbs (no truncated labels).
+  Widget _profileStage() {
+    final pattiLabel = VipEntranceOverlay.formatPattiLabel(seat.pattiStyle);
+    final orbs = <_ProfileOrbData>[
+      if (seat.isCoinsSeller)
+        const _ProfileOrbData(
+          tip: 'Coin Seller',
+          icon: Icons.storefront_rounded,
+          colors: [Color(0xFFFFE082), Color(0xFFFF8F00)],
+        ),
+      if (seat.isVip)
+        const _ProfileOrbData(
+          tip: 'VIP Member',
+          icon: Icons.workspace_premium_rounded,
+          colors: [Color(0xFFFFE0B2), Color(0xFFFF6B35)],
+        ),
+      if (seat.isAdmin)
+        const _ProfileOrbData(
+          tip: 'Room Admin',
+          icon: Icons.shield_rounded,
+          colors: [Color(0xFFB794FF), Color(0xFF6A3DFF)],
+        ),
+      if (seat.seatNo > 0)
+        _ProfileOrbData(
+          tip: 'Seat ${seat.seatNo}',
+          icon: Icons.event_seat_rounded,
+          colors: const [Color(0xFFB2EBF2), Color(0xFF1A9FD4)],
+        ),
+      if (pattiLabel.isNotEmpty)
+        _ProfileOrbData(
+          tip: '$pattiLabel Patti',
+          icon: Icons.auto_awesome_rounded,
+          colors: const [Color(0xFFFFF59D), Color(0xFFD4AF37)],
+        ),
+      if (seat.isMuted)
+        const _ProfileOrbData(
+          tip: 'Muted',
+          icon: Icons.mic_off_rounded,
+          colors: [Color(0xFFFFCDD2), Color(0xFFC62828)],
+        ),
+    ];
+
+    // Place up to 4 orbs around the frame.
+    final topLeft = orbs.isNotEmpty ? orbs[0] : null;
+    final topRight = orbs.length > 1 ? orbs[1] : null;
+    final bottomLeft = orbs.length > 2 ? orbs[2] : null;
+    final bottomRight = orbs.length > 3 ? orbs[3] : null;
+
+    return SizedBox(
+      height: 168,
+      width: double.infinity,
+      child: Stack(
+        alignment: Alignment.center,
+        clipBehavior: Clip.none,
+        children: [
+          _PremiumAvatarFrame(
+            name: seat.name,
+            imageUrl: seat.avatarUrl,
+            frameUrl: seat.avatarFrameUrl,
+            muted: seat.isMuted,
+            isHost: seat.isHost,
+            seatNo: seat.seatNo,
+            frameSize: 132,
+            avatarSize: 74,
+          ),
+          if (topLeft != null)
+            Positioned(left: 8, top: 10, child: _profileOrb(topLeft)),
+          if (topRight != null)
+            Positioned(right: 8, top: 10, child: _profileOrb(topRight)),
+          if (bottomLeft != null)
+            Positioned(left: 18, bottom: 8, child: _profileOrb(bottomLeft)),
+          if (bottomRight != null)
+            Positioned(right: 18, bottom: 8, child: _profileOrb(bottomRight)),
+        ],
+      ),
+    );
+  }
+
+  Widget _profileOrb(_ProfileOrbData orb) {
+    return Tooltip(
+      message: orb.tip,
+      triggerMode: TooltipTriggerMode.tap,
+      decoration: BoxDecoration(
+        color: const Color(0xFF2A1A12),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      textStyle: const TextStyle(color: kColorWhite, fontSize: 11),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(colors: orb.colors),
+          border: Border.all(color: Colors.white, width: 1.6),
+          boxShadow: [
+            BoxShadow(
+              color: orb.colors.last.withValues(alpha: 0.4),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Icon(orb.icon, size: 18, color: kColorWhite),
+      ),
+    );
+  }
+
+  Widget _identityBlock(BuildContext context) {
+    return Column(
+      children: [
+        SemiBoldText(
+          text: seat.name,
+          fontSize: TextStyles.k18FontSize,
+          color: _ink,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          align: TextAlign.center,
+        ),
+        Spacing.v8,
+        Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _metaPill(
+              icon: Icons.info_outline_rounded,
+              label: 'User ID',
+              accent: const Color(0xFFFF4DC4),
+              onTap: () => _showUserIdCard(context),
+            ),
+            if (seat.seatNo > 0)
+              _metaPill(
+                icon: Icons.event_seat_rounded,
+                label: 'Seat ${seat.seatNo}',
+                accent: const Color(0xFF1A9FD4),
+              ),
+            if (seat.diamonds > 0)
+              _metaPill(
+                icon: Icons.diamond_rounded,
+                label: '${seat.diamonds}',
+                accent: const Color(0xFF2ED3FF),
+              ),
+            if (seat.isCoinsSeller)
+              _metaPill(
+                icon: Icons.storefront_rounded,
+                label: 'Seller',
+                accent: const Color(0xFFFF8F00),
+              ),
+            if (seat.isVip)
+              _metaPill(
+                icon: Icons.workspace_premium_rounded,
+                label: 'VIP',
+                accent: _goldDeep,
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _metaPill({
+    required IconData icon,
+    required String label,
+    required Color accent,
+    VoidCallback? onTap,
+  }) {
+    final child = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: Colors.white.withValues(alpha: 0.55),
+        border: Border.all(color: accent.withValues(alpha: 0.35)),
+        boxShadow: [
+          BoxShadow(
+            color: accent.withValues(alpha: 0.12),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: accent),
+          Spacing.h4,
+          SemiBoldText(
+            text: label,
+            fontSize: TextStyles.k10FontSize,
+            color: _ink,
+          ),
+        ],
+      ),
+    );
+
+    if (onTap == null) return child;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: child,
+      ),
+    );
+  }
+
+  void _showUserIdCard(BuildContext context) {
+    final id = seat.userId.trim();
+    if (id.isEmpty) {
+      AppToast.showError(context, 'No user ID available');
+      return;
+    }
+
+    Get.dialog<void>(
+      Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 36),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF2A1638), Color(0xFF140C22)],
+            ),
+            border: Border.all(color: _goldBright.withValues(alpha: 0.45)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.35),
+                blurRadius: 24,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFFFF4DC4).withValues(alpha: 0.18),
+                      border: Border.all(
+                        color: const Color(0xFFFF4DC4).withValues(alpha: 0.45),
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.badge_rounded,
+                      size: 18,
+                      color: Color(0xFFFF4DC4),
+                    ),
+                  ),
+                  Spacing.h10,
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SemiBoldText(
+                          text: 'User ID',
+                          fontSize: TextStyles.k14FontSize,
+                          color: kColorWhite,
+                        ),
+                        AppText(
+                          text: 'Tap copy to share this profile',
+                          fontSize: TextStyles.k10FontSize,
+                          color: Colors.white54,
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: Get.back,
+                    icon: const Icon(Icons.close_rounded, color: Colors.white54),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ],
+              ),
+              Spacing.v12,
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                ),
+                child: SelectableText(
+                  id,
+                  style: const TextStyle(
+                    color: kColorWhite,
+                    fontSize: 12,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+              Spacing.v12,
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFF8F00), Color(0xFFFF4081)],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        Clipboard.setData(ClipboardData(text: id));
+                        Get.back();
+                        AppToast.showSuccess(context, 'ID copied');
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: const Center(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.copy_rounded, color: kColorWhite, size: 16),
+                            SizedBox(width: 6),
+                            SemiBoldText(
+                              text: 'Copy ID',
+                              fontSize: TextStyles.k12FontSize,
+                              color: kColorWhite,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      barrierColor: Colors.black.withValues(alpha: 0.55),
     );
   }
 
@@ -1036,21 +1386,6 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
     );
   }
 
-  Widget _avatarHero() {
-    return Center(
-      child: _PremiumAvatarFrame(
-        name: seat.name,
-        imageUrl: seat.avatarUrl,
-        frameUrl: seat.avatarFrameUrl,
-        muted: seat.isMuted,
-        isHost: seat.isHost,
-        seatNo: seat.seatNo,
-        frameSize: 148,
-        avatarSize: 82,
-      ),
-    );
-  }
-
   Widget _roleRibbon() {
     final isCoinSeller = seat.isCoinsSeller;
     final label = seat.isHost
@@ -1107,217 +1442,33 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
     );
   }
 
-  Widget _nameRow() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        if (seat.isCoinsSeller) ...[
-          const Icon(
-            Icons.storefront_rounded,
-            size: 18,
-            color: Color(0xFFFF8F00),
-          ),
-          Spacing.h4,
-        ] else if (seat.isVip) ...[
-          Icon(Icons.workspace_premium_rounded, size: 18, color: _goldDeep),
-          Spacing.h4,
-        ],
-        Flexible(
-          child: SemiBoldText(
-            text: seat.name,
-            fontSize: TextStyles.k18FontSize,
-            color: _ink,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            align: TextAlign.center,
-          ),
-        ),
-        if (seat.isAdmin) ...[
-          Spacing.h4,
-          Icon(Icons.shield_rounded, size: 17, color: const Color(0xFF7B5CFF)),
-        ],
-        if (seat.isVip && seat.isCoinsSeller) ...[
-          Spacing.h4,
-          Icon(Icons.workspace_premium_rounded, size: 17, color: _goldDeep),
-        ],
-        if (seat.diamonds > 0) ...[
-          Spacing.h4,
-          Icon(Icons.diamond_rounded, size: 16, color: const Color(0xFF2ED3FF)),
-        ],
-      ],
-    );
-  }
-
-  Widget _idRow(BuildContext context) {
-    final id = seat.userId.trim();
-    final displayId = id.isEmpty ? '—' : id;
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Icon(Icons.badge_rounded, size: 16, color: Color(0xFFFF4DC4)),
-        Spacing.h4,
-        Flexible(
-          child: AppText(
-            text: displayId,
-            fontSize: TextStyles.k12FontSize,
-            color: _ink.withValues(alpha: 0.82),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        if (id.isNotEmpty) ...[
-          Spacing.h4,
-          GestureDetector(
-            onTap: () {
-              Clipboard.setData(ClipboardData(text: id));
-              AppToast.showSuccess(context, 'ID copied');
-            },
-            child: Icon(
-              Icons.copy_rounded,
-              size: 15,
-              color: _ink.withValues(alpha: 0.55),
-            ),
-          ),
-        ],
-        Spacing.h8,
-        _levelMedallion(seat.diamonds),
-        if (seat.seatNo > 0) ...[
-          Spacing.h6,
-          _levelMedallion(seat.seatNo, accent: const Color(0xFF7B5CFF)),
-        ],
-      ],
-    );
-  }
-
-  Widget _levelMedallion(int value, {Color accent = const Color(0xFFFFB347)}) {
-    return Container(
-      width: 28,
-      height: 28,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [accent, accent.withValues(alpha: 0.72)],
-        ),
-        border: Border.all(color: _goldChampagne, width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: accent.withValues(alpha: 0.35),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      alignment: Alignment.center,
-      child: SemiBoldText(
-        text: '$value',
-        fontSize: TextStyles.k10FontSize,
-        color: kColorWhite,
-      ),
-    );
-  }
-
-  Widget _tagPills() {
-    final pattiLabel = VipEntranceOverlay.formatPattiLabel(seat.pattiStyle);
-    final tags = <_MemberTagPill>[
-      if (seat.isAdmin)
-        const _MemberTagPill(
-          label: 'Admin',
-          colors: [Color(0xFF9C6BFF), Color(0xFF6A3DFF)],
-          icon: Icons.shield_rounded,
-        ),
-      if (seat.isCoinsSeller)
-        const _MemberTagPill(
-          label: 'Coin Seller',
-          colors: [Color(0xFFFFC107), Color(0xFFFF8F00)],
-          icon: Icons.storefront_rounded,
-        ),
-      if (seat.isVip)
-        const _MemberTagPill(
-          label: 'VIP',
-          colors: [Color(0xFFFFB347), Color(0xFFFF6B35)],
-          icon: Icons.workspace_premium_rounded,
-        ),
-      if (pattiLabel.isNotEmpty)
-        _MemberTagPill(
-          label: '$pattiLabel Patti',
-          colors: const [Color(0xFFFFDF00), Color(0xFFD4AF37)],
-          icon: Icons.auto_awesome_rounded,
-        ),
-      if (seat.isMuted)
-        const _MemberTagPill(
-          label: 'Muted',
-          colors: [Color(0xFFFF6B6B), Color(0xFFC62828)],
-          icon: Icons.mic_off_rounded,
-        ),
-      if (seat.seatNo > 0)
-        _MemberTagPill(
-          label: 'Seat ${seat.seatNo}',
-          colors: const [Color(0xFF2ED3FF), Color(0xFF1A9FD4)],
-          icon: Icons.event_seat_rounded,
-        ),
-    ];
-
-    if (tags.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Wrap(
-      alignment: WrapAlignment.center,
-      spacing: 8,
-      runSpacing: 8,
-      children: tags.map(_tagPill).toList(),
-    );
-  }
-
-  Widget _tagPill(_MemberTagPill tag) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: LinearGradient(colors: tag.colors),
-        boxShadow: [
-          BoxShadow(
-            color: tag.colors.first.withValues(alpha: 0.28),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(tag.icon, size: 14, color: kColorWhite),
-          Spacing.h4,
-          SemiBoldText(
-            text: tag.label,
-            fontSize: TextStyles.k10FontSize,
-            color: kColorWhite,
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _collectionRow({
     required String title,
     required Color background,
     required Widget child,
+    Color? borderColor,
   }) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       decoration: BoxDecoration(
-        color: background,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            background,
+            Color.lerp(background, Colors.black, 0.18) ?? background,
+          ],
+        ),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.22)),
+        border: Border.all(
+          color: (borderColor ?? kColorWhite).withValues(alpha: 0.28),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
+            color: (borderColor ?? Colors.black).withValues(alpha: 0.16),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -1348,52 +1499,238 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
     );
   }
 
-  Widget _badgeIcons() {
-    final badges = <Widget>[
+  Widget _badgeShowcase() {
+    final pattiLabel = VipEntranceOverlay.formatPattiLabel(seat.pattiStyle);
+    final medals = <_BadgeMedalData>[
       if (seat.isAdmin)
-        _badgeIcon(Icons.shield_rounded, const Color(0xFF7B5CFF)),
+        const _BadgeMedalData(
+          label: 'Admin',
+          icon: Icons.shield_rounded,
+          colors: [Color(0xFFB794FF), Color(0xFF7B5CFF), Color(0xFF5A2FE0)],
+        ),
       if (seat.isCoinsSeller)
-        _badgeIcon(Icons.storefront_rounded, const Color(0xFFFFC107)),
+        const _BadgeMedalData(
+          label: 'Seller',
+          icon: Icons.storefront_rounded,
+          colors: [Color(0xFFFFE082), Color(0xFFFFC107), Color(0xFFFF8F00)],
+        ),
       if (seat.isVip)
-        _badgeIcon(Icons.workspace_premium_rounded, const Color(0xFFFFB347)),
-      if (seat.pattiStyle.trim().isNotEmpty)
-        _badgeIcon(Icons.auto_awesome_rounded, const Color(0xFFFFDF00)),
+        const _BadgeMedalData(
+          label: 'VIP',
+          icon: Icons.workspace_premium_rounded,
+          colors: [Color(0xFFFFE0B2), Color(0xFFFFB347), Color(0xFFFF6B35)],
+        ),
+      if (pattiLabel.isNotEmpty)
+        _BadgeMedalData(
+          label: pattiLabel,
+          icon: Icons.auto_awesome_rounded,
+          colors: const [Color(0xFFFFF59D), Color(0xFFFFDF00), Color(0xFFD4AF37)],
+        ),
       if (seat.isMuted)
-        _badgeIcon(Icons.mic_off_rounded, const Color(0xFFFF6B6B))
+        const _BadgeMedalData(
+          label: 'Muted',
+          icon: Icons.mic_off_rounded,
+          colors: [Color(0xFFFFCDD2), Color(0xFFFF6B6B), Color(0xFFC62828)],
+        )
       else
-        _badgeIcon(Icons.mic_rounded, const Color(0xFF2FE56E)),
+        const _BadgeMedalData(
+          label: 'Live Mic',
+          icon: Icons.mic_rounded,
+          colors: [Color(0xFFB9F6CA), Color(0xFF2FE56E), Color(0xFF00C853)],
+        ),
       if (seat.diamonds > 0)
-        _badgeIcon(Icons.diamond_rounded, const Color(0xFF2ED3FF)),
+        _BadgeMedalData(
+          label: 'x${seat.diamonds}',
+          icon: Icons.diamond_rounded,
+          colors: const [Color(0xFFB2EBF2), Color(0xFF2ED3FF), Color(0xFF1A9FD4)],
+        ),
     ];
 
-    if (badges.isEmpty) {
-      return AppText(
-        text: 'No badges yet',
-        fontSize: TextStyles.k10FontSize,
-        color: kColorWhite.withValues(alpha: 0.75),
-      );
-    }
-
-    return Row(
-      children: [
-        for (var i = 0; i < badges.length; i++) ...[
-          if (i > 0) Spacing.h8,
-          badges[i],
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF2A1638).withValues(alpha: 0.92),
+            const Color(0xFF140C22).withValues(alpha: 0.95),
+            const Color(0xFF1A1030),
+          ],
+        ),
+        border: Border.all(color: _goldBright.withValues(alpha: 0.45)),
+        boxShadow: [
+          BoxShadow(
+            color: _goldDeep.withValues(alpha: 0.22),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
         ],
-      ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFFE082), Color(0xFFFF8F00)],
+                  ),
+                  border: Border.all(color: Colors.white, width: 1.2),
+                ),
+                child: const Icon(
+                  Icons.emoji_events_rounded,
+                  size: 15,
+                  color: kColorWhite,
+                ),
+              ),
+              Spacing.h8,
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SemiBoldText(
+                      text: 'Badge Showcase',
+                      fontSize: TextStyles.k12FontSize,
+                      color: kColorWhite,
+                    ),
+                    AppText(
+                      text: 'Collected honors on this profile',
+                      fontSize: TextStyles.k10FontSize,
+                      color: Colors.white54,
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _goldBright.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: _goldBright.withValues(alpha: 0.4)),
+                ),
+                child: SemiBoldText(
+                  text: '${medals.length}',
+                  fontSize: TextStyles.k10FontSize,
+                  color: _goldChampagne,
+                ),
+              ),
+            ],
+          ),
+          Spacing.v12,
+          if (medals.isEmpty)
+            const AppText(
+              text: 'No badges unlocked yet',
+              fontSize: TextStyles.k10FontSize,
+              color: Colors.white54,
+            )
+          else
+            SizedBox(
+              height: 108,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: medals.length,
+                separatorBuilder: (_, __) => Spacing.h10,
+                itemBuilder: (_, index) =>
+                    _badgeMedalCard(medals[index], featured: index == 0),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
-  Widget _badgeIcon(IconData icon, Color color) {
-    return Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: kColorWhite.withValues(alpha: 0.14),
-        border: Border.all(color: color.withValues(alpha: 0.65)),
+  Widget _badgeMedalCard(_BadgeMedalData medal, {bool featured = false}) {
+    final accent = medal.colors.length > 1 ? medal.colors[1] : medal.colors.first;
+    final size = featured ? 54.0 : 48.0;
+
+    return SizedBox(
+      width: featured ? 78 : 70,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Ribbon
+          Container(
+            width: 22,
+            height: 10,
+            decoration: BoxDecoration(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  accent.withValues(alpha: 0.95),
+                  accent.withValues(alpha: 0.55),
+                ],
+              ),
+            ),
+          ),
+          Transform.translate(
+            offset: const Offset(0, -2),
+            child: Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: SweepGradient(
+                  colors: [
+                    medal.colors.first,
+                    accent,
+                    medal.colors.last,
+                    medal.colors.first,
+                  ],
+                ),
+                border: Border.all(color: Colors.white, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: accent.withValues(alpha: 0.55),
+                    blurRadius: 16,
+                    spreadRadius: 1,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Container(
+                margin: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      Colors.white.withValues(alpha: 0.35),
+                      accent.withValues(alpha: 0.85),
+                      medal.colors.last,
+                    ],
+                  ),
+                ),
+                child: Icon(medal.icon, size: featured ? 22 : 20, color: kColorWhite),
+              ),
+            ),
+          ),
+          Spacing.v6,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              color: Colors.white.withValues(alpha: 0.08),
+              border: Border.all(color: accent.withValues(alpha: 0.35)),
+            ),
+            child: SemiBoldText(
+              text: medal.label,
+              fontSize: TextStyles.k10FontSize,
+              color: kColorWhite,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              align: TextAlign.center,
+            ),
+          ),
+        ],
       ),
-      child: Icon(icon, size: 18, color: color),
     );
   }
 
@@ -1622,16 +1959,28 @@ class _SeatActionButton extends StatelessWidget {
   }
 }
 
-class _MemberTagPill {
-  const _MemberTagPill({
-    required this.label,
-    required this.colors,
+class _ProfileOrbData {
+  const _ProfileOrbData({
+    required this.tip,
     required this.icon,
+    required this.colors,
+  });
+
+  final String tip;
+  final IconData icon;
+  final List<Color> colors;
+}
+
+class _BadgeMedalData {
+  const _BadgeMedalData({
+    required this.label,
+    required this.icon,
+    required this.colors,
   });
 
   final String label;
-  final List<Color> colors;
   final IconData icon;
+  final List<Color> colors;
 }
 
 /// Ornate red/gold profile card shell — matches premium room-member reference.
@@ -1737,7 +2086,7 @@ class _OrnateMemberProfileCard extends StatelessWidget {
                   bottom: 28,
                   child: _sidePillar(),
                 ),
-                child,
+                Positioned.fill(child: child),
               ],
             ),
           ),
