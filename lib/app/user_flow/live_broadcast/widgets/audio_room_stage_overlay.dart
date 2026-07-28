@@ -1052,35 +1052,56 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
   }
 
   Widget _roleRibbon() {
+    final isCoinSeller = seat.isCoinsSeller;
     final label = seat.isHost
         ? 'Room Host'
         : seat.isAdmin
         ? 'Room Admin'
+        : isCoinSeller
+        ? 'Coin Seller'
         : seat.isVip
         ? 'VIP Member'
         : 'Room Member';
+
+    final colors = isCoinSeller && !seat.isHost && !seat.isAdmin
+        ? const [Color(0xFFFF8F00), Color(0xFFFF4081), Color(0xFFFF8F00)]
+        : const [Color(0xFFB71C1C), Color(0xFF8E1B24), Color(0xFFB71C1C)];
 
     return Center(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 5),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFFB71C1C), Color(0xFF8E1B24), Color(0xFFB71C1C)],
-          ),
+          gradient: LinearGradient(colors: colors),
           borderRadius: BorderRadius.circular(6),
           border: Border.all(color: _goldBright, width: 1.2),
           boxShadow: [
             BoxShadow(
-              color: _frameRed.withValues(alpha: 0.35),
+              color: (isCoinSeller && !seat.isHost && !seat.isAdmin
+                      ? const Color(0xFFFF8F00)
+                      : _frameRed)
+                  .withValues(alpha: 0.35),
               blurRadius: 8,
               offset: const Offset(0, 3),
             ),
           ],
         ),
-        child: SemiBoldText(
-          text: label,
-          fontSize: TextStyles.k12FontSize,
-          color: _goldChampagne,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isCoinSeller && !seat.isHost && !seat.isAdmin) ...[
+              const Icon(
+                Icons.storefront_rounded,
+                size: 14,
+                color: _goldChampagne,
+              ),
+              Spacing.h4,
+            ],
+            SemiBoldText(
+              text: label,
+              fontSize: TextStyles.k12FontSize,
+              color: _goldChampagne,
+            ),
+          ],
         ),
       ),
     );
@@ -1090,7 +1111,14 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        if (seat.isVip) ...[
+        if (seat.isCoinsSeller) ...[
+          const Icon(
+            Icons.storefront_rounded,
+            size: 18,
+            color: Color(0xFFFF8F00),
+          ),
+          Spacing.h4,
+        ] else if (seat.isVip) ...[
           Icon(Icons.workspace_premium_rounded, size: 18, color: _goldDeep),
           Spacing.h4,
         ],
@@ -1107,6 +1135,10 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
         if (seat.isAdmin) ...[
           Spacing.h4,
           Icon(Icons.shield_rounded, size: 17, color: const Color(0xFF7B5CFF)),
+        ],
+        if (seat.isVip && seat.isCoinsSeller) ...[
+          Spacing.h4,
+          Icon(Icons.workspace_premium_rounded, size: 17, color: _goldDeep),
         ],
         if (seat.diamonds > 0) ...[
           Spacing.h4,
@@ -1195,6 +1227,12 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
           label: 'Admin',
           colors: [Color(0xFF9C6BFF), Color(0xFF6A3DFF)],
           icon: Icons.shield_rounded,
+        ),
+      if (seat.isCoinsSeller)
+        const _MemberTagPill(
+          label: 'Coin Seller',
+          colors: [Color(0xFFFFC107), Color(0xFFFF8F00)],
+          icon: Icons.storefront_rounded,
         ),
       if (seat.isVip)
         const _MemberTagPill(
@@ -1314,6 +1352,8 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
     final badges = <Widget>[
       if (seat.isAdmin)
         _badgeIcon(Icons.shield_rounded, const Color(0xFF7B5CFF)),
+      if (seat.isCoinsSeller)
+        _badgeIcon(Icons.storefront_rounded, const Color(0xFFFFC107)),
       if (seat.isVip)
         _badgeIcon(Icons.workspace_premium_rounded, const Color(0xFFFFB347)),
       if (seat.pattiStyle.trim().isNotEmpty)

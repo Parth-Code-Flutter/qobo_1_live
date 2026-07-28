@@ -89,14 +89,18 @@ class AudioRoomSeatModel {
     final isCoinsSeller =
         _readBool(raw, const [
           'isCoinsSeller',
+          'isCoinSeller',
           'is_coins_seller',
+          'is_coin_seller',
           'coinsSeller',
           'coins_seller',
         ]) ||
         (occupantMap != null &&
             _readBool(occupantMap, const [
               'isCoinsSeller',
+              'isCoinSeller',
               'is_coins_seller',
+              'is_coin_seller',
               'coinsSeller',
               'coins_seller',
             ]));
