@@ -77,6 +77,8 @@ dependencies:
   path_provider: ^2.1.5
   # Realtime follower alerts (`host_live_started`) from the backend Socket.IO server.
   socket_io_client: ^3.1.2
+  # Coin recharge checkout (Key ID only on device; secret stays on backend).
+  razorpay_flutter: ^1.4.5
 
 dev_dependencies:
   flutter_test:

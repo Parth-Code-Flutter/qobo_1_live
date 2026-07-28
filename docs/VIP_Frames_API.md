@@ -31,13 +31,14 @@ When a user successfully joins an audio room, video room, or live stream, the ba
     "user_id": "user-uuid",
     "user_name": "John Doe",
     "avatar": "https://api.qobo1live.com/uploads/profiles/...",
-    "vip_frame_url": "https://api.qobo1live.com/uploads/frames/vip_dragon.svga"
+    "vip_frame_url": "https://api.qobo1live.com/uploads/frames/vip_dragon.svga",
+    "patti_style": "golden"
   }
   ```
 - **Mobile Responsibility**:
   - Listen for the `vip_user_joined` socket event in audio, video, and live rooms.
-  - Also read `isVIP` + `vipFrameUrl` from `GET /api/room/seats` and play the entrance **once** when a VIP newly appears on a seat (same room session; not replayed for users already present when you join).
-  - When this event is received, display an animated VIP Entrance UI over the room (e.g. playing the SVGA frame animation, showing the user's name and avatar entering the room).
+  - Also read `isVIP` + `vipFrameUrl` + `pattiStyle` from `GET /api/room/seats` and play the entrance **once** when a VIP / custom-patti user newly appears on a seat (same room session; not replayed for users already present when you join).
+  - When this event is received, display an animated VIP Entrance UI over the room (SVGA when `vip_frame_url` is set, plus a patti style banner when `patti_style` is present). Overlay still shows for patti-only joins (no VIP frame).
 
 ## 3. Admin Panel Management
 Administrators can add VIP Frames through the **Avatar Frames** section of the Admin Panel. They just need to select **"VIP"** from the Category dropdown and upload the SVGA or image file, along with setting the price and duration. No extra configuration is needed on mobile.

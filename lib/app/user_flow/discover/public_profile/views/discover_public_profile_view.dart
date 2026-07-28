@@ -299,6 +299,16 @@ class DiscoverPublicProfileView
                         ),
                         Spacing.h8,
                       ],
+                      if (_pattiLabel(user.pattiStyle).isNotEmpty &&
+                          user.pattiStyle.trim().toLowerCase() !=
+                              'classic') ...[
+                        _chip(
+                          '${_pattiLabel(user.pattiStyle)} Patti',
+                          Icons.auto_awesome_rounded,
+                          accent: true,
+                        ),
+                        Spacing.h8,
+                      ],
                       if (user.isFavourite)
                         _chip(
                           'Favourite',
@@ -630,6 +640,14 @@ class DiscoverPublicProfileView
         colors: const [Color(0xFFFFD54F), Color(0xFFFF8F00)],
       ),
       _HighlightTile(
+        icon: Icons.auto_awesome_rounded,
+        label: 'Patti',
+        value: _pattiLabel(user.pattiStyle).isEmpty
+            ? 'Classic'
+            : _pattiLabel(user.pattiStyle),
+        colors: const [Color(0xFFFFDF00), Color(0xFFD4AF37)],
+      ),
+      _HighlightTile(
         icon: Icons.favorite_rounded,
         label: 'Connection',
         value: _connectionLabel(user),
@@ -786,6 +804,8 @@ class DiscoverPublicProfileView
       'isVip',
       'isFavourite',
       'isFavorite',
+      'pattiStyle',
+      'patti_style',
       'coins',
       'coinsPerSecond',
       'followersCount',
@@ -882,6 +902,16 @@ class DiscoverPublicProfileView
         ],
       ),
     );
+  }
+
+  String _pattiLabel(String style) {
+    final raw = style.trim();
+    if (raw.isEmpty) return '';
+    return raw
+        .split(RegExp(r'[_\s-]+'))
+        .where((p) => p.isNotEmpty)
+        .map((p) => '${p[0].toUpperCase()}${p.substring(1).toLowerCase()}')
+        .join(' ');
   }
 
   Widget _statPill(String value, String label, IconData icon) {

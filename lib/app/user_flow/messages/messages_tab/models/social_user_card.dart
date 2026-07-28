@@ -18,6 +18,7 @@ class SocialUserCard {
     this.canMessage = false,
     this.isVip = false,
     this.isFavourite = false,
+    this.pattiStyle = 'classic',
     this.coins = 0,
     this.coinsPerSecond = 0,
     this.followersCount = 0,
@@ -39,6 +40,9 @@ class SocialUserCard {
   final bool canMessage;
   final bool isVip;
   final bool isFavourite;
+
+  /// Entrance nameplate style (`classic` by default).
+  final String pattiStyle;
   final double coins;
   final double coinsPerSecond;
   final int followersCount;
@@ -74,6 +78,7 @@ class SocialUserCard {
       isFavourite: identical(isFavourite, _copyWithUnset)
           ? this.isFavourite
           : isFavourite as bool,
+      pattiStyle: pattiStyle,
       coins: coins,
       coinsPerSecond: coinsPerSecond,
       followersCount: followersCount ?? this.followersCount,
@@ -118,13 +123,21 @@ class SocialUserCard {
       isFollower: isFollower || isMutual,
       isMutual: isMutual,
       canMessage: apiCanMessage || isFollowing || isFollower || isMutual,
-      isVip: json['isVip'] == true,
+      isVip: json['isVip'] == true || json['isVIP'] == true,
       isFavourite: json['isFavourite'] == true || json['isFavorite'] == true,
+      pattiStyle: _readPattiStyle(json),
       coins: _toDouble(json['coins']),
       coinsPerSecond: _toDouble(json['coinsPerSecond']),
       followersCount: _toInt(json['followersCount']),
       followingCount: _toInt(json['followingCount']),
     );
+  }
+
+  static String _readPattiStyle(Map<String, dynamic> json) {
+    final raw = json['pattiStyle'] ?? json['patti_style'];
+    final text = raw?.toString().trim() ?? '';
+    if (text.isEmpty || text == 'null') return 'classic';
+    return text;
   }
 
   static List<SocialUserCard> listFromResponseData(dynamic data) {

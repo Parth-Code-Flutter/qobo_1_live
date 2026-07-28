@@ -14,6 +14,7 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:zego_uikit/zego_uikit.dart';
 
+import 'package:qobo_one_live/utils/ui_utils/vip_entrance_overlay.dart';
 import '../controllers/live_broadcast_controller.dart';
 import '../models/audio_room_models.dart';
 import '../utils/audio_room_seat_layout.dart';
@@ -1157,6 +1158,7 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
   }
 
   Widget _tagPills() {
+    final pattiLabel = VipEntranceOverlay.formatPattiLabel(seat.pattiStyle);
     final tags = <_MemberTagPill>[
       if (seat.isAdmin)
         const _MemberTagPill(
@@ -1169,6 +1171,12 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
           label: 'VIP',
           colors: [Color(0xFFFFB347), Color(0xFFFF6B35)],
           icon: Icons.workspace_premium_rounded,
+        ),
+      if (pattiLabel.isNotEmpty)
+        _MemberTagPill(
+          label: '$pattiLabel Patti',
+          colors: const [Color(0xFFFFDF00), Color(0xFFD4AF37)],
+          icon: Icons.auto_awesome_rounded,
         ),
       if (seat.isMuted)
         const _MemberTagPill(
@@ -1278,6 +1286,8 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
         _badgeIcon(Icons.shield_rounded, const Color(0xFF7B5CFF)),
       if (seat.isVip)
         _badgeIcon(Icons.workspace_premium_rounded, const Color(0xFFFFB347)),
+      if (seat.pattiStyle.trim().isNotEmpty)
+        _badgeIcon(Icons.auto_awesome_rounded, const Color(0xFFFFDF00)),
       if (seat.isMuted)
         _badgeIcon(Icons.mic_off_rounded, const Color(0xFFFF6B6B))
       else

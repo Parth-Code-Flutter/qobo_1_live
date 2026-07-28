@@ -1,6 +1,9 @@
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/razorpay_config.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/repo/economy/economy_repo.dart';
+import 'package:qobo_one_live/services/payment/razorpay_payment_service.dart';
+import 'package:qobo_one_live/services/user_session_controller.dart';
 
 import '../models/withdraw_config.dart';
 import '../models/withdraw_history_item.dart';
@@ -22,33 +25,66 @@ class CoinPackage {
   final String currency;
 
   String get coinsLabel => '$amount Coins';
-  String get priceLabel => '$currency ${price % 1 == 0 ? price.toInt() : price}';
+  String get priceLabel =>
+      '$currency ${price % 1 == 0 ? price.toInt() : price}';
+
+  /// Razorpay expects amount in the smallest currency unit (paise for INR).
+  int get priceInMinorUnits {
+    final scaled = (price * 100).round();
+    return scaled < 0 ? 0 : scaled;
+  }
 
   factory CoinPackage.fromJson(Map<String, dynamic> json) {
-    final amountRaw = json['amount'];
-    final priceRaw = json['price'];
+    final amountRaw =
+        json['amount'] ??
+        json['coins'] ??
+        json['coin'] ??
+        json['coinAmount'] ??
+        json['coin_amount'];
+    final priceRaw =
+        json['price'] ??
+        json['amountInr'] ??
+        json['amount_inr'] ??
+        json['inr'] ??
+        json['cost'];
+    final id =
+        json['id']?.toString() ??
+        json['_id']?.toString() ??
+        json['packageId']?.toString() ??
+        json['package_id']?.toString() ??
+        '';
+    final currencyRaw =
+        json['currency']?.toString() ??
+        json['currencyCode']?.toString() ??
+        json['currency_code']?.toString() ??
+        'INR';
+
     return CoinPackage(
-      id: json['id']?.toString() ?? '',
-      name: json['name']?.toString() ?? 'Coin Package',
+      id: id,
+      name: json['name']?.toString() ??
+          json['title']?.toString() ??
+          'Coin Package',
       amount: amountRaw is num
           ? amountRaw.round()
           : int.tryParse(amountRaw?.toString() ?? '') ?? 0,
       price: priceRaw is num
           ? priceRaw
           : num.tryParse(priceRaw?.toString() ?? '') ?? 0,
-      currency: json['currency']?.toString().trim().isNotEmpty == true
-          ? json['currency'].toString()
-          : 'INR',
+      currency: currencyRaw.trim().isNotEmpty ? currencyRaw.trim() : 'INR',
     );
   }
 }
 
 /// Controller for wallet flow.
 class WalletController extends GetxController {
-  WalletController({EconomyRepo? economyRepo})
-    : _economyRepo = economyRepo ?? EconomyRepo();
+  WalletController({
+    EconomyRepo? economyRepo,
+    RazorpayPaymentService? razorpayPaymentService,
+  }) : _economyRepo = economyRepo ?? EconomyRepo(),
+       _razorpay = razorpayPaymentService ?? RazorpayPaymentService();
 
   final EconomyRepo _economyRepo;
+  final RazorpayPaymentService _razorpay;
 
   final coinBalance = '0'.obs;
   final diamondBalance = '0'.obs;
@@ -69,6 +105,13 @@ class WalletController extends GetxController {
   final packageError = ''.obs;
   final isBuying = false.obs;
 
+  CoinPackage? get selectedPackage {
+    if (packages.isEmpty) return null;
+    final index = selectedPlanIndex.value;
+    if (index < 0 || index >= packages.length) return null;
+    return packages[index];
+  }
+
   @override
   void onInit() {
     super.onInit();
@@ -78,13 +121,22 @@ class WalletController extends GetxController {
     loadWithdrawHistory();
   }
 
+  @override
+  void onClose() {
+    _razorpay.dispose();
+    super.onClose();
+  }
+
   Future<void> loadWallet() async {
     final response = await _economyRepo.getWalletBalances(isShowLoader: false);
     final data = response?['data'];
     if (isEconomyApiSuccess(response) && data is Map) {
       coinBalance.value = _formatAmount(
         parseWalletAmount(
-          data['coins'] ?? data['coin'] ?? data['balance'] ?? data['coinBalance'],
+          data['coins'] ??
+              data['coin'] ??
+              data['balance'] ??
+              data['coinBalance'],
         ),
       );
       diamondBalance.value = _formatAmount(
@@ -101,15 +153,19 @@ class WalletController extends GetxController {
     try {
       final response = await _economyRepo.getCoinPackages(isShowLoader: false);
       final data = response?['data'];
-      if (isEconomyApiSuccess(response) && data is List) {
-        final parsed = data
+      final list = _extractPackageList(data);
+      if (isEconomyApiSuccess(response) && list != null) {
+        final parsed = list
             .whereType<Map>()
             .map((e) => CoinPackage.fromJson(Map<String, dynamic>.from(e)))
-            .where((e) => e.id.isNotEmpty && e.amount > 0)
+            .where((e) => e.id.isNotEmpty && e.amount > 0 && e.price > 0)
             .toList();
         packages.assignAll(parsed);
         if (selectedPlanIndex.value >= parsed.length) {
           selectedPlanIndex.value = 0;
+        }
+        if (parsed.isEmpty) {
+          packageError.value = 'No coin packages found.';
         }
       } else {
         packages.clear();
@@ -122,6 +178,20 @@ class WalletController extends GetxController {
     } finally {
       isLoadingPackages.value = false;
     }
+  }
+
+  List? _extractPackageList(dynamic data) {
+    if (data is List) return data;
+    if (data is Map) {
+      final nested =
+          data['packages'] ??
+          data['items'] ??
+          data['list'] ??
+          data['plans'] ??
+          data['coinPackages'];
+      if (nested is List) return nested;
+    }
+    return null;
   }
 
   Future<void> loadWithdrawConfig() async {
@@ -143,7 +213,8 @@ class WalletController extends GetxController {
         }
       } else {
         withdrawError.value =
-            response?['message']?.toString() ?? 'Unable to load withdrawal config.';
+            response?['message']?.toString() ??
+            'Unable to load withdrawal config.';
       }
     } catch (_) {
       withdrawError.value = 'Unable to load withdrawal config.';
@@ -155,12 +226,17 @@ class WalletController extends GetxController {
   Future<void> loadWithdrawHistory() async {
     isLoadingWithdrawHistory.value = true;
     try {
-      final response = await _economyRepo.getWithdrawHistory(isShowLoader: false);
+      final response = await _economyRepo.getWithdrawHistory(
+        isShowLoader: false,
+      );
       final data = response?['data'];
       if (isEconomyApiSuccess(response) && data is List) {
         final parsed = data
             .whereType<Map>()
-            .map((e) => WithdrawHistoryItem.fromJson(Map<String, dynamic>.from(e)))
+            .map(
+              (e) =>
+                  WithdrawHistoryItem.fromJson(Map<String, dynamic>.from(e)),
+            )
             .where((e) => e.transactionId.isNotEmpty)
             .toList();
         withdrawHistory.assignAll(parsed);
@@ -224,26 +300,126 @@ class WalletController extends GetxController {
     }
   }
 
-  String tierLabel(int amount) =>
-      '${withdrawCurrencySymbol.value}$amount';
+  String tierLabel(int amount) => '${withdrawCurrencySymbol.value}$amount';
 
-  Future<bool> buySelectedPackage(String method) async {
-    if (packages.isEmpty || selectedPlanIndex.value >= packages.length) {
+  /// Opens Razorpay Checkout for [package] (or the selected plan), then credits
+  /// coins via `POST /api/economy/recharge` with payment references.
+  Future<bool> buyPackageWithRazorpay({CoinPackage? package}) async {
+    final plan = package ?? selectedPackage;
+    if (plan == null) {
+      packageError.value = 'No coin package selected.';
       return false;
     }
-    final package = packages[selectedPlanIndex.value];
+    if (plan.priceInMinorUnits <= 0) {
+      packageError.value = 'Invalid package price.';
+      return false;
+    }
+    if (RazorpayConfig.isPlaceholderKey &&
+        !RazorpayConfig.allowPlaceholderCheckout) {
+      packageError.value =
+          'Razorpay key not configured. Replace RazorpayConfig.keyId.';
+      return false;
+    }
+
+    isBuying.value = true;
+    packageError.value = '';
+    try {
+      String? email;
+      String? phone;
+      String? name;
+      if (Get.isRegistered<UserSessionController>()) {
+        final session = Get.find<UserSessionController>();
+        email = session.email;
+        phone = session.phone;
+        name = session.userName;
+      }
+
+      final checkout = await _razorpay.openCheckout(
+        amountMinorUnits: plan.priceInMinorUnits,
+        currency: plan.currency,
+        description: plan.coinsLabel,
+        receipt: 'pkg_${plan.id}',
+        email: email,
+        contact: phone,
+        customerName: name,
+      );
+
+      if (!checkout.success) {
+        if (checkout.cancelled) {
+          packageError.value = 'Payment cancelled.';
+        } else {
+          packageError.value =
+              checkout.errorMessage?.trim().isNotEmpty == true
+              ? checkout.errorMessage!
+              : 'Payment failed.';
+        }
+        return false;
+      }
+
+      final paymentId = checkout.paymentId?.trim() ?? '';
+      if (paymentId.isEmpty) {
+        packageError.value = 'Missing Razorpay payment id.';
+        return false;
+      }
+
+      final response = await _economyRepo.rechargeCurrency(
+        amount: plan.amount,
+        method: 'razorpay',
+        packageId: plan.id,
+        paymentId: paymentId,
+        orderId: checkout.orderId,
+        signature: checkout.signature,
+        paidAmount: plan.price,
+        currency: plan.currency,
+        isShowLoader: true,
+      );
+
+      if (isEconomyApiSuccess(response)) {
+        await loadWallet();
+        return true;
+      }
+
+      packageError.value =
+          response?['message']?.toString() ??
+          'Payment received but coin credit failed. Contact support with $paymentId.';
+      return false;
+    } catch (error) {
+      packageError.value = 'Unable to start Razorpay checkout.';
+      return false;
+    } finally {
+      isBuying.value = false;
+    }
+  }
+
+  /// Legacy non-gateway path (Google Pay / PayPal placeholders). Prefer
+  /// [buyPackageWithRazorpay] for real purchases.
+  Future<bool> buySelectedPackage(String method) async {
+    final normalized = method.trim().toLowerCase();
+    if (normalized.contains('razor')) {
+      return buyPackageWithRazorpay();
+    }
+
+    final package = selectedPackage;
+    if (package == null) {
+      packageError.value = 'No coin package selected.';
+      return false;
+    }
     isBuying.value = true;
     try {
       final response = await _economyRepo.rechargeCurrency(
         amount: package.amount,
-        method: method,
+        method: normalized,
+        packageId: package.id,
+        paidAmount: package.price,
+        currency: package.currency,
         isShowLoader: true,
       );
       if (isEconomyApiSuccess(response)) {
         await loadWallet();
         return true;
       }
-      packageError.value = response?['message']?.toString() ?? 'Payment failed.';
+      packageError.value =
+          response?['message']?.toString() ?? 'Payment failed.';
       return false;
     } finally {
       isBuying.value = false;

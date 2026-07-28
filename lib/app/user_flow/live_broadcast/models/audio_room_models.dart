@@ -6,6 +6,7 @@ class AudioRoomSeatModel {
     this.avatarUrl,
     this.avatarFrameUrl,
     this.vipFrameUrl,
+    this.pattiStyle = 'classic',
     this.role = 'empty',
     this.diamonds = 0,
     this.isMuted = false,
@@ -84,6 +85,10 @@ class AudioRoomSeatModel {
     final isVip = _readBool(raw, const ['isVIP', 'isVip', 'is_vip']) ||
         (occupantMap != null &&
             _readBool(occupantMap, const ['isVIP', 'isVip', 'is_vip']));
+    final pattiStyle =
+        _readString(raw, const ['pattiStyle', 'patti_style']) ??
+        _readString(occupantMap, const ['pattiStyle', 'patti_style']) ??
+        'classic';
 
     return AudioRoomSeatModel(
       seatNo: _readInt(raw, const ['seatNo', 'seat_id', 'seatId', 'seat']) ?? 0,
@@ -92,6 +97,7 @@ class AudioRoomSeatModel {
       avatarUrl: avatar,
       avatarFrameUrl: avatarFrame,
       vipFrameUrl: vipFrame,
+      pattiStyle: pattiStyle,
       role:
           _readString(raw, const ['role', 'type']) ??
           (userId.isEmpty ? 'empty' : 'speaker'),
@@ -112,6 +118,9 @@ class AudioRoomSeatModel {
 
   /// Full-screen entrance SVGA from `GET /api/room/seats` when [isVip] is true.
   final String? vipFrameUrl;
+
+  /// Entrance nameplate style from seats / profile (`classic` by default).
+  final String pattiStyle;
   final String role;
   final int diamonds;
   final bool isMuted;
@@ -122,6 +131,12 @@ class AudioRoomSeatModel {
   bool get occupied => userId.trim().isNotEmpty || name.trim().isNotEmpty;
   bool get isHost => role.toLowerCase() == 'host' || seatNo == 1;
 
+  /// Non-default patti used for entrance / seat tags.
+  bool get hasCustomPattiStyle {
+    final style = pattiStyle.trim().toLowerCase();
+    return style.isNotEmpty && style != 'classic';
+  }
+
   AudioRoomSeatModel copyWith({
     int? seatNo,
     String? userId,
@@ -129,6 +144,7 @@ class AudioRoomSeatModel {
     String? avatarUrl,
     String? avatarFrameUrl,
     String? vipFrameUrl,
+    String? pattiStyle,
     String? role,
     int? diamonds,
     bool? isMuted,
@@ -143,6 +159,7 @@ class AudioRoomSeatModel {
       avatarUrl: avatarUrl ?? this.avatarUrl,
       avatarFrameUrl: avatarFrameUrl ?? this.avatarFrameUrl,
       vipFrameUrl: vipFrameUrl ?? this.vipFrameUrl,
+      pattiStyle: pattiStyle ?? this.pattiStyle,
       role: role ?? this.role,
       diamonds: diamonds ?? this.diamonds,
       isMuted: isMuted ?? this.isMuted,

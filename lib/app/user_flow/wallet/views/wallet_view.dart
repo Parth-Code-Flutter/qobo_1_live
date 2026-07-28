@@ -146,27 +146,32 @@ class _WalletViewState extends State<WalletView> {
                 SizedBox(
                   width: double.infinity,
                   height: 48,
-                  child: appButton(
-                    onPressed: () {
-                      if (controller.packages.isEmpty) {
-                        Get.snackbar(
-                          'Wallet',
-                          'No coin package available right now.',
-                          snackPosition: SnackPosition.BOTTOM,
-                          backgroundColor: Colors.black87,
-                          colorText: kColorWhite,
-                        );
-                        return;
-                      }
-                      _openCheckoutBottomSheet(
-                        controller.packages[controller.selectedPlanIndex.value],
-                      );
-                    },
-                    buttonText: 'Buy Now',
-                    isGradient: false,
-                    buttonColor: kColorPrimary,
-                    borderRadius: 12,
-                  ),
+                  child: Obx(() {
+                    final buying = controller.isBuying.value;
+                    return appButton(
+                      onPressed: () {
+                        if (buying) return;
+                        final plan = controller.selectedPackage;
+                        if (plan == null) {
+                          Get.snackbar(
+                            'Wallet',
+                            controller.packageError.value.isNotEmpty
+                                ? controller.packageError.value
+                                : 'No coin package available right now.',
+                            snackPosition: SnackPosition.BOTTOM,
+                            backgroundColor: Colors.black87,
+                            colorText: kColorWhite,
+                          );
+                          return;
+                        }
+                        _openCheckoutBottomSheet(plan);
+                      },
+                      buttonText: buying ? 'Processing…' : 'Buy Now',
+                      isGradient: false,
+                      buttonColor: kColorPrimary,
+                      borderRadius: 12,
+                    );
+                  }),
                 ),
               ],
             ),
@@ -277,24 +282,45 @@ class _WalletViewState extends State<WalletView> {
             ),
             Spacing.v24,
             _paymentMethodTile(
+              logoIcon: Icons.credit_card_rounded,
+              title: 'Razorpay',
+              subtitle: 'UPI · Cards · NetBanking · Wallets',
+              color: Colors.deepOrange,
+              onTap: () => _submitPayment('Razorpay', plan),
+            ),
+            const Divider(color: Colors.white10, height: 16),
+            _paymentMethodTile(
               logoIcon: Icons.account_balance_wallet_rounded,
               title: 'Google Pay',
+              subtitle: 'Coming soon',
               color: Colors.blue,
-              onTap: () => _submitPayment('Google Pay', plan),
+              onTap: () {
+                Get.back();
+                Get.snackbar(
+                  'Coming soon',
+                  'Use Razorpay for coin purchases right now.',
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.black87,
+                  colorText: kColorWhite,
+                );
+              },
             ),
             const Divider(color: Colors.white10, height: 16),
             _paymentMethodTile(
               logoIcon: Icons.payment_rounded,
               title: 'PayPal Gateway',
+              subtitle: 'Coming soon',
               color: Colors.indigo,
-              onTap: () => _submitPayment('PayPal', plan),
-            ),
-            const Divider(color: Colors.white10, height: 16),
-            _paymentMethodTile(
-              logoIcon: Icons.credit_card_rounded,
-              title: 'Razorpay Instant',
-              color: Colors.deepOrange,
-              onTap: () => _submitPayment('Razorpay', plan),
+              onTap: () {
+                Get.back();
+                Get.snackbar(
+                  'Coming soon',
+                  'Use Razorpay for coin purchases right now.',
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.black87,
+                  colorText: kColorWhite,
+                );
+              },
             ),
             const Divider(color: Colors.white10, height: 16),
             _paymentMethodTile(
@@ -324,6 +350,7 @@ class _WalletViewState extends State<WalletView> {
     required String title,
     required Color color,
     required VoidCallback onTap,
+    String? subtitle,
   }) {
     return ListTile(
       leading: Container(
@@ -336,6 +363,13 @@ class _WalletViewState extends State<WalletView> {
         child: Icon(logoIcon, color: color, size: 20),
       ),
       title: SemiBoldText(text: title, fontSize: 13, color: kColorWhite),
+      subtitle: subtitle == null
+          ? null
+          : AppText(
+              text: subtitle,
+              fontSize: 11,
+              color: kColorWhite.withValues(alpha: 0.55),
+            ),
       trailing: const Icon(
         Icons.arrow_forward_ios_rounded,
         color: Colors.white24,
@@ -347,7 +381,15 @@ class _WalletViewState extends State<WalletView> {
 
   void _submitPayment(String method, CoinPackage plan) async {
     Get.back(); // close payment methods
-    final ok = await controller.buySelectedPackage(method.toLowerCase());
+    final index = controller.packages.indexWhere((p) => p.id == plan.id);
+    if (index >= 0) {
+      controller.selectedPlanIndex.value = index;
+    }
+
+    final ok = method.toLowerCase().contains('razor')
+        ? await controller.buyPackageWithRazorpay(package: plan)
+        : await controller.buySelectedPackage(method.toLowerCase());
+
     if (ok) {
       Get.dialog(
         Dialog(
@@ -401,11 +443,20 @@ class _WalletViewState extends State<WalletView> {
         ),
       );
     } else {
+      final msg = controller.packageError.value;
+      if (msg.toLowerCase().contains('cancel')) {
+        Get.snackbar(
+          'Payment cancelled',
+          'No coins were charged.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.black87,
+          colorText: kColorWhite,
+        );
+        return;
+      }
       Get.snackbar(
         'Payment Failed',
-        controller.packageError.value.isNotEmpty
-            ? controller.packageError.value
-            : 'Unable to complete this purchase.',
+        msg.isNotEmpty ? msg : 'Unable to complete this purchase.',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.black87,
         colorText: kColorWhite,

@@ -65,6 +65,13 @@ class UserSessionController extends GetxController {
     'profileBackgroundPreviewUrl',
     'profile_background_preview_url',
   ]);
+
+  /// Entrance nameplate style from `GET /api/user/profile` (defaults to classic).
+  String get pattiStyle {
+    final value = _stringValueFromProfile(const ['pattiStyle', 'patti_style']);
+    return value.isNotEmpty ? value : 'classic';
+  }
+
   bool get isSuperAdmin => role.toLowerCase() == 'super_admin';
   bool get isAgency => role.toLowerCase() == 'agency';
   bool get isHost => role.toLowerCase() == 'host';

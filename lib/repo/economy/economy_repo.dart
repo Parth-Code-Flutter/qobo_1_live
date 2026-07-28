@@ -25,14 +25,38 @@ class EconomyRepo {
   }
 
   /// Calls `POST /api/economy/recharge` to purchase virtual currency.
+  ///
+  /// Preferred body after Razorpay Checkout success:
+  /// `{ packageId, amount, method, paymentId, orderId, signature }`.
   Future<Map<String, dynamic>?> rechargeCurrency({
     required int amount,
     required String method, // e.g. 'razorpay'
+    String? packageId,
+    String? paymentId,
+    String? orderId,
+    String? signature,
+    num? paidAmount,
+    String? currency,
     bool isShowLoader = true,
   }) async {
+    final body = <String, dynamic>{
+      'amount': amount,
+      'method': method,
+      if (packageId != null && packageId.isNotEmpty) 'packageId': packageId,
+      if (packageId != null && packageId.isNotEmpty) 'package_id': packageId,
+      if (paymentId != null && paymentId.isNotEmpty) 'paymentId': paymentId,
+      if (paymentId != null && paymentId.isNotEmpty) 'payment_id': paymentId,
+      if (orderId != null && orderId.isNotEmpty) 'orderId': orderId,
+      if (orderId != null && orderId.isNotEmpty) 'order_id': orderId,
+      if (signature != null && signature.isNotEmpty) 'signature': signature,
+      if (paidAmount != null) 'paidAmount': paidAmount,
+      if (paidAmount != null) 'paid_amount': paidAmount,
+      if (currency != null && currency.isNotEmpty) 'currency': currency,
+    };
+
     final response = await _apiService.postRequest(
       endPoint: EconomyEndpoints.recharge,
-      requestModel: <String, dynamic>{'amount': amount, 'method': method},
+      requestModel: body,
       isShowLoader: isShowLoader,
     );
 

@@ -1139,13 +1139,24 @@ class LiveBroadcastController extends GetxController {
                   data['frame_url'] ??
                   data['frameUrl'])
               ?.toString();
+      final pattiStyle =
+          (data['patti_style'] ?? data['pattiStyle'])?.toString().trim() ?? '';
       _playVipEntranceOnce(
-        userId: userId.isNotEmpty ? userId : '$userName|$frameUrl',
+        userId: userId.isNotEmpty
+            ? userId
+            : '$userName|${frameUrl ?? ''}|$pattiStyle',
         userName: userName,
         avatarUrl: avatar,
         vipFrameUrl: frameUrl,
+        pattiStyle: pattiStyle,
       );
     };
+  }
+
+  bool _seatHasEntranceEffect(AudioRoomSeatModel seat) {
+    final frameUrl = seat.vipFrameUrl?.trim() ?? '';
+    final hasVipFrame = seat.isVip && frameUrl.isNotEmpty;
+    return hasVipFrame || seat.hasCustomPattiStyle;
   }
 
   /// First seats snapshot only seeds dedupe — skip people already in the room.
@@ -1153,13 +1164,13 @@ class LiveBroadcastController extends GetxController {
     for (final seat in seats) {
       final userId = seat.userId.trim();
       if (userId.isEmpty) continue;
-      if (!seat.isVip && (seat.vipFrameUrl?.trim().isEmpty ?? true)) continue;
+      if (!_seatHasEntranceEffect(seat)) continue;
       _vipEntrancePlayedUserIds.add(userId);
     }
     _vipSeatEntranceBaselineReady = true;
   }
 
-  /// After baseline, play entrance for VIPs who newly appear on seats.
+  /// After baseline, play entrance for VIPs / patti users who newly appear.
   void _maybePlayVipEntrancesFromSeats(List<AudioRoomSeatModel> seats) {
     if (!_vipSeatEntranceBaselineReady) {
       _seedVipEntranceBaselineFromSeats(seats);
@@ -1175,14 +1186,13 @@ class LiveBroadcastController extends GetxController {
 
     for (final seat in seats) {
       final userId = seat.userId.trim();
-      final frameUrl = seat.vipFrameUrl?.trim() ?? '';
-      if (userId.isEmpty || frameUrl.isEmpty) continue;
-      if (!seat.isVip) continue;
+      if (userId.isEmpty || !_seatHasEntranceEffect(seat)) continue;
       _playVipEntranceOnce(
         userId: userId,
         userName: seat.name,
         avatarUrl: seat.avatarUrl,
-        vipFrameUrl: frameUrl,
+        vipFrameUrl: seat.vipFrameUrl,
+        pattiStyle: seat.pattiStyle,
       );
     }
   }
@@ -1192,19 +1202,24 @@ class LiveBroadcastController extends GetxController {
     required String userName,
     String? avatarUrl,
     String? vipFrameUrl,
+    String? pattiStyle,
   }) {
     final id = userId.trim();
     final frame =
         ApiImageUtils.normalize(vipFrameUrl?.trim())?.trim() ??
         vipFrameUrl?.trim() ??
         '';
-    if (id.isEmpty || frame.isEmpty) return;
+    final patti = pattiStyle?.trim() ?? '';
+    if (id.isEmpty) return;
+    // Socket / seats may send VIP frame only, patti only, or both.
+    if (frame.isEmpty && patti.isEmpty) return;
     if (!_vipEntrancePlayedUserIds.add(id)) return;
 
     VipEntranceOverlay.show(
       userName: userName,
       avatarUrl: avatarUrl,
-      vipFrameUrl: frame,
+      vipFrameUrl: frame.isEmpty ? null : frame,
+      pattiStyle: patti.isEmpty ? null : patti,
     );
   }
 
