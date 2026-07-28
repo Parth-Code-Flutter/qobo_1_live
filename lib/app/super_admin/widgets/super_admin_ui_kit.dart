@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -19,10 +20,31 @@ class SuperAdminTabHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final canPop = Navigator.of(context).canPop();
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
       child: Row(
         children: [
+          if (canPop) ...[
+            Material(
+              color: kColorWhite.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(14),
+              child: InkWell(
+                onTap: Get.back,
+                borderRadius: BorderRadius.circular(14),
+                child: const SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    color: kColorWhite,
+                    size: 18,
+                  ),
+                ),
+              ),
+            ),
+            Spacing.h10,
+          ],
           Container(
             width: 44,
             height: 44,

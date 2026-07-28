@@ -22,96 +22,100 @@ class SuperAdminBottomNavView extends GetView<SuperAdminBottomNavController> {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return Scaffold(
-      backgroundColor: kColorWhite,
-      extendBody: true,
-      body: Obx(() {
-        switch (controller.selectedIndex.value) {
-          case SuperAdminBottomNavController.dashboardTabIndex:
-            return const SuperAdminDashboardTabView();
-          case SuperAdminBottomNavController.agencyTabIndex:
-            return const SuperAdminAgencyTabView();
-          case SuperAdminBottomNavController.hostTabIndex:
-            return const SuperAdminHostTabView();
-          case SuperAdminBottomNavController.settingsTabIndex:
-            return SuperAdminSettingsTabView(
-              onLogoutPressed: controller.onLogoutPressed,
-            );
-          default:
-            return Spacing.shrink;
-        }
-      }),
+    // Opened from host Profile via Get.toNamed — system/back pops to Profile.
+    return PopScope(
+      canPop: true,
+      child: Scaffold(
+        backgroundColor: kColorWhite,
+        extendBody: true,
+        body: Obx(() {
+          switch (controller.selectedIndex.value) {
+            case SuperAdminBottomNavController.dashboardTabIndex:
+              return const SuperAdminDashboardTabView();
+            case SuperAdminBottomNavController.agencyTabIndex:
+              return const SuperAdminAgencyTabView();
+            case SuperAdminBottomNavController.hostTabIndex:
+              return const SuperAdminHostTabView();
+            case SuperAdminBottomNavController.settingsTabIndex:
+              return SuperAdminSettingsTabView(
+                onLogoutPressed: controller.onLogoutPressed,
+              );
+            default:
+              return Spacing.shrink;
+          }
+        }),
       // Create actions: + on Agency tab registers a new agency,
       // + on Host tab submits a new host application.
-      floatingActionButton: Obx(() {
-        final index = controller.selectedIndex.value;
-        final isAgencyTab =
-            index == SuperAdminBottomNavController.agencyTabIndex;
-        final isHostTab = index == SuperAdminBottomNavController.hostTabIndex;
-        if (!isAgencyTab && !isHostTab) return const SizedBox.shrink();
+        floatingActionButton: Obx(() {
+          final index = controller.selectedIndex.value;
+          final isAgencyTab =
+              index == SuperAdminBottomNavController.agencyTabIndex;
+          final isHostTab = index == SuperAdminBottomNavController.hostTabIndex;
+          if (!isAgencyTab && !isHostTab) return const SizedBox.shrink();
 
-        final home = Get.find<SuperAdminHomeController>();
-        final accent = isAgencyTab
-            ? const Color(0xFFFF8AD8)
-            : const Color(0xFF5CE1B0);
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: FloatingActionButton(
-            heroTag: 'super_admin_create_fab',
-            tooltip: isAgencyTab ? 'Create agency' : 'Create host',
-            backgroundColor: accent,
-            foregroundColor: const Color(0xFF121644),
-            shape: const CircleBorder(),
-            onPressed: isAgencyTab
-                ? home.openCreateAgency
-                : home.openCreateHost,
-            child: const Icon(Icons.add_rounded, size: 30),
-          ),
-        );
-      }),
-      bottomNavigationBar: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  const Color(0xFF181A5A).withValues(alpha: 0.86),
-                  const Color(0xFF121644).withValues(alpha: 0.93),
-                ],
-              ),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(26),
-                topRight: Radius.circular(26),
-              ),
-              border: Border(
-                top: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  width: 0.7,
+          final home = Get.find<SuperAdminHomeController>();
+          final accent = isAgencyTab
+              ? const Color(0xFFFF8AD8)
+              : const Color(0xFF5CE1B0);
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: FloatingActionButton(
+              heroTag: 'super_admin_create_fab',
+              tooltip: isAgencyTab ? 'Create agency' : 'Create host',
+              backgroundColor: accent,
+              foregroundColor: const Color(0xFF121644),
+              shape: const CircleBorder(),
+              onPressed: isAgencyTab
+                  ? home.openCreateAgency
+                  : home.openCreateHost,
+              child: const Icon(Icons.add_rounded, size: 30),
+            ),
+          );
+        }),
+        bottomNavigationBar: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    const Color(0xFF181A5A).withValues(alpha: 0.86),
+                    const Color(0xFF121644).withValues(alpha: 0.93),
+                  ],
+                ),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(26),
+                  topRight: Radius.circular(26),
+                ),
+                border: Border(
+                  top: BorderSide(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    width: 0.7,
+                  ),
                 ),
               ),
-            ),
-            child: Padding(
-              padding: EdgeInsets.only(bottom: bottomInset),
-              child: SizedBox(
-                height: 84,
-                child: Obx(
-                  () => Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: List.generate(controller.items.length, (index) {
-                      final item = controller.items[index];
-                      return Expanded(
-                        child: _SuperAdminNavTab(
-                          label: item.label,
-                          icon: item.icon,
-                          accent: item.accent,
-                          selected: controller.selectedIndex.value == index,
-                          onTap: () => controller.onNavBarTabSelected(index),
-                        ),
-                      );
-                    }),
+              child: Padding(
+                padding: EdgeInsets.only(bottom: bottomInset),
+                child: SizedBox(
+                  height: 84,
+                  child: Obx(
+                    () => Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: List.generate(controller.items.length, (index) {
+                        final item = controller.items[index];
+                        return Expanded(
+                          child: _SuperAdminNavTab(
+                            label: item.label,
+                            icon: item.icon,
+                            accent: item.accent,
+                            selected: controller.selectedIndex.value == index,
+                            onTap: () => controller.onNavBarTabSelected(index),
+                          ),
+                        );
+                      }),
+                    ),
                   ),
                 ),
               ),

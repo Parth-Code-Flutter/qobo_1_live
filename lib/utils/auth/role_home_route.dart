@@ -39,15 +39,8 @@ abstract final class RoleHomeRoute {
   }
 
   static String _routeForSession(UserSessionController session) {
-    if (session.isSuperAdmin) {
-      return Routes.SUPER_ADMIN_BOTTOM_NAV;
-    }
-    // Isolation: agency owners only use the agency owner shell — never the
-    // consumer bottom nav (guide: agency_super_admin_isolation_flow_v1.md).
-    if (session.isAgency) {
-      return Routes.AGENCY_OWNER;
-    }
-    // Host / user keep the standard consumer bottom nav.
+    // All roles land in the standard host/user bottom nav. Role-specific
+    // dashboards open from Profile shortcuts so users can return easily.
     return Routes.BOTTOM_NAV;
   }
 }

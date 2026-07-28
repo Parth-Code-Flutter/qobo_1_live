@@ -7,7 +7,9 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/repo/user/user_repo.dart';
+import 'package:qobo_one_live/app/bottom_nav/controllers/bottom_nav_controller.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/services/agency_session_controller.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/app/user_flow/wallet/bindings/wallet_binding.dart';
 import 'package:qobo_one_live/app/user_flow/wallet/views/wallet_view.dart';
@@ -109,12 +111,6 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                   child: Column(
                     children: [
                       _profileHero(session),
-                      _superAdminAction(session),
-                      Spacing.v12,
-                      if (session.isSuperAdmin || session.isAgency) ...[
-                        _profileActionCards(session),
-                        Spacing.v12,
-                      ],
                       _profileFeatureGrid(),
                       Spacing.v20,
                       _settingsRow(),
@@ -356,108 +352,20 @@ class _ProfileTabViewState extends State<ProfileTabView> {
     );
   }
 
-  Widget _superAdminAction(UserSessionController userSession) {
-    return GetBuilder<UserSessionController>(
-      init: userSession,
-      builder: (session) {
-        if (session.isSuperAdmin || session.isAgency || session.isHost) {
-          return const SizedBox.shrink();
-        }
-
-        return const Padding(
-          padding: EdgeInsets.only(top: 10),
-          child: _BecomeSuperAdminButton(),
-        );
-      },
-    );
-  }
-
-  /// Quick action cards right below stats, matching Figma layout.
-  Widget _profileActionCards(UserSessionController userSession) {
-    return GetBuilder<UserSessionController>(
-      init: userSession,
-      builder: (session) {
-        final actions = <Widget>[];
-
-        if (session.isSuperAdmin || session.isAgency) {
-          actions.add(
-            Expanded(
-              child: _actionCard(
-                title: session.isSuperAdmin
-                    ? 'Super Admin\nDashboard'
-                    : 'Agency\nDashboard',
-                trailing: const Icon(
-                  Icons.groups_rounded,
-                  color: kColorWhite,
-                  size: 24,
-                ),
-                start: kColorProfileActionPinkStart,
-                end: kColorProfileActionPinkEnd,
-                onTap: () => session.isSuperAdmin
-                    ? Get.offAllNamed(Routes.SUPER_ADMIN_BOTTOM_NAV)
-                    : Get.offAllNamed(Routes.AGENCY_OWNER),
-              ),
-            ),
-          );
-        }
-
-        return Row(children: actions);
-      },
-    );
-  }
-
-  Widget _actionCard({
-    required String title,
-    String? icon,
-    Widget? trailing,
-    required Color start,
-    required Color end,
-    required VoidCallback onTap,
-  }) {
-    assert(
-      icon != null || trailing != null,
-      'Provide either icon asset or trailing widget',
-    );
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 74,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          gradient: LinearGradient(colors: [start, end]),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              child: SemiBoldText(
-                text: title,
-                fontSize: TextStyles.k14FontSize,
-                color: kColorWhite,
-              ),
-            ),
-            Spacing.h8,
-            trailing ??
-                SvgPicture.asset(
-                  icon!,
-                  width: 20,
-                  height: 20,
-                  fit: BoxFit.contain,
-                ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _profileFeatureGrid() {
     final features = <_ProfileFeatureItem>[
       _ProfileFeatureItem('Top Up', kIconRechargeCoins, const [
         Color(0xFFFF8A1D),
         Color(0xFFFF6B57),
       ], onTap: _openWallet),
+      _ProfileFeatureItem('Super\nAdmin', kIconBadge, const [
+        Color(0xFFFF4D8D),
+        Color(0xFF8F37F2),
+      ], onTap: _openSuperAdminFlow),
+      _ProfileFeatureItem('Agency', kIconMall, const [
+        Color(0xFF6E4BFF),
+        Color(0xFF00BCD4),
+      ], onTap: _openAgencyFlow),
       _ProfileFeatureItem('Visitors', kIconVisitor, const [
         Color(0xFF1F74F2),
         Color(0xFF22B8F2),
@@ -552,6 +460,12 @@ class _ProfileTabViewState extends State<ProfileTabView> {
               isShowLoader: false,
             );
           }
+          if (item.onTapRoute == Routes.AGENCY_OWNER ||
+              item.onTapRoute == Routes.SUPER_ADMIN_BOTTOM_NAV) {
+            await _resolveUserSession().refreshProfileFromApi(
+              isShowLoader: false,
+            );
+          }
         }
       },
       child: Column(
@@ -613,6 +527,66 @@ class _ProfileTabViewState extends State<ProfileTabView> {
     await Get.to(() => const WalletView(), binding: WalletBinding());
   }
 
+  Future<void> _openSuperAdminFlow() async {
+    final session = _resolveUserSession();
+    if (session.isSuperAdmin) {
+      // Keep host bottom nav underneath so back returns to Profile.
+      if (Get.isRegistered<BottomNavController>()) {
+        Get.find<BottomNavController>().onNavBarTabSelected(
+          BottomNavController.profileTabIndex,
+        );
+      }
+      await Get.toNamed(Routes.SUPER_ADMIN_BOTTOM_NAV);
+      return;
+    }
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _SuperAdminRegistrationSheet(),
+    );
+  }
+
+  Future<void> _openAgencyFlow() async {
+    final session = _resolveUserSession();
+    if (Get.isRegistered<BottomNavController>()) {
+      Get.find<BottomNavController>().onNavBarTabSelected(
+        BottomNavController.profileTabIndex,
+      );
+    }
+    if (session.isAgency) {
+      await Get.toNamed(Routes.AGENCY_OWNER);
+      return;
+    }
+
+    final agencySession = Get.isRegistered<AgencySessionController>()
+        ? Get.find<AgencySessionController>()
+        : Get.put(AgencySessionController(), permanent: true);
+    await agencySession.ensureHydratedFromDashboard(forceRefresh: true);
+
+    if (agencySession.hasApprovedAgency) {
+      await Get.toNamed(Routes.AGENCY_OWNER);
+      return;
+    }
+    if (agencySession.isApplicationPending ||
+        agencySession.isApplicationRejected) {
+      await Get.toNamed(
+        Routes.AGENCY_OWNER_STATUS,
+        arguments: {
+          if (agencySession.applicationId.value.isNotEmpty)
+            'application_id': agencySession.applicationId.value,
+          if (agencySession.appliedPhone.value.isNotEmpty)
+            'phone': agencySession.appliedPhone.value,
+          'autoFetch': agencySession.applicationId.value.isNotEmpty ||
+              agencySession.appliedPhone.value.isNotEmpty,
+        },
+      );
+      return;
+    }
+
+    await Get.toNamed(Routes.AGENCY_OWNER_REGISTER);
+  }
+
   UserSessionController _resolveUserSession() {
     if (Get.isRegistered<UserSessionController>()) {
       return Get.find<UserSessionController>();
@@ -653,12 +627,12 @@ class _ProfileTabViewState extends State<ProfileTabView> {
   }
 }
 
-class _BecomeSuperAdminButton extends StatefulWidget {
-  const _BecomeSuperAdminButton();
+class _SuperAdminRegistrationSheet extends StatefulWidget {
+  const _SuperAdminRegistrationSheet();
 
   @override
-  State<_BecomeSuperAdminButton> createState() =>
-      _BecomeSuperAdminButtonState();
+  State<_SuperAdminRegistrationSheet> createState() =>
+      _SuperAdminRegistrationSheetState();
 }
 
 class _ProfileHeroCard extends StatelessWidget {
@@ -686,7 +660,8 @@ class _ProfileHeroCard extends StatelessWidget {
   }
 }
 
-class _BecomeSuperAdminButtonState extends State<_BecomeSuperAdminButton> {
+class _SuperAdminRegistrationSheetState
+    extends State<_SuperAdminRegistrationSheet> {
   final UserRepo _userRepo = UserRepo();
   bool _isLoading = false;
   final List<File> _documents = <File>[];
@@ -930,58 +905,103 @@ class _BecomeSuperAdminButtonState extends State<_BecomeSuperAdminButton> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: _submitRequest,
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 180),
-        opacity: _isLoading ? 0.68 : 1,
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
         child: Container(
-          width: double.infinity,
-          // Match `_actionCard` height so Super Admin and Recharge align.
-          height: 74,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-              colors: [
-                kColorProfileActionPinkStart,
-                kColorProfileChipPurpleEnd,
-              ],
-            ),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: kColorWhite.withValues(alpha: 0.16)),
-            boxShadow: [
-              BoxShadow(
-                color: kColorProfileActionPinkStart.withValues(alpha: 0.22),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
+            color: const Color(0xFF161622),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (_isLoading)
-                const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: kColorWhite,
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: kColorWhite.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(4),
                   ),
-                )
-              else
-                const Icon(
-                  Icons.workspace_premium_rounded,
-                  color: kColorWhite,
-                  size: 20,
                 ),
-              Spacing.h8,
+              ),
+              Spacing.v16,
               const SemiBoldText(
-                text: 'Become Super Admin',
-                fontSize: TextStyles.k14FontSize,
+                text: 'Super Admin',
+                fontSize: TextStyles.k18FontSize,
                 color: kColorWhite,
+                align: TextAlign.center,
+              ),
+              Spacing.v6,
+              const AppText(
+                text:
+                    'Submit your registration request. After approval, you can open the Super Admin dashboard from the Profile grid.',
+                fontSize: TextStyles.k12FontSize,
+                color: Colors.white70,
+                align: TextAlign.center,
+              ),
+              const SizedBox(height: 18),
+              GestureDetector(
+                onTap: _submitRequest,
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 180),
+                  opacity: _isLoading ? 0.68 : 1,
+                  child: Container(
+                    width: double.infinity,
+                    height: 74,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                        colors: [
+                          kColorProfileActionPinkStart,
+                          kColorProfileChipPurpleEnd,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: kColorWhite.withValues(alpha: 0.16)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: kColorProfileActionPinkStart.withValues(alpha: 0.22),
+                          blurRadius: 18,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (_isLoading)
+                          const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: kColorWhite,
+                            ),
+                          )
+                        else
+                          const Icon(
+                            Icons.workspace_premium_rounded,
+                            color: kColorWhite,
+                            size: 20,
+                          ),
+                        Spacing.h8,
+                        const SemiBoldText(
+                          text: 'Become Super Admin',
+                          fontSize: TextStyles.k14FontSize,
+                          color: kColorWhite,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
