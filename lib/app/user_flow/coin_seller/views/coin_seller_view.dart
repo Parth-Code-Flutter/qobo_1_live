@@ -467,14 +467,12 @@ class CoinSellerView extends GetView<CoinSellerController> {
             ),
             Spacing.v6,
             const AppText(
-              text:
-                  'Buyer ID, email, or phone. Coins leave your stock instantly.',
+              text: 'Pick a buyer from the list, then enter coins and price.',
               fontSize: 11,
               color: Colors.white54,
             ),
             Spacing.v16,
-            _field(Icons.person_search_rounded, controller.userIdController,
-                'User ID / email / phone'),
+            _buyerSelector(),
             Spacing.v12,
             _field(Icons.toll_rounded, controller.coinsController,
                 'Coin amount', number: true),
@@ -499,7 +497,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
                   Expanded(
                     child: AppText(
                       text:
-                          'Confirm payment received before transferring coins.',
+                          'You will confirm the transfer before coins are sent.',
                       fontSize: 10,
                       color: Colors.white60,
                     ),
@@ -549,6 +547,109 @@ class CoinSellerView extends GetView<CoinSellerController> {
         ),
       ),
     );
+  }
+
+  Widget _buyerSelector() {
+    return Obx(() {
+      final buyer = controller.selectedBuyer.value;
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: controller.openBuyerPicker,
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: buyer != null
+                    ? CoinSellerUi.gold.withValues(alpha: 0.4)
+                    : Colors.white12,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white12),
+                  ),
+                  alignment: Alignment.center,
+                  child: buyer == null
+                      ? const Icon(
+                          Icons.person_search_rounded,
+                          size: 18,
+                          color: CoinSellerUi.gold,
+                        )
+                      : AppUserAvatar(
+                          name: buyer.name,
+                          imageUrl: buyer.displayPicture,
+                          size: 36,
+                        ),
+                ),
+                Spacing.h10,
+                Expanded(
+                  child: buyer == null
+                      ? const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SemiBoldText(
+                              text: 'Select buyer',
+                              fontSize: 13,
+                              color: kColorWhite,
+                            ),
+                            AppText(
+                              text: 'Friends, followers, or search',
+                              fontSize: 10,
+                              color: Colors.white38,
+                            ),
+                          ],
+                        )
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SemiBoldText(
+                              text: buyer.name,
+                              fontSize: 13,
+                              color: kColorWhite,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            AppText(
+                              text: buyer.id,
+                              fontSize: 10,
+                              color: Colors.white38,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                ),
+                if (buyer != null)
+                  IconButton(
+                    onPressed: controller.clearSelectedBuyer,
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: Colors.white54,
+                      size: 18,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                  )
+                else
+                  Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: Colors.white.withValues(alpha: 0.5),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
   }
 
   Widget _field(

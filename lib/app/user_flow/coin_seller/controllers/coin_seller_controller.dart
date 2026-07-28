@@ -8,8 +8,11 @@ import 'package:qobo_one_live/app/user_flow/coin_seller/models/seller_metrics.da
 import 'package:qobo_one_live/app/user_flow/coin_seller/models/seller_portal_parsers.dart';
 import 'package:qobo_one_live/app/user_flow/coin_seller/models/seller_sale.dart';
 import 'package:qobo_one_live/app/user_flow/coin_seller/models/seller_transactions_page.dart';
+import 'package:qobo_one_live/app/user_flow/coin_seller/widgets/coin_seller_buyer_picker_sheet.dart';
+import 'package:qobo_one_live/app/user_flow/coin_seller/widgets/coin_seller_confirm_transfer_dialog.dart';
 import 'package:qobo_one_live/app/user_flow/coin_seller/widgets/coin_seller_transaction_detail_sheet.dart';
 import 'package:qobo_one_live/app/user_flow/coin_seller/widgets/seller_sell_success_dialog.dart';
+import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/local_storage_constants.dart';
 import 'package:qobo_one_live/repo/coin_seller/coin_seller_repo.dart';
@@ -54,9 +57,17 @@ class CoinSellerController extends GetxController {
   final transactionsApiAvailable = true.obs;
 
   final detailsController = TextEditingController();
-  final userIdController = TextEditingController();
   final coinsController = TextEditingController();
   final priceController = TextEditingController();
+
+  /// Buyer chosen from the searchable user list.
+  final selectedBuyer = Rxn<SocialUserCard>();
+
+  String get selectedBuyerId => selectedBuyer.value?.id.trim() ?? '';
+  String get selectedBuyerName =>
+      selectedBuyer.value?.name.trim().isNotEmpty == true
+          ? selectedBuyer.value!.name.trim()
+          : selectedBuyerId;
 
   List<SellerSale> get filteredSales {
     final filter = transactionFilter.value;
@@ -398,16 +409,34 @@ class CoinSellerController extends GetxController {
     );
   }
 
+  Future<void> openBuyerPicker() async {
+    final picked = await CoinSellerBuyerPickerSheet.show(
+      selectedUserId: selectedBuyerId.isEmpty ? null : selectedBuyerId,
+    );
+    if (picked != null) {
+      selectedBuyer.value = picked;
+    }
+  }
+
+  void clearSelectedBuyer() {
+    selectedBuyer.value = null;
+  }
+
   Future<void> transferCoins() async {
     if (isTransferring.value) return;
     if (screenState.value != CoinSellerScreenState.approved) return;
 
-    final buyerId = userIdController.text.trim();
+    final buyer = selectedBuyer.value;
+    final buyerId = buyer?.id.trim() ?? '';
     final coinsStr = coinsController.text.trim();
     final priceStr = priceController.text.trim();
 
-    if (buyerId.isEmpty || coinsStr.isEmpty || priceStr.isEmpty) {
-      _showError('Enter user (id / email / phone), coins, and price.');
+    if (buyerId.isEmpty) {
+      _showError('Select a buyer from the user list.');
+      return;
+    }
+    if (coinsStr.isEmpty || priceStr.isEmpty) {
+      _showError('Enter coin amount and price.');
       return;
     }
 
@@ -430,8 +459,9 @@ class CoinSellerController extends GetxController {
       return;
     }
 
-    final confirmed = await _confirmTransfer(
-      buyerId: buyerId,
+    // Explicit confirmation before the sell API runs.
+    final confirmed = await CoinSellerConfirmTransferDialog.show(
+      buyer: buyer!,
       amount: coinsToTransfer,
       price: price,
     );
@@ -457,7 +487,10 @@ class CoinSellerController extends GetxController {
       return;
     }
 
-    userIdController.clear();
+    final buyerLabel =
+        buyer.name.trim().isNotEmpty ? buyer.name.trim() : buyerId;
+
+    clearSelectedBuyer();
     coinsController.clear();
     priceController.clear();
 
@@ -466,7 +499,7 @@ class CoinSellerController extends GetxController {
 
     await SellerSellSuccessDialog.show(
       amount: coinsToTransfer,
-      recipient: buyerId,
+      recipient: buyerLabel,
       price: price,
       currency: sale?.currency ?? 'INR',
     );
@@ -581,65 +614,6 @@ class CoinSellerController extends GetxController {
     }
   }
 
-  Future<bool?> _confirmTransfer({
-    required String buyerId,
-    required int amount,
-    required num price,
-  }) {
-    return Get.dialog<bool>(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        backgroundColor: const Color(0xFF1E1E2D),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Confirm transfer',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: kColorWhite,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Send $amount coins to\n$buyerId\nfor INR $price?\n\n'
-                'Confirm only after you have received payment.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white70, fontSize: 13),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Get.back(result: false),
-                      child: const Text('Cancel'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: kColorPrimary,
-                      ),
-                      onPressed: () => Get.back(result: true),
-                      child: const Text('Confirm'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-      barrierDismissible: false,
-    );
-  }
-
   void _showError(String message) {
     Get.snackbar(
       'Coin Seller',
@@ -663,7 +637,6 @@ class CoinSellerController extends GetxController {
   @override
   void onClose() {
     detailsController.dispose();
-    userIdController.dispose();
     coinsController.dispose();
     priceController.dispose();
     super.onClose();
