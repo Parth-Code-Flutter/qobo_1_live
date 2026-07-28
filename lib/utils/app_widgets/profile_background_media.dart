@@ -18,17 +18,14 @@ class ProfileBackgroundMedia extends StatelessWidget {
     this.previewImageUrl,
   });
 
-  /// Optional bundled asset only for non-catalog surfaces (e.g. VIP entrance).
-  static const String kProfileSvgaFallbackAsset =
-      'assets/gif/profile_cover_fallback.svga';
-
   final String url;
   final BoxFit fit;
 
   /// When true, SVGA shows a spinner while bytes download/decode.
   final bool showLoadingIndicator;
 
-  /// Optional bundled `.svga` played when [url] cannot be downloaded.
+  /// Optional bundled `.svga` when [url] cannot be downloaded.
+  /// Prefer API/network SVGAs only — leave null in catalog surfaces.
   final String? svgaFallbackAsset;
 
   /// Real, item-specific static thumbnail (never `.svga`). Shown instead of

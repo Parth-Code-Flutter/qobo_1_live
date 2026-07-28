@@ -11,16 +11,13 @@ import 'package:flutter_svga/flutter_svga.dart';
 /// Full-screen celebration shown after a successful gift send (or peer receive).
 ///
 /// Prefer [svgaUrl] from the gift-list API `animationUrl` field.
-/// Local SVGA / GIF assets remain available as optional fallbacks only.
+/// Optional [svgaAsset] / [gifAsset] remain for tests or rare offline demos.
 ///
 /// Uses a transparent dialog route so the animation sits above Zego
 /// PlatformViews (video room, live stream, 1:1 video) as well as Flutter UI.
 class GiftCelebrationOverlay {
   GiftCelebrationOverlay._();
 
-  // --- Local assets (kept for reference; prefer API animationUrl) ---
-  // static const String treeLoveGiftAsset = 'assets/gif/tree_love_gift_79.svga';
-  // static const String jellyfishGiftAsset = 'assets/gif/jellyfish_gift_49.svga';
   static const String loveGiftAsset = kGifLoveGift;
 
   static OverlayEntry? _activeEntry;

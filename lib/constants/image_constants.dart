@@ -10,11 +10,10 @@ const String kImgTemp4 = '$imgPath/temp4.png';
 const String kImgTemp5 = '$imgPath/temp5.png';
 
 
-const String kImgSplashScreen = '$imgPath/splash_screen_img.png';
 const String kImgBG = '$imgPath/bg_img.png';
 const String kGifSplashScreen = '$gifPath/splash_screen_gif.gif';
 const String kGifCongratulation = '$gifPath/congratulation_success.gif';
-/// Audio-room gift celebration GIF (full-screen after send-gift success).
+/// Optional gift celebration GIF when no API `animationUrl` is available.
 const String kGifLoveGift = '$gifPath/love_gif.gif';
 
 /// PNG Icons
@@ -54,24 +53,15 @@ const String kIconBackpack = '$iconPath/backpack_icon.svg';
 const String kIconFamily = '$iconPath/family_icon.svg';
 const String kIconSVIP = '$iconPath/svip_icon.svg';
 const String kIconActivity = '$iconPath/activity_icon.svg';
-const String kIconAristocracyCenter = '$iconPath/aristocracy_center_icon.svg';
 const String kIconMall = '$iconPath/mall_icon.svg';
 const String kIconPointerCenter = '$iconPath/point_center_icon.svg';
 const String kIconAward = '$iconPath/award_icon.svg';
-const String kIconBroadcastWatched = '$iconPath/broadcast_watched_icon.svg';
 const String kIconCustomerService = '$iconPath/customer_service_icon.svg';
-const String kIconMoneyBag = '$iconPath/money_bag_icon.svg';
 const String kIconCoin2 = '$iconPath/coin_2_icon.svg';
 const String kIconCoin3 = '$iconPath/coin_3_icon.svg';
 const String kIconCoin4 = '$iconPath/coin_4_icon.svg';
 const String kIconDiamond = '$iconPath/diamond_icon.svg';
 const String kIconRechargeCoins = '$iconPath/recharge_coins_icon.svg';
-const String kIconMike = '$iconPath/mike_icon.svg';
 const String kIconVideoCamera = '$iconPath/video_camera_icon.svg';
 const String kIconEye = '$iconPath/eye_icon.svg';
-const String kIconUserPlus = '$iconPath/user_plus_icon.svg';
-const String kIconMuteMike = '$iconPath/mute_mike_icon.svg';
-const String kIconRight = '$iconPath/right_icon.svg';
-const String kIconRightClickGrey = '$iconPath/right_click_grey_icon.svg';
 const String kIconLeaderboard = '$iconPath/leader_board_icon.svg';
-const String kIconGroupOfStars = '$iconPath/group_of_stars.svg';

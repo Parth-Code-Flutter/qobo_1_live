@@ -7,7 +7,6 @@ import 'package:flutter_svga/flutter_svga.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
-import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
 import 'package:qobo_one_live/utils/svga_network_loader.dart';
 
 /// Full-screen VIP / patti entrance (gift-style) when a user joins audio/video/live.
@@ -177,10 +176,17 @@ class _VipEntranceViewState extends State<_VipEntranceView>
         }
       }
 
-      // Bundled fallback when Render/CDN upload is missing (common 404).
-      videoItem ??= await SVGAParser.shared.decodeFromAssets(
-        ProfileBackgroundMedia.kProfileSvgaFallbackAsset,
-      );
+      if (videoItem == null) {
+        if (!mounted || _svgaController != controller) return;
+        controller.dispose();
+        _svgaController = null;
+        setState(() {
+          _svgaReady = false;
+          _isLoading = false;
+        });
+        _scheduleDismiss();
+        return;
+      }
 
       if (!mounted || _svgaController != controller) {
         videoItem.dispose();
