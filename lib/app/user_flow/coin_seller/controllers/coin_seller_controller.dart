@@ -1,12 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/app/user_flow/coin_seller/coin_seller_dev_config.dart';
+import 'package:qobo_one_live/app/user_flow/coin_seller/models/seller_admin.dart';
+import 'package:qobo_one_live/app/user_flow/coin_seller/models/seller_dashboard_data.dart';
+import 'package:qobo_one_live/app/user_flow/coin_seller/models/seller_login_data.dart';
+import 'package:qobo_one_live/app/user_flow/coin_seller/models/seller_metrics.dart';
+import 'package:qobo_one_live/app/user_flow/coin_seller/models/seller_portal_parsers.dart';
+import 'package:qobo_one_live/app/user_flow/coin_seller/models/seller_sale.dart';
+import 'package:qobo_one_live/app/user_flow/coin_seller/models/seller_sale_user.dart';
+import 'package:qobo_one_live/app/user_flow/coin_seller/widgets/seller_sell_success_dialog.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/repo/coin_seller/coin_seller_repo.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 
 class CoinSellerController extends GetxController {
   CoinSellerController({CoinSellerRepo? repo})
-    : _repo = repo ?? CoinSellerRepo();
+      : _repo = repo ?? CoinSellerRepo();
 
   final CoinSellerRepo _repo;
   final LocalStorage _storage = LocalStorage.shared;
@@ -16,13 +25,14 @@ class CoinSellerController extends GetxController {
   final isLoggingIn = false.obs;
   final isLoadingDashboard = false.obs;
   final isTransferring = false.obs;
+  final obscurePassword = true.obs;
 
   final sellerEmail = ''.obs;
   final availableCoins = 0.obs;
-  final totalRevenue = 0.obs;
+  final totalRevenue = 0.0.obs;
   final totalCoinsSold = 0.obs;
   final totalTransactions = 0.obs;
-  final salesLedger = <Map<String, dynamic>>[].obs;
+  final salesLedger = <SellerSale>[].obs;
 
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
@@ -45,16 +55,20 @@ class CoinSellerController extends GetxController {
       return;
     }
 
-    final admin = await _storage.getSellerAdmin();
-    if (admin != null) {
-      sellerEmail.value = admin['email']?.toString() ?? '';
-      availableCoins.value =
-          int.tryParse(admin['coinsBalance']?.toString() ?? '') ?? 0;
+    final adminMap = await _storage.getSellerAdmin();
+    if (adminMap != null) {
+      final admin = SellerAdmin.fromJson(adminMap);
+      sellerEmail.value = admin.email;
+      availableCoins.value = admin.coinsBalance;
     }
 
     isAuthenticated.value = true;
     isBootstrapping.value = false;
     await loadDashboard(isShowLoader: false);
+  }
+
+  void togglePasswordVisibility() {
+    obscurePassword.value = !obscurePassword.value;
   }
 
   Future<void> login() async {
@@ -70,34 +84,70 @@ class CoinSellerController extends GetxController {
     final response = await _repo.login(email: email, password: password);
     isLoggingIn.value = false;
 
-    if (!_isSuccess(response)) {
-      _showError(_message(response, 'Unable to login as coin seller.'));
+    final loginData =
+        response != null ? SellerLoginData.tryParseEnvelope(response) : null;
+    if (loginData != null) {
+      if (!loginData.admin.isSellerAdmin &&
+          loginData.admin.role.trim().isNotEmpty) {
+        if (CoinSellerDevConfig.bypassAuthForFlowTest) {
+          await _enterFlowTestDashboard(email: email);
+          return;
+        }
+        _showError('This account is not a coin seller.');
+        return;
+      }
+
+      await _storage.saveSellerSession(
+        token: loginData.token,
+        admin: loginData.admin.toJson(),
+      );
+      sellerEmail.value =
+          loginData.admin.email.isNotEmpty ? loginData.admin.email : email;
+      availableCoins.value = loginData.admin.coinsBalance;
+      passwordController.clear();
+      isAuthenticated.value = true;
+      await loadDashboard();
       return;
     }
 
-    final data = _asMap(response?['data']);
-    final token = data['token']?.toString().trim() ?? '';
-    final admin = _asMap(data['admin']);
-    final role = admin['role']?.toString().toLowerCase() ?? '';
-
-    if (token.isEmpty) {
-      _showError('Login succeeded but no token was returned.');
-      return;
-    }
-    if (role.isNotEmpty && role != 'seller_admin') {
-      _showError('This account is not a coin seller.');
+    if (CoinSellerDevConfig.bypassAuthForFlowTest) {
+      await _enterFlowTestDashboard(email: email);
       return;
     }
 
-    await _storage.saveSellerSession(token: token, admin: admin);
-    sellerEmail.value = admin['email']?.toString() ?? email;
-    availableCoins.value =
-        int.tryParse(admin['coinsBalance']?.toString() ?? '') ?? 0;
-    passwordController.clear();
-    isAuthenticated.value = true;
-    await loadDashboard();
+    if (response == null) {
+      _showError('Unable to login as coin seller.');
+      return;
+    }
+    _showError(
+      sellerPortalMessage(response, 'Unable to login as coin seller.'),
+    );
   }
 
+  Future<void> _enterFlowTestDashboard({required String email}) async {
+    const admin = SellerAdmin(
+      id: 'dev-seller',
+      email: 'seller@test.com',
+      role: 'seller_admin',
+      coinsBalance: 15000,
+    );
+    await _storage.saveSellerSession(
+      token: 'dev-flow-test-token',
+      admin: SellerAdmin(
+        id: admin.id,
+        email: email.isNotEmpty ? email : admin.email,
+        role: admin.role,
+        coinsBalance: admin.coinsBalance,
+      ).toJson(),
+    );
+    sellerEmail.value = email.isNotEmpty ? email : admin.email;
+    availableCoins.value = admin.coinsBalance;
+    passwordController.clear();
+    isAuthenticated.value = true;
+    await loadDashboard(isShowLoader: false);
+  }
+
+  /// Clears seller JWT only — does not touch the end-user session.
   Future<void> logoutSeller() async {
     await _storage.clearSellerSession();
     isAuthenticated.value = false;
@@ -116,43 +166,66 @@ class CoinSellerController extends GetxController {
     final response = await _repo.getDashboard(isShowLoader: isShowLoader);
     isLoadingDashboard.value = false;
 
-    if (_isUnauthorized(response)) {
+    if (isSellerPortalUnauthorized(response)) {
+      if (CoinSellerDevConfig.bypassAuthForFlowTest) {
+        _applyDashboard(_placeholderDashboard());
+        return;
+      }
       await logoutSeller();
       _showError('Seller session expired. Please login again.');
       return;
     }
 
-    if (!_isSuccess(response)) {
-      _showError(_message(response, 'Unable to load seller dashboard.'));
+    final dashboard = SellerDashboardData.tryParseEnvelope(response);
+    if (dashboard == null) {
+      if (CoinSellerDevConfig.bypassAuthForFlowTest) {
+        _applyDashboard(_placeholderDashboard());
+        return;
+      }
+      _showError(
+        sellerPortalMessage(response, 'Unable to load seller dashboard.'),
+      );
       return;
     }
 
-    final data = _asMap(response?['data']);
-    availableCoins.value =
-        int.tryParse(data['coinsBalance']?.toString() ?? '') ??
-        availableCoins.value;
-
-    final metrics = _asMap(data['metrics']);
-    totalRevenue.value =
-        _toInt(metrics['totalRevenue']) ?? totalRevenue.value;
-    totalCoinsSold.value =
-        _toInt(metrics['totalCoinsSold']) ?? totalCoinsSold.value;
-    totalTransactions.value =
-        _toInt(metrics['totalTransactions']) ?? totalTransactions.value;
-
-    final recent = data['recentSales'];
-    if (recent is List) {
-      salesLedger.assignAll(
-        recent
-            .whereType<Map>()
-            .map((item) => _normalizeSale(Map<String, dynamic>.from(item)))
-            .toList(),
-      );
-    } else {
-      salesLedger.clear();
-    }
+    _applyDashboard(dashboard);
   }
 
+  SellerDashboardData _placeholderDashboard() {
+    return SellerDashboardData(
+      coinsBalance: availableCoins.value > 0 ? availableCoins.value : 15000,
+      metrics: const SellerMetrics(
+        totalRevenue: 2500,
+        totalCoinsSold: 10000,
+        totalTransactions: 45,
+      ),
+      recentSales: [
+        SellerSale(
+          id: 'dev-sale-1',
+          userId: 'user-demo-1',
+          amount: 500,
+          price: 100,
+          currency: 'INR',
+          createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+          user: const SellerSaleUser(
+            id: 'user-demo-1',
+            name: 'John Doe',
+            email: 'john@example.com',
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _applyDashboard(SellerDashboardData dashboard) {
+    availableCoins.value = dashboard.coinsBalance;
+    totalRevenue.value = dashboard.metrics.totalRevenue.toDouble();
+    totalCoinsSold.value = dashboard.metrics.totalCoinsSold;
+    totalTransactions.value = dashboard.metrics.totalTransactions;
+    salesLedger.assignAll(dashboard.recentSales);
+  }
+
+  /// Validates form, confirms with the user, then calls sell API.
   Future<void> transferCoins() async {
     if (isTransferring.value) return;
     final buyerId = userIdController.text.trim();
@@ -183,6 +256,13 @@ class CoinSellerController extends GetxController {
       return;
     }
 
+    final confirmed = await _confirmTransfer(
+      buyerId: buyerId,
+      amount: coinsToTransfer,
+      price: price,
+    );
+    if (confirmed != true) return;
+
     isTransferring.value = true;
     final response = await _repo.sellCoins(
       userId: buyerId,
@@ -191,14 +271,15 @@ class CoinSellerController extends GetxController {
     );
     isTransferring.value = false;
 
-    if (_isUnauthorized(response)) {
+    if (isSellerPortalUnauthorized(response)) {
       await logoutSeller();
       _showError('Seller session expired. Please login again.');
       return;
     }
 
-    if (!_isSuccess(response)) {
-      _showError(_message(response, 'Unable to transfer coins.'));
+    final sale = SellerSale.tryParseEnvelope(response);
+    if (sale == null && !isSellerPortalSuccess(response)) {
+      _showError(sellerPortalMessage(response, 'Unable to transfer coins.'));
       return;
     }
 
@@ -206,17 +287,32 @@ class CoinSellerController extends GetxController {
     coinsController.clear();
     priceController.clear();
 
-    final sale = _normalizeSale(_asMap(response?['data']));
-    salesLedger.insert(0, sale);
-    availableCoins.value = (availableCoins.value - coinsToTransfer)
-        .clamp(0, 1 << 30);
+    // Optimistic update; dashboard refresh is source of truth.
+    if (sale != null) {
+      salesLedger.insert(0, sale);
+    }
+    availableCoins.value =
+        (availableCoins.value - coinsToTransfer).clamp(0, 1 << 30);
     totalCoinsSold.value += coinsToTransfer;
     totalTransactions.value += 1;
-    totalRevenue.value += _toInt(sale['price']) ?? price.round();
+    totalRevenue.value += (sale?.price ?? price).toDouble();
 
     await loadDashboard(isShowLoader: false);
 
-    Get.dialog(
+    await SellerSellSuccessDialog.show(
+      amount: coinsToTransfer,
+      recipient: buyerId,
+      price: price,
+      currency: sale?.currency ?? 'INR',
+    );
+  }
+
+  Future<bool?> _confirmTransfer({
+    required String buyerId,
+    required int amount,
+    required num price,
+  }) {
+    return Get.dialog<bool>(
       Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         backgroundColor: const Color(0xFF1E1E2D),
@@ -224,15 +320,11 @@ class CoinSellerController extends GetxController {
           padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(
-                Icons.check_circle_rounded,
-                color: Colors.green,
-                size: 64,
-              ),
-              const SizedBox(height: 16),
               const Text(
-                'Transfer Successful',
+                'Confirm transfer',
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   color: kColorWhite,
                   fontWeight: FontWeight.bold,
@@ -241,102 +333,49 @@ class CoinSellerController extends GetxController {
               ),
               const SizedBox(height: 12),
               Text(
-                'Sent $coinsToTransfer coins to $buyerId.',
+                'Send $amount coins to\n$buyerId\nfor INR $price?\n\n'
+                'Confirm only after you have received payment.',
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.white70, fontSize: 13),
               ),
               const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: kColorPrimary,
-                    foregroundColor: kColorWhite,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Get.back(result: false),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white70,
+                        side: const BorderSide(color: Colors.white24),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text('Cancel'),
                     ),
                   ),
-                  onPressed: () => Get.back(),
-                  child: const Text('OK'),
-                ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: kColorPrimary,
+                        foregroundColor: kColorWhite,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: () => Get.back(result: true),
+                      child: const Text('Confirm'),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
         ),
       ),
+      barrierDismissible: false,
     );
-  }
-
-  Map<String, dynamic> _normalizeSale(Map<String, dynamic> raw) {
-    final user = _asMap(raw['user']);
-    final amount = _toInt(raw['amount']) ?? 0;
-    final price = _toInt(raw['price']) ?? 0;
-    final currency = raw['currency']?.toString().trim().isNotEmpty == true
-        ? raw['currency'].toString()
-        : 'INR';
-    final buyerName = user['name']?.toString().trim().isNotEmpty == true
-        ? user['name'].toString()
-        : (raw['userId']?.toString() ?? 'User');
-    final buyerId =
-        user['id']?.toString() ??
-        raw['userId']?.toString() ??
-        '';
-    return <String, dynamic>{
-      ...raw,
-      'buyerId': buyerId,
-      'buyerName': buyerName,
-      'buyerEmail': user['email']?.toString() ?? '',
-      'coins': amount,
-      'price': price,
-      'currency': currency,
-      'date': _formatDate(raw['createdAt']?.toString()),
-    };
-  }
-
-  String _formatDate(String? raw) {
-    if (raw == null || raw.trim().isEmpty) return 'Just now';
-    final parsed = DateTime.tryParse(raw);
-    if (parsed == null) return raw;
-    final local = parsed.toLocal();
-    String two(int n) => n.toString().padLeft(2, '0');
-    return '${two(local.day)}/${two(local.month)}/${local.year} '
-        '${two(local.hour)}:${two(local.minute)}';
-  }
-
-  bool _isSuccess(Map<String, dynamic>? response) {
-    if (response == null) return false;
-    if (response['success'] == true) return true;
-    final code = response['statusCode'];
-    return code == 1 ||
-        code == 200 ||
-        code == 201 ||
-        code?.toString() == '1' ||
-        code?.toString() == '200' ||
-        code?.toString() == '201';
-  }
-
-  bool _isUnauthorized(Map<String, dynamic>? response) {
-    if (response == null) return false;
-    final code = response['statusCode'];
-    return code == 401 || code?.toString() == '401';
-  }
-
-  String _message(Map<String, dynamic>? response, String fallback) {
-    final message = response?['message']?.toString().trim();
-    return message == null || message.isEmpty ? fallback : message;
-  }
-
-  Map<String, dynamic> _asMap(dynamic value) {
-    if (value is Map<String, dynamic>) return value;
-    if (value is Map) return Map<String, dynamic>.from(value);
-    return <String, dynamic>{};
-  }
-
-  int? _toInt(dynamic value) {
-    if (value == null) return null;
-    if (value is int) return value;
-    if (value is num) return value.round();
-    return int.tryParse(value.toString());
   }
 
   void _showError(String message) {

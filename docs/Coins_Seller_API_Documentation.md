@@ -1,21 +1,28 @@
-# Coins Seller Module - API Documentation
+# Coins Seller Module — API Documentation
 
-This document describes the API endpoints required for the **Coins Seller Portal** within the mobile application. These APIs allow independent sellers (merchants) to log in, view their inventory, and distribute coins to end-users.
+> Canonical copy with mobile requirements: [`docs/api/COINS_SELLER_PORTAL_API.md`](./api/COINS_SELLER_PORTAL_API.md)
+
+This document describes the API endpoints for the **Coins Seller Portal** within the mobile application. These APIs allow independent sellers (merchants) to log in, view their stock, and distribute coins to end-users.
 
 ---
 
 ## 1. Seller Login
+
 Authenticates a seller (merchant) and returns a secure access token.
+
 * **Method**: `POST`
 * **Endpoint**: `/api/admin/login`
 * **Request Body**:
+
 ```json
 {
   "email": "seller@example.com",
   "password": "SellerPassword123"
 }
 ```
+
 * **Response `200 OK`**:
+
 ```json
 {
   "success": true,
@@ -32,14 +39,19 @@ Authenticates a seller (merchant) and returns a secure access token.
 }
 ```
 
+**Mobile requirement:** Secure seller login; persist seller JWT separately; open the seller dashboard isolated from the regular user app.
+
 ---
 
 ## 2. Seller Dashboard Data
+
 Fetches the seller's current coin balance, aggregate sales metrics, and transaction history.
+
 * **Method**: `GET`
 * **Endpoint**: `/api/admin/seller-portal/dashboard`
 * **Auth**: Seller JWT Token (`Authorization: Bearer <token>`)
 * **Response `200 OK`**:
+
 ```json
 {
   "success": true,
@@ -71,14 +83,19 @@ Fetches the seller's current coin balance, aggregate sales metrics, and transact
 }
 ```
 
+**Mobile requirement:** Prominent `coinsBalance` stock, metrics row, and `recentSales` list (avatar, name, amount, price, date). Pull-to-refresh.
+
 ---
 
 ## 3. Sell Coins to User
-Transfers coins from the seller's stock to a user's wallet. The backend handles the ledger math to ensure the seller has enough stock.
+
+Transfers coins from the seller's stock to a user's wallet. The backend handles ledger math so the seller has enough stock.
+
 * **Method**: `POST`
 * **Endpoint**: `/api/admin/seller-portal/sell`
 * **Auth**: Seller JWT Token (`Authorization: Bearer <token>`)
 * **Request Body**:
+
 ```json
 {
   "userId": "user-uuid-or-email",
@@ -86,7 +103,9 @@ Transfers coins from the seller's stock to a user's wallet. The backend handles 
   "price": 100
 }
 ```
+
 * **Response `200 OK`**:
+
 ```json
 {
   "success": true,
@@ -102,4 +121,6 @@ Transfers coins from the seller's stock to a user's wallet. The backend handles 
 }
 ```
 
-*Note: The `userId` field can accept the user's UUID, their registered Email address, or Phone Number.*
+*Note: The `userId` field can accept the user's UUID, registered email, or phone number.*
+
+**Mobile requirement:** Sell/Transfer form with confirm-before-submit; on success show animation, clear form, refresh dashboard.

@@ -1,9 +1,13 @@
+import 'package:http/http.dart' as http;
 import 'package:qobo_one_live/services/api_constants.dart';
 import 'package:qobo_one_live/services/api_service.dart';
 import 'package:qobo_one_live/utils/api_response_utils.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 
 /// Coin Seller Portal APIs (`seller_admin` JWT from `/api/admin/login`).
+///
+/// Uses [bearerToken] + [skipUnauthorizedHandling] so seller 401s never
+/// clear the end-user session.
 class CoinSellerRepo {
   CoinSellerRepo({
     ApiService? apiService,
@@ -30,7 +34,7 @@ class CoinSellerRepo {
       isLoginCall: true,
     );
     if (response == null) return null;
-    return ApiResponseUtils.tryDecodeMap(response.body);
+    return _decodeOrUnauthorized(response);
   }
 
   /// GET `/api/admin/seller-portal/dashboard`
@@ -47,14 +51,7 @@ class CoinSellerRepo {
       skipUnauthorizedHandling: true,
     );
     if (response == null) return null;
-    if (response.statusCode == 401) {
-      return <String, dynamic>{
-        'success': false,
-        'statusCode': 401,
-        'message': 'Seller session expired',
-      };
-    }
-    return ApiResponseUtils.tryDecodeMap(response.body);
+    return _decodeOrUnauthorized(response);
   }
 
   /// POST `/api/admin/seller-portal/sell`
@@ -81,6 +78,10 @@ class CoinSellerRepo {
       skipUnauthorizedHandling: true,
     );
     if (response == null) return null;
+    return _decodeOrUnauthorized(response);
+  }
+
+  Map<String, dynamic>? _decodeOrUnauthorized(http.Response response) {
     if (response.statusCode == 401) {
       return <String, dynamic>{
         'success': false,
