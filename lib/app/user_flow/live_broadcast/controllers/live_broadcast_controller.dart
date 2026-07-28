@@ -21,6 +21,7 @@ import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/join_request_in_app_banner.dart';
 import 'package:qobo_one_live/utils/app_dialogs/audio_room_feedback_dialog.dart';
+import 'package:qobo_one_live/utils/app_widgets/session_earnings_dialog.dart';
 import 'package:qobo_one_live/utils/session_earnings_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -377,8 +378,20 @@ class LiveBroadcastController extends GetxController {
     );
   }
 
+  /// Shows session earnings dialog; Withdraw navigates to wallet withdraw.
+  void openSessionEarningsDialog() {
+    SessionEarningsDialog.show(
+      tracker: sessionEarnings,
+      onWithdraw: openWithdrawalWallet,
+      unitLabel: 'coins',
+    );
+  }
+
   void openWithdrawalWallet() {
-    Get.to(() => const WalletView(), binding: WalletBinding());
+    Get.to(
+      () => const WalletView(openWithdrawOnLoad: true),
+      binding: WalletBinding(),
+    );
   }
 
   List<String> get giftCategories {

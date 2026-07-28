@@ -19,6 +19,7 @@ class SessionEarningsBadge extends StatelessWidget {
     this.textColor,
     this.backgroundColor,
     this.borderColor,
+    this.onTap,
   });
 
   final SessionEarningsTracker tracker;
@@ -30,6 +31,8 @@ class SessionEarningsBadge extends StatelessWidget {
   final Color? textColor;
   final Color? backgroundColor;
   final Color? borderColor;
+  /// Opens withdraw / wallet flow when the host taps earnings.
+  final VoidCallback? onTap;
 
   double get _defaultMaxWidth => compact ? 60 : 68;
 
@@ -44,7 +47,7 @@ class SessionEarningsBadge extends StatelessWidget {
           ? TextStyles.k10FontSize
           : TextStyles.k12FontSize;
 
-      return ConstrainedBox(
+      final pill = ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth ?? _defaultMaxWidth),
         child: Container(
           height: compact ? 36 : 42,
@@ -79,6 +82,17 @@ class SessionEarningsBadge extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      );
+
+      if (onTap == null) return pill;
+
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(compact ? 10 : 12),
+          child: pill,
         ),
       );
     });

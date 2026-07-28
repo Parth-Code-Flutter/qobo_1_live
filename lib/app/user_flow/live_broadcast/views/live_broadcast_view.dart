@@ -138,6 +138,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
             const Positioned.fill(child: AudioRoomStageOverlay()),
             if (!canOpenCall) _buildAudioRoomConnectionBanner(),
           ],
+          if (isVideoRoom) _buildVideoHostEarningsBadge(),
           _buildGroupCallGiftDock(),
         ],
       );
@@ -161,6 +162,28 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
 
     // Viewers should still report leave when the host/room ends remotely.
     return reason == call.ZegoCallEndReason.remoteHangUp;
+  }
+
+  Widget _buildVideoHostEarningsBadge() {
+    return Obx(() {
+      if (!controller.isHost.value) return const SizedBox.shrink();
+      return Positioned(
+        top: 8,
+        right: 14,
+        child: SafeArea(
+          child: SessionEarningsBadge(
+            key: controller.sessionEarningsBadgeKey,
+            tracker: controller.sessionEarnings,
+            compact: true,
+            maxWidth: 72,
+            icon: Icons.monetization_on_rounded,
+            iconColor: const Color(0xFFFFA10A),
+            backgroundColor: Colors.black.withValues(alpha: 0.35),
+            onTap: controller.openSessionEarningsDialog,
+          ),
+        ),
+      );
+    });
   }
 
   Widget _buildGroupCallGiftDock() {
@@ -645,30 +668,19 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final isCompact = constraints.maxWidth < 390;
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          final earningsMaxWidth = (constraints.maxWidth * 0.17).clamp(
+            52.0,
+            isCompact ? 64.0 : 72.0,
+          );
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: _hostSummaryCard(compact: isCompact)),
-                  SizedBox(width: isCompact ? 6 : 10),
-                  _topActions(compact: isCompact),
-                ],
+              Expanded(child: _hostSummaryCard(compact: isCompact)),
+              SizedBox(width: isCompact ? 6 : 10),
+              _topActions(
+                compact: isCompact,
+                earningsMaxWidth: earningsMaxWidth,
               ),
-              Obx(() {
-                if (!controller.isHost.value) return const SizedBox.shrink();
-                return Padding(
-                  padding: const EdgeInsets.only(top: 10),
-                  child: SessionEarningsHostBanner(
-                    key: controller.sessionEarningsBadgeKey,
-                    tracker: controller.sessionEarnings,
-                    compact: isCompact,
-                    onWithdraw: controller.openWithdrawalWallet,
-                    unitLabel: 'coins',
-                  ),
-                );
-              }),
             ],
           );
         },
@@ -803,7 +815,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
     });
   }
 
-  Widget _topActions({bool compact = false}) {
+  Widget _topActions({bool compact = false, double? earningsMaxWidth}) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -814,6 +826,21 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
           compact: compact,
           onTap: controller.shareRoom,
         ),
+        Obx(() {
+          if (!controller.isHost.value) return const SizedBox.shrink();
+          return Padding(
+            padding: EdgeInsets.only(left: compact ? 5 : 8),
+            child: SessionEarningsBadge(
+              key: controller.sessionEarningsBadgeKey,
+              tracker: controller.sessionEarnings,
+              compact: compact,
+              maxWidth: earningsMaxWidth,
+              icon: Icons.monetization_on_rounded,
+              iconColor: const Color(0xFFFFA10A),
+              onTap: controller.openSessionEarningsDialog,
+            ),
+          );
+        }),
         SizedBox(width: compact ? 5 : 8),
         // Same end control as audio/video rooms (red power icon).
         _topIconButton(

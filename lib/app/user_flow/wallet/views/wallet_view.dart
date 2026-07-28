@@ -12,7 +12,10 @@ import 'package:qobo_one_live/routes/app_pages.dart';
 import '../controllers/wallet_controller.dart';
 
 class WalletView extends StatefulWidget {
-  const WalletView({super.key});
+  const WalletView({super.key, this.openWithdrawOnLoad = false});
+
+  /// When true, opens the withdraw bottom sheet after the wallet loads.
+  final bool openWithdrawOnLoad;
 
   @override
   State<WalletView> createState() => _WalletViewState();
@@ -24,6 +27,17 @@ class _WalletViewState extends State<WalletView> {
   final TextEditingController _withdrawAccountController =
       TextEditingController();
   final TextEditingController _withdrawIfscController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.openWithdrawOnLoad) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _openWithdrawBottomSheet();
+      });
+    }
+  }
 
   @override
   void dispose() {
