@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/coin_seller/controllers/coin_seller_controller.dart';
 import 'package:qobo_one_live/app/user_flow/coin_seller/models/seller_sale.dart';
+import 'package:qobo_one_live/app/user_flow/coin_seller/widgets/coin_seller_transaction_actions_sheet.dart';
 import 'package:qobo_one_live/app/user_flow/coin_seller/widgets/coin_seller_ui_kit.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
@@ -20,47 +21,64 @@ class CoinSellerView extends GetView<CoinSellerController> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: CoinSellerUi.ink,
-      body: DecoratedBox(
-        decoration: const BoxDecoration(gradient: CoinSellerUi.heroGradient),
-        child: SafeArea(
-          child: Obx(() {
-            if (controller.isBootstrapping.value ||
-                controller.screenState.value == CoinSellerScreenState.checking) {
-              return const Center(
-                child: CircularProgressIndicator(color: CoinSellerUi.gold),
+      resizeToAvoidBottomInset: true,
+      body: GestureDetector(
+        onTap: () => _dismissKeyboard(context),
+        behavior: HitTestBehavior.translucent,
+        child: DecoratedBox(
+          decoration: const BoxDecoration(gradient: CoinSellerUi.heroGradient),
+          child: SafeArea(
+            child: Obx(() {
+              if (controller.isBootstrapping.value ||
+                  controller.screenState.value ==
+                      CoinSellerScreenState.checking) {
+                return const Center(
+                  child: CircularProgressIndicator(color: CoinSellerUi.gold),
+                );
+              }
+              return Column(
+                children: [
+                  _header(context),
+                  Expanded(
+                    child: _bodyForState(context, controller.screenState.value),
+                  ),
+                ],
               );
-            }
-            return Column(
-              children: [
-                _header(),
-                Expanded(child: _bodyForState(controller.screenState.value)),
-              ],
-            );
-          }),
+            }),
+          ),
         ),
       ),
     );
   }
 
-  Widget _bodyForState(CoinSellerScreenState state) {
+  void _dismissKeyboard(BuildContext context) {
+    FocusScope.of(context).unfocus();
+  }
+
+  void _runDismissKeyboard(BuildContext context, VoidCallback action) {
+    _dismissKeyboard(context);
+    action();
+  }
+
+  Widget _bodyForState(BuildContext context, CoinSellerScreenState state) {
     switch (state) {
       case CoinSellerScreenState.checking:
         return const SizedBox.shrink();
       case CoinSellerScreenState.apply:
-        return _buildApplyForm();
+        return _buildApplyForm(context);
       case CoinSellerScreenState.pending:
-        return _buildPendingState();
+        return _buildPendingState(context);
       case CoinSellerScreenState.approved:
-        return _buildApprovedDashboard();
+        return _buildApprovedDashboard(context);
     }
   }
 
-  Widget _header() {
+  Widget _header(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
       child: Row(
         children: [
-          _iconButton(Icons.arrow_back_ios_new_rounded, Get.back),
+          _iconButton(context, Icons.arrow_back_ios_new_rounded, Get.back),
           Expanded(
             child: Column(
               children: [
@@ -86,6 +104,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
               return const SizedBox(width: 40);
             }
             return _iconButton(
+              context,
               Icons.refresh_rounded,
               () => controller.loadDashboard(),
             );
@@ -95,9 +114,13 @@ class CoinSellerView extends GetView<CoinSellerController> {
     );
   }
 
-  Widget _iconButton(IconData icon, VoidCallback onTap) {
+  Widget _iconButton(
+    BuildContext context,
+    IconData icon,
+    VoidCallback onTap,
+  ) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () => _runDismissKeyboard(context, onTap),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: BackdropFilter(
@@ -118,8 +141,9 @@ class CoinSellerView extends GetView<CoinSellerController> {
     );
   }
 
-  Widget _buildApplyForm() {
+  Widget _buildApplyForm(BuildContext context) {
     return SingleChildScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.all(16),
       child: _glassPanel(
         child: Column(
@@ -157,7 +181,10 @@ class CoinSellerView extends GetView<CoinSellerController> {
                 width: double.infinity,
                 height: 50,
                 child: appButton(
-                  onPressed: controller.applyToBecomeSeller,
+                  onPressed: () => _runDismissKeyboard(
+                    context,
+                    controller.applyToBecomeSeller,
+                  ),
                   buttonText: controller.isApplying.value
                       ? 'Submitting…'
                       : 'Apply now',
@@ -169,7 +196,10 @@ class CoinSellerView extends GetView<CoinSellerController> {
             Spacing.v10,
             Center(
               child: TextButton(
-                onPressed: () => controller.loadDashboard(isShowLoader: true),
+                onPressed: () => _runDismissKeyboard(
+                  context,
+                  () => controller.loadDashboard(isShowLoader: true),
+                ),
                 child: const AppText(
                   text: 'Already approved? Refresh status',
                   fontSize: 12,
@@ -183,7 +213,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
     );
   }
 
-  Widget _buildPendingState() {
+  Widget _buildPendingState(BuildContext context) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -229,7 +259,10 @@ class CoinSellerView extends GetView<CoinSellerController> {
                 width: double.infinity,
                 height: 48,
                 child: appButton(
-                  onPressed: () => controller.loadDashboard(),
+                  onPressed: () => _runDismissKeyboard(
+                    context,
+                    () => controller.loadDashboard(),
+                  ),
                   buttonText: 'Check approval status',
                   isGradient: true,
                   borderRadius: 14,
@@ -242,7 +275,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
     );
   }
 
-  Widget _buildApprovedDashboard() {
+  Widget _buildApprovedDashboard(BuildContext context) {
     return DefaultTabController(
       length: 2,
       child: Column(
@@ -260,14 +293,14 @@ class CoinSellerView extends GetView<CoinSellerController> {
           Spacing.v12,
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _tabBar(),
+            child: _tabBar(context),
           ),
           Spacing.v8,
           Expanded(
             child: TabBarView(
               children: [
-                _transferPanel(),
-                _transactionsPanel(),
+                _transferPanel(context),
+                _transactionsPanel(context),
               ],
             ),
           ),
@@ -427,7 +460,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
     );
   }
 
-  Widget _tabBar() {
+  Widget _tabBar(BuildContext context) {
     return Container(
       height: 44,
       decoration: BoxDecoration(
@@ -436,6 +469,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
         border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: TabBar(
+        onTap: (_) => _dismissKeyboard(context),
         indicatorSize: TabBarIndicatorSize.tab,
         dividerColor: Colors.transparent,
         indicator: BoxDecoration(
@@ -445,6 +479,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
         labelColor: kColorWhite,
         unselectedLabelColor: Colors.white60,
         labelStyle: TextStyles.kSemiBoldPoppins(fontSize: 12),
+        unselectedLabelStyle: TextStyles.kSemiBoldPoppins(fontSize: 12),
         tabs: const [
           Tab(text: 'Sell coins'),
           Tab(text: 'Transactions'),
@@ -453,8 +488,9 @@ class CoinSellerView extends GetView<CoinSellerController> {
     );
   }
 
-  Widget _transferPanel() {
+  Widget _transferPanel(BuildContext context) {
     return SingleChildScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       child: _glassPanel(
         child: Column(
@@ -472,7 +508,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
               color: Colors.white54,
             ),
             Spacing.v16,
-            _buyerSelector(),
+            _buyerSelector(context),
             Spacing.v12,
             _field(Icons.toll_rounded, controller.coinsController,
                 'Coin amount', number: true),
@@ -527,7 +563,10 @@ class CoinSellerView extends GetView<CoinSellerController> {
                     child: InkWell(
                       onTap: controller.isTransferring.value
                           ? null
-                          : controller.transferCoins,
+                          : () => _runDismissKeyboard(
+                                context,
+                                controller.transferCoins,
+                              ),
                       borderRadius: BorderRadius.circular(14),
                       child: Center(
                         child: SemiBoldText(
@@ -549,13 +588,13 @@ class CoinSellerView extends GetView<CoinSellerController> {
     );
   }
 
-  Widget _buyerSelector() {
+  Widget _buyerSelector(BuildContext context) {
     return Obx(() {
       final buyer = controller.selectedBuyer.value;
       return Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: controller.openBuyerPicker,
+          onTap: () => _runDismissKeyboard(context, controller.openBuyerPicker),
           borderRadius: BorderRadius.circular(14),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -631,7 +670,10 @@ class CoinSellerView extends GetView<CoinSellerController> {
                 ),
                 if (buyer != null)
                   IconButton(
-                    onPressed: controller.clearSelectedBuyer,
+                    onPressed: () => _runDismissKeyboard(
+                      context,
+                      controller.clearSelectedBuyer,
+                    ),
                     icon: const Icon(
                       Icons.close_rounded,
                       color: Colors.white54,
@@ -695,18 +737,26 @@ class CoinSellerView extends GetView<CoinSellerController> {
     );
   }
 
-  Widget _transactionsPanel() {
+  Widget _transactionsPanel(BuildContext context) {
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
           child: Obx(() => Row(
                 children: [
-                  _filterChip('All', CoinSellerTransactionFilter.all),
+                  _filterChip(context, 'All', CoinSellerTransactionFilter.all),
                   Spacing.h8,
-                  _filterChip('Completed', CoinSellerTransactionFilter.completed),
+                  _filterChip(
+                    context,
+                    'Completed',
+                    CoinSellerTransactionFilter.completed,
+                  ),
                   Spacing.h8,
-                  _filterChip('Reversed', CoinSellerTransactionFilter.reversed),
+                  _filterChip(
+                    context,
+                    'Reversed',
+                    CoinSellerTransactionFilter.reversed,
+                  ),
                 ],
               )),
         ),
@@ -730,6 +780,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
               color: CoinSellerUi.gold,
               onRefresh: () => controller.loadTransactions(refresh: true),
               child: ListView.separated(
+                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                 itemCount: sales.length +
                     (controller.hasMoreTransactions.value ? 1 : 0),
@@ -738,12 +789,15 @@ class CoinSellerView extends GetView<CoinSellerController> {
                   if (index >= sales.length) {
                     return Center(
                       child: TextButton(
-                        onPressed: controller.loadMoreTransactions,
+                        onPressed: () => _runDismissKeyboard(
+                          context,
+                          controller.loadMoreTransactions,
+                        ),
                         child: const Text('Load more'),
                       ),
                     );
                   }
-                  return _transactionTile(sales[index]);
+                  return _transactionTile(context, sales[index]);
                 },
               ),
             );
@@ -753,10 +807,17 @@ class CoinSellerView extends GetView<CoinSellerController> {
     );
   }
 
-  Widget _filterChip(String label, CoinSellerTransactionFilter filter) {
+  Widget _filterChip(
+    BuildContext context,
+    String label,
+    CoinSellerTransactionFilter filter,
+  ) {
     final selected = controller.transactionFilter.value == filter;
     return GestureDetector(
-      onTap: () => controller.setTransactionFilter(filter),
+      onTap: () => _runDismissKeyboard(
+        context,
+        () => controller.setTransactionFilter(filter),
+      ),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
@@ -779,46 +840,94 @@ class CoinSellerView extends GetView<CoinSellerController> {
     );
   }
 
-  Widget _transactionTile(SellerSale sale) {
+  Widget _transactionTile(BuildContext context, SellerSale sale) {
+    final accent = sale.isReversed
+        ? const Color(0xFFFF6B6B)
+        : CoinSellerUi.gold;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => controller.openTransactionDetail(sale),
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: CoinSellerUi.glassCard(),
+        onTap: () => _runDismissKeyboard(
+          context,
+          () => controller.openTransactionDetail(sale),
+        ),
+        borderRadius: BorderRadius.circular(20),
+        child: Ink(
+          padding: const EdgeInsets.fromLTRB(14, 14, 10, 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                accent.withValues(alpha: 0.14),
+                Colors.white.withValues(alpha: 0.05),
+                Colors.black.withValues(alpha: 0.18),
+              ],
+            ),
+            border: Border.all(color: accent.withValues(alpha: 0.28)),
+            boxShadow: [
+              BoxShadow(
+                color: accent.withValues(alpha: 0.08),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
           child: Row(
             children: [
-              AppUserAvatar(
-                name: sale.displayName,
-                imageUrl: sale.avatarUrl,
-                size: 46,
+              Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      accent.withValues(alpha: 0.85),
+                      const Color(0xFFFF4081).withValues(alpha: 0.55),
+                    ],
+                  ),
+                ),
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0xFF120A1E),
+                  ),
+                  child: AppUserAvatar(
+                    name: sale.displayName,
+                    imageUrl: sale.avatarUrl,
+                    size: 44,
+                  ),
+                ),
               ),
               Spacing.h12,
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    SemiBoldText(
+                      text: sale.displayName,
+                      fontSize: 14,
+                      color: kColorWhite,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Spacing.v6,
                     Row(
                       children: [
-                        Expanded(
-                          child: SemiBoldText(
-                            text: sale.displayName,
-                            fontSize: 13,
-                            color: kColorWhite,
+                        _statusPill(sale),
+                        Spacing.h8,
+                        Flexible(
+                          child: AppText(
+                            text: sale.formattedDate,
+                            fontSize: 10,
+                            color: Colors.white38,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        _statusPill(sale),
                       ],
-                    ),
-                    Spacing.v4,
-                    AppText(
-                      text: sale.formattedDate,
-                      fontSize: 10,
-                      color: Colors.white38,
                     ),
                   ],
                 ),
@@ -829,43 +938,41 @@ class CoinSellerView extends GetView<CoinSellerController> {
                 children: [
                   SemiBoldText(
                     text: sale.isReversed
-                        ? '${sale.amount}'
+                        ? CoinSellerUi.formatCoins(sale.amount)
                         : '+${CoinSellerUi.formatCoins(sale.amount)}',
-                    fontSize: 13,
+                    fontSize: 14,
                     color: sale.isReversed ? Colors.white54 : CoinSellerUi.gold,
                   ),
-                  AppText(
-                    text: '${sale.currency} ${CoinSellerUi.formatMoney(sale.price)}',
-                    fontSize: 11,
-                    color: CoinSellerUi.mint,
+                  Spacing.v4,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: CoinSellerUi.mint.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: CoinSellerUi.mint.withValues(alpha: 0.28),
+                      ),
+                    ),
+                    child: AppText(
+                      text:
+                          '${sale.currency} ${CoinSellerUi.formatMoney(sale.price)}',
+                      fontSize: 10,
+                      color: CoinSellerUi.mint,
+                    ),
                   ),
                 ],
               ),
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert_rounded,
-                    color: Colors.white54, size: 18),
-                color: const Color(0xFF241535),
-                onSelected: (action) {
-                  switch (action) {
-                    case 'view':
-                      controller.openTransactionDetail(sale);
-                    case 'edit':
-                      controller.openEditTransaction(sale);
-                    case 'reverse':
-                      controller.reverseSale(sale);
-                  }
-                },
-                itemBuilder: (_) => [
-                  const PopupMenuItem(value: 'view', child: Text('View details')),
-                  if (sale.canEdit)
-                    const PopupMenuItem(value: 'edit', child: Text('Edit price')),
-                  if (sale.canReverse)
-                    const PopupMenuItem(
-                      value: 'reverse',
-                      child: Text('Reverse sale',
-                          style: TextStyle(color: Colors.redAccent)),
-                    ),
-                ],
+              IconButton(
+                onPressed: () => _openTransactionActions(context, sale),
+                icon: Icon(
+                  Icons.more_horiz_rounded,
+                  color: Colors.white.withValues(alpha: 0.55),
+                  size: 22,
+                ),
+                visualDensity: VisualDensity.compact,
               ),
             ],
           ),
@@ -874,14 +981,32 @@ class CoinSellerView extends GetView<CoinSellerController> {
     );
   }
 
+  Future<void> _openTransactionActions(
+    BuildContext context,
+    SellerSale sale,
+  ) async {
+    _dismissKeyboard(context);
+    final action = await CoinSellerTransactionActionsSheet.show(sale: sale);
+    if (action == null) return;
+    switch (action) {
+      case CoinSellerTransactionAction.view:
+        controller.openTransactionDetail(sale);
+      case CoinSellerTransactionAction.edit:
+        controller.openEditTransaction(sale);
+      case CoinSellerTransactionAction.reverse:
+        controller.reverseSale(sale);
+    }
+  }
+
   Widget _statusPill(SellerSale sale) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: sale.statusColor.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(10),
+        color: sale.statusColor.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: sale.statusColor.withValues(alpha: 0.4)),
       ),
-      child: AppText(
+      child: SemiBoldText(
         text: sale.statusLabel,
         fontSize: 9,
         color: sale.statusColor,
