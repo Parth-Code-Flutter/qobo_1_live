@@ -859,13 +859,29 @@ class _MemberSeat extends GetView<LiveBroadcastController> {
               SizedBox(height: metrics.gapAfterFrame),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: SemiBoldText(
-                  text: seat.name,
-                  fontSize: TextStyles.k10FontSize,
-                  color: kColorWhite,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  align: TextAlign.center,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (seat.isCoinsSeller) ...[
+                      const Icon(
+                        Icons.verified_rounded,
+                        size: 11,
+                        color: Color(0xFFFFC107),
+                      ),
+                      const SizedBox(width: 2),
+                    ],
+                    Flexible(
+                      child: SemiBoldText(
+                        text: seat.name,
+                        fontSize: TextStyles.k10FontSize,
+                        color: kColorWhite,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        align: TextAlign.center,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               _DiamondCount(value: seat.diamonds),

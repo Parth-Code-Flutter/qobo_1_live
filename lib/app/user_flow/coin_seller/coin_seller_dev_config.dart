@@ -1,9 +1,10 @@
-/// Temporary flags while wiring the seller portal against live APIs.
+/// Temporary flags while wiring the user coins-seller APIs.
 ///
-/// Set [bypassAuthForFlowTest] to `false` before release builds.
+/// Keep [bypassAuthForFlowTest] `false` so apply / 403 / dashboard follow the
+/// real backend contract from USER_COINS_SELLER_API.md.
 abstract final class CoinSellerDevConfig {
   CoinSellerDevConfig._();
 
-  /// When true, Sign in opens the dashboard even if login/dashboard APIs fail.
-  static const bool bypassAuthForFlowTest = true;
+  /// When true, a failed dashboard still opens a placeholder approved view.
+  static const bool bypassAuthForFlowTest = false;
 }

@@ -1,17 +1,24 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/coin_seller/coin_seller_dev_config.dart';
-import 'package:qobo_one_live/app/user_flow/coin_seller/models/seller_admin.dart';
 import 'package:qobo_one_live/app/user_flow/coin_seller/models/seller_dashboard_data.dart';
-import 'package:qobo_one_live/app/user_flow/coin_seller/models/seller_login_data.dart';
 import 'package:qobo_one_live/app/user_flow/coin_seller/models/seller_metrics.dart';
 import 'package:qobo_one_live/app/user_flow/coin_seller/models/seller_portal_parsers.dart';
 import 'package:qobo_one_live/app/user_flow/coin_seller/models/seller_sale.dart';
-import 'package:qobo_one_live/app/user_flow/coin_seller/models/seller_sale_user.dart';
+import 'package:qobo_one_live/app/user_flow/coin_seller/models/seller_transactions_page.dart';
+import 'package:qobo_one_live/app/user_flow/coin_seller/widgets/coin_seller_transaction_detail_sheet.dart';
 import 'package:qobo_one_live/app/user_flow/coin_seller/widgets/seller_sell_success_dialog.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/constants/local_storage_constants.dart';
 import 'package:qobo_one_live/repo/coin_seller/coin_seller_repo.dart';
+import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
+
+enum CoinSellerScreenState { checking, apply, pending, approved }
+
+enum CoinSellerTransactionFilter { all, completed, reversed }
 
 class CoinSellerController extends GetxController {
   CoinSellerController({CoinSellerRepo? repo})
@@ -20,25 +27,45 @@ class CoinSellerController extends GetxController {
   final CoinSellerRepo _repo;
   final LocalStorage _storage = LocalStorage.shared;
 
-  final isBootstrapping = true.obs;
-  final isAuthenticated = false.obs;
-  final isLoggingIn = false.obs;
-  final isLoadingDashboard = false.obs;
-  final isTransferring = false.obs;
-  final obscurePassword = true.obs;
+  static const _pendingApplyKey = kStorageCoinsSellerApplyPending;
 
-  final sellerEmail = ''.obs;
+  final screenState = CoinSellerScreenState.checking.obs;
+  final dashboardTabIndex = 0.obs;
+  final transactionFilter = CoinSellerTransactionFilter.all.obs;
+
+  final isBootstrapping = true.obs;
+  final isApplying = false.obs;
+  final isLoadingDashboard = false.obs;
+  final isLoadingTransactions = false.obs;
+  final isTransferring = false.obs;
+  final isReversing = false.obs;
+  final isUpdatingTransaction = false.obs;
+  final reversingSaleId = ''.obs;
+
+  final sellerLabel = ''.obs;
   final availableCoins = 0.obs;
   final totalRevenue = 0.0.obs;
   final totalCoinsSold = 0.obs;
   final totalTransactions = 0.obs;
   final salesLedger = <SellerSale>[].obs;
 
-  final emailController = TextEditingController();
-  final passwordController = TextEditingController();
+  final transactionsPage = 1.obs;
+  final hasMoreTransactions = false.obs;
+  final transactionsApiAvailable = true.obs;
+
+  final detailsController = TextEditingController();
   final userIdController = TextEditingController();
   final coinsController = TextEditingController();
   final priceController = TextEditingController();
+
+  List<SellerSale> get filteredSales {
+    final filter = transactionFilter.value;
+    if (filter == CoinSellerTransactionFilter.all) return salesLedger;
+    if (filter == CoinSellerTransactionFilter.completed) {
+      return salesLedger.where((s) => !s.isReversed).toList();
+    }
+    return salesLedger.where((s) => s.isReversed).toList();
+  }
 
   @override
   void onInit() {
@@ -48,131 +75,90 @@ class CoinSellerController extends GetxController {
 
   Future<void> _bootstrap() async {
     isBootstrapping.value = true;
-    final token = await _storage.getSellerToken();
-    if (token.trim().isEmpty) {
-      isAuthenticated.value = false;
-      isBootstrapping.value = false;
-      return;
-    }
-
-    final adminMap = await _storage.getSellerAdmin();
-    if (adminMap != null) {
-      final admin = SellerAdmin.fromJson(adminMap);
-      sellerEmail.value = admin.email;
-      availableCoins.value = admin.coinsBalance;
-    }
-
-    isAuthenticated.value = true;
-    isBootstrapping.value = false;
+    screenState.value = CoinSellerScreenState.checking;
+    await _storage.clearSellerSession();
+    _hydrateSellerLabel();
     await loadDashboard(isShowLoader: false);
+    isBootstrapping.value = false;
   }
 
-  void togglePasswordVisibility() {
-    obscurePassword.value = !obscurePassword.value;
+  void _hydrateSellerLabel() {
+    if (!Get.isRegistered<UserSessionController>()) {
+      sellerLabel.value = '';
+      return;
+    }
+    final session = Get.find<UserSessionController>();
+    final name = session.displayName.trim();
+    final email = session.email.trim();
+    sellerLabel.value = name.isNotEmpty
+        ? name
+        : (email.isNotEmpty ? email : session.userId);
   }
 
-  Future<void> login() async {
-    if (isLoggingIn.value) return;
-    final email = emailController.text.trim();
-    final password = passwordController.text;
-    if (email.isEmpty || password.isEmpty) {
-      _showError('Enter seller email and password.');
+  Future<bool> _wasApplyMarkedPending() async {
+    try {
+      final raw = await _storage.getStringFromStorage(_pendingApplyKey);
+      return raw == '1' || raw == 'true';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _markApplyPending(bool pending) async {
+    try {
+      await _storage.writeStringStorage(_pendingApplyKey, pending ? '1' : '0');
+    } catch (_) {}
+  }
+
+  Future<void> applyToBecomeSeller() async {
+    if (isApplying.value) return;
+    final details = detailsController.text.trim();
+    if (details.isEmpty) {
+      _showError('Tell us briefly how you plan to sell coins.');
+      return;
+    }
+    if (details.length < 10) {
+      _showError('Please add a bit more detail (at least 10 characters).');
       return;
     }
 
-    isLoggingIn.value = true;
-    final response = await _repo.login(email: email, password: password);
-    isLoggingIn.value = false;
+    isApplying.value = true;
+    final response = await _repo.apply(details: details);
+    isApplying.value = false;
 
-    final loginData =
-        response != null ? SellerLoginData.tryParseEnvelope(response) : null;
-    if (loginData != null) {
-      if (!loginData.admin.isSellerAdmin &&
-          loginData.admin.role.trim().isNotEmpty) {
-        if (CoinSellerDevConfig.bypassAuthForFlowTest) {
-          await _enterFlowTestDashboard(email: email);
-          return;
-        }
-        _showError('This account is not a coin seller.');
-        return;
-      }
-
-      await _storage.saveSellerSession(
-        token: loginData.token,
-        admin: loginData.admin.toJson(),
+    if (isSellerPortalSuccess(response)) {
+      await _markApplyPending(true);
+      detailsController.clear();
+      screenState.value = CoinSellerScreenState.pending;
+      _showSuccess(
+        sellerPortalMessage(
+          response,
+          'Application submitted. We will notify you after review.',
+        ),
       );
-      sellerEmail.value =
-          loginData.admin.email.isNotEmpty ? loginData.admin.email : email;
-      availableCoins.value = loginData.admin.coinsBalance;
-      passwordController.clear();
-      isAuthenticated.value = true;
-      await loadDashboard();
-      return;
-    }
-
-    if (CoinSellerDevConfig.bypassAuthForFlowTest) {
-      await _enterFlowTestDashboard(email: email);
-      return;
-    }
-
-    if (response == null) {
-      _showError('Unable to login as coin seller.');
       return;
     }
     _showError(
-      sellerPortalMessage(response, 'Unable to login as coin seller.'),
+      sellerPortalMessage(response, 'Unable to submit seller application.'),
     );
-  }
-
-  Future<void> _enterFlowTestDashboard({required String email}) async {
-    const admin = SellerAdmin(
-      id: 'dev-seller',
-      email: 'seller@test.com',
-      role: 'seller_admin',
-      coinsBalance: 15000,
-    );
-    await _storage.saveSellerSession(
-      token: 'dev-flow-test-token',
-      admin: SellerAdmin(
-        id: admin.id,
-        email: email.isNotEmpty ? email : admin.email,
-        role: admin.role,
-        coinsBalance: admin.coinsBalance,
-      ).toJson(),
-    );
-    sellerEmail.value = email.isNotEmpty ? email : admin.email;
-    availableCoins.value = admin.coinsBalance;
-    passwordController.clear();
-    isAuthenticated.value = true;
-    await loadDashboard(isShowLoader: false);
-  }
-
-  /// Clears seller JWT only — does not touch the end-user session.
-  Future<void> logoutSeller() async {
-    await _storage.clearSellerSession();
-    isAuthenticated.value = false;
-    availableCoins.value = 0;
-    totalRevenue.value = 0;
-    totalCoinsSold.value = 0;
-    totalTransactions.value = 0;
-    salesLedger.clear();
-    sellerEmail.value = '';
   }
 
   Future<void> loadDashboard({bool isShowLoader = true}) async {
-    if (!isAuthenticated.value) return;
-
     isLoadingDashboard.value = true;
     final response = await _repo.getDashboard(isShowLoader: isShowLoader);
     isLoadingDashboard.value = false;
 
     if (isSellerPortalUnauthorized(response)) {
-      if (CoinSellerDevConfig.bypassAuthForFlowTest) {
-        _applyDashboard(_placeholderDashboard());
-        return;
-      }
-      await logoutSeller();
-      _showError('Seller session expired. Please login again.');
+      screenState.value = CoinSellerScreenState.apply;
+      _showError('Please sign in again to manage coin seller.');
+      return;
+    }
+
+    if (isSellerPortalForbidden(response)) {
+      final pending = await _wasApplyMarkedPending();
+      screenState.value = pending
+          ? CoinSellerScreenState.pending
+          : CoinSellerScreenState.apply;
       return;
     }
 
@@ -180,54 +166,242 @@ class CoinSellerController extends GetxController {
     if (dashboard == null) {
       if (CoinSellerDevConfig.bypassAuthForFlowTest) {
         _applyDashboard(_placeholderDashboard());
+        screenState.value = CoinSellerScreenState.approved;
         return;
       }
+      final pending = await _wasApplyMarkedPending();
+      screenState.value = pending
+          ? CoinSellerScreenState.pending
+          : CoinSellerScreenState.apply;
+      if (response != null) {
+        _showError(
+          sellerPortalMessage(response, 'Unable to load seller dashboard.'),
+        );
+      }
+      return;
+    }
+
+    await _markApplyPending(false);
+    _applyDashboard(dashboard);
+    screenState.value = CoinSellerScreenState.approved;
+    await loadTransactions(refresh: true, isShowLoader: false);
+  }
+
+  Future<void> loadTransactions({
+    bool refresh = false,
+    bool isShowLoader = false,
+  }) async {
+    if (screenState.value != CoinSellerScreenState.approved) return;
+    if (isLoadingTransactions.value) return;
+
+    if (refresh) {
+      transactionsPage.value = 1;
+      hasMoreTransactions.value = false;
+    }
+
+    isLoadingTransactions.value = true;
+    final statusFilter = switch (transactionFilter.value) {
+      CoinSellerTransactionFilter.completed => 'completed',
+      CoinSellerTransactionFilter.reversed => 'reversed',
+      CoinSellerTransactionFilter.all => null,
+    };
+
+    final response = await _repo.getTransactions(
+      page: transactionsPage.value,
+      limit: 25,
+      status: statusFilter,
+      isShowLoader: isShowLoader,
+    );
+    isLoadingTransactions.value = false;
+
+    if (response != null && response['statusCode'] == 404) {
+      transactionsApiAvailable.value = false;
+      return;
+    }
+
+    final page = SellerTransactionsPage.tryParseEnvelope(response);
+    if (page != null) {
+      transactionsApiAvailable.value = true;
+      hasMoreTransactions.value = page.hasMore;
+      if (refresh || transactionsPage.value <= 1) {
+        salesLedger.assignAll(page.items);
+      } else {
+        final existing = salesLedger.map((e) => e.id).toSet();
+        salesLedger.addAll(
+          page.items.where((item) => !existing.contains(item.id)),
+        );
+      }
+      return;
+    }
+
+    transactionsApiAvailable.value = false;
+  }
+
+  Future<void> loadMoreTransactions() async {
+    if (!hasMoreTransactions.value || isLoadingTransactions.value) return;
+    transactionsPage.value += 1;
+    await loadTransactions(isShowLoader: false);
+  }
+
+  void setTransactionFilter(CoinSellerTransactionFilter filter) {
+    if (transactionFilter.value == filter) return;
+    transactionFilter.value = filter;
+    if (transactionsApiAvailable.value) {
+      unawaited(loadTransactions(refresh: true));
+    }
+  }
+
+  Future<void> openTransactionDetail(SellerSale sale) async {
+    SellerSale resolved = sale;
+    if (sale.id.trim().isNotEmpty) {
+      final response = await _repo.getTransaction(transactionId: sale.id);
+      if (response != null && response['statusCode'] != 404) {
+        final fresh = SellerSale.tryParseEnvelope(response);
+        if (fresh != null) resolved = fresh;
+      }
+    }
+    await CoinSellerTransactionDetailSheet.show(
+      sale: resolved,
+      controller: this,
+    );
+  }
+
+  Future<void> openEditTransaction(SellerSale sale) async {
+    if (!sale.canEdit) return;
+    final priceCtrl = TextEditingController(text: sale.price.toString());
+    final noteCtrl = TextEditingController(text: sale.note ?? '');
+
+    final confirmed = await Get.dialog<bool>(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        backgroundColor: const Color(0xFF1E1E2D),
+        child: Padding(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Edit transaction',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: kColorWhite,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: priceCtrl,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                style: const TextStyle(color: kColorWhite),
+                decoration: _inputDecoration('Price (INR)'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: noteCtrl,
+                maxLines: 2,
+                style: const TextStyle(color: kColorWhite),
+                decoration: _inputDecoration('Note (optional)'),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Get.back(result: false),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Get.back(result: true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: kColorPrimary,
+                      ),
+                      child: const Text('Save'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (confirmed != true) {
+      priceCtrl.dispose();
+      noteCtrl.dispose();
+      return;
+    }
+
+    final newPrice = num.tryParse(priceCtrl.text.trim());
+    final note = noteCtrl.text.trim();
+    priceCtrl.dispose();
+    noteCtrl.dispose();
+
+    if (newPrice == null || newPrice < 0) {
+      _showError('Enter a valid price.');
+      return;
+    }
+
+    isUpdatingTransaction.value = true;
+    var response = await _repo.updateTransaction(
+      transactionId: sale.id,
+      price: newPrice,
+      note: note.isEmpty ? null : note,
+    );
+
+    // Some backends expose reverse via DELETE instead of PATCH for metadata.
+    if (response != null && response['statusCode'] == 404) {
+      response = null;
+    }
+    isUpdatingTransaction.value = false;
+
+    if (response == null || !isSellerPortalSuccess(response)) {
       _showError(
-        sellerPortalMessage(response, 'Unable to load seller dashboard.'),
+        sellerPortalMessage(response, 'Unable to update this transaction.'),
       );
       return;
     }
 
-    _applyDashboard(dashboard);
+    final updated = SellerSale.tryParseEnvelope(response);
+    final index = salesLedger.indexWhere((item) => item.id == sale.id);
+    if (index >= 0) {
+      salesLedger[index] = (updated ?? sale).copyWith(
+        price: newPrice,
+        note: note.isEmpty ? sale.note : note,
+      );
+      salesLedger.refresh();
+    }
+    _showSuccess('Transaction updated.');
+    await loadDashboard(isShowLoader: false);
   }
 
-  SellerDashboardData _placeholderDashboard() {
-    return SellerDashboardData(
-      coinsBalance: availableCoins.value > 0 ? availableCoins.value : 15000,
-      metrics: const SellerMetrics(
-        totalRevenue: 2500,
-        totalCoinsSold: 10000,
-        totalTransactions: 45,
+  InputDecoration _inputDecoration(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
+      filled: true,
+      fillColor: Colors.white10,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.white12),
       ),
-      recentSales: [
-        SellerSale(
-          id: 'dev-sale-1',
-          userId: 'user-demo-1',
-          amount: 500,
-          price: 100,
-          currency: 'INR',
-          createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-          user: const SellerSaleUser(
-            id: 'user-demo-1',
-            name: 'John Doe',
-            email: 'john@example.com',
-          ),
-        ),
-      ],
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.white12),
+      ),
     );
   }
 
-  void _applyDashboard(SellerDashboardData dashboard) {
-    availableCoins.value = dashboard.coinsBalance;
-    totalRevenue.value = dashboard.metrics.totalRevenue.toDouble();
-    totalCoinsSold.value = dashboard.metrics.totalCoinsSold;
-    totalTransactions.value = dashboard.metrics.totalTransactions;
-    salesLedger.assignAll(dashboard.recentSales);
-  }
-
-  /// Validates form, confirms with the user, then calls sell API.
   Future<void> transferCoins() async {
     if (isTransferring.value) return;
+    if (screenState.value != CoinSellerScreenState.approved) return;
+
     final buyerId = userIdController.text.trim();
     final coinsStr = coinsController.text.trim();
     final priceStr = priceController.text.trim();
@@ -271,9 +445,9 @@ class CoinSellerController extends GetxController {
     );
     isTransferring.value = false;
 
-    if (isSellerPortalUnauthorized(response)) {
-      await logoutSeller();
-      _showError('Seller session expired. Please login again.');
+    if (isSellerPortalForbidden(response)) {
+      screenState.value = CoinSellerScreenState.apply;
+      _showError('Seller access was revoked. Please re-apply if needed.');
       return;
     }
 
@@ -287,17 +461,8 @@ class CoinSellerController extends GetxController {
     coinsController.clear();
     priceController.clear();
 
-    // Optimistic update; dashboard refresh is source of truth.
-    if (sale != null) {
-      salesLedger.insert(0, sale);
-    }
-    availableCoins.value =
-        (availableCoins.value - coinsToTransfer).clamp(0, 1 << 30);
-    totalCoinsSold.value += coinsToTransfer;
-    totalTransactions.value += 1;
-    totalRevenue.value += (sale?.price ?? price).toDouble();
-
     await loadDashboard(isShowLoader: false);
+    dashboardTabIndex.value = 1;
 
     await SellerSellSuccessDialog.show(
       amount: coinsToTransfer,
@@ -305,6 +470,115 @@ class CoinSellerController extends GetxController {
       price: price,
       currency: sale?.currency ?? 'INR',
     );
+  }
+
+  Future<void> reverseSale(SellerSale sale) async {
+    if (isReversing.value || !sale.canReverse) return;
+
+    final confirmed = await Get.dialog<bool>(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: const Color(0xFF1E1E2D),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Reverse this sale?',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: kColorWhite,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Reverse ${sale.amount} coins sold to ${sale.displayName}?\n\n'
+                'This fails if the buyer already spent those coins.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Get.back(result: false),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent,
+                      ),
+                      onPressed: () => Get.back(result: true),
+                      child: const Text('Reverse'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+    );
+    if (confirmed != true) return;
+
+    isReversing.value = true;
+    reversingSaleId.value = sale.id;
+
+    var response = await _repo.reverseTransaction(transactionId: sale.id);
+    if (response != null && !isSellerPortalSuccess(response)) {
+      response = await _repo.deleteTransaction(transactionId: sale.id);
+    }
+
+    isReversing.value = false;
+    reversingSaleId.value = '';
+
+    if (!isSellerPortalSuccess(response)) {
+      _showError(
+        sellerPortalMessage(
+          response,
+          'Unable to reverse this sale. The buyer may have spent the coins.',
+        ),
+      );
+      return;
+    }
+
+    final index = salesLedger.indexWhere((item) => item.id == sale.id);
+    if (index >= 0) {
+      salesLedger[index] = sale.copyWith(status: 'reversed');
+      salesLedger.refresh();
+    }
+    await loadDashboard(isShowLoader: false);
+    _showSuccess('Sale reversed successfully.');
+  }
+
+  SellerDashboardData _placeholderDashboard() {
+    return SellerDashboardData(
+      coinsBalance: availableCoins.value > 0 ? availableCoins.value : 15000,
+      metrics: const SellerMetrics(
+        totalRevenue: 2500,
+        totalCoinsSold: 10000,
+        totalTransactions: 45,
+      ),
+      recentSales: const [],
+    );
+  }
+
+  void _applyDashboard(SellerDashboardData dashboard) {
+    availableCoins.value = dashboard.coinsBalance;
+    totalRevenue.value = dashboard.metrics.totalRevenue.toDouble();
+    totalCoinsSold.value = dashboard.metrics.totalCoinsSold;
+    totalTransactions.value = dashboard.metrics.totalTransactions;
+    if (!transactionsApiAvailable.value || salesLedger.isEmpty) {
+      salesLedger.assignAll(dashboard.recentSales);
+    }
   }
 
   Future<bool?> _confirmTransfer({
@@ -320,7 +594,6 @@ class CoinSellerController extends GetxController {
           padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Text(
                 'Confirm transfer',
@@ -344,13 +617,6 @@ class CoinSellerController extends GetxController {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Get.back(result: false),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white70,
-                        side: const BorderSide(color: Colors.white24),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
                       child: const Text('Cancel'),
                     ),
                   ),
@@ -359,10 +625,6 @@ class CoinSellerController extends GetxController {
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: kColorPrimary,
-                        foregroundColor: kColorWhite,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
                       ),
                       onPressed: () => Get.back(result: true),
                       child: const Text('Confirm'),
@@ -388,10 +650,19 @@ class CoinSellerController extends GetxController {
     );
   }
 
+  void _showSuccess(String message) {
+    Get.snackbar(
+      'Coin Seller',
+      message,
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.green.withValues(alpha: 0.92),
+      colorText: kColorWhite,
+    );
+  }
+
   @override
   void onClose() {
-    emailController.dispose();
-    passwordController.dispose();
+    detailsController.dispose();
     userIdController.dispose();
     coinsController.dispose();
     priceController.dispose();

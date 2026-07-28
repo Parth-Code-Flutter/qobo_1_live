@@ -327,6 +327,8 @@ class EconomyEndpoints {
 }
 
 /// Coin Seller Portal (`seller_admin`) under `/api/admin/...`.
+///
+/// @Deprecated Prefer [UserCoinsSellerEndpoints] — sellers are now regular users.
 class SellerPortalEndpoints {
   SellerPortalEndpoints._();
 
@@ -338,6 +340,29 @@ class SellerPortalEndpoints {
 
   /// POST /api/admin/seller-portal/sell
   static const String sell = '/api/admin/seller-portal/sell';
+}
+
+/// User P2P Coins Seller APIs (standard user JWT).
+class UserCoinsSellerEndpoints {
+  UserCoinsSellerEndpoints._();
+
+  /// POST /api/user/coins-seller/apply
+  static const String apply = '/api/user/coins-seller/apply';
+
+  /// GET /api/user/coins-seller/dashboard
+  static const String dashboard = '/api/user/coins-seller/dashboard';
+
+  /// POST /api/user/coins-seller/sell
+  static const String sell = '/api/user/coins-seller/sell';
+
+  /// GET /api/user/coins-seller/transactions
+  static const String transactions = '/api/user/coins-seller/transactions';
+
+  /// GET/PATCH/PUT/DELETE /api/user/coins-seller/transaction/:id
+  static String transaction(String id) => '/api/user/coins-seller/transaction/$id';
+
+  /// PUT /api/user/coins-seller/transaction/:id — reverse sale
+  static String reverseTransaction(String id) => transaction(id);
 }
 
 /// Central place for avatar frame storefront API endpoints.

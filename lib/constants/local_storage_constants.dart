@@ -7,6 +7,8 @@ const String kStorageToken = 'token';
 /// Separate JWT for coin-seller portal (`/api/admin/login` → `seller_admin`).
 const String kStorageSellerToken = 'seller_token';
 const String kStorageSellerAdmin = 'seller_admin_data';
+/// Local flag: user submitted coins-seller apply and awaits admin approval.
+const String kStorageCoinsSellerApplyPending = 'coins_seller_apply_pending';
 const String kStorageUserData = 'user_data';
 const String kStorageAdminUserData = 'admin_user_data';
 const String kStorageEmployeeUserData = 'employee_user_data';

@@ -1,4 +1,4 @@
-// Shared JSON helpers for Coins Seller Portal models.
+// Shared JSON helpers for User Coins Seller models.
 
 Map<String, dynamic> asJsonMap(dynamic value) {
   if (value is Map<String, dynamic>) return value;
@@ -33,6 +33,13 @@ bool isSellerPortalUnauthorized(Map<String, dynamic>? response) {
   if (response == null) return false;
   final code = response['statusCode'];
   return code == 401 || code?.toString() == '401';
+}
+
+/// Dashboard returns 403 when the user is not an approved coins seller.
+bool isSellerPortalForbidden(Map<String, dynamic>? response) {
+  if (response == null) return false;
+  final code = response['statusCode'];
+  return code == 403 || code?.toString() == '403';
 }
 
 String sellerPortalMessage(Map<String, dynamic>? response, String fallback) {

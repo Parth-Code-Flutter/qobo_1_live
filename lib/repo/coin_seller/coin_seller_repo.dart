@@ -2,93 +2,200 @@ import 'package:http/http.dart' as http;
 import 'package:qobo_one_live/services/api_constants.dart';
 import 'package:qobo_one_live/services/api_service.dart';
 import 'package:qobo_one_live/utils/api_response_utils.dart';
-import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 
-/// Coin Seller Portal APIs (`seller_admin` JWT from `/api/admin/login`).
+/// User P2P Coins Seller APIs (`/api/user/coins-seller/*`).
 ///
-/// Uses [bearerToken] + [skipUnauthorizedHandling] so seller 401s never
-/// clear the end-user session.
+/// Uses the **standard user JWT** from [HeaderData] — no separate seller login.
 class CoinSellerRepo {
-  CoinSellerRepo({
-    ApiService? apiService,
-    LocalStorage? storage,
-  })  : _apiService = apiService ?? ApiService(),
-        _storage = storage ?? LocalStorage.shared;
+  CoinSellerRepo({ApiService? apiService})
+      : _apiService = apiService ?? ApiService();
 
   final ApiService _apiService;
-  final LocalStorage _storage;
 
-  /// POST `/api/admin/login`
-  Future<Map<String, dynamic>?> login({
-    required String email,
-    required String password,
+  /// POST `/api/user/coins-seller/apply`
+  Future<Map<String, dynamic>?> apply({
+    required String details,
     bool isShowLoader = true,
   }) async {
     final response = await _apiService.postRequest(
-      endPoint: SellerPortalEndpoints.login,
+      endPoint: UserCoinsSellerEndpoints.apply,
       requestModel: <String, dynamic>{
-        'email': email.trim(),
-        'password': password,
+        'details': details.trim(),
       },
       isShowLoader: isShowLoader,
-      isLoginCall: true,
     );
     if (response == null) return null;
-    return _decodeOrUnauthorized(response);
+    return _decode(response);
   }
 
-  /// GET `/api/admin/seller-portal/dashboard`
+  /// GET `/api/user/coins-seller/dashboard`
   Future<Map<String, dynamic>?> getDashboard({
     bool isShowLoader = true,
   }) async {
-    final token = await _storage.getSellerToken();
-    if (token.trim().isEmpty) return null;
-
     final response = await _apiService.getRequest(
-      endPoint: SellerPortalEndpoints.dashboard,
+      endPoint: UserCoinsSellerEndpoints.dashboard,
       isShowLoader: isShowLoader,
-      bearerToken: token,
-      skipUnauthorizedHandling: true,
     );
     if (response == null) return null;
-    return _decodeOrUnauthorized(response);
+    return _decode(response);
   }
 
-  /// POST `/api/admin/seller-portal/sell`
-  ///
-  /// [userId] may be UUID, email, or phone per backend docs.
+  /// GET `/api/user/coins-seller/transactions`
+  Future<Map<String, dynamic>?> getTransactions({
+    int page = 1,
+    int limit = 20,
+    String? status,
+    bool isShowLoader = false,
+  }) async {
+    final query = <String, String>{
+      'page': '$page',
+      'limit': '$limit',
+    };
+    if (status != null && status.trim().isNotEmpty) {
+      query['status'] = status.trim();
+    }
+
+    final response = await _apiService.getRequest(
+      endPoint: UserCoinsSellerEndpoints.transactions,
+      queryParams: query,
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return _decode(response, allowNotFound: true);
+  }
+
+  /// GET `/api/user/coins-seller/transaction/:id`
+  Future<Map<String, dynamic>?> getTransaction({
+    required String transactionId,
+    bool isShowLoader = false,
+  }) async {
+    final id = transactionId.trim();
+    if (id.isEmpty) return null;
+
+    final response = await _apiService.getRequest(
+      endPoint: UserCoinsSellerEndpoints.transaction(id),
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return _decode(response, allowNotFound: true);
+  }
+
+  /// POST `/api/user/coins-seller/sell`
   Future<Map<String, dynamic>?> sellCoins({
     required String userId,
     required int amount,
     required num price,
     bool isShowLoader = true,
   }) async {
-    final token = await _storage.getSellerToken();
-    if (token.trim().isEmpty) return null;
-
     final response = await _apiService.postRequest(
-      endPoint: SellerPortalEndpoints.sell,
+      endPoint: UserCoinsSellerEndpoints.sell,
       requestModel: <String, dynamic>{
         'userId': userId.trim(),
         'amount': amount,
         'price': price,
       },
       isShowLoader: isShowLoader,
-      bearerToken: token,
-      skipUnauthorizedHandling: true,
     );
     if (response == null) return null;
-    return _decodeOrUnauthorized(response);
+    return _decode(response);
   }
 
-  Map<String, dynamic>? _decodeOrUnauthorized(http.Response response) {
-    if (response.statusCode == 401) {
+  /// PATCH `/api/user/coins-seller/transaction/:id` — update price / note.
+  Future<Map<String, dynamic>?> updateTransaction({
+    required String transactionId,
+    num? price,
+    String? note,
+    bool isShowLoader = true,
+  }) async {
+    final id = transactionId.trim();
+    if (id.isEmpty) return null;
+
+    final body = <String, dynamic>{};
+    if (price != null) body['price'] = price;
+    if (note != null) body['note'] = note.trim();
+    if (body.isEmpty) return null;
+
+    final response = await _apiService.patchRequest(
+      endPoint: UserCoinsSellerEndpoints.transaction(id),
+      requestModel: body,
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return _decode(response, allowNotFound: true);
+  }
+
+  /// PUT `/api/user/coins-seller/transaction/:id` — reverse sale.
+  Future<Map<String, dynamic>?> reverseTransaction({
+    required String transactionId,
+    bool isShowLoader = true,
+  }) async {
+    final id = transactionId.trim();
+    if (id.isEmpty) return null;
+
+    final response = await _apiService.putRequest(
+      endPoint: UserCoinsSellerEndpoints.reverseTransaction(id),
+      requestModel: <String, dynamic>{},
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return _decode(response);
+  }
+
+  /// DELETE `/api/user/coins-seller/transaction/:id` — alias for reverse when supported.
+  Future<Map<String, dynamic>?> deleteTransaction({
+    required String transactionId,
+    bool isShowLoader = true,
+  }) async {
+    final id = transactionId.trim();
+    if (id.isEmpty) return null;
+
+    final response = await _apiService.deleteRequest(
+      endPoint: UserCoinsSellerEndpoints.transaction(id),
+      requestModel: null,
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return _decode(response, allowNotFound: true);
+  }
+
+  Map<String, dynamic> _decode(
+    http.Response response, {
+    bool allowNotFound = false,
+  }) {
+    final decoded =
+        ApiResponseUtils.tryDecodeMap(response.body) ?? <String, dynamic>{};
+
+    if (response.statusCode == 404 && allowNotFound) {
       return <String, dynamic>{
+        ...decoded,
         'success': false,
-        'statusCode': 401,
-        'message': 'Seller session expired',
+        'statusCode': 404,
+        'message': decoded['message']?.toString() ?? 'Not found',
       };
     }
-    return ApiResponseUtils.tryDecodeMap(response.body);
+
+    if (response.statusCode == 401 || response.statusCode == 403) {
+      return <String, dynamic>{
+        ...decoded,
+        'success': false,
+        'statusCode': response.statusCode,
+        'message': (decoded['message']?.toString().trim().isNotEmpty == true)
+            ? decoded['message']
+            : (response.statusCode == 403
+                ? 'Access Denied'
+                : 'Unauthorized'),
+      };
+    }
+
+    if (!decoded.containsKey('statusCode')) {
+      decoded['statusCode'] = response.statusCode;
+    }
+    if (response.statusCode == 201 && decoded['success'] != true) {
+      final code = decoded['statusCode'];
+      if (code != 1 && code != 200 && code != 201 && code?.toString() != '201') {
+        decoded['statusCode'] = 201;
+      }
+    }
+    return decoded;
   }
 }

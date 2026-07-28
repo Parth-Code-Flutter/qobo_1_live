@@ -13,6 +13,7 @@ class AudioRoomSeatModel {
     this.isLocked = false,
     this.isAdmin = false,
     this.isVip = false,
+    this.isCoinsSeller = false,
   });
 
   factory AudioRoomSeatModel.empty(int seatNo) =>
@@ -85,6 +86,20 @@ class AudioRoomSeatModel {
     final isVip = _readBool(raw, const ['isVIP', 'isVip', 'is_vip']) ||
         (occupantMap != null &&
             _readBool(occupantMap, const ['isVIP', 'isVip', 'is_vip']));
+    final isCoinsSeller =
+        _readBool(raw, const [
+          'isCoinsSeller',
+          'is_coins_seller',
+          'coinsSeller',
+          'coins_seller',
+        ]) ||
+        (occupantMap != null &&
+            _readBool(occupantMap, const [
+              'isCoinsSeller',
+              'is_coins_seller',
+              'coinsSeller',
+              'coins_seller',
+            ]));
     final pattiStyle =
         _readString(raw, const ['pattiStyle', 'patti_style']) ??
         _readString(occupantMap, const ['pattiStyle', 'patti_style']) ??
@@ -107,6 +122,7 @@ class AudioRoomSeatModel {
       isLocked: _readBool(raw, const ['isLocked', 'locked']),
       isAdmin: _readBool(raw, const ['isAdmin', 'admin']),
       isVip: isVip,
+      isCoinsSeller: isCoinsSeller,
     );
   }
 
@@ -127,6 +143,9 @@ class AudioRoomSeatModel {
   final bool isLocked;
   final bool isAdmin;
   final bool isVip;
+
+  /// Verified P2P coins merchant from seats / join payloads.
+  final bool isCoinsSeller;
 
   bool get occupied => userId.trim().isNotEmpty || name.trim().isNotEmpty;
   bool get isHost => role.toLowerCase() == 'host' || seatNo == 1;
@@ -151,6 +170,7 @@ class AudioRoomSeatModel {
     bool? isLocked,
     bool? isAdmin,
     bool? isVip,
+    bool? isCoinsSeller,
   }) {
     return AudioRoomSeatModel(
       seatNo: seatNo ?? this.seatNo,
@@ -166,6 +186,7 @@ class AudioRoomSeatModel {
       isLocked: isLocked ?? this.isLocked,
       isAdmin: isAdmin ?? this.isAdmin,
       isVip: isVip ?? this.isVip,
+      isCoinsSeller: isCoinsSeller ?? this.isCoinsSeller,
     );
   }
 }
