@@ -20,6 +20,7 @@ class GiftChatCelebrationTracker {
   void onGiftMessages({
     required Iterable<GiftChatEvent> events,
     required String myUserId,
+    void Function(GiftChatEvent event)? onPeerGift,
   }) {
     final gifts = events.toList(growable: false);
 
@@ -46,6 +47,7 @@ class GiftChatCelebrationTracker {
 
       _lastCelebratedKey = event.key;
       GiftMediaUtils.showCelebrationFromChatLabel(event.message);
+      onPeerGift?.call(event);
       return;
     }
   }

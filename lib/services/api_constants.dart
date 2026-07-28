@@ -130,6 +130,9 @@ class RoomEndpoints {
   /// GET /api/room/seats
   static const String seats = '/api/room/seats';
 
+  /// GET /api/room/session-earnings — host session coins/diamonds this room
+  static const String sessionEarnings = '/api/room/session-earnings';
+
   /// POST /api/room/admin-action
   static const String adminAction = '/api/room/admin-action';
 

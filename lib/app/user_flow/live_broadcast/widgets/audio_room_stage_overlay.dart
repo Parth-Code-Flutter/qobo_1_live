@@ -9,6 +9,7 @@ import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/session_earnings_badge.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
@@ -39,7 +40,7 @@ class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
       final bgUrl = controller.roomBackgroundUrl.value;
       return Stack(
         fit: StackFit.expand,
-        children: [
+        children: [ 
           const DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -702,13 +703,15 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
                 compact: compact,
               ),
             ],
-            Spacing.h8,
-            _HeaderMetric(
-              icon: Icons.local_fire_department_rounded,
-              label: controller.likesLabel.value.isEmpty
-                  ? '0'
-                  : controller.likesLabel.value,
-            ),
+            if (controller.isHost.value) ...[
+              Spacing.h8,
+              SessionEarningsBadge(
+                tracker: controller.sessionEarnings,
+                compact: compact,
+                icon: Icons.monetization_on_rounded,
+                iconColor: const Color(0xFFFFA10A),
+              ),
+            ],
             if (controller.isHost.value) ...[
               Spacing.h8,
               _CircleButton(

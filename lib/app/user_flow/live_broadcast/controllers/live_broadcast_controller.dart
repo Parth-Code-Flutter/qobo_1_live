@@ -14,12 +14,14 @@ import 'package:qobo_one_live/repo/room/room_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/realtime/user_realtime_socket_service.dart';
 import 'package:qobo_one_live/services/room/join_approval_service.dart';
+import 'package:qobo_one_live/services/session/session_earnings_tracker.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/join_request_in_app_banner.dart';
 import 'package:qobo_one_live/utils/app_dialogs/audio_room_feedback_dialog.dart';
+import 'package:qobo_one_live/utils/session_earnings_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_celebration_overlay.dart';
@@ -76,6 +78,7 @@ class LiveBroadcastController extends GetxController {
 
   final coinsBalance = 0.obs;
   final diamondsBalance = 0.obs;
+  final sessionEarnings = SessionEarningsTracker();
   final giftCatalog = <Map<String, String>>[].obs;
   final isLoadingGifts = false.obs;
   final selectedGiftReceiverId = RxnString();
@@ -117,6 +120,7 @@ class LiveBroadcastController extends GetxController {
   var _vipSeatEntranceBaselineReady = false;
 
   Timer? _seatRefreshTimer;
+  Timer? _sessionEarningsTimer;
   VoidCallback? _viewerCountListener;
   var _exitReported = false;
   var _hostEndConfirmed = false;
@@ -147,9 +151,13 @@ class LiveBroadcastController extends GetxController {
         JoinApprovalService.isApprovalRequired(_roomData);
     _hydrateHostProfile();
     _hydrateRoomBackground();
+    _seedSessionEarningsFromRoom();
     _validateStreamingInput();
     loadWalletBalance();
     loadGiftCatalog();
+    if (isHost.value) {
+      _startSessionEarningsPolling();
+    }
     if (isAudioVideoRoom) {
       final initialSeats = _parseAudioSeats(_roomData);
       if (initialSeats.isNotEmpty) {
@@ -304,6 +312,66 @@ class LiveBroadcastController extends GetxController {
         data['diamonds'] ?? data['diamond'] ?? data['diamondBalance'],
       );
     }
+  }
+
+  void _seedSessionEarningsFromRoom() {
+    SessionEarningsUtils.ingestRoomData(sessionEarnings, _roomData);
+  }
+
+  String get _sessionEarningsType {
+    if (isLiveStreamingSession) return 'live_stream';
+    if (isVideoRoom) return 'video_room';
+    return 'audio_room';
+  }
+
+  void _startSessionEarningsPolling() {
+    if (!isHost.value) return;
+    _sessionEarningsTimer?.cancel();
+    unawaited(_refreshSessionEarnings());
+    _sessionEarningsTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (_exitReported || !isHost.value) {
+        _stopSessionEarningsPolling();
+        return;
+      }
+      unawaited(_refreshSessionEarnings());
+    });
+  }
+
+  void _stopSessionEarningsPolling() {
+    _sessionEarningsTimer?.cancel();
+    _sessionEarningsTimer = null;
+  }
+
+  Future<void> _refreshSessionEarnings() async {
+    if (!isHost.value || _exitReported) return;
+    final roomApiId = audioRoomApiId;
+    if (roomApiId.isEmpty) return;
+
+    final response = await _roomRepo.getSessionEarnings(
+      roomId: roomApiId,
+      sessionType: _sessionEarningsType,
+      isShowLoader: false,
+    );
+    SessionEarningsUtils.ingestApiEnvelope(sessionEarnings, response);
+  }
+
+  void _applySessionEarningsFromGiftResponse({
+    required Map<String, dynamic>? response,
+    required int fallbackGiftPrice,
+    required String scope,
+    String? receiverId,
+  }) {
+    final hostId =
+        resolveHostId(_roomData) ?? receiverId ?? this.receiverId.value;
+    SessionEarningsUtils.ingestGiftResponse(
+      tracker: sessionEarnings,
+      response: response,
+      hostUserId: hostId,
+      hostReceivesRoomGifts: scope == 'room',
+      fallbackGiftPrice: fallbackGiftPrice,
+      scope: scope,
+      receiverId: receiverId,
+    );
   }
 
   void openWithdrawalWallet() {
@@ -544,6 +612,16 @@ class LiveBroadcastController extends GetxController {
               message: m.message,
             ),
           ),
+      onPeerGift: isHost.value
+          ? (event) {
+              SessionEarningsUtils.ingestIncomingGiftChat(
+                tracker: sessionEarnings,
+                chatMessage: event.message,
+                giftCatalog: giftCatalog.toList(),
+                earnsGift: true,
+              );
+            }
+          : null,
     );
   }
 
@@ -859,6 +937,13 @@ class LiveBroadcastController extends GetxController {
     );
 
     if (isEconomyApiSuccess(response)) {
+      _applySessionEarningsFromGiftResponse(
+        response: response,
+        fallbackGiftPrice: price,
+        scope: scope,
+        receiverId: currentReceiverId.isEmpty ? null : currentReceiverId,
+      );
+
       final animationUrl = GiftMediaUtils.animationUrlFromResponse(
         response,
         gift,
@@ -2642,6 +2727,7 @@ class LiveBroadcastController extends GetxController {
   @override
   void onClose() {
     _stopSeatRefreshPolling();
+    _stopSessionEarningsPolling();
     _unbindRoomBackgroundSocket();
     _vipEntrancePlayedUserIds.clear();
     _vipSeatEntranceBaselineReady = false;

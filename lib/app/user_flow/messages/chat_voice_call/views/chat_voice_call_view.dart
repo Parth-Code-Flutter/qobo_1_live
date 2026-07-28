@@ -1119,7 +1119,7 @@ class _CoinsPanel extends StatelessWidget {
                 ),
           AppText(
             text: connected
-                ? 'Wallet ${controller.walletLabel}'
+                ? controller.sessionEarningsSubtitle
                 : 'until answer',
             fontSize: TextStyles.k8FontSize,
             color: kColorWhite.withValues(alpha: 0.74),

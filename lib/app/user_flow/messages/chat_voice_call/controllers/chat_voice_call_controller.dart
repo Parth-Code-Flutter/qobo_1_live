@@ -7,11 +7,14 @@ import 'package:qobo_one_live/repo/calling/calling_repo.dart';
 import 'package:qobo_one_live/repo/chat/chat_local_store.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/repo/economy/economy_repo.dart';
+import 'package:qobo_one_live/repo/room/room_repo.dart';
 import 'package:qobo_one_live/services/chat/chat_call_service.dart';
+import 'package:qobo_one_live/services/session/session_earnings_tracker.dart';
 import 'package:qobo_one_live/services/chat/chat_inbox_preview.dart';
 import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
+import 'package:qobo_one_live/utils/session_earnings_utils.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_celebration_overlay.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_chat_celebration_tracker.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_media_utils.dart';
@@ -25,15 +28,18 @@ class ChatVoiceCallController extends GetxController {
     ChatCallService? callService,
     CallingRepo? callingRepo,
     EconomyRepo? economyRepo,
+    RoomRepo? roomRepo,
     ChatLocalStore? localStore,
   }) : _callService = callService ?? ChatCallService(),
        _callingRepo = callingRepo ?? CallingRepo(),
        _economyRepo = economyRepo ?? EconomyRepo(),
+       _roomRepo = roomRepo ?? RoomRepo(),
        _localStore = localStore ?? ChatLocalStore();
 
   final ChatCallService _callService;
   final CallingRepo _callingRepo;
   final EconomyRepo _economyRepo;
+  final RoomRepo _roomRepo;
   final ChatLocalStore _localStore;
 
   final callId = ''.obs;
@@ -51,6 +57,7 @@ class ChatVoiceCallController extends GetxController {
   final billableSeconds = 0.obs;
   final coinsBalance = 0.obs;
   final coinsPerSecond = 1.0.obs;
+  final sessionEarnings = SessionEarningsTracker();
   final giftCatalog = <Map<String, String>>[].obs;
   final isLoadingGifts = false.obs;
 
@@ -68,6 +75,7 @@ class ChatVoiceCallController extends GetxController {
   final GiftChatCelebrationTracker _giftCelebrationTracker =
       GiftChatCelebrationTracker();
   bool _giftListenerBound = false;
+  Timer? _sessionEarningsTimer;
 
   String get zegoUserId {
     if (!Get.isRegistered<UserSessionController>()) {
@@ -124,6 +132,9 @@ class ChatVoiceCallController extends GetxController {
     _startTicker();
     unawaited(loadWalletBalance());
     unawaited(loadGiftCatalog());
+    if (!isCaller.value) {
+      _startSessionEarningsPolling();
+    }
     // Listen for peer gifts once the call room message bus is available.
     _bindGiftMessageListener();
     LoggerUtils.logInfo(
@@ -144,19 +155,28 @@ class ChatVoiceCallController extends GetxController {
     return remaining < 0 ? 0 : remaining;
   }
 
+  int get sessionGiftCoinsEarned => sessionEarnings.displayCoins;
+
+  int get sessionTotalCoinsEarned {
+    if (isCaller.value) return 0;
+    return sessionGiftCoinsEarned + estimatedCoinDelta;
+  }
+
   String get billingRoleLabel => hasPeerJoined.value
-      ? (isCaller.value ? 'Coins spending' : 'Coins earning')
+      ? (isCaller.value ? 'Coins spending' : 'Session earning')
       : 'Starts after answer';
 
   String get billingAmountLabel {
     if (!hasPeerJoined.value) return '0';
-    final amount = formatLedgerAmount(estimatedCoinDelta);
-    return isCaller.value ? '-$amount' : '+$amount';
+    if (isCaller.value) {
+      return '-${formatLedgerAmount(estimatedCoinDelta)}';
+    }
+    return '+${formatLedgerAmount(sessionTotalCoinsEarned)}';
   }
 
-  String get walletLabel => formatLedgerAmount(
-    isCaller.value ? estimatedRemainingCoins : coinsBalance.value,
-  );
+  String get sessionEarningsSubtitle => isCaller.value
+      ? 'Remaining ${formatLedgerAmount(estimatedRemainingCoins)}'
+      : 'Session ${formatLedgerAmount(sessionTotalCoinsEarned)}';
 
   void onCallUserEntered(String userId) {
     final rawEnteredId = userId.trim();
@@ -227,6 +247,7 @@ class ChatVoiceCallController extends GetxController {
   @override
   void onClose() {
     _ticker?.cancel();
+    _stopSessionEarningsPolling();
     _giftMessageSub?.cancel();
     _giftCelebrationTracker.reset();
     GiftCelebrationOverlay.dismiss();
@@ -367,7 +388,44 @@ class ChatVoiceCallController extends GetxController {
               message: m.message,
             ),
           ),
+      onPeerGift: !isCaller.value
+          ? (event) {
+              SessionEarningsUtils.ingestIncomingGiftChat(
+                tracker: sessionEarnings,
+                chatMessage: event.message,
+                giftCatalog: giftCatalog.toList(),
+                earnsGift: true,
+              );
+            }
+          : null,
     );
+  }
+
+  void _startSessionEarningsPolling() {
+    if (isCaller.value) return;
+    _sessionEarningsTimer?.cancel();
+    unawaited(_refreshSessionEarnings());
+    _sessionEarningsTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      unawaited(_refreshSessionEarnings());
+    });
+  }
+
+  void _stopSessionEarningsPolling() {
+    _sessionEarningsTimer?.cancel();
+    _sessionEarningsTimer = null;
+  }
+
+  Future<void> _refreshSessionEarnings() async {
+    if (isCaller.value) return;
+    final currentRoomId = roomId.value.trim();
+    if (currentRoomId.isEmpty) return;
+
+    final response = await _roomRepo.getSessionEarnings(
+      roomId: currentRoomId,
+      sessionType: 'call',
+      isShowLoader: false,
+    );
+    SessionEarningsUtils.ingestApiEnvelope(sessionEarnings, response);
   }
 
   void _startTicker() {

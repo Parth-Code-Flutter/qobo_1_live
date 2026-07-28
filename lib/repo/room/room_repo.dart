@@ -435,6 +435,28 @@ class RoomRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
+  /// Calls `GET /api/room/session-earnings?room_id=&session_type=`.
+  Future<Map<String, dynamic>?> getSessionEarnings({
+    required String roomId,
+    required String sessionType,
+    bool isShowLoader = false,
+  }) async {
+    final trimmedRoomId = roomId.trim();
+    final trimmedType = sessionType.trim();
+    if (trimmedRoomId.isEmpty || trimmedType.isEmpty) return null;
+
+    final query =
+        'room_id=${Uri.encodeComponent(trimmedRoomId)}'
+        '&session_type=${Uri.encodeComponent(trimmedType)}';
+    final response = await _apiService.getRequest(
+      endPoint: '${RoomEndpoints.sessionEarnings}?$query',
+      isShowLoader: isShowLoader,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
   /// Calls `POST /api/room/admin-action`.
   Future<Map<String, dynamic>?> adminAction({
     required String roomId,
