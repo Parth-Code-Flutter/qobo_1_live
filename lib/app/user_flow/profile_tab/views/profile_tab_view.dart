@@ -111,8 +111,10 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                       _profileHero(session),
                       _superAdminAction(session),
                       Spacing.v12,
-                      _profileActionCards(session),
-                      Spacing.v12,
+                      if (session.isSuperAdmin || session.isAgency) ...[
+                        _profileActionCards(session),
+                        Spacing.v12,
+                      ],
                       _profileFeatureGrid(),
                       Spacing.v20,
                       _settingsRow(),
@@ -375,42 +377,28 @@ class _ProfileTabViewState extends State<ProfileTabView> {
     return GetBuilder<UserSessionController>(
       init: userSession,
       builder: (session) {
-        final actions = <Widget>[
-          Expanded(
-            child: _actionCard(
-              title: 'Recharge\nCoins',
-              icon: kIconRechargeCoins,
-              start: kColorProfileActionOrangeStart,
-              end: kColorProfileActionOrangeEnd,
-              onTap: () {
-                Get.to(() => const WalletView(), binding: WalletBinding());
-              },
-            ),
-          ),
-        ];
+        final actions = <Widget>[];
 
         if (session.isSuperAdmin || session.isAgency) {
-          actions
-            ..add(Spacing.h10)
-            ..add(
-              Expanded(
-                child: _actionCard(
-                  title: session.isSuperAdmin
-                      ? 'Super Admin\nDashboard'
-                      : 'Agency\nDashboard',
-                  trailing: const Icon(
-                    Icons.groups_rounded,
-                    color: kColorWhite,
-                    size: 24,
-                  ),
-                  start: kColorProfileActionPinkStart,
-                  end: kColorProfileActionPinkEnd,
-                  onTap: () => session.isSuperAdmin
-                      ? Get.offAllNamed(Routes.SUPER_ADMIN_BOTTOM_NAV)
-                      : Get.offAllNamed(Routes.AGENCY_OWNER),
+          actions.add(
+            Expanded(
+              child: _actionCard(
+                title: session.isSuperAdmin
+                    ? 'Super Admin\nDashboard'
+                    : 'Agency\nDashboard',
+                trailing: const Icon(
+                  Icons.groups_rounded,
+                  color: kColorWhite,
+                  size: 24,
                 ),
+                start: kColorProfileActionPinkStart,
+                end: kColorProfileActionPinkEnd,
+                onTap: () => session.isSuperAdmin
+                    ? Get.offAllNamed(Routes.SUPER_ADMIN_BOTTOM_NAV)
+                    : Get.offAllNamed(Routes.AGENCY_OWNER),
               ),
-            );
+            ),
+          );
         }
 
         return Row(children: actions);
@@ -466,6 +454,10 @@ class _ProfileTabViewState extends State<ProfileTabView> {
 
   Widget _profileFeatureGrid() {
     final features = <_ProfileFeatureItem>[
+      _ProfileFeatureItem('Top Up', kIconRechargeCoins, const [
+        Color(0xFFFF8A1D),
+        Color(0xFFFF6B57),
+      ], onTap: _openWallet),
       _ProfileFeatureItem('Visitors', kIconVisitor, const [
         Color(0xFF1F74F2),
         Color(0xFF22B8F2),
@@ -550,7 +542,9 @@ class _ProfileTabViewState extends State<ProfileTabView> {
   Widget _featureItem(_ProfileFeatureItem item) {
     return GestureDetector(
       onTap: () async {
-        if (item.onTapRoute != null) {
+        if (item.onTap != null) {
+          await item.onTap!.call();
+        } else if (item.onTapRoute != null) {
           await Get.toNamed(item.onTapRoute!);
           // After Backpack equip/unequip, reload session so the hero frame updates.
           if (item.onTapRoute == Routes.BACKPACK) {
@@ -613,6 +607,10 @@ class _ProfileTabViewState extends State<ProfileTabView> {
     if (session.profileBackgroundUrl.trim().isEmpty) {
       await session.syncEquippedProfileBackgroundFromBackpack();
     }
+  }
+
+  Future<void> _openWallet() async {
+    await Get.to(() => const WalletView(), binding: WalletBinding());
   }
 
   UserSessionController _resolveUserSession() {
@@ -999,10 +997,12 @@ class _ProfileFeatureItem {
     this.iconPath,
     this.gradientColors, {
     this.onTapRoute,
+    this.onTap,
   });
 
   final String label;
   final String iconPath;
   final List<Color> gradientColors;
   final String? onTapRoute;
+  final Future<void> Function()? onTap;
 }
