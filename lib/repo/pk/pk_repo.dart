@@ -187,14 +187,20 @@ class PkRepo {
   }
 
   /// Calls `POST /api/pk/dating-action` for like/dislike/superlike swipes.
+  ///
+  /// Backend contract: `type` = `LIKE` | `DISLIKE` | `SUPERLIKE`.
   Future<Map<String, dynamic>?> datingAction({
     required String targetId,
-    required String type, // 'like', 'dislike', or 'superlike'
-    bool isShowLoader = true,
+    required String type,
+    bool isShowLoader = false,
   }) async {
+    final normalized = type.trim().toUpperCase();
     final response = await _apiService.postRequest(
       endPoint: PkEndpoints.datingAction,
-      requestModel: <String, dynamic>{'target_id': targetId, 'type': type},
+      requestModel: <String, dynamic>{
+        'target_id': targetId.trim(),
+        'type': normalized,
+      },
       isShowLoader: isShowLoader,
     );
 

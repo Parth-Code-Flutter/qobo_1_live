@@ -1,341 +1,611 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/routes/app_pages.dart';
-import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
-import 'package:qobo_one_live/utils/text_utils/app_text.dart';
-import 'package:qobo_one_live/repo/pk/pk_repo.dart';
-import 'package:qobo_one_live/utils/app_widgets/safe_network_avatar.dart';
+import 'package:qobo_one_live/app/user_flow/live_room/controllers/live_room_controller.dart';
+import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/repo/call/call_repo.dart';
+import 'package:qobo_one_live/repo/room/room_repo.dart';
+import 'package:qobo_one_live/services/chat/chat_call_launcher.dart';
+import 'package:qobo_one_live/services/chat/chat_call_service.dart';
+import 'package:qobo_one_live/utils/api_image_utils.dart';
+import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
+import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 
+/// Profile → Call hub.
+///
+/// Tabs: 0 Live streaming · 1 Video Rooms · 2 Audio Rooms · 3 Calls (history).
 class CallController extends GetxController {
-  // Navigation / Tab state
-  final currentTab =
-      0.obs; // 0: Preferences Onboarding, 1: Swipe Deck, 2: Matches List
+  final hubTab = 0.obs;
 
-  // Onboarding Preference Form States
-  final seekingGender = 'Female'.obs; // Female, Male, Everyone
-  final minAge = 18.obs;
-  final maxAge = 35.obs;
-  final interestedIn = <String>[].obs; // Chat, Call, Long-term, Gaming Partner
-  final isOnboardingDone = false.obs;
+  final rooms = <Map<String, dynamic>>[].obs;
+  final isRoomsLoading = false.obs;
 
-  // Swipe Deck States
-  final profiles = <Map<String, dynamic>>[].obs;
-  final currentProfileIndex = 0.obs;
+  final historyFilter = 'all'.obs;
+  final historyItems = <Map<String, dynamic>>[].obs;
+  final isHistoryLoading = false.obs;
+  final isCallsSearchOpen = false.obs;
 
-  // Matches List State
-  final matches = <Map<String, dynamic>>[].obs;
+  final searchQuery = ''.obs;
+  final searchResults = <Map<String, dynamic>>[].obs;
+  final isSearchLoading = false.obs;
+  final isStartingCall = false.obs;
+  final searchFieldController = TextEditingController();
+  Timer? _searchDebounce;
 
-  final PkRepo _pkRepo = PkRepo();
+  final RoomRepo _roomRepo = RoomRepo();
+  final CallRepo _callRepo = CallRepo();
+
+  String get currentRoomType {
+    switch (hubTab.value) {
+      case 1:
+        return 'video';
+      case 2:
+        return 'audio';
+      case 0:
+      default:
+        return 'live_stream';
+    }
+  }
+
+  String get currentRoomTitle {
+    switch (hubTab.value) {
+      case 1:
+        return 'Video Rooms';
+      case 2:
+        return 'Audio Rooms';
+      case 0:
+      default:
+        return 'Live Streaming';
+    }
+  }
+
+  String get currentRoomSubtitle {
+    switch (hubTab.value) {
+      case 1:
+        return 'Jump into an active video party room';
+      case 2:
+        return 'Join a live audio hangout';
+      case 0:
+      default:
+        return 'Watch and chat in live streams';
+    }
+  }
 
   @override
   void onInit() {
     super.onInit();
-    loadCallProfiles();
+    fetchRooms();
   }
 
-  Future<void> loadCallProfiles() async {
+  @override
+  void onClose() {
+    _searchDebounce?.cancel();
+    searchFieldController.dispose();
+    super.onClose();
+  }
+
+  void selectHubTab(int index) {
+    if (hubTab.value == index) return;
+    hubTab.value = index;
+    if (index == 3) {
+      isCallsSearchOpen.value = false;
+      searchFieldController.clear();
+      searchQuery.value = '';
+      searchResults.clear();
+      fetchHistory(refresh: true);
+    } else {
+      fetchRooms();
+    }
+  }
+
+  Future<void> fetchRooms() async {
+    if (hubTab.value == 3) return;
+    if (isRoomsLoading.value) return;
     try {
-      final response = await _pkRepo.getCallList(isShowLoader: false);
-      if (response != null &&
-          response['statusCode'] == 1 &&
-          response['data'] != null) {
-        final list = response['data'];
-        if (list is List) {
-          final mapped = list.map((e) {
-            final map = e as Map<String, dynamic>;
-            return {
-              'name': map['name'] ?? 'User',
-              'age': map['age'] ?? 22,
-              'location': map['location'] ?? 'Dhaka, Bangladesh',
-              'bio': map['bio'] ?? 'Hello!',
-              'avatar':
-                  map['displayPicture'] != null &&
-                      map['displayPicture'].toString().isNotEmpty
-                  ? (map['displayPicture'].toString().startsWith('http')
-                        ? map['displayPicture'].toString()
-                        : 'https://my-backend-api-960q.onrender.com${map['displayPicture']}')
-                  : 'assets/images/temp_img_2.png',
-              'matchPercentage': map['matchPercentage'] ?? 90,
-              'interests': List<String>.from(map['interests'] ?? []),
-            };
-          }).toList();
-          profiles.assignAll(mapped);
-          currentProfileIndex.value = 0;
-          return;
+      isRoomsLoading.value = true;
+      final type = currentRoomType;
+      var response = await _roomRepo.listActiveRooms(
+        type: type,
+        page: 1,
+        limit: 40,
+        isShowLoader: false,
+      );
+
+      // Fallback: mixed list + client filter when live_stream type empty.
+      if (type == 'live_stream' && !_hasRoomList(response)) {
+        response = await _roomRepo.listActiveRooms(
+          page: 1,
+          limit: 40,
+          isShowLoader: false,
+        );
+      }
+
+      final mapped = <Map<String, dynamic>>[];
+      if (_hasRoomList(response)) {
+        for (final item in response!['data'] as List) {
+          if (item is! Map) continue;
+          final room = _mapRoom(item);
+          if (type == 'live_stream' && room['roomType'] != 'LIVE_STREAM') {
+            continue;
+          }
+          if (type == 'video' && room['roomType'] != 'VIDEO') continue;
+          if (type == 'audio' && room['roomType'] != 'AUDIO') continue;
+          mapped.add(room);
         }
       }
-    } catch (_) {}
-    profiles.clear();
-    currentProfileIndex.value = 0;
+      rooms.assignAll(mapped);
+    } catch (_) {
+      rooms.clear();
+    } finally {
+      isRoomsLoading.value = false;
+    }
   }
 
-  // Action: Complete Onboarding & go to Swipe Deck
-  Future<void> savePreferences() async {
-    if (interestedIn.isEmpty) {
-      Get.snackbar(
-        'Preferences',
-        'Please select at least one interest or goal.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.redAccent,
-        colorText: kColorWhite,
-      );
-      return;
+  void joinRoom(Map<String, dynamic> room) {
+    final live = Get.isRegistered<LiveRoomController>()
+        ? Get.find<LiveRoomController>()
+        : Get.put(LiveRoomController(), permanent: false);
+    live.joinRoom(room);
+  }
+
+  void selectHistoryFilter(String filter) {
+    final normalized = filter.trim().toLowerCase();
+    if (historyFilter.value == normalized) return;
+    historyFilter.value = normalized;
+    fetchHistory(refresh: true);
+  }
+
+  void toggleCallsSearch() {
+    isCallsSearchOpen.value = !isCallsSearchOpen.value;
+    if (!isCallsSearchOpen.value) {
+      searchFieldController.clear();
+      searchQuery.value = '';
+      searchResults.clear();
     }
+  }
 
+  Future<void> fetchHistory({bool refresh = true}) async {
+    if (isHistoryLoading.value) return;
     try {
-      final response = await _pkRepo.callOnboarding(
-        interests: interestedIn.toList(),
-        preferredGender: seekingGender.value,
-        minAge: minAge.value,
-        maxAge: maxAge.value,
-        // Keep optional until a dedicated location picker is added.
-        location: null,
-        isShowLoader: true,
+      isHistoryLoading.value = true;
+      final response = await _callRepo.getHistory(
+        filter: historyFilter.value,
+        page: 1,
+        limit: 40,
+        isShowLoader: false,
       );
 
-      final statusCode = response?['statusCode'];
-      final isSuccess =
-          statusCode == 1 || statusCode == 200 || statusCode == 201;
-      final message =
-          (response?['message']?.toString().trim().isNotEmpty ?? false)
-          ? response!['message'].toString().trim()
-          : (isSuccess
-                ? 'Discovering matches matching your criteria...'
-                : 'Unable to save call preferences. Please try again.');
-
-      if (!isSuccess) {
-        Get.snackbar(
-          'Call Preferences',
-          message,
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.redAccent,
-          colorText: kColorWhite,
-        );
+      if (!_isApiSuccess(response) || response?['data'] is! List) {
+        historyItems.clear();
         return;
       }
 
-      // Only move to swipe deck after successful onboarding save.
-      isOnboardingDone.value = true;
-      currentTab.value = 1;
-      await loadCallProfiles();
-
-      Get.snackbar(
-        'Call Preferences Saved',
-        message,
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
-        colorText: kColorWhite,
+      historyItems.assignAll(
+        (response!['data'] as List)
+            .whereType<Map>()
+            .map(_mapHistoryItem)
+            .toList(),
       );
     } catch (_) {
-      Get.snackbar(
-        'Call Preferences',
-        'Unable to save call preferences. Please try again.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.redAccent,
-        colorText: kColorWhite,
-      );
+      historyItems.clear();
+    } finally {
+      isHistoryLoading.value = false;
     }
   }
 
-  // Action: Reset preferences to re-edit onboarding
-  void resetPreferences() {
-    isOnboardingDone.value = false;
-    currentTab.value = 0;
-  }
-
-  // Action: Swipe Left (Nope/Dislike)
-  void swipeLeft() {
-    if (currentProfileIndex.value < profiles.length) {
-      final name = profiles[currentProfileIndex.value]['name'];
-      Get.snackbar(
-        'Passed',
-        'You passed on $name',
-        snackPosition: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 1),
-        backgroundColor: Colors.black54,
-        colorText: kColorWhite,
-      );
-      nextProfile();
+  /// WhatsApp-style call button — voice for voice history, video for video.
+  Future<void> callBackFromHistory(
+    BuildContext context,
+    Map<String, dynamic> item,
+  ) async {
+    final kind = item['kind']?.toString() ?? '';
+    if (kind == 'room_join') {
+      await _rejoinRoomFromHistory(context, item);
+      return;
     }
-  }
 
-  // Action: Swipe Right (Like)
-  void swipeRight() {
-    if (currentProfileIndex.value < profiles.length) {
-      final profile = profiles[currentProfileIndex.value];
-      final name = profile['name'];
-
-      // Simulate a 50% match chance for high-fidelity engagement
-      final bool isMatch = currentProfileIndex.value % 2 == 0;
-
-      if (isMatch) {
-        // Add to matches list
-        matches.insert(0, {
-          'name': profile['name'],
-          'age': profile['age'],
-          'location': profile['location'].split(',').first,
-          'avatar': profile['avatar'],
-          'matchedTime': 'Just Now',
-          'lastMsg': 'Say hello to your new match!',
-        });
-        showMatchCelebration(profile);
-      } else {
-        Get.snackbar(
-          'Liked',
-          'You liked $name. Waiting for response...',
-          snackPosition: SnackPosition.BOTTOM,
-          duration: const Duration(seconds: 1),
-          backgroundColor: Colors.pinkAccent,
-          colorText: kColorWhite,
-        );
-      }
-      nextProfile();
+    final peer = item['peer'] is Map
+        ? Map<String, dynamic>.from(item['peer'] as Map)
+        : <String, dynamic>{};
+    final userId = peer['userId']?.toString() ?? '';
+    if (userId.isEmpty) {
+      AppToast.showError(context, 'User unavailable for callback');
+      return;
     }
-  }
-
-  // Move to next card
-  void nextProfile() {
-    if (currentProfileIndex.value < profiles.length) {
-      currentProfileIndex.value++;
-    }
-  }
-
-  // Reset Swiper deck to retry
-  void resetSwiper() {
-    currentProfileIndex.value = 0;
-    loadCallProfiles();
-  }
-
-  // Match celebration dialog
-  void showMatchCelebration(Map<String, dynamic> profile) {
-    Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        backgroundColor: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFE91E63), Color(0xFF9C27B0)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.amber, width: 2),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.pinkAccent.withValues(alpha: 0.5),
-                blurRadius: 20,
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const BoldText(
-                text: '🎉 IT\'S A MATCH! 🎉',
-                fontSize: 22,
-                color: kColorWhite,
-              ),
-              Spacing.v16,
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const CircleAvatar(
-                    radius: 36,
-                    backgroundImage: AssetImage(
-                      'assets/images/temp_img_2.png',
-                    ), // Me
-                  ),
-                  Spacing.h12,
-                  const Icon(Icons.favorite, color: Colors.white, size: 28),
-                  Spacing.h12,
-                  CircleAvatar(
-                    radius: 36,
-                    backgroundColor: Colors.white10,
-                    child: ClipOval(
-                      child: profile['avatar'].toString().startsWith('http')
-                          ? SafeNetworkAvatar(
-                              url: profile['avatar'],
-                              size: 72,
-                              fallback: Image.asset(
-                                'assets/images/temp_img_2.png',
-                                fit: BoxFit.cover,
-                              ),
-                              fit: BoxFit.cover,
-                            )
-                          : Image.asset(
-                              profile['avatar'],
-                              width: 72,
-                              height: 72,
-                              fit: BoxFit.cover,
-                            ),
-                    ),
-                  ),
-                ],
-              ),
-              Spacing.v20,
-              Text(
-                'You and ${profile['name']} liked each other!',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: kColorWhite, fontSize: 13),
-              ),
-              Spacing.v24,
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white10,
-                        foregroundColor: kColorWhite,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      onPressed: () => Get.back(),
-                      child: const Text(
-                        'Keep Swiping',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                  Spacing.h12,
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFFE91E63),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      onPressed: () {
-                        Get.back();
-                        Get.toNamed(Routes.CHAT_DETAIL);
-                      },
-                      child: const Text(
-                        'Say Hello',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+    final callType = (item['callType']?.toString() ?? 'voice').toLowerCase();
+    await startDirectCall(
+      context,
+      user: {
+        'userId': userId,
+        'name': peer['name'] ?? 'User',
+        'avatar': peer['avatar'],
+        'acceptsVoiceCall': true,
+        'acceptsVideoCall': true,
+        'voiceCoinsPerSecond': item['coinsPerSecond'],
+        'videoCoinsPerSecond': item['coinsPerSecond'],
+        'busy': false,
+      },
+      callType: callType == 'video' ? ChatCallType.video : ChatCallType.voice,
     );
   }
 
-  void toggleInterest(String interest) {
-    if (interestedIn.contains(interest)) {
-      interestedIn.remove(interest);
-    } else {
-      interestedIn.add(interest);
+  Future<void> _rejoinRoomFromHistory(
+    BuildContext context,
+    Map<String, dynamic> item,
+  ) async {
+    final room = item['room'] is Map
+        ? Map<String, dynamic>.from(item['room'] as Map)
+        : <String, dynamic>{};
+    final isLive = room['isLiveNow'] == true;
+    final roomId =
+        room['roomId']?.toString() ??
+        room['_id']?.toString() ??
+        room['id']?.toString() ??
+        '';
+    if (!isLive || roomId.isEmpty) {
+      AppToast.showWarning(context, 'This session is no longer live');
+      return;
     }
+    final type = (room['type']?.toString() ?? 'audio').toLowerCase();
+    final isLiveStream = _isLiveStreamType(type);
+    joinRoom({
+      'roomType': isLiveStream
+          ? 'LIVE_STREAM'
+          : (type == 'audio' ? 'AUDIO' : 'VIDEO'),
+      'roomData': {
+        ...room,
+        'id': roomId,
+        'room_id': roomId,
+        'type': isLiveStream ? 'live_stream' : type,
+        'name': room['name'] ?? 'Room',
+        'coverImage': room['coverImage'],
+      },
+    });
+  }
+
+  void onSearchChanged(String value) {
+    searchQuery.value = value;
+    _searchDebounce?.cancel();
+    final q = value.trim();
+    if (q.isEmpty) {
+      searchResults.clear();
+      isSearchLoading.value = false;
+      return;
+    }
+    _searchDebounce = Timer(const Duration(milliseconds: 450), () {
+      searchCallUsers(q);
+    });
+  }
+
+  Future<void> searchCallUsers(String query) async {
+    final q = query.trim();
+    if (q.isEmpty) {
+      searchResults.clear();
+      return;
+    }
+    try {
+      isSearchLoading.value = true;
+      final response = await _callRepo.searchUsers(
+        query: q,
+        page: 1,
+        limit: 20,
+        isShowLoader: false,
+      );
+      if (!_isApiSuccess(response) || response?['data'] is! List) {
+        searchResults.clear();
+        return;
+      }
+      searchResults.assignAll(
+        (response!['data'] as List)
+            .whereType<Map>()
+            .map(_mapSearchUser)
+            .toList(),
+      );
+    } catch (_) {
+      searchResults.clear();
+    } finally {
+      isSearchLoading.value = false;
+    }
+  }
+
+  Future<void> startDirectCall(
+    BuildContext context, {
+    required Map<String, dynamic> user,
+    required ChatCallType callType,
+  }) async {
+    if (isStartingCall.value) return;
+
+    final userId = user['userId']?.toString().trim() ?? '';
+    final name = user['name']?.toString() ?? 'User';
+    if (userId.isEmpty) {
+      AppToast.showError(context, 'Invalid user');
+      return;
+    }
+
+    final isVideo = callType == ChatCallType.video;
+    if (isVideo && user['acceptsVideoCall'] == false) {
+      AppToast.showError(context, '$name is not accepting video calls');
+      return;
+    }
+    if (!isVideo && user['acceptsVoiceCall'] == false) {
+      AppToast.showError(context, '$name is not accepting voice calls');
+      return;
+    }
+    if (user['busy'] == true) {
+      AppToast.showError(context, '$name is busy right now');
+      return;
+    }
+
+    isStartingCall.value = true;
+    String? serverCallId;
+    try {
+      final clientCallId = ZegoLiveIdUtils.sanitize(
+        'vc_${DateTime.now().millisecondsSinceEpoch}_${userId.hashCode.abs()}',
+      );
+
+      final response = await _callRepo.startDirectCall(
+        calleeUserId: userId,
+        callType: isVideo ? 'video' : 'voice',
+        clientCallId: clientCallId,
+        isShowLoader: true,
+      );
+
+      if (!_isApiSuccess(response)) {
+        if (context.mounted) {
+          AppToast.showError(
+            context,
+            response?['message']?.toString() ?? 'Could not start call',
+          );
+        }
+        return;
+      }
+
+      final data = response?['data'] is Map
+          ? Map<String, dynamic>.from(response!['data'] as Map)
+          : <String, dynamic>{};
+      serverCallId = data['callId']?.toString();
+      final chatRoomId = data['chatRoomId']?.toString() ?? '';
+      final coins =
+          _asDouble(data['coinsPerSecond']) ??
+          _asDouble(
+            isVideo ? user['videoCoinsPerSecond'] : user['voiceCoinsPerSecond'],
+          );
+
+      if (!context.mounted) return;
+
+      await ChatCallLauncher.start(
+        context: context,
+        targetId: userId,
+        peerName: name,
+        peerAvatar: user['avatar']?.toString(),
+        peerCountry: user['countryCode']?.toString(),
+        coinsPerSecond: coins,
+        roomId: chatRoomId.isNotEmpty ? chatRoomId : null,
+        callType: callType,
+      );
+
+      if (serverCallId != null && serverCallId.isNotEmpty) {
+        await _callRepo.endDirectCall(
+          callId: serverCallId,
+          reason: 'completed',
+          isShowLoader: false,
+        );
+      }
+      unawaited(fetchHistory(refresh: true));
+    } catch (_) {
+      if (serverCallId != null && serverCallId.isNotEmpty) {
+        await _callRepo.endDirectCall(
+          callId: serverCallId,
+          reason: 'cancelled',
+          isShowLoader: false,
+        );
+      }
+      if (context.mounted) {
+        AppToast.showError(context, 'Call failed to start');
+      }
+    } finally {
+      isStartingCall.value = false;
+    }
+  }
+
+  bool _hasRoomList(Map<String, dynamic>? response) {
+    return response != null &&
+        response['statusCode'] == 1 &&
+        response['data'] is List &&
+        (response['data'] as List).isNotEmpty;
+  }
+
+  bool _isApiSuccess(Map<String, dynamic>? response) {
+    if (response == null) return false;
+    final code = response['statusCode'];
+    return code == 1 || code == 200 || code == 201;
+  }
+
+  bool _isLiveStreamType(String? type) {
+    final normalized = type?.trim().toLowerCase() ?? '';
+    return normalized == 'live_stream' ||
+        normalized == 'livestream' ||
+        normalized == 'live-stream';
+  }
+
+  Map<String, dynamic> _mapRoom(Map room) {
+    final rawType = room['type']?.toString() ?? 'video';
+    final isLiveStream = _isLiveStreamType(rawType);
+    final type = rawType.toUpperCase();
+    final rankBadge = room['roomRankBadge'];
+    final image = ApiImageUtils.normalize(
+      room['coverImage']?.toString() ??
+          room['image']?.toString() ??
+          room['thumbnail']?.toString(),
+    );
+    final title =
+        room['name']?.toString() ?? room['title']?.toString() ?? 'Room';
+    final seats = room['maxSeats'] ?? room['seatConfig'] ?? 0;
+    final count =
+        room['heatScore'] ??
+        room['viewerCount'] ??
+        room['onlineCount'] ??
+        room['listenerCount'] ??
+        room['audienceCount'] ??
+        0;
+
+    String badge = '';
+    if (rankBadge is Map) {
+      final label = rankBadge['label']?.toString().trim() ?? '';
+      if (label.isNotEmpty && !_isLiveStreamType(label)) {
+        badge = label;
+      }
+    } else if (!isLiveStream) {
+      badge = type;
+    }
+
+    return {
+      'id': room['_id'] ?? room['id'] ?? '',
+      'roomData': Map<String, dynamic>.from(room),
+      'nameAge': seats == 0 ? title : '$title · $seats seats',
+      'badge': badge,
+      'roomType': isLiveStream ? 'LIVE_STREAM' : type,
+      'location':
+          room['countryName']?.toString() ??
+          room['countryCode']?.toString() ??
+          room['country']?.toString() ??
+          '—',
+      'points': count.toString(),
+      'favorite': room['isFavorite'] == true || room['isFollowed'] == true,
+      'image': image ?? (type == 'AUDIO' ? kImgTemp2 : kImgTemp3),
+      'typeLabel': isLiveStream
+          ? 'Live'
+          : (type == 'AUDIO' ? 'Audio' : 'Video'),
+    };
+  }
+
+  Map<String, dynamic> _mapHistoryItem(Map raw) {
+    final peer = raw['peer'] is Map
+        ? Map<String, dynamic>.from(raw['peer'] as Map)
+        : <String, dynamic>{};
+    if (peer['avatar'] != null) {
+      peer['avatar'] =
+          ApiImageUtils.normalize(peer['avatar']?.toString()) ?? peer['avatar'];
+    }
+    final room = raw['room'] is Map
+        ? Map<String, dynamic>.from(raw['room'] as Map)
+        : <String, dynamic>{};
+    if (room['coverImage'] != null) {
+      room['coverImage'] =
+          ApiImageUtils.normalize(room['coverImage']?.toString()) ??
+          room['coverImage'];
+    }
+
+    final duration = int.tryParse('${raw['durationSeconds'] ?? 0}') ?? 0;
+    final mins = duration ~/ 60;
+    final secs = duration % 60;
+    final durationLabel =
+        '${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+
+    final direction = raw['direction']?.toString() ?? '';
+    final status = raw['status']?.toString() ?? '';
+    final callType = raw['callType']?.toString() ?? '';
+    final kind = raw['kind']?.toString() ?? 'direct_call';
+    final isMissed = status == 'missed' || direction == 'missed';
+    final isVideo = callType.contains('video');
+
+    return {
+      'id': raw['id']?.toString() ?? '',
+      'kind': kind,
+      'direction': direction,
+      'status': status,
+      'callType': callType,
+      'peer': peer,
+      'room': room,
+      'startedAt': raw['startedAt']?.toString() ?? '',
+      'endedAt': raw['endedAt']?.toString() ?? '',
+      'durationSeconds': duration,
+      'durationLabel': durationLabel,
+      'coinsCharged': raw['coinsCharged'] ?? 0,
+      'coinsPerSecond': raw['coinsPerSecond'],
+      'chatRoomId': raw['chatRoomId']?.toString() ?? '',
+      'title':
+          peer['name']?.toString() ?? room['name']?.toString() ?? 'Session',
+      'timeLabel': _relativeTime(raw['startedAt']?.toString()),
+      'isMissed': isMissed,
+      'isVideo': isVideo,
+      'detailLine': _whatsAppDetailLine(
+        kind: kind,
+        direction: direction,
+        status: status,
+        callType: callType,
+        durationLabel: durationLabel,
+        isMissed: isMissed,
+      ),
+    };
+  }
+
+  String _whatsAppDetailLine({
+    required String kind,
+    required String direction,
+    required String status,
+    required String callType,
+    required String durationLabel,
+    required bool isMissed,
+  }) {
+    if (kind == 'room_join') {
+      return '${callType.replaceAll('_', ' ')} · $durationLabel';
+    }
+    if (isMissed) return 'Missed ${callType.contains('video') ? 'video' : 'voice'} call';
+    if (direction == 'incoming') {
+      return 'Incoming · $durationLabel';
+    }
+    if (direction == 'outgoing') {
+      return 'Outgoing · $durationLabel';
+    }
+    return '${status.isEmpty ? callType : status} · $durationLabel';
+  }
+
+  String _relativeTime(String? iso) {
+    if (iso == null || iso.isEmpty) return '';
+    final dt = DateTime.tryParse(iso)?.toLocal();
+    if (dt == null) return '';
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
+    if (diff.inHours < 24 && now.day == dt.day) {
+      final h = dt.hour.toString().padLeft(2, '0');
+      final m = dt.minute.toString().padLeft(2, '0');
+      return '$h:$m';
+    }
+    if (diff.inDays < 7) {
+      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      return days[dt.weekday - 1];
+    }
+    return '${dt.day}/${dt.month}/${dt.year}';
+  }
+
+  Map<String, dynamic> _mapSearchUser(Map raw) {
+    final avatar =
+        ApiImageUtils.normalize(raw['avatar']?.toString()) ??
+        raw['avatar']?.toString() ??
+        '';
+    return {
+      'userId': raw['userId']?.toString() ?? raw['_id']?.toString() ?? '',
+      'name': raw['name']?.toString() ?? 'User',
+      'username': raw['username']?.toString() ?? '',
+      'avatar': avatar,
+      'countryCode': raw['countryCode']?.toString() ?? '',
+      'isOnline': raw['isOnline'] == true,
+      'acceptsVoiceCall': raw['acceptsVoiceCall'] != false,
+      'acceptsVideoCall': raw['acceptsVideoCall'] != false,
+      'voiceCoinsPerSecond': _asDouble(raw['voiceCoinsPerSecond']),
+      'videoCoinsPerSecond': _asDouble(raw['videoCoinsPerSecond']),
+      'busy': raw['busy'] == true,
+      'minWalletCoinsRequired': raw['minWalletCoinsRequired'] ?? 0,
+    };
+  }
+
+  double? _asDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString());
   }
 }

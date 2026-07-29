@@ -445,6 +445,23 @@ class CallingEndpoints {
   static const String chargeLegacy = '/api/calling/charge';
 }
 
+/// Profile → Call hub APIs (history, dialer search, direct start/end).
+class CallModuleEndpoints {
+  CallModuleEndpoints._();
+
+  /// GET /api/call/history
+  static const String history = '/api/call/history';
+
+  /// GET /api/call/users/search?q=
+  static const String usersSearch = '/api/call/users/search';
+
+  /// POST /api/call/direct/start
+  static const String directStart = '/api/call/direct/start';
+
+  /// POST /api/call/direct/end
+  static const String directEnd = '/api/call/direct/end';
+}
+
 /// Central place for chat related API endpoints.
 class ChatEndpoints {
   ChatEndpoints._();
