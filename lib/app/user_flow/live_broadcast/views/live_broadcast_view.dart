@@ -192,12 +192,9 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
         return const SizedBox.shrink();
       }
 
-      final showGifts = controller.canSendGifts;
+      // Theme is host-only; Gift always stays visible (send gated in controller).
       final showBackground =
           controller.isHost.value && controller.isAudioVideoRoom;
-      if (!showGifts && !showBackground) {
-        return const SizedBox.shrink();
-      }
 
       // Keep gifts / host tools outside Zego's menu bars so call controls stay
       // unchanged.
@@ -245,10 +242,9 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                     ),
                   ),
                 ),
-                if (showGifts) Spacing.v10,
+                Spacing.v10,
               ],
-              if (showGifts)
-                Material(
+              Material(
                   color: Colors.transparent,
                   child: InkWell(
                     onTap: controller.openGiftsSheet,
@@ -1087,14 +1083,13 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                   ),
                 ),
               ],
-              if (controller.canSendGifts) ...[
-                Spacing.h8,
-                _bottomActionIcon(
-                  Icons.card_giftcard_rounded,
-                  color: _accent,
-                  onTap: controller.openGiftsSheet,
-                ),
-              ],
+              // Always show gift; alone-room toast is handled in sendGift.
+              Spacing.h8,
+              _bottomActionIcon(
+                Icons.card_giftcard_rounded,
+                color: _accent,
+                onTap: controller.openGiftsSheet,
+              ),
               Spacing.h8,
               _bottomActionIcon(
                 Icons.more_horiz_rounded,

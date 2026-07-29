@@ -478,11 +478,18 @@ class LiveBroadcastController extends GetxController {
   String get _normalizedNavRoomType =>
       roomType.value.toUpperCase().replaceAll('-', '_').replaceAll(' ', '_');
 
-  /// Gift only when someone else is in the room (host alone = no gift target).
-  bool get canSendGifts {
-    // Guests can always gift the host once they've joined.
+  /// Gift icon stays visible for host and audience even when alone.
+  /// Send is still gated by [hasGiftAudience] inside [sendGift].
+  bool get canSendGifts => true;
+
+  /// True when room-scoped gifts have someone else to share with.
+  /// Host alone / empty room → false (send shows toast; icon stays visible).
+  /// Guests: prefer Zego/seat counts; if those lag, still allow gift to host.
+  bool get hasGiftAudience {
+    if (hasOtherParticipantsBesideHost) return true;
+    // Guest already joined a live room — host is the receive target.
     if (!isHost.value) return true;
-    return hasOtherParticipantsBesideHost;
+    return false;
   }
 
   /// True when at least one non-host person is present (seat, viewer, or Zego user).
@@ -1006,6 +1013,21 @@ class LiveBroadcastController extends GetxController {
         ? selectedGiftReceiverId.value!.trim()
         : receiverId.value.trim();
     final scope = isRoomGiftMode.value ? 'room' : 'user';
+
+    // Room gift ("everyone") — allow sheet open when alone, block only on Send.
+    // Direct user gifts still work when a specific peer was selected.
+    if (scope == 'room' && !hasGiftAudience) {
+      Get.snackbar(
+        'No audience',
+        "There's no audience to share gifts. Please wait for someone to join",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.black87,
+        colorText: const Color(0xFFFFFFFF),
+        duration: const Duration(seconds: 3),
+      );
+      return;
+    }
+
     if (giftId.isEmpty ||
         currentRoomId.isEmpty ||
         (scope == 'user' && currentReceiverId.isEmpty)) {
