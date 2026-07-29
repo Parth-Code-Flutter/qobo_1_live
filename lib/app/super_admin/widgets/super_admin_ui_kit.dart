@@ -1,33 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
-/// Shared header for Super Admin tabs — gradient icon badge + title/subtitle.
+/// Shared header for Super Admin tabs — glow icon badge + title/subtitle.
 class SuperAdminTabHeader extends StatelessWidget {
   const SuperAdminTabHeader({
     super.key,
     required this.icon,
     required this.title,
     required this.subtitle,
+    this.trailing,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
     final canPop = Navigator.of(context).canPop();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
       child: Row(
         children: [
           if (canPop) ...[
             Material(
-              color: kColorWhite.withValues(alpha: 0.14),
+              color: kColorWhite.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(14),
               child: InkWell(
                 onTap: Get.back,
@@ -45,29 +48,11 @@ class SuperAdminTabHeader extends StatelessWidget {
             ),
             Spacing.h10,
           ],
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  kColorLiveFilterChipGradientStart,
-                  kColorLiveFilterChipGradientEnd,
-                ],
-              ),
-              border: Border.all(color: kColorWhite.withValues(alpha: 0.22)),
-              boxShadow: [
-                BoxShadow(
-                  color: kColorPrimary.withValues(alpha: 0.4),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Icon(icon, color: kColorWhite, size: 22),
+          SuperAdminUi.glowIcon(
+            icon: icon,
+            accent: SuperAdminUi.violet,
+            size: 46,
+            iconSize: 22,
           ),
           Spacing.h12,
           Expanded(
@@ -88,6 +73,7 @@ class SuperAdminTabHeader extends StatelessWidget {
               ],
             ),
           ),
+          if (trailing != null) trailing!,
         ],
       ),
     );
@@ -109,32 +95,31 @@ class SuperAdminEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          width: 72,
-          height: 72,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: kColorWhite.withValues(alpha: 0.08),
-            border: Border.all(color: kColorWhite.withValues(alpha: 0.14)),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        children: [
+          SuperAdminUi.glowIcon(
+            icon: icon,
+            accent: SuperAdminUi.sky,
+            size: 72,
+            iconSize: 32,
           ),
-          child: Icon(icon, color: Colors.white54, size: 32),
-        ),
-        Spacing.v16,
-        SemiBoldText(
-          text: title,
-          fontSize: TextStyles.k14FontSize,
-          color: kColorWhite,
-        ),
-        Spacing.v6,
-        AppText(
-          text: subtitle,
-          fontSize: TextStyles.k12FontSize,
-          color: Colors.white60,
-          align: TextAlign.center,
-        ),
-      ],
+          Spacing.v16,
+          SemiBoldText(
+            text: title,
+            fontSize: TextStyles.k14FontSize,
+            color: kColorWhite,
+          ),
+          Spacing.v6,
+          AppText(
+            text: subtitle,
+            fontSize: TextStyles.k12FontSize,
+            color: Colors.white60,
+            align: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -149,18 +134,25 @@ class SuperAdminStatusPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final value = status.toLowerCase();
     final color = value == 'pending'
-        ? const Color(0xFFFFD166)
+        ? SuperAdminUi.gold
         : (value == 'approved' || value == 'active')
-        ? const Color(0xFF4ADE80)
+        ? SuperAdminUi.mint
         : value == 'suspended' || value == 'inactive'
-        ? const Color(0xFFFFB74D)
-        : const Color(0xFFFF8A80);
+        ? SuperAdminUi.warning
+        : SuperAdminUi.danger;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.18),
+        color: color.withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: color.withValues(alpha: 0.45)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.18),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: SemiBoldText(
         text: status,
@@ -191,7 +183,7 @@ class SuperAdminDocThumb extends StatelessWidget {
           ),
           Spacing.v6,
           ClipRRect(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
             child: AspectRatio(
               aspectRatio: 1.4,
               child: url.isEmpty
@@ -238,7 +230,7 @@ class SuperAdminInfoRow extends StatelessWidget {
   Widget build(BuildContext context) {
     if (value.trim().isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -259,6 +251,45 @@ class SuperAdminInfoRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Section label with optional trailing widget.
+class SuperAdminSectionTitle extends StatelessWidget {
+  const SuperAdminSectionTitle({
+    super.key,
+    required this.icon,
+    required this.title,
+    this.accent = SuperAdminUi.violet,
+    this.trailing,
+  });
+
+  final IconData icon;
+  final String title;
+  final Color accent;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SuperAdminUi.glowIcon(
+          icon: icon,
+          accent: accent,
+          size: 30,
+          iconSize: 16,
+        ),
+        Spacing.h10,
+        Expanded(
+          child: SemiBoldText(
+            text: title,
+            fontSize: TextStyles.k14FontSize,
+            color: kColorWhite,
+          ),
+        ),
+        if (trailing != null) trailing!,
+      ],
     );
   }
 }

@@ -117,10 +117,15 @@ class SuperAdminHomeController extends GetxController {
 
   /// Opens agency detail screen (`GET /agencies/:id`).
   void openAgencyDetail(SuperAdminAgencyItem agency) {
-    if (agency.id.isEmpty) return;
+    openAgencyById(agency.id);
+  }
+
+  /// Opens agency detail by id (dashboard top-agency rows, deep links).
+  void openAgencyById(String id) {
+    if (id.isEmpty) return;
     Get.toNamed(
       Routes.SUPER_ADMIN_AGENCY_DETAIL,
-      arguments: {'agencyId': agency.id},
+      arguments: {'agencyId': id},
     );
   }
 

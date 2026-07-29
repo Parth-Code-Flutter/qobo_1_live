@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/super_admin/host_detail/controllers/super_admin_host_detail_controller.dart';
 import 'package:qobo_one_live/app/super_admin/models/super_admin_models.dart';
-import 'package:qobo_one_live/app/super_admin/widgets/super_admin_glass_card.dart';
+import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui.dart';
 import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui_kit.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
@@ -26,11 +26,23 @@ class SuperAdminHostDetailView extends GetView<SuperAdminHostDetailController> {
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
+          scrolledUnderElevation: 0,
           iconTheme: const IconThemeData(color: kColorWhite),
-          title: const SemiBoldText(
-            text: 'Host Detail',
-            fontSize: TextStyles.k16FontSize,
-            color: kColorWhite,
+          title: Row(
+            children: [
+              SuperAdminUi.glowIcon(
+                icon: Icons.mic_rounded,
+                accent: SuperAdminUi.teal,
+                size: 34,
+                iconSize: 18,
+              ),
+              Spacing.h10,
+              const SemiBoldText(
+                text: 'Host Detail',
+                fontSize: TextStyles.k16FontSize,
+                color: kColorWhite,
+              ),
+            ],
           ),
         ),
         body: Obx(() {
@@ -82,8 +94,28 @@ class SuperAdminHostDetailView extends GetView<SuperAdminHostDetailController> {
     );
   }
 
+  Widget _sectionTitle(String title, IconData icon, Color accent) {
+    return Row(
+      children: [
+        SuperAdminUi.glowIcon(
+          icon: icon,
+          accent: accent,
+          size: 28,
+          iconSize: 14,
+        ),
+        Spacing.h8,
+        SemiBoldText(
+          text: title,
+          fontSize: TextStyles.k14FontSize,
+          color: kColorWhite,
+        ),
+      ],
+    );
+  }
+
   Widget _headerCard(SuperAdminHostDetail detail) {
     return SuperAdminGlassCard(
+      glow: SuperAdminUi.teal,
       child: Row(
         children: [
           SafeNetworkAvatar(
@@ -138,14 +170,11 @@ class SuperAdminHostDetailView extends GetView<SuperAdminHostDetailController> {
       detail.country,
     ].where((e) => e.isNotEmpty).join(', ');
     return SuperAdminGlassCard(
+      glow: SuperAdminUi.sky,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SemiBoldText(
-            text: 'Profile',
-            fontSize: TextStyles.k14FontSize,
-            color: kColorWhite,
-          ),
+          _sectionTitle('Profile', Icons.badge_rounded, SuperAdminUi.sky),
           Spacing.v12,
           SuperAdminInfoRow(label: 'Email', value: detail.email),
           SuperAdminInfoRow(
@@ -176,13 +205,14 @@ class SuperAdminHostDetailView extends GetView<SuperAdminHostDetailController> {
   Widget _earningsCard(SuperAdminHostDetail detail) {
     final e = detail.earnings;
     return SuperAdminGlassCard(
+      glow: SuperAdminUi.gold,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SemiBoldText(
-            text: 'Earnings',
-            fontSize: TextStyles.k14FontSize,
-            color: kColorWhite,
+          _sectionTitle(
+            'Earnings',
+            Icons.payments_rounded,
+            SuperAdminUi.gold,
           ),
           Spacing.v12,
           SuperAdminInfoRow(
@@ -210,13 +240,14 @@ class SuperAdminHostDetailView extends GetView<SuperAdminHostDetailController> {
   Widget _agencyCard(SuperAdminHostDetail detail) {
     final agency = detail.agency;
     return SuperAdminGlassCard(
+      glow: SuperAdminUi.violet,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SemiBoldText(
-            text: 'Agency',
-            fontSize: TextStyles.k14FontSize,
-            color: kColorWhite,
+          _sectionTitle(
+            'Agency',
+            Icons.business_rounded,
+            SuperAdminUi.violet,
           ),
           Spacing.v12,
           SuperAdminInfoRow(label: 'Name', value: agency.name),
@@ -229,13 +260,14 @@ class SuperAdminHostDetailView extends GetView<SuperAdminHostDetailController> {
 
   Widget _docsCard(SuperAdminHostDetail detail) {
     return SuperAdminGlassCard(
+      glow: SuperAdminUi.pink,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SemiBoldText(
-            text: 'Documents',
-            fontSize: TextStyles.k14FontSize,
-            color: kColorWhite,
+          _sectionTitle(
+            'Documents',
+            Icons.folder_rounded,
+            SuperAdminUi.pink,
           ),
           Spacing.v12,
           if (detail.documents.idNo.isNotEmpty)
@@ -261,21 +293,29 @@ class SuperAdminHostDetailView extends GetView<SuperAdminHostDetailController> {
   Widget _actionsCard(BuildContext context, SuperAdminHostDetail detail) {
     return Obx(() {
       final busy = controller.isProcessing.value;
+      final showSuspend = detail.isActive;
+      final showReactivate =
+          detail.isSuspended || detail.status.toLowerCase() == 'inactive';
+      if (!showSuspend && !showReactivate) return const SizedBox.shrink();
+
       return SuperAdminGlassCard(
+        glow: SuperAdminUi.warning,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SemiBoldText(
-              text: 'Moderation',
-              fontSize: TextStyles.k14FontSize,
-              color: kColorWhite,
+            _sectionTitle(
+              'Moderation',
+              Icons.shield_rounded,
+              SuperAdminUi.warning,
             ),
             Spacing.v12,
-            if (detail.isActive)
-              _btn(
+            if (showSuspend)
+              SuperAdminActionButton(
                 label: 'Suspend host',
-                color: const Color(0xFFFFB74D).withValues(alpha: 0.18),
-                fg: const Color(0xFFFFB74D),
+                icon: Icons.pause_circle_filled_rounded,
+                background: SuperAdminUi.warning.withValues(alpha: 0.18),
+                borderColor: SuperAdminUi.warning.withValues(alpha: 0.45),
+                foreground: SuperAdminUi.warning,
                 onTap: busy
                     ? null
                     : () async {
@@ -284,67 +324,119 @@ class SuperAdminHostDetailView extends GetView<SuperAdminHostDetailController> {
                         await controller.setStatus('suspended', reason: reason);
                       },
               ),
-            if (detail.isSuspended || detail.status.toLowerCase() == 'inactive')
-              _btn(
+            if (showReactivate) ...[
+              if (showSuspend) Spacing.v10,
+              SuperAdminActionButton(
                 label: 'Reactivate host',
-                color: const Color(0xFF2E9E5B),
-                fg: kColorWhite,
+                icon: Icons.play_circle_fill_rounded,
+                background: SuperAdminUi.success,
+                foreground: kColorWhite,
                 onTap: busy ? null : () => controller.setStatus('active'),
               ),
+            ],
           ],
         ),
       );
     });
   }
 
-  Widget _btn({
-    required String label,
-    required Color color,
-    required Color fg,
-    required VoidCallback? onTap,
-  }) {
-    return Material(
-      color: color,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Center(
-            child: SemiBoldText(
-              text: label,
-              fontSize: TextStyles.k12FontSize,
-              color: fg,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Future<String?> _askReason(BuildContext context) async {
     final textController = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: kColorWhite,
-        title: const Text('Suspend host?'),
-        content: TextField(
-          controller: textController,
-          decoration: const InputDecoration(hintText: 'Reason'),
-          maxLines: 3,
+      builder: (dialogContext) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+          decoration: BoxDecoration(
+            color: SuperAdminUi.sheet.withValues(alpha: 0.96),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: kColorWhite.withValues(alpha: 0.14)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SemiBoldText(
+                text: 'Suspend host?',
+                fontSize: TextStyles.k16FontSize,
+                color: kColorWhite,
+              ),
+              Spacing.v12,
+              TextField(
+                controller: textController,
+                style: const TextStyle(color: kColorWhite),
+                decoration: InputDecoration(
+                  hintText: 'Reason',
+                  hintStyle: const TextStyle(color: Colors.white38),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: kColorWhite.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: SuperAdminUi.violet),
+                  ),
+                ),
+                maxLines: 3,
+              ),
+              Spacing.v16,
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 46,
+                      child: OutlinedButton(
+                        onPressed: () =>
+                            Navigator.of(dialogContext).pop(false),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white70,
+                          side: BorderSide(
+                            color: kColorWhite.withValues(alpha: 0.22),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const SemiBoldText(
+                          text: 'Cancel',
+                          fontSize: TextStyles.k12FontSize,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Spacing.h10,
+                  Expanded(
+                    child: SizedBox(
+                      height: 46,
+                      child: ElevatedButton(
+                        onPressed: () =>
+                            Navigator.of(dialogContext).pop(true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: SuperAdminUi.warning,
+                          foregroundColor: kColorWhite,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const SemiBoldText(
+                          text: 'Suspend',
+                          fontSize: TextStyles.k12FontSize,
+                          color: kColorWhite,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Suspend'),
-          ),
-        ],
       ),
     );
     final value = textController.text.trim();

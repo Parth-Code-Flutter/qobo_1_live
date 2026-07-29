@@ -8,6 +8,7 @@ import 'package:qobo_one_live/app/super_admin/dashboard/views/super_admin_dashbo
 import 'package:qobo_one_live/app/super_admin/home/controllers/super_admin_home_controller.dart';
 import 'package:qobo_one_live/app/super_admin/host/views/super_admin_host_tab_view.dart';
 import 'package:qobo_one_live/app/super_admin/settings/views/super_admin_settings_tab_view.dart';
+import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -44,8 +45,8 @@ class SuperAdminBottomNavView extends GetView<SuperAdminBottomNavController> {
               return Spacing.shrink;
           }
         }),
-      // Create actions: + on Agency tab registers a new agency,
-      // + on Host tab submits a new host application.
+        // Create actions: + on Agency tab registers a new agency,
+        // + on Host tab submits a new host application.
         floatingActionButton: Obx(() {
           final index = controller.selectedIndex.value;
           final isAgencyTab =
@@ -54,21 +55,53 @@ class SuperAdminBottomNavView extends GetView<SuperAdminBottomNavController> {
           if (!isAgencyTab && !isHostTab) return const SizedBox.shrink();
 
           final home = Get.find<SuperAdminHomeController>();
-          final accent = isAgencyTab
-              ? const Color(0xFFFF8AD8)
-              : const Color(0xFF5CE1B0);
+          final accent =
+              isAgencyTab ? SuperAdminUi.pink : SuperAdminUi.teal;
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: FloatingActionButton(
-              heroTag: 'super_admin_create_fab',
-              tooltip: isAgencyTab ? 'Create agency' : 'Create host',
-              backgroundColor: accent,
-              foregroundColor: const Color(0xFF121644),
-              shape: const CircleBorder(),
-              onPressed: isAgencyTab
-                  ? home.openCreateAgency
-                  : home.openCreateHost,
-              child: const Icon(Icons.add_rounded, size: 30),
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: accent.withValues(alpha: 0.45),
+                    blurRadius: 18,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                shape: const CircleBorder(),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: isAgencyTab
+                      ? home.openCreateAgency
+                      : home.openCreateHost,
+                  child: Ink(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          accent,
+                          Color.lerp(accent, kColorWhite, 0.28)!,
+                        ],
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.add_rounded,
+                      size: 30,
+                      color: const Color(0xFF121644),
+                      semanticLabel:
+                          isAgencyTab ? 'Create agency' : 'Create host',
+                    ),
+                  ),
+                ),
+              ),
             ),
           );
         }),
@@ -191,6 +224,25 @@ class _SuperAdminNavTab extends StatelessWidget {
                       fontSize: TextStyles.k10FontSize,
                       colors: labelColor,
                     ),
+            ),
+            Spacing.v4,
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              width: selected ? 18 : 0,
+              height: 3,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(4),
+                color: accent,
+                boxShadow: selected
+                    ? [
+                        BoxShadow(
+                          color: accent.withValues(alpha: 0.55),
+                          blurRadius: 6,
+                        ),
+                      ]
+                    : null,
+              ),
             ),
           ],
         ),

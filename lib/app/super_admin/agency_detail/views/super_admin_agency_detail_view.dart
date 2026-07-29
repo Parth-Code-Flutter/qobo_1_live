@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/super_admin/agency_detail/controllers/super_admin_agency_detail_controller.dart';
 import 'package:qobo_one_live/app/super_admin/models/super_admin_models.dart';
-import 'package:qobo_one_live/app/super_admin/widgets/super_admin_glass_card.dart';
+import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui.dart';
 import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui_kit.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
@@ -27,11 +27,23 @@ class SuperAdminAgencyDetailView
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
+          scrolledUnderElevation: 0,
           iconTheme: const IconThemeData(color: kColorWhite),
-          title: const SemiBoldText(
-            text: 'Agency Detail',
-            fontSize: TextStyles.k16FontSize,
-            color: kColorWhite,
+          title: Row(
+            children: [
+              SuperAdminUi.glowIcon(
+                icon: Icons.business_rounded,
+                accent: SuperAdminUi.violet,
+                size: 34,
+                iconSize: 18,
+              ),
+              Spacing.h10,
+              const SemiBoldText(
+                text: 'Agency Detail',
+                fontSize: TextStyles.k16FontSize,
+                color: kColorWhite,
+              ),
+            ],
           ),
         ),
         body: Obx(() {
@@ -83,8 +95,28 @@ class SuperAdminAgencyDetailView
     );
   }
 
+  Widget _sectionTitle(String title, IconData icon, Color accent) {
+    return Row(
+      children: [
+        SuperAdminUi.glowIcon(
+          icon: icon,
+          accent: accent,
+          size: 28,
+          iconSize: 14,
+        ),
+        Spacing.h8,
+        SemiBoldText(
+          text: title,
+          fontSize: TextStyles.k14FontSize,
+          color: kColorWhite,
+        ),
+      ],
+    );
+  }
+
   Widget _headerCard(SuperAdminAgencyDetail detail) {
     return SuperAdminGlassCard(
+      glow: SuperAdminUi.violet,
       child: Row(
         children: [
           SafeNetworkAvatar(
@@ -128,13 +160,14 @@ class SuperAdminAgencyDetailView
 
   Widget _ownerCard(SuperAdminAgencyDetail detail) {
     return SuperAdminGlassCard(
+      glow: SuperAdminUi.sky,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SemiBoldText(
-            text: 'Owner & address',
-            fontSize: TextStyles.k14FontSize,
-            color: kColorWhite,
+          _sectionTitle(
+            'Owner & address',
+            Icons.person_rounded,
+            SuperAdminUi.sky,
           ),
           Spacing.v12,
           SuperAdminInfoRow(label: 'Owner', value: detail.owner.name),
@@ -166,14 +199,11 @@ class SuperAdminAgencyDetailView
   Widget _statsCard(SuperAdminAgencyDetail detail) {
     final s = detail.stats;
     return SuperAdminGlassCard(
+      glow: SuperAdminUi.mint,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SemiBoldText(
-            text: 'Stats',
-            fontSize: TextStyles.k14FontSize,
-            color: kColorWhite,
-          ),
+          _sectionTitle('Stats', Icons.insights_rounded, SuperAdminUi.mint),
           Spacing.v12,
           SuperAdminInfoRow(label: 'Hosts', value: '${s.hostCount}'),
           SuperAdminInfoRow(label: 'Active', value: '${s.activeHostsCount}'),
@@ -189,13 +219,14 @@ class SuperAdminAgencyDetailView
 
   Widget _docsCard(SuperAdminAgencyDetail detail) {
     return SuperAdminGlassCard(
+      glow: SuperAdminUi.pink,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SemiBoldText(
-            text: 'Documents',
-            fontSize: TextStyles.k14FontSize,
-            color: kColorWhite,
+          _sectionTitle(
+            'Documents',
+            Icons.folder_rounded,
+            SuperAdminUi.pink,
           ),
           Spacing.v12,
           Row(
@@ -219,24 +250,31 @@ class SuperAdminAgencyDetailView
   Widget _actionsCard(BuildContext context, SuperAdminAgencyDetail detail) {
     return Obx(() {
       final busy = controller.isProcessing.value;
+      final hasActions =
+          detail.isPending || detail.isApproved || detail.isSuspended;
+      if (!hasActions) return const SizedBox.shrink();
+
       return SuperAdminGlassCard(
+        glow: SuperAdminUi.gold,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SemiBoldText(
-              text: 'Actions',
-              fontSize: TextStyles.k14FontSize,
-              color: kColorWhite,
+            _sectionTitle(
+              'Actions',
+              Icons.bolt_rounded,
+              SuperAdminUi.gold,
             ),
             Spacing.v12,
             if (detail.isPending)
               Row(
                 children: [
                   Expanded(
-                    child: _btn(
+                    child: SuperAdminActionButton(
                       label: 'Reject',
-                      color: const Color(0xFFFF8A80).withValues(alpha: 0.16),
-                      fg: const Color(0xFFFF8A80),
+                      icon: Icons.close_rounded,
+                      background: SuperAdminUi.danger.withValues(alpha: 0.16),
+                      borderColor: SuperAdminUi.danger.withValues(alpha: 0.4),
+                      foreground: SuperAdminUi.danger,
                       onTap: busy
                           ? null
                           : () async {
@@ -252,23 +290,26 @@ class SuperAdminAgencyDetailView
                   ),
                   Spacing.h10,
                   Expanded(
-                    child: _btn(
+                    child: SuperAdminActionButton(
                       label: 'Approve',
-                      color: const Color(0xFF2E9E5B),
-                      fg: kColorWhite,
+                      icon: Icons.check_rounded,
+                      background: SuperAdminUi.success,
+                      foreground: kColorWhite,
                       onTap: busy ? null : controller.approve,
                     ),
                   ),
                 ],
               ),
-            if (detail.isApproved) ...[
+            if (detail.isApproved)
               Row(
                 children: [
                   Expanded(
-                    child: _btn(
+                    child: SuperAdminActionButton(
                       label: 'Suspend',
-                      color: const Color(0xFFFFB74D).withValues(alpha: 0.18),
-                      fg: const Color(0xFFFFB74D),
+                      icon: Icons.pause_circle_filled_rounded,
+                      background: SuperAdminUi.warning.withValues(alpha: 0.18),
+                      borderColor: SuperAdminUi.warning.withValues(alpha: 0.45),
+                      foreground: SuperAdminUi.warning,
                       onTap: busy
                           ? null
                           : () async {
@@ -284,10 +325,12 @@ class SuperAdminAgencyDetailView
                   ),
                   Spacing.h10,
                   Expanded(
-                    child: _btn(
+                    child: SuperAdminActionButton(
                       label: 'Edit %',
-                      color: kColorPrimary.withValues(alpha: 0.35),
-                      fg: kColorWhite,
+                      icon: Icons.percent_rounded,
+                      background: SuperAdminUi.sky.withValues(alpha: 0.28),
+                      borderColor: SuperAdminUi.sky.withValues(alpha: 0.45),
+                      foreground: kColorWhite,
                       onTap: busy
                           ? null
                           : () async {
@@ -302,12 +345,12 @@ class SuperAdminAgencyDetailView
                   ),
                 ],
               ),
-            ],
             if (detail.isSuspended)
-              _btn(
+              SuperAdminActionButton(
                 label: 'Reactivate',
-                color: const Color(0xFF2E9E5B),
-                fg: kColorWhite,
+                icon: Icons.play_circle_fill_rounded,
+                background: SuperAdminUi.success,
+                foreground: kColorWhite,
                 onTap: busy ? null : controller.reactivate,
               ),
           ],
@@ -322,10 +365,10 @@ class SuperAdminAgencyDetailView
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SemiBoldText(
-            text: 'Hosts in this agency',
-            fontSize: TextStyles.k14FontSize,
-            color: kColorWhite,
+          _sectionTitle(
+            'Hosts in this agency',
+            Icons.mic_rounded,
+            SuperAdminUi.teal,
           ),
           Spacing.v12,
           if (controller.isLoadingHosts.value && items.isEmpty)
@@ -345,52 +388,47 @@ class SuperAdminAgencyDetailView
             ...items.map((host) {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 10),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => controller.openHostDetail(host),
-                    borderRadius: BorderRadius.circular(18),
-                    child: SuperAdminGlassCard(
-                      child: Row(
-                        children: [
-                          SafeNetworkAvatar(
-                            url: host.avatarUrl,
-                            size: 42,
-                            fallback: CircleAvatar(
-                              radius: 21,
-                              backgroundColor: kColorPrimary,
-                              child: Text(
-                                host.name.isNotEmpty
-                                    ? host.name.characters.first
-                                    : 'H',
-                              ),
-                            ),
+                child: SuperAdminGlassCard(
+                  glow: SuperAdminUi.teal,
+                  onTap: () => controller.openHostDetail(host),
+                  child: Row(
+                    children: [
+                      SafeNetworkAvatar(
+                        url: host.avatarUrl,
+                        size: 42,
+                        fallback: CircleAvatar(
+                          radius: 21,
+                          backgroundColor: kColorPrimary,
+                          child: Text(
+                            host.name.isNotEmpty
+                                ? host.name.characters.first
+                                : 'H',
                           ),
-                          Spacing.h10,
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                SemiBoldText(
-                                  text: host.name,
-                                  fontSize: TextStyles.k14FontSize,
-                                  color: kColorWhite,
-                                ),
-                                AppText(
-                                  text: host.status,
-                                  fontSize: TextStyles.k10FontSize,
-                                  color: Colors.white70,
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(
-                            Icons.chevron_right_rounded,
-                            color: Colors.white54,
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
+                      Spacing.h10,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SemiBoldText(
+                              text: host.name,
+                              fontSize: TextStyles.k14FontSize,
+                              color: kColorWhite,
+                            ),
+                            AppText(
+                              text: host.status,
+                              fontSize: TextStyles.k10FontSize,
+                              color: Colors.white70,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.chevron_right_rounded,
+                        color: Colors.white54,
+                      ),
+                    ],
                   ),
                 ),
               );
@@ -398,32 +436,6 @@ class SuperAdminAgencyDetailView
         ],
       );
     });
-  }
-
-  Widget _btn({
-    required String label,
-    required Color color,
-    required Color fg,
-    required VoidCallback? onTap,
-  }) {
-    return Material(
-      color: color,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Center(
-            child: SemiBoldText(
-              text: label,
-              fontSize: TextStyles.k12FontSize,
-              color: fg,
-            ),
-          ),
-        ),
-      ),
-    );
   }
 
   Future<String?> _askText(
@@ -434,24 +446,99 @@ class SuperAdminAgencyDetailView
     final textController = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: kColorWhite,
-        title: Text(title),
-        content: TextField(
-          controller: textController,
-          decoration: InputDecoration(hintText: hint),
-          maxLines: 3,
+      builder: (dialogContext) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+          decoration: BoxDecoration(
+            color: SuperAdminUi.sheet.withValues(alpha: 0.96),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: kColorWhite.withValues(alpha: 0.14)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SemiBoldText(
+                text: title,
+                fontSize: TextStyles.k16FontSize,
+                color: kColorWhite,
+              ),
+              Spacing.v12,
+              TextField(
+                controller: textController,
+                style: const TextStyle(color: kColorWhite),
+                decoration: InputDecoration(
+                  hintText: hint,
+                  hintStyle: const TextStyle(color: Colors.white38),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: kColorWhite.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: SuperAdminUi.violet),
+                  ),
+                ),
+                maxLines: 3,
+              ),
+              Spacing.v16,
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 46,
+                      child: OutlinedButton(
+                        onPressed: () =>
+                            Navigator.of(dialogContext).pop(false),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white70,
+                          side: BorderSide(
+                            color: kColorWhite.withValues(alpha: 0.22),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const SemiBoldText(
+                          text: 'Cancel',
+                          fontSize: TextStyles.k12FontSize,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Spacing.h10,
+                  Expanded(
+                    child: SizedBox(
+                      height: 46,
+                      child: ElevatedButton(
+                        onPressed: () =>
+                            Navigator.of(dialogContext).pop(true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: SuperAdminUi.violet,
+                          foregroundColor: kColorWhite,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const SemiBoldText(
+                          text: 'Confirm',
+                          fontSize: TextStyles.k12FontSize,
+                          color: kColorWhite,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Confirm'),
-          ),
-        ],
       ),
     );
     final value = textController.text.trim();
@@ -466,24 +553,100 @@ class SuperAdminAgencyDetailView
     );
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: kColorWhite,
-        title: const Text('Commission %'),
-        content: TextField(
-          controller: textController,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(hintText: 'e.g. 10'),
+      builder: (dialogContext) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+          decoration: BoxDecoration(
+            color: SuperAdminUi.sheet.withValues(alpha: 0.96),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: kColorWhite.withValues(alpha: 0.14)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SemiBoldText(
+                text: 'Commission %',
+                fontSize: TextStyles.k16FontSize,
+                color: kColorWhite,
+              ),
+              Spacing.v12,
+              TextField(
+                controller: textController,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                style: const TextStyle(color: kColorWhite),
+                decoration: InputDecoration(
+                  hintText: 'e.g. 10',
+                  hintStyle: const TextStyle(color: Colors.white38),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: kColorWhite.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: SuperAdminUi.violet),
+                  ),
+                ),
+              ),
+              Spacing.v16,
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 46,
+                      child: OutlinedButton(
+                        onPressed: () =>
+                            Navigator.of(dialogContext).pop(false),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white70,
+                          side: BorderSide(
+                            color: kColorWhite.withValues(alpha: 0.22),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const SemiBoldText(
+                          text: 'Cancel',
+                          fontSize: TextStyles.k12FontSize,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Spacing.h10,
+                  Expanded(
+                    child: SizedBox(
+                      height: 46,
+                      child: ElevatedButton(
+                        onPressed: () =>
+                            Navigator.of(dialogContext).pop(true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: SuperAdminUi.sky,
+                          foregroundColor: kColorWhite,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const SemiBoldText(
+                          text: 'Save',
+                          fontSize: TextStyles.k12FontSize,
+                          color: kColorWhite,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
     final raw = double.tryParse(textController.text.trim());

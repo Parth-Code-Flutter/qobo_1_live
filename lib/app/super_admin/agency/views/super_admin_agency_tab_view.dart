@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/super_admin/home/controllers/super_admin_home_controller.dart';
 import 'package:qobo_one_live/app/super_admin/models/super_admin_models.dart';
-import 'package:qobo_one_live/app/super_admin/widgets/super_admin_glass_card.dart';
+import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui.dart';
 import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui_kit.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
@@ -16,6 +16,13 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
   const SuperAdminAgencyTabView({super.key});
 
   static const _filters = ['pending', 'approved', 'suspended', 'all'];
+
+  static const _filterIcons = <String, IconData>{
+    'pending': Icons.hourglass_top_rounded,
+    'approved': Icons.verified_rounded,
+    'suspended': Icons.pause_circle_filled_rounded,
+    'all': Icons.grid_view_rounded,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -87,14 +94,6 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
     );
   }
 
-  /// Icon shown inside each status filter pill.
-  static const _filterIcons = <String, IconData>{
-    'pending': Icons.hourglass_top_rounded,
-    'approved': Icons.verified_rounded,
-    'suspended': Icons.pause_circle_filled_rounded,
-    'all': Icons.grid_view_rounded,
-  };
-
   Widget _filterChips() {
     return SizedBox(
       height: 44,
@@ -108,70 +107,16 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
           separatorBuilder: (_, __) => Spacing.h8,
           itemBuilder: (_, index) {
             final filter = _filters[index];
-            return _filterPill(filter, isSelected: selected == filter);
+            final label = filter[0].toUpperCase() + filter.substring(1);
+            return SuperAdminFilterPill(
+              label: label,
+              icon: _filterIcons[filter] ?? Icons.circle,
+              isSelected: selected == filter,
+              onTap: () => controller.changeAgencyFilter(filter),
+            );
           },
         );
       }),
-    );
-  }
-
-  /// Gradient pill for the selected status; frosted glass for the rest
-  /// (same visual language as the discover live filters).
-  Widget _filterPill(String filter, {required bool isSelected}) {
-    final label = filter[0].toUpperCase() + filter.substring(1);
-    return GestureDetector(
-      onTap: () => controller.changeAgencyFilter(filter),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
-          gradient: isSelected
-              ? const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    kColorLiveFilterChipGradientStart,
-                    kColorLiveFilterChipGradientMid,
-                    kColorLiveFilterChipGradientEnd,
-                  ],
-                )
-              : null,
-          color: isSelected ? null : kColorWhite.withValues(alpha: 0.10),
-          border: Border.all(
-            color: isSelected
-                ? kColorLiveFilterChipBorder
-                : kColorWhite.withValues(alpha: 0.14),
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: kColorPrimary.withValues(alpha: 0.45),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              _filterIcons[filter],
-              size: 15,
-              color: isSelected ? kColorWhite : Colors.white60,
-            ),
-            Spacing.h6,
-            SemiBoldText(
-              text: label,
-              fontSize: TextStyles.k12FontSize,
-              color: isSelected ? kColorWhite : Colors.white70,
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -180,138 +125,99 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
     SuperAdminAgencyItem agency,
     bool processing,
   ) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => controller.openAgencyDetail(agency),
-        borderRadius: BorderRadius.circular(18),
-        child: SuperAdminGlassCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    final glow = agency.isPending
+        ? SuperAdminUi.gold
+        : agency.isSuspended
+            ? SuperAdminUi.warning
+            : SuperAdminUi.violet;
+
+    return SuperAdminGlassCard(
+      glow: glow,
+      onTap: () => controller.openAgencyDetail(agency),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  SafeNetworkAvatar(
-                    url: agency.ownerAvatar,
-                    size: 46,
-                    fallback: CircleAvatar(
-                      radius: 23,
-                      backgroundColor: kColorPrimary,
-                      child: Text(
-                        agency.ownerName.isNotEmpty
-                            ? agency.ownerName.characters.first
-                            : 'A',
-                      ),
-                    ),
+              SafeNetworkAvatar(
+                url: agency.ownerAvatar,
+                size: 46,
+                fallback: CircleAvatar(
+                  radius: 23,
+                  backgroundColor: kColorPrimary,
+                  child: Text(
+                    agency.ownerName.isNotEmpty
+                        ? agency.ownerName.characters.first
+                        : 'A',
                   ),
-                  Spacing.h10,
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SemiBoldText(
-                          text: agency.name,
-                          fontSize: TextStyles.k14FontSize,
-                          color: kColorWhite,
-                        ),
-                        AppText(
-                          text: '${agency.ownerName} • ${agency.code}',
-                          fontSize: TextStyles.k10FontSize,
-                          color: Colors.white70,
-                        ),
-                      ],
-                    ),
-                  ),
-                  SuperAdminStatusPill(status: agency.status),
-                  Spacing.h6,
-                  _manageButton(context, agency, processing),
-                ],
+                ),
               ),
-              Spacing.v12,
-              AppText(
-                text:
-                    '${agency.hostCount} hosts • ${agency.pendingHostsCount} pending hosts',
-                fontSize: TextStyles.k12FontSize,
-                color: Colors.white70,
-              ),
-              if (agency.isPending) ...[
-                Spacing.v12,
-                Row(
+              Spacing.h10,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: _actionButton(
-                        label: 'Reject',
-                        icon: Icons.close_rounded,
-                        color: const Color(0xFFFF8A80).withValues(alpha: 0.16),
-                        borderColor: const Color(
-                          0xFFFF8A80,
-                        ).withValues(alpha: 0.4),
-                        foreground: const Color(0xFFFF8A80),
-                        onTap: processing
-                            ? null
-                            : () => _confirmReject(context, agency),
-                      ),
+                    SemiBoldText(
+                      text: agency.name,
+                      fontSize: TextStyles.k14FontSize,
+                      color: kColorWhite,
                     ),
-                    Spacing.h10,
-                    Expanded(
-                      child: _actionButton(
-                        label: processing ? 'Wait...' : 'Approve',
-                        icon: Icons.check_rounded,
-                        color: const Color(0xFF2E9E5B),
-                        foreground: kColorWhite,
-                        onTap: processing
-                            ? null
-                            : () => controller.approveAgency(agency),
-                      ),
+                    AppText(
+                      text: '${agency.ownerName} • ${agency.code}',
+                      fontSize: TextStyles.k10FontSize,
+                      color: Colors.white70,
                     ),
                   ],
                 ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _actionButton({
-    required String label,
-    required IconData icon,
-    required Color color,
-    required Color foreground,
-    required VoidCallback? onTap,
-    Color? borderColor,
-  }) {
-    return Material(
-      color: color,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 11),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: borderColor != null ? Border.all(color: borderColor) : null,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 16, color: foreground),
-              Spacing.h6,
-              SemiBoldText(
-                text: label,
-                fontSize: TextStyles.k12FontSize,
-                color: foreground,
               ),
+              SuperAdminStatusPill(status: agency.status),
+              Spacing.h6,
+              _manageButton(context, agency, processing),
             ],
           ),
-        ),
+          Spacing.v12,
+          AppText(
+            text:
+                '${agency.hostCount} hosts • ${agency.pendingHostsCount} pending hosts',
+            fontSize: TextStyles.k12FontSize,
+            color: Colors.white70,
+          ),
+          if (agency.isPending) ...[
+            Spacing.v12,
+            Row(
+              children: [
+                Expanded(
+                  child: SuperAdminActionButton(
+                    label: 'Reject',
+                    icon: Icons.close_rounded,
+                    background: SuperAdminUi.danger.withValues(alpha: 0.16),
+                    borderColor: SuperAdminUi.danger.withValues(alpha: 0.4),
+                    foreground: SuperAdminUi.danger,
+                    onTap: processing
+                        ? null
+                        : () => _confirmReject(context, agency),
+                  ),
+                ),
+                Spacing.h10,
+                Expanded(
+                  child: SuperAdminActionButton(
+                    label: processing ? 'Wait...' : 'Approve',
+                    icon: Icons.check_rounded,
+                    background: SuperAdminUi.success,
+                    foreground: kColorWhite,
+                    onTap: processing
+                        ? null
+                        : () => controller.approveAgency(agency),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }
 
-  /// Edit / delete entry point on each agency card.
   Widget _manageButton(
     BuildContext context,
     SuperAdminAgencyItem agency,
@@ -339,150 +245,84 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
 
   void _openManageSheet(BuildContext context, SuperAdminAgencyItem agency) {
     Get.bottomSheet(
-      Container(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
-        decoration: const BoxDecoration(
-          color: Color(0xFF1A1B4B),
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(24),
-            topRight: Radius.circular(24),
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            Spacing.v12,
-            SemiBoldText(
-              text: agency.name,
-              fontSize: TextStyles.k16FontSize,
-              color: kColorWhite,
-            ),
-            AppText(
-              text: 'Code ${agency.code.isEmpty ? '—' : agency.code}'
-                  ' • ${agency.status}',
-              fontSize: TextStyles.k12FontSize,
-              color: Colors.white60,
-            ),
-            Spacing.v12,
-            if (agency.isPending)
-              _sheetAction(
-                icon: Icons.check_circle_rounded,
-                color: const Color(0xFF4ADE80),
-                label: 'Approve agency',
-                onTap: () {
-                  Get.back();
-                  controller.approveAgency(agency);
-                },
-              ),
-            if (agency.isSuspended)
-              _sheetAction(
-                icon: Icons.play_circle_fill_rounded,
-                color: const Color(0xFF4ADE80),
-                label: 'Reactivate agency',
-                onTap: () {
-                  Get.back();
-                  controller.activateAgency(agency);
-                },
-              ),
-            if (agency.isApproved)
-              _sheetAction(
-                icon: Icons.pause_circle_filled_rounded,
-                color: const Color(0xFFFFB74D),
-                label: 'Suspend agency',
-                onTap: () async {
-                  Get.back();
-                  final reason = await _askReason(
-                    context,
-                    title: 'Suspend agency?',
-                    hint: 'Reason (optional)',
-                    confirmLabel: 'Suspend',
-                  );
-                  if (reason == null) return;
-                  await controller.suspendAgency(agency, reason);
-                },
-              ),
-            _sheetAction(
-              icon: Icons.percent_rounded,
-              color: const Color(0xFF7C9CFF),
-              label: 'Edit commission rate',
-              onTap: () async {
+      SuperAdminSheetScaffold(
+        title: agency.name,
+        subtitle:
+            'Code ${agency.code.isEmpty ? '—' : agency.code} • ${agency.status}',
+        children: [
+          if (agency.isPending)
+            SuperAdminSheetAction(
+              icon: Icons.check_circle_rounded,
+              color: SuperAdminUi.mint,
+              label: 'Approve agency',
+              onTap: () {
                 Get.back();
-                final rate = await _askCommission(context, agency);
-                if (rate == null) return;
-                await controller.updateAgencyCommission(agency, rate);
+                controller.approveAgency(agency);
               },
             ),
-            _sheetAction(
-              icon: Icons.delete_forever_rounded,
-              color: const Color(0xFFFF8A80),
-              label: 'Delete agency',
+          if (agency.isSuspended)
+            SuperAdminSheetAction(
+              icon: Icons.play_circle_fill_rounded,
+              color: SuperAdminUi.mint,
+              label: 'Reactivate agency',
+              onTap: () {
+                Get.back();
+                controller.activateAgency(agency);
+              },
+            ),
+          if (agency.isApproved)
+            SuperAdminSheetAction(
+              icon: Icons.pause_circle_filled_rounded,
+              color: SuperAdminUi.warning,
+              label: 'Suspend agency',
               onTap: () async {
                 Get.back();
                 final reason = await _askReason(
                   context,
-                  title: 'Delete agency?',
-                  subtitle:
-                      'The agency is rejected and removed from active lists.',
+                  title: 'Suspend agency?',
                   hint: 'Reason (optional)',
-                  confirmLabel: 'Delete',
+                  confirmLabel: 'Suspend',
                 );
                 if (reason == null) return;
-                await controller.deleteAgency(agency, reason);
+                await controller.suspendAgency(agency, reason);
               },
             ),
-          ],
-        ),
+          SuperAdminSheetAction(
+            icon: Icons.percent_rounded,
+            color: SuperAdminUi.sky,
+            label: 'Edit commission rate',
+            onTap: () async {
+              Get.back();
+              final rate = await _askCommission(context, agency);
+              if (rate == null) return;
+              await controller.updateAgencyCommission(agency, rate);
+            },
+          ),
+          SuperAdminSheetAction(
+            icon: Icons.delete_forever_rounded,
+            color: SuperAdminUi.danger,
+            label: 'Delete agency',
+            onTap: () async {
+              Get.back();
+              final reason = await _askReason(
+                context,
+                title: 'Delete agency?',
+                subtitle:
+                    'The agency is rejected and removed from active lists.',
+                hint: 'Reason (optional)',
+                confirmLabel: 'Delete',
+              );
+              if (reason == null) return;
+              await controller.deleteAgency(agency, reason);
+            },
+          ),
+        ],
       ),
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
     );
   }
 
-  Widget _sheetAction({
-    required IconData icon,
-    required Color color,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Material(
-        color: kColorWhite.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(14),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-            child: Row(
-              children: [
-                Icon(icon, size: 20, color: color),
-                Spacing.h10,
-                SemiBoldText(
-                  text: label,
-                  fontSize: TextStyles.k12FontSize,
-                  color: kColorWhite,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Reason dialog for suspend/delete. Returns null when cancelled;
-  /// empty string means confirmed without a reason.
   Future<String?> _askReason(
     BuildContext context, {
     required String title,
@@ -493,33 +333,32 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
     final reasonController = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: kColorWhite,
-        title: Text(title),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (subtitle != null) ...[
-              Text(subtitle, style: const TextStyle(fontSize: 13)),
-              const SizedBox(height: 10),
-            ],
-            TextField(
-              controller: reasonController,
-              decoration: InputDecoration(hintText: hint),
-              maxLines: 3,
+      builder: (dialogContext) => _SuperAdminGlassDialog(
+        title: title,
+        subtitle: subtitle,
+        confirmLabel: confirmLabel,
+        confirmColor: SuperAdminUi.danger,
+        onCancel: () => Navigator.of(dialogContext).pop(false),
+        onConfirm: () => Navigator.of(dialogContext).pop(true),
+        child: TextField(
+          controller: reasonController,
+          style: const TextStyle(color: kColorWhite),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(color: Colors.white38),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: kColorWhite.withValues(alpha: 0.2),
+              ),
             ),
-          ],
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: SuperAdminUi.violet),
+            ),
+          ),
+          maxLines: 3,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(confirmLabel),
-          ),
-        ],
       ),
     );
     final reason = reasonController.text.trim();
@@ -527,7 +366,6 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
     return confirmed == true ? reason : null;
   }
 
-  /// Commission dialog — user types a percentage, API expects a fraction.
   Future<double?> _askCommission(
     BuildContext context,
     SuperAdminAgencyItem agency,
@@ -537,31 +375,37 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
     );
     final rate = await showDialog<double>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: kColorWhite,
-        title: const Text('Commission rate'),
-        content: TextField(
+      builder: (dialogContext) => _SuperAdminGlassDialog(
+        title: 'Commission rate',
+        confirmLabel: 'Save',
+        confirmColor: SuperAdminUi.sky,
+        onCancel: () => Navigator.of(dialogContext).pop(),
+        onConfirm: () {
+          final percent = double.tryParse(rateController.text.trim());
+          if (percent == null || percent < 0 || percent > 100) return;
+          Navigator.of(dialogContext).pop(percent / 100);
+        },
+        child: TextField(
           controller: rateController,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
+          style: const TextStyle(color: kColorWhite),
+          decoration: InputDecoration(
             hintText: 'e.g. 12.5',
+            hintStyle: const TextStyle(color: Colors.white38),
             suffixText: '%',
+            suffixStyle: const TextStyle(color: Colors.white70),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: kColorWhite.withValues(alpha: 0.2),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: SuperAdminUi.violet),
+            ),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              final percent = double.tryParse(rateController.text.trim());
-              if (percent == null || percent < 0 || percent > 100) return;
-              Navigator.of(dialogContext).pop(percent / 100);
-            },
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
     rateController.dispose();
@@ -575,29 +419,150 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
     final feedbackController = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: kColorWhite,
-        title: const Text('Reject agency?'),
-        content: TextField(
+      builder: (dialogContext) => _SuperAdminGlassDialog(
+        title: 'Reject agency?',
+        confirmLabel: 'Reject',
+        confirmColor: SuperAdminUi.danger,
+        onCancel: () => Navigator.of(dialogContext).pop(false),
+        onConfirm: () => Navigator.of(dialogContext).pop(true),
+        child: TextField(
           controller: feedbackController,
-          decoration: const InputDecoration(hintText: 'Optional feedback'),
+          style: const TextStyle(color: kColorWhite),
+          decoration: InputDecoration(
+            hintText: 'Optional feedback',
+            hintStyle: const TextStyle(color: Colors.white38),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: kColorWhite.withValues(alpha: 0.2),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: SuperAdminUi.violet),
+            ),
+          ),
           maxLines: 3,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Reject'),
-          ),
-        ],
       ),
     );
     if (confirmed == true) {
       await controller.rejectAgency(agency, feedbackController.text.trim());
     }
     feedbackController.dispose();
+  }
+}
+
+/// Dark glass confirm dialog matching Super Admin chrome.
+class _SuperAdminGlassDialog extends StatelessWidget {
+  const _SuperAdminGlassDialog({
+    required this.title,
+    this.subtitle,
+    required this.child,
+    required this.confirmLabel,
+    required this.confirmColor,
+    required this.onCancel,
+    required this.onConfirm,
+  });
+
+  final String title;
+  final String? subtitle;
+  final Widget child;
+  final String confirmLabel;
+  final Color confirmColor;
+  final VoidCallback onCancel;
+  final VoidCallback onConfirm;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+        decoration: BoxDecoration(
+          color: SuperAdminUi.sheet.withValues(alpha: 0.96),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.14)),
+          boxShadow: [
+            BoxShadow(
+              color: SuperAdminUi.violet.withValues(alpha: 0.22),
+              blurRadius: 28,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SemiBoldText(
+              text: title,
+              fontSize: TextStyles.k16FontSize,
+              color: kColorWhite,
+            ),
+            if (subtitle != null && subtitle!.isNotEmpty) ...[
+              Spacing.v8,
+              AppText(
+                text: subtitle!,
+                fontSize: TextStyles.k12FontSize,
+                color: Colors.white60,
+              ),
+            ],
+            Spacing.v12,
+            child,
+            Spacing.v16,
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 46,
+                    child: OutlinedButton(
+                      onPressed: onCancel,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white70,
+                        side: BorderSide(
+                          color: kColorWhite.withValues(alpha: 0.22),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const SemiBoldText(
+                        text: 'Cancel',
+                        fontSize: TextStyles.k12FontSize,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ),
+                ),
+                Spacing.h10,
+                Expanded(
+                  child: SizedBox(
+                    height: 46,
+                    child: ElevatedButton(
+                      onPressed: onConfirm,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: confirmColor,
+                        foregroundColor: kColorWhite,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: SemiBoldText(
+                        text: confirmLabel,
+                        fontSize: TextStyles.k12FontSize,
+                        color: kColorWhite,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

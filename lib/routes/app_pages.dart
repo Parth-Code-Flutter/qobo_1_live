@@ -100,8 +100,6 @@ import '../app/user_flow/coin_seller/bindings/coin_seller_binding.dart';
 import '../app/user_flow/coin_seller/views/coin_seller_view.dart';
 import '../app/user_flow/agency_owner_dashboard/bindings/agency_owner_dashboard_binding.dart';
 import '../app/user_flow/agency_owner_dashboard/views/agency_owner_dashboard_view.dart';
-import '../app/user_flow/super_admin_dashboard/bindings/super_admin_dashboard_binding.dart';
-import '../app/user_flow/super_admin_dashboard/views/super_admin_dashboard_view.dart';
 import '../app/super_admin/bottom_nav/bindings/super_admin_bottom_nav_binding.dart';
 import '../app/super_admin/bottom_nav/views/super_admin_bottom_nav_view.dart';
 import '../app/super_admin/agency_detail/bindings/super_admin_agency_detail_binding.dart';
@@ -366,11 +364,6 @@ class AppPages {
       name: _Paths.AGENCY_OWNER,
       page: () => const AgencyOwnerDashboardView(),
       binding: AgencyOwnerDashboardBinding(),
-    ),
-    GetPage(
-      name: _Paths.SUPER_ADMIN_DASHBOARD,
-      page: () => const SuperAdminDashboardView(),
-      binding: SuperAdminDashboardBinding(),
     ),
     GetPage(
       name: _Paths.SUPER_ADMIN_BOTTOM_NAV,
