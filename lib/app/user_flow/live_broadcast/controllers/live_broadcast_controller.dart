@@ -478,8 +478,32 @@ class LiveBroadcastController extends GetxController {
   String get _normalizedNavRoomType =>
       roomType.value.toUpperCase().replaceAll('-', '_').replaceAll(' ', '_');
 
-  /// Hosts and viewers can open the gift sheet in audio/video/group rooms.
-  bool get canSendGifts => true;
+  /// Gift only when someone else is in the room (host alone = no gift target).
+  bool get canSendGifts {
+    // Guests can always gift the host once they've joined.
+    if (!isHost.value) return true;
+    return hasOtherParticipantsBesideHost;
+  }
+
+  /// True when at least one non-host person is present (seat, viewer, or Zego user).
+  bool get hasOtherParticipantsBesideHost {
+    if (viewerCount.value > 1) return true;
+
+    for (final viewer in liveViewers) {
+      if (viewer['isHost'] == true) continue;
+      return true;
+    }
+
+    final hostId = receiverId.value.trim();
+    for (final seat in audioRoomSeats) {
+      if (!seat.occupied) continue;
+      if (seat.isHost) continue;
+      if (hostId.isNotEmpty && _userIdsMatch(seat.userId, hostId)) continue;
+      return true;
+    }
+
+    return false;
+  }
 
   /// Zego can emit call-end lifecycle events during participant changes.
   /// Hosts may leave the route only after explicitly confirming room end.
@@ -721,6 +745,24 @@ class LiveBroadcastController extends GetxController {
     if (bindMessages) {
       _bindGroupCallMessageListener();
     }
+    _bindGroupCallUserListener();
+  }
+
+  /// Keep viewer/participant count reactive for gift visibility in video rooms.
+  void _bindGroupCallUserListener() {
+    _userSub?.cancel();
+    try {
+      final kit = ZegoUIKit();
+      _syncGroupCallUsers(kit.getAllUsers());
+      _userSub = kit.getUserListStream().listen(_syncGroupCallUsers);
+    } catch (_) {
+      // Zego user stream may not be ready yet on first connect.
+    }
+  }
+
+  void _syncGroupCallUsers(List<ZegoUIKitUser> users) {
+    viewerCount.value = users.length;
+    _syncViewers(users);
   }
 
   void handleGroupCallRoomLoginFailed(int errorCode) {

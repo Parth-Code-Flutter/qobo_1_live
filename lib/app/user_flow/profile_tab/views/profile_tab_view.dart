@@ -398,10 +398,10 @@ class _ProfileTabViewState extends State<ProfileTabView> {
         Color(0xFFE5009E),
         Color(0xFFFF54C8),
       ], onTapRoute: Routes.MALL),
-      _ProfileFeatureItem('Point Center', kIconPointerCenter, const [
-        Color(0xFF00A8B8),
-        Color(0xFF08D6C7),
-      ], onTapRoute: Routes.POINT_CENTER),
+      // _ProfileFeatureItem('Point Center', kIconPointerCenter, const [
+      //   Color(0xFF00A8B8),
+      //   Color(0xFF08D6C7),
+      // ], onTapRoute: Routes.POINT_CENTER),
       _ProfileFeatureItem('Award', kIconAward, const [
         Color(0xFFFF145C),
         Color(0xFFFFD83D),

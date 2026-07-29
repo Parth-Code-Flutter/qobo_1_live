@@ -176,13 +176,16 @@ class _AudioRoomBottomControls extends GetView<LiveBroadcastController> {
               compact: compact,
               onTap: () => Get.snackbar('React', 'Reaction sent.'),
             ),
-            Obx(
-              () => _GiftControlButton(
+            Obx(() {
+              if (!controller.canSendGifts) {
+                return const SizedBox.shrink();
+              }
+              return _GiftControlButton(
                 compact: compact,
                 coins: controller.coinsBalance.value,
                 onTap: controller.openGiftsSheet,
-              ),
-            ),
+              );
+            }),
             _ControlButton(
               icon: Icons.more_horiz_rounded,
               label: 'More',
