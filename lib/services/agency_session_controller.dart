@@ -80,7 +80,7 @@ class AgencySessionController extends GetxController {
 
   /// Loads agency id/name/hosts from dashboard when memory session is empty (cold start).
   ///
-  /// Isolation: only `agency` (and mid-registration `user`) may hit this endpoint.
+  /// Allowed roles: `agency`, `super_admin`, and mid-registration `user`.
   Future<void> ensureHydratedFromDashboard({bool forceRefresh = false}) async {
     await loadFromStorage();
 
@@ -107,13 +107,16 @@ class AgencySessionController extends GetxController {
     }
   }
 
-  /// Blocks `super_admin` / `host` from agency-owner dashboard APIs.
+  /// Isolation: only agency owners, mid-registration users, and super admins
+  /// may hit the agency-owner dashboard endpoint.
   bool _mayFetchAgencyDashboard() {
     if (!Get.isRegistered<UserSessionController>()) return true;
-    final role = Get.find<UserSessionController>().role.toLowerCase();
+    final session = Get.find<UserSessionController>();
+    if (session.isAgency || session.isSuperAdmin) return true;
+    final role = session.role.toLowerCase();
     if (role.isEmpty) return true;
-    // Agency owners, and users mid-registration (role still `user`).
-    return role == 'agency' || role == 'user';
+    // Mid-registration (role still `user`).
+    return role == 'user';
   }
 
   Future<void> _fetchDashboardIntoSession() async {

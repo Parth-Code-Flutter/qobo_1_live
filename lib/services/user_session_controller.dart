@@ -73,7 +73,12 @@ class UserSessionController extends GetxController {
   }
 
   bool get isSuperAdmin => role.toLowerCase() == 'super_admin';
-  bool get isAgency => role.toLowerCase() == 'agency';
+  bool get isAgency {
+    final normalized = role.toLowerCase().replaceAll(' ', '_');
+    return normalized == 'agency' ||
+        normalized == 'agency_owner' ||
+        normalized == 'agencyowner';
+  }
   bool get isHost => role.toLowerCase() == 'host';
 
   /// Approved P2P coins seller (role and/or profile flags from getProfile).

@@ -38,11 +38,14 @@ class AgencyOwnerDashboardController extends GetxController {
     loadDashboard();
   }
 
-  /// Isolation: super admin / host must not use agency-owner APIs or shell.
+  /// Isolation: host/coin-seller must not use agency-owner APIs or shell.
+  /// Agency owners and super admins may open the dashboard.
   bool _assertAgencyOwnerAccess() {
     if (!Get.isRegistered<UserSessionController>()) return true;
     final session = Get.find<UserSessionController>();
-    if (session.isAgency || session.role.isEmpty) return true;
+    if (session.isAgency || session.isSuperAdmin || session.role.isEmpty) {
+      return true;
+    }
     // Mid-registration users may still open status/dashboard after apply.
     if (session.role.toLowerCase() == 'user') return true;
     RoleHomeRoute.goHome();

@@ -557,12 +557,15 @@ class _ProfileTabViewState extends State<ProfileTabView> {
 
   Future<void> _openAgencyFlow() async {
     final session = _resolveUserSession();
+    // Keep Profile selected under the pushed route so Back returns here.
     if (Get.isRegistered<BottomNavController>()) {
       Get.find<BottomNavController>().onNavBarTabSelected(
         BottomNavController.profileTabIndex,
       );
     }
-    if (session.isAgency) {
+
+    // Agency owners + super admins open the owner dashboard directly.
+    if (session.isAgency || session.isSuperAdmin) {
       await Get.toNamed(Routes.AGENCY_OWNER);
       return;
     }
