@@ -819,21 +819,18 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
           compact: compact,
           onTap: controller.shareRoom,
         ),
-        Obx(() {
-          // Host + audience: show local session earnings for gift receives.
-          return Padding(
-            padding: EdgeInsets.only(left: compact ? 5 : 8),
-            child: SessionEarningsBadge(
-              key: controller.sessionEarningsBadgeKey,
-              tracker: controller.sessionEarnings,
-              compact: compact,
-              maxWidth: earningsMaxWidth,
-              icon: Icons.monetization_on_rounded,
-              iconColor: const Color(0xFFFFA10A),
-              onTap: controller.openSessionEarningsDialog,
-            ),
-          );
-        }),
+        Padding(
+          padding: EdgeInsets.only(left: compact ? 5 : 8),
+          child: SessionEarningsBadge(
+            key: controller.sessionEarningsBadgeKey,
+            tracker: controller.sessionEarnings,
+            compact: compact,
+            maxWidth: earningsMaxWidth,
+            icon: Icons.monetization_on_rounded,
+            iconColor: const Color(0xFFFFA10A),
+            onTap: controller.openSessionEarningsDialog,
+          ),
+        ),
         SizedBox(width: compact ? 5 : 8),
         // Same end control as audio/video rooms (red power icon).
         _topIconButton(
