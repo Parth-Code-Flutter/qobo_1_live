@@ -68,29 +68,39 @@ abstract final class SessionEarningsUtils {
     }
   }
 
-  /// After `POST /api/economy/send-gift`, apply host earnings when present.
+  /// After `POST /api/economy/send-gift`, apply earnings for this device's earner.
+  ///
+  /// - `scope=user`: credits when [earnerUserId] is the gift receiver.
+  /// - `scope=room`: credits when [roomParticipantsEarn] is true (everyone in
+  ///   the room except the sender — caller must set this).
   static void ingestGiftResponse({
     required SessionEarningsTracker tracker,
     required Map<String, dynamic>? response,
     required String hostUserId,
+    required String earnerUserId,
     required bool hostReceivesRoomGifts,
+    bool roomParticipantsEarn = false,
     int fallbackGiftPrice = 0,
     String scope = 'user',
     String? receiverId,
   }) {
     if (!isEconomyApiSuccess(response)) return;
     final data = _asMap(response?['data']);
-    final hostId = hostUserId.trim();
+    final earnerId = earnerUserId.trim();
     final receiver = (receiverId ?? data['receiverId'] ?? data['receiver_id'])
         ?.toString()
         .trim();
     final normalizedScope = scope.trim().toLowerCase();
 
-    final earnsGift = hostId.isNotEmpty &&
-        (normalizedScope == 'room' && hostReceivesRoomGifts ||
-            (receiver != null && receiver.isNotEmpty && receiver == hostId));
+    if (earnerId.isEmpty) return;
 
-    if (!earnsGift) return;
+    final isRoomGiftToParticipant =
+        normalizedScope == 'room' && roomParticipantsEarn;
+    final isDirectGiftToEarner = receiver != null &&
+        receiver.isNotEmpty &&
+        _idsMatch(earnerId, receiver);
+
+    if (!isRoomGiftToParticipant && !isDirectGiftToEarner) return;
 
     final hostBlock = _asMap(
       data['hostEarnings'] ??
@@ -128,8 +138,7 @@ abstract final class SessionEarningsUtils {
     }
   }
 
-  /// Peer gift chat line — estimate host/callee share from catalog when API
-  /// response is only available on the sender device.
+  /// Peer gift chat line — estimate share from catalog / embedded price.
   ///
   /// Returns coins applied to [tracker] (0 when nothing earned).
   static int ingestIncomingGiftChat({
@@ -139,6 +148,11 @@ abstract final class SessionEarningsUtils {
     required bool earnsGift,
   }) {
     if (!earnsGift || !GiftMediaUtils.isGiftChatMessage(chatMessage)) return 0;
+    final embedded = parseGiftPrice(chatMessage);
+    if (embedded != null && embedded > 0) {
+      tracker.applyDelta(coins: embedded);
+      return embedded;
+    }
     final price = _giftPriceFromCatalog(giftCatalog, chatMessage);
     if (price != null && price > 0) {
       tracker.applyDelta(coins: price);
@@ -220,6 +234,16 @@ abstract final class SessionEarningsUtils {
     if (value is Map<String, dynamic>) return value;
     if (value is Map) return Map<String, dynamic>.from(value);
     return <String, dynamic>{};
+  }
+
+  static bool _idsMatch(String left, String right) {
+    final a = left.trim();
+    final b = right.trim();
+    if (a.isEmpty || b.isEmpty) return false;
+    if (a == b) return true;
+    final aSan = a.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toLowerCase();
+    final bSan = b.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toLowerCase();
+    return aSan.isNotEmpty && aSan == bSan;
   }
 
   static int? _readIntFromMaps(

@@ -27,7 +27,7 @@ class SuperAdminBottomNavView extends GetView<SuperAdminBottomNavController> {
     return PopScope(
       canPop: true,
       child: Scaffold(
-        backgroundColor: kColorWhite,
+        backgroundColor: SuperAdminUi.ink,
         extendBody: true,
         body: Obx(() {
           switch (controller.selectedIndex.value) {
@@ -114,8 +114,8 @@ class SuperAdminBottomNavView extends GetView<SuperAdminBottomNavController> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    const Color(0xFF181A5A).withValues(alpha: 0.86),
-                    const Color(0xFF121644).withValues(alpha: 0.93),
+                    SuperAdminUi.sheet.withValues(alpha: 0.92),
+                    SuperAdminUi.ink.withValues(alpha: 0.97),
                   ],
                 ),
                 borderRadius: const BorderRadius.only(
@@ -124,7 +124,7 @@ class SuperAdminBottomNavView extends GetView<SuperAdminBottomNavController> {
                 ),
                 border: Border(
                   top: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.2),
+                    color: SuperAdminUi.textPrimary.withValues(alpha: 0.10),
                     width: 0.7,
                   ),
                 ),
@@ -177,8 +177,10 @@ class _SuperAdminNavTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final iconColor = selected ? accent : accent.withValues(alpha: 0.45);
-    final labelColor = selected ? accent : Colors.white.withValues(alpha: 0.42);
+    final iconColor =
+        selected ? accent : SuperAdminUi.textMuted.withValues(alpha: 0.85);
+    final labelColor =
+        selected ? accent : SuperAdminUi.textFaint;
 
     return Material(
       color: Colors.transparent,

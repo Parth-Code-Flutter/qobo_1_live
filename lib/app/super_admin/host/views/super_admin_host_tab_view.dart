@@ -5,9 +5,7 @@ import 'package:qobo_one_live/app/super_admin/models/super_admin_models.dart';
 import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui.dart';
 import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui_kit.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
-import 'package:qobo_one_live/utils/app_widgets/safe_network_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -29,150 +27,174 @@ class SuperAdminHostTabView extends GetView<SuperAdminHomeController> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SuperAdminTabHeader(
-              icon: Icons.mic_rounded,
-              title: 'Host',
-              subtitle: 'Track host activity across all agencies',
-            ),
-            _filterChips(),
-            Expanded(
-              child: Obx(() {
-                if (controller.isLoadingHosts.value &&
-                    controller.trackedHosts.isEmpty) {
-                  return const Center(
-                    child: CircularProgressIndicator(color: kColorPrimary),
-                  );
-                }
-                final hosts = controller.trackedHosts;
-                if (hosts.isEmpty) {
-                  return RefreshIndicator(
-                    color: kColorPrimary,
-                    onRefresh: () =>
-                        controller.loadTrackedHosts(showLoader: false),
-                    child: ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: const [
-                        SizedBox(height: 120),
-                        SuperAdminEmptyState(
-                          icon: Icons.podcasts_rounded,
-                          title: 'No host activity found',
-                          subtitle: 'Pull down to refresh host tracking data',
-                        ),
-                      ],
-                    ),
-                  );
-                }
+    return SuperAdminPageScaffold(
+      primary: SuperAdminUi.teal,
+      secondary: SuperAdminUi.sky,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SuperAdminTabHeader(
+            icon: Icons.mic_rounded,
+            title: 'Host',
+            subtitle: 'Track host activity across all agencies',
+            accent: SuperAdminUi.teal,
+          ),
+          _filterChips(),
+          Expanded(
+            child: Obx(() {
+              if (controller.isLoadingHosts.value &&
+                  controller.trackedHosts.isEmpty) {
+                return const Center(
+                  child: CircularProgressIndicator(color: kColorPrimary),
+                );
+              }
+              final hosts = controller.trackedHosts;
+              if (hosts.isEmpty) {
                 return RefreshIndicator(
                   color: kColorPrimary,
                   onRefresh: () =>
                       controller.loadTrackedHosts(showLoader: false),
-                  child: ListView.separated(
-                    physics: const AlwaysScrollableScrollPhysics(
-                      parent: BouncingScrollPhysics(),
-                    ),
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
-                    itemCount: hosts.length,
-                    separatorBuilder: (_, __) => Spacing.v12,
-                    itemBuilder: (_, index) {
-                      final host = hosts[index];
-                      return SuperAdminGlassCard(
-                        glow: SuperAdminUi.teal,
-                        onTap: () => controller.openHostDetail(host),
-                        child: Row(
-                          children: [
-                            SafeNetworkAvatar(
-                              url: host.avatarUrl,
-                              size: 48,
-                              fallback: CircleAvatar(
-                                radius: 24,
-                                backgroundColor: kColorPrimary,
-                                child: Text(
-                                  host.name.isNotEmpty
-                                      ? host.name.characters.first
-                                      : 'H',
-                                ),
-                              ),
-                            ),
-                            Spacing.h12,
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  SemiBoldText(
-                                    text: host.name,
-                                    fontSize: TextStyles.k14FontSize,
-                                    color: kColorWhite,
-                                  ),
-                                  Spacing.v2,
-                                  AppText(
-                                    text:
-                                        'Agency ${host.agencyCode.isEmpty ? '—' : host.agencyCode} • ${host.status}',
-                                    fontSize: TextStyles.k10FontSize,
-                                    color: Colors.white70,
-                                  ),
-                                  Spacing.v8,
-                                  Wrap(
-                                    spacing: 6,
-                                    runSpacing: 6,
-                                    children: [
-                                      _metricChip(
-                                        Icons.diamond_rounded,
-                                        host.diamonds.toStringAsFixed(0),
-                                        SuperAdminUi.sky,
-                                      ),
-                                      _metricChip(
-                                        Icons.monetization_on_rounded,
-                                        host.coins.toStringAsFixed(0),
-                                        SuperAdminUi.gold,
-                                      ),
-                                      _metricChip(
-                                        Icons.timer_outlined,
-                                        _formatSeconds(host.totalStreamSeconds),
-                                        SuperAdminUi.mint,
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 5,
-                              ),
-                              decoration: BoxDecoration(
-                                color: SuperAdminUi.gold.withValues(alpha: 0.14),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color:
-                                      SuperAdminUi.gold.withValues(alpha: 0.4),
-                                ),
-                              ),
-                              child: SemiBoldText(
-                                text: host.totalCommissionEarned
-                                    .toStringAsFixed(1),
-                                fontSize: TextStyles.k12FontSize,
-                                color: SuperAdminUi.gold,
-                              ),
-                            ),
-                            Spacing.h6,
-                            _manageButton(context, host),
-                          ],
-                        ),
-                      );
-                    },
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: const [
+                      SizedBox(height: 120),
+                      SuperAdminEmptyState(
+                        icon: Icons.podcasts_rounded,
+                        title: 'No host activity found',
+                        subtitle: 'Pull down to refresh host tracking data',
+                      ),
+                    ],
                   ),
                 );
-              }),
+              }
+              return RefreshIndicator(
+                color: kColorPrimary,
+                onRefresh: () =>
+                    controller.loadTrackedHosts(showLoader: false),
+                child: ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics(),
+                  ),
+                  padding: SuperAdminUi.pageInsets,
+                  itemCount: hosts.length,
+                  separatorBuilder: (_, __) =>
+                      Spacing.v(SuperAdminUi.sectionGap),
+                  itemBuilder: (_, index) {
+                    final host = hosts[index];
+                    return _hostCard(context, host);
+                  },
+                ),
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _hostCard(BuildContext context, SuperAdminTrackedHost host) {
+    final glow = host.status.toLowerCase() == 'suspended'
+        ? SuperAdminUi.warning
+        : SuperAdminUi.teal;
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.96, end: 1),
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutBack,
+      builder: (context, scale, child) =>
+          Transform.scale(scale: scale, child: child),
+      child: SuperAdminGlassCard(
+        glow: glow,
+        padding: const EdgeInsets.all(14),
+        onTap: () => controller.openHostDetail(host),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SuperAdminAvatarRing(
+                  url: host.avatarUrl,
+                  fallbackLetter: host.name,
+                  size: 74,
+                  accent: glow,
+                ),
+                Spacing.h12,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      BoldText(
+                        text: host.name,
+                        fontSize: TextStyles.k16FontSize,
+                        color: SuperAdminUi.textPrimary,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Spacing.v4,
+                      AppText(
+                        text:
+                            'Agency ${host.agencyCode.isEmpty ? '—' : host.agencyCode}',
+                        fontSize: TextStyles.k12FontSize,
+                        color: SuperAdminUi.textSecondary,
+                      ),
+                      Spacing.v8,
+                      SuperAdminStatusPill(status: host.status),
+                    ],
+                  ),
+                ),
+                Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            SuperAdminUi.gold.withValues(alpha: 0.35),
+                            SuperAdminUi.gold.withValues(alpha: 0.08),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: SuperAdminUi.gold.withValues(alpha: 0.45),
+                        ),
+                      ),
+                      child: SemiBoldText(
+                        text: host.totalCommissionEarned.toStringAsFixed(1),
+                        fontSize: TextStyles.k12FontSize,
+                        color: SuperAdminUi.gold,
+                      ),
+                    ),
+                    Spacing.v8,
+                    _manageButton(context, host),
+                  ],
+                ),
+              ],
+            ),
+            Spacing.v12,
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                SuperAdminMetricChip(
+                  icon: Icons.diamond_rounded,
+                  label: host.diamonds.toStringAsFixed(0),
+                  accent: SuperAdminUi.sky,
+                ),
+                SuperAdminMetricChip(
+                  icon: Icons.monetization_on_rounded,
+                  label: host.coins.toStringAsFixed(0),
+                  accent: SuperAdminUi.gold,
+                ),
+                SuperAdminMetricChip(
+                  icon: Icons.timer_outlined,
+                  label: _formatSeconds(host.totalStreamSeconds),
+                  accent: SuperAdminUi.mint,
+                ),
+              ],
             ),
           ],
         ),
@@ -180,38 +202,15 @@ class SuperAdminHostTabView extends GetView<SuperAdminHomeController> {
     );
   }
 
-  Widget _metricChip(IconData icon, String value, Color accent) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: accent.withValues(alpha: 0.28)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: accent),
-          Spacing.h4,
-          AppText(
-            text: value,
-            fontSize: TextStyles.k10FontSize,
-            color: Colors.white70,
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _filterChips() {
     return SizedBox(
-      height: 44,
+      height: 48,
       child: Obx(() {
         final selected = controller.hostStatusFilter.value;
         return ListView.separated(
           scrollDirection: Axis.horizontal,
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: SuperAdminUi.pagePad),
           itemCount: _filters.length,
           separatorBuilder: (_, __) => Spacing.h8,
           itemBuilder: (_, index) {
@@ -239,21 +238,21 @@ class SuperAdminHostTabView extends GetView<SuperAdminHomeController> {
           height: 32,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: kColorWhite.withValues(alpha: 0.10),
-            border: Border.all(color: kColorWhite.withValues(alpha: 0.16)),
+            color: SuperAdminUi.textPrimary.withValues(alpha: 0.10),
+            border: Border.all(color: SuperAdminUi.textPrimary.withValues(alpha: 0.16)),
           ),
           child: processing
               ? const Padding(
                   padding: EdgeInsets.all(7),
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Colors.white70,
+                    color: SuperAdminUi.textSecondary,
                   ),
                 )
               : const Icon(
                   Icons.more_vert_rounded,
                   size: 18,
-                  color: Colors.white70,
+                  color: SuperAdminUi.textSecondary,
                 ),
         ),
       );
@@ -347,7 +346,7 @@ class SuperAdminHostTabView extends GetView<SuperAdminHomeController> {
           decoration: BoxDecoration(
             color: SuperAdminUi.sheet.withValues(alpha: 0.96),
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: kColorWhite.withValues(alpha: 0.14)),
+            border: Border.all(color: SuperAdminUi.textPrimary.withValues(alpha: 0.14)),
             boxShadow: [
               BoxShadow(
                 color: SuperAdminUi.violet.withValues(alpha: 0.22),
@@ -363,27 +362,27 @@ class SuperAdminHostTabView extends GetView<SuperAdminHomeController> {
               SemiBoldText(
                 text: title,
                 fontSize: TextStyles.k16FontSize,
-                color: kColorWhite,
+                color: SuperAdminUi.textPrimary,
               ),
               if (subtitle != null) ...[
                 Spacing.v8,
                 AppText(
                   text: subtitle,
                   fontSize: TextStyles.k12FontSize,
-                  color: Colors.white60,
+                  color: SuperAdminUi.textMuted,
                 ),
               ],
               Spacing.v12,
               TextField(
                 controller: reasonController,
-                style: const TextStyle(color: kColorWhite),
+                style: const TextStyle(color: SuperAdminUi.textPrimary),
                 decoration: InputDecoration(
                   hintText: hint,
-                  hintStyle: const TextStyle(color: Colors.white38),
+                  hintStyle: const TextStyle(color: SuperAdminUi.textFaint),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
-                      color: kColorWhite.withValues(alpha: 0.2),
+                      color: SuperAdminUi.textPrimary.withValues(alpha: 0.2),
                     ),
                   ),
                   focusedBorder: OutlineInputBorder(
@@ -403,9 +402,9 @@ class SuperAdminHostTabView extends GetView<SuperAdminHomeController> {
                         onPressed: () =>
                             Navigator.of(dialogContext).pop(false),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.white70,
+                          foregroundColor: SuperAdminUi.textSecondary,
                           side: BorderSide(
-                            color: kColorWhite.withValues(alpha: 0.22),
+                            color: SuperAdminUi.textPrimary.withValues(alpha: 0.22),
                           ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
@@ -414,7 +413,7 @@ class SuperAdminHostTabView extends GetView<SuperAdminHomeController> {
                         child: const SemiBoldText(
                           text: 'Cancel',
                           fontSize: TextStyles.k12FontSize,
-                          color: Colors.white70,
+                          color: SuperAdminUi.textSecondary,
                         ),
                       ),
                     ),
@@ -437,7 +436,7 @@ class SuperAdminHostTabView extends GetView<SuperAdminHomeController> {
                         child: SemiBoldText(
                           text: confirmLabel,
                           fontSize: TextStyles.k12FontSize,
-                          color: kColorWhite,
+                          color: SuperAdminUi.textPrimary,
                         ),
                       ),
                     ),

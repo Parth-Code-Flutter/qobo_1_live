@@ -216,10 +216,16 @@ const giftAnimMarkerSuffix = ']]';
 const giftSoundMarkerPrefix = '[[giftSound:';
 const giftSoundMarkerSuffix = ']]';
 
-/// Removes embedded gift media markers so chat UI stays clean.
+/// Removes embedded gift media / earnings markers so chat UI stays clean.
 String stripGiftAnimMarker(String text) {
   return text
-      .replaceAll(RegExp(r'\n?\[\[gift(?:Anim|Sound):.*?\]\]'), '')
+      .replaceAll(
+        RegExp(
+          r'\n?\[\[gift(?:Anim|Sound|To|From|Scope|Price):.*?\]\]',
+          caseSensitive: false,
+        ),
+        '',
+      )
       .trim();
 }
 
@@ -243,4 +249,46 @@ String? parseGiftSoundUrl(String text) {
   final url = match?.group(1)?.trim();
   if (url == null || url.isEmpty) return null;
   return url;
+}
+
+/// Receiver id for user-scoped gifts (`[[giftTo:…]]`).
+String? parseGiftReceiverId(String text) {
+  final match = RegExp(
+    r'\[\[giftTo:([^\]]+)\]\]',
+    caseSensitive: false,
+  ).firstMatch(text);
+  final id = match?.group(1)?.trim();
+  if (id == null || id.isEmpty) return null;
+  return id;
+}
+
+/// Sender id for gift earnings (`[[giftFrom:…]]`).
+String? parseGiftSenderId(String text) {
+  final match = RegExp(
+    r'\[\[giftFrom:([^\]]+)\]\]',
+    caseSensitive: false,
+  ).firstMatch(text);
+  final id = match?.group(1)?.trim();
+  if (id == null || id.isEmpty) return null;
+  return id;
+}
+
+/// Gift scope from chat (`room` / `user`). Defaults to `user` when absent.
+String parseGiftScope(String text) {
+  final match = RegExp(
+    r'\[\[giftScope:([^\]]+)\]\]',
+    caseSensitive: false,
+  ).firstMatch(text);
+  final scope = match?.group(1)?.trim().toLowerCase();
+  if (scope == 'room' || scope == 'user') return scope!;
+  return 'user';
+}
+
+/// Catalog / send price embedded for peer seat-diamond updates.
+int? parseGiftPrice(String text) {
+  final match = RegExp(
+    r'\[\[giftPrice:(\d+)\]\]',
+    caseSensitive: false,
+  ).firstMatch(text);
+  return int.tryParse(match?.group(1) ?? '');
 }

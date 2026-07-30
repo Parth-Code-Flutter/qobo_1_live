@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui.dart';
-import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
-/// Shared header for Super Admin tabs — glow icon badge + title/subtitle.
+/// Shared header for Super Admin tabs — icon badge + clear type hierarchy.
 class SuperAdminTabHeader extends StatelessWidget {
   const SuperAdminTabHeader({
     super.key,
@@ -14,23 +13,30 @@ class SuperAdminTabHeader extends StatelessWidget {
     required this.title,
     required this.subtitle,
     this.trailing,
+    this.accent = SuperAdminUi.violet,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final Widget? trailing;
+  final Color accent;
 
   @override
   Widget build(BuildContext context) {
     final canPop = Navigator.of(context).canPop();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+      padding: const EdgeInsets.fromLTRB(
+        SuperAdminUi.pagePad,
+        12,
+        SuperAdminUi.pagePad,
+        10,
+      ),
       child: Row(
         children: [
           if (canPop) ...[
             Material(
-              color: kColorWhite.withValues(alpha: 0.12),
+              color: SuperAdminUi.panel.withValues(alpha: 0.65),
               borderRadius: BorderRadius.circular(14),
               child: InkWell(
                 onTap: Get.back,
@@ -40,7 +46,7 @@ class SuperAdminTabHeader extends StatelessWidget {
                   height: 44,
                   child: Icon(
                     Icons.arrow_back_ios_new_rounded,
-                    color: kColorWhite,
+                    color: SuperAdminUi.textPrimary,
                     size: 18,
                   ),
                 ),
@@ -50,7 +56,7 @@ class SuperAdminTabHeader extends StatelessWidget {
           ],
           SuperAdminUi.glowIcon(
             icon: icon,
-            accent: SuperAdminUi.violet,
+            accent: accent,
             size: 46,
             iconSize: 22,
           ),
@@ -59,16 +65,16 @@ class SuperAdminTabHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SemiBoldText(
+                BoldText(
                   text: title,
-                  fontSize: TextStyles.k20FontSize,
-                  color: kColorWhite,
+                  fontSize: TextStyles.k22FontSize,
+                  color: SuperAdminUi.textPrimary,
                 ),
-                Spacing.v2,
+                Spacing.v4,
                 AppText(
                   text: subtitle,
                   fontSize: TextStyles.k12FontSize,
-                  color: Colors.white70,
+                  color: SuperAdminUi.textMuted,
                 ),
               ],
             ),
@@ -109,13 +115,13 @@ class SuperAdminEmptyState extends StatelessWidget {
           SemiBoldText(
             text: title,
             fontSize: TextStyles.k14FontSize,
-            color: kColorWhite,
+            color: SuperAdminUi.textPrimary,
           ),
           Spacing.v6,
           AppText(
             text: subtitle,
             fontSize: TextStyles.k12FontSize,
-            color: Colors.white60,
+            color: SuperAdminUi.textMuted,
             align: TextAlign.center,
           ),
         ],
@@ -143,16 +149,9 @@ class SuperAdminStatusPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.16),
+        color: color.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.45)),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.18),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: color.withValues(alpha: 0.38)),
       ),
       child: SemiBoldText(
         text: status,
@@ -179,7 +178,7 @@ class SuperAdminDocThumb extends StatelessWidget {
           AppText(
             text: label,
             fontSize: TextStyles.k10FontSize,
-            color: Colors.white70,
+            color: SuperAdminUi.textMuted,
           ),
           Spacing.v6,
           ClipRRect(
@@ -188,22 +187,22 @@ class SuperAdminDocThumb extends StatelessWidget {
               aspectRatio: 1.4,
               child: url.isEmpty
                   ? Container(
-                      color: kColorWhite.withValues(alpha: 0.08),
+                      color: SuperAdminUi.panel.withValues(alpha: 0.7),
                       alignment: Alignment.center,
                       child: const Icon(
                         Icons.image_not_supported_outlined,
-                        color: Colors.white38,
+                        color: SuperAdminUi.textFaint,
                       ),
                     )
                   : Image.network(
                       url,
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Container(
-                        color: kColorWhite.withValues(alpha: 0.08),
+                        color: SuperAdminUi.panel.withValues(alpha: 0.7),
                         alignment: Alignment.center,
                         child: const Icon(
                           Icons.broken_image_outlined,
-                          color: Colors.white38,
+                          color: SuperAdminUi.textFaint,
                         ),
                       ),
                     ),
@@ -239,14 +238,14 @@ class SuperAdminInfoRow extends StatelessWidget {
             child: AppText(
               text: label,
               fontSize: TextStyles.k12FontSize,
-              color: Colors.white54,
+              color: SuperAdminUi.textMuted,
             ),
           ),
           Expanded(
             child: SemiBoldText(
               text: value,
               fontSize: TextStyles.k12FontSize,
-              color: kColorWhite,
+              color: SuperAdminUi.textPrimary,
             ),
           ),
         ],
@@ -285,7 +284,7 @@ class SuperAdminSectionTitle extends StatelessWidget {
           child: SemiBoldText(
             text: title,
             fontSize: TextStyles.k14FontSize,
-            color: kColorWhite,
+            color: SuperAdminUi.textPrimary,
           ),
         ),
         if (trailing != null) trailing!,

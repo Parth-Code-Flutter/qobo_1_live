@@ -711,18 +711,17 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
                     compact: compact,
                   ),
                 ],
-                if (controller.isHost.value) ...[
-                  Spacing.h8,
-                  SessionEarningsBadge(
-                    key: controller.sessionEarningsBadgeKey,
-                    tracker: controller.sessionEarnings,
-                    compact: compact,
-                    maxWidth: earningsMaxWidth,
-                    icon: Icons.monetization_on_rounded,
-                    iconColor: const Color(0xFFFFA10A),
-                    onTap: controller.openSessionEarningsDialog,
-                  ),
-                ],
+                // Host + audience: local session earnings (gifts to this user).
+                Spacing.h8,
+                SessionEarningsBadge(
+                  key: controller.sessionEarningsBadgeKey,
+                  tracker: controller.sessionEarnings,
+                  compact: compact,
+                  maxWidth: earningsMaxWidth,
+                  icon: Icons.monetization_on_rounded,
+                  iconColor: const Color(0xFFFFA10A),
+                  onTap: controller.openSessionEarningsDialog,
+                ),
                 if (controller.isHost.value) ...[
                   Spacing.h8,
                   _CircleButton(
@@ -2810,7 +2809,7 @@ class _DiamondCount extends StatelessWidget {
           AppText(
             text: '$value',
             fontSize: 9,
-            color: AudioRoomStageOverlay._ink,
+            color: kColorWhite,
           ),
         ],
       ),

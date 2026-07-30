@@ -5,9 +5,7 @@ import 'package:qobo_one_live/app/super_admin/models/super_admin_models.dart';
 import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui.dart';
 import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui_kit.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
-import 'package:qobo_one_live/utils/app_widgets/safe_network_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -26,83 +24,81 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SuperAdminTabHeader(
-              icon: Icons.business_rounded,
-              title: 'Agency',
-              subtitle: 'Review and process agency applications',
-            ),
-            _filterChips(),
-            Expanded(
-              child: Obx(() {
-                if (controller.isLoadingAgencies.value &&
-                    controller.agencies.isEmpty) {
-                  return const Center(
-                    child: CircularProgressIndicator(color: kColorPrimary),
-                  );
-                }
-                final agencies = controller.agencies;
-                if (agencies.isEmpty) {
-                  return RefreshIndicator(
-                    color: kColorPrimary,
-                    onRefresh: () => controller.loadAgencies(showLoader: false),
-                    child: ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: const [
-                        SizedBox(height: 120),
-                        SuperAdminEmptyState(
-                          icon: Icons.storefront_outlined,
-                          title: 'No agencies found',
-                          subtitle:
-                              'Pull down to refresh or try another filter',
-                        ),
-                      ],
-                    ),
-                  );
-                }
+    return SuperAdminPageScaffold(
+      primary: SuperAdminUi.pink,
+      secondary: SuperAdminUi.violet,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SuperAdminTabHeader(
+            icon: Icons.business_rounded,
+            title: 'Agency',
+            subtitle: 'Review and process agency applications',
+            accent: SuperAdminUi.pink,
+          ),
+          _filterChips(),
+          Expanded(
+            child: Obx(() {
+              if (controller.isLoadingAgencies.value &&
+                  controller.agencies.isEmpty) {
+                return const Center(
+                  child: CircularProgressIndicator(color: kColorPrimary),
+                );
+              }
+              final agencies = controller.agencies;
+              if (agencies.isEmpty) {
                 return RefreshIndicator(
                   color: kColorPrimary,
                   onRefresh: () => controller.loadAgencies(showLoader: false),
-                  child: ListView.separated(
-                    physics: const AlwaysScrollableScrollPhysics(
-                      parent: BouncingScrollPhysics(),
-                    ),
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
-                    itemCount: agencies.length,
-                    separatorBuilder: (_, __) => Spacing.v12,
-                    itemBuilder: (_, index) {
-                      final agency = agencies[index];
-                      final processing =
-                          controller.processingAgencyId.value == agency.id;
-                      return _agencyCard(context, agency, processing);
-                    },
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: const [
+                      SizedBox(height: 120),
+                      SuperAdminEmptyState(
+                        icon: Icons.storefront_outlined,
+                        title: 'No agencies found',
+                        subtitle:
+                            'Pull down to refresh or try another filter',
+                      ),
+                    ],
                   ),
                 );
-              }),
-            ),
-          ],
-        ),
+              }
+              return RefreshIndicator(
+                color: kColorPrimary,
+                onRefresh: () => controller.loadAgencies(showLoader: false),
+                child: ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics(),
+                  ),
+                  padding: SuperAdminUi.pageInsets,
+                  itemCount: agencies.length,
+                  separatorBuilder: (_, __) =>
+                      Spacing.v(SuperAdminUi.sectionGap),
+                  itemBuilder: (_, index) {
+                    final agency = agencies[index];
+                    final processing =
+                        controller.processingAgencyId.value == agency.id;
+                    return _agencyCard(context, agency, processing);
+                  },
+                ),
+              );
+            }),
+          ),
+        ],
       ),
     );
   }
 
   Widget _filterChips() {
     return SizedBox(
-      height: 44,
+      height: 48,
       child: Obx(() {
         final selected = controller.agencyStatusFilter.value;
         return ListView.separated(
           scrollDirection: Axis.horizontal,
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: SuperAdminUi.pagePad),
           itemCount: _filters.length,
           separatorBuilder: (_, __) => Spacing.h8,
           itemBuilder: (_, index) {
@@ -129,91 +125,119 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
         ? SuperAdminUi.gold
         : agency.isSuspended
             ? SuperAdminUi.warning
-            : SuperAdminUi.violet;
+            : SuperAdminUi.pink;
 
-    return SuperAdminGlassCard(
-      glow: glow,
-      onTap: () => controller.openAgencyDetail(agency),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              SafeNetworkAvatar(
-                url: agency.ownerAvatar,
-                size: 46,
-                fallback: CircleAvatar(
-                  radius: 23,
-                  backgroundColor: kColorPrimary,
-                  child: Text(
-                    agency.ownerName.isNotEmpty
-                        ? agency.ownerName.characters.first
-                        : 'A',
-                  ),
-                ),
-              ),
-              Spacing.h10,
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SemiBoldText(
-                      text: agency.name,
-                      fontSize: TextStyles.k14FontSize,
-                      color: kColorWhite,
-                    ),
-                    AppText(
-                      text: '${agency.ownerName} • ${agency.code}',
-                      fontSize: TextStyles.k10FontSize,
-                      color: Colors.white70,
-                    ),
-                  ],
-                ),
-              ),
-              SuperAdminStatusPill(status: agency.status),
-              Spacing.h6,
-              _manageButton(context, agency, processing),
-            ],
-          ),
-          Spacing.v12,
-          AppText(
-            text:
-                '${agency.hostCount} hosts • ${agency.pendingHostsCount} pending hosts',
-            fontSize: TextStyles.k12FontSize,
-            color: Colors.white70,
-          ),
-          if (agency.isPending) ...[
-            Spacing.v12,
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.96, end: 1),
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutBack,
+      builder: (context, scale, child) =>
+          Transform.scale(scale: scale, child: child),
+      child: SuperAdminGlassCard(
+        glow: glow,
+        padding: const EdgeInsets.all(14),
+        onTap: () => controller.openAgencyDetail(agency),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                SuperAdminAvatarRing(
+                  url: agency.ownerAvatar,
+                  fallbackLetter: agency.name.isNotEmpty
+                      ? agency.name
+                      : agency.ownerName,
+                  size: 74,
+                  accent: glow,
+                ),
+                Spacing.h12,
                 Expanded(
-                  child: SuperAdminActionButton(
-                    label: 'Reject',
-                    icon: Icons.close_rounded,
-                    background: SuperAdminUi.danger.withValues(alpha: 0.16),
-                    borderColor: SuperAdminUi.danger.withValues(alpha: 0.4),
-                    foreground: SuperAdminUi.danger,
-                    onTap: processing
-                        ? null
-                        : () => _confirmReject(context, agency),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      BoldText(
+                        text: agency.name,
+                        fontSize: TextStyles.k16FontSize,
+                        color: SuperAdminUi.textPrimary,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Spacing.v4,
+                      AppText(
+                        text: agency.ownerName.isEmpty
+                            ? agency.code
+                            : '${agency.ownerName} · ${agency.code}',
+                        fontSize: TextStyles.k12FontSize,
+                        color: SuperAdminUi.textSecondary,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Spacing.v8,
+                      SuperAdminStatusPill(status: agency.status),
+                    ],
                   ),
                 ),
-                Spacing.h10,
-                Expanded(
-                  child: SuperAdminActionButton(
-                    label: processing ? 'Wait...' : 'Approve',
-                    icon: Icons.check_rounded,
-                    background: SuperAdminUi.success,
-                    foreground: kColorWhite,
-                    onTap: processing
-                        ? null
-                        : () => controller.approveAgency(agency),
-                  ),
-                ),
+                _manageButton(context, agency, processing),
               ],
             ),
+            Spacing.v12,
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                SuperAdminMetricChip(
+                  icon: Icons.groups_rounded,
+                  label: '${agency.hostCount} hosts',
+                  accent: SuperAdminUi.sky,
+                ),
+                SuperAdminMetricChip(
+                  icon: Icons.hourglass_top_rounded,
+                  label: '${agency.pendingHostsCount} pending',
+                  accent: SuperAdminUi.gold,
+                ),
+                if (agency.commissionRate > 0)
+                  SuperAdminMetricChip(
+                    icon: Icons.percent_rounded,
+                    label:
+                        '${(agency.commissionRate * 100).toStringAsFixed(0)}%',
+                    accent: SuperAdminUi.mint,
+                  ),
+              ],
+            ),
+            if (agency.isPending) ...[
+              Spacing.v12,
+              Row(
+                children: [
+                  Expanded(
+                    child: SuperAdminActionButton(
+                      label: 'Reject',
+                      icon: Icons.close_rounded,
+                      background: SuperAdminUi.danger.withValues(alpha: 0.16),
+                      borderColor: SuperAdminUi.danger.withValues(alpha: 0.4),
+                      foreground: SuperAdminUi.danger,
+                      onTap: processing
+                          ? null
+                          : () => _confirmReject(context, agency),
+                    ),
+                  ),
+                  Spacing.h10,
+                  Expanded(
+                    child: SuperAdminActionButton(
+                      label: processing ? 'Wait...' : 'Approve',
+                      icon: Icons.check_rounded,
+                      background: SuperAdminUi.success,
+                      foreground: kColorWhite,
+                      onTap: processing
+                          ? null
+                          : () => controller.approveAgency(agency),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -231,13 +255,13 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
         height: 32,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: kColorWhite.withValues(alpha: 0.10),
-          border: Border.all(color: kColorWhite.withValues(alpha: 0.16)),
+          color: SuperAdminUi.textPrimary.withValues(alpha: 0.10),
+          border: Border.all(color: SuperAdminUi.textPrimary.withValues(alpha: 0.16)),
         ),
         child: const Icon(
           Icons.more_vert_rounded,
           size: 18,
-          color: Colors.white70,
+          color: SuperAdminUi.textSecondary,
         ),
       ),
     );
@@ -342,14 +366,14 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
         onConfirm: () => Navigator.of(dialogContext).pop(true),
         child: TextField(
           controller: reasonController,
-          style: const TextStyle(color: kColorWhite),
+          style: const TextStyle(color: SuperAdminUi.textPrimary),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(color: Colors.white38),
+            hintStyle: TextStyle(color: SuperAdminUi.textFaint),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(
-                color: kColorWhite.withValues(alpha: 0.2),
+                color: SuperAdminUi.textPrimary.withValues(alpha: 0.2),
               ),
             ),
             focusedBorder: OutlineInputBorder(
@@ -388,16 +412,16 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
         child: TextField(
           controller: rateController,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          style: const TextStyle(color: kColorWhite),
+          style: const TextStyle(color: SuperAdminUi.textPrimary),
           decoration: InputDecoration(
             hintText: 'e.g. 12.5',
-            hintStyle: const TextStyle(color: Colors.white38),
+            hintStyle: const TextStyle(color: SuperAdminUi.textFaint),
             suffixText: '%',
-            suffixStyle: const TextStyle(color: Colors.white70),
+            suffixStyle: const TextStyle(color: SuperAdminUi.textSecondary),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(
-                color: kColorWhite.withValues(alpha: 0.2),
+                color: SuperAdminUi.textPrimary.withValues(alpha: 0.2),
               ),
             ),
             focusedBorder: OutlineInputBorder(
@@ -427,14 +451,14 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
         onConfirm: () => Navigator.of(dialogContext).pop(true),
         child: TextField(
           controller: feedbackController,
-          style: const TextStyle(color: kColorWhite),
+          style: const TextStyle(color: SuperAdminUi.textPrimary),
           decoration: InputDecoration(
             hintText: 'Optional feedback',
-            hintStyle: const TextStyle(color: Colors.white38),
+            hintStyle: const TextStyle(color: SuperAdminUi.textFaint),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(
-                color: kColorWhite.withValues(alpha: 0.2),
+                color: SuperAdminUi.textPrimary.withValues(alpha: 0.2),
               ),
             ),
             focusedBorder: OutlineInputBorder(
@@ -483,7 +507,7 @@ class _SuperAdminGlassDialog extends StatelessWidget {
         decoration: BoxDecoration(
           color: SuperAdminUi.sheet.withValues(alpha: 0.96),
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: kColorWhite.withValues(alpha: 0.14)),
+          border: Border.all(color: SuperAdminUi.textPrimary.withValues(alpha: 0.14)),
           boxShadow: [
             BoxShadow(
               color: SuperAdminUi.violet.withValues(alpha: 0.22),
@@ -499,14 +523,14 @@ class _SuperAdminGlassDialog extends StatelessWidget {
             SemiBoldText(
               text: title,
               fontSize: TextStyles.k16FontSize,
-              color: kColorWhite,
+              color: SuperAdminUi.textPrimary,
             ),
             if (subtitle != null && subtitle!.isNotEmpty) ...[
               Spacing.v8,
               AppText(
                 text: subtitle!,
                 fontSize: TextStyles.k12FontSize,
-                color: Colors.white60,
+                color: SuperAdminUi.textMuted,
               ),
             ],
             Spacing.v12,
@@ -520,9 +544,9 @@ class _SuperAdminGlassDialog extends StatelessWidget {
                     child: OutlinedButton(
                       onPressed: onCancel,
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white70,
+                        foregroundColor: SuperAdminUi.textSecondary,
                         side: BorderSide(
-                          color: kColorWhite.withValues(alpha: 0.22),
+                          color: SuperAdminUi.textPrimary.withValues(alpha: 0.22),
                         ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
@@ -531,7 +555,7 @@ class _SuperAdminGlassDialog extends StatelessWidget {
                       child: const SemiBoldText(
                         text: 'Cancel',
                         fontSize: TextStyles.k12FontSize,
-                        color: Colors.white70,
+                        color: SuperAdminUi.textSecondary,
                       ),
                     ),
                   ),
@@ -553,7 +577,7 @@ class _SuperAdminGlassDialog extends StatelessWidget {
                       child: SemiBoldText(
                         text: confirmLabel,
                         fontSize: TextStyles.k12FontSize,
-                        color: kColorWhite,
+                        color: SuperAdminUi.textPrimary,
                       ),
                     ),
                   ),

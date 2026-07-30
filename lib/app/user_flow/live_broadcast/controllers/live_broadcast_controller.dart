@@ -365,16 +365,101 @@ class LiveBroadcastController extends GetxController {
     required String scope,
     String? receiverId,
   }) {
+    final myId = _currentUserId();
     final hostId =
-        resolveHostId(_roomData) ?? receiverId ?? this.receiverId.value;
+        resolveHostId(_roomData) ?? this.receiverId.value.trim();
+    if (myId.isEmpty) return;
+
+    // Sender never earns from their own gift. Room gifts credit peers only.
+    final normalized = scope.trim().toLowerCase();
+    if (normalized == 'room') return;
+
     SessionEarningsUtils.ingestGiftResponse(
       tracker: sessionEarnings,
       response: response,
       hostUserId: hostId,
-      hostReceivesRoomGifts: scope == 'room',
+      earnerUserId: myId,
+      hostReceivesRoomGifts: false,
+      roomParticipantsEarn: false,
       fallbackGiftPrice: fallbackGiftPrice,
       scope: scope,
       receiverId: receiverId,
+    );
+  }
+
+  /// Whether the local user earns from this gift.
+  ///
+  /// - `room`: every participant except [senderId] (gift to everyone).
+  /// - `user`: only the targeted receiver.
+  bool _localUserEarnsGift({
+    required String scope,
+    String? receiverId,
+    String? senderId,
+  }) {
+    final myId = _currentUserId();
+    if (myId.isEmpty) return false;
+    final normalized = scope.trim().toLowerCase();
+    final from = senderId?.trim() ?? '';
+    if (from.isNotEmpty && _userIdsMatch(from, myId)) {
+      // Sender pays — they do not earn.
+      return false;
+    }
+    if (normalized == 'room') return true;
+    final to = receiverId?.trim() ?? '';
+    return to.isNotEmpty && _userIdsMatch(to, myId);
+  }
+
+  /// Optimistic seat diamond bump for gift recipients.
+  ///
+  /// Room gifts credit every occupied seat except [excludeUserId] (sender).
+  void _bumpSeatDiamonds({
+    required String scope,
+    String? receiverId,
+    required int amount,
+    String? excludeUserId,
+  }) {
+    if (amount <= 0 || !isAudioVideoRoom) return;
+    final normalized = scope.trim().toLowerCase();
+    final exclude = excludeUserId?.trim() ?? '';
+    final targetId = normalized == 'room'
+        ? ''
+        : (receiverId?.trim() ?? '');
+    if (normalized != 'room' && targetId.isEmpty) return;
+
+    var changed = false;
+    final next = audioRoomSeats.map((seat) {
+      if (!seat.occupied) return seat;
+      if (exclude.isNotEmpty && _userIdsMatch(seat.userId, exclude)) {
+        return seat;
+      }
+      if (normalized == 'room' || _userIdsMatch(seat.userId, targetId)) {
+        changed = true;
+        return seat.copyWith(diamonds: seat.diamonds + amount);
+      }
+      return seat;
+    }).toList();
+    if (changed) {
+      audioRoomSeats.assignAll(next);
+    }
+  }
+
+  Future<void> _playCoinFlyAfterGift({required int earnedCoins}) async {
+    await GiftCelebrationOverlay.waitUntilIdle();
+    if (_exitReported) return;
+    _playEarningsCoinFlyAnimation(earnedCoins);
+  }
+
+  void _playEarningsCoinFlyAnimation(int earnedCoins) {
+    final visualCount = earnedCoins > 0
+        ? (6 + (earnedCoins / 15).ceil()).clamp(6, 16)
+        : 10;
+    unawaited(
+      CoinFlyOverlay.show(
+        targetKey: sessionEarningsBadgeKey,
+        coinCount: visualCount,
+        earnedAmount: earnedCoins,
+        delay: const Duration(milliseconds: 220),
+      ),
     );
   }
 
@@ -659,16 +744,47 @@ class LiveBroadcastController extends GetxController {
               message: m.message,
             ),
           ),
-      onPeerGift: isHost.value
-          ? (event) {
-              unawaited(_handleHostIncomingGift(event.message));
-            }
-          : null,
+      onPeerGift: (event) {
+        unawaited(
+          _handlePeerGiftEarnings(
+            event.message,
+            senderId: event.senderId,
+          ),
+        );
+      },
     );
   }
 
-  Future<void> _handleHostIncomingGift(String chatMessage) async {
-    if (!isHost.value) return;
+  /// Updates seat diamonds + local session earnings when a peer gift arrives.
+  Future<void> _handlePeerGiftEarnings(
+    String chatMessage, {
+    required String senderId,
+  }) async {
+    final scope = parseGiftScope(chatMessage);
+    final receiverId = parseGiftReceiverId(chatMessage);
+    final fromId = parseGiftSenderId(chatMessage) ?? senderId;
+    final price = parseGiftPrice(chatMessage) ??
+        _giftPriceFromCatalogMessage(chatMessage);
+
+    // Room → every seat except sender; user → that receiver's seat.
+    if (price > 0) {
+      _bumpSeatDiamonds(
+        scope: scope,
+        receiverId: receiverId,
+        amount: price,
+        excludeUserId: fromId,
+      );
+    }
+    if (isAudioVideoRoom) {
+      unawaited(loadAudioRoomSeats());
+    }
+
+    final iEarn = _localUserEarnsGift(
+      scope: scope,
+      receiverId: receiverId,
+      senderId: fromId,
+    );
+    if (!iEarn || _exitReported) return;
 
     final before = sessionEarnings.displayCoins;
     var earned = SessionEarningsUtils.ingestIncomingGiftChat(
@@ -678,33 +794,32 @@ class LiveBroadcastController extends GetxController {
       earnsGift: true,
     );
 
-    if (earned <= 0) {
+    if (earned <= 0 && price > 0) {
+      sessionEarnings.applyDelta(coins: price);
+      earned = price;
+    } else if (earned <= 0) {
       await _refreshSessionEarnings();
       earned = sessionEarnings.displayCoins - before;
     }
 
-    // Gift SVGA plays first (started by GiftChatCelebrationTracker); coin-fly
-    // starts only after that celebration dismisses.
     await GiftCelebrationOverlay.waitUntilIdle();
-    if (!isHost.value || _exitReported) return;
-
-    _playHostCoinFlyAnimation(earned > 0 ? earned : 0);
+    if (_exitReported) return;
+    _playEarningsCoinFlyAnimation(
+      earned > 0 ? earned : (price > 0 ? price : 0),
+    );
   }
 
-  void _playHostCoinFlyAnimation(int earnedCoins) {
-    if (!isHost.value) return;
-    final visualCount = earnedCoins > 0
-        ? (6 + (earnedCoins / 15).ceil()).clamp(6, 16)
-        : 10;
-    unawaited(
-      CoinFlyOverlay.show(
-        targetKey: sessionEarningsBadgeKey,
-        coinCount: visualCount,
-        earnedAmount: earnedCoins,
-        // Short settle after gift dialog closes — gift already finished.
-        delay: const Duration(milliseconds: 220),
-      ),
-    );
+  int _giftPriceFromCatalogMessage(String chatMessage) {
+    final name =
+        GiftMediaUtils.giftNameFromChatLabel(chatMessage).toLowerCase();
+    if (name.isNotEmpty && name != 'gift') {
+      for (final gift in giftCatalog) {
+        if ((gift['name'] ?? '').trim().toLowerCase() == name) {
+          return int.tryParse(gift['price'] ?? '0') ?? 0;
+        }
+      }
+    }
+    return 0;
   }
 
   Map<String, dynamic> _mapZegoMessage(
@@ -1052,12 +1167,28 @@ class LiveBroadcastController extends GetxController {
     );
 
     if (isEconomyApiSuccess(response)) {
+      final myId = _currentUserId();
+      final beforeEarnings = sessionEarnings.displayCoins;
+      // Direct gifts only — room gifts credit peers via the chat broadcast.
       _applySessionEarningsFromGiftResponse(
         response: response,
         fallbackGiftPrice: price,
         scope: scope,
         receiverId: currentReceiverId.isEmpty ? null : currentReceiverId,
       );
+      final earnedDelta =
+          (sessionEarnings.displayCoins - beforeEarnings).clamp(0, 1 << 30);
+
+      // Room → every seat except sender; user → targeted seat.
+      _bumpSeatDiamonds(
+        scope: scope,
+        receiverId: currentReceiverId.isEmpty ? null : currentReceiverId,
+        amount: price,
+        excludeUserId: myId,
+      );
+      if (isAudioVideoRoom) {
+        unawaited(loadAudioRoomSeats());
+      }
 
       final animationUrl = GiftMediaUtils.animationUrlFromResponse(
         response,
@@ -1075,6 +1206,12 @@ class LiveBroadcastController extends GetxController {
         ),
       );
 
+      // Coin-fly only when this device earned (direct gift to self).
+      // Room gifts: peers earn via [_handlePeerGiftEarnings].
+      if (earnedDelta > 0) {
+        unawaited(_playCoinFlyAfterGift(earnedCoins: earnedDelta));
+      }
+
       unawaited(loadWalletBalance());
 
       // Broadcast gift markers so every peer in the Zego room can celebrate.
@@ -1083,6 +1220,10 @@ class LiveBroadcastController extends GetxController {
         giftIcon: gift['icon'],
         animationUrl: animationUrl,
         soundUrl: soundUrl,
+        scope: scope,
+        senderId: myId,
+        receiverId: scope == 'room' ? null : currentReceiverId,
+        giftPrice: price,
       );
       // Always try the base UIKit bus. The live-streaming facade
       // (`message.send`) can silently no-op when its chat relay is unwired.

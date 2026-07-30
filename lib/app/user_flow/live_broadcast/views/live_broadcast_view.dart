@@ -165,25 +165,22 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
   }
 
   Widget _buildVideoHostEarningsBadge() {
-    return Obx(() {
-      if (!controller.isHost.value) return const SizedBox.shrink();
-      return Positioned(
-        top: 8,
-        right: 14,
-        child: SafeArea(
-          child: SessionEarningsBadge(
-            key: controller.sessionEarningsBadgeKey,
-            tracker: controller.sessionEarnings,
-            compact: true,
-            maxWidth: 72,
-            icon: Icons.monetization_on_rounded,
-            iconColor: const Color(0xFFFFA10A),
-            backgroundColor: Colors.black.withValues(alpha: 0.35),
-            onTap: controller.openSessionEarningsDialog,
-          ),
+    return Positioned(
+      top: 8,
+      right: 14,
+      child: SafeArea(
+        child: SessionEarningsBadge(
+          key: controller.sessionEarningsBadgeKey,
+          tracker: controller.sessionEarnings,
+          compact: true,
+          maxWidth: 72,
+          icon: Icons.monetization_on_rounded,
+          iconColor: const Color(0xFFFFA10A),
+          backgroundColor: Colors.black.withValues(alpha: 0.35),
+          onTap: controller.openSessionEarningsDialog,
         ),
-      );
-    });
+      ),
+    );
   }
 
   Widget _buildGroupCallGiftDock() {
@@ -823,7 +820,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
           onTap: controller.shareRoom,
         ),
         Obx(() {
-          if (!controller.isHost.value) return const SizedBox.shrink();
+          // Host + audience: show local session earnings for gift receives.
           return Padding(
             padding: EdgeInsets.only(left: compact ? 5 : 8),
             child: SessionEarningsBadge(

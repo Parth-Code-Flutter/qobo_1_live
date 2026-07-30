@@ -4,8 +4,6 @@ import 'package:qobo_one_live/app/super_admin/bottom_nav/controllers/super_admin
 import 'package:qobo_one_live/app/super_admin/home/controllers/super_admin_home_controller.dart';
 import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui.dart';
 import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui_kit.dart';
-import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
@@ -21,191 +19,176 @@ class SuperAdminSettingsTabView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(0, 0, 0, 110),
-          children: [
-            const SuperAdminTabHeader(
-              icon: Icons.settings_rounded,
-              title: 'Settings',
-              subtitle: 'Account and session controls',
-            ),
-            Spacing.v12,
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: GetBuilder<UserSessionController>(
-                builder: (session) {
-                  return SuperAdminGlassCard(
-                    glow: SuperAdminUi.gold,
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            FramedUserAvatar(
-                              name: session.displayName,
-                              imageUrl: session.displayPictureUrl,
-                              frameUrl: session.profileFrameUrl,
-                              frameSeed: session.userId,
-                              size: 64,
-                              fontSize: TextStyles.k16FontSize,
-                            ),
-                            Positioned(
-                              right: -4,
-                              bottom: -2,
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  gradient: SuperAdminUi.goldButtonGradient,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: SuperAdminUi.gold
-                                          .withValues(alpha: 0.45),
-                                      blurRadius: 8,
-                                    ),
-                                  ],
-                                ),
-                                child: const Icon(
-                                  Icons.workspace_premium_rounded,
-                                  size: 14,
-                                  color: Color(0xFF1A1200),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Spacing.h12,
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+    return SuperAdminPageScaffold(
+      primary: SuperAdminUi.gold,
+      secondary: SuperAdminUi.violet,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SuperAdminTabHeader(
+            icon: Icons.settings_rounded,
+            title: 'Settings',
+            subtitle: 'Account and session controls',
+            accent: SuperAdminUi.gold,
+          ),
+          Expanded(
+            child: ListView(
+              padding: SuperAdminUi.pageInsets,
+              children: [
+                GetBuilder<UserSessionController>(
+                  builder: (session) {
+                    return SuperAdminGlassCard(
+                      glow: SuperAdminUi.gold,
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Stack(
+                            clipBehavior: Clip.none,
                             children: [
-                              SemiBoldText(
-                                text: session.displayName,
+                              FramedUserAvatar(
+                                name: session.displayName,
+                                imageUrl: session.displayPictureUrl,
+                                frameUrl: session.profileFrameUrl,
+                                frameSeed: session.userId,
+                                size: 64,
                                 fontSize: TextStyles.k16FontSize,
-                                color: kColorWhite,
                               ),
-                              Spacing.v4,
-                              AppText(
-                                text: session.email.isNotEmpty
-                                    ? session.email
-                                    : session.phone,
-                                fontSize: TextStyles.k12FontSize,
-                                color: Colors.white70,
-                              ),
-                              Spacing.v8,
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 5,
-                                ),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(20),
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      SuperAdminUi.gold.withValues(alpha: 0.35),
-                                      SuperAdminUi.violet
-                                          .withValues(alpha: 0.25),
+                              Positioned(
+                                right: -4,
+                                bottom: -2,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: SuperAdminUi.goldButtonGradient,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: SuperAdminUi.gold
+                                            .withValues(alpha: 0.35),
+                                        blurRadius: 8,
+                                      ),
                                     ],
                                   ),
-                                  border: Border.all(
-                                    color:
-                                        SuperAdminUi.gold.withValues(alpha: 0.45),
+                                  child: const Icon(
+                                    Icons.workspace_premium_rounded,
+                                    size: 14,
+                                    color: Color(0xFF1A1200),
                                   ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.verified_rounded,
-                                      size: 12,
-                                      color: SuperAdminUi.gold,
-                                    ),
-                                    Spacing.h4,
-                                    SemiBoldText(
-                                      text: session.role.isEmpty
-                                          ? 'super_admin'
-                                          : session.role,
-                                      fontSize: TextStyles.k10FontSize,
-                                      color: kColorWhite,
-                                    ),
-                                  ],
                                 ),
                               ),
                             ],
                           ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
+                          Spacing.h12,
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                SemiBoldText(
+                                  text: session.displayName,
+                                  fontSize: TextStyles.k16FontSize,
+                                  color: SuperAdminUi.textPrimary,
+                                ),
+                                Spacing.v4,
+                                AppText(
+                                  text: session.email.isNotEmpty
+                                      ? session.email
+                                      : session.phone,
+                                  fontSize: TextStyles.k12FontSize,
+                                  color: SuperAdminUi.textMuted,
+                                ),
+                                Spacing.v8,
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 5,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(20),
+                                    color:
+                                        SuperAdminUi.gold.withValues(alpha: 0.14),
+                                    border: Border.all(
+                                      color: SuperAdminUi.gold
+                                          .withValues(alpha: 0.38),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.verified_rounded,
+                                        size: 12,
+                                        color: SuperAdminUi.gold,
+                                      ),
+                                      Spacing.h4,
+                                      SemiBoldText(
+                                        text: session.role.isEmpty
+                                            ? 'super_admin'
+                                            : session.role,
+                                        fontSize: TextStyles.k10FontSize,
+                                        color: SuperAdminUi.textPrimary,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                Spacing.v(SuperAdminUi.sectionGap),
+                _infoRow(
+                  icon: Icons.refresh_rounded,
+                  accent: SuperAdminUi.sky,
+                  title: 'Refresh dashboard data',
+                  subtitle: 'Reload agencies, hosts, and commissions',
+                  onTap: () {
+                    if (!Get.isRegistered<SuperAdminHomeController>()) {
+                      return;
+                    }
+                    Get.find<SuperAdminHomeController>()
+                        .loadDashboardStats(showLoader: true);
+                  },
+                ),
+                Spacing.v12,
+                _infoRow(
+                  icon: Icons.business_rounded,
+                  accent: SuperAdminUi.pink,
+                  title: 'Agencies',
+                  subtitle: 'Jump to agency review',
+                  onTap: () {
+                    Get.find<SuperAdminBottomNavController>()
+                        .onNavBarTabSelected(
+                      SuperAdminBottomNavController.agencyTabIndex,
+                    );
+                  },
+                ),
+                Spacing.v12,
+                _infoRow(
+                  icon: Icons.mic_rounded,
+                  accent: SuperAdminUi.teal,
+                  title: 'Hosts',
+                  subtitle: 'Jump to host tracking',
+                  onTap: () {
+                    Get.find<SuperAdminBottomNavController>()
+                        .onNavBarTabSelected(
+                      SuperAdminBottomNavController.hostTabIndex,
+                    );
+                  },
+                ),
+                Spacing.v24,
+                appButton(
+                  onPressed: () => onLogoutPressed(),
+                  buttonText: 'Log out',
+                  isGradient: true,
+                  buttonHeight: 50,
+                ),
+              ],
             ),
-            Spacing.v16,
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                children: [
-                  _infoRow(
-                    icon: Icons.refresh_rounded,
-                    accent: SuperAdminUi.sky,
-                    title: 'Refresh dashboard data',
-                    subtitle: 'Reload agencies, hosts, and commissions',
-                    onTap: () {
-                      if (!Get.isRegistered<SuperAdminHomeController>()) {
-                        return;
-                      }
-                      Get.find<SuperAdminHomeController>()
-                          .loadDashboardStats(showLoader: true);
-                    },
-                  ),
-                  Spacing.v10,
-                  _infoRow(
-                    icon: Icons.business_rounded,
-                    accent: SuperAdminUi.pink,
-                    title: 'Agencies',
-                    subtitle: 'Jump to agency review',
-                    onTap: () {
-                      Get.find<SuperAdminBottomNavController>()
-                          .onNavBarTabSelected(
-                        SuperAdminBottomNavController.agencyTabIndex,
-                      );
-                    },
-                  ),
-                  Spacing.v10,
-                  _infoRow(
-                    icon: Icons.mic_rounded,
-                    accent: SuperAdminUi.teal,
-                    title: 'Hosts',
-                    subtitle: 'Jump to host tracking',
-                    onTap: () {
-                      Get.find<SuperAdminBottomNavController>()
-                          .onNavBarTabSelected(
-                        SuperAdminBottomNavController.hostTabIndex,
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-            Spacing.v24,
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: appButton(
-                onPressed: () => onLogoutPressed(),
-                buttonText: 'Log out',
-                isGradient: true,
-                buttonHeight: 50,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -220,7 +203,7 @@ class SuperAdminSettingsTabView extends StatelessWidget {
     return SuperAdminGlassCard(
       glow: accent,
       onTap: onTap,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       child: Row(
         children: [
           SuperAdminUi.glowIcon(
@@ -236,21 +219,21 @@ class SuperAdminSettingsTabView extends StatelessWidget {
               children: [
                 SemiBoldText(
                   text: title,
-                  fontSize: TextStyles.k12FontSize,
-                  color: kColorWhite,
+                  fontSize: TextStyles.k14FontSize,
+                  color: SuperAdminUi.textPrimary,
                 ),
                 Spacing.v2,
                 AppText(
                   text: subtitle,
-                  fontSize: TextStyles.k10FontSize,
-                  color: Colors.white60,
+                  fontSize: TextStyles.k12FontSize,
+                  color: SuperAdminUi.textMuted,
                 ),
               ],
             ),
           ),
-          Icon(
+          const Icon(
             Icons.chevron_right_rounded,
-            color: Colors.white38,
+            color: SuperAdminUi.textFaint,
             size: 20,
           ),
         ],

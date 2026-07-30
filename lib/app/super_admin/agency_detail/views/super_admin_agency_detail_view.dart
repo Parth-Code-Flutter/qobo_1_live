@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/super_admin/agency_detail/controllers/super_admin_agency_detail_controller.dart';
 import 'package:qobo_one_live/app/super_admin/models/super_admin_models.dart';
+import 'package:qobo_one_live/app/super_admin/widgets/super_admin_detail_chrome.dart';
 import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui.dart';
 import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui_kit.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
-import 'package:qobo_one_live/utils/app_widgets/safe_network_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -18,22 +17,21 @@ class SuperAdminAgencyDetailView
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
-      ),
+    return SuperAdminDetailBackdrop(
+      primary: SuperAdminUi.pink,
+      secondary: SuperAdminUi.violet,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
           scrolledUnderElevation: 0,
-          iconTheme: const IconThemeData(color: kColorWhite),
+          iconTheme: const IconThemeData(color: SuperAdminUi.textPrimary),
           title: Row(
             children: [
               SuperAdminUi.glowIcon(
                 icon: Icons.business_rounded,
-                accent: SuperAdminUi.violet,
+                accent: SuperAdminUi.pink,
                 size: 34,
                 iconSize: 18,
               ),
@@ -41,7 +39,7 @@ class SuperAdminAgencyDetailView
               const SemiBoldText(
                 text: 'Agency Detail',
                 fontSize: TextStyles.k16FontSize,
-                color: kColorWhite,
+                color: SuperAdminUi.textPrimary,
               ),
             ],
           ),
@@ -74,18 +72,18 @@ class SuperAdminAgencyDetailView
               physics: const AlwaysScrollableScrollPhysics(
                 parent: BouncingScrollPhysics(),
               ),
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+              padding: SuperAdminUi.detailInsets,
               children: [
                 _headerCard(detail),
-                Spacing.v12,
+                Spacing.v(SuperAdminUi.sectionGap),
                 _ownerCard(detail),
-                Spacing.v12,
+                Spacing.v(SuperAdminUi.sectionGap),
                 _statsCard(detail),
-                Spacing.v12,
+                Spacing.v(SuperAdminUi.sectionGap),
                 _docsCard(detail),
-                Spacing.v12,
+                Spacing.v(SuperAdminUi.sectionGap),
                 _actionsCard(context, detail),
-                Spacing.v16,
+                Spacing.v(SuperAdminUi.sectionGap),
                 _hostsSection(),
               ],
             ),
@@ -95,61 +93,42 @@ class SuperAdminAgencyDetailView
     );
   }
 
-  Widget _sectionTitle(String title, IconData icon, Color accent) {
-    return Row(
-      children: [
-        SuperAdminUi.glowIcon(
-          icon: icon,
-          accent: accent,
-          size: 28,
-          iconSize: 14,
-        ),
-        Spacing.h8,
-        SemiBoldText(
-          text: title,
-          fontSize: TextStyles.k14FontSize,
-          color: kColorWhite,
-        ),
-      ],
-    );
-  }
-
   Widget _headerCard(SuperAdminAgencyDetail detail) {
+    final imageUrl = detail.logo.isNotEmpty
+        ? detail.logo
+        : detail.owner.displayPicture;
     return SuperAdminGlassCard(
-      glow: SuperAdminUi.violet,
+      blur: false,
+      glow: SuperAdminUi.pink,
+      padding: const EdgeInsets.all(18),
       child: Row(
         children: [
-          SafeNetworkAvatar(
-            url: detail.logo.isNotEmpty
-                ? detail.logo
-                : detail.owner.displayPicture,
-            size: 56,
-            fallback: CircleAvatar(
-              radius: 28,
-              backgroundColor: kColorPrimary,
-              child: Text(
-                detail.name.isNotEmpty ? detail.name.characters.first : 'A',
-              ),
-            ),
+          SuperAdminAvatarRing(
+            url: imageUrl,
+            fallbackLetter: detail.name,
+            size: 88,
+            accent: SuperAdminUi.pink,
           ),
           Spacing.h12,
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SemiBoldText(
+                BoldText(
                   text: detail.name,
-                  fontSize: TextStyles.k16FontSize,
-                  color: kColorWhite,
+                  fontSize: TextStyles.k18FontSize,
+                  color: SuperAdminUi.textPrimary,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                Spacing.v4,
-                AppText(
-                  text: 'Code ${detail.code}',
-                  fontSize: TextStyles.k12FontSize,
-                  color: Colors.white70,
-                ),
-                Spacing.v6,
+                Spacing.v8,
                 SuperAdminStatusPill(status: detail.status),
+                Spacing.v8,
+                SuperAdminMetricChip(
+                  icon: Icons.qr_code_2_rounded,
+                  label: detail.code.isEmpty ? 'No code' : detail.code,
+                  accent: SuperAdminUi.violet,
+                ),
               ],
             ),
           ),
@@ -159,37 +138,71 @@ class SuperAdminAgencyDetailView
   }
 
   Widget _ownerCard(SuperAdminAgencyDetail detail) {
+    final phone = SuperAdminDetailFormat.phone(
+      detail.owner.countryCode,
+      detail.owner.phone,
+    );
+    final hasFeedback = detail.feedback.trim().isNotEmpty;
+    final hasInvited = detail.invitedBy.name.trim().isNotEmpty;
     return SuperAdminGlassCard(
+      blur: false,
       glow: SuperAdminUi.sky,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionTitle(
-            'Owner & address',
-            Icons.person_rounded,
-            SuperAdminUi.sky,
+          const SuperAdminCleanSectionHeader(
+            icon: Icons.person_rounded,
+            title: 'Owner & address',
+            accent: SuperAdminUi.sky,
           ),
-          Spacing.v12,
-          SuperAdminInfoRow(label: 'Owner', value: detail.owner.name),
-          SuperAdminInfoRow(label: 'Email', value: detail.owner.email),
-          SuperAdminInfoRow(
+          Spacing.v8,
+          SuperAdminCleanInfoRow(
+            icon: Icons.badge_rounded,
+            label: 'Owner',
+            value: detail.owner.name,
+            accent: SuperAdminUi.sky,
+          ),
+          SuperAdminCleanInfoRow(
+            icon: Icons.mail_rounded,
+            label: 'Email',
+            value: detail.owner.email,
+            accent: SuperAdminUi.pink,
+          ),
+          SuperAdminCleanInfoRow(
+            icon: Icons.phone_rounded,
             label: 'Phone',
-            value: [
-              detail.owner.countryCode,
-              detail.owner.phone,
-            ].where((e) => e.isNotEmpty).join(' '),
+            value: phone,
+            accent: SuperAdminUi.mint,
           ),
-          SuperAdminInfoRow(label: 'Address', value: detail.address.line),
-          SuperAdminInfoRow(
-            label: 'Commission',
+          SuperAdminCleanInfoRow(
+            icon: Icons.location_on_rounded,
+            label: 'Address',
+            value: detail.address.line,
+            accent: SuperAdminUi.gold,
+          ),
+          SuperAdminCleanInfoRow(
+            icon: Icons.percent_rounded,
+            label: 'Commission %',
             value: '${(detail.commissionRate * 100).toStringAsFixed(1)}%',
+            accent: SuperAdminUi.violet,
+            showDivider: hasFeedback || hasInvited,
           ),
-          if (detail.feedback.isNotEmpty)
-            SuperAdminInfoRow(label: 'Feedback', value: detail.feedback),
-          if (detail.invitedBy.name.isNotEmpty)
-            SuperAdminInfoRow(
+          if (hasFeedback)
+            SuperAdminCleanInfoRow(
+              icon: Icons.chat_bubble_rounded,
+              label: 'Feedback',
+              value: detail.feedback,
+              accent: SuperAdminUi.warning,
+              showDivider: hasInvited,
+            ),
+          if (hasInvited)
+            SuperAdminCleanInfoRow(
+              icon: Icons.workspace_premium_rounded,
               label: 'Invited by',
               value: detail.invitedBy.name,
+              accent: SuperAdminUi.gold,
+              showDivider: false,
             ),
         ],
       ),
@@ -199,18 +212,60 @@ class SuperAdminAgencyDetailView
   Widget _statsCard(SuperAdminAgencyDetail detail) {
     final s = detail.stats;
     return SuperAdminGlassCard(
+      blur: false,
       glow: SuperAdminUi.mint,
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionTitle('Stats', Icons.insights_rounded, SuperAdminUi.mint),
-          Spacing.v12,
-          SuperAdminInfoRow(label: 'Hosts', value: '${s.hostCount}'),
-          SuperAdminInfoRow(label: 'Active', value: '${s.activeHostsCount}'),
-          SuperAdminInfoRow(label: 'Pending', value: '${s.pendingHostsCount}'),
-          SuperAdminInfoRow(
-            label: 'Commission',
-            value: s.totalCommissionEarned.toStringAsFixed(2),
+          const SuperAdminCleanSectionHeader(
+            icon: Icons.insights_rounded,
+            title: 'Stats',
+            accent: SuperAdminUi.mint,
+          ),
+          Spacing.v(14),
+          Row(
+            children: [
+              Expanded(
+                child: SuperAdminStatTile(
+                  icon: Icons.groups_rounded,
+                  label: 'Hosts',
+                  value: '${s.hostCount}',
+                  accent: SuperAdminUi.sky,
+                ),
+              ),
+              Spacing.h10,
+              Expanded(
+                child: SuperAdminStatTile(
+                  icon: Icons.verified_rounded,
+                  label: 'Active',
+                  value: '${s.activeHostsCount}',
+                  accent: SuperAdminUi.mint,
+                ),
+              ),
+            ],
+          ),
+          Spacing.v10,
+          Row(
+            children: [
+              Expanded(
+                child: SuperAdminStatTile(
+                  icon: Icons.hourglass_top_rounded,
+                  label: 'Pending',
+                  value: '${s.pendingHostsCount}',
+                  accent: SuperAdminUi.gold,
+                ),
+              ),
+              Spacing.h10,
+              Expanded(
+                child: SuperAdminStatTile(
+                  icon: Icons.payments_rounded,
+                  label: 'Commission',
+                  value: s.totalCommissionEarned.toStringAsFixed(1),
+                  accent: SuperAdminUi.pink,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -219,16 +274,18 @@ class SuperAdminAgencyDetailView
 
   Widget _docsCard(SuperAdminAgencyDetail detail) {
     return SuperAdminGlassCard(
+      blur: false,
       glow: SuperAdminUi.pink,
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionTitle(
-            'Documents',
-            Icons.folder_rounded,
-            SuperAdminUi.pink,
+          const SuperAdminCleanSectionHeader(
+            icon: Icons.folder_rounded,
+            title: 'Documents',
+            accent: SuperAdminUi.pink,
           ),
-          Spacing.v12,
+          Spacing.v(14),
           Row(
             children: [
               SuperAdminDocThumb(
@@ -255,16 +312,18 @@ class SuperAdminAgencyDetailView
       if (!hasActions) return const SizedBox.shrink();
 
       return SuperAdminGlassCard(
+        blur: false,
         glow: SuperAdminUi.gold,
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _sectionTitle(
-              'Actions',
-              Icons.bolt_rounded,
-              SuperAdminUi.gold,
+            const SuperAdminCleanSectionHeader(
+              icon: Icons.bolt_rounded,
+              title: 'Actions',
+              accent: SuperAdminUi.gold,
             ),
-            Spacing.v12,
+            Spacing.v(14),
             if (detail.isPending)
               Row(
                 children: [
@@ -365,10 +424,10 @@ class SuperAdminAgencyDetailView
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionTitle(
-            'Hosts in this agency',
-            Icons.mic_rounded,
-            SuperAdminUi.teal,
+          const SuperAdminCleanSectionHeader(
+            icon: Icons.mic_rounded,
+            title: 'Hosts in this agency',
+            accent: SuperAdminUi.teal,
           ),
           Spacing.v12,
           if (controller.isLoadingHosts.value && items.isEmpty)
@@ -387,24 +446,23 @@ class SuperAdminAgencyDetailView
           else
             ...items.map((host) {
               return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.only(bottom: 8),
                 child: SuperAdminGlassCard(
+                  blur: false,
                   glow: SuperAdminUi.teal,
+                  radius: 16,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   onTap: () => controller.openHostDetail(host),
                   child: Row(
                     children: [
-                      SafeNetworkAvatar(
+                      SuperAdminAvatarRing(
                         url: host.avatarUrl,
-                        size: 42,
-                        fallback: CircleAvatar(
-                          radius: 21,
-                          backgroundColor: kColorPrimary,
-                          child: Text(
-                            host.name.isNotEmpty
-                                ? host.name.characters.first
-                                : 'H',
-                          ),
-                        ),
+                        fallbackLetter: host.name,
+                        size: 46,
+                        accent: SuperAdminUi.teal,
                       ),
                       Spacing.h10,
                       Expanded(
@@ -414,19 +472,16 @@ class SuperAdminAgencyDetailView
                             SemiBoldText(
                               text: host.name,
                               fontSize: TextStyles.k14FontSize,
-                              color: kColorWhite,
+                              color: SuperAdminUi.textPrimary,
                             ),
-                            AppText(
-                              text: host.status,
-                              fontSize: TextStyles.k10FontSize,
-                              color: Colors.white70,
-                            ),
+                            Spacing.v4,
+                            SuperAdminStatusPill(status: host.status),
                           ],
                         ),
                       ),
                       const Icon(
                         Icons.chevron_right_rounded,
-                        color: Colors.white54,
+                        color: SuperAdminUi.textMuted,
                       ),
                     ],
                   ),
@@ -454,7 +509,7 @@ class SuperAdminAgencyDetailView
           decoration: BoxDecoration(
             color: SuperAdminUi.sheet.withValues(alpha: 0.96),
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: kColorWhite.withValues(alpha: 0.14)),
+            border: Border.all(color: SuperAdminUi.textPrimary.withValues(alpha: 0.14)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -463,19 +518,19 @@ class SuperAdminAgencyDetailView
               SemiBoldText(
                 text: title,
                 fontSize: TextStyles.k16FontSize,
-                color: kColorWhite,
+                color: SuperAdminUi.textPrimary,
               ),
               Spacing.v12,
               TextField(
                 controller: textController,
-                style: const TextStyle(color: kColorWhite),
+                style: const TextStyle(color: SuperAdminUi.textPrimary),
                 decoration: InputDecoration(
                   hintText: hint,
-                  hintStyle: const TextStyle(color: Colors.white38),
+                  hintStyle: const TextStyle(color: SuperAdminUi.textFaint),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
-                      color: kColorWhite.withValues(alpha: 0.2),
+                      color: SuperAdminUi.textPrimary.withValues(alpha: 0.2),
                     ),
                   ),
                   focusedBorder: OutlineInputBorder(
@@ -495,9 +550,9 @@ class SuperAdminAgencyDetailView
                         onPressed: () =>
                             Navigator.of(dialogContext).pop(false),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.white70,
+                          foregroundColor: SuperAdminUi.textSecondary,
                           side: BorderSide(
-                            color: kColorWhite.withValues(alpha: 0.22),
+                            color: SuperAdminUi.textPrimary.withValues(alpha: 0.22),
                           ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
@@ -506,7 +561,7 @@ class SuperAdminAgencyDetailView
                         child: const SemiBoldText(
                           text: 'Cancel',
                           fontSize: TextStyles.k12FontSize,
-                          color: Colors.white70,
+                          color: SuperAdminUi.textSecondary,
                         ),
                       ),
                     ),
@@ -529,7 +584,7 @@ class SuperAdminAgencyDetailView
                         child: const SemiBoldText(
                           text: 'Confirm',
                           fontSize: TextStyles.k12FontSize,
-                          color: kColorWhite,
+                          color: SuperAdminUi.textPrimary,
                         ),
                       ),
                     ),
@@ -561,7 +616,7 @@ class SuperAdminAgencyDetailView
           decoration: BoxDecoration(
             color: SuperAdminUi.sheet.withValues(alpha: 0.96),
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: kColorWhite.withValues(alpha: 0.14)),
+            border: Border.all(color: SuperAdminUi.textPrimary.withValues(alpha: 0.14)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -570,21 +625,21 @@ class SuperAdminAgencyDetailView
               const SemiBoldText(
                 text: 'Commission %',
                 fontSize: TextStyles.k16FontSize,
-                color: kColorWhite,
+                color: SuperAdminUi.textPrimary,
               ),
               Spacing.v12,
               TextField(
                 controller: textController,
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
-                style: const TextStyle(color: kColorWhite),
+                style: const TextStyle(color: SuperAdminUi.textPrimary),
                 decoration: InputDecoration(
                   hintText: 'e.g. 10',
-                  hintStyle: const TextStyle(color: Colors.white38),
+                  hintStyle: const TextStyle(color: SuperAdminUi.textFaint),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
-                      color: kColorWhite.withValues(alpha: 0.2),
+                      color: SuperAdminUi.textPrimary.withValues(alpha: 0.2),
                     ),
                   ),
                   focusedBorder: OutlineInputBorder(
@@ -603,9 +658,9 @@ class SuperAdminAgencyDetailView
                         onPressed: () =>
                             Navigator.of(dialogContext).pop(false),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.white70,
+                          foregroundColor: SuperAdminUi.textSecondary,
                           side: BorderSide(
-                            color: kColorWhite.withValues(alpha: 0.22),
+                            color: SuperAdminUi.textPrimary.withValues(alpha: 0.22),
                           ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
@@ -614,7 +669,7 @@ class SuperAdminAgencyDetailView
                         child: const SemiBoldText(
                           text: 'Cancel',
                           fontSize: TextStyles.k12FontSize,
-                          color: Colors.white70,
+                          color: SuperAdminUi.textSecondary,
                         ),
                       ),
                     ),
@@ -637,7 +692,7 @@ class SuperAdminAgencyDetailView
                         child: const SemiBoldText(
                           text: 'Save',
                           fontSize: TextStyles.k12FontSize,
-                          color: kColorWhite,
+                          color: SuperAdminUi.textPrimary,
                         ),
                       ),
                     ),

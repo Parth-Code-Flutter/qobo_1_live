@@ -96,21 +96,36 @@ abstract final class GiftMediaUtils {
         '';
   }
 
-  /// Builds the Zego gift chat line with hidden `[[giftAnim:]]` / `[[giftSound:]]`.
+  /// Builds the Zego gift chat line with hidden media + earnings markers.
+  ///
+  /// Peers use `giftTo` / `giftScope` / `giftPrice` to bump seat diamonds and
+  /// session earnings for the actual receiver (host or audience).
   static String buildChatLabel({
     required String? giftName,
     required String? giftIcon,
     required String animationUrl,
     required String soundUrl,
+    String scope = 'user',
+    String? receiverId,
+    String? senderId,
+    int? giftPrice,
   }) {
     final name = giftName?.trim().isNotEmpty == true
         ? giftName!.trim()
         : 'Gift';
     final iconPart = isNetworkGiftIcon(giftIcon) ? '' : (giftIcon ?? '');
     final base = '🎁 sent $name $iconPart'.trim();
+    final normalizedScope =
+        scope.trim().toLowerCase() == 'room' ? 'room' : 'user';
+    final toId = receiverId?.trim() ?? '';
+    final fromId = senderId?.trim() ?? '';
     final markers = <String>[
       if (animationUrl.isNotEmpty) '[[giftAnim:$animationUrl]]',
       if (soundUrl.isNotEmpty) '[[giftSound:$soundUrl]]',
+      '[[giftScope:$normalizedScope]]',
+      if (fromId.isNotEmpty) '[[giftFrom:$fromId]]',
+      if (toId.isNotEmpty) '[[giftTo:$toId]]',
+      if (giftPrice != null && giftPrice > 0) '[[giftPrice:$giftPrice]]',
     ];
     // Hidden markers let peers play the exact gift animation and sound.
     return markers.isEmpty ? base : '$base\n${markers.join('\n')}';
