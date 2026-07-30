@@ -76,6 +76,35 @@ class UserSessionController extends GetxController {
   bool get isAgency => role.toLowerCase() == 'agency';
   bool get isHost => role.toLowerCase() == 'host';
 
+  /// Approved P2P coins seller (role and/or profile flags from getProfile).
+  bool get isCoinSeller {
+    final normalized = role.toLowerCase().replaceAll(' ', '_');
+    if (normalized == 'coin_seller' ||
+        normalized == 'coins_seller' ||
+        normalized == 'seller' ||
+        normalized == 'seller_admin') {
+      return true;
+    }
+    if (_boolValueFromProfile(const [
+      'isCoinsSeller',
+      'isCoinSeller',
+      'is_coins_seller',
+      'is_coin_seller',
+      'coinsSeller',
+      'coins_seller',
+    ])) {
+      return true;
+    }
+    final status = _stringValueFromProfile(const [
+      'coinsSellerStatus',
+      'coinSellerStatus',
+      'coins_seller_status',
+      'sellerStatus',
+      'seller_status',
+    ]).toLowerCase();
+    return status == 'approved' || status == 'active';
+  }
+
   /// Profile header counters — prefer backend `formatted*` strings (e.g. "2K").
   String get formattedVisitors => _formattedSocialStat(
     formattedKeys: const ['formattedVisitors', 'stats.formattedVisitors'],
@@ -315,6 +344,26 @@ class UserSessionController extends GetxController {
   String _cleanString(dynamic value) {
     if (value == null) return '';
     return value.toString().trim();
+  }
+
+  bool _boolValueFromProfile(List<String> keys) {
+    for (final key in keys) {
+      final raw = _readProfileValue(_profileData, key);
+      if (raw == true || raw == 1) return true;
+      if (raw == false || raw == 0 || raw == null) continue;
+      final text = raw.toString().trim().toLowerCase();
+      if (text == 'true' || text == '1' || text == 'yes') return true;
+      final nested = _profileData?['user'];
+      if (nested is Map) {
+        final nestedRaw = _readProfileValue(nested, key);
+        if (nestedRaw == true || nestedRaw == 1) return true;
+        final nestedText = nestedRaw?.toString().trim().toLowerCase() ?? '';
+        if (nestedText == 'true' || nestedText == '1' || nestedText == 'yes') {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   /// Reads a formatted social counter, falling back to a compact count string.

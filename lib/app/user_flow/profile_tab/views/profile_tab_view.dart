@@ -353,19 +353,26 @@ class _ProfileTabViewState extends State<ProfileTabView> {
   }
 
   Widget _profileFeatureGrid() {
+    final session = _resolveUserSession();
+    final showSuperAdmin = !session.isCoinSeller && !session.isAgency;
+    final showAgency = !session.isCoinSeller;
+    final showCoinSeller = !session.isAgency && !session.isSuperAdmin;
+
     final features = <_ProfileFeatureItem>[
       _ProfileFeatureItem('Top Up', kIconRechargeCoins, const [
         Color(0xFFFF8A1D),
         Color(0xFFFF6B57),
       ], onTap: _openWallet),
-      _ProfileFeatureItem('Super\nAdmin', kIconBadge, const [
-        Color(0xFFFF4D8D),
-        Color(0xFF8F37F2),
-      ], onTap: _openSuperAdminFlow),
-      _ProfileFeatureItem('Agency', kIconMall, const [
-        Color(0xFF6E4BFF),
-        Color(0xFF00BCD4),
-      ], onTap: _openAgencyFlow),
+      if (showSuperAdmin)
+        _ProfileFeatureItem('Super\nAdmin', kIconBadge, const [
+          Color(0xFFFF4D8D),
+          Color(0xFF8F37F2),
+        ], onTap: _openSuperAdminFlow),
+      if (showAgency)
+        _ProfileFeatureItem('Agency', kIconMall, const [
+          Color(0xFF6E4BFF),
+          Color(0xFF00BCD4),
+        ], onTap: _openAgencyFlow),
       _ProfileFeatureItem('Visitors', kIconVisitor, const [
         Color(0xFF1F74F2),
         Color(0xFF22B8F2),
@@ -410,10 +417,11 @@ class _ProfileTabViewState extends State<ProfileTabView> {
         Color(0xFFE5009E),
         Color(0xFFFF54C8),
       ], onTapRoute: Routes.CALL),
-      _ProfileFeatureItem('Coin Seller', kIconCoin2, const [
-        Color(0xFFFFB020),
-        Color(0xFFFF6B00),
-      ], onTapRoute: Routes.COIN_SELLER),
+      if (showCoinSeller)
+        _ProfileFeatureItem('Coin Seller', kIconCoin2, const [
+          Color(0xFFFFB020),
+          Color(0xFFFF6B00),
+        ], onTapRoute: Routes.COIN_SELLER),
       _ProfileFeatureItem(
         'Customer\nservice',
         kIconCustomerService,
