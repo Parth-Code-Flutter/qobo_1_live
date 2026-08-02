@@ -125,6 +125,8 @@ class LiveBroadcastController extends GetxController {
 
   Timer? _seatRefreshTimer;
   Timer? _sessionEarningsTimer;
+  Timer? _joinRequestPollTimer;
+  final Set<String> _promptedJoinRequestIds = <String>{};
   VoidCallback? _viewerCountListener;
   var _exitReported = false;
   var _hostEndConfirmed = false;
@@ -161,6 +163,7 @@ class LiveBroadcastController extends GetxController {
     loadGiftCatalog();
     if (isHost.value) {
       _startSessionEarningsPolling();
+      unawaited(_bootstrapHostJoinApproval());
     }
     if (isAudioVideoRoom) {
       final initialSeats = _parseAudioSeats(_roomData);
@@ -234,6 +237,13 @@ class LiveBroadcastController extends GetxController {
           (item['request_id']?.toString() ?? item['requestId']?.toString()) ==
           id,
     );
+    _promptedJoinRequestIds.remove(id);
+  }
+
+  void markJoinRequestPrompted(String requestId) {
+    final id = requestId.trim();
+    if (id.isEmpty) return;
+    _promptedJoinRequestIds.add(id);
   }
 
   Future<void> openJoinRequestsSheet() async {
@@ -247,6 +257,135 @@ class LiveBroadcastController extends GetxController {
   void setJoinApprovalRequired(bool value) {
     joinApprovalRequired.value = value;
     _roomData['joinApprovalRequired'] = value;
+  }
+
+  /// Host: turn on join approval + poll pending requests so Add/Reject works
+  /// even if socket/FCM is delayed.
+  Future<void> _bootstrapHostJoinApproval() async {
+    await _ensureJoinApprovalEnabled();
+    await UserRealtimeSocketService.ensureConnected();
+    final apiRoomId = audioRoomApiId.trim().isNotEmpty
+        ? audioRoomApiId.trim()
+        : roomId.value.trim();
+    if (apiRoomId.isNotEmpty &&
+        Get.isRegistered<UserRealtimeSocketService>()) {
+      await Get.find<UserRealtimeSocketService>().joinRoomChannel(apiRoomId);
+    }
+    _startJoinRequestPolling();
+  }
+
+  Future<void> _ensureJoinApprovalEnabled() async {
+    final apiRoomId = audioRoomApiId.trim().isNotEmpty
+        ? audioRoomApiId.trim()
+        : roomId.value.trim();
+    if (apiRoomId.isEmpty) return;
+
+    if (!joinApprovalRequired.value) {
+      joinApprovalRequired.value = true;
+      _roomData['joinApprovalRequired'] = true;
+    }
+
+    try {
+      final response = await _roomRepo.updateRoomSettings(
+        roomId: apiRoomId,
+        joinApprovalRequired: true,
+        isShowLoader: false,
+      );
+      if (JoinApprovalService.isApiSuccess(response)) {
+        setJoinApprovalRequired(true);
+      }
+    } catch (_) {
+      // Settings API may be unavailable; polling + create flag still help.
+    }
+  }
+
+  void _startJoinRequestPolling() {
+    if (!isHost.value) return;
+    _joinRequestPollTimer?.cancel();
+    unawaited(_pollPendingJoinRequests(showDialogForNew: true));
+    _joinRequestPollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (_exitReported || !isHost.value) {
+        _stopJoinRequestPolling();
+        return;
+      }
+      unawaited(_pollPendingJoinRequests(showDialogForNew: true));
+    });
+  }
+
+  void _stopJoinRequestPolling() {
+    _joinRequestPollTimer?.cancel();
+    _joinRequestPollTimer = null;
+  }
+
+  Future<void> _pollPendingJoinRequests({
+    bool showDialogForNew = false,
+  }) async {
+    if (!isHost.value || _exitReported) return;
+    final apiRoomId = audioRoomApiId.trim().isNotEmpty
+        ? audioRoomApiId.trim()
+        : roomId.value.trim();
+    if (apiRoomId.isEmpty) return;
+
+    Map<String, dynamic>? response;
+    try {
+      response = await _roomRepo.listJoinRequests(
+        roomId: apiRoomId,
+        status: 'pending',
+        isShowLoader: false,
+      );
+    } catch (_) {
+      return;
+    }
+    if (response == null) return;
+
+    final data = response['data'];
+    final map = data is Map
+        ? Map<String, dynamic>.from(data)
+        : <String, dynamic>{};
+    final raw = map['items'] ?? map['requests'] ?? data;
+    final list = raw is List
+        ? raw
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList()
+        : <Map<String, dynamic>>[];
+
+    for (final item in list) {
+      final requestId =
+          item['request_id']?.toString().trim() ??
+          item['requestId']?.toString().trim() ??
+          '';
+      if (requestId.isEmpty) continue;
+
+      upsertPendingJoinRequest({
+        ...item,
+        'request_id': requestId,
+        'room_id':
+            item['room_id']?.toString() ??
+            item['roomId']?.toString() ??
+            apiRoomId,
+        'status': 'pending',
+        'type': 'join_request',
+      });
+
+      if (!showDialogForNew || _promptedJoinRequestIds.contains(requestId)) {
+        continue;
+      }
+      _promptedJoinRequestIds.add(requestId);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        unawaited(
+          JoinRequestInAppBanner.tryShowFromMap({
+            ...item,
+            'type': 'join_request',
+            'request_id': requestId,
+            'room_id':
+                item['room_id']?.toString() ??
+                item['roomId']?.toString() ??
+                apiRoomId,
+          }),
+        );
+      });
+    }
   }
 
   void _hydrateRoomBackground() {
@@ -2985,6 +3124,8 @@ class LiveBroadcastController extends GetxController {
     CoinFlyOverlay.dismiss();
     _stopSeatRefreshPolling();
     _stopSessionEarningsPolling();
+    _stopJoinRequestPolling();
+    _promptedJoinRequestIds.clear();
     _unbindRoomBackgroundSocket();
     _vipEntrancePlayedUserIds.clear();
     _vipSeatEntranceBaselineReady = false;

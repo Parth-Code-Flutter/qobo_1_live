@@ -75,6 +75,8 @@ class SuperAdminAgencyDetailView
               padding: SuperAdminUi.detailInsets,
               children: [
                 _headerCard(detail),
+                Spacing.v10,
+                _openOwnerDashboardButton(),
                 Spacing.v(SuperAdminUi.sectionGap),
                 _ownerCard(detail),
                 Spacing.v(SuperAdminUi.sectionGap),
@@ -89,6 +91,60 @@ class SuperAdminAgencyDetailView
             ),
           );
         }),
+      ),
+    );
+  }
+
+  Widget _openOwnerDashboardButton() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: controller.openOwnerDashboard,
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              colors: [
+                SuperAdminUi.pink.withValues(alpha: 0.28),
+                SuperAdminUi.violet.withValues(alpha: 0.22),
+              ],
+            ),
+            border: Border.all(
+              color: SuperAdminUi.pink.withValues(alpha: 0.45),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.dashboard_customize_rounded, color: SuperAdminUi.pink),
+              Spacing.h10,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SemiBoldText(
+                      text: 'Open agency dashboard',
+                      fontSize: TextStyles.k14FontSize,
+                      color: SuperAdminUi.textPrimary,
+                    ),
+                    Spacing.v2,
+                    AppText(
+                      text:
+                          'Owner metrics via /api/agency/dashboard?agency_id=',
+                      fontSize: TextStyles.k10FontSize,
+                      color: SuperAdminUi.textSecondary,
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: SuperAdminUi.textSecondary,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

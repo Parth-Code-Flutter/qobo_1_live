@@ -398,7 +398,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
                 ),
                 Spacing.v2,
                 const AppText(
-                  text: 'Viewers wait until you approve their request',
+                  text: 'Viewers wait until you Add or Reject their request',
                   fontSize: TextStyles.k10FontSize,
                   color: kColorHint,
                 ),

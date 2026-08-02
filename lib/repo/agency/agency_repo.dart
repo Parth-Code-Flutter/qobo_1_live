@@ -111,16 +111,25 @@ class AgencyRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
-  /// `GET /api/agency/dashboard?month=YYYY-MM` — full owner dashboard payload.
+  /// `GET /api/agency/dashboard?month=YYYY-MM[&agency_id=]` — full dashboard.
+  ///
+  /// Super Admins **must** pass [agencyId]; agency owners omit it (resolved
+  /// from their owner token on the backend).
   Future<Map<String, dynamic>?> getAgencyDashboard({
     String? month,
+    String? agencyId,
     bool isShowLoader = true,
   }) async {
     final monthParam = month?.trim().isNotEmpty == true
         ? month!.trim()
         : agencyCurrentMonthParam();
-    var path = AgencyEndpoints.dashboard;
-    path += '?month=${Uri.encodeComponent(monthParam)}';
+    final params = <String, String>{
+      'month': monthParam,
+      if (agencyId != null && agencyId.trim().isNotEmpty)
+        'agency_id': agencyId.trim(),
+    };
+    final path =
+        '${AgencyEndpoints.dashboard}?${Uri(queryParameters: params).query}';
     final response = await _apiService.getRequest(
       endPoint: path,
       isShowLoader: isShowLoader,

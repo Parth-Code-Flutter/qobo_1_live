@@ -630,6 +630,7 @@ class LiveRoomController extends GetxController {
       roomId: roomId,
       sessionType: sessionType,
       roomHint: roomData,
+      forceApprovalFlow: true,
       isShowLoader: true,
     );
     final context = Get.context;
@@ -690,10 +691,9 @@ class LiveRoomController extends GetxController {
       return;
     }
 
-    // Gate Zego entry when host requires join approval.
-    if (roomId.isNotEmpty &&
-        (JoinApprovalService.isApprovalRequired(payload) ||
-            JoinApprovalService.isApprovalRequired(room))) {
+    // Always go through the approval gate before opening Zego so the host can
+    // Add/Reject. Backend may auto-join when approval is not required.
+    if (roomId.isNotEmpty) {
       final response = await JoinApprovalService().joinWithApprovalGate(
         roomId: roomId,
         sessionType: 'live_stream',
@@ -721,7 +721,8 @@ class LiveRoomController extends GetxController {
       payload['join_request_id'] =
           _text(payload['join_request_id']) ??
           (response?['data'] is Map
-              ? _text((response!['data'] as Map)['request_id'])
+              ? (_text((response!['data'] as Map)['join_request_id']) ??
+                    _text((response['data'] as Map)['request_id']))
               : null);
     }
 
@@ -797,6 +798,7 @@ class LiveRoomController extends GetxController {
         roomType: isRoomsAudioMode ? 'AUDIO' : 'VIDEO',
       ),
       roomHint: room,
+      forceApprovalFlow: true,
       isShowLoader: true,
     );
     if (!context.mounted) return;

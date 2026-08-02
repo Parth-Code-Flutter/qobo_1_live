@@ -187,4 +187,18 @@ class SuperAdminAgencyDetailController extends GetxController {
     home.loadAgencies(showLoader: false);
     home.loadDashboardStats(showLoader: false);
   }
+
+  /// Owner metrics dashboard — requires `agency_id` for Super Admin tokens.
+  void openOwnerDashboard() {
+    if (agencyId.isEmpty) return;
+    final name = detail.value?.name ?? '';
+    Get.toNamed(
+      Routes.AGENCY_OWNER,
+      arguments: {
+        'agencyId': agencyId,
+        'agency_id': agencyId,
+        if (name.isNotEmpty) 'agencyName': name,
+      },
+    );
+  }
 }

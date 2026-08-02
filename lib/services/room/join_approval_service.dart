@@ -241,7 +241,7 @@ class JoinApprovalService {
   static String _defaultWaitMessage(JoinRequestWaitResult result) {
     switch (result) {
       case JoinRequestWaitResult.rejected:
-        return 'Host declined your request to join';
+        return 'Host request rejected';
       case JoinRequestWaitResult.expired:
         return 'Your join request expired. Try again.';
       case JoinRequestWaitResult.cancelled:

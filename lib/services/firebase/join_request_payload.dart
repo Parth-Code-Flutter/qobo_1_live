@@ -52,7 +52,7 @@ class JoinRequestPayload {
   String get bannerTitle {
     if (isHostRequest) return 'Join Request';
     if (isApproved) return 'Join Approved';
-    if (isRejected) return 'Join Declined';
+    if (isRejected) return 'Host request rejected';
     if (isExpired) return 'Request Expired';
     return 'Join Request';
   }
@@ -65,7 +65,7 @@ class JoinRequestPayload {
       return '$name wants to join $room';
     }
     if (isApproved) return 'Host approved your request. Joining now…';
-    if (isRejected) return 'Host declined your request to join';
+    if (isRejected) return 'Host request rejected';
     if (isExpired) return 'Your join request expired. Try again.';
     return '';
   }

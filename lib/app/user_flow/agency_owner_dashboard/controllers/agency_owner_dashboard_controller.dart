@@ -31,11 +31,31 @@ class AgencyOwnerDashboardController extends GetxController {
   final pendingMessage = ''.obs;
   final isLoggingOut = false.obs;
 
+  /// Required for Super Admin (`GET /api/agency/dashboard?agency_id=`).
+  String _viewAsAgencyId = '';
+
   @override
   void onInit() {
     super.onInit();
+    _readRouteAgencyId();
     if (!_assertAgencyOwnerAccess()) return;
+    if (_userSession.isSuperAdmin && _viewAsAgencyId.isEmpty) {
+      isLoading.value = false;
+      loadError.value =
+          'Select an agency to view its dashboard. Super Admin must pass agency_id.';
+      return;
+    }
     loadDashboard();
+  }
+
+  void _readRouteAgencyId() {
+    final args = Get.arguments;
+    if (args is! Map) return;
+    final id =
+        args['agencyId']?.toString().trim() ??
+        args['agency_id']?.toString().trim() ??
+        '';
+    _viewAsAgencyId = id;
   }
 
   /// Isolation: host/coin-seller must not use agency-owner APIs or shell.
@@ -57,7 +77,15 @@ class AgencyOwnerDashboardController extends GetxController {
     loadError.value = '';
     isApplicationPending.value = false;
     try {
+      if (_userSession.isSuperAdmin && _viewAsAgencyId.isEmpty) {
+        loadError.value =
+            'Select an agency to view its dashboard. Super Admin must pass agency_id.';
+        dashboard.value = null;
+        return;
+      }
+
       final response = await _agencyRepo.getAgencyDashboard(
+        agencyId: _viewAsAgencyId.isNotEmpty ? _viewAsAgencyId : null,
         isShowLoader: showLoader,
       );
       final data = response?['data'];

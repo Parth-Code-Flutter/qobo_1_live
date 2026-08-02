@@ -78,8 +78,15 @@ class JoinRequestPushHandler {
 
     if (type == PushNotificationTypes.joinRequest) {
       _ingestHostRequest(payload, data);
+      if (Get.isRegistered<LiveBroadcastController>()) {
+        Get.find<LiveBroadcastController>()
+            .markJoinRequestPrompted(payload.requestId);
+      }
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        JoinRequestInAppBanner.tryShowFromMap(data, handler: this);
+        JoinRequestInAppBanner.tryShowFromMap({
+          ...data,
+          'type': type,
+        }, handler: this);
       });
       return;
     }
@@ -116,11 +123,11 @@ class JoinRequestPushHandler {
           sessionType: payload.sessionType,
           message: payload.message.isNotEmpty
               ? payload.message
-              : 'Host declined your request to join',
+              : 'Host request rejected',
         ),
       );
       if (Get.isDialogOpen != true) {
-        _toast('Host declined your request to join');
+        _toast('Host request rejected');
       }
       return;
     }
@@ -174,7 +181,7 @@ class JoinRequestPushHandler {
         sourceMessage,
       );
     }
-    _toast(action == 'approve' ? 'Approved' : 'Rejected');
+    _toast(action == 'approve' ? 'Added to room' : 'Rejected');
   }
 
   Future<void> _enterAfterApproval(

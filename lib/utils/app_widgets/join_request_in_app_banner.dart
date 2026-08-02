@@ -53,7 +53,12 @@ abstract final class JoinRequestInAppBanner {
     Map<String, dynamic> data, {
     JoinRequestPushHandler? handler,
   }) {
-    final payload = JoinRequestPayload.tryParse(data);
+    final normalized = Map<String, dynamic>.from(data);
+    final type = normalized['type']?.toString().trim() ?? '';
+    if (type.isEmpty) {
+      normalized['type'] = PushNotificationTypes.joinRequest;
+    }
+    final payload = JoinRequestPayload.tryParse(normalized);
     if (payload == null) {
       return Future.value(false);
     }
@@ -62,7 +67,7 @@ abstract final class JoinRequestInAppBanner {
           'socket_join_${payload.requestId}_${DateTime.now().millisecondsSinceEpoch}',
       title: payload.bannerTitle,
       body: payload.bannerBody,
-      data: data,
+      data: normalized,
     );
     return tryShow(message, handler: handler);
   }
@@ -182,7 +187,7 @@ class _JoinRequestBannerDialog extends StatelessWidget {
             ),
             Spacing.v16,
             _GradientActionButton(
-              label: 'Approve',
+              label: 'Add',
               icon: Icons.check_rounded,
               onTap: () async {
                 Get.back<void>();
@@ -465,7 +470,7 @@ class _JoinRequestsSheetBodyState extends State<_JoinRequestsSheetBody> {
                         TextButton(
                           onPressed: () => _respond(item, 'approve'),
                           child: const AppText(
-                            text: 'Approve',
+                            text: 'Add',
                             fontSize: TextStyles.k12FontSize,
                             color: Color(0xFFFF3EA5),
                           ),

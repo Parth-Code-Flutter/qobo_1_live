@@ -21,6 +21,7 @@ import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
 import 'package:qobo_one_live/utils/files_utils/file_utils.dart';
+import 'package:qobo_one_live/utils/app_widgets/super_admin_agency_picker_sheet.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -564,8 +565,22 @@ class _ProfileTabViewState extends State<ProfileTabView> {
       );
     }
 
-    // Agency owners + super admins open the owner dashboard directly.
-    if (session.isAgency || session.isSuperAdmin) {
+    // Super Admin: backend requires agency_id on /api/agency/dashboard.
+    if (session.isSuperAdmin) {
+      final selected = await SuperAdminAgencyPickerSheet.show();
+      if (selected == null || selected.id.trim().isEmpty) return;
+      await Get.toNamed(
+        Routes.AGENCY_OWNER,
+        arguments: {
+          'agencyId': selected.id.trim(),
+          'agency_id': selected.id.trim(),
+          'agencyName': selected.name,
+        },
+      );
+      return;
+    }
+
+    if (session.isAgency) {
       await Get.toNamed(Routes.AGENCY_OWNER);
       return;
     }
