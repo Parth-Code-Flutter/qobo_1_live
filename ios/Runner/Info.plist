@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Qobo One Live</string>
+	<string>Qobo1live</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>qobo_one_live</string>
+	<string>Qobo1live</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -46,7 +46,7 @@
 	<key>FacebookClientToken</key>
 	<string>cd0bacb6a9dc071fc904a04bdbfd7d3e</string>
 	<key>FacebookDisplayName</key>
-	<string>Qobo One Live</string>
+	<string>Qobo1live</string>
 	<key>GIDClientID</key>
 	<string>152049582917-r07ktr1kgeq70ongu0gpatc4sj1gnd6d.apps.googleusercontent.com</string>
 	<key>LSApplicationQueriesSchemes</key>
