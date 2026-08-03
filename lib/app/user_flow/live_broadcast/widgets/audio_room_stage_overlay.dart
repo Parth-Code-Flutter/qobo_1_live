@@ -17,6 +17,7 @@ import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:zego_uikit/zego_uikit.dart';
 
 import 'package:qobo_one_live/utils/ui_utils/vip_entrance_overlay.dart';
+import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 import '../controllers/live_broadcast_controller.dart';
 import '../models/audio_room_models.dart';
 import '../utils/audio_room_seat_layout.dart';
@@ -63,6 +64,15 @@ class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
               ),
             ),
           ),
+          // Video rooms only: deepen the stage behind rectangular tiles.
+          if (controller.isVideoRoom)
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.55),
+                ),
+              ),
+            ),
           if (bgUrl != null && bgUrl.isNotEmpty)
             Positioned.fill(
               child: Image.network(
@@ -92,6 +102,20 @@ class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final compact = constraints.maxWidth < 390;
+                final isVideo = controller.isVideoRoom;
+                // Keep audio padding identical to the previous working UI.
+                final side = isVideo
+                    ? (compact ? 8.0 : 10.0)
+                    : (compact ? 10.0 : 12.0);
+                final top = isVideo
+                    ? (compact ? 8.0 : 10.0)
+                    : (compact ? 12.0 : 14.0);
+                final bottomPad = isVideo
+                    ? (compact ? 280.0 : 296.0)
+                    : (compact ? 296.0 : 312.0);
+                final gridGap = isVideo
+                    ? (compact ? 10.0 : 12.0)
+                    : (compact ? 14.0 : 16.0);
                 return Stack(
                   children: [
                     CustomScrollView(
@@ -99,17 +123,17 @@ class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
                       slivers: [
                         SliverPadding(
                           padding: EdgeInsets.fromLTRB(
-                            compact ? 10 : 12,
-                            compact ? 12 : 14,
-                            compact ? 10 : 12,
+                            side,
+                            top,
+                            side,
                             // Keep the last seat row reachable above the chat
                             // feed + input + control dock.
-                            compact ? 296 : 312,
+                            bottomPad,
                           ),
                           sliver: SliverList(
                             delegate: SliverChildListDelegate.fixed([
                               _RoomHeader(compact: compact),
-                              SizedBox(height: compact ? 14 : 16),
+                              SizedBox(height: gridGap),
                               _MemberGrid(compact: compact),
                             ]),
                           ),
@@ -176,6 +200,16 @@ class _AudioRoomBottomControls extends GetView<LiveBroadcastController> {
         child: Row(
           children: [
             _MicControl(compact: compact),
+            // Video rooms only: camera on/off + flip.
+            if (controller.isVideoRoom) ...[
+              _CameraControl(compact: compact),
+              _ControlButton(
+                icon: Icons.cameraswitch_rounded,
+                label: 'Flip',
+                compact: compact,
+                onTap: controller.flipGroupCallCamera,
+              ),
+            ],
             _SpeakerControl(compact: compact),
             _ControlButton(
               icon: Icons.back_hand_rounded,
@@ -184,12 +218,13 @@ class _AudioRoomBottomControls extends GetView<LiveBroadcastController> {
               emphasized: true,
               onTap: () => controller.requestAudioSeat(),
             ),
-            _ControlButton(
-              icon: Icons.favorite_rounded,
-              label: 'React',
-              compact: compact,
-              onTap: () => Get.snackbar('React', 'Reaction sent.'),
-            ),
+            if (!controller.isVideoRoom)
+              _ControlButton(
+                icon: Icons.favorite_rounded,
+                label: 'React',
+                compact: compact,
+                onTap: () => Get.snackbar('React', 'Reaction sent.'),
+              ),
             // Always show Gift; send blocks with toast when host/person is alone.
             Obx(
               () => _GiftControlButton(
@@ -415,6 +450,32 @@ class _MicControl extends StatelessWidget {
           compact: compact,
           active: isOn,
           onTap: () => ZegoUIKit().turnMicrophoneOn(!isOn, muteMode: true),
+        );
+      },
+    );
+  }
+}
+
+/// Local camera toggle for video party rooms (group-call Zego engine).
+class _CameraControl extends StatelessWidget {
+  const _CameraControl({required this.compact});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final userId = ZegoUIKit().getLocalUser().id;
+    return ValueListenableBuilder<bool>(
+      valueListenable: ZegoUIKit().getCameraStateNotifier(userId),
+      builder: (context, isOn, _) {
+        return _ControlButton(
+          icon: isOn
+              ? Icons.videocam_rounded
+              : Icons.videocam_off_rounded,
+          label: isOn ? 'Cam On' : 'Cam Off',
+          compact: compact,
+          active: isOn,
+          onTap: () => ZegoUIKit().turnCameraOn(!isOn),
         );
       },
     );
@@ -774,27 +835,52 @@ class _MemberGridState extends State<_MemberGrid> {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final seats = _buildSeats();
-      final visibleSeats = seats;
+      final seats = controller.audioRoomSeats.toList();
 
       return LayoutBuilder(
         builder: (context, constraints) {
-          final metrics = _SeatLayoutMetrics.fromWidth(
-            constraints.maxWidth,
-            compact: widget.compact,
-          );
+          final isVideo = controller.isVideoRoom;
+
+          // Audio: restore fixed 3-column circular seats (previous working UI).
+          // Video: equal rectangular tiles sized from seat count.
+          final metrics = isVideo
+              ? _SeatLayoutMetrics.videoFromWidth(
+                  constraints.maxWidth,
+                  compact: widget.compact,
+                  seatCount: seats.length,
+                )
+              : _SeatLayoutMetrics.fromWidth(
+                  constraints.maxWidth,
+                  compact: widget.compact,
+                );
+
           return GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: visibleSeats.length,
+            itemCount: seats.length,
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: AudioRoomSeatLayoutMetrics.crossAxisCount,
+              crossAxisCount: isVideo
+                  ? metrics.columns
+                  : AudioRoomSeatLayoutMetrics.crossAxisCount,
               mainAxisExtent: metrics.mainAxisExtent,
               mainAxisSpacing: metrics.mainAxisSpacing,
               crossAxisSpacing: metrics.crossAxisSpacing,
             ),
             itemBuilder: (context, index) {
-              final seat = visibleSeats[index];
+              final seat = seats[index];
+              if (isVideo) {
+                if (seat.isLocked) {
+                  return _VideoLockedSeatTile(seatNo: seat.seatNo);
+                }
+                if (!seat.occupied) {
+                  return _VideoEmptySeatTile(
+                    seatNo: seat.seatNo,
+                    metrics: metrics,
+                  );
+                }
+                return _VideoOccupiedSeatTile(seat: seat);
+              }
+
               if (seat.isLocked) {
                 return _LockedSeat(seatNo: seat.seatNo, metrics: metrics);
               }
@@ -808,8 +894,584 @@ class _MemberGridState extends State<_MemberGrid> {
       );
     });
   }
+}
 
-  List<AudioRoomSeatModel> _buildSeats() => controller.audioRoomSeats.toList();
+// ---------------------------------------------------------------------------
+// Video-room seat tiles — equal rounded rectangles (conference-style grid).
+// Audio rooms keep the circular premium frames below.
+// ---------------------------------------------------------------------------
+
+/// Shared chrome for every video seat: rounded rect, soft frame border.
+class _VideoSeatShell extends StatelessWidget {
+  const _VideoSeatShell({
+    required this.child,
+    required this.isHost,
+    this.onTap,
+  });
+
+  final Widget child;
+  final bool isHost;
+  final VoidCallback? onTap;
+
+  static const _radius = 18.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final borderColor = isHost
+        ? const Color(0xFFFFC857).withValues(alpha: 0.85)
+        : kColorWhite.withValues(alpha: 0.14);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(_radius),
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(_radius),
+            border: Border.all(color: borderColor, width: isHost ? 1.6 : 1.0),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.35),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              ),
+              if (isHost)
+                BoxShadow(
+                  color: const Color(0xFFFFC857).withValues(alpha: 0.18),
+                  blurRadius: 16,
+                  spreadRadius: 0.5,
+                ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(_radius - 0.5),
+            child: child,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Occupied video seat: full-bleed camera + mic badge + bottom identity bar.
+class _VideoOccupiedSeatTile extends GetView<LiveBroadcastController> {
+  const _VideoOccupiedSeatTile({required this.seat});
+
+  final AudioRoomSeatModel seat;
+
+  @override
+  Widget build(BuildContext context) {
+    final rawRole = seat.role.trim();
+    final roleLabel = seat.isHost
+        ? 'Host'
+        : (seat.isCoinsSeller
+            ? 'Seller'
+            : (rawRole.isEmpty
+                ? 'Speaker'
+                : '${rawRole[0].toUpperCase()}${rawRole.substring(1).toLowerCase()}'));
+
+    return _VideoSeatShell(
+      isHost: seat.isHost,
+      onTap: () => _openSeatActions(context),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Camera fills the whole tile.
+          _SeatVideoFill(
+            userId: seat.userId,
+            name: seat.name,
+            imageUrl: seat.avatarUrl,
+          ),
+          // Soft bottom scrim so the name stays readable over any scene.
+          const Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 56,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0x00000000),
+                    Color(0x99000000),
+                    Color(0xCC000000),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Mic state — sample-style top-left badge.
+          Positioned(
+            left: 8,
+            top: 8,
+            child: _VideoMicBadge(muted: seat.isMuted),
+          ),
+          // Seat index — subtle top-right.
+          Positioned(
+            right: 8,
+            top: 8,
+            child: _VideoSeatIndexChip(seatNo: seat.seatNo),
+          ),
+          // Identity + role at the bottom of the rectangle.
+          Positioned(
+            left: 10,
+            right: 10,
+            bottom: 10,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SemiBoldText(
+                        text: seat.name,
+                        fontSize: TextStyles.k12FontSize,
+                        color: kColorWhite,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          _VideoRoleChip(
+                            label: roleLabel,
+                            highlighted: seat.isHost,
+                          ),
+                          if (seat.diamonds > 0) ...[
+                            const SizedBox(width: 6),
+                            Icon(
+                              Icons.diamond_rounded,
+                              size: 11,
+                              color: AudioRoomStageOverlay._seatGold,
+                            ),
+                            const SizedBox(width: 2),
+                            AppText(
+                              text: '${seat.diamonds}',
+                              fontSize: TextStyles.k10FontSize,
+                              color: kColorWhite.withValues(alpha: 0.78),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                if (seat.avatarFrameUrl?.trim().isNotEmpty == true)
+                  _VideoMiniFrameThumb(url: seat.avatarFrameUrl!.trim()),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openSeatActions(BuildContext context) {
+    if (seat.isHost) return;
+    Get.bottomSheet(
+      _AudioSeatActionsSheet(
+        seat: seat,
+        isHostView: controller.canManageAudioRoomMembers,
+      ),
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.55),
+      isScrollControlled: true,
+    );
+  }
+}
+
+/// Empty video seat placeholder — same size as occupied tiles.
+class _VideoEmptySeatTile extends GetView<LiveBroadcastController> {
+  const _VideoEmptySeatTile({
+    required this.seatNo,
+    required this.metrics,
+  });
+
+  final int seatNo;
+  final _SeatLayoutMetrics metrics;
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final isManager =
+          controller.isHost.value || controller.canManageAudioRoomMembers;
+      final actionLabel = isManager
+          ? 'Invite'
+          : (controller.viewerFollowsHost.value ? 'Sit' : 'Request');
+
+      return _VideoSeatShell(
+        isHost: false,
+        onTap: () => _onEmptySeatTap(),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF1B1528),
+                    Color(0xFF12141C),
+                    Color(0xFF0B0D14),
+                  ],
+                ),
+              ),
+            ),
+            // Soft dashed feel via inset border.
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(
+                  painter: _VideoEmptySeatDashPainter(
+                    color: kColorWhite.withValues(alpha: 0.10),
+                    radius: 16,
+                  ),
+                ),
+              ),
+            ),
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: metrics.avatarSize.clamp(44.0, 64.0),
+                    height: metrics.avatarSize.clamp(44.0, 64.0),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: kColorWhite.withValues(alpha: 0.06),
+                      border: Border.all(
+                        color: kColorWhite.withValues(alpha: 0.12),
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.person_outline_rounded,
+                      color: kColorWhite.withValues(alpha: 0.42),
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SemiBoldText(
+                    text: 'Seat $seatNo',
+                    fontSize: TextStyles.k12FontSize,
+                    color: kColorWhite.withValues(alpha: 0.72),
+                  ),
+                  const SizedBox(height: 2),
+                  AppText(
+                    text: 'Empty',
+                    fontSize: TextStyles.k10FontSize,
+                    color: kColorWhite.withValues(alpha: 0.40),
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              left: 10,
+              right: 10,
+              bottom: 10,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SemiBoldText(
+                      text: actionLabel,
+                      fontSize: TextStyles.k12FontSize,
+                      color: kColorWhite.withValues(alpha: 0.88),
+                    ),
+                  ),
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: kColorWhite.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: kColorWhite.withValues(alpha: 0.18),
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.add_rounded,
+                      color: kColorWhite,
+                      size: 18,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              right: 8,
+              top: 8,
+              child: _VideoSeatIndexChip(seatNo: seatNo),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  void _onEmptySeatTap() {
+    final isManager =
+        controller.isHost.value || controller.canManageAudioRoomMembers;
+    if (isManager) {
+      Get.bottomSheet(
+        _EmptySeatActionsSheet(seatNo: seatNo),
+        backgroundColor: Colors.transparent,
+        isScrollControlled: true,
+      );
+      return;
+    }
+    unawaited(controller.requestSeatForSeatNo(seatNo));
+  }
+}
+
+class _VideoLockedSeatTile extends StatelessWidget {
+  const _VideoLockedSeatTile({required this.seatNo});
+
+  final int seatNo;
+
+  @override
+  Widget build(BuildContext context) {
+    return _VideoSeatShell(
+      isHost: false,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          const ColoredBox(color: Color(0xFF12141C)),
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.lock_rounded,
+                  color: kColorWhite.withValues(alpha: 0.45),
+                  size: 28,
+                ),
+                const SizedBox(height: 8),
+                SemiBoldText(
+                  text: 'Locked',
+                  fontSize: TextStyles.k12FontSize,
+                  color: kColorWhite.withValues(alpha: 0.55),
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            right: 8,
+            top: 8,
+            child: _VideoSeatIndexChip(seatNo: seatNo),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _VideoMicBadge extends StatelessWidget {
+  const _VideoMicBadge({required this.muted});
+
+  final bool muted;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.48),
+        shape: BoxShape.circle,
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.14)),
+      ),
+      child: Icon(
+        muted ? Icons.mic_off_rounded : Icons.mic_rounded,
+        size: 15,
+        color: muted ? const Color(0xFFFF6B7A) : kColorWhite,
+      ),
+    );
+  }
+}
+
+class _VideoSeatIndexChip extends StatelessWidget {
+  const _VideoSeatIndexChip({required this.seatNo});
+
+  final int seatNo;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.42),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
+      ),
+      child: AppText(
+        text: '#$seatNo',
+        fontSize: TextStyles.k10FontSize,
+        color: kColorWhite.withValues(alpha: 0.78),
+      ),
+    );
+  }
+}
+
+class _VideoRoleChip extends StatelessWidget {
+  const _VideoRoleChip({
+    required this.label,
+    required this.highlighted,
+  });
+
+  final String label;
+  final bool highlighted;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        gradient: highlighted
+            ? const LinearGradient(
+                colors: [Color(0xFFFFC857), Color(0xFFE8A317)],
+              )
+            : null,
+        color: highlighted ? null : kColorWhite.withValues(alpha: 0.14),
+      ),
+      child: SemiBoldText(
+        text: label,
+        fontSize: TextStyles.k10FontSize,
+        color: highlighted ? const Color(0xFF2A1A08) : kColorWhite,
+      ),
+    );
+  }
+}
+
+/// Tiny avatar-frame preview on the identity bar when the user wears one.
+class _VideoMiniFrameThumb extends StatelessWidget {
+  const _VideoMiniFrameThumb({required this.url});
+
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.22)),
+        image: DecorationImage(
+          image: NetworkImage(ApiImageUtils.normalize(url) ?? url),
+          fit: BoxFit.cover,
+        ),
+      ),
+    );
+  }
+}
+
+/// Soft dashed outline painted inside empty video seats.
+class _VideoEmptySeatDashPainter extends CustomPainter {
+  _VideoEmptySeatDashPainter({
+    required this.color,
+    required this.radius,
+  });
+
+  final Color color;
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+    final rect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(6, 6, size.width - 12, size.height - 12),
+      Radius.circular(radius),
+    );
+    // Approximate a dashed look with a path metric dash.
+    final path = Path()..addRRect(rect);
+    for (final metric in path.computeMetrics()) {
+      var distance = 0.0;
+      while (distance < metric.length) {
+        final next = distance + 5;
+        canvas.drawPath(
+          metric.extractPath(distance, next.clamp(0, metric.length)),
+          paint,
+        );
+        distance += 10;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _VideoEmptySeatDashPainter oldDelegate) {
+    return oldDelegate.color != color || oldDelegate.radius != radius;
+  }
+}
+
+/// Full-bleed Zego camera for rectangular video seats.
+class _SeatVideoFill extends StatelessWidget {
+  const _SeatVideoFill({
+    required this.userId,
+    required this.name,
+    required this.imageUrl,
+  });
+
+  final String userId;
+  final String name;
+  final String? imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final zegoId = ZegoLiveIdUtils.sanitizeUserId(userId.trim());
+    if (zegoId.isEmpty) {
+      return _videoFallbackAvatar();
+    }
+
+    ZegoUIKitUser? matched;
+    for (final user in ZegoUIKit().getAllUsers()) {
+      if (user.id == zegoId ||
+          ZegoLiveIdUtils.sanitizeUserId(user.id) == zegoId) {
+        matched = user;
+        break;
+      }
+    }
+    final zegoUser = matched ?? ZegoUIKitUser(id: zegoId, name: name);
+
+    return ZegoAudioVideoView(
+      user: zegoUser,
+      borderRadius: 0,
+      borderColor: Colors.transparent,
+      backgroundBuilder: (context, size, user, extraInfo) {
+        return _videoFallbackAvatar();
+      },
+      avatarConfig: ZegoAvatarConfig(
+        showInAudioMode: true,
+        showSoundWavesInAudioMode: false,
+        builder: (context, size, user, extraInfo) {
+          return AppUserAvatar(
+            name: name,
+            imageUrl: imageUrl,
+            size: size.shortestSide * 0.42,
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _videoFallbackAvatar() {
+    return ColoredBox(
+      color: const Color(0xFF1A1228),
+      child: Center(
+        child: AppUserAvatar(
+          name: name,
+          imageUrl: imageUrl,
+          size: 72,
+        ),
+      ),
+    );
+  }
 }
 
 /// Scales seat content down if fonts/accessibility push past the cell height.

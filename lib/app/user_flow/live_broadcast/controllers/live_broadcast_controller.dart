@@ -30,9 +30,9 @@ import 'package:qobo_one_live/utils/ui_utils/gift_chat_celebration_tracker.dart'
 import 'package:qobo_one_live/utils/ui_utils/gift_media_utils.dart';
 import 'package:qobo_one_live/utils/ui_utils/coin_fly_overlay.dart';
 import 'package:qobo_one_live/utils/ui_utils/vip_entrance_overlay.dart';
+import 'package:zego_uikit_prebuilt_live_streaming/zego_uikit_prebuilt_live_streaming.dart';
 import 'package:qobo_one_live/utils/zego_engine_utils.dart';
 import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
-import 'package:zego_uikit_prebuilt_live_streaming/zego_uikit_prebuilt_live_streaming.dart';
 
 import '../models/audio_room_models.dart';
 import '../models/room_background_theme.dart';
@@ -3842,6 +3842,14 @@ class LiveBroadcastController extends GetxController {
   void toggleCamera() {
     if (!isVideoRoom) return;
     try {
+      // Party video rooms use the group-call Zego engine (not live-streaming).
+      if (isAudioVideoRoom) {
+        final userId = ZegoUIKit().getLocalUser().id;
+        final isOn = ZegoUIKit().getCameraStateNotifier(userId).value;
+        ZegoUIKit().turnCameraOn(!isOn);
+        isCameraOff.value = isOn;
+        return;
+      }
       final camera =
           ZegoUIKitPrebuiltLiveStreamingController().audioVideo.camera;
       camera.switchState();
@@ -3849,6 +3857,17 @@ class LiveBroadcastController extends GetxController {
     } catch (_) {
       isCameraOff.value = !isCameraOff.value;
     }
+  }
+
+  /// Flip front/back camera for video party rooms.
+  void flipGroupCallCamera() {
+    if (!isVideoRoom || !isAudioVideoRoom) return;
+    try {
+      final userId = ZegoUIKit().getLocalUser().id;
+      final isFront =
+          ZegoUIKit().getUseFrontFacingCameraStateNotifier(userId).value;
+      unawaited(ZegoUIKit().useFrontFacingCamera(!isFront));
+    } catch (_) {}
   }
 
   void leaveRoom() {

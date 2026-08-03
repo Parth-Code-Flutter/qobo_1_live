@@ -5,7 +5,6 @@ import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/app_widgets/session_earnings_badge.dart';
-import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:zego_uikit_prebuilt_call/zego_uikit_prebuilt_call.dart' as call;
@@ -134,20 +133,11 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
             )
           else
             const Positioned.fill(child: ColoredBox(color: Colors.black)),
-          if (!isVideoRoom) ...[
-            const Positioned.fill(child: AudioRoomStageOverlay()),
-            if (!canOpenCall) _buildAudioRoomConnectionBanner(),
-          ],
-          if (isVideoRoom) ...[
-            _buildVideoHostEarningsBadge(),
-            const Positioned(
-              left: 12,
-              right: 12,
-              bottom: 96,
-              child: _VideoFloorAudienceStrip(),
-            ),
-          ],
-          _buildGroupCallGiftDock(),
+          // Audio + video party rooms share the same seat grid overlay
+          // (host on seat 1, empty seats, invite / request / floor strip).
+          const Positioned.fill(child: AudioRoomStageOverlay()),
+          if (!canOpenCall) _buildAudioRoomConnectionBanner(),
+          // Gift dock is only for live-stream chrome; party overlay has Gift.
         ],
       );
     });
@@ -170,147 +160,6 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
 
     // Viewers should still report leave when the host/room ends remotely.
     return reason == call.ZegoCallEndReason.remoteHangUp;
-  }
-
-  Widget _buildVideoHostEarningsBadge() {
-    return Positioned(
-      top: 8,
-      right: 14,
-      child: SafeArea(
-        child: SessionEarningsBadge(
-          key: controller.sessionEarningsBadgeKey,
-          tracker: controller.sessionEarnings,
-          compact: true,
-          maxWidth: 72,
-          icon: Icons.monetization_on_rounded,
-          iconColor: const Color(0xFFFFA10A),
-          backgroundColor: Colors.black.withValues(alpha: 0.35),
-          onTap: controller.openSessionEarningsDialog,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGroupCallGiftDock() {
-    return Obx(() {
-      if (controller.isAudioVideoRoom && !controller.isVideoRoom) {
-        return const SizedBox.shrink();
-      }
-
-      // Theme is host-only; Gift always stays visible (send gated in controller).
-      final showBackground =
-          controller.isHost.value && controller.isAudioVideoRoom;
-
-      // Keep gifts / host tools outside Zego's menu bars so call controls stay
-      // unchanged.
-      return Positioned(
-        right: 14,
-        bottom: 108,
-        child: SafeArea(
-          minimum: const EdgeInsets.only(bottom: 4),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              if (showBackground) ...[
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: controller.openRoomBackgroundSheet,
-                    borderRadius: BorderRadius.circular(28),
-                    child: Container(
-                      height: 48,
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      decoration: BoxDecoration(
-                        color: _surface,
-                        borderRadius: BorderRadius.circular(28),
-                        border: Border.all(
-                          color: kColorWhite.withValues(alpha: 0.08),
-                        ),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.wallpaper_rounded,
-                            color: Color(0xFF7AD7FF),
-                            size: 18,
-                          ),
-                          SizedBox(width: 8),
-                          SemiBoldText(
-                            text: 'Theme',
-                            fontSize: TextStyles.k12FontSize,
-                            color: kColorWhite,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                Spacing.v10,
-              ],
-              Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: controller.openGiftsSheet,
-                    borderRadius: BorderRadius.circular(28),
-                    child: Container(
-                      height: 52,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: _surface,
-                        borderRadius: BorderRadius.circular(28),
-                        border: Border.all(
-                          color: kColorWhite.withValues(alpha: 0.08),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.22),
-                            blurRadius: 18,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.diamond_rounded,
-                            color: kColorWalletAmount,
-                            size: 18,
-                          ),
-                          Spacing.h6,
-                          SemiBoldText(
-                            text: formatLedgerAmount(
-                              controller.coinsBalance.value,
-                            ),
-                            fontSize: TextStyles.k12FontSize,
-                            color: kColorWhite,
-                          ),
-                          Spacing.h10,
-                          Container(
-                            width: 34,
-                            height: 34,
-                            decoration: const BoxDecoration(
-                              color: _accent,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.card_giftcard_rounded,
-                              color: kColorWhite,
-                              size: 18,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      );
-    });
   }
 
   Widget _buildAudioRoomConnectionBanner() {
@@ -395,32 +244,40 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
       ..turnOnMicrophoneWhenJoining = true
       ..useSpeakerWhenJoining = true
       ..enableAccidentalTouchPrevention = false
-      ..duration.isVisible = true
+      ..duration.isVisible = false
       ..user.requiredUsers.enabled = false
+      // Hide Zego's default stacked gallery — we render seats ourselves.
+      ..audioVideoView.containerBuilder = _buildHiddenPartyRoomVideoContainer
+      ..audioVideoView.showUserNameOnView = false
+      ..audioVideoView.showMicrophoneStateOnView = false
+      ..audioVideoView.showCameraStateOnView = false
       ..topMenuBar = call.ZegoCallTopMenuBarConfig(
         title: roomTitle,
         style: call.ZegoCallMenuBarStyle.dark,
-        hideAutomatically: false,
-        buttons: const [call.ZegoCallMenuBarButtonName.showMemberListButton],
+        hideAutomatically: true,
+        isVisible: false,
+        buttons: const [],
       )
       ..bottomMenuBar = call.ZegoCallBottomMenuBarConfig(
         style: call.ZegoCallMenuBarStyle.dark,
-        hideAutomatically: false,
+        hideAutomatically: true,
+        isVisible: false,
         maxCount: 5,
-        buttons: isVideoRoom
-            ? const [
-                call.ZegoCallMenuBarButtonName.toggleCameraButton,
-                call.ZegoCallMenuBarButtonName.toggleMicrophoneButton,
-                call.ZegoCallMenuBarButtonName.switchCameraButton,
-                call.ZegoCallMenuBarButtonName.switchAudioOutputButton,
-                call.ZegoCallMenuBarButtonName.hangUpButton,
-              ]
-            : const [
-                // Audio rooms use the custom concert-style control dock.
-              ],
+        // Custom AudioRoomStageOverlay owns mic / cam / gift / leave.
+        buttons: const [],
       );
 
     return config;
+  }
+
+  /// Keeps the Zego call engine running while our seat grid shows video tiles.
+  Widget? _buildHiddenPartyRoomVideoContainer(
+    BuildContext context,
+    List<ZegoUIKitUser> allUsers,
+    List<ZegoUIKitUser> audioVideoUsers,
+    ZegoAudioVideoView Function(ZegoUIKitUser) audioVideoViewCreator,
+  ) {
+    return const SizedBox.shrink();
   }
 
   Widget _buildMainVideoBackground() {
@@ -1436,55 +1293,5 @@ class _AudioRoomPlusTile extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-/// Floor audience avatars for video party rooms (audio uses stage overlay strip).
-class _VideoFloorAudienceStrip extends GetView<LiveBroadcastController> {
-  const _VideoFloorAudienceStrip();
-
-  @override
-  Widget build(BuildContext context) {
-    return Obx(() {
-      final users = controller.floorAudience;
-      if (users.isEmpty) return const SizedBox.shrink();
-      return SizedBox(
-        height: 42,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            for (var i = 0; i < users.length && i < 12; i++)
-              Positioned(
-                left: i * 22.0,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => openFloorAudienceProfileSheet(users[i]),
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: const Color(0xFFFF3EA5).withValues(alpha: 0.55),
-                        width: 1.5,
-                      ),
-                      color: Colors.white12,
-                      image: (users[i].avatarUrl ?? '').trim().isNotEmpty
-                          ? DecorationImage(
-                              image: NetworkImage(users[i].avatarUrl!.trim()),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
-                    ),
-                    child: (users[i].avatarUrl ?? '').trim().isEmpty
-                        ? const Icon(Icons.person, size: 16, color: kColorWhite)
-                        : null,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      );
-    });
   }
 }
