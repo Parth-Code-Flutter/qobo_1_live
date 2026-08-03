@@ -1,27 +1,31 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/geo/country_flag_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
-/// One video room row for collapsed header + expanded body.
+/// Parsed card model for the video-room browse grid.
 typedef _VideoRoomTileData = ({
   String title,
   String hostName,
-  String category,
   String viewerCountShort,
   String image,
   String avatar,
-  String country,
-  List<String> tags,
+  String? frameUrl,
+  String? countryFlag,
+  String? countryLabel,
   Map<String, dynamic> room,
 });
 
-/// Video room feed with image-first cards for a dating-style browse feel.
+/// Video rooms listing — clean Bigo / party-room style 2-column grid.
+///
+/// Cover-first cards, small framed host avatars at the bottom, and a simple
+/// people-count pill (no overlapping chips or giant center crowns).
 class VideoRoomListView extends StatefulWidget {
   const VideoRoomListView({
     super.key,
@@ -42,15 +46,10 @@ class VideoRoomListView extends StatefulWidget {
 
   static const String roomLabel = 'Video Room';
 
-  static const ColorFilter _whiteIcon = ColorFilter.mode(
-    kColorWhite,
-    BlendMode.srcIn,
-  );
-
   static const _previewGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [kColorVideoPreviewGradientStart, kColorVideoPreviewGradientEnd],
+    colors: [Color(0xFF2A1548), Color(0xFF12081F)],
   );
 
   @override
@@ -65,237 +64,221 @@ class _VideoRoomListViewState extends State<VideoRoomListView> {
       (index) => _tileFromRoom(widget.rooms[index], index),
     );
 
-    return widget.isLoading
-        ? const Center(
-            child: CircularProgressIndicator(
-              color: kColorWhite,
-              strokeWidth: 2,
-            ),
-          )
-        : RefreshIndicator(
-            color: kColorPrimary,
-            backgroundColor: LiveRoomUiColors.screenGradientBottom,
-            onRefresh: widget.onRefresh ?? () async {},
-            child: CustomScrollView(
-              slivers: [
-                if (widget.showCreatePanel)
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(14, 4, 14, 12),
-                    sliver: SliverToBoxAdapter(
-                      child: _CreateVideoRoomPanel(
-                        liveCount: tiles.length,
-                        onTap: widget.onCreateVideoRoom,
-                      ),
-                    ),
-                  ),
-                if (tiles.isEmpty)
-                  const SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: _VideoRoomsEmptyState(),
-                  )
-                else
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(14, 4, 14, 28),
-                    sliver: SliverToBoxAdapter(
-                      child: _VideoRoomsBrowseGrid(
-                        tiles: tiles,
-                        onJoinLive: widget.onJoinLive,
-                      ),
-                    ),
-                  ),
-              ],
-              physics: const AlwaysScrollableScrollPhysics(
-                parent: BouncingScrollPhysics(),
+    if (widget.isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: kColorWhite, strokeWidth: 2),
+      );
+    }
+
+    return RefreshIndicator(
+      color: kColorPrimary,
+      backgroundColor: LiveRoomUiColors.screenGradientBottom,
+      onRefresh: widget.onRefresh ?? () async {},
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        slivers: [
+          if (widget.showCreatePanel)
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(4, 4, 4, 12),
+              sliver: SliverToBoxAdapter(
+                child: _CreateVideoRoomPanel(
+                  liveCount: tiles.length,
+                  onTap: widget.onCreateVideoRoom,
+                ),
               ),
             ),
-          );
+          if (tiles.isEmpty)
+            const SliverFillRemaining(
+              hasScrollBody: false,
+              child: _VideoRoomsEmptyState(),
+            )
+          else ...[
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(4, 2, 4, 10),
+              sliver: SliverToBoxAdapter(
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: SemiBoldText(
+                        text: 'Live now',
+                        fontSize: TextStyles.k16FontSize,
+                        color: kColorWhite,
+                      ),
+                    ),
+                    AppText(
+                      text:
+                          '${tiles.length} ${tiles.length == 1 ? 'room' : 'rooms'}',
+                      fontSize: TextStyles.k12FontSize,
+                      color: kColorWhite.withValues(alpha: 0.55),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(4, 0, 4, 28),
+              sliver: SliverGrid(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 0.78,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final data = tiles[index];
+                    return _VideoRoomCard(
+                      data: data,
+                      onJoin: widget.onJoinLive == null
+                          ? null
+                          : () => widget.onJoinLive!(data.room),
+                    );
+                  },
+                  childCount: tiles.length,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   _VideoRoomTileData _tileFromRoom(Map<String, dynamic> room, int index) {
     const fallbackImages = [kImgTemp2, kImgTemp3, kImgTemp4, kImgTemp5];
     final host = room['host'];
     final hostMap = host is Map ? host : const <String, dynamic>{};
-    final rawTags = room['tags'];
-    final roomTags = rawTags is List
-        ? rawTags
-              .map((tag) => _text(tag))
-              .whereType<String>()
-              .map((tag) => tag.startsWith('#') ? tag : '#$tag')
-              .toList()
-        : const <String>[];
+    final nestedRoom = room['roomData'];
+    final nestedMap = nestedRoom is Map
+        ? Map<String, dynamic>.from(nestedRoom)
+        : const <String, dynamic>{};
+
     final title =
         _text(room['name']) ??
         _text(room['title']) ??
+        _text(nestedMap['name']) ??
         _text(room['hostName']) ??
-        'Live Video Room';
+        'Video Room';
     final hostName =
         _text(room['hostName']) ??
         _text(hostMap['name']) ??
-        _text(room['userName']) ??
-        title;
+        _text(nestedMap['hostName']) ??
+        'Host';
     final viewers =
-        _text(room['viewerCount']) ??
-        _text(room['onlineCount']) ??
-        _text(room['heatScore']) ??
-        _text(room['audienceCount']) ??
-        _text(room['watching']) ??
-        _text(room['_count']) ??
-        '0';
+        _formatViewers(
+          _text(room['viewerCount']) ??
+              _text(room['onlineCount']) ??
+              _text(room['heatScore']) ??
+              _text(room['audienceCount']) ??
+              _text(nestedMap['viewerCount']) ??
+              '0',
+        );
+
     final image =
         ApiImageUtils.normalize(
-          _text(room['coverImage']) ??
-              _text(room['image']) ??
-              _text(room['thumbnail']) ??
-              _text(room['poster']),
+          _firstNonEmpty([
+            room['backgroundImage'],
+            room['background_image'],
+            room['backgroundUrl'],
+            room['background_url'],
+            room['background'],
+            nestedMap['backgroundImage'],
+            nestedMap['backgroundUrl'],
+            nestedMap['background_url'],
+            room['coverImage'],
+            room['image'],
+            room['thumbnail'],
+            room['poster'],
+            nestedMap['coverImage'],
+          ]),
         ) ??
         fallbackImages[index % fallbackImages.length];
+
     final avatar =
         ApiImageUtils.normalize(
-          _text(room['hostDisplayPicture']) ??
-              _text(room['hostAvatar']) ??
-              _text(hostMap['displayPicture']),
+          _firstNonEmpty([
+            room['hostDisplayPicture'],
+            room['hostAvatar'],
+            hostMap['displayPicture'],
+            hostMap['avatar'],
+            nestedMap['hostDisplayPicture'],
+            nestedMap['hostAvatar'],
+          ]),
         ) ??
         fallbackImages[(index + 1) % fallbackImages.length];
+
+    final frameUrl = ApiImageUtils.normalize(
+      _readFrameUrl(room['avatarFrame']) ??
+          _readFrameUrl(room['avatarFrameUrl']) ??
+          _readFrameUrl(hostMap['avatarFrame']) ??
+          _readFrameUrl(hostMap['avatarFrameUrl']) ??
+          _readFrameUrl(nestedMap['avatarFrame']) ??
+          _readFrameUrl(nestedMap['hostAvatarFrame']) ??
+          _readFrameUrl(nestedMap['hostAvatarFrameUrl']),
+    );
+
+    final countryRaw = _firstNonEmpty([
+      room['countryCode'],
+      room['country'],
+      room['countryName'],
+      hostMap['countryCode'],
+      hostMap['country'],
+      nestedMap['countryCode'],
+      nestedMap['country'],
+      nestedMap['countryName'],
+    ]);
+    final country = CountryFlagUtils.resolve(countryRaw);
+
     return (
       title: title,
       hostName: hostName,
-      category:
-          _text(room['bio']) ?? _text(room['category']) ?? 'Live video stream',
       viewerCountShort: viewers,
       image: image,
       avatar: avatar,
-      country:
-          _text(room['countryCode']) ??
-          _text(room['country']) ??
-          _text(room['countryName']) ??
-          'GLOBAL',
-      tags: [
-        '#${(room['type']?.toString() ?? 'video').toUpperCase()}',
-        ...roomTags,
-        if (_text(room['countryName']) != null) '#${room['countryName']}',
-        if (_text(room['countryName']) == null &&
-            _text(room['countryCode']) != null)
-          '#${room['countryCode']}',
-        if (_text(room['countryName']) == null &&
-            _text(room['countryCode']) == null &&
-            _text(room['country']) != null)
-          '#${room['country']}',
-        if (_text(room['countryName']) == null &&
-            _text(room['countryCode']) == null &&
-            _text(room['country']) == null)
-          '#Global',
-      ],
+      frameUrl: frameUrl,
+      countryFlag: country?.emoji,
+      countryLabel: country?.label,
       room: room,
     );
+  }
+
+  String _formatViewers(String raw) {
+    final n = int.tryParse(raw.replaceAll(RegExp(r'[^0-9]'), ''));
+    if (n == null) return raw;
+    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
+    if (n >= 1000) return '${(n / 1000).toStringAsFixed(n >= 10000 ? 0 : 1)}K';
+    return '$n';
+  }
+
+  String? _firstNonEmpty(List<dynamic> values) {
+    for (final value in values) {
+      final text = _text(value);
+      if (text != null) return text;
+    }
+    return null;
+  }
+
+  String? _readFrameUrl(dynamic frame) {
+    if (frame == null) return null;
+    if (frame is String) return _text(frame);
+    if (frame is Map) {
+      return _firstNonEmpty([
+        frame['image'],
+        frame['imageUrl'],
+        frame['url'],
+        frame['frameUrl'],
+        frame['svga'],
+      ]);
+    }
+    return _text(frame);
   }
 
   String? _text(dynamic value) {
     final text = value?.toString().trim();
     if (text == null || text.isEmpty || text == 'null') return null;
     return text;
-  }
-}
-
-/// Dating-app inspired browse layout: one immersive featured room followed by
-/// a responsive two-column grid. A single room no longer looks undersized.
-class _VideoRoomsBrowseGrid extends StatelessWidget {
-  const _VideoRoomsBrowseGrid({required this.tiles, required this.onJoinLive});
-
-  final List<_VideoRoomTileData> tiles;
-  final ValueChanged<Map<String, dynamic>>? onJoinLive;
-
-  @override
-  Widget build(BuildContext context) {
-    final remaining = tiles.skip(1).toList();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionTitle(
-          title: 'Trending now',
-          subtitle:
-              '${tiles.length} live ${tiles.length == 1 ? 'room' : 'rooms'}',
-        ),
-        Spacing.v10,
-        SizedBox(
-          height: 286,
-          child: _VideoRoomAccordionTile(
-            data: tiles.first,
-            featured: true,
-            onJoinLive: _joinCallback(tiles.first),
-          ),
-        ),
-        if (remaining.isNotEmpty) ...[
-          Spacing.v20,
-          const _SectionTitle(
-            title: 'More live rooms',
-            subtitle: 'Meet someone new',
-          ),
-          Spacing.v10,
-          LayoutBuilder(
-            builder: (context, constraints) {
-              const spacing = 12.0;
-              final cardWidth = (constraints.maxWidth - spacing) / 2;
-              return Wrap(
-                spacing: spacing,
-                runSpacing: 14,
-                children: remaining
-                    .map(
-                      (data) => SizedBox(
-                        width: cardWidth,
-                        height: 250,
-                        child: _VideoRoomAccordionTile(
-                          data: data,
-                          onJoinLive: _joinCallback(data),
-                        ),
-                      ),
-                    )
-                    .toList(),
-              );
-            },
-          ),
-        ],
-      ],
-    );
-  }
-
-  VoidCallback? _joinCallback(_VideoRoomTileData data) {
-    if (onJoinLive == null) return null;
-    return () => onJoinLive!(data.room);
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.title, required this.subtitle});
-
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: SemiBoldText(
-            text: title,
-            fontSize: TextStyles.k16FontSize,
-            color: kColorWhite,
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-          decoration: BoxDecoration(
-            color: kColorWhite.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
-          ),
-          child: AppText(
-            text: subtitle,
-            fontSize: TextStyles.k10FontSize,
-            color: kColorWhite.withValues(alpha: 0.66),
-          ),
-        ),
-      ],
-    );
   }
 }
 
@@ -307,85 +290,59 @@ class _CreateVideoRoomPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            kColorVideoJoinLivePurple.withValues(alpha: 0.92),
-            kColorVideoPreviewGradientEnd.withValues(alpha: 0.95),
-          ],
-        ),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
-        boxShadow: [
-          BoxShadow(
-            color: kColorVideoJoinLivePurple.withValues(alpha: 0.28),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: kColorWhite.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            gradient: const LinearGradient(
+              colors: [Color(0xFF7A1E63), Color(0xFFB8328A)],
             ),
-            child: const Icon(Icons.add_rounded, color: kColorWhite, size: 28),
+            border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
           ),
-          Spacing.h12,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SemiBoldText(
-                  text: 'Start a Video Room',
-                  fontSize: TextStyles.k14FontSize,
-                  color: kColorWhite,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+          child: Row(
+            children: [
+              const Icon(Icons.videocam_rounded, color: kColorWhite, size: 22),
+              Spacing.h10,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SemiBoldText(
+                      text: 'Start video room',
+                      fontSize: TextStyles.k14FontSize,
+                      color: kColorWhite,
+                    ),
+                    AppText(
+                      text: '$liveCount live now',
+                      fontSize: TextStyles.k10FontSize,
+                      color: kColorWhite.withValues(alpha: 0.72),
+                    ),
+                  ],
                 ),
-                Spacing.v4,
-                AppText(
-                  text: '$liveCount rooms live now',
-                  fontSize: TextStyles.k12FontSize,
-                  color: kColorWhite.withValues(alpha: 0.72),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 7,
                 ),
-              ],
-            ),
-          ),
-          Spacing.h10,
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: onTap,
-              borderRadius: BorderRadius.circular(18),
-              child: Container(
-                height: 38,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
                 decoration: BoxDecoration(
                   color: kColorWhite,
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                alignment: Alignment.center,
                 child: const SemiBoldText(
                   text: 'Create',
                   fontSize: TextStyles.k12FontSize,
                   color: kColorPrimary,
                 ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -398,43 +355,27 @@ class _VideoRoomsEmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
+        padding: const EdgeInsets.symmetric(horizontal: 28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 58,
-              height: 58,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    kColorVideoPreviewGradientStart,
-                    kColorVideoPreviewGradientEnd,
-                  ],
-                ),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: kColorVideoPreviewAccent.withValues(alpha: 0.4),
-                ),
-              ),
-              child: const Icon(
-                Icons.videocam_off_outlined,
-                color: kColorWhite,
-                size: 28,
-              ),
+            Icon(
+              Icons.videocam_off_outlined,
+              size: 40,
+              color: kColorWhite.withValues(alpha: 0.45),
             ),
-            const SizedBox(height: 14),
+            Spacing.v12,
             const SemiBoldText(
-              text: 'No data found',
+              text: 'No video rooms yet',
               fontSize: TextStyles.k16FontSize,
               color: kColorWhite,
               align: TextAlign.center,
             ),
             Spacing.v6,
             AppText(
-              text: 'Video rooms will appear here when available.',
+              text: 'Create one or pull to refresh when friends go live.',
               fontSize: TextStyles.k12FontSize,
-              color: kColorWhite.withValues(alpha: 0.72),
+              color: kColorWhite.withValues(alpha: 0.58),
               align: TextAlign.center,
             ),
           ],
@@ -444,158 +385,113 @@ class _VideoRoomsEmptyState extends StatelessWidget {
   }
 }
 
-/// Image-first card inspired by social/dating video room grids.
-class _VideoRoomAccordionTile extends StatelessWidget {
-  const _VideoRoomAccordionTile({
-    required this.data,
-    this.onJoinLive,
-    this.featured = false,
-  });
+/// Cover-first party-room card (Bigo-style hierarchy).
+class _VideoRoomCard extends StatelessWidget {
+  const _VideoRoomCard({required this.data, this.onJoin});
 
   final _VideoRoomTileData data;
-  final VoidCallback? onJoinLive;
-  final bool featured;
+  final VoidCallback? onJoin;
 
   @override
   Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(featured ? 28 : 22);
-
-    // Keep the painted border/glow inside the fixed-height parent so rounded
-    // corners do not look cut on dense mobile layouts.
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(1, 1, 1, 3),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onJoinLive,
-          splashColor: kColorWhite.withValues(alpha: 0.10),
-          borderRadius: radius,
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: radius,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  kColorWhite.withValues(alpha: 0.18),
-                  kColorWhite.withValues(alpha: 0.06),
-                ],
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onJoin,
+        borderRadius: BorderRadius.circular(18),
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.28),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.20),
-                  blurRadius: featured ? 24 : 16,
-                  offset: Offset(0, featured ? 12 : 8),
-                ),
-                if (featured)
-                  BoxShadow(
-                    color: const Color(0xFFFF3F8E).withValues(alpha: 0.16),
-                    blurRadius: 30,
-                    spreadRadius: 1,
-                  ),
-              ],
-            ),
-            foregroundDecoration: BoxDecoration(
-              borderRadius: radius,
-              border: Border.all(
-                color: featured
-                    ? const Color(0xFFFF4FA7).withValues(alpha: 0.42)
-                    : kColorWhite.withValues(alpha: 0.12),
-                width: featured ? 1.4 : 1,
-              ),
-            ),
-            clipBehavior: Clip.antiAlias,
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(18),
             child: Stack(
               fit: StackFit.expand,
               children: [
-                _RoomImage(path: data.image),
-                DecoratedBox(
+                _CoverImage(path: data.image),
+                // Soft bottom scrim only — keeps the cover readable.
+                const DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Colors.black.withValues(alpha: featured ? 0.06 : 0.10),
-                        Colors.transparent,
-                        Colors.black.withValues(alpha: featured ? 0.90 : 0.84),
+                        Color(0x14000000),
+                        Color(0x00000000),
+                        Color(0x99000000),
+                        Color(0xE6080612),
                       ],
-                      stops: const [0, 0.42, 1],
+                      stops: [0, 0.35, 0.68, 1],
                     ),
                   ),
                 ),
+                // LIVE — top left, compact. Country flag sits beside it.
                 Positioned(
-                  left: featured ? 14 : 10,
-                  top: featured ? 14 : 10,
-                  child: const _LiveBadge(),
-                ),
-                Positioned(
-                  right: featured ? 14 : 9,
-                  top: featured ? 14 : 9,
-                  child: _ViewerMiniPill(count: data.viewerCountShort),
-                ),
-                Positioned(
-                  left: featured ? 16 : 10,
-                  right: featured ? 16 : 10,
-                  bottom: featured ? 16 : 10,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  left: 8,
+                  top: 8,
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Row(
-                        children: [
-                          _RoomTypeChip(
-                            label: data.tags.isNotEmpty
-                                ? data.tags.first.replaceFirst('#', '')
-                                : VideoRoomListView.roomLabel,
-                          ),
-                          Spacing.h6,
-                          Flexible(child: _CountryBadge(label: data.country)),
-                        ],
+                      const _LiveDot(),
+                      if (data.countryFlag != null) ...[
+                        const SizedBox(width: 6),
+                        _CountryFlagChip(
+                          flag: data.countryFlag!,
+                          label: data.countryLabel ?? '',
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                // Viewers — top right, glass pill (people icon, not eye).
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: _ViewerCount(count: data.viewerCountShort),
+                ),
+                // Host + title — bottom only (no overlapping mid chips).
+                Positioned(
+                  left: 10,
+                  right: 10,
+                  bottom: 10,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      _HostFrame(
+                        name: data.hostName,
+                        avatar: data.avatar,
+                        frameUrl: data.frameUrl,
                       ),
-                      Spacing.v8,
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          _HostAvatar(
-                            path: data.avatar,
-                            size: featured ? 43 : 34,
-                          ),
-                          SizedBox(width: featured ? 10 : 7),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                SemiBoldText(
-                                  text: data.title,
-                                  fontSize: featured
-                                      ? TextStyles.k18FontSize
-                                      : TextStyles.k14FontSize,
-                                  color: kColorWhite,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                Spacing.v2,
-                                AppText(
-                                  text: featured
-                                      ? '${data.hostName}  •  ${data.category}'
-                                      : data.hostName,
-                                  fontSize: featured
-                                      ? TextStyles.k12FontSize
-                                      : TextStyles.k10FontSize,
-                                  color: kColorWhite.withValues(alpha: 0.82),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
+                      Spacing.h8,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SemiBoldText(
+                              text: data.title,
+                              fontSize: TextStyles.k12FontSize,
+                              color: kColorWhite,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                          Spacing.h8,
-                          _FloatingJoinButton(
-                            onTap: onJoinLive,
-                            featured: featured,
-                          ),
-                        ],
+                            Spacing.v2,
+                            AppText(
+                              text: data.hostName,
+                              fontSize: TextStyles.k10FontSize,
+                              color: kColorWhite.withValues(alpha: 0.72),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -609,190 +505,81 @@ class _VideoRoomAccordionTile extends StatelessWidget {
   }
 }
 
-class _CountryBadge extends StatelessWidget {
-  const _CountryBadge({required this.label});
-
-  final String label;
+class _LiveDot extends StatelessWidget {
+  const _LiveDot();
 
   @override
   Widget build(BuildContext context) {
-    final display = label.trim().toUpperCase();
     return Container(
-      constraints: const BoxConstraints(maxWidth: 58),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.34),
-        borderRadius: BorderRadius.circular(11),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.16)),
+        color: const Color(0xFFE13434),
+        borderRadius: BorderRadius.circular(8),
       ),
-      child: AppText(
-        text: display.length > 6 ? display.substring(0, 6) : display,
+      child: const SemiBoldText(
+        text: 'LIVE',
         fontSize: TextStyles.k10FontSize,
         color: kColorWhite,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        align: TextAlign.center,
       ),
     );
   }
 }
 
-class _LiveBadge extends StatelessWidget {
-  const _LiveBadge();
+class _CountryFlagChip extends StatelessWidget {
+  const _CountryFlagChip({required this.flag, required this.label});
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFF355D), Color(0xFFFF3EA5)],
-        ),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.30)),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFFF355D).withValues(alpha: 0.42),
-            blurRadius: 12,
-          ),
-        ],
-      ),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.circle, size: 7, color: kColorWhite),
-          SizedBox(width: 5),
-          SemiBoldText(
-            text: 'LIVE',
-            fontSize: TextStyles.k10FontSize,
-            color: kColorWhite,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HostAvatar extends StatelessWidget {
-  const _HostAvatar({required this.path, required this.size});
-
-  final String path;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      padding: const EdgeInsets.all(2),
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          colors: [Color(0xFFFFD84D), Color(0xFFFF3F8E), Color(0xFF8B5CFF)],
-        ),
-      ),
-      child: ClipOval(child: _RoomImage(path: path)),
-    );
-  }
-}
-
-class _RoomTypeChip extends StatelessWidget {
-  const _RoomTypeChip({required this.label});
-
+  final String flag;
   final String label;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF7B4BFF), Color(0xFFFF4FA7)],
-        ),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: kColorVideoJoinLivePurple.withValues(alpha: 0.35),
-            blurRadius: 8,
-          ),
-        ],
+        color: Colors.black.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.videocam_rounded, color: kColorWhite, size: 12),
-          Spacing.h4,
-          SemiBoldText(
-            text: label.toLowerCase().contains('audio')
-                ? 'Audio Room'
-                : 'Video Room',
-            fontSize: TextStyles.k10FontSize,
-            color: kColorWhite,
-          ),
+          Text(flag, style: const TextStyle(fontSize: 12, height: 1)),
+          if (label.isNotEmpty) ...[
+            const SizedBox(width: 4),
+            SemiBoldText(
+              text: label,
+              fontSize: TextStyles.k10FontSize,
+              color: kColorWhite.withValues(alpha: 0.92),
+            ),
+          ],
         ],
       ),
     );
   }
 }
 
-class _FloatingJoinButton extends StatelessWidget {
-  const _FloatingJoinButton({this.onTap, this.featured = false});
-
-  final VoidCallback? onTap;
-  final bool featured;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: featured ? 48 : 38,
-        height: featured ? 48 : 38,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: const LinearGradient(
-            colors: [kColorVideoJoinLivePurple, kColorVideoJoinLiveGradientEnd],
-          ),
-          border: Border.all(color: kColorWhite.withValues(alpha: 0.22)),
-          boxShadow: [
-            BoxShadow(
-              color: kColorVideoJoinLivePurple.withValues(alpha: 0.45),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: const Icon(
-          Icons.play_arrow_rounded,
-          color: kColorWhite,
-          size: 28,
-        ),
-      ),
-    );
-  }
-}
-
-class _ViewerMiniPill extends StatelessWidget {
-  const _ViewerMiniPill({required this.count});
+/// Clean viewer count — soft glass + people icon (replaces messy eye pill).
+class _ViewerCount extends StatelessWidget {
+  const _ViewerCount({required this.count});
 
   final String count;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: kColorWhite.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.black.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SvgPicture.asset(
-            kIconEye,
-            width: 12,
-            height: 12,
-            colorFilter: VideoRoomListView._whiteIcon,
+          Icon(
+            Icons.people_alt_rounded,
+            size: 12,
+            color: kColorWhite.withValues(alpha: 0.90),
           ),
           const SizedBox(width: 4),
           SemiBoldText(
@@ -806,8 +593,34 @@ class _ViewerMiniPill extends StatelessWidget {
   }
 }
 
-class _RoomImage extends StatelessWidget {
-  const _RoomImage({required this.path});
+/// Compact framed host avatar for the card footer.
+class _HostFrame extends StatelessWidget {
+  const _HostFrame({
+    required this.name,
+    required this.avatar,
+    this.frameUrl,
+  });
+
+  final String name;
+  final String avatar;
+  final String? frameUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    // FramedUserAvatar adds its own frame padding (~1.34×); keep visual ~40dp.
+    return FramedUserAvatar(
+      name: name,
+      imageUrl: avatar,
+      frameUrl: frameUrl,
+      frameSeed: name,
+      size: 34,
+      fontSize: TextStyles.k10FontSize,
+    );
+  }
+}
+
+class _CoverImage extends StatelessWidget {
+  const _CoverImage({required this.path});
 
   final String path;
 
@@ -831,7 +644,7 @@ class _RoomImage extends StatelessWidget {
     return const DecoratedBox(
       decoration: BoxDecoration(gradient: VideoRoomListView._previewGradient),
       child: Center(
-        child: Icon(Icons.videocam_rounded, color: kColorWhite, size: 32),
+        child: Icon(Icons.videocam_rounded, color: kColorWhite, size: 28),
       ),
     );
   }
