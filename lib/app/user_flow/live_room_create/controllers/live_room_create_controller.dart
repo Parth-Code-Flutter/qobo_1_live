@@ -23,8 +23,8 @@ class LiveRoomCreateController extends GetxController {
   final roomType = 'AUDIO'.obs;
   final seatCount = '8'.obs;
   final isPrivate = false.obs;
-  /// Default on so listing joins wait for host Add/Reject.
-  final joinApprovalRequired = true.obs;
+  /// Default off — party rooms use open join + seat requests (not room gate).
+  final joinApprovalRequired = false.obs;
   final selectedCategoryIndex = 0.obs;
   final selectedRegion = 'IN'.obs;
 

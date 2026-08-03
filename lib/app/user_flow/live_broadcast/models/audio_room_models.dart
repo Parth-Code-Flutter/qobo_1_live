@@ -279,3 +279,113 @@ bool _readBool(Map<String, dynamic> raw, List<String> keys) {
   }
   return false;
 }
+
+/// In-room listener who is not on a mic seat (`floor_audience[]`).
+class FloorAudienceUser {
+  const FloorAudienceUser({
+    required this.userId,
+    required this.name,
+    this.avatarUrl,
+    this.avatarFrameUrl,
+    this.vipFrameUrl,
+    this.isVip = false,
+    this.isCoinsSeller = false,
+  });
+
+  factory FloorAudienceUser.fromMap(Map<String, dynamic> raw) {
+    return FloorAudienceUser(
+      userId:
+          _readString(raw, const ['userId', 'user_id', 'id'])?.trim() ?? '',
+      name:
+          _readString(raw, const [
+            'name',
+            'fullName',
+            'username',
+            'displayName',
+          ])?.trim() ??
+          'Guest',
+      avatarUrl: _readString(raw, const [
+        'avatarUrl',
+        'avatar',
+        'displayPicture',
+        'profileImage',
+      ]),
+      avatarFrameUrl:
+          _readFrameUrl(raw['avatarFrame']) ??
+          _readString(raw, const [
+            'avatarFrameUrl',
+            'avatar_frame_url',
+            'frameUrl',
+          ]),
+      vipFrameUrl: _readString(raw, const [
+        'vipFrameUrl',
+        'vip_frame_url',
+      ]),
+      isVip: _readBool(raw, const ['isVIP', 'isVip', 'is_vip']),
+      isCoinsSeller: _readBool(raw, const [
+        'isCoinsSeller',
+        'isCoinSeller',
+        'is_coins_seller',
+      ]),
+    );
+  }
+
+  final String userId;
+  final String name;
+  final String? avatarUrl;
+  final String? avatarFrameUrl;
+  final String? vipFrameUrl;
+  final bool isVip;
+  final bool isCoinsSeller;
+}
+
+/// Host inbox row for `pending_seat_requests[]`.
+class PendingSeatRequest {
+  const PendingSeatRequest({
+    required this.requestId,
+    required this.seatNo,
+    required this.userId,
+    required this.name,
+    this.avatarUrl,
+    this.createdAt,
+  });
+
+  factory PendingSeatRequest.fromMap(Map<String, dynamic> raw) {
+    return PendingSeatRequest(
+      requestId:
+          _readString(raw, const [
+            'id',
+            'request_id',
+            'requestId',
+          ])?.trim() ??
+          '',
+      seatNo:
+          _readInt(raw, const ['seatId', 'seat_id', 'seatNo', 'seat']) ?? 0,
+      userId:
+          _readString(raw, const ['userId', 'user_id', 'requester_id'])
+              ?.trim() ??
+          '',
+      name:
+          _readString(raw, const [
+            'name',
+            'requester_name',
+            'requesterName',
+          ])?.trim() ??
+          'Guest',
+      avatarUrl: _readString(raw, const [
+        'avatarUrl',
+        'avatar',
+        'requester_avatar',
+        'requesterAvatar',
+      ]),
+      createdAt: _readString(raw, const ['createdAt', 'created_at']),
+    );
+  }
+
+  final String requestId;
+  final int seatNo;
+  final String userId;
+  final String name;
+  final String? avatarUrl;
+  final String? createdAt;
+}

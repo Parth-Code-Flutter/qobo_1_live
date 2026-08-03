@@ -130,6 +130,19 @@ class RoomEndpoints {
   /// GET /api/room/seats
   static const String seats = '/api/room/seats';
 
+  /// Seat-request APIs (floor audience → mic seat).
+  /// POST /api/room/seat-request
+  static const String seatRequest = '/api/room/seat-request';
+
+  /// POST /api/room/seat-request/respond
+  static const String seatRequestRespond = '/api/room/seat-request/respond';
+
+  /// POST /api/room/seat-request/cancel
+  static const String seatRequestCancel = '/api/room/seat-request/cancel';
+
+  /// GET /api/room/seat-requests?roomId=
+  static const String seatRequests = '/api/room/seat-requests';
+
   /// GET /api/room/session-earnings — host session coins/diamonds this room
   static const String sessionEarnings = '/api/room/session-earnings';
 

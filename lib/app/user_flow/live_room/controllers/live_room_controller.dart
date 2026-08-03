@@ -630,7 +630,8 @@ class LiveRoomController extends GetxController {
       roomId: roomId,
       sessionType: sessionType,
       roomHint: roomData,
-      forceApprovalFlow: true,
+      // Party rooms: open join (backend bypasses joinApprovalRequired).
+      forceApprovalFlow: false,
       isShowLoader: true,
     );
     final context = Get.context;
@@ -798,7 +799,7 @@ class LiveRoomController extends GetxController {
         roomType: isRoomsAudioMode ? 'AUDIO' : 'VIDEO',
       ),
       roomHint: room,
-      forceApprovalFlow: true,
+      forceApprovalFlow: false,
       isShowLoader: true,
     );
     if (!context.mounted) return;

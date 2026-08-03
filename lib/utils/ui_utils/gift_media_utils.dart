@@ -97,9 +97,13 @@ abstract final class GiftMediaUtils {
   }
 
   /// Builds the Zego gift chat line with hidden media + earnings markers.
+  /// Builds the Zego in-room gift chat payload.
   ///
-  /// Peers use `giftTo` / `giftScope` / `giftPrice` to bump seat diamonds and
-  /// session earnings for the actual receiver (host or audience).
+  /// Visible text stays human-readable. Hidden `[[gift…]]` markers carry
+  /// animation / earnings metadata for peers (stripped before chat UI).
+  ///
+  /// Room gifts (`scope=room`, no single receiver) show
+  /// **"🎁 sent {name} to the Room"** — never a raw user id.
   static String buildChatLabel({
     required String? giftName,
     required String? giftIcon,
@@ -109,40 +113,56 @@ abstract final class GiftMediaUtils {
     String? receiverId,
     String? senderId,
     int? giftPrice,
+    List<String>? creditedUserIds,
+    int? amountEach,
   }) {
     final name = giftName?.trim().isNotEmpty == true
         ? giftName!.trim()
         : 'Gift';
     final iconPart = isNetworkGiftIcon(giftIcon) ? '' : (giftIcon ?? '');
-    final base = '🎁 sent $name $iconPart'.trim();
     final normalizedScope =
         scope.trim().toLowerCase() == 'room' ? 'room' : 'user';
     final toId = receiverId?.trim() ?? '';
+    final isRoomGift = normalizedScope == 'room' || toId.isEmpty;
+    final base = (isRoomGift
+            ? '🎁 sent $name to the Room $iconPart'
+            : '🎁 sent $name $iconPart')
+        .trim();
     final fromId = senderId?.trim() ?? '';
+    final credited = (creditedUserIds ?? const <String>[])
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .join(',');
     final markers = <String>[
       if (animationUrl.isNotEmpty) '[[giftAnim:$animationUrl]]',
       if (soundUrl.isNotEmpty) '[[giftSound:$soundUrl]]',
-      '[[giftScope:$normalizedScope]]',
+      '[[giftScope:${isRoomGift ? 'room' : normalizedScope}]]',
       if (fromId.isNotEmpty) '[[giftFrom:$fromId]]',
-      if (toId.isNotEmpty) '[[giftTo:$toId]]',
+      if (!isRoomGift && toId.isNotEmpty) '[[giftTo:$toId]]',
       if (giftPrice != null && giftPrice > 0) '[[giftPrice:$giftPrice]]',
+      if (amountEach != null && amountEach > 0)
+        '[[giftAmountEach:$amountEach]]',
+      // Hidden only — never shown in chat (stripped by stripGiftAnimMarker).
+      if (credited.isNotEmpty) '[[giftCredited:$credited]]',
     ];
-    // Hidden markers let peers play the exact gift animation and sound.
     return markers.isEmpty ? base : '$base\n${markers.join('\n')}';
   }
 
   /// Readable gift name from labels like "🎁 sent Red Rose 🌹".
   static String giftNameFromChatLabel(String text) {
-    final visible = stripGiftAnimMarker(text).replaceFirst('🎁 ', '').trim();
-    final withoutSent = visible.startsWith('sent ')
-        ? visible.substring(5).trim()
-        : visible;
-    if (withoutSent.isEmpty) return 'Gift';
-    final parts = withoutSent.split(RegExp(r'\s+'));
+    var visible = stripGiftAnimMarker(text).replaceFirst('🎁 ', '').trim();
+    if (visible.startsWith('sent ')) {
+      visible = visible.substring(5).trim();
+    }
+    visible = visible
+        .replaceFirst(RegExp(r'\s+to the [Rr]oom\s*$'), '')
+        .trim();
+    if (visible.isEmpty) return 'Gift';
+    final parts = visible.split(RegExp(r'\s+'));
     if (parts.length >= 2 && parts.last.runes.length <= 2) {
       return parts.sublist(0, parts.length - 1).join(' ');
     }
-    return withoutSent;
+    return visible;
   }
 
   /// True when the chat text is a gift celebration payload.

@@ -221,7 +221,7 @@ String stripGiftAnimMarker(String text) {
   return text
       .replaceAll(
         RegExp(
-          r'\n?\[\[gift(?:Anim|Sound|To|From|Scope|Price):.*?\]\]',
+          r'\n?\[\[gift(?:Anim|Sound|To|From|Scope|Price|Credited|AmountEach):.*?\]\]',
           caseSensitive: false,
         ),
         '',
@@ -288,6 +288,30 @@ String parseGiftScope(String text) {
 int? parseGiftPrice(String text) {
   final match = RegExp(
     r'\[\[giftPrice:(\d+)\]\]',
+    caseSensitive: false,
+  ).firstMatch(text);
+  return int.tryParse(match?.group(1) ?? '');
+}
+
+/// Backend `credited_user_ids` for room gifts (seated recipients only).
+List<String> parseGiftCreditedUserIds(String text) {
+  final match = RegExp(
+    r'\[\[giftCredited:([^\]]+)\]\]',
+    caseSensitive: false,
+  ).firstMatch(text);
+  final raw = match?.group(1)?.trim() ?? '';
+  if (raw.isEmpty) return const [];
+  return raw
+      .split(',')
+      .map((e) => e.trim())
+      .where((e) => e.isNotEmpty)
+      .toList();
+}
+
+/// Per-recipient credit for room gifts (`amount_each` from backend).
+int? parseGiftAmountEach(String text) {
+  final match = RegExp(
+    r'\[\[giftAmountEach:(\d+)\]\]',
     caseSensitive: false,
   ).firstMatch(text);
   return int.tryParse(match?.group(1) ?? '');

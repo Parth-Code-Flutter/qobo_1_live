@@ -41,6 +41,12 @@ class UserRealtimeSocketService extends GetxController {
       <void Function(Map<String, dynamic> data)>{};
   final _vipUserJoinedListeners =
       <void Function(Map<String, dynamic> data)>{};
+  final _seatRequestListeners =
+      <void Function(Map<String, dynamic> data)>{};
+  final _floorAudienceListeners =
+      <void Function(Map<String, dynamic> data)>{};
+  final _userKickedListeners =
+      <void Function(Map<String, dynamic> data)>{};
 
   /// Ensures a singleton exists and connects when the user is logged in.
   static Future<void> ensureConnected() async {
@@ -121,6 +127,28 @@ class UserRealtimeSocketService extends GetxController {
         'join_request_cancelled',
         (raw) => _onJoinNamed('join_request_cancelled', raw),
       );
+      socket.on('seat_request', (raw) => _onSeatNamed('seat_request', raw));
+      socket.on(
+        'seat_request_approved',
+        (raw) => _onSeatNamed('seat_request_approved', raw),
+      );
+      socket.on(
+        'seat_request_rejected',
+        (raw) => _onSeatNamed('seat_request_rejected', raw),
+      );
+      socket.on(
+        'seat_request_cancelled',
+        (raw) => _onSeatNamed('seat_request_cancelled', raw),
+      );
+      socket.on(
+        'floor_audience_updated',
+        (raw) => _onFloorAudienceUpdated(raw),
+      );
+      socket.on('user_kicked', (raw) => _onUserKicked('user_kicked', raw));
+      socket.on(
+        'room_user_kicked',
+        (raw) => _onUserKicked('room_user_kicked', raw),
+      );
       socket.on('vip_user_joined', _onVipUserJoined);
 
       socket.onDisconnect((_) {
@@ -190,6 +218,42 @@ class UserRealtimeSocketService extends GetxController {
     _vipUserJoinedListeners.remove(listener);
   }
 
+  void addSeatRequestListener(
+    void Function(Map<String, dynamic> data) listener,
+  ) {
+    _seatRequestListeners.add(listener);
+  }
+
+  void removeSeatRequestListener(
+    void Function(Map<String, dynamic> data) listener,
+  ) {
+    _seatRequestListeners.remove(listener);
+  }
+
+  void addFloorAudienceListener(
+    void Function(Map<String, dynamic> data) listener,
+  ) {
+    _floorAudienceListeners.add(listener);
+  }
+
+  void removeFloorAudienceListener(
+    void Function(Map<String, dynamic> data) listener,
+  ) {
+    _floorAudienceListeners.remove(listener);
+  }
+
+  void addUserKickedListener(
+    void Function(Map<String, dynamic> data) listener,
+  ) {
+    _userKickedListeners.add(listener);
+  }
+
+  void removeUserKickedListener(
+    void Function(Map<String, dynamic> data) listener,
+  ) {
+    _userKickedListeners.remove(listener);
+  }
+
   Future<void> disconnect() async {
     final socket = _socket;
     _socket = null;
@@ -209,6 +273,13 @@ class UserRealtimeSocketService extends GetxController {
       socket.off('join_rejected');
       socket.off('join_request_expired');
       socket.off('join_request_cancelled');
+      socket.off('seat_request');
+      socket.off('seat_request_approved');
+      socket.off('seat_request_rejected');
+      socket.off('seat_request_cancelled');
+      socket.off('floor_audience_updated');
+      socket.off('user_kicked');
+      socket.off('room_user_kicked');
       socket.off('vip_user_joined');
       socket.dispose();
     } catch (e) {
@@ -270,6 +341,55 @@ class UserRealtimeSocketService extends GetxController {
         'type': event,
     };
     unawaited(_joinRequestHandler.handleSocketEvent(event, payload));
+  }
+
+  void _onSeatNamed(String event, dynamic raw) {
+    final data = _asStringKeyedMap(raw);
+    if (data.isEmpty && event.isEmpty) return;
+    final payload = <String, dynamic>{
+      ...data,
+      'event': event,
+      if (data['type'] == null || data['type'].toString().trim().isEmpty)
+        'type': event,
+    };
+    LoggerUtils.logInfo('RealtimeSocket: $event data=$payload');
+    for (final listener in List.of(_seatRequestListeners)) {
+      try {
+        listener(payload);
+      } catch (e) {
+        LoggerUtils.logWarning('RealtimeSocket: seat listener error — $e');
+      }
+    }
+  }
+
+  void _onFloorAudienceUpdated(dynamic raw) {
+    final data = _asStringKeyedMap(raw);
+    LoggerUtils.logInfo('RealtimeSocket: floor_audience_updated data=$data');
+    for (final listener in List.of(_floorAudienceListeners)) {
+      try {
+        listener(data);
+      } catch (e) {
+        LoggerUtils.logWarning('RealtimeSocket: floor listener error — $e');
+      }
+    }
+  }
+
+  void _onUserKicked(String event, dynamic raw) {
+    final data = _asStringKeyedMap(raw);
+    final payload = <String, dynamic>{
+      ...data,
+      'event': event,
+      if (data['type'] == null || data['type'].toString().trim().isEmpty)
+        'type': event,
+    };
+    LoggerUtils.logInfo('RealtimeSocket: $event data=$payload');
+    for (final listener in List.of(_userKickedListeners)) {
+      try {
+        listener(payload);
+      } catch (e) {
+        LoggerUtils.logWarning('RealtimeSocket: kick listener error — $e');
+      }
+    }
   }
 
   void _onHostLiveStarted(dynamic raw) {

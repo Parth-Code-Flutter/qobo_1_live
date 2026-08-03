@@ -140,6 +140,7 @@ abstract final class SessionEarningsUtils {
 
   /// Peer gift chat line — estimate share from catalog / embedded price.
   ///
+  /// Prefers `amount_each` for room gifts (split among seated users).
   /// Returns coins applied to [tracker] (0 when nothing earned).
   static int ingestIncomingGiftChat({
     required SessionEarningsTracker tracker,
@@ -148,6 +149,11 @@ abstract final class SessionEarningsUtils {
     required bool earnsGift,
   }) {
     if (!earnsGift || !GiftMediaUtils.isGiftChatMessage(chatMessage)) return 0;
+    final amountEach = parseGiftAmountEach(chatMessage);
+    if (amountEach != null && amountEach > 0) {
+      tracker.applyDelta(coins: amountEach);
+      return amountEach;
+    }
     final embedded = parseGiftPrice(chatMessage);
     if (embedded != null && embedded > 0) {
       tracker.applyDelta(coins: embedded);

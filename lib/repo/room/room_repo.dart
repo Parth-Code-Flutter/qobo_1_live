@@ -404,15 +404,22 @@ class RoomRepo {
     required int seatId,
     bool isShowLoader = true,
   }) async {
+    final trimmedRoomId = roomId?.trim() ?? '';
     final trimmedTargetUserId = targetUserId?.trim();
     final response = await _apiService.postRequest(
       endPoint: RoomEndpoints.micAction,
       requestModel: <String, dynamic>{
-        if (roomId != null && roomId.trim().isNotEmpty) 'room_id': roomId,
-        if (trimmedTargetUserId != null && trimmedTargetUserId.isNotEmpty)
+        if (trimmedRoomId.isNotEmpty) ...{
+          'room_id': trimmedRoomId,
+          'roomId': trimmedRoomId,
+        },
+        if (trimmedTargetUserId != null && trimmedTargetUserId.isNotEmpty) ...{
           'target_user_id': trimmedTargetUserId,
+          'targetUserId': trimmedTargetUserId,
+        },
         'action': action,
         'seat_id': seatId,
+        'seatId': seatId,
       },
       isShowLoader: isShowLoader,
     );
@@ -421,16 +428,108 @@ class RoomRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
-  /// Calls `GET /api/room/seats?room_id=...`.
+  /// Calls `GET /api/room/seats?room_id=...` (also sends `roomId` for new backends).
   Future<Map<String, dynamic>?> getRoomSeats({
     required String roomId,
     bool isShowLoader = false,
   }) async {
+    final id = roomId.trim();
+    final params = <String, String>{
+      'room_id': id,
+      'roomId': id,
+    };
     final response = await _apiService.getRequest(
-      endPoint: '${RoomEndpoints.seats}?room_id=${Uri.encodeComponent(roomId)}',
+      endPoint: '${RoomEndpoints.seats}?${Uri(queryParameters: params).query}',
       isShowLoader: isShowLoader,
     );
 
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// `POST /api/room/seat-request` — floor user asks host for a mic seat.
+  Future<Map<String, dynamic>?> createSeatRequest({
+    required String roomId,
+    required int seatId,
+    bool isShowLoader = true,
+  }) async {
+    final id = roomId.trim();
+    if (id.isEmpty || seatId <= 0) return null;
+    final response = await _apiService.postRequest(
+      endPoint: RoomEndpoints.seatRequest,
+      requestModel: <String, dynamic>{
+        'roomId': id,
+        'room_id': id,
+        'seatId': seatId,
+        'seat_id': seatId,
+      },
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// `POST /api/room/seat-request/respond` — host approve/reject.
+  Future<Map<String, dynamic>?> respondToSeatRequest({
+    required String roomId,
+    required String requestId,
+    required String action,
+    bool isShowLoader = true,
+  }) async {
+    final id = roomId.trim();
+    final reqId = requestId.trim();
+    if (id.isEmpty || reqId.isEmpty) return null;
+    final response = await _apiService.postRequest(
+      endPoint: RoomEndpoints.seatRequestRespond,
+      requestModel: <String, dynamic>{
+        'roomId': id,
+        'room_id': id,
+        'requestId': reqId,
+        'request_id': reqId,
+        'action': action.trim().toLowerCase(),
+      },
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// `POST /api/room/seat-request/cancel`
+  Future<Map<String, dynamic>?> cancelSeatRequest({
+    required String roomId,
+    required String requestId,
+    bool isShowLoader = false,
+  }) async {
+    final id = roomId.trim();
+    final reqId = requestId.trim();
+    if (id.isEmpty || reqId.isEmpty) return null;
+    final response = await _apiService.postRequest(
+      endPoint: RoomEndpoints.seatRequestCancel,
+      requestModel: <String, dynamic>{
+        'roomId': id,
+        'room_id': id,
+        'requestId': reqId,
+        'request_id': reqId,
+      },
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// `GET /api/room/seat-requests?roomId=`
+  Future<Map<String, dynamic>?> listSeatRequests({
+    required String roomId,
+    bool isShowLoader = false,
+  }) async {
+    final id = roomId.trim();
+    if (id.isEmpty) return null;
+    final params = <String, String>{'roomId': id, 'room_id': id};
+    final response = await _apiService.getRequest(
+      endPoint:
+          '${RoomEndpoints.seatRequests}?${Uri(queryParameters: params).query}',
+      isShowLoader: isShowLoader,
+    );
     if (response == null) return null;
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
@@ -639,11 +738,16 @@ class RoomRepo {
     required String targetUserId,
     bool isShowLoader = true,
   }) async {
+    final id = roomId.trim();
+    final target = targetUserId.trim();
+    if (id.isEmpty || target.isEmpty) return null;
     final response = await _apiService.postRequest(
       endPoint: RoomEndpoints.kick,
       requestModel: <String, dynamic>{
-        'room_id': roomId,
-        'target_user_id': targetUserId,
+        'room_id': id,
+        'roomId': id,
+        'target_user_id': target,
+        'targetUserId': target,
       },
       isShowLoader: isShowLoader,
     );

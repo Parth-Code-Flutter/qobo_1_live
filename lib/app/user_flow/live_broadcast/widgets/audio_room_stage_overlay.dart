@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
@@ -20,6 +21,17 @@ import '../controllers/live_broadcast_controller.dart';
 import '../models/audio_room_models.dart';
 import '../utils/audio_room_seat_layout.dart';
 import 'room_options_sheet.dart';
+
+/// Opens floor-audience user profile (Message / Gift / optional Kick).
+void openFloorAudienceProfileSheet(FloorAudienceUser user) {
+  if (user.userId.trim().isEmpty) return;
+  Get.bottomSheet(
+    FloorAudienceProfileSheet(user: user),
+    backgroundColor: Colors.transparent,
+    barrierColor: Colors.black.withValues(alpha: 0.55),
+    isScrollControlled: true,
+  );
+}
 
 class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
   const AudioRoomStageOverlay({super.key});
@@ -115,6 +127,8 @@ class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
                           // Room chat feed + input, mirroring the live streaming
                           // chat so everyone in the audio room can talk directly.
                           _AudioRoomChatFeed(compact: compact),
+                          SizedBox(height: compact ? 6 : 8),
+                          const _FloorAudienceStrip(),
                           SizedBox(height: compact ? 6 : 8),
                           _AudioRoomChatInput(compact: compact),
                           SizedBox(height: compact ? 6 : 8),
@@ -1320,6 +1334,9 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
 
   List<_SeatActionData> _buildActions(BuildContext context) {
     if (isHostView) {
+      final canClearSeat = seat.seatNo > 1 &&
+          seat.occupied &&
+          seat.role.trim().toLowerCase() != 'host';
       return [
         _SeatActionData(
           icon: seat.isMuted ? Icons.mic_rounded : Icons.mic_off_rounded,
@@ -1330,6 +1347,13 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
             mute: !seat.isMuted,
           ),
         ),
+        if (canClearSeat)
+          _SeatActionData(
+            icon: Icons.event_seat_rounded,
+            label: 'Remove from seat',
+            accent: const Color(0xFFFFB347),
+            onTap: () => controller.removeUserFromAudioSeat(seat),
+          ),
         _SeatActionData(
           icon: Icons.person_remove_rounded,
           label: 'Kick off',
@@ -2336,11 +2360,7 @@ class _GridEmptySeat extends GetView<LiveBroadcastController> {
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () => Get.bottomSheet(
-        _InviteCandidatesSheet(seatNo: seatNo),
-        backgroundColor: Colors.transparent,
-        isScrollControlled: true,
-      ),
+      onTap: () => _onEmptySeatTap(context),
       child: _seatCellShell(
         child: SizedBox(
           width: metrics.frameSize + metrics.badgeSize,
@@ -2396,16 +2416,787 @@ class _GridEmptySeat extends GetView<LiveBroadcastController> {
                 ],
               ),
               SizedBox(height: metrics.gapAfterFrame),
-              const SemiBoldText(
-                text: 'Invite',
-                fontSize: TextStyles.k10FontSize,
-                color: AudioRoomStageOverlay._muted,
-                align: TextAlign.center,
-              ),
+              Obx(() {
+                final label = controller.isHost.value ||
+                        controller.canManageAudioRoomMembers
+                    ? 'Invite'
+                    : (controller.viewerFollowsHost.value
+                          ? 'Sit'
+                          : 'Request');
+                return SemiBoldText(
+                  text: label,
+                  fontSize: TextStyles.k10FontSize,
+                  color: AudioRoomStageOverlay._muted,
+                  align: TextAlign.center,
+                );
+              }),
               // Spacer matching diamond row so empty/occupied cells stay aligned.
               const SizedBox(height: 18),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  void _onEmptySeatTap(BuildContext context) {
+    final isManager =
+        controller.isHost.value || controller.canManageAudioRoomMembers;
+    if (isManager) {
+      Get.bottomSheet(
+        _EmptySeatActionsSheet(seatNo: seatNo),
+        backgroundColor: Colors.transparent,
+        isScrollControlled: true,
+      );
+      return;
+    }
+    // Guest: request / take seat directly.
+    unawaited(controller.requestSeatForSeatNo(seatNo));
+  }
+}
+
+class _EmptySeatActionsSheet extends GetView<LiveBroadcastController> {
+  const _EmptySeatActionsSheet({required this.seatNo});
+
+  final int seatNo;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFF161622),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SemiBoldText(
+              text: 'Seat $seatNo',
+              fontSize: TextStyles.k16FontSize,
+              color: kColorWhite,
+            ),
+            const SizedBox(height: 6),
+            AppText(
+              text: 'Invite someone or leave this seat open for requests.',
+              fontSize: TextStyles.k12FontSize,
+              color: kColorWhite.withValues(alpha: 0.65),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.person_add_alt_1_rounded,
+                  color: Color(0xFFFF3EA5)),
+              title: const SemiBoldText(
+                text: 'Invite',
+                fontSize: TextStyles.k14FontSize,
+                color: kColorWhite,
+              ),
+              subtitle: AppText(
+                text: 'Invite a follower who is not in the room yet',
+                fontSize: TextStyles.k10FontSize,
+                color: kColorWhite.withValues(alpha: 0.55),
+              ),
+              onTap: () {
+                Get.back<void>();
+                Get.bottomSheet(
+                  _InviteCandidatesSheet(seatNo: seatNo),
+                  backgroundColor: Colors.transparent,
+                  isScrollControlled: true,
+                );
+              },
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.groups_rounded,
+                  color: Color(0xFFFFD56A)),
+              title: const SemiBoldText(
+                text: 'Seat floor user',
+                fontSize: TextStyles.k14FontSize,
+                color: kColorWhite,
+              ),
+              subtitle: AppText(
+                text: 'Place someone from the floor list on this seat',
+                fontSize: TextStyles.k10FontSize,
+                color: kColorWhite.withValues(alpha: 0.55),
+              ),
+              onTap: () {
+                Get.back<void>();
+                Get.bottomSheet(
+                  _FloorAudienceSeatPickerSheet(seatNo: seatNo),
+                  backgroundColor: Colors.transparent,
+                  isScrollControlled: true,
+                  barrierColor: Colors.black.withValues(alpha: 0.55),
+                );
+              },
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.front_hand_rounded,
+                  color: Color(0xFF7C9CFF)),
+              title: const SemiBoldText(
+                text: 'Request to seat (self)',
+                fontSize: TextStyles.k14FontSize,
+                color: kColorWhite,
+              ),
+              subtitle: AppText(
+                text: 'Only if you are not already seated',
+                fontSize: TextStyles.k10FontSize,
+                color: kColorWhite.withValues(alpha: 0.55),
+              ),
+              onTap: () {
+                Get.back<void>();
+                unawaited(controller.requestSeatForSeatNo(seatNo));
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FloorAudienceStrip extends GetView<LiveBroadcastController> {
+  const _FloorAudienceStrip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final users = controller.floorAudience;
+      if (users.isEmpty) return const SizedBox.shrink();
+      return SizedBox(
+        height: 42,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            for (var i = 0; i < users.length && i < 12; i++)
+              Positioned(
+                left: i * 22.0,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _openFloorUserSheet(context, users[i]),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFFFF3EA5).withValues(alpha: 0.55),
+                        width: 1.5,
+                      ),
+                      color: Colors.white12,
+                      image: (users[i].avatarUrl ?? '').trim().isNotEmpty
+                          ? DecorationImage(
+                              image: NetworkImage(users[i].avatarUrl!.trim()),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                    ),
+                    child: (users[i].avatarUrl ?? '').trim().isEmpty
+                        ? const Icon(Icons.person, size: 16, color: kColorWhite)
+                        : null,
+                  ),
+                ),
+              ),
+            if (users.length > 12)
+              Positioned(
+                left: 12 * 22.0,
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.black54,
+                    border: Border.all(color: Colors.white24),
+                  ),
+                  child: SemiBoldText(
+                    text: '+${users.length - 12}',
+                    fontSize: TextStyles.k10FontSize,
+                    color: kColorWhite,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    });
+  }
+
+  void _openFloorUserSheet(BuildContext context, FloorAudienceUser user) {
+    openFloorAudienceProfileSheet(user);
+  }
+}
+
+/// Floor-list user profile — Message / Gift (+ Kick for host/admin).
+class FloorAudienceProfileSheet extends GetView<LiveBroadcastController> {
+  const FloorAudienceProfileSheet({super.key, required this.user});
+
+  final FloorAudienceUser user;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final canManage = controller.canManageAudioRoomMembers;
+    final isSelf = _isSelf();
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(10, 0, 10, bottomInset + 10),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF2B1654), Color(0xFF171339)],
+          ),
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.14)),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFFF3EA5).withValues(alpha: 0.22),
+              blurRadius: 24,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: kColorWhite.withValues(alpha: 0.28),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Spacing.v16,
+            CircleAvatar(
+              radius: 36,
+              backgroundColor: Colors.white12,
+              backgroundImage: (user.avatarUrl ?? '').trim().isNotEmpty
+                  ? NetworkImage(user.avatarUrl!.trim())
+                  : null,
+              child: (user.avatarUrl ?? '').trim().isEmpty
+                  ? const Icon(Icons.person, color: kColorWhite, size: 36)
+                  : null,
+            ),
+            Spacing.v12,
+            SemiBoldText(
+              text: user.name.trim().isEmpty ? 'Guest' : user.name.trim(),
+              fontSize: TextStyles.k18FontSize,
+              color: kColorWhite,
+            ),
+            Spacing.v6,
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                color: const Color(0xFFFF3EA5).withValues(alpha: 0.18),
+                border: Border.all(
+                  color: const Color(0xFFFF3EA5).withValues(alpha: 0.4),
+                ),
+              ),
+              child: const SemiBoldText(
+                text: 'Floor audience',
+                fontSize: TextStyles.k10FontSize,
+                color: Color(0xFFFF8FB8),
+              ),
+            ),
+            if (user.isVip || user.isCoinsSeller) ...[
+              Spacing.v10,
+              Wrap(
+                spacing: 8,
+                children: [
+                  if (user.isVip)
+                    _floorChip(
+                      icon: Icons.workspace_premium_rounded,
+                      label: 'VIP',
+                    ),
+                  if (user.isCoinsSeller)
+                    _floorChip(
+                      icon: Icons.storefront_rounded,
+                      label: 'Coin Seller',
+                    ),
+                ],
+              ),
+            ],
+            Spacing.v16,
+            if (!isSelf) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: _floorActionButton(
+                      icon: Icons.chat_bubble_outline_rounded,
+                      label: 'Message',
+                      colors: const [Color(0xFFFF8FB8), Color(0xFFFF3EA5)],
+                      onTap: () => _openMessage(context),
+                    ),
+                  ),
+                  Spacing.h10,
+                  Expanded(
+                    child: _floorActionButton(
+                      icon: Icons.card_giftcard_rounded,
+                      label: 'Gift',
+                      colors: const [Color(0xFFFFB347), Color(0xFFFF6B35)],
+                      onTap: _openGift,
+                    ),
+                  ),
+                ],
+              ),
+              if (canManage) ...[
+                Spacing.v10,
+                SizedBox(
+                  width: double.infinity,
+                  child: _floorActionButton(
+                    icon: Icons.event_seat_rounded,
+                    label: 'Put on seat',
+                    colors: const [Color(0xFF7C9CFF), Color(0xFF5B6CFF)],
+                    onTap: _openSeatPicker,
+                  ),
+                ),
+                Spacing.v10,
+                SizedBox(
+                  width: double.infinity,
+                  child: _floorActionButton(
+                    icon: Icons.person_remove_rounded,
+                    label: 'Remove from room',
+                    colors: const [Color(0xFFFF6B6B), Color(0xFFD32F2F)],
+                    onTap: _kick,
+                  ),
+                ),
+              ],
+            ] else
+              AppText(
+                text: 'This is you in the floor audience.',
+                fontSize: TextStyles.k12FontSize,
+                color: kColorWhite.withValues(alpha: 0.7),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  bool _isSelf() {
+    final myId = Get.isRegistered<UserSessionController>()
+        ? Get.find<UserSessionController>().userId.trim()
+        : '';
+    if (myId.isEmpty) return false;
+    return myId == user.userId.trim();
+  }
+
+  Widget _floorChip({required IconData icon, required String label}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: kColorWhite.withValues(alpha: 0.08),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: const Color(0xFFFFD56A)),
+          const SizedBox(width: 4),
+          SemiBoldText(
+            text: label,
+            fontSize: TextStyles.k10FontSize,
+            color: kColorWhite,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _floorActionButton({
+    required IconData icon,
+    required String label,
+    required List<Color> colors,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Ink(
+          height: 48,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            gradient: LinearGradient(colors: colors),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: kColorWhite, size: 18),
+              const SizedBox(width: 8),
+              SemiBoldText(
+                text: label,
+                fontSize: TextStyles.k14FontSize,
+                color: kColorWhite,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openMessage(BuildContext context) {
+    Get.back<void>();
+    unawaited(
+      controller.openChatWithViewer(context, {
+        'targetId': user.userId,
+        'name': user.name,
+        'avatarUrl': user.avatarUrl,
+      }),
+    );
+  }
+
+  void _openGift() {
+    final receiverId = user.userId.trim();
+    if (receiverId.isEmpty) {
+      Get.back<void>();
+      return;
+    }
+    controller.openGiftsSheet(
+      receiverId: receiverId,
+      receiverName: user.name,
+      roomGift: false,
+    );
+  }
+
+  void _openSeatPicker() {
+    Get.back<void>();
+    Get.bottomSheet(
+      _EmptySeatsForFloorUserSheet(user: user),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      barrierColor: Colors.black.withValues(alpha: 0.55),
+    );
+  }
+
+  void _kick() {
+    Get.back<void>();
+    unawaited(
+      controller.kickAudioRoomUser(
+        AudioRoomSeatModel(
+          seatNo: 0,
+          userId: user.userId,
+          name: user.name,
+          avatarUrl: user.avatarUrl,
+          role: 'audience',
+        ),
+      ),
+    );
+  }
+}
+
+/// Host picks an empty seat for a floor-audience user.
+class _EmptySeatsForFloorUserSheet extends GetView<LiveBroadcastController> {
+  const _EmptySeatsForFloorUserSheet({required this.user});
+
+  final FloorAudienceUser user;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final name = user.name.trim().isEmpty ? 'Guest' : user.name.trim();
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(10, 0, 10, bottomInset + 10),
+      child: Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.55,
+        ),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF2B1654), Color(0xFF171339)],
+          ),
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.14)),
+        ),
+        padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: kColorWhite.withValues(alpha: 0.28),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Spacing.v16,
+            SemiBoldText(
+              text: 'Put $name on a seat',
+              fontSize: TextStyles.k16FontSize,
+              color: kColorWhite,
+            ),
+            Spacing.v6,
+            AppText(
+              text: 'Choose an empty guest seat.',
+              fontSize: TextStyles.k12FontSize,
+              color: kColorWhite.withValues(alpha: 0.65),
+            ),
+            Spacing.v12,
+            Flexible(
+              child: Obx(() {
+                final emptySeats = controller.audioRoomSeats
+                    .where(
+                      (s) =>
+                          s.seatNo > 1 && !s.occupied && !s.isLocked,
+                    )
+                    .toList();
+                if (emptySeats.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: AppText(
+                      text: 'No empty seats available right now.',
+                      fontSize: TextStyles.k12FontSize,
+                      color: kColorWhite.withValues(alpha: 0.7),
+                      align: TextAlign.center,
+                    ),
+                  );
+                }
+                return ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: emptySeats.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final seat = emptySeats[index];
+                    return Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () => unawaited(
+                          controller.placeFloorUserOnSeat(
+                            user: user,
+                            seatNo: seat.seatNo,
+                          ),
+                        ),
+                        child: Ink(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 14,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(14),
+                            color: kColorWhite.withValues(alpha: 0.06),
+                            border: Border.all(
+                              color: kColorWhite.withValues(alpha: 0.1),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 36,
+                                height: 36,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      const Color(0xFF7C9CFF)
+                                          .withValues(alpha: 0.9),
+                                      const Color(0xFF5B6CFF),
+                                    ],
+                                  ),
+                                ),
+                                child: SemiBoldText(
+                                  text: '${seat.seatNo}',
+                                  fontSize: TextStyles.k14FontSize,
+                                  color: kColorWhite,
+                                ),
+                              ),
+                              Spacing.h12,
+                              Expanded(
+                                child: SemiBoldText(
+                                  text: 'Seat ${seat.seatNo}',
+                                  fontSize: TextStyles.k14FontSize,
+                                  color: kColorWhite,
+                                ),
+                              ),
+                              const Icon(
+                                Icons.chevron_right_rounded,
+                                color: kColorWhite,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              }),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Host picks a floor-audience user for a specific empty seat.
+class _FloorAudienceSeatPickerSheet extends GetView<LiveBroadcastController> {
+  const _FloorAudienceSeatPickerSheet({required this.seatNo});
+
+  final int seatNo;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(10, 0, 10, bottomInset + 10),
+      child: Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.55,
+        ),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF2B1654), Color(0xFF171339)],
+          ),
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.14)),
+        ),
+        padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: kColorWhite.withValues(alpha: 0.28),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Spacing.v16,
+            SemiBoldText(
+              text: 'Seat $seatNo — floor audience',
+              fontSize: TextStyles.k16FontSize,
+              color: kColorWhite,
+            ),
+            Spacing.v6,
+            AppText(
+              text: 'Tap a user to place them on this seat.',
+              fontSize: TextStyles.k12FontSize,
+              color: kColorWhite.withValues(alpha: 0.65),
+            ),
+            Spacing.v12,
+            Flexible(
+              child: Obx(() {
+                final users = controller.floorAudience;
+                if (users.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: AppText(
+                      text: 'No floor audience users in this room.',
+                      fontSize: TextStyles.k12FontSize,
+                      color: kColorWhite.withValues(alpha: 0.7),
+                      align: TextAlign.center,
+                    ),
+                  );
+                }
+                return ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: users.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final user = users[index];
+                    final name =
+                        user.name.trim().isEmpty ? 'Guest' : user.name.trim();
+                    return Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () => unawaited(
+                          controller.placeFloorUserOnSeat(
+                            user: user,
+                            seatNo: seatNo,
+                          ),
+                        ),
+                        child: Ink(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(14),
+                            color: kColorWhite.withValues(alpha: 0.06),
+                            border: Border.all(
+                              color: kColorWhite.withValues(alpha: 0.1),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 20,
+                                backgroundColor: Colors.white12,
+                                backgroundImage:
+                                    (user.avatarUrl ?? '').trim().isNotEmpty
+                                    ? NetworkImage(user.avatarUrl!.trim())
+                                    : null,
+                                child: (user.avatarUrl ?? '').trim().isEmpty
+                                    ? const Icon(
+                                        Icons.person,
+                                        color: kColorWhite,
+                                        size: 20,
+                                      )
+                                    : null,
+                              ),
+                              Spacing.h12,
+                              Expanded(
+                                child: SemiBoldText(
+                                  text: name,
+                                  fontSize: TextStyles.k14FontSize,
+                                  color: kColorWhite,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const Icon(
+                                Icons.event_seat_rounded,
+                                color: Color(0xFFFFD56A),
+                                size: 20,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              }),
+            ),
+          ],
         ),
       ),
     );

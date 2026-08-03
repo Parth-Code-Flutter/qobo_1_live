@@ -308,7 +308,7 @@ class DiscoverTabController extends GetxController {
         roomType: isAudioRoomMode ? 'AUDIO' : 'VIDEO',
       ),
       roomHint: room,
-      forceApprovalFlow: true,
+      forceApprovalFlow: false,
       isShowLoader: true,
     );
     if (!context.mounted) return;

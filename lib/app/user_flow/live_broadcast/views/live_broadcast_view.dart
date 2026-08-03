@@ -138,7 +138,15 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
             const Positioned.fill(child: AudioRoomStageOverlay()),
             if (!canOpenCall) _buildAudioRoomConnectionBanner(),
           ],
-          if (isVideoRoom) _buildVideoHostEarningsBadge(),
+          if (isVideoRoom) ...[
+            _buildVideoHostEarningsBadge(),
+            const Positioned(
+              left: 12,
+              right: 12,
+              bottom: 96,
+              child: _VideoFloorAudienceStrip(),
+            ),
+          ],
           _buildGroupCallGiftDock(),
         ],
       );
@@ -1428,5 +1436,55 @@ class _AudioRoomPlusTile extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Floor audience avatars for video party rooms (audio uses stage overlay strip).
+class _VideoFloorAudienceStrip extends GetView<LiveBroadcastController> {
+  const _VideoFloorAudienceStrip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final users = controller.floorAudience;
+      if (users.isEmpty) return const SizedBox.shrink();
+      return SizedBox(
+        height: 42,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            for (var i = 0; i < users.length && i < 12; i++)
+              Positioned(
+                left: i * 22.0,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => openFloorAudienceProfileSheet(users[i]),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFFFF3EA5).withValues(alpha: 0.55),
+                        width: 1.5,
+                      ),
+                      color: Colors.white12,
+                      image: (users[i].avatarUrl ?? '').trim().isNotEmpty
+                          ? DecorationImage(
+                              image: NetworkImage(users[i].avatarUrl!.trim()),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                    ),
+                    child: (users[i].avatarUrl ?? '').trim().isEmpty
+                        ? const Icon(Icons.person, size: 16, color: kColorWhite)
+                        : null,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    });
   }
 }

@@ -116,6 +116,8 @@ class EconomyRepo {
     int quantity = 1,
     String scope = 'user',
     String? clientGiftId,
+    List<String>? seatedUserIds,
+    String? sessionType,
     bool isShowLoader = true,
   }) async {
     final normalizedScope = scope.trim().isEmpty
@@ -125,13 +127,35 @@ class EconomyRepo {
     final resolvedClientGiftId = clientGiftId?.trim().isNotEmpty == true
         ? clientGiftId!.trim()
         : _newClientGiftId();
+    final seated = (seatedUserIds ?? const <String>[])
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    final session = sessionType?.trim() ?? '';
     final body = <String, dynamic>{
       'roomId': roomId,
+      'room_id': roomId,
       'giftId': giftId,
-      if (normalizedReceiverId.isNotEmpty) 'receiverId': normalizedReceiverId,
+      'gift_id': giftId,
+      if (normalizedScope == 'user' && normalizedReceiverId.isNotEmpty) ...{
+        'receiverId': normalizedReceiverId,
+        'receiver_id': normalizedReceiverId,
+      },
+      // Hint for party-room room gifts when backend seat lookup lags.
+      if (normalizedScope == 'room' && seated.isNotEmpty) ...{
+        'seatedUserIds': seated,
+        'seated_user_ids': seated,
+        'creditedUserIds': seated,
+        'credited_user_ids': seated,
+      },
+      if (session.isNotEmpty) ...{
+        'sessionType': session,
+        'session_type': session,
+      },
       'quantity': quantity,
       'scope': normalizedScope,
       'clientGiftId': resolvedClientGiftId,
+      'client_gift_id': resolvedClientGiftId,
     };
 
     var response = await _apiService.postRequest(
@@ -159,6 +183,8 @@ class EconomyRepo {
           'quantity': quantity,
           'scope': normalizedScope,
           'client_gift_id': resolvedClientGiftId,
+          if (seated.isNotEmpty) 'seated_user_ids': seated,
+          if (session.isNotEmpty) 'session_type': session,
         },
         isShowLoader: isShowLoader,
       );
