@@ -853,11 +853,15 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
                   filled: false,
                 ),
                 Spacing.h8,
-                AppUserAvatar(
-                  name: controller.hostName.value,
-                  imageUrl: controller.hostAvatarUrl.value,
-                  size: compact ? 40 : 44,
-                  border: Border.all(color: kColorWhite, width: 1.5),
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _openHostProfileSheet,
+                  child: AppUserAvatar(
+                    name: controller.hostName.value,
+                    imageUrl: controller.hostAvatarUrl.value,
+                    size: compact ? 40 : 44,
+                    border: Border.all(color: kColorWhite, width: 1.5),
+                  ),
                 ),
                 Spacing.h10,
                 Expanded(
@@ -926,6 +930,47 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
         ),
       );
     });
+  }
+
+  /// AppBar host avatar → same ornate seat profile sheet used for mic seats.
+  void _openHostProfileSheet() {
+    final hostSeat = _resolveHostSeatForProfile();
+    if (hostSeat == null) return;
+
+    Get.bottomSheet(
+      _AudioSeatActionsSheet(
+        seat: hostSeat,
+        // Profile view only (Message / Gift). Avoid host manage actions
+        // like Kick/Mute against the room host from the header entry.
+        isHostView: false,
+      ),
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.55),
+      isScrollControlled: true,
+    );
+  }
+
+  AudioRoomSeatModel? _resolveHostSeatForProfile() {
+    // Prefer the live seat model so diamonds / badges / frame match the grid.
+    for (final seat in controller.audioRoomSeats) {
+      if (seat.occupied && seat.isHost) return seat;
+    }
+    for (final seat in controller.audioRoomSeats) {
+      if (seat.occupied && seat.seatNo == 1) return seat;
+    }
+
+    final name = controller.hostName.value.trim();
+    final userId = controller.receiverId.value.trim();
+    if (name.isEmpty && userId.isEmpty) return null;
+
+    return AudioRoomSeatModel(
+      seatNo: 1,
+      userId: userId,
+      name: name.isEmpty ? 'Host' : name,
+      avatarUrl: controller.hostAvatarUrl.value,
+      avatarFrameUrl: controller.hostAvatarFrameUrl.value,
+      role: 'host',
+    );
   }
 }
 
