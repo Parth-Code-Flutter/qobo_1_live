@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/icon_constants.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
@@ -225,7 +226,8 @@ class AwardView extends GetView<AwardController> {
         case 'star_rounded':
           return Icons.star_rounded;
         case 'card_giftcard_rounded':
-          return Icons.card_giftcard_rounded;
+        case 'redeem_rounded':
+          return kGiftIcon;
         case 'visibility_rounded':
           return Icons.visibility_rounded;
         case 'shield_rounded':

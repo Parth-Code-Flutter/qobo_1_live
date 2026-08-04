@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/icon_constants.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_sound_player.dart';
@@ -455,7 +456,7 @@ class _GiftCelebrationCard extends StatelessWidget {
           ],
         ),
         child: const Icon(
-          Icons.card_giftcard_rounded,
+          kGiftIcon,
           color: kColorWhite,
           size: 42,
         ),

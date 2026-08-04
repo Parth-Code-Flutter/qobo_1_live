@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/icon_constants.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/agency_host_review_actions.dart';
@@ -492,7 +493,7 @@ class _HostSheetCard extends StatelessWidget {
               Spacing.h8,
               Expanded(
                 child: _metricChip(
-                  Icons.card_giftcard_rounded,
+                  kGiftIcon,
                   formatCoins(host.totalGifts),
                 ),
               ),

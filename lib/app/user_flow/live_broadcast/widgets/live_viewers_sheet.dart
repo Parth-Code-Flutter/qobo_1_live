@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/icon_constants.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
@@ -288,7 +289,7 @@ class LiveViewerProfileDialog extends GetView<LiveBroadcastController> {
                   Spacing.h10,
                   Expanded(
                     child: _ProfileActionButton(
-                      icon: Icons.card_giftcard_rounded,
+                      icon: kGiftIcon,
                       label: 'Gift',
                       isPrimary: true,
                       onTap: () {

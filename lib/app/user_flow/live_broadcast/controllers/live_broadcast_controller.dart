@@ -3697,6 +3697,32 @@ class LiveBroadcastController extends GetxController {
     );
   }
 
+  /// PK APIs need the backend room id (with dashes), not the
+  /// sanitized Zego channel id used for call login.
+  void openPkBattle() {
+    final roomApiId = audioRoomApiId.trim().isNotEmpty
+        ? audioRoomApiId.trim()
+        : roomId.value.trim();
+    if (roomApiId.isEmpty) {
+      Get.snackbar(
+        'PK Battle',
+        'Room id is missing. Rejoin the room and try again.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.black87,
+        colorText: kColorWhite,
+      );
+      return;
+    }
+    Get.toNamed(
+      Routes.PK_BATTLE,
+      arguments: {
+        'room_id': roomApiId,
+        'title': streamTitle.value,
+        'name': hostName.value,
+      },
+    );
+  }
+
   Future<void> shareRoom() async {
     final shareId = audioRoomApiId.isNotEmpty ? audioRoomApiId : 'room';
     var roomUrl = 'https://qobo.live/room/$shareId';

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/live_broadcast/controllers/live_broadcast_controller.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 
@@ -195,7 +194,9 @@ class RoomOptionsSheet extends StatelessWidget {
 
     switch (option.action) {
       case _RoomOptionAction.pkBattle:
-        _openPkBattle();
+        if (Get.isRegistered<LiveBroadcastController>()) {
+          Get.find<LiveBroadcastController>().openPkBattle();
+        }
       case _RoomOptionAction.filters:
         _runAfterClose(
           () => Get.find<LiveBroadcastController>().openLiveFiltersSheet(),
@@ -226,35 +227,5 @@ class RoomOptionsSheet extends StatelessWidget {
   void _runAfterClose(VoidCallback action) {
     if (!Get.isRegistered<LiveBroadcastController>()) return;
     Future.delayed(const Duration(milliseconds: 120), action);
-  }
-
-  void _openPkBattle() {
-    final liveController = Get.isRegistered<LiveBroadcastController>()
-        ? Get.find<LiveBroadcastController>()
-        : null;
-    // PK APIs need the backend room id (with dashes), not the
-    // sanitized Zego channel id used for call login.
-    final roomId =
-        (liveController?.audioRoomApiId.trim().isNotEmpty == true)
-            ? liveController!.audioRoomApiId.trim()
-            : (liveController?.roomId.value.trim() ?? '');
-    if (roomId.isEmpty) {
-      Get.snackbar(
-        'PK Battle',
-        'Room id is missing. Rejoin the room and try again.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.black87,
-        colorText: kColorWhite,
-      );
-      return;
-    }
-    Get.toNamed(
-      Routes.PK_BATTLE,
-      arguments: {
-        'room_id': roomId,
-        'title': liveController?.streamTitle.value ?? '',
-        'name': liveController?.hostName.value ?? '',
-      },
-    );
   }
 }

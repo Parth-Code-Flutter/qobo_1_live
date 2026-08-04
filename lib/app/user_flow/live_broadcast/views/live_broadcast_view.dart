@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/icon_constants.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
@@ -945,7 +946,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
               // Always show gift; alone-room toast is handled in sendGift.
               Spacing.h8,
               _bottomActionIcon(
-                Icons.card_giftcard_rounded,
+                kGiftIcon,
                 color: _accent,
                 onTap: controller.openGiftsSheet,
               ),

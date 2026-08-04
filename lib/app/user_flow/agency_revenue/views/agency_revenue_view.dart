@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/icon_constants.dart';
 import 'package:qobo_one_live/app/user_flow/agency_owner_dashboard/models/agency_revenue_demo.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
@@ -368,7 +369,7 @@ class AgencyRevenueView extends GetView<AgencyRevenueController> {
       case AgencyRevenueLineType.call:
         return Icons.call_rounded;
       case AgencyRevenueLineType.gift:
-        return Icons.card_giftcard_rounded;
+        return kGiftIcon;
       case AgencyRevenueLineType.owner:
         return Icons.person_rounded;
       case AgencyRevenueLineType.payout:

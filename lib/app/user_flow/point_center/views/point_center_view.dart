@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/icon_constants.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
@@ -232,7 +233,7 @@ class PointCenterView extends GetView<PointCenterController> {
                       height: 52,
                       fit: BoxFit.contain,
                       placeholderBuilder: (_) => const Icon(
-                        Icons.card_giftcard_rounded,
+                        kGiftIcon,
                         color: kColorPrimary,
                         size: 40,
                       ),

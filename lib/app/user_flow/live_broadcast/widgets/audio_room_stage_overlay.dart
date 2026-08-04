@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/icon_constants.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
@@ -21,7 +22,6 @@ import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 import '../controllers/live_broadcast_controller.dart';
 import '../models/audio_room_models.dart';
 import '../utils/audio_room_seat_layout.dart';
-import 'room_options_sheet.dart';
 
 /// Opens floor-audience user profile (Message / Gift / optional Kick).
 void openFloorAudienceProfileSheet(FloorAudienceUser user) {
@@ -262,20 +262,6 @@ class _AudioRoomBottomControls extends GetView<LiveBroadcastController> {
               ),
             ],
             _SpeakerControl(compact: compact),
-            _ControlButton(
-              icon: Icons.back_hand_rounded,
-              label: 'Request',
-              compact: compact,
-              emphasized: true,
-              onTap: () => controller.requestAudioSeat(),
-            ),
-            if (!controller.isVideoRoom)
-              _ControlButton(
-                icon: Icons.favorite_rounded,
-                label: 'React',
-                compact: compact,
-                onTap: () => Get.snackbar('React', 'Reaction sent.'),
-              ),
             // Always show Gift; send blocks with toast when host/person is alone.
             Obx(
               () => _GiftControlButton(
@@ -284,19 +270,39 @@ class _AudioRoomBottomControls extends GetView<LiveBroadcastController> {
                 onTap: controller.openGiftsSheet,
               ),
             ),
+            // Same icons as Room options sheet (Background / Share / PK).
             _ControlButton(
-              icon: Icons.more_horiz_rounded,
-              label: 'More',
+              icon: Icons.image_rounded,
+              label: 'Background',
               compact: compact,
-              onTap: () {
-                Get.bottomSheet(
-                  RoomOptionsSheet(
-                    isHost: controller.isHost.value,
-                    isVideoRoom: controller.isVideoRoom,
-                  ),
-                  backgroundColor: Colors.transparent,
-                );
-              },
+              accentGradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF4FC3F7), Color(0xFF2979FF)],
+              ),
+              onTap: controller.openRoomBackgroundSheet,
+            ),
+            _ControlButton(
+              icon: Icons.ios_share_rounded,
+              label: 'Share',
+              compact: compact,
+              accentGradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF9B7BFF), Color(0xFF6C4DFF)],
+              ),
+              onTap: controller.shareRoom,
+            ),
+            _ControlButton(
+              icon: Icons.flash_on_rounded,
+              label: 'PK Battle',
+              compact: compact,
+              accentGradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFFFFD54F), Color(0xFFFF8F00)],
+              ),
+              onTap: controller.openPkBattle,
             ),
           ],
         ),
@@ -632,7 +638,6 @@ class _ControlButton extends StatelessWidget {
     required this.compact,
     required this.onTap,
     this.active = false,
-    this.emphasized = false,
     this.accentGradient,
   });
 
@@ -641,7 +646,6 @@ class _ControlButton extends StatelessWidget {
   final bool compact;
   final VoidCallback? onTap;
   final bool active;
-  final bool emphasized;
   final Gradient? accentGradient;
 
   @override
@@ -663,16 +667,8 @@ class _ControlButton extends StatelessWidget {
                   height: size,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: accentGradient ??
-                        (emphasized
-                            ? const LinearGradient(
-                                colors: [
-                                  kColorProfileFeatureBlue,
-                                  kColorPrimary,
-                                ],
-                              )
-                            : null),
-                    color: accentGradient != null || emphasized
+                    gradient: accentGradient,
+                    color: accentGradient != null
                         ? null
                         : active
                         ? kColorWhite
@@ -684,7 +680,7 @@ class _ControlButton extends StatelessWidget {
                   child: Icon(
                     icon,
                     size: compact ? 19 : 22,
-                    color: accentGradient != null || emphasized
+                    color: accentGradient != null
                         ? kColorWhite
                         : active
                         ? kColorPrimary
@@ -742,14 +738,29 @@ class _GiftControlButton extends StatelessWidget {
                     Container(
                       width: compact ? 40 : 46,
                       height: compact ? 40 : 46,
-                      decoration: const BoxDecoration(
-                        color: kColorProfileActionPinkStart,
+                      decoration: BoxDecoration(
                         shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color(0xFFFF7AB8),
+                            Color(0xFFFF3EA5),
+                            Color(0xFFE12BC5),
+                          ],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFFF3EA5).withValues(alpha: 0.45),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
                       ),
-                      child: const Icon(
-                        Icons.card_giftcard_rounded,
+                      child: Icon(
+                        kGiftIcon,
                         color: kColorWhite,
-                        size: 20,
+                        size: compact ? 20 : 22,
                       ),
                     ),
                     if (!compact)
@@ -2294,7 +2305,7 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
           onTap: () => _openMessage(context),
         ),
         _SeatActionData(
-          icon: Icons.card_giftcard_rounded,
+          icon: kGiftIcon,
           label: 'Gift',
           accent: const Color(0xFFFFB347),
           onTap: _openGift,
@@ -2310,7 +2321,7 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
         onTap: () => _openMessage(context),
       ),
       _SeatActionData(
-        icon: Icons.card_giftcard_rounded,
+        icon: kGiftIcon,
         label: 'Send gift',
         accent: const Color(0xFFFFB347),
         onTap: _openGift,
@@ -3669,7 +3680,7 @@ class FloorAudienceProfileSheet extends GetView<LiveBroadcastController> {
                   Spacing.h10,
                   Expanded(
                     child: _floorActionButton(
-                      icon: Icons.card_giftcard_rounded,
+                      icon: kGiftIcon,
                       label: 'Gift',
                       colors: const [Color(0xFFFFB347), Color(0xFFFF6B35)],
                       onTap: _openGift,

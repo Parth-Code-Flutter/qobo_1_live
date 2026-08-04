@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/icon_constants.dart';
 import 'package:qobo_one_live/app/user_flow/agency_owner_dashboard/models/agency_revenue_demo.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
@@ -1045,7 +1046,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
                 ),
                 Spacing.h6,
                 _hostMetricChip(
-                  Icons.card_giftcard_rounded,
+                  kGiftIcon,
                   _formatCoins(host.totalGifts),
                 ),
               ],

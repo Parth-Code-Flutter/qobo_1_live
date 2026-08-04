@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/icon_constants.dart';
 import 'package:qobo_one_live/app/user_flow/live_broadcast/widgets/gift_icon_widget.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/zego_config.dart';
@@ -254,7 +255,7 @@ class _VideoParticipantStrip extends GetView<ChatVoiceCallController> {
                 ),
                 const SizedBox(width: 6),
                 _CompactCallActionButton(
-                  icon: Icons.card_giftcard_rounded,
+                  icon: kGiftIcon,
                   label: 'Gift',
                   onTap: () => Get.bottomSheet(
                     _CallGiftsBottomSheet(controller: controller),
