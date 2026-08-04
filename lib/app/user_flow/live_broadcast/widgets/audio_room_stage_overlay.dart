@@ -891,18 +891,22 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
                     ],
                   ),
                 ),
-                _CircleButton(
-                  icon: Icons.share_rounded,
-                  onTap: () => controller.shareRoom(),
-                  compact: compact,
-                ),
-                if (controller.canManageAudioRoomMembers) ...[
-                  Spacing.h8,
+                // Share + background stay on video rooms only — removed from audio AppBar.
+                // Audio hosts can still change background from More → Background.
+                if (controller.isVideoRoom) ...[
                   _CircleButton(
-                    icon: Icons.wallpaper_rounded,
-                    onTap: controller.openRoomBackgroundSheet,
+                    icon: Icons.share_rounded,
+                    onTap: () => controller.shareRoom(),
                     compact: compact,
                   ),
+                  if (controller.canManageAudioRoomMembers) ...[
+                    Spacing.h8,
+                    _CircleButton(
+                      icon: Icons.wallpaper_rounded,
+                      onTap: controller.openRoomBackgroundSheet,
+                      compact: compact,
+                    ),
+                  ],
                 ],
                 // Host + audience: local session earnings (gifts to this user).
                 Spacing.h8,
