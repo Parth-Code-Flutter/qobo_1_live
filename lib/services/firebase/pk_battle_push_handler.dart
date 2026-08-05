@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:push_notification_service/push_notification_service.dart';
@@ -23,6 +25,11 @@ class PkBattlePushHandler {
   Future<void> handleNotificationTap(PushNotificationMessage message) async {
     final type = message.data['type']?.toString().trim().toLowerCase() ?? '';
     if (!PushNotificationTypes.isPkType(type)) return;
+
+    if (PushNotificationTypes.isFollowerPkType(type)) {
+      await _openFollowerArena(message.data, type: type);
+      return;
+    }
 
     if (type == PushNotificationTypes.pkRequest) {
       await _openIncomingChallenge(message.data);
@@ -58,6 +65,18 @@ class PkBattlePushHandler {
     final type = message.data['type']?.toString().trim().toLowerCase() ?? '';
     if (!PushNotificationTypes.isPkType(type)) return;
 
+    if (PushNotificationTypes.isFollowerPkType(type)) {
+      if (actionId == PushNotificationActions.acceptPk) {
+        await _openFollowerArena(message.data, type: type);
+        await Future<void>.delayed(const Duration(milliseconds: 120));
+        if (Get.isRegistered<PKBattleController>()) {
+          await Get.find<PKBattleController>().acceptFollowerChallenge();
+        }
+      }
+      await PushNotificationService.instance.cancelLocalNotification(message);
+      return;
+    }
+
     switch (actionId) {
       case PushNotificationActions.acceptPk:
         await _respondToRequest(message.data, action: 'accept');
@@ -71,13 +90,34 @@ class PkBattlePushHandler {
   }
 
   /// Socket payloads reuse the same field names as FCM data.
-  Future<void> handleSocketEvent(String event, Map<String, dynamic> data) async {
-    final type = (data['type']?.toString().trim().isNotEmpty == true
-            ? data['type'].toString()
-            : event)
-        .trim()
-        .toLowerCase();
-    LoggerUtils.logInfo('PkBattlePush: socket event=$event type=$type data=$data');
+  Future<void> handleSocketEvent(
+    String event,
+    Map<String, dynamic> data,
+  ) async {
+    final type =
+        (data['type']?.toString().trim().isNotEmpty == true
+                ? data['type'].toString()
+                : event)
+            .trim()
+            .toLowerCase();
+    LoggerUtils.logInfo(
+      'PkBattlePush: socket event=$event type=$type data=$data',
+    );
+
+    if (PushNotificationTypes.isFollowerPkType(type)) {
+      if (Get.isRegistered<PKBattleController>()) {
+        Get.find<PKBattleController>().handleFollowerPkEvent(type, data);
+      } else if (type == PushNotificationTypes.pkFollowerInvite) {
+        await _openFollowerArena(data, type: type);
+      }
+
+      // Keep seat PK badges / gift targets fresh for everyone still in-room.
+      if (type != PushNotificationTypes.pkFollowerInvite &&
+          Get.isRegistered<LiveBroadcastController>()) {
+        unawaited(Get.find<LiveBroadcastController>().loadAudioRoomSeats());
+      }
+      return;
+    }
 
     if (Get.isRegistered<PKBattleController>()) {
       final pk = Get.find<PKBattleController>();
@@ -142,6 +182,28 @@ class PkBattlePushHandler {
     Get.toNamed(Routes.PK_BATTLE, arguments: args);
   }
 
+  Future<void> _openFollowerArena(
+    Map<String, dynamic> data, {
+    required String type,
+  }) async {
+    final args = <String, dynamic>{
+      'mode': 'audio_follower_pk',
+      'room_id': _resolveMyRoomId(data),
+      'lifecycle_type': type,
+      'type': type,
+      ...data,
+    };
+
+    if (Get.isRegistered<PKBattleController>()) {
+      Get.find<PKBattleController>().handleFollowerPkEvent(type, data);
+      if (Get.currentRoute != Routes.PK_BATTLE) {
+        Get.toNamed(Routes.PK_BATTLE, arguments: args);
+      }
+      return;
+    }
+    Get.toNamed(Routes.PK_BATTLE, arguments: args);
+  }
+
   Future<void> _openArenaFromLifecycle(
     Map<String, dynamic> data, {
     required String type,
@@ -180,9 +242,7 @@ class PkBattlePushHandler {
   }) async {
     final myRoomId = _resolveMyRoomId(data);
     final requestId =
-        _text(data['request_id']) ??
-        _text(data['sender_room_id']) ??
-        '';
+        _text(data['request_id']) ?? _text(data['sender_room_id']) ?? '';
     if (myRoomId.isEmpty || requestId.isEmpty) {
       _toast('PK request details are missing.', isError: true);
       return;
@@ -208,7 +268,8 @@ class PkBattlePushHandler {
       action: action,
       duration: int.tryParse(data['battle_duration']?.toString() ?? '') ?? 300,
     );
-    final ok = response?['success'] == true ||
+    final ok =
+        response?['success'] == true ||
         response?['statusCode'] == 1 ||
         response?['statusCode'] == 200;
     if (!ok) {
@@ -218,9 +279,7 @@ class PkBattlePushHandler {
       );
       return;
     }
-    _toast(
-      action == 'accept' ? 'PK battle accepted.' : 'PK request rejected.',
-    );
+    _toast(action == 'accept' ? 'PK battle accepted.' : 'PK request rejected.');
   }
 
   String _resolveMyRoomId(Map<String, dynamic> data) {
@@ -232,9 +291,7 @@ class PkBattlePushHandler {
     }
 
     // For recipient of pk_request, room_id is their own room.
-    return _text(data['room_id']) ??
-        _text(data['target_room_id']) ??
-        '';
+    return _text(data['room_id']) ?? _text(data['target_room_id']) ?? '';
   }
 
   String? _text(dynamic value) {

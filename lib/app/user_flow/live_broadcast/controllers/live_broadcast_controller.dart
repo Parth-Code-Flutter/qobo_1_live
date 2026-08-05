@@ -39,6 +39,7 @@ import '../models/audio_room_models.dart';
 import '../models/room_background_theme.dart';
 import '../utils/live_room_profile_utils.dart';
 import '../widgets/gifts_bottom_sheet.dart';
+import '../widgets/follower_pk_gift_target_sheet.dart';
 import '../widgets/live_filters_sheet.dart';
 import '../widgets/live_viewers_sheet.dart';
 import '../widgets/room_background_sheet.dart';
@@ -82,8 +83,10 @@ class LiveBroadcastController extends GetxController {
   final coinsBalance = 0.obs;
   final diamondsBalance = 0.obs;
   final sessionEarnings = SessionEarningsTracker();
+
   /// Target for gullak-style coin fly animation into the host earnings pill.
   final sessionEarningsBadgeKey = GlobalKey(debugLabel: 'sessionEarningsBadge');
+
   /// Target for floor-audience join fly animation into the AppBar people badge.
   final floorAudienceBadgeKey = GlobalKey(debugLabel: 'floorAudienceBadge');
   final giftCatalog = <Map<String, String>>[].obs;
@@ -93,6 +96,7 @@ class LiveBroadcastController extends GetxController {
   final isRoomGiftMode = true.obs;
   final audioRoomSeats = <AudioRoomSeatModel>[].obs;
   final floorAudience = <FloorAudienceUser>[].obs;
+
   /// Skip join-fly on the first floor snapshot so opening a room is quiet.
   bool _floorAudienceHydrated = false;
   final Set<String> _knownFloorAudienceIds = <String>{};
@@ -140,6 +144,7 @@ class LiveBroadcastController extends GetxController {
   VoidCallback? _viewerCountListener;
   var _exitReported = false;
   var _hostEndConfirmed = false;
+
   /// After join, used to auto-close the room when seat sync shows removal/kick.
   var _roomMembershipConfirmed = false;
   var _currentUserOccupiedMicSeat = false;
@@ -163,8 +168,9 @@ class LiveBroadcastController extends GetxController {
         roomId.value = ZegoLiveIdUtils.sanitize(rawId);
       }
     }
-    joinApprovalRequired.value =
-        JoinApprovalService.isApprovalRequired(_roomData);
+    joinApprovalRequired.value = JoinApprovalService.isApprovalRequired(
+      _roomData,
+    );
     _hydrateHostProfile();
     _hydrateRoomBackground();
     _seedSessionEarningsFromRoom();
@@ -209,8 +215,7 @@ class LiveBroadcastController extends GetxController {
       _roomRepo
           .joinRoom(
             roomId: backendRoomId,
-            joinRequestId:
-                (joinRequestId != null && joinRequestId.isNotEmpty)
+            joinRequestId: (joinRequestId != null && joinRequestId.isNotEmpty)
                 ? joinRequestId
                 : null,
             sessionType: 'live_stream',
@@ -280,8 +285,7 @@ class LiveBroadcastController extends GetxController {
     final apiRoomId = audioRoomApiId.trim().isNotEmpty
         ? audioRoomApiId.trim()
         : roomId.value.trim();
-    if (apiRoomId.isNotEmpty &&
-        Get.isRegistered<UserRealtimeSocketService>()) {
+    if (apiRoomId.isNotEmpty && Get.isRegistered<UserRealtimeSocketService>()) {
       await Get.find<UserRealtimeSocketService>().joinRoomChannel(apiRoomId);
     }
     _bindSeatRequestSocket();
@@ -314,9 +318,7 @@ class LiveBroadcastController extends GetxController {
     _seatRequestPollTimer = null;
   }
 
-  Future<void> _pollPendingSeatRequests({
-    bool showDialogForNew = false,
-  }) async {
+  Future<void> _pollPendingSeatRequests({bool showDialogForNew = false}) async {
     if (!isHost.value || _exitReported) return;
     final apiRoomId = audioRoomApiId.trim();
     if (apiRoomId.isEmpty) return;
@@ -340,10 +342,12 @@ class LiveBroadcastController extends GetxController {
               : null);
     final list = raw is List
         ? raw
-            .whereType<Map>()
-            .map((e) => PendingSeatRequest.fromMap(Map<String, dynamic>.from(e)))
-            .where((e) => e.requestId.isNotEmpty)
-            .toList()
+              .whereType<Map>()
+              .map(
+                (e) => PendingSeatRequest.fromMap(Map<String, dynamic>.from(e)),
+              )
+              .where((e) => e.requestId.isNotEmpty)
+              .toList()
         : <PendingSeatRequest>[];
 
     pendingSeatRequests.assignAll(list);
@@ -403,9 +407,7 @@ class LiveBroadcastController extends GetxController {
     if (pendingRaw is List) {
       final parsed = pendingRaw
           .whereType<Map>()
-          .map(
-            (e) => PendingSeatRequest.fromMap(Map<String, dynamic>.from(e)),
-          )
+          .map((e) => PendingSeatRequest.fromMap(Map<String, dynamic>.from(e)))
           .where((e) => e.requestId.isNotEmpty)
           .toList();
       pendingSeatRequests.assignAll(parsed);
@@ -419,12 +421,65 @@ class LiveBroadcastController extends GetxController {
         }
       }
     }
+
+    // Room-level follower PK block (badge restore when seat.pkBattle is absent).
+    _applyActiveFollowerPkMeta(
+      map['active_follower_pk'] ?? map['activeFollowerPk'],
+    );
+  }
+
+  /// Mirrors `active_follower_pk` onto the challenger's seat when seats lag.
+  void _applyActiveFollowerPkMeta(dynamic raw) {
+    if (raw is! Map) return;
+    final meta = Map<String, dynamic>.from(raw);
+    final battleId =
+        (meta['battle_id'] ?? meta['battleId'] ?? meta['id'])
+            ?.toString()
+            .trim() ??
+        '';
+    final challengerId =
+        (meta['challenger_user_id'] ??
+                meta['challengerUserId'] ??
+                meta['challenger_id'])
+            ?.toString()
+            .trim() ??
+        '';
+    final status = (meta['status']?.toString().trim() ?? '').toLowerCase();
+    if (battleId.isEmpty || challengerId.isEmpty || status.isEmpty) return;
+
+    final badge = AudioRoomPkBattleInfo(
+      battleId: battleId,
+      status: status,
+      mode: 'audio_follower_pk',
+      active: status == 'waiting_opponent' ||
+          status == 'duration_pending' ||
+          status == 'active',
+      canJoin: status == 'waiting_opponent',
+    );
+
+    var changed = false;
+    final next = audioRoomSeats.map((seat) {
+      if (!_userIdsMatch(seat.userId, challengerId)) return seat;
+      if (seat.pkBattle?.battleId == badge.battleId &&
+          seat.pkBattle?.status == badge.status &&
+          seat.pkBattle?.canJoin == badge.canJoin) {
+        return seat;
+      }
+      changed = true;
+      return seat.copyWith(pkBattle: badge);
+    }).toList();
+    if (changed) {
+      audioRoomSeats.assignAll(next);
+    }
   }
 
   /// Updates [floorAudience] and flies new joiners into the AppBar people badge.
   void _applyFloorAudience(List<FloorAudienceUser> next) {
     final previousIds = Set<String>.from(_knownFloorAudienceIds);
-    final nextIds = next.map((e) => e.userId.trim()).where((e) => e.isNotEmpty).toSet();
+    final nextIds = next
+        .map((e) => e.userId.trim())
+        .where((e) => e.isNotEmpty)
+        .toSet();
 
     floorAudience.assignAll(next);
     _knownFloorAudienceIds
@@ -469,8 +524,7 @@ class LiveBroadcastController extends GetxController {
     final apiRoomId = audioRoomApiId.trim().isNotEmpty
         ? audioRoomApiId.trim()
         : roomId.value.trim();
-    if (apiRoomId.isNotEmpty &&
-        Get.isRegistered<UserRealtimeSocketService>()) {
+    if (apiRoomId.isNotEmpty && Get.isRegistered<UserRealtimeSocketService>()) {
       await Get.find<UserRealtimeSocketService>().joinRoomChannel(apiRoomId);
     }
     _startJoinRequestPolling();
@@ -519,9 +573,7 @@ class LiveBroadcastController extends GetxController {
     _joinRequestPollTimer = null;
   }
 
-  Future<void> _pollPendingJoinRequests({
-    bool showDialogForNew = false,
-  }) async {
+  Future<void> _pollPendingJoinRequests({bool showDialogForNew = false}) async {
     if (!isHost.value || _exitReported) return;
     final apiRoomId = audioRoomApiId.trim().isNotEmpty
         ? audioRoomApiId.trim()
@@ -546,10 +598,7 @@ class LiveBroadcastController extends GetxController {
         : <String, dynamic>{};
     final raw = map['items'] ?? map['requests'] ?? data;
     final list = raw is List
-        ? raw
-            .whereType<Map>()
-            .map((e) => Map<String, dynamic>.from(e))
-            .toList()
+        ? raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList()
         : <Map<String, dynamic>>[];
 
     for (final item in list) {
@@ -707,8 +756,7 @@ class LiveBroadcastController extends GetxController {
     String? receiverId,
   }) {
     final myId = _currentUserId();
-    final hostId =
-        resolveHostId(_roomData) ?? this.receiverId.value.trim();
+    final hostId = resolveHostId(_roomData) ?? this.receiverId.value.trim();
     if (myId.isEmpty) return;
 
     // Sender never earns from their own gift. Room gifts credit peers only.
@@ -780,9 +828,7 @@ class LiveBroadcastController extends GetxController {
         ?.map((e) => e.trim())
         .where((e) => e.isNotEmpty)
         .toList();
-    final targetId = normalized == 'room'
-        ? ''
-        : (receiverId?.trim() ?? '');
+    final targetId = normalized == 'room' ? '' : (receiverId?.trim() ?? '');
     if (normalized != 'room' &&
         targetId.isEmpty &&
         (credited == null || credited.isEmpty)) {
@@ -795,11 +841,12 @@ class LiveBroadcastController extends GetxController {
       if (exclude.isNotEmpty && _userIdsMatch(seat.userId, exclude)) {
         return seat;
       }
-      final matchCredited = credited != null &&
+      final matchCredited =
+          credited != null &&
           credited.isNotEmpty &&
           credited.any((id) => _userIdsMatch(id, seat.userId));
-      final matchRoom = normalized == 'room' &&
-          (credited == null || credited.isEmpty);
+      final matchRoom =
+          normalized == 'room' && (credited == null || credited.isEmpty);
       final matchUser =
           normalized != 'room' && _userIdsMatch(seat.userId, targetId);
       if (matchCredited || matchRoom || matchUser) {
@@ -927,8 +974,7 @@ class LiveBroadcastController extends GetxController {
   }
 
   /// Host or room admin — can mute/kick/manage members and change background.
-  bool get canManageAudioRoomMembers =>
-      isHost.value || isCurrentUserRoomAdmin;
+  bool get canManageAudioRoomMembers => isHost.value || isCurrentUserRoomAdmin;
 
   String get _normalizedNavRoomType =>
       roomType.value.toUpperCase().replaceAll('-', '_').replaceAll(' ', '_');
@@ -942,7 +988,9 @@ class LiveBroadcastController extends GetxController {
   /// Party-room gifts credit **mic seats only** (not floor audience).
   bool get hasGiftAudience {
     if (isAudioVideoRoom) {
-      return _seatedGiftRecipientIds(excludeUserId: _currentUserId()).isNotEmpty;
+      return _seatedGiftRecipientIds(
+        excludeUserId: _currentUserId(),
+      ).isNotEmpty;
     }
     if (hasOtherParticipantsBesideHost) return true;
     // Live-stream guest already joined — host is the receive target.
@@ -1136,10 +1184,7 @@ class LiveBroadcastController extends GetxController {
           ),
       onPeerGift: (event) {
         unawaited(
-          _handlePeerGiftEarnings(
-            event.message,
-            senderId: event.senderId,
-          ),
+          _handlePeerGiftEarnings(event.message, senderId: event.senderId),
         );
       },
     );
@@ -1153,7 +1198,8 @@ class LiveBroadcastController extends GetxController {
     final scope = parseGiftScope(chatMessage);
     final receiverId = parseGiftReceiverId(chatMessage);
     final fromId = parseGiftSenderId(chatMessage) ?? senderId;
-    final price = parseGiftPrice(chatMessage) ??
+    final price =
+        parseGiftPrice(chatMessage) ??
         _giftPriceFromCatalogMessage(chatMessage);
     final creditedIds = parseGiftCreditedUserIds(chatMessage);
     final amountEach = parseGiftAmountEach(chatMessage);
@@ -1208,8 +1254,9 @@ class LiveBroadcastController extends GetxController {
   }
 
   int _giftPriceFromCatalogMessage(String chatMessage) {
-    final name =
-        GiftMediaUtils.giftNameFromChatLabel(chatMessage).toLowerCase();
+    final name = GiftMediaUtils.giftNameFromChatLabel(
+      chatMessage,
+    ).toLowerCase();
     if (name.isNotEmpty && name != 'gift') {
       for (final gift in giftCatalog) {
         if ((gift['name'] ?? '').trim().toLowerCase() == name) {
@@ -1556,7 +1603,7 @@ class LiveBroadcastController extends GetxController {
         Get.snackbar(
           'Insufficient Coins',
           'Room gifts are shared with ${seatedRecipients.length} seated users '
-          '($totalCost coins). You need ${totalCost - coinsBalance.value} more.',
+              '($totalCost coins). You need ${totalCost - coinsBalance.value} more.',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: const Color(0xFFD32F2F),
           colorText: const Color(0xFFFFFFFF),
@@ -1716,8 +1763,10 @@ class LiveBroadcastController extends GetxController {
       scope: scope,
       receiverId: currentReceiverId.isEmpty ? null : currentReceiverId,
     );
-    final earnedDelta =
-        (sessionEarnings.displayCoins - beforeEarnings).clamp(0, 1 << 30);
+    final earnedDelta = (sessionEarnings.displayCoins - beforeEarnings).clamp(
+      0,
+      1 << 30,
+    );
 
     var creditedIds = _parseCreditedUserIdsFromGiftResponse(response);
     if (creditedIds.isEmpty &&
@@ -1825,7 +1874,43 @@ class LiveBroadcastController extends GetxController {
     String? receiverId,
     String? receiverName,
     bool roomGift = true,
+    bool skipFollowerPkTargetPicker = false,
   }) {
+    final pkPlayers = audioRoomSeats
+        .where(
+          (seat) =>
+              seat.occupied &&
+              seat.pkBattle?.active == true &&
+              seat.pkBattle?.mode == 'audio_follower_pk' &&
+              seat.pkBattle?.status == 'active',
+        )
+        .toList();
+    if (roomGift &&
+        !skipFollowerPkTargetPicker &&
+        !isVideoRoom &&
+        pkPlayers.isNotEmpty) {
+      Get.bottomSheet(
+        FollowerPkGiftTargetSheet(
+          players: pkPlayers.take(2).toList(),
+          onSelected: (player) {
+            Get.back();
+            Future.delayed(const Duration(milliseconds: 120), () {
+              openGiftsSheet(
+                receiverId: player.userId,
+                receiverName: player.name,
+                roomGift: false,
+                skipFollowerPkTargetPicker: true,
+              );
+            });
+          },
+        ),
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        barrierColor: Colors.black.withValues(alpha: 0.6),
+      );
+      return;
+    }
+
     isRoomGiftMode.value = roomGift;
     // Room gifts have no single receiver (backend: receiver null + credited_user_ids).
     selectedGiftReceiverId.value = roomGift ? null : receiverId;
@@ -2008,7 +2093,9 @@ class LiveBroadcastController extends GetxController {
         return;
       }
       final userId =
-          (data['user_id'] ?? data['userId'] ?? data['id'])?.toString().trim() ??
+          (data['user_id'] ?? data['userId'] ?? data['id'])
+              ?.toString()
+              .trim() ??
           '';
       final userName =
           (data['user_name'] ?? data['userName'] ?? data['name'])
@@ -2360,10 +2447,9 @@ class LiveBroadcastController extends GetxController {
     if (isHost.value || _exitReported) return;
 
     final myId = _currentUserId();
-    final onMicSeat = myId.isNotEmpty &&
-        seats.any(
-          (seat) => seat.occupied && _userIdsMatch(seat.userId, myId),
-        );
+    final onMicSeat =
+        myId.isNotEmpty &&
+        seats.any((seat) => seat.occupied && _userIdsMatch(seat.userId, myId));
 
     if (onMicSeat) {
       _currentUserOccupiedMicSeat = true;
@@ -2449,7 +2535,10 @@ class LiveBroadcastController extends GetxController {
       }
 
       final placement =
-          (map['my_placement'] ?? map['myPlacement'])?.toString().trim().toLowerCase() ??
+          (map['my_placement'] ?? map['myPlacement'])
+              ?.toString()
+              .trim()
+              .toLowerCase() ??
           '';
       if (placement == 'removed' ||
           placement == 'kicked' ||
@@ -2491,13 +2580,19 @@ class LiveBroadcastController extends GetxController {
         if (status == 'ended' || status == 'closed') return false;
       }
 
-      final currentUser = map['currentUser'] ?? map['participant'] ?? map['membership'];
+      final currentUser =
+          map['currentUser'] ?? map['participant'] ?? map['membership'];
       if (currentUser is Map) {
         final userMap = Map<String, dynamic>.from(currentUser);
         if (userMap['kicked'] == true || userMap['removed'] == true) {
           return false;
         }
-        for (final key in const ['isInRoom', 'inRoom', 'isActive', 'isParticipant']) {
+        for (final key in const [
+          'isInRoom',
+          'inRoom',
+          'isActive',
+          'isParticipant',
+        ]) {
           if (userMap.containsKey(key)) {
             return _coerceNullableBool(userMap[key]);
           }
@@ -2863,7 +2958,8 @@ class LiveBroadcastController extends GetxController {
     final data = response?['data'];
     if (data is Map) {
       final map = Map<String, dynamic>.from(data);
-      final hasHydratedSeats = map['seats'] is List ||
+      final hasHydratedSeats =
+          map['seats'] is List ||
           map.containsKey('floor_audience') ||
           map.containsKey('floorAudience') ||
           map.containsKey('my_placement') ||
@@ -3010,11 +3106,7 @@ class LiveBroadcastController extends GetxController {
       );
       return;
     }
-    _showRoomApiError(
-      'Seat request',
-      response,
-      'Unable to request this seat.',
-    );
+    _showRoomApiError('Seat request', response, 'Unable to request this seat.');
   }
 
   Future<void> respondToPendingSeatRequest(
@@ -3085,8 +3177,7 @@ class LiveBroadcastController extends GetxController {
                   CircleAvatar(
                     radius: 22,
                     backgroundColor: Colors.white12,
-                    backgroundImage:
-                        (request.avatarUrl ?? '').trim().isNotEmpty
+                    backgroundImage: (request.avatarUrl ?? '').trim().isNotEmpty
                         ? NetworkImage(request.avatarUrl!.trim())
                         : null,
                     child: (request.avatarUrl ?? '').trim().isEmpty
@@ -3307,8 +3398,7 @@ class LiveBroadcastController extends GetxController {
       unawaited(
         _forceLeaveRoomBecauseRemoved(
           message:
-              data['message']?.toString() ??
-              'You were removed from this room.',
+              data['message']?.toString() ?? 'You were removed from this room.',
         ),
       );
     };
@@ -3457,7 +3547,8 @@ class LiveBroadcastController extends GetxController {
       if (hostSeat.avatarFrameUrl?.trim().isNotEmpty == true) {
         hostAvatarFrameUrl.value = hostSeat.avatarFrameUrl;
       }
-      if (receiverId.value.trim().isEmpty && hostSeat.userId.trim().isNotEmpty) {
+      if (receiverId.value.trim().isEmpty &&
+          hostSeat.userId.trim().isNotEmpty) {
         receiverId.value = hostSeat.userId;
       }
     }
@@ -3474,9 +3565,7 @@ class LiveBroadcastController extends GetxController {
     for (final seat in occupied) {
       if (!seat.occupied) continue;
       // When I am the room host, my mic seat is always seat 1.
-      if (isHost.value &&
-          myId.isNotEmpty &&
-          _userIdsMatch(seat.userId, myId)) {
+      if (isHost.value && myId.isNotEmpty && _userIdsMatch(seat.userId, myId)) {
         hostFromSeats = seat;
         break;
       }
@@ -3659,15 +3748,16 @@ class LiveBroadcastController extends GetxController {
     String fallback,
   ) {
     final data = response?['data'];
-    final code = (response?['code'] ??
-            response?['errorCode'] ??
-            response?['error_code'] ??
-            (data is Map
-                ? (data['code'] ?? data['errorCode'] ?? data['error_code'])
-                : null))
-        ?.toString()
-        .trim()
-        .toUpperCase();
+    final code =
+        (response?['code'] ??
+                response?['errorCode'] ??
+                response?['error_code'] ??
+                (data is Map
+                    ? (data['code'] ?? data['errorCode'] ?? data['error_code'])
+                    : null))
+            ?.toString()
+            .trim()
+            .toUpperCase();
 
     switch (code) {
       case 'CANNOT_REMOVE_HOST_SEAT':
@@ -3762,6 +3852,27 @@ class LiveBroadcastController extends GetxController {
       Routes.PK_BATTLE,
       arguments: {
         'room_id': roomApiId,
+        'title': streamTitle.value,
+        'name': hostName.value,
+        if (!isVideoRoom) ...{
+          'mode': 'audio_follower_pk',
+          'auto_start_follower': true,
+        },
+      },
+    );
+  }
+
+  void joinFollowerPkFromSeat(AudioRoomSeatModel seat) {
+    final battle = seat.pkBattle;
+    final roomApiId = audioRoomApiId.trim();
+    if (battle == null || battle.battleId.isEmpty || roomApiId.isEmpty) return;
+    Get.toNamed(
+      Routes.PK_BATTLE,
+      arguments: {
+        'mode': 'audio_follower_pk',
+        'room_id': roomApiId,
+        'battle_id': battle.battleId,
+        'join_from_room': true,
         'title': streamTitle.value,
         'name': hostName.value,
       },
@@ -3935,8 +4046,9 @@ class LiveBroadcastController extends GetxController {
     if (!isVideoRoom || !isAudioVideoRoom) return;
     try {
       final userId = ZegoUIKit().getLocalUser().id;
-      final isFront =
-          ZegoUIKit().getUseFrontFacingCameraStateNotifier(userId).value;
+      final isFront = ZegoUIKit()
+          .getUseFrontFacingCameraStateNotifier(userId)
+          .value;
       unawaited(ZegoUIKit().useFrontFacingCamera(!isFront));
     } catch (_) {}
   }

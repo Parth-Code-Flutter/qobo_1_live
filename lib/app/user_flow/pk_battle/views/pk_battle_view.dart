@@ -9,12 +9,16 @@ import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 import '../controllers/pk_battle_controller.dart';
+import 'follower_pk_battle_view.dart';
 
 class PKBattleView extends GetView<PKBattleController> {
   const PKBattleView({super.key});
 
   @override
   Widget build(BuildContext context) {
+    if (controller.isFollowerMode.value) {
+      return const FollowerPkBattleView();
+    }
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F1A),
       appBar: const CommonAppBarWidget(
@@ -30,6 +34,8 @@ class PKBattleView extends GetView<PKBattleController> {
           case PKState.incomingRequest:
             return _buildIncomingRequest();
           case PKState.outgoingRequest:
+            return _buildOutgoingRequest();
+          case PKState.durationPending:
             return _buildOutgoingRequest();
           case PKState.inBattle:
             return _buildInBattleScreen();
@@ -257,8 +263,7 @@ class PKBattleView extends GetView<PKBattleController> {
                                           ),
                                         ),
                                         child: Text(
-                                          '${opp['room_type']}'
-                                              .toUpperCase(),
+                                          '${opp['room_type']}'.toUpperCase(),
                                           style: const TextStyle(
                                             fontSize: 9,
                                             color: Colors.white70,
@@ -708,10 +713,7 @@ class PKBattleView extends GetView<PKBattleController> {
                 Text(
                   controller.lastGiftSummary.value,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white54,
-                    fontSize: 11,
-                  ),
+                  style: const TextStyle(color: Colors.white54, fontSize: 11),
                 ),
               ],
             ],

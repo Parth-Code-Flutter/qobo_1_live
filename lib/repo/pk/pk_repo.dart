@@ -138,6 +138,124 @@ class PkRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
+  Future<Map<String, dynamic>?> startFollowerPk({
+    required String roomId,
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: PkEndpoints.followerStart,
+      requestModel: <String, dynamic>{'room_id': roomId.trim()},
+      isShowLoader: isShowLoader,
+    );
+    return response == null
+        ? null
+        : ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  Future<Map<String, dynamic>?> acceptFollowerPk({
+    required String battleId,
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: PkEndpoints.followerAccept,
+      requestModel: <String, dynamic>{'battle_id': battleId.trim()},
+      isShowLoader: isShowLoader,
+    );
+    return response == null
+        ? null
+        : ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  Future<Map<String, dynamic>?> joinFollowerPkFromRoom({
+    required String battleId,
+    required String roomId,
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: PkEndpoints.followerJoinFromRoom,
+      requestModel: <String, dynamic>{
+        'battle_id': battleId.trim(),
+        'room_id': roomId.trim(),
+      },
+      isShowLoader: isShowLoader,
+    );
+    return response == null
+        ? null
+        : ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  Future<Map<String, dynamic>?> setFollowerPkDuration({
+    required String battleId,
+    required int durationSeconds,
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: PkEndpoints.followerSetDuration,
+      requestModel: <String, dynamic>{
+        'battle_id': battleId.trim(),
+        'duration_seconds': durationSeconds,
+      },
+      isShowLoader: isShowLoader,
+    );
+    return response == null
+        ? null
+        : ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  Future<Map<String, dynamic>?> cancelFollowerPk({
+    required String battleId,
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: PkEndpoints.followerCancel,
+      requestModel: <String, dynamic>{'battle_id': battleId.trim()},
+      isShowLoader: isShowLoader,
+    );
+    return response == null
+        ? null
+        : ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  Future<Map<String, dynamic>?> getFollowerPkStatus({
+    required String battleId,
+    bool isShowLoader = false,
+  }) async {
+    final response = await _apiService.getRequest(
+      endPoint:
+          '${PkEndpoints.followerStatus}?battle_id=${Uri.encodeComponent(battleId.trim())}',
+      isShowLoader: isShowLoader,
+    );
+    return response == null
+        ? null
+        : ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  Future<Map<String, dynamic>?> getActiveFollowerPk({
+    required String roomId,
+    bool isShowLoader = false,
+  }) async {
+    final response = await _apiService.getRequest(
+      endPoint:
+          '${PkEndpoints.followerActive}?room_id=${Uri.encodeComponent(roomId.trim())}',
+      isShowLoader: isShowLoader,
+    );
+    return response == null
+        ? null
+        : ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  Future<Map<String, dynamic>?> getFollowerPkForMe({
+    bool isShowLoader = false,
+  }) async {
+    final response = await _apiService.getRequest(
+      endPoint: PkEndpoints.followerActiveForMe,
+      isShowLoader: isShowLoader,
+    );
+    return response == null
+        ? null
+        : ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
   /// Calls `POST /api/pk/dating-onboarding` to save call preferences.
   Future<Map<String, dynamic>?> callOnboarding({
     required List<String> interests,

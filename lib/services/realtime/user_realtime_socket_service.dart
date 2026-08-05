@@ -37,16 +37,11 @@ class UserRealtimeSocketService extends GetxController {
   bool _connecting = false;
   String? _joinedRoomId;
 
-  final _roomBackgroundListeners =
-      <void Function(Map<String, dynamic> data)>{};
-  final _vipUserJoinedListeners =
-      <void Function(Map<String, dynamic> data)>{};
-  final _seatRequestListeners =
-      <void Function(Map<String, dynamic> data)>{};
-  final _floorAudienceListeners =
-      <void Function(Map<String, dynamic> data)>{};
-  final _userKickedListeners =
-      <void Function(Map<String, dynamic> data)>{};
+  final _roomBackgroundListeners = <void Function(Map<String, dynamic> data)>{};
+  final _vipUserJoinedListeners = <void Function(Map<String, dynamic> data)>{};
+  final _seatRequestListeners = <void Function(Map<String, dynamic> data)>{};
+  final _floorAudienceListeners = <void Function(Map<String, dynamic> data)>{};
+  final _userKickedListeners = <void Function(Map<String, dynamic> data)>{};
 
   /// Ensures a singleton exists and connects when the user is logged in.
   static Future<void> ensureConnected() async {
@@ -116,6 +111,34 @@ class UserRealtimeSocketService extends GetxController {
       socket.on('pk_cancelled', (raw) => _onPkNamed('pk_cancelled', raw));
       socket.on('pk_score_update', (raw) => _onPkNamed('pk_score_update', raw));
       socket.on('pk_completed', (raw) => _onPkNamed('pk_completed', raw));
+      socket.on(
+        'pk_follower_invite',
+        (raw) => _onPkNamed('pk_follower_invite', raw),
+      );
+      socket.on(
+        'pk_follower_waiting',
+        (raw) => _onPkNamed('pk_follower_waiting', raw),
+      );
+      socket.on(
+        'pk_follower_joined',
+        (raw) => _onPkNamed('pk_follower_joined', raw),
+      );
+      socket.on(
+        'pk_follower_duration_set',
+        (raw) => _onPkNamed('pk_follower_duration_set', raw),
+      );
+      socket.on(
+        'pk_follower_score_update',
+        (raw) => _onPkNamed('pk_follower_score_update', raw),
+      );
+      socket.on(
+        'pk_follower_completed',
+        (raw) => _onPkNamed('pk_follower_completed', raw),
+      );
+      socket.on(
+        'pk_follower_cancelled',
+        (raw) => _onPkNamed('pk_follower_cancelled', raw),
+      );
       socket.on('join_request', (raw) => _onJoinNamed('join_request', raw));
       socket.on('join_approved', (raw) => _onJoinNamed('join_approved', raw));
       socket.on('join_rejected', (raw) => _onJoinNamed('join_rejected', raw));
@@ -268,6 +291,13 @@ class UserRealtimeSocketService extends GetxController {
       socket.off('pk_cancelled');
       socket.off('pk_score_update');
       socket.off('pk_completed');
+      socket.off('pk_follower_invite');
+      socket.off('pk_follower_waiting');
+      socket.off('pk_follower_joined');
+      socket.off('pk_follower_duration_set');
+      socket.off('pk_follower_score_update');
+      socket.off('pk_follower_completed');
+      socket.off('pk_follower_cancelled');
       socket.off('join_request');
       socket.off('join_approved');
       socket.off('join_rejected');
@@ -303,7 +333,9 @@ class UserRealtimeSocketService extends GetxController {
       try {
         listener(data);
       } catch (e) {
-        LoggerUtils.logWarning('RealtimeSocket: background listener error — $e');
+        LoggerUtils.logWarning(
+          'RealtimeSocket: background listener error — $e',
+        );
       }
     }
   }
@@ -399,9 +431,7 @@ class UserRealtimeSocketService extends GetxController {
       return;
     }
 
-    LoggerUtils.logInfo(
-      'RealtimeSocket: host_live_started data=$data',
-    );
+    LoggerUtils.logInfo('RealtimeSocket: host_live_started data=$data');
 
     // Normalize to the same shape the FCM path already understands.
     final normalized = <String, dynamic>{
@@ -434,10 +464,7 @@ class UserRealtimeSocketService extends GetxController {
     // Show the branded Join banner once the overlay is ready.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(
-        RoomInviteInAppBanner.tryShow(
-          pushMessage,
-          handler: _roomInviteHandler,
-        ),
+        RoomInviteInAppBanner.tryShow(pushMessage, handler: _roomInviteHandler),
       );
     });
   }

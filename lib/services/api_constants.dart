@@ -372,7 +372,8 @@ class UserCoinsSellerEndpoints {
   static const String transactions = '/api/user/coins-seller/transactions';
 
   /// GET/PATCH/PUT/DELETE /api/user/coins-seller/transaction/:id
-  static String transaction(String id) => '/api/user/coins-seller/transaction/$id';
+  static String transaction(String id) =>
+      '/api/user/coins-seller/transaction/$id';
 
   /// PUT /api/user/coins-seller/transaction/:id — reverse sale
   static String reverseTransaction(String id) => transaction(id);
@@ -436,6 +437,16 @@ class PkEndpoints {
 
   /// GET /api/pk/active?room_id=...
   static const String active = '/api/pk/active';
+
+  /// Audio-room follower PK endpoints. Kept separate from room-vs-room PK.
+  static const String followerStart = '/api/pk/follower/start';
+  static const String followerAccept = '/api/pk/follower/accept';
+  static const String followerJoinFromRoom = '/api/pk/follower/join-from-room';
+  static const String followerSetDuration = '/api/pk/follower/set-duration';
+  static const String followerCancel = '/api/pk/follower/cancel';
+  static const String followerStatus = '/api/pk/follower/status';
+  static const String followerActive = '/api/pk/follower/active';
+  static const String followerActiveForMe = '/api/pk/follower/active-for-me';
 
   /// POST /api/pk/dating-onboarding
   static const String callOnboarding = '/api/pk/dating-onboarding';

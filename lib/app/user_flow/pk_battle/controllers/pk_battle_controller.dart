@@ -7,11 +7,14 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/repo/pk/pk_repo.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 
+import '../models/follower_pk_battle.dart';
+
 enum PKState {
   idle,
   searching,
   incomingRequest,
   outgoingRequest,
+  durationPending,
   inBattle,
   completed,
 }
@@ -38,6 +41,12 @@ class PKBattleController extends GetxController {
   final opponentPoints = 0.obs;
   final timerSeconds = 300.obs;
   final battleStatus = ''.obs;
+  final isFollowerMode = false.obs;
+  final isBusy = false.obs;
+  final isChallenger = false.obs;
+  final followerBattle = Rxn<FollowerPkBattle>();
+  final selectedDurationSeconds = 300.obs;
+  final notifiedFollowerCount = 0.obs;
 
   final currentOpponentName = ''.obs;
   final currentOpponentAvatar = ''.obs;
@@ -51,6 +60,8 @@ class PKBattleController extends GetxController {
   Timer? _battleTimer;
   Timer? _statusPollTimer;
   Timer? _requestExpiryTimer;
+  Timer? _followerLifecycleTimer;
+  String _followerLifecyclePhase = '';
 
   /// Backend expires pending PK requests after ~120s.
   static const int _defaultRequestExpirySeconds = 120;
@@ -59,8 +70,12 @@ class PKBattleController extends GetxController {
   void onInit() {
     super.onInit();
     _hydrateContext();
-    unawaited(_restoreActiveState());
-    loadOpponents(isShowLoader: false);
+    if (isFollowerMode.value) {
+      unawaited(_bootstrapFollowerMode());
+    } else {
+      unawaited(_restoreActiveState());
+      loadOpponents(isShowLoader: false);
+    }
     debounce(
       searchQuery,
       (_) => filterOpponentsList(),
@@ -73,7 +88,388 @@ class PKBattleController extends GetxController {
     _battleTimer?.cancel();
     _statusPollTimer?.cancel();
     _requestExpiryTimer?.cancel();
+    _stopFollowerLifecyclePolling();
     super.onClose();
+  }
+
+  Future<void> _bootstrapFollowerMode() async {
+    final args = Get.arguments;
+    final joinFromRoom =
+        args is Map &&
+        (args['join_from_room'] == true || args['joinFromRoom'] == true);
+    if (joinFromRoom) {
+      final battleId = _readText(Map<String, dynamic>.from(args), [
+        'battle_id',
+        'battleId',
+      ]);
+      if (battleId.isNotEmpty && myRoomId.value.isNotEmpty) {
+        await joinFollowerPkFromRoom(
+          battleId: battleId,
+          roomId: myRoomId.value,
+        );
+        return;
+      }
+    }
+
+    await restoreFollowerPk();
+    final autoStart =
+        args is Map &&
+        (args['auto_start_follower'] == true ||
+            args['autoStartFollower'] == true);
+    if (autoStart &&
+        followerBattle.value == null &&
+        pkState.value == PKState.idle) {
+      await startFollowerPk();
+    }
+  }
+
+  Future<void> startFollowerPk() async {
+    if (isBusy.value || myRoomId.value.trim().isEmpty) return;
+    isBusy.value = true;
+    final response = await _pkRepo.startFollowerPk(
+      roomId: myRoomId.value,
+      isShowLoader: false,
+    );
+    isBusy.value = false;
+    if (!_isSuccess(response)) {
+      _showError(_message(response, 'Unable to start follower PK.'));
+      return;
+    }
+    _applyFollowerBattle(_asMap(response?['data']));
+    isChallenger.value = true;
+    pkState.value = PKState.outgoingRequest;
+    _showInfo(
+      notifiedFollowerCount.value > 0
+          ? 'Challenge sent to ${notifiedFollowerCount.value} followers.'
+          : 'Challenge sent to your followers.',
+    );
+  }
+
+  Future<void> acceptFollowerChallenge() async {
+    final battleId = currentBattleId.value.trim();
+    if (isBusy.value || battleId.isEmpty) return;
+    isBusy.value = true;
+    final response = await _pkRepo.acceptFollowerPk(
+      battleId: battleId,
+      isShowLoader: false,
+    );
+    isBusy.value = false;
+    if (!_isSuccess(response)) {
+      _showError(_message(response, 'Unable to accept this PK challenge.'));
+      return;
+    }
+    isChallenger.value = false;
+    _applyFollowerBattle(_asMap(response?['data']));
+  }
+
+  Future<void> joinFollowerPkFromRoom({
+    required String battleId,
+    required String roomId,
+  }) async {
+    if (isBusy.value || battleId.trim().isEmpty || roomId.trim().isEmpty) {
+      return;
+    }
+    isFollowerMode.value = true;
+    isBusy.value = true;
+    final response = await _pkRepo.joinFollowerPkFromRoom(
+      battleId: battleId,
+      roomId: roomId,
+      isShowLoader: false,
+    );
+    isBusy.value = false;
+    if (!_isSuccess(response)) {
+      _showError(_message(response, 'Unable to join this PK challenge.'));
+      return;
+    }
+    isChallenger.value = false;
+    _applyFollowerBattle(_asMap(response?['data']));
+  }
+
+  Future<void> setFollowerDuration(int seconds) async {
+    if (isBusy.value ||
+        !isChallenger.value ||
+        !const [300, 600, 900].contains(seconds)) {
+      return;
+    }
+    final battleId = currentBattleId.value.trim();
+    if (battleId.isEmpty) return;
+    selectedDurationSeconds.value = seconds;
+    isBusy.value = true;
+    final response = await _pkRepo.setFollowerPkDuration(
+      battleId: battleId,
+      durationSeconds: seconds,
+      isShowLoader: false,
+    );
+    isBusy.value = false;
+    if (!_isSuccess(response)) {
+      _showError(_message(response, 'Unable to start the PK timer.'));
+      return;
+    }
+    _applyFollowerBattle(_asMap(response?['data']));
+  }
+
+  Future<void> cancelFollowerPk() async {
+    final battleId = currentBattleId.value.trim();
+    if (isBusy.value || battleId.isEmpty) return;
+    isBusy.value = true;
+    final response = await _pkRepo.cancelFollowerPk(
+      battleId: battleId,
+      isShowLoader: false,
+    );
+    isBusy.value = false;
+    if (!_isSuccess(response)) {
+      _showError(_message(response, 'Unable to cancel follower PK.'));
+      return;
+    }
+    _clearFollowerBattle();
+    _showInfo('Follower PK cancelled.');
+  }
+
+  Future<void> restoreFollowerPk() async {
+    Map<String, dynamic>? response;
+    if (myRoomId.value.trim().isNotEmpty) {
+      response = await _pkRepo.getActiveFollowerPk(
+        roomId: myRoomId.value,
+        isShowLoader: false,
+      );
+    }
+    if (!_isSuccess(response)) {
+      response = await _pkRepo.getFollowerPkForMe(isShowLoader: false);
+    }
+    if (!_isSuccess(response)) return;
+
+    final data = _asMap(response?['data']);
+    final battle = _asMap(data['battle']).isNotEmpty
+        ? _asMap(data['battle'])
+        : data;
+    if (_readText(battle, ['battle_id', 'battleId', 'id']).isNotEmpty) {
+      _applyFollowerBattle(battle);
+      return;
+    }
+
+    final invite = _asMap(data['pending_invite'] ?? data['invite']);
+    if (invite.isNotEmpty) {
+      handleFollowerPkEvent('pk_follower_invite', invite);
+    }
+  }
+
+  void handleFollowerPkEvent(String event, Map<String, dynamic> payload) {
+    isFollowerMode.value = true;
+    final normalized = event.trim().toLowerCase();
+    switch (normalized) {
+      case 'pk_follower_invite':
+        final source = _asMap(
+          payload['from_user'] ??
+              payload['challenger'] ??
+              payload['challenger_user'],
+        );
+        currentBattleId.value = _readText(payload, [
+          'battle_id',
+          'battleId',
+          'id',
+        ]);
+        myRoomId.value = _readText(payload, ['room_id', 'roomId']).isNotEmpty
+            ? _readText(payload, ['room_id', 'roomId'])
+            : myRoomId.value;
+        currentOpponentName.value =
+            _readText(source, ['name', 'fullName']).isNotEmpty
+            ? _readText(source, ['name', 'fullName'])
+            : _readText(payload, ['from_user_name', 'challenger_name']);
+        currentOpponentAvatar.value =
+            _readText(source, [
+              'avatar',
+              'avatarUrl',
+              'displayPicture',
+            ]).isNotEmpty
+            ? _readText(source, ['avatar', 'avatarUrl', 'displayPicture'])
+            : _readText(payload, ['from_user_avatar', 'challenger_avatar']);
+        isChallenger.value = false;
+        pkState.value = PKState.incomingRequest;
+        _armRequestExpiry(
+          payload['invite_expires_at'] ??
+              payload['expires_at'] ??
+              payload['expiresAt'],
+        );
+      case 'pk_follower_waiting':
+      case 'pk_follower_joined':
+      case 'pk_follower_duration_set':
+      case 'pk_follower_score_update':
+      case 'pk_follower_completed':
+        // Lifecycle events may carry only deltas (scores / timer), so the event
+        // name itself decides the phase when `status` is absent.
+        _applyFollowerBattle(
+          payload,
+          impliedStatus: _followerStatusForEvent(normalized),
+        );
+        if (normalized == 'pk_follower_completed') {
+          _completeFollowerBattle();
+        }
+      case 'pk_follower_cancelled':
+        _clearFollowerBattle();
+        _showInfo('Follower PK was cancelled or expired.');
+    }
+  }
+
+  /// Phase implied by a follower-PK lifecycle event name.
+  String? _followerStatusForEvent(String event) {
+    switch (event) {
+      case 'pk_follower_waiting':
+        return 'waiting_opponent';
+      case 'pk_follower_joined':
+        return 'duration_pending';
+      case 'pk_follower_duration_set':
+      case 'pk_follower_score_update':
+        return 'active';
+      case 'pk_follower_completed':
+        return 'completed';
+    }
+    return null;
+  }
+
+  void _applyFollowerBattle(
+    Map<String, dynamic> payload, {
+    String? impliedStatus,
+  }) {
+    if (payload.isEmpty) return;
+    // Socket/REST payloads may nest the battle; flatten before merging so the
+    // previous snapshot is not discarded by the nested object.
+    final incoming = _asMap(payload['battle']).isNotEmpty
+        ? _asMap(payload['battle'])
+        : payload;
+    final previous = followerBattle.value;
+    final merged = <String, dynamic>{
+      if (previous != null) ...{
+        'battle_id': previous.battleId,
+        'room_id': previous.roomId,
+        'status': previous.status,
+        'challenger': {
+          'user_id': previous.challenger.userId,
+          'name': previous.challenger.name,
+          'avatar': previous.challenger.avatarUrl,
+        },
+        if (previous.opponent != null)
+          'opponent': {
+            'user_id': previous.opponent!.userId,
+            'name': previous.opponent!.name,
+            'avatar': previous.opponent!.avatarUrl,
+          },
+        'duration_seconds': previous.durationSeconds,
+        'remaining_seconds': previous.remainingSeconds,
+        'started_at': previous.startedAt?.toIso8601String(),
+        'ends_at': previous.endsAt?.toIso8601String(),
+        'invite_expires_at': previous.inviteExpiresAt?.toIso8601String(),
+        'challenger_score': previous.challengerScore,
+        'opponent_score': previous.opponentScore,
+        'result': previous.result,
+        'winner_user_id': previous.winnerUserId,
+        'notified_follower_count': previous.notifiedFollowerCount,
+      },
+      ...incoming,
+      if (impliedStatus != null && _readText(incoming, ['status']).isEmpty)
+        'status': impliedStatus,
+    };
+    final battle = FollowerPkBattle.fromMap(merged);
+    if (battle.battleId.isEmpty) return;
+    followerBattle.value = battle;
+    currentBattleId.value = battle.battleId;
+    if (battle.roomId.isNotEmpty) myRoomId.value = battle.roomId;
+    battleStatus.value = battle.status;
+    notifiedFollowerCount.value = battle.notifiedFollowerCount;
+    timerSeconds.value = battle.secondsRemaining();
+
+    final currentUserId = _currentUserId();
+    if (currentUserId.isNotEmpty) {
+      isChallenger.value = battle.challenger.userId == currentUserId;
+    }
+    final opponent = isChallenger.value ? battle.opponent : battle.challenger;
+    if (opponent != null) {
+      currentOpponentName.value = opponent.name;
+      currentOpponentAvatar.value = opponent.avatarUrl ?? '';
+    }
+    if (isChallenger.value) {
+      myPoints.value = battle.challengerScore;
+      opponentPoints.value = battle.opponentScore;
+    } else {
+      myPoints.value = battle.opponentScore;
+      opponentPoints.value = battle.challengerScore;
+    }
+
+    if (battle.isWaiting) {
+      pkState.value = isChallenger.value
+          ? PKState.outgoingRequest
+          : PKState.incomingRequest;
+      _armRequestExpiry(battle.inviteExpiresAt);
+      _startFollowerLifecyclePolling(battle.status);
+    } else if (battle.isDurationPending) {
+      _requestExpiryTimer?.cancel();
+      pkState.value = PKState.durationPending;
+      _startFollowerLifecyclePolling(battle.status);
+    } else if (battle.isActive) {
+      _requestExpiryTimer?.cancel();
+      _stopFollowerLifecyclePolling();
+      pkState.value = PKState.inBattle;
+      _startLocalBattleClock();
+      _startStatusPolling();
+    } else if (battle.isCompleted) {
+      _completeFollowerBattle();
+    }
+  }
+
+  /// Polls pre-battle phases so a missed `pk_follower_joined` /
+  /// `pk_follower_duration_set` socket event still advances the screen.
+  void _startFollowerLifecyclePolling(String phase) {
+    if (_followerLifecycleTimer?.isActive == true &&
+        _followerLifecyclePhase == phase) {
+      return;
+    }
+    _followerLifecycleTimer?.cancel();
+    _followerLifecyclePhase = phase;
+    _followerLifecycleTimer = Timer.periodic(const Duration(seconds: 3), (
+      _,
+    ) async {
+      final battleId = currentBattleId.value.trim();
+      if (battleId.isEmpty) {
+        _stopFollowerLifecyclePolling();
+        return;
+      }
+      final response = await _pkRepo.getFollowerPkStatus(
+        battleId: battleId,
+        isShowLoader: false,
+      );
+      if (!_isSuccess(response)) return;
+      _applyFollowerBattle(_asMap(response?['data']));
+    });
+  }
+
+  void _stopFollowerLifecyclePolling() {
+    _followerLifecycleTimer?.cancel();
+    _followerLifecycleTimer = null;
+    _followerLifecyclePhase = '';
+  }
+
+  void _completeFollowerBattle() {
+    _battleTimer?.cancel();
+    _statusPollTimer?.cancel();
+    _stopFollowerLifecyclePolling();
+    pkState.value = PKState.completed;
+  }
+
+  void _clearFollowerBattle() {
+    _battleTimer?.cancel();
+    _statusPollTimer?.cancel();
+    _requestExpiryTimer?.cancel();
+    _stopFollowerLifecyclePolling();
+    followerBattle.value = null;
+    currentBattleId.value = '';
+    battleStatus.value = '';
+    myPoints.value = 0;
+    opponentPoints.value = 0;
+    pkState.value = PKState.idle;
+  }
+
+  void closeFollowerArena() {
+    _clearFollowerBattle();
+    if (Get.key.currentState?.canPop() == true) Get.back();
   }
 
   Future<void> loadOpponents({bool isShowLoader = true}) async {
@@ -182,8 +578,7 @@ class PKBattleController extends GetxController {
     }
 
     final data = _asMap(response?['data']);
-    currentRequestId.value =
-        _readText(data, ['request_id', 'id']).isNotEmpty
+    currentRequestId.value = _readText(data, ['request_id', 'id']).isNotEmpty
         ? _readText(data, ['request_id', 'id'])
         : myRoomId.value;
     _armRequestExpiry(data['expires_at'] ?? data['expiresAt']);
@@ -450,8 +845,7 @@ class PKBattleController extends GetxController {
     if (currentOpponentRoomId.value.isEmpty) {
       final room1 = _readText(payload, ['room1Id', 'room1_id']);
       final room2 = _readText(payload, ['room2Id', 'room2_id']);
-      currentOpponentRoomId.value =
-          room1 == myRoomId.value ? room2 : room1;
+      currentOpponentRoomId.value = room1 == myRoomId.value ? room2 : room1;
     }
     currentOpponentName.value =
         _readText(payload, [
@@ -495,18 +889,27 @@ class PKBattleController extends GetxController {
     final args = Get.arguments;
     if (args is Map) {
       final argsMap = Map<String, dynamic>.from(args);
+      final mode = _readText(argsMap, ['mode', 'pk_mode']).toLowerCase();
+      isFollowerMode.value =
+          mode == 'audio_follower_pk' ||
+          _readText(argsMap, ['type']).startsWith('pk_follower_');
       myRoomId.value = _readText(argsMap, ['room_id', 'roomId', 'id']);
       myRoomName.value =
           _readText(argsMap, ['title', 'name', 'roomName']).isNotEmpty
           ? _readText(argsMap, ['title', 'name', 'roomName'])
           : myRoomName.value;
 
-      if (argsMap['incoming_pk'] == true ||
+      if (isFollowerMode.value &&
+          _readText(argsMap, ['type']).startsWith('pk_follower_')) {
+        handleFollowerPkEvent(_readText(argsMap, ['type']), argsMap);
+      } else if (argsMap['incoming_pk'] == true ||
           _readText(argsMap, ['type']).toLowerCase() == 'pk_request') {
         handleIncomingPkRequest(argsMap);
       } else {
-        final lifecycle = _readText(argsMap, ['lifecycle_type', 'type'])
-            .toLowerCase();
+        final lifecycle = _readText(argsMap, [
+          'lifecycle_type',
+          'type',
+        ]).toLowerCase();
         if (lifecycle == 'pk_started' || lifecycle == 'pk_accepted') {
           handlePkStarted(argsMap);
         } else if (lifecycle == 'pk_completed') {
@@ -569,8 +972,7 @@ class PKBattleController extends GetxController {
       final status = _readText(request, ['status']).toLowerCase();
       if (status == 'pending') {
         // If we are the target, show incoming; else outgoing wait.
-        final target =
-            _readText(request, ['target_room_id', 'targetRoomId']);
+        final target = _readText(request, ['target_room_id', 'targetRoomId']);
         final challengerRoom = _readText(request, [
           'room_id',
           'sender_room_id',
@@ -583,10 +985,7 @@ class PKBattleController extends GetxController {
             'request_id': _readText(request, ['request_id', 'id']),
           });
         } else {
-          currentRequestId.value = _readText(request, [
-            'request_id',
-            'id',
-          ]);
+          currentRequestId.value = _readText(request, ['request_id', 'id']);
           currentOpponentRoomId.value = target;
           pkState.value = PKState.outgoingRequest;
           _armRequestExpiry(request['expires_at'] ?? request['expiresAt']);
@@ -632,13 +1031,22 @@ class PKBattleController extends GetxController {
     if (currentBattleId.value.isEmpty) return;
 
     _statusPollTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
-      final response = await _pkRepo.getPkStatus(
-        battleId: currentBattleId.value,
-        isShowLoader: false,
-      );
+      final response = isFollowerMode.value
+          ? await _pkRepo.getFollowerPkStatus(
+              battleId: currentBattleId.value,
+              isShowLoader: false,
+            )
+          : await _pkRepo.getPkStatus(
+              battleId: currentBattleId.value,
+              isShowLoader: false,
+            );
       if (!_isSuccess(response)) return;
 
       final data = _asMap(response?['data']);
+      if (isFollowerMode.value) {
+        _applyFollowerBattle(data);
+        return;
+      }
       _applyScores(data);
       battleStatus.value = _readText(data, ['status']);
       _applyRemainingSeconds(data);
@@ -694,7 +1102,8 @@ class PKBattleController extends GetxController {
 
     final giftName = _readText(gift, ['gift_name', 'giftName', 'name']);
     final senderName = _readText(gift, ['sender_name', 'senderName']);
-    final coins = int.tryParse(
+    final coins =
+        int.tryParse(
           gift['coin_value']?.toString() ?? gift['coinValue']?.toString() ?? '',
         ) ??
         0;
@@ -848,6 +1257,11 @@ class PKBattleController extends GetxController {
   String? _readNullableText(Map<String, dynamic> map, List<String> keys) {
     final value = _readText(map, keys);
     return value.isEmpty ? null : value;
+  }
+
+  String _currentUserId() {
+    if (!Get.isRegistered<UserSessionController>()) return '';
+    return Get.find<UserSessionController>().userId.trim();
   }
 
   void _showInfo(String message) {

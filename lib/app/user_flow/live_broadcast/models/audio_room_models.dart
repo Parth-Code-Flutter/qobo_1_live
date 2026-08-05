@@ -14,6 +14,7 @@ class AudioRoomSeatModel {
     this.isAdmin = false,
     this.isVip = false,
     this.isCoinsSeller = false,
+    this.pkBattle,
   });
 
   factory AudioRoomSeatModel.empty(int seatNo) =>
@@ -83,7 +84,8 @@ class AudioRoomSeatModel {
           'vipFrame',
           'vip_frame',
         ]);
-    final isVip = _readBool(raw, const ['isVIP', 'isVip', 'is_vip']) ||
+    final isVip =
+        _readBool(raw, const ['isVIP', 'isVip', 'is_vip']) ||
         (occupantMap != null &&
             _readBool(occupantMap, const ['isVIP', 'isVip', 'is_vip']));
     final isCoinsSeller =
@@ -127,6 +129,12 @@ class AudioRoomSeatModel {
       isAdmin: _readBool(raw, const ['isAdmin', 'admin']),
       isVip: isVip,
       isCoinsSeller: isCoinsSeller,
+      pkBattle: AudioRoomPkBattleInfo.fromDynamic(
+        raw['pkBattle'] ??
+            raw['pk_battle'] ??
+            occupantMap?['pkBattle'] ??
+            occupantMap?['pk_battle'],
+      ),
     );
   }
 
@@ -150,9 +158,15 @@ class AudioRoomSeatModel {
 
   /// Verified P2P coins merchant from seats / join payloads.
   final bool isCoinsSeller;
+  final AudioRoomPkBattleInfo? pkBattle;
 
   bool get occupied => userId.trim().isNotEmpty || name.trim().isNotEmpty;
   bool get isHost => role.toLowerCase() == 'host' || seatNo == 1;
+  bool get hasJoinableFollowerPk =>
+      pkBattle?.active == true &&
+      pkBattle?.mode == 'audio_follower_pk' &&
+      pkBattle?.canJoin == true &&
+      pkBattle?.status == 'waiting_opponent';
 
   /// Non-default patti used for entrance / seat tags.
   bool get hasCustomPattiStyle {
@@ -175,6 +189,7 @@ class AudioRoomSeatModel {
     bool? isAdmin,
     bool? isVip,
     bool? isCoinsSeller,
+    AudioRoomPkBattleInfo? pkBattle,
   }) {
     return AudioRoomSeatModel(
       seatNo: seatNo ?? this.seatNo,
@@ -191,8 +206,43 @@ class AudioRoomSeatModel {
       isAdmin: isAdmin ?? this.isAdmin,
       isVip: isVip ?? this.isVip,
       isCoinsSeller: isCoinsSeller ?? this.isCoinsSeller,
+      pkBattle: pkBattle ?? this.pkBattle,
     );
   }
+}
+
+class AudioRoomPkBattleInfo {
+  const AudioRoomPkBattleInfo({
+    required this.battleId,
+    required this.status,
+    required this.mode,
+    required this.active,
+    required this.canJoin,
+  });
+
+  factory AudioRoomPkBattleInfo.fromMap(Map<String, dynamic> map) {
+    return AudioRoomPkBattleInfo(
+      battleId: _readString(map, const ['battle_id', 'battleId', 'id']) ?? '',
+      status: (_readString(map, const ['status']) ?? '').toLowerCase(),
+      mode: (_readString(map, const ['mode']) ?? '').toLowerCase(),
+      active: _readBool(map, const ['active', 'isActive']),
+      canJoin: _readBool(map, const ['can_join', 'canJoin']),
+    );
+  }
+
+  static AudioRoomPkBattleInfo? fromDynamic(dynamic value) {
+    if (value is! Map) return null;
+    final info = AudioRoomPkBattleInfo.fromMap(
+      Map<String, dynamic>.from(value),
+    );
+    return info.battleId.isEmpty ? null : info;
+  }
+
+  final String battleId;
+  final String status;
+  final String mode;
+  final bool active;
+  final bool canJoin;
 }
 
 class AudioRoomInviteCandidate {
@@ -294,8 +344,7 @@ class FloorAudienceUser {
 
   factory FloorAudienceUser.fromMap(Map<String, dynamic> raw) {
     return FloorAudienceUser(
-      userId:
-          _readString(raw, const ['userId', 'user_id', 'id'])?.trim() ?? '',
+      userId: _readString(raw, const ['userId', 'user_id', 'id'])?.trim() ?? '',
       name:
           _readString(raw, const [
             'name',
@@ -317,10 +366,7 @@ class FloorAudienceUser {
             'avatar_frame_url',
             'frameUrl',
           ]),
-      vipFrameUrl: _readString(raw, const [
-        'vipFrameUrl',
-        'vip_frame_url',
-      ]),
+      vipFrameUrl: _readString(raw, const ['vipFrameUrl', 'vip_frame_url']),
       isVip: _readBool(raw, const ['isVIP', 'isVip', 'is_vip']),
       isCoinsSeller: _readBool(raw, const [
         'isCoinsSeller',
@@ -353,17 +399,15 @@ class PendingSeatRequest {
   factory PendingSeatRequest.fromMap(Map<String, dynamic> raw) {
     return PendingSeatRequest(
       requestId:
-          _readString(raw, const [
-            'id',
-            'request_id',
-            'requestId',
-          ])?.trim() ??
+          _readString(raw, const ['id', 'request_id', 'requestId'])?.trim() ??
           '',
-      seatNo:
-          _readInt(raw, const ['seatId', 'seat_id', 'seatNo', 'seat']) ?? 0,
+      seatNo: _readInt(raw, const ['seatId', 'seat_id', 'seatNo', 'seat']) ?? 0,
       userId:
-          _readString(raw, const ['userId', 'user_id', 'requester_id'])
-              ?.trim() ??
+          _readString(raw, const [
+            'userId',
+            'user_id',
+            'requester_id',
+          ])?.trim() ??
           '',
       name:
           _readString(raw, const [

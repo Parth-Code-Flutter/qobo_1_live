@@ -65,7 +65,7 @@ class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
       }
       return Stack(
         fit: StackFit.expand,
-        children: [ 
+        children: [
           const DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -133,7 +133,11 @@ class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
                 // Video: size the seat grid against the middle stage so 4-seat
                 // rooms stay ~70% and denser rooms (6–8) get a larger fill.
                 final middleH =
-                    (constraints.maxHeight - top - bottomPad - headerH - gridGap)
+                    (constraints.maxHeight -
+                            top -
+                            bottomPad -
+                            headerH -
+                            gridGap)
                         .clamp(160.0, constraints.maxHeight);
                 final seatCount = controller.audioRoomSeats.length;
                 final fillRatio =
@@ -500,11 +504,7 @@ class _AudioRoomChatInput extends GetView<LiveBroadcastController> {
               ),
               border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
             ),
-            child: const Icon(
-              Icons.send_rounded,
-              color: kColorWhite,
-              size: 20,
-            ),
+            child: const Icon(Icons.send_rounded, color: kColorWhite, size: 20),
           ),
         ),
       ],
@@ -600,9 +600,7 @@ class _CameraControl extends StatelessWidget {
         valueListenable: ZegoUIKit().getCameraStateNotifier(userId),
         builder: (context, isOn, _) {
           return _ControlButton(
-            icon: isOn
-                ? Icons.videocam_rounded
-                : Icons.videocam_off_rounded,
+            icon: isOn ? Icons.videocam_rounded : Icons.videocam_off_rounded,
             label: isOn ? 'Cam On' : 'Cam Off',
             compact: compact,
             active: isOn,
@@ -795,7 +793,9 @@ class _GiftControlButton extends StatelessWidget {
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFFF3EA5).withValues(alpha: 0.45),
+                            color: const Color(
+                              0xFFFF3EA5,
+                            ).withValues(alpha: 0.45),
                             blurRadius: 10,
                             offset: const Offset(0, 3),
                           ),
@@ -1044,6 +1044,7 @@ class _MemberGrid extends StatefulWidget {
   const _MemberGrid({required this.compact, this.maxHeight});
 
   final bool compact;
+
   /// Video only: target height so tiles fill ~70%+ of the middle stage.
   final double? maxHeight;
 
@@ -1071,7 +1072,8 @@ class _MemberGridState extends State<_MemberGrid> {
                   constraints.maxWidth,
                   compact: widget.compact,
                   seatCount: seats.length,
-                  maxHeight: widget.maxHeight ??
+                  maxHeight:
+                      widget.maxHeight ??
                       (constraints.maxHeight.isFinite
                           ? constraints.maxHeight
                           : null),
@@ -1193,10 +1195,10 @@ class _VideoOccupiedSeatTile extends GetView<LiveBroadcastController> {
     final roleLabel = seat.isHost
         ? 'Host'
         : (seat.isCoinsSeller
-            ? 'Seller'
-            : (rawRole.isEmpty
-                ? 'Speaker'
-                : '${rawRole[0].toUpperCase()}${rawRole.substring(1).toLowerCase()}'));
+              ? 'Seller'
+              : (rawRole.isEmpty
+                    ? 'Speaker'
+                    : '${rawRole[0].toUpperCase()}${rawRole.substring(1).toLowerCase()}'));
 
     return _VideoSeatShell(
       isHost: seat.isHost,
@@ -1295,9 +1297,7 @@ class _VideoOccupiedSeatTile extends GetView<LiveBroadcastController> {
                     if (!tiny &&
                         seat.avatarFrameUrl?.trim().isNotEmpty == true) ...[
                       const SizedBox(width: 6),
-                      _VideoMiniFrameThumb(
-                        url: seat.avatarFrameUrl!.trim(),
-                      ),
+                      _VideoMiniFrameThumb(url: seat.avatarFrameUrl!.trim()),
                     ],
                   ],
                 ),
@@ -1325,10 +1325,7 @@ class _VideoOccupiedSeatTile extends GetView<LiveBroadcastController> {
 
 /// Empty video seat placeholder — same size as occupied tiles.
 class _VideoEmptySeatTile extends GetView<LiveBroadcastController> {
-  const _VideoEmptySeatTile({
-    required this.seatNo,
-    required this.metrics,
-  });
+  const _VideoEmptySeatTile({required this.seatNo, required this.metrics});
 
   final int seatNo;
   final _SeatLayoutMetrics metrics;
@@ -1349,10 +1346,11 @@ class _VideoEmptySeatTile extends GetView<LiveBroadcastController> {
           builder: (context, constraints) {
             final h = constraints.maxHeight;
             final tiny = h < 120;
-            final avatar = (tiny
-                    ? metrics.avatarSize.clamp(28.0, 40.0)
-                    : metrics.avatarSize.clamp(36.0, 56.0))
-                .toDouble();
+            final avatar =
+                (tiny
+                        ? metrics.avatarSize.clamp(28.0, 40.0)
+                        : metrics.avatarSize.clamp(36.0, 56.0))
+                    .toDouble();
             final pad = tiny ? 5.0 : 8.0;
             final plus = tiny ? 22.0 : metrics.addButtonSize;
 
@@ -1445,10 +1443,7 @@ class _VideoEmptySeatTile extends GetView<LiveBroadcastController> {
                 Positioned(
                   right: pad,
                   top: pad,
-                  child: _VideoSeatIndexChip(
-                    seatNo: seatNo,
-                    compact: tiny,
-                  ),
+                  child: _VideoSeatIndexChip(seatNo: seatNo, compact: tiny),
                 ),
               ],
             );
@@ -1629,10 +1624,7 @@ class _VideoMiniFrameThumb extends StatelessWidget {
 
 /// Soft dashed outline painted inside empty video seats.
 class _VideoEmptySeatDashPainter extends CustomPainter {
-  _VideoEmptySeatDashPainter({
-    required this.color,
-    required this.radius,
-  });
+  _VideoEmptySeatDashPainter({required this.color, required this.radius});
 
   final Color color;
   final double radius;
@@ -1749,8 +1741,7 @@ class _SeatVideoFillState extends State<_SeatVideoFill> {
       } catch (_) {
         return _videoFallbackAvatar();
       }
-      final zegoUser =
-          matched ?? ZegoUIKitUser(id: zegoId, name: widget.name);
+      final zegoUser = matched ?? ZegoUIKitUser(id: zegoId, name: widget.name);
 
       return ZegoAudioVideoView(
         user: zegoUser,
@@ -1845,6 +1836,39 @@ class _MemberSeat extends GetView<LiveBroadcastController> {
                     bottom: -4,
                     child: _MicBubble(muted: seat.isMuted, small: true),
                   ),
+                  if (seat.hasJoinableFollowerPk)
+                    Positioned(
+                      right: -8,
+                      top: -8,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => controller.joinFollowerPkFromSeat(seat),
+                        child: Container(
+                          width: 30,
+                          height: 30,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFF3EA5), Color(0xFFFF8A2A)],
+                            ),
+                            border: Border.all(color: kColorWhite, width: 1.5),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(
+                                  0xFFFF3EA5,
+                                ).withValues(alpha: 0.5),
+                                blurRadius: 10,
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.bolt_rounded,
+                            color: kColorWhite,
+                            size: 17,
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
               SizedBox(height: metrics.gapAfterFrame),
@@ -2239,7 +2263,10 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
                   ),
                   IconButton(
                     onPressed: Get.back,
-                    icon: const Icon(Icons.close_rounded, color: Colors.white54),
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: Colors.white54,
+                    ),
                     visualDensity: VisualDensity.compact,
                   ),
                 ],
@@ -2251,7 +2278,9 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.1),
+                  ),
                 ),
                 child: SelectableText(
                   id,
@@ -2286,7 +2315,11 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.copy_rounded, color: kColorWhite, size: 16),
+                            Icon(
+                              Icons.copy_rounded,
+                              color: kColorWhite,
+                              size: 16,
+                            ),
                             SizedBox(width: 6),
                             SemiBoldText(
                               text: 'Copy ID',
@@ -2310,7 +2343,8 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
 
   List<_SeatActionData> _buildActions(BuildContext context) {
     if (isHostView) {
-      final canClearSeat = seat.seatNo > 1 &&
+      final canClearSeat =
+          seat.seatNo > 1 &&
           seat.occupied &&
           seat.role.trim().toLowerCase() != 'host';
       return [
@@ -2318,10 +2352,8 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
           icon: seat.isMuted ? Icons.mic_rounded : Icons.mic_off_rounded,
           label: seat.isMuted ? 'Unmute' : 'Mute',
           accent: const Color(0xFF7AD7FF),
-          onTap: () => controller.updateAudioSeatMic(
-            seat: seat,
-            mute: !seat.isMuted,
-          ),
+          onTap: () =>
+              controller.updateAudioSeatMic(seat: seat, mute: !seat.isMuted),
         ),
         if (canClearSeat)
           _SeatActionData(
@@ -2412,10 +2444,11 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
           border: Border.all(color: _goldBright, width: 1.2),
           boxShadow: [
             BoxShadow(
-              color: (isCoinSeller && !seat.isHost && !seat.isAdmin
-                      ? const Color(0xFFFF8F00)
-                      : _frameRed)
-                  .withValues(alpha: 0.35),
+              color:
+                  (isCoinSeller && !seat.isHost && !seat.isAdmin
+                          ? const Color(0xFFFF8F00)
+                          : _frameRed)
+                      .withValues(alpha: 0.35),
               blurRadius: 8,
               offset: const Offset(0, 3),
             ),
@@ -2525,7 +2558,11 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
         _BadgeMedalData(
           label: pattiLabel,
           icon: Icons.auto_awesome_rounded,
-          colors: const [Color(0xFFFFF59D), Color(0xFFFFDF00), Color(0xFFD4AF37)],
+          colors: const [
+            Color(0xFFFFF59D),
+            Color(0xFFFFDF00),
+            Color(0xFFD4AF37),
+          ],
         ),
       if (seat.isMuted)
         const _BadgeMedalData(
@@ -2543,7 +2580,11 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
         _BadgeMedalData(
           label: 'x${seat.diamonds}',
           icon: Icons.diamond_rounded,
-          colors: const [Color(0xFFB2EBF2), Color(0xFF2ED3FF), Color(0xFF1A9FD4)],
+          colors: const [
+            Color(0xFFB2EBF2),
+            Color(0xFF2ED3FF),
+            Color(0xFF1A9FD4),
+          ],
         ),
     ];
 
@@ -2648,7 +2689,9 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
   }
 
   Widget _badgeMedalCard(_BadgeMedalData medal, {bool featured = false}) {
-    final accent = medal.colors.length > 1 ? medal.colors[1] : medal.colors.first;
+    final accent = medal.colors.length > 1
+        ? medal.colors[1]
+        : medal.colors.first;
     final size = featured ? 54.0 : 48.0;
 
     return SizedBox(
@@ -2661,7 +2704,9 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
             width: 22,
             height: 10,
             decoration: BoxDecoration(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(4),
+              ),
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
@@ -2709,7 +2754,11 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
                     ],
                   ),
                 ),
-                child: Icon(medal.icon, size: featured ? 22 : 20, color: kColorWhite),
+                child: Icon(
+                  medal.icon,
+                  size: featured ? 22 : 20,
+                  color: kColorWhite,
+                ),
               ),
             ),
           ),
@@ -2858,12 +2907,7 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
     }
 
     Get.back();
-    unawaited(
-      controller.openChatWithSeatMember(
-        context,
-        seat: seat,
-      ),
-    );
+    unawaited(controller.openChatWithSeatMember(context, seat: seat));
   }
 
   void _openGift() {
@@ -3075,18 +3119,8 @@ class _OrnateMemberProfileCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                Positioned(
-                  left: 6,
-                  top: 28,
-                  bottom: 28,
-                  child: _sidePillar(),
-                ),
-                Positioned(
-                  right: 6,
-                  top: 28,
-                  bottom: 28,
-                  child: _sidePillar(),
-                ),
+                Positioned(left: 6, top: 28, bottom: 28, child: _sidePillar()),
+                Positioned(right: 6, top: 28, bottom: 28, child: _sidePillar()),
                 Positioned.fill(child: child),
               ],
             ),
@@ -3393,12 +3427,11 @@ class _GridEmptySeat extends GetView<LiveBroadcastController> {
               ),
               SizedBox(height: metrics.gapAfterFrame),
               Obx(() {
-                final label = controller.isHost.value ||
+                final label =
+                    controller.isHost.value ||
                         controller.canManageAudioRoomMembers
                     ? 'Invite'
-                    : (controller.viewerFollowsHost.value
-                          ? 'Sit'
-                          : 'Request');
+                    : (controller.viewerFollowsHost.value ? 'Sit' : 'Request');
                 return SemiBoldText(
                   text: label,
                   fontSize: TextStyles.k10FontSize,
@@ -3475,8 +3508,10 @@ class _EmptySeatActionsSheet extends GetView<LiveBroadcastController> {
             const SizedBox(height: 16),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.person_add_alt_1_rounded,
-                  color: Color(0xFFFF3EA5)),
+              leading: const Icon(
+                Icons.person_add_alt_1_rounded,
+                color: Color(0xFFFF3EA5),
+              ),
               title: const SemiBoldText(
                 text: 'Invite',
                 fontSize: TextStyles.k14FontSize,
@@ -3498,8 +3533,10 @@ class _EmptySeatActionsSheet extends GetView<LiveBroadcastController> {
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.groups_rounded,
-                  color: Color(0xFFFFD56A)),
+              leading: const Icon(
+                Icons.groups_rounded,
+                color: Color(0xFFFFD56A),
+              ),
               title: const SemiBoldText(
                 text: 'Seat floor user',
                 fontSize: TextStyles.k14FontSize,
@@ -3522,8 +3559,10 @@ class _EmptySeatActionsSheet extends GetView<LiveBroadcastController> {
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.front_hand_rounded,
-                  color: Color(0xFF7C9CFF)),
+              leading: const Icon(
+                Icons.front_hand_rounded,
+                color: Color(0xFF7C9CFF),
+              ),
               title: const SemiBoldText(
                 text: 'Request to seat (self)',
                 fontSize: TextStyles.k14FontSize,
@@ -3713,7 +3752,8 @@ class _FloorAudienceListSheet extends GetView<LiveBroadcastController> {
                         ),
                         Spacing.v10,
                         AppText(
-                          text: 'When someone joins this room, they show up here.',
+                          text:
+                              'When someone joins this room, they show up here.',
                           fontSize: TextStyles.k12FontSize,
                           color: kColorWhite.withValues(alpha: 0.65),
                           align: TextAlign.center,
@@ -3729,8 +3769,9 @@ class _FloorAudienceListSheet extends GetView<LiveBroadcastController> {
                   separatorBuilder: (_, __) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
                     final user = users[index];
-                    final name =
-                        user.name.trim().isEmpty ? 'Guest' : user.name.trim();
+                    final name = user.name.trim().isEmpty
+                        ? 'Guest'
+                        : user.name.trim();
                     return Material(
                       color: Colors.transparent,
                       child: InkWell(
@@ -4122,10 +4163,7 @@ class _EmptySeatsForFloorUserSheet extends GetView<LiveBroadcastController> {
             Flexible(
               child: Obx(() {
                 final emptySeats = controller.audioRoomSeats
-                    .where(
-                      (s) =>
-                          s.seatNo > 1 && !s.occupied && !s.isLocked,
-                    )
+                    .where((s) => s.seatNo > 1 && !s.occupied && !s.isLocked)
                     .toList();
                 if (emptySeats.isEmpty) {
                   return Padding(
@@ -4176,8 +4214,9 @@ class _EmptySeatsForFloorUserSheet extends GetView<LiveBroadcastController> {
                                   shape: BoxShape.circle,
                                   gradient: LinearGradient(
                                     colors: [
-                                      const Color(0xFF7C9CFF)
-                                          .withValues(alpha: 0.9),
+                                      const Color(
+                                        0xFF7C9CFF,
+                                      ).withValues(alpha: 0.9),
                                       const Color(0xFF5B6CFF),
                                     ],
                                   ),
@@ -4289,8 +4328,9 @@ class _FloorAudienceSeatPickerSheet extends GetView<LiveBroadcastController> {
                   separatorBuilder: (_, __) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
                     final user = users[index];
-                    final name =
-                        user.name.trim().isEmpty ? 'Guest' : user.name.trim();
+                    final name = user.name.trim().isEmpty
+                        ? 'Guest'
+                        : user.name.trim();
                     return Material(
                       color: Colors.transparent,
                       child: InkWell(
@@ -4755,11 +4795,7 @@ class _DiamondCount extends StatelessWidget {
             color: AudioRoomStageOverlay._seatGold,
           ),
           Spacing.h4,
-          AppText(
-            text: '$value',
-            fontSize: 9,
-            color: kColorWhite,
-          ),
+          AppText(text: '$value', fontSize: 9, color: kColorWhite),
         ],
       ),
     );

@@ -344,20 +344,23 @@ class PushNotificationService {
       case PushNotificationTypes.roomInvite:
         return (
           title: 'Room Invitation',
-          body: '${host?.isNotEmpty == true ? host : 'Someone'} invited you to '
+          body:
+              '${host?.isNotEmpty == true ? host : 'Someone'} invited you to '
               'join "$roomLabel"',
         );
       case PushNotificationTypes.roomCreated:
         return (
           title: 'Live Stream Alert',
-          body: '$hostLabel started a $roomType room'
+          body:
+              '$hostLabel started a $roomType room'
               '${roomTitle?.isNotEmpty == true ? ': $roomTitle' : ''}',
         );
       case PushNotificationTypes.liveStreamingCreated:
       case PushNotificationTypes.liveStreamStarted:
         return (
           title: 'Live Stream Alert! 🔴',
-          body: '$hostLabel started a live video stream'
+          body:
+              '$hostLabel started a live video stream'
               '${roomTitle?.isNotEmpty == true ? ': $roomTitle' : ''}',
         );
       case PushNotificationTypes.pkRequest:
@@ -374,6 +377,19 @@ class PushNotificationService {
         return (
           title: 'PK Battle Challenge',
           body: '$sender challenged you from "$senderRoom"',
+        );
+      case PushNotificationTypes.pkFollowerInvite:
+        final challenger =
+            message.data['challenger_name']?.toString().trim().isNotEmpty ==
+                true
+            ? message.data['challenger_name']!.toString().trim()
+            : (message.data['from_user_name']?.toString().trim().isNotEmpty ==
+                      true
+                  ? message.data['from_user_name']!.toString().trim()
+                  : 'A user you follow');
+        return (
+          title: 'Follower PK Challenge ⚡',
+          body: '$challenger is looking for a PK opponent. Accept now!',
         );
       case PushNotificationTypes.pkAccepted:
       case PushNotificationTypes.pkStarted:
@@ -395,6 +411,26 @@ class PushNotificationService {
         return (
           title: 'PK Battle Finished',
           body: 'The PK battle has ended. Check the results!',
+        );
+      case PushNotificationTypes.pkFollowerJoined:
+        return (
+          title: 'Follower PK Opponent Found',
+          body: 'Your opponent joined. Choose the battle duration.',
+        );
+      case PushNotificationTypes.pkFollowerDurationSet:
+        return (
+          title: 'Follower PK Started ⚡',
+          body: 'The timer is running. Open the arena!',
+        );
+      case PushNotificationTypes.pkFollowerCompleted:
+        return (
+          title: 'Follower PK Finished',
+          body: 'The battle ended. Open to see the result.',
+        );
+      case PushNotificationTypes.pkFollowerCancelled:
+        return (
+          title: 'Follower PK Cancelled',
+          body: 'This follower PK is no longer available.',
         );
       case PushNotificationTypes.joinRequest:
         final requester =
@@ -439,6 +475,7 @@ class PushNotificationService {
       case PushNotificationTypes.liveStreamStarted:
         return 'Live Stream Alert! 🔴';
       case PushNotificationTypes.pkRequest:
+      case PushNotificationTypes.pkFollowerInvite:
         return 'PK Battle Challenge';
       case PushNotificationTypes.pkAccepted:
       case PushNotificationTypes.pkStarted:
@@ -448,7 +485,14 @@ class PushNotificationService {
       case PushNotificationTypes.pkCancelled:
         return 'PK Challenge Cancelled';
       case PushNotificationTypes.pkCompleted:
+      case PushNotificationTypes.pkFollowerCompleted:
         return 'PK Battle Finished';
+      case PushNotificationTypes.pkFollowerJoined:
+        return 'PK Opponent Found';
+      case PushNotificationTypes.pkFollowerDurationSet:
+        return 'PK Battle Started';
+      case PushNotificationTypes.pkFollowerCancelled:
+        return 'PK Challenge Cancelled';
       case PushNotificationTypes.joinRequest:
         return 'Join Request';
       case PushNotificationTypes.joinApproved:

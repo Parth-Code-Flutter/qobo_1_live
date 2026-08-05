@@ -40,6 +40,15 @@ abstract final class PushNotificationTypes {
   /// Both hosts — battle finished.
   static const String pkCompleted = 'pk_completed';
 
+  /// Audio-room follower PK lifecycle.
+  static const String pkFollowerInvite = 'pk_follower_invite';
+  static const String pkFollowerWaiting = 'pk_follower_waiting';
+  static const String pkFollowerJoined = 'pk_follower_joined';
+  static const String pkFollowerDurationSet = 'pk_follower_duration_set';
+  static const String pkFollowerScoreUpdate = 'pk_follower_score_update';
+  static const String pkFollowerCompleted = 'pk_follower_completed';
+  static const String pkFollowerCancelled = 'pk_follower_cancelled';
+
   /// Host receives a viewer join-request (Approve / Reject).
   static const String joinRequest = 'join_request';
 
@@ -69,6 +78,13 @@ abstract final class PushNotificationTypes {
     pkCancelled,
     pkStarted,
     pkCompleted,
+    pkFollowerInvite,
+    pkFollowerWaiting,
+    pkFollowerJoined,
+    pkFollowerDurationSet,
+    pkFollowerScoreUpdate,
+    pkFollowerCompleted,
+    pkFollowerCancelled,
     joinRequest,
     joinApproved,
     joinRejected,
@@ -88,7 +104,8 @@ abstract final class PushNotificationTypes {
       type == custom;
 
   /// PK challenge that shows Accept + Reject.
-  static bool isPkRequest(String type) => type == pkRequest;
+  static bool isPkRequest(String type) =>
+      type == pkRequest || type == pkFollowerInvite;
 
   /// Other PK lifecycle pushes (open arena / refresh state).
   static bool isPkLifecycle(String type) =>
@@ -98,7 +115,10 @@ abstract final class PushNotificationTypes {
       type == pkStarted ||
       type == pkCompleted;
 
-  static bool isPkType(String type) => isPkRequest(type) || isPkLifecycle(type);
+  static bool isFollowerPkType(String type) => type.startsWith('pk_follower_');
+
+  static bool isPkType(String type) =>
+      isPkRequest(type) || isPkLifecycle(type) || isFollowerPkType(type);
 
   /// Host inbox for pending room/live admission.
   static bool isJoinRequest(String type) => type == joinRequest;
