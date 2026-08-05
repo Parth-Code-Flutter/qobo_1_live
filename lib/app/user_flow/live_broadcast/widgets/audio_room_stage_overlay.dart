@@ -495,6 +495,17 @@ class _MicControl extends StatelessWidget {
 
   final bool compact;
 
+  static const _onGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFFF6AD5), Color(0xFF9B1FE8)],
+  );
+  static const _offGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF5C4A72), Color(0xFF2E2740)],
+  );
+
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<LiveBroadcastController>();
@@ -504,7 +515,7 @@ class _MicControl extends StatelessWidget {
           icon: Icons.mic_off_rounded,
           label: 'Muted',
           compact: compact,
-          active: false,
+          accentGradient: _offGradient,
           onTap: null,
         );
       }
@@ -514,7 +525,7 @@ class _MicControl extends StatelessWidget {
           icon: Icons.mic_off_rounded,
           label: 'Muted',
           compact: compact,
-          active: false,
+          accentGradient: _offGradient,
           onTap: null,
         );
       }
@@ -525,7 +536,7 @@ class _MicControl extends StatelessWidget {
             icon: isOn ? Icons.mic_rounded : Icons.mic_off_rounded,
             label: isOn ? 'Mic On' : 'Muted',
             compact: compact,
-            active: isOn,
+            accentGradient: isOn ? _onGradient : _offGradient,
             onTap: () => ZegoUIKit().turnMicrophoneOn(!isOn, muteMode: true),
           );
         },
@@ -586,6 +597,17 @@ class _SpeakerControl extends StatelessWidget {
 
   final bool compact;
 
+  static const _speakerGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF7B5CFF), Color(0xFF2ED3FF)],
+  );
+  static const _earpieceGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF5C4A72), Color(0xFF2E2740)],
+  );
+
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<LiveBroadcastController>();
@@ -595,7 +617,7 @@ class _SpeakerControl extends StatelessWidget {
           icon: Icons.volume_up_rounded,
           label: 'Speaker',
           compact: compact,
-          active: true,
+          accentGradient: _speakerGradient,
           onTap: null,
         );
       }
@@ -605,7 +627,7 @@ class _SpeakerControl extends StatelessWidget {
           icon: Icons.volume_up_rounded,
           label: 'Speaker',
           compact: compact,
-          active: true,
+          accentGradient: _speakerGradient,
           onTap: null,
         );
       }
@@ -620,7 +642,7 @@ class _SpeakerControl extends StatelessWidget {
             icon: isSpeaker ? Icons.volume_up_rounded : Icons.hearing_rounded,
             label: isSpeaker ? 'Speaker' : 'Earpiece',
             compact: compact,
-            active: isSpeaker,
+            accentGradient: isSpeaker ? _speakerGradient : _earpieceGradient,
             onTap: isLocked
                 ? null
                 : () => ZegoUIKit().setAudioOutputToSpeaker(!isSpeaker),
