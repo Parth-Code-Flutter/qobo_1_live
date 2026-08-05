@@ -262,106 +262,121 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
   }
 
   Widget _noteBanner() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: const Row(
-        children: [
-          Icon(Icons.info_outline_rounded, color: Colors.white54, size: 16),
-          SizedBox(width: 8),
-          Expanded(
-            child: AppText(
-              text: 'Withdraw anytime from your wallet. Session total updates live.',
-              fontSize: TextStyles.k10FontSize,
-              color: Colors.white60,
+    return Obx(() {
+      final hasEarnings = widget.tracker.displayCoins > 0;
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.info_outline_rounded,
+              color: Colors.white54,
+              size: 16,
             ),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(width: 8),
+            Expanded(
+              child: AppText(
+                text: hasEarnings
+                    ? 'Withdraw anytime from your wallet. Session total updates live.'
+                    : 'Receive a gift in this room to start earning coins.',
+                fontSize: TextStyles.k10FontSize,
+                color: Colors.white60,
+              ),
+            ),
+          ],
+        ),
+      );
+    });
   }
 
   Widget _actions() {
-    return Row(
-      children: [
-        Expanded(
-          child: SizedBox(
-            height: 50,
-            child: OutlinedButton(
-              onPressed: () => Get.back(),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.white70,
-                side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+    return Obx(() {
+      // Nothing to withdraw yet — keep a single full-width Close.
+      final hasEarnings = widget.tracker.displayCoins > 0;
+      return Row(
+        children: [
+          Expanded(
+            child: SizedBox(
+              height: 50,
+              child: OutlinedButton(
+                onPressed: () => Get.back(),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white70,
+                  side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
-              ),
-              child: const SemiBoldText(
-                text: 'Close',
-                fontSize: TextStyles.k12FontSize,
-                color: Colors.white70,
+                child: const SemiBoldText(
+                  text: 'Close',
+                  fontSize: TextStyles.k12FontSize,
+                  color: Colors.white70,
+                ),
               ),
             ),
           ),
-        ),
-        Spacing.h12,
-        Expanded(
-          flex: 2,
-          child: SizedBox(
-            height: 50,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFFFC107), Color(0xFFFF8F00)],
-                ),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: kColorWalletAmount.withValues(alpha: 0.4),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
+          if (hasEarnings) ...[
+            Spacing.h12,
+            Expanded(
+              flex: 2,
+              child: SizedBox(
+                height: 50,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFFC107), Color(0xFFFF8F00)],
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: kColorWalletAmount.withValues(alpha: 0.4),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () {
-                    Get.back();
-                    widget.onWithdraw();
-                  },
-                  borderRadius: BorderRadius.circular(14),
-                  child: const Center(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.account_balance_wallet_rounded,
-                          color: kColorBlack,
-                          size: 18,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        Get.back();
+                        widget.onWithdraw();
+                      },
+                      borderRadius: BorderRadius.circular(14),
+                      child: const Center(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.account_balance_wallet_rounded,
+                              color: kColorBlack,
+                              size: 18,
+                            ),
+                            SizedBox(width: 6),
+                            SemiBoldText(
+                              text: 'Withdraw',
+                              fontSize: TextStyles.k12FontSize,
+                              color: kColorBlack,
+                            ),
+                          ],
                         ),
-                        SizedBox(width: 6),
-                        SemiBoldText(
-                          text: 'Withdraw',
-                          fontSize: TextStyles.k12FontSize,
-                          color: kColorBlack,
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        ),
-      ],
-    );
+          ],
+        ],
+      );
+    });
   }
 
   Widget _glowBlob({
