@@ -123,8 +123,8 @@ class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
                     ? (compact ? 8.0 : 10.0)
                     : (compact ? 12.0 : 14.0);
                 final bottomPad = isVideo
-                    ? (compact ? 268.0 : 284.0)
-                    : (compact ? 296.0 : 312.0);
+                    ? (compact ? 236.0 : 252.0)
+                    : (compact ? 264.0 : 280.0);
                 final gridGap = isVideo
                     ? (compact ? 8.0 : 10.0)
                     : (compact ? 14.0 : 16.0);
@@ -203,8 +203,6 @@ class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
                           // Room chat feed + input, mirroring the live streaming
                           // chat so everyone in the audio room can talk directly.
                           _AudioRoomChatFeed(compact: compact),
-                          SizedBox(height: compact ? 6 : 8),
-                          const _FloorAudienceStrip(),
                           SizedBox(height: compact ? 6 : 8),
                           _AudioRoomChatInput(compact: compact),
                           SizedBox(height: compact ? 6 : 8),
@@ -965,6 +963,9 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
                     ),
                   ],
                 ],
+                // Floor audience moved here from the bottom strip: person + count.
+                Spacing.h8,
+                _FloorAudienceBadge(compact: compact),
                 // Host + audience: local session earnings (gifts to this user).
                 Spacing.h8,
                 SessionEarningsBadge(
@@ -3545,75 +3546,257 @@ class _EmptySeatActionsSheet extends GetView<LiveBroadcastController> {
   }
 }
 
-class _FloorAudienceStrip extends GetView<LiveBroadcastController> {
-  const _FloorAudienceStrip();
+class _FloorAudienceBadge extends GetView<LiveBroadcastController> {
+  const _FloorAudienceBadge({required this.compact});
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final users = controller.floorAudience;
-      if (users.isEmpty) return const SizedBox.shrink();
-      return SizedBox(
-        height: 42,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            for (var i = 0; i < users.length && i < 12; i++)
-              Positioned(
-                left: i * 22.0,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => _openFloorUserSheet(context, users[i]),
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: const Color(0xFFFF3EA5).withValues(alpha: 0.55),
-                        width: 1.5,
-                      ),
-                      color: Colors.white12,
-                      image: (users[i].avatarUrl ?? '').trim().isNotEmpty
-                          ? DecorationImage(
-                              image: NetworkImage(users[i].avatarUrl!.trim()),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
-                    ),
-                    child: (users[i].avatarUrl ?? '').trim().isEmpty
-                        ? const Icon(Icons.person, size: 16, color: kColorWhite)
-                        : null,
-                  ),
-                ),
+      final count = controller.floorAudience.length;
+      final size = compact ? 36.0 : 40.0;
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          key: controller.floorAudienceBadgeKey,
+          onTap: _openFloorAudienceListSheet,
+          borderRadius: BorderRadius.circular(20),
+          child: Ink(
+            height: size,
+            padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 10),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFFFF6AD5), Color(0xFF9B1FE8)],
               ),
-            if (users.length > 12)
-              Positioned(
-                left: 12 * 22.0,
-                child: Container(
-                  width: 36,
-                  height: 36,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.black54,
-                    border: Border.all(color: Colors.white24),
-                  ),
-                  child: SemiBoldText(
-                    text: '+${users.length - 12}',
-                    fontSize: TextStyles.k10FontSize,
-                    color: kColorWhite,
-                  ),
+              border: Border.all(color: kColorWhite.withValues(alpha: 0.18)),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFF3EA5).withValues(alpha: 0.28),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
                 ),
-              ),
-          ],
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.people_alt_rounded,
+                  color: kColorWhite,
+                  size: compact ? 15 : 17,
+                ),
+                Spacing.h6,
+                SemiBoldText(
+                  text: '$count',
+                  fontSize: compact
+                      ? TextStyles.k10FontSize
+                      : TextStyles.k12FontSize,
+                  color: kColorWhite,
+                ),
+              ],
+            ),
+          ),
         ),
       );
     });
   }
 
-  void _openFloorUserSheet(BuildContext context, FloorAudienceUser user) {
-    openFloorAudienceProfileSheet(user);
+  void _openFloorAudienceListSheet() {
+    Get.bottomSheet(
+      const _FloorAudienceListSheet(),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      barrierColor: Colors.black.withValues(alpha: 0.55),
+    );
+  }
+}
+
+/// Full floor-audience list opened from the AppBar people badge.
+class _FloorAudienceListSheet extends GetView<LiveBroadcastController> {
+  const _FloorAudienceListSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(10, 0, 10, bottomInset + 10),
+      child: Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.62,
+        ),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF2B1654), Color(0xFF171339)],
+          ),
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.14)),
+        ),
+        padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: kColorWhite.withValues(alpha: 0.28),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Spacing.v16,
+            Obx(() {
+              final count = controller.floorAudience.length;
+              return Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [Color(0xFFFF6AD5), Color(0xFF9B1FE8)],
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.people_alt_rounded,
+                      color: kColorWhite,
+                      size: 18,
+                    ),
+                  ),
+                  Spacing.h10,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SemiBoldText(
+                          text: 'Floor audience',
+                          fontSize: TextStyles.k16FontSize,
+                          color: kColorWhite,
+                        ),
+                        AppText(
+                          text: count == 0
+                              ? 'No one on the floor yet'
+                              : '$count ${count == 1 ? 'person' : 'people'} watching',
+                          fontSize: TextStyles.k12FontSize,
+                          color: kColorWhite.withValues(alpha: 0.65),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            }),
+            Spacing.v12,
+            Flexible(
+              child: Obx(() {
+                final users = controller.floorAudience;
+                if (users.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 28),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.person_outline_rounded,
+                          size: 36,
+                          color: kColorWhite.withValues(alpha: 0.35),
+                        ),
+                        Spacing.v10,
+                        AppText(
+                          text: 'When someone joins this room, they show up here.',
+                          fontSize: TextStyles.k12FontSize,
+                          color: kColorWhite.withValues(alpha: 0.65),
+                          align: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: users.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final user = users[index];
+                    final name =
+                        user.name.trim().isEmpty ? 'Guest' : user.name.trim();
+                    return Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () {
+                          Get.back();
+                          Future.delayed(const Duration(milliseconds: 120), () {
+                            openFloorAudienceProfileSheet(user);
+                          });
+                        },
+                        child: Ink(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(14),
+                            color: kColorWhite.withValues(alpha: 0.06),
+                            border: Border.all(
+                              color: kColorWhite.withValues(alpha: 0.1),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 20,
+                                backgroundColor: Colors.white12,
+                                backgroundImage:
+                                    (user.avatarUrl ?? '').trim().isNotEmpty
+                                    ? NetworkImage(user.avatarUrl!.trim())
+                                    : null,
+                                child: (user.avatarUrl ?? '').trim().isEmpty
+                                    ? const Icon(
+                                        Icons.person,
+                                        color: kColorWhite,
+                                        size: 20,
+                                      )
+                                    : null,
+                              ),
+                              Spacing.h12,
+                              Expanded(
+                                child: SemiBoldText(
+                                  text: name,
+                                  fontSize: TextStyles.k14FontSize,
+                                  color: kColorWhite,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Icon(
+                                Icons.chevron_right_rounded,
+                                color: kColorWhite.withValues(alpha: 0.45),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              }),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

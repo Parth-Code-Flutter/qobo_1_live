@@ -83,7 +83,6 @@ class AudioRoomGridView extends StatelessWidget {
                 final data = tiles[index];
                 return _AudioRoomGridTile(
                   data: data,
-                  isSpeaking: index == 1,
                   onTap: onJoinRoom == null
                       ? null
                       : () => onJoinRoom!(data.room),
@@ -142,12 +141,10 @@ class AudioRoomGridView extends StatelessWidget {
 class _AudioRoomGridTile extends StatelessWidget {
   const _AudioRoomGridTile({
     required this.data,
-    required this.isSpeaking,
     this.onTap,
   });
 
   final _AudioRoomTileData data;
-  final bool isSpeaking;
   final VoidCallback? onTap;
 
   @override
@@ -165,27 +162,9 @@ class _AudioRoomGridTile extends StatelessWidget {
             clipBehavior: Clip.none,
             alignment: Alignment.center,
             children: [
-              Container(
+              SizedBox(
                 width: 70,
                 height: 70,
-                padding: EdgeInsets.all(isSpeaking ? 3 : 0),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: isSpeaking
-                        ? const Color(0xFF12F287)
-                        : Colors.transparent,
-                    width: 2,
-                  ),
-                  boxShadow: [
-                    if (isSpeaking)
-                      BoxShadow(
-                        color: const Color(0xFF12F287).withValues(alpha: 0.35),
-                        blurRadius: 16,
-                        spreadRadius: 1,
-                      ),
-                  ],
-                ),
                 child: ClipOval(child: _RoomImage(path: data.avatar)),
               ),
               Positioned(
@@ -195,17 +174,15 @@ class _AudioRoomGridTile extends StatelessWidget {
                   width: 26,
                   height: 26,
                   decoration: BoxDecoration(
-                    color: isSpeaking
-                        ? const Color(0xFF14D96B)
-                        : const Color(0xFF7B3B93),
+                    color: const Color(0xFF7B3B93),
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: const Color(0xFF20104A),
                       width: 2,
                     ),
                   ),
-                  child: Icon(
-                    isSpeaking ? Icons.mic_rounded : Icons.mic_off_rounded,
+                  child: const Icon(
+                    Icons.mic_rounded,
                     color: kColorWhite,
                     size: 14,
                   ),
@@ -217,7 +194,7 @@ class _AudioRoomGridTile extends StatelessWidget {
           SemiBoldText(
             text: roomTitle,
             fontSize: TextStyles.k12FontSize,
-            color: isSpeaking ? const Color(0xFF12F287) : kColorWhite,
+            color: kColorWhite,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             align: TextAlign.center,

@@ -29,6 +29,7 @@ import 'package:qobo_one_live/utils/ui_utils/gift_celebration_overlay.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_chat_celebration_tracker.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_media_utils.dart';
 import 'package:qobo_one_live/utils/ui_utils/coin_fly_overlay.dart';
+import 'package:qobo_one_live/utils/ui_utils/avatar_fly_overlay.dart';
 import 'package:qobo_one_live/utils/ui_utils/vip_entrance_overlay.dart';
 import 'package:zego_uikit_prebuilt_live_streaming/zego_uikit_prebuilt_live_streaming.dart';
 import 'package:qobo_one_live/utils/zego_engine_utils.dart';
@@ -83,6 +84,8 @@ class LiveBroadcastController extends GetxController {
   final sessionEarnings = SessionEarningsTracker();
   /// Target for gullak-style coin fly animation into the host earnings pill.
   final sessionEarningsBadgeKey = GlobalKey(debugLabel: 'sessionEarningsBadge');
+  /// Target for floor-audience join fly animation into the AppBar people badge.
+  final floorAudienceBadgeKey = GlobalKey(debugLabel: 'floorAudienceBadge');
   final giftCatalog = <Map<String, String>>[].obs;
   final isLoadingGifts = false.obs;
   final selectedGiftReceiverId = RxnString();
@@ -90,6 +93,9 @@ class LiveBroadcastController extends GetxController {
   final isRoomGiftMode = true.obs;
   final audioRoomSeats = <AudioRoomSeatModel>[].obs;
   final floorAudience = <FloorAudienceUser>[].obs;
+  /// Skip join-fly on the first floor snapshot so opening a room is quiet.
+  bool _floorAudienceHydrated = false;
+  final Set<String> _knownFloorAudienceIds = <String>{};
   final pendingSeatRequests = <PendingSeatRequest>[].obs;
   final viewerFollowsHost = false.obs;
   final myPlacement = 'floor'.obs; // seat | floor
@@ -383,7 +389,7 @@ class LiveBroadcastController extends GetxController {
 
     final floorRaw = map['floor_audience'] ?? map['floorAudience'];
     if (floorRaw is List) {
-      floorAudience.assignAll(
+      _applyFloorAudience(
         floorRaw
             .whereType<Map>()
             .map((e) => FloorAudienceUser.fromMap(Map<String, dynamic>.from(e)))
@@ -413,6 +419,45 @@ class LiveBroadcastController extends GetxController {
         }
       }
     }
+  }
+
+  /// Updates [floorAudience] and flies new joiners into the AppBar people badge.
+  void _applyFloorAudience(List<FloorAudienceUser> next) {
+    final previousIds = Set<String>.from(_knownFloorAudienceIds);
+    final nextIds = next.map((e) => e.userId.trim()).where((e) => e.isNotEmpty).toSet();
+
+    floorAudience.assignAll(next);
+    _knownFloorAudienceIds
+      ..clear()
+      ..addAll(nextIds);
+
+    if (!_floorAudienceHydrated) {
+      _floorAudienceHydrated = true;
+      return;
+    }
+
+    final myId = _currentUserId();
+    final newcomers = next.where((user) {
+      final id = user.userId.trim();
+      if (id.isEmpty || previousIds.contains(id)) return false;
+      // Don't animate yourself joining into your own badge.
+      if (myId.isNotEmpty && _userIdsMatch(id, myId)) return false;
+      return true;
+    }).toList();
+
+    for (final user in newcomers.take(2)) {
+      unawaited(_playFloorJoinFlyAnimation(user));
+    }
+  }
+
+  Future<void> _playFloorJoinFlyAnimation(FloorAudienceUser user) async {
+    try {
+      await AvatarFlyOverlay.show(
+        targetKey: floorAudienceBadgeKey,
+        name: user.name.trim().isEmpty ? 'Guest' : user.name.trim(),
+        avatarUrl: user.avatarUrl,
+      );
+    } catch (_) {}
   }
 
   /// Host: turn on join approval + poll pending join requests.
@@ -4202,12 +4247,15 @@ class LiveBroadcastController extends GetxController {
   @override
   void onClose() {
     CoinFlyOverlay.dismiss();
+    AvatarFlyOverlay.dismiss();
     _stopSeatRefreshPolling();
     _stopSessionEarningsPolling();
     _stopJoinRequestPolling();
     _stopSeatRequestPolling();
     _promptedJoinRequestIds.clear();
     _promptedSeatRequestIds.clear();
+    _knownFloorAudienceIds.clear();
+    _floorAudienceHydrated = false;
     _unbindSeatRequestSocket();
     _unbindRoomBackgroundSocket();
     _vipEntrancePlayedUserIds.clear();
