@@ -5,6 +5,7 @@ import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/rooms_empty_state.dart';
 import 'package:qobo_one_live/utils/geo/country_flag_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -90,9 +91,11 @@ class _VideoRoomListViewState extends State<VideoRoomListView> {
               ),
             ),
           if (tiles.isEmpty)
-            const SliverFillRemaining(
+            SliverFillRemaining(
               hasScrollBody: false,
-              child: _VideoRoomsEmptyState(),
+              child: _VideoRoomsEmptyState(
+                onCreate: widget.onCreateVideoRoom,
+              ),
             )
           else ...[
             SliverPadding(
@@ -349,38 +352,21 @@ class _CreateVideoRoomPanel extends StatelessWidget {
 }
 
 class _VideoRoomsEmptyState extends StatelessWidget {
-  const _VideoRoomsEmptyState();
+  const _VideoRoomsEmptyState({this.onCreate});
+
+  final VoidCallback? onCreate;
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.videocam_off_outlined,
-              size: 40,
-              color: kColorWhite.withValues(alpha: 0.45),
-            ),
-            Spacing.v12,
-            const SemiBoldText(
-              text: 'No video rooms yet',
-              fontSize: TextStyles.k16FontSize,
-              color: kColorWhite,
-              align: TextAlign.center,
-            ),
-            Spacing.v6,
-            AppText(
-              text: 'Create one or pull to refresh when friends go live.',
-              fontSize: TextStyles.k12FontSize,
-              color: kColorWhite.withValues(alpha: 0.58),
-              align: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
+    return RoomsEmptyState(
+      icon: Icons.videocam_rounded,
+      title: 'No video rooms yet',
+      subtitle:
+          'Go live on camera and your room shows up here for everyone '
+          'browsing right now.',
+      accentColors: const [Color(0xFFFF4DC4), Color(0xFFFF6A3D)],
+      ctaLabel: onCreate == null ? null : 'Start video room',
+      onCta: onCreate,
     );
   }
 }

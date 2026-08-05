@@ -22,6 +22,7 @@ import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 import '../controllers/live_broadcast_controller.dart';
 import '../models/audio_room_models.dart';
 import '../utils/audio_room_seat_layout.dart';
+import 'room_options_sheet.dart';
 
 /// Opens floor-audience user profile (Message / Gift / optional Kick).
 void openFloorAudienceProfileSheet(FloorAudienceUser user) {
@@ -270,40 +271,63 @@ class _AudioRoomBottomControls extends GetView<LiveBroadcastController> {
                 onTap: controller.openGiftsSheet,
               ),
             ),
-            // Same icons as Room options sheet (Background / Share / PK).
-            _ControlButton(
-              icon: Icons.image_rounded,
-              label: 'Background',
-              compact: compact,
-              accentGradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF4FC3F7), Color(0xFF2979FF)],
+            // Video dock is crowded (Cam/Flip) — tuck these into More.
+            // Audio keeps Background / Share / PK Battle on the dock.
+            if (controller.isVideoRoom)
+              _ControlButton(
+                icon: Icons.more_horiz_rounded,
+                label: 'More',
+                compact: compact,
+                accentGradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF8E8E9A), Color(0xFF4A4A58)],
+                ),
+                onTap: () {
+                  Get.bottomSheet(
+                    RoomOptionsSheet(
+                      isHost: controller.isHost.value,
+                      isVideoRoom: true,
+                    ),
+                    backgroundColor: Colors.transparent,
+                  );
+                },
+              )
+            else ...[
+              _ControlButton(
+                icon: Icons.image_rounded,
+                label: 'Background',
+                compact: compact,
+                accentGradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF4FC3F7), Color(0xFF2979FF)],
+                ),
+                onTap: controller.openRoomBackgroundSheet,
               ),
-              onTap: controller.openRoomBackgroundSheet,
-            ),
-            _ControlButton(
-              icon: Icons.ios_share_rounded,
-              label: 'Share',
-              compact: compact,
-              accentGradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF9B7BFF), Color(0xFF6C4DFF)],
+              _ControlButton(
+                icon: Icons.ios_share_rounded,
+                label: 'Share',
+                compact: compact,
+                accentGradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF9B7BFF), Color(0xFF6C4DFF)],
+                ),
+                onTap: controller.shareRoom,
               ),
-              onTap: controller.shareRoom,
-            ),
-            _ControlButton(
-              icon: Icons.flash_on_rounded,
-              label: 'PK Battle',
-              compact: compact,
-              accentGradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFFFFD54F), Color(0xFFFF8F00)],
+              _ControlButton(
+                icon: Icons.flash_on_rounded,
+                label: 'PK Battle',
+                compact: compact,
+                accentGradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFFFD54F), Color(0xFFFF8F00)],
+                ),
+                onTap: controller.openPkBattle,
               ),
-              onTap: controller.openPkBattle,
-            ),
+            ],
           ],
         ),
       ),

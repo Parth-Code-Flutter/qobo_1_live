@@ -4,6 +4,7 @@ import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/rooms_empty_state.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -60,8 +61,8 @@ class AudioRoomGridView extends StatelessWidget {
               physics: const AlwaysScrollableScrollPhysics(
                 parent: BouncingScrollPhysics(),
               ),
-              padding: const EdgeInsets.fromLTRB(14, 64, 14, 120),
-              children: const [_AudioRoomsEmptyState()],
+              padding: const EdgeInsets.fromLTRB(14, 48, 14, 120),
+              children: [_AudioRoomsEmptyState(onCreate: onCreateAudioRoom)],
             )
           : GridView.builder(
               padding: const EdgeInsets.fromLTRB(8, 18, 8, 104),
@@ -318,46 +319,21 @@ class _RoomImage extends StatelessWidget {
 }
 
 class _AudioRoomsEmptyState extends StatelessWidget {
-  const _AudioRoomsEmptyState();
+  const _AudioRoomsEmptyState({this.onCreate});
+
+  final VoidCallback? onCreate;
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 58,
-              height: 58,
-              decoration: BoxDecoration(
-                color: kColorWhite.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.graphic_eq_rounded,
-                color: kColorWhite,
-                size: 28,
-              ),
-            ),
-            const SizedBox(height: 14),
-            const SemiBoldText(
-              text: 'No data found',
-              fontSize: TextStyles.k16FontSize,
-              color: kColorWhite,
-              align: TextAlign.center,
-            ),
-            Spacing.v6,
-            AppText(
-              text: 'Audio rooms will appear here when available.',
-              fontSize: TextStyles.k12FontSize,
-              color: kColorWhite.withValues(alpha: 0.72),
-              align: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
+    return RoomsEmptyState(
+      icon: Icons.graphic_eq_rounded,
+      title: 'No audio rooms live',
+      subtitle:
+          'Be the first to open the mic tonight — start a room and invite '
+          'people to hang out.',
+      accentColors: const [Color(0xFF7B5CFF), Color(0xFF2ED3FF)],
+      ctaLabel: onCreate == null ? null : 'Create audio room',
+      onCta: onCreate,
     );
   }
 }
