@@ -1,4 +1,6 @@
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
+import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/ui_utils/app_ui_utils.dart';
 import 'package:flutter/material.dart';
@@ -191,50 +193,79 @@ class _RichTextEditorWidgetState extends State<RichTextEditorWidget> {
     final linkTextController = TextEditingController();
     final linkUrlController = TextEditingController();
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Insert Link'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: linkTextController,
-              decoration: const InputDecoration(
-                labelText: 'Link Text',
-                hintText: 'Enter link text',
+    CommonAppDialog.show(
+      context,
+      title: 'Insert Link',
+      icon: Icons.link_rounded,
+      iconAccent: AdminAgencyUi.sky,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: linkTextController,
+            style: TextStyles.kRegularPoppins(
+              fontSize: TextStyles.k14FontSize,
+              colors: kColorWhite,
+            ),
+            decoration: InputDecoration(
+              labelText: 'Link Text',
+              hintText: 'Enter link text',
+              labelStyle: TextStyle(color: kColorWhite.withValues(alpha: 0.7)),
+              hintStyle: TextStyle(color: kColorWhite.withValues(alpha: 0.4)),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: kColorWhite.withValues(alpha: 0.25),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AdminAgencyUi.sky),
               ),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: linkUrlController,
-              decoration: const InputDecoration(
-                labelText: 'URL',
-                hintText: 'https://example.com',
-              ),
-              keyboardType: TextInputType.url,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
           ),
-          TextButton(
-            onPressed: () {
-              if (linkTextController.text.isNotEmpty &&
-                  linkUrlController.text.isNotEmpty) {
-                final linkMarkdown =
-                    '[${linkTextController.text}](${linkUrlController.text})';
-                _insertAtCursor(linkMarkdown);
-                Navigator.of(context).pop();
-              }
-            },
-            child: const Text('Insert'),
+          const SizedBox(height: 16),
+          TextField(
+            controller: linkUrlController,
+            keyboardType: TextInputType.url,
+            style: TextStyles.kRegularPoppins(
+              fontSize: TextStyles.k14FontSize,
+              colors: kColorWhite,
+            ),
+            decoration: InputDecoration(
+              labelText: 'URL',
+              hintText: 'https://example.com',
+              labelStyle: TextStyle(color: kColorWhite.withValues(alpha: 0.7)),
+              hintStyle: TextStyle(color: kColorWhite.withValues(alpha: 0.4)),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: kColorWhite.withValues(alpha: 0.25),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AdminAgencyUi.violet),
+              ),
+            ),
           ),
         ],
       ),
+      actions: [
+        const CommonAppDialogAction(label: 'Cancel'),
+        CommonAppDialogAction(
+          label: 'Insert',
+          isPrimary: true,
+          onPressed: () {
+            if (linkTextController.text.isNotEmpty &&
+                linkUrlController.text.isNotEmpty) {
+              final linkMarkdown =
+                  '[${linkTextController.text}](${linkUrlController.text})';
+              _insertAtCursor(linkMarkdown);
+            }
+          },
+        ),
+      ],
     );
   }
 

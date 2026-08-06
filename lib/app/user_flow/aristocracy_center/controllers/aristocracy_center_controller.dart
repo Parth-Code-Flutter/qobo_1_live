@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
+import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 
 class AristocracyCenterController extends GetxController {
   final selectedRankIndex = 0.obs;
@@ -80,50 +82,33 @@ class AristocracyCenterController extends GetxController {
     if (coinsBalance.value >= price) {
       coinsBalance.value -= price;
       activeRankName.value = rankName;
-      Get.dialog(
-        AlertDialog(
-          title: Row(
-            children: [
-              const Icon(Icons.shield_rounded, color: Colors.amber),
-              const SizedBox(width: 8),
-              Text('$rankName Unlocked!'),
-            ],
-          ),
-          content: Text('Welcome to the nobility! You have successfully subscribed to the "$rankName" rank.\nEnjoy your premium privileges immediately.'),
-          actions: [
-            TextButton(
-              onPressed: () => Get.back(),
-              child: const Text('Confirm'),
-            ),
-          ],
-        ),
+      CommonAppDialog.showGet(
+        title: '$rankName Unlocked!',
+        message:
+            'Welcome to the nobility! You have successfully subscribed to the "$rankName" rank. Enjoy your premium privileges immediately.',
+        icon: Icons.shield_rounded,
+        iconAccent: AdminAgencyUi.goldDeep,
+        actions: const [
+          CommonAppDialogAction(label: 'Confirm', isPrimary: true),
+        ],
       );
     } else {
-      Get.dialog(
-        AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.warning_amber_rounded, color: Colors.orange),
-              SizedBox(width: 8),
-              Text('Insufficient Coins'),
-            ],
+      CommonAppDialog.showGet(
+        title: 'Insufficient Coins',
+        message:
+            'You need ${price - coinsBalance.value} more Coins to purchase the "$rankName" subscription. Would you like to recharge?',
+        icon: Icons.warning_amber_rounded,
+        iconAccent: AdminAgencyUi.goldDeep,
+        actions: [
+          const CommonAppDialogAction(label: 'Cancel'),
+          CommonAppDialogAction(
+            label: 'Recharge Now',
+            isPrimary: true,
+            onPressed: () {
+              Get.snackbar('Redirecting', 'Opening recharge panel...');
+            },
           ),
-          content: Text('You need ${price - coinsBalance.value} more Coins to purchase the "$rankName" subscription. Would you like to recharge?'),
-          actions: [
-            TextButton(
-              onPressed: () => Get.back(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF761B65)),
-              onPressed: () {
-                Get.back();
-                Get.snackbar('Redirecting', 'Opening recharge panel...');
-              },
-              child: const Text('Recharge Now', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        ),
+        ],
       );
     }
   }

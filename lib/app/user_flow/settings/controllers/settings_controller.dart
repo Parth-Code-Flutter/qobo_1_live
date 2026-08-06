@@ -5,6 +5,8 @@ import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/firebase/fcm_token_sync_service.dart';
 import 'package:qobo_one_live/services/realtime/user_realtime_socket_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
+import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
+import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 
 class SettingsController extends GetxController {
   SettingsController({UserRepo? userRepo}) : _userRepo = userRepo ?? UserRepo();
@@ -60,35 +62,32 @@ class SettingsController extends GetxController {
   }
 
   void onDeleteAccountTap(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text(
-          'Delete Account',
-          style: TextStyle(color: Colors.red),
-        ),
-        content: const Text(
+    CommonAppDialog.show(
+      context,
+      title: 'Delete Account',
+      message:
           'Are you sure you want to permanently delete your account? This action cannot be undone.',
+      icon: Icons.delete_forever_rounded,
+      iconAccent: AdminAgencyUi.rose,
+      actions: [
+        const CommonAppDialogAction(label: 'Cancel'),
+        CommonAppDialogAction(
+          label: 'Delete',
+          isPrimary: true,
+          isDestructive: true,
+          onPressed: () async {
+            final response = await _userRepo.deleteAccount(
+              isShowLoader: true,
+            );
+            if (response == null || response['statusCode'] == 0) {
+              Get.snackbar('Account', 'Could not delete account.');
+              return;
+            }
+            await _userSession.clearSession();
+            Get.offAllNamed(Routes.AUTH_LOGIN);
+          },
         ),
-        actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () async {
-              Get.back();
-              final response = await _userRepo.deleteAccount(
-                isShowLoader: true,
-              );
-              if (response == null || response['statusCode'] == 0) {
-                Get.snackbar('Account', 'Could not delete account.');
-                return;
-              }
-              await _userSession.clearSession();
-              Get.offAllNamed(Routes.AUTH_LOGIN);
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+      ],
     );
   }
 

@@ -12,6 +12,9 @@ import 'package:qobo_one_live/services/social_auth/google_social_auth_provider.d
 import 'package:qobo_one_live/services/social_auth/social_auth_provider.dart';
 import 'package:qobo_one_live/utils/auth/auth_session_helper.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
+import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
+import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
+import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 class AuthLoginController extends GetxController {
   AuthLoginController({
@@ -274,101 +277,99 @@ class AuthLoginController extends GetxController {
 
     final phoneController = TextEditingController();
 
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: const Color(0xFF1E1E2D),
-        title: const Text('Firebase Phone Login', style: TextStyle(color: kColorWhite, fontSize: 16, fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Enter your phone number to receive a verification code via SMS.', style: TextStyle(color: Colors.white70, fontSize: 12)),
-            const SizedBox(height: 16),
-            TextField(
-              controller: phoneController,
-              keyboardType: TextInputType.phone,
-              style: const TextStyle(color: kColorWhite),
-              decoration: const InputDecoration(
-                hintText: 'e.g. +923001234567',
-                hintStyle: TextStyle(color: Colors.white38),
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: kColorPrimary)),
-              ),
-            ),
-          ],
+    CommonAppDialog.showGet(
+      title: 'Firebase Phone Login',
+      message:
+          'Enter your phone number to receive a verification code via SMS.',
+      icon: Icons.sms_rounded,
+      iconAccent: AdminAgencyUi.sky,
+      content: TextField(
+        controller: phoneController,
+        keyboardType: TextInputType.phone,
+        style: TextStyles.kRegularPoppins(
+          fontSize: TextStyles.k14FontSize,
+          colors: kColorWhite,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white38)),
+        decoration: InputDecoration(
+          hintText: 'e.g. +923001234567',
+          hintStyle: TextStyle(color: kColorWhite.withValues(alpha: 0.4)),
+          enabledBorder: UnderlineInputBorder(
+            borderSide: BorderSide(color: kColorWhite.withValues(alpha: 0.25)),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: kColorPrimary),
-            onPressed: () {
-              final number = phoneController.text.trim();
-              if (number.isEmpty) return;
-              Get.back();
-              _verifyFirebasePhoneCode(context, number);
-            },
-            child: const Text('Send SMS'),
+          focusedBorder: const UnderlineInputBorder(
+            borderSide: BorderSide(color: AdminAgencyUi.pink),
           ),
-        ],
+        ),
       ),
+      actions: [
+        const CommonAppDialogAction(label: 'Cancel'),
+        CommonAppDialogAction(
+          label: 'Send SMS',
+          isPrimary: true,
+          onPressed: () {
+            final number = phoneController.text.trim();
+            if (number.isEmpty) return;
+            _verifyFirebasePhoneCode(context, number);
+          },
+        ),
+      ],
     );
   }
 
   void _verifyFirebasePhoneCode(BuildContext context, String phone) {
     final codeController = TextEditingController();
 
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: const Color(0xFF1E1E2D),
-        title: const Text('Verify SMS Code', style: TextStyle(color: kColorWhite, fontSize: 16, fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Enter the 6-digit code sent to $phone.', style: const TextStyle(color: Colors.white70, fontSize: 12)),
-            const SizedBox(height: 16),
-            TextField(
-              controller: codeController,
-              keyboardType: TextInputType.number,
-              style: const TextStyle(color: kColorWhite),
-              maxLength: 6,
-              decoration: const InputDecoration(
-                hintText: 'e.g. 123456',
-                hintStyle: TextStyle(color: Colors.white38),
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: kColorPrimary)),
-              ),
-            ),
-          ],
+    CommonAppDialog.showGet(
+      title: 'Verify SMS Code',
+      message: 'Enter the 6-digit code sent to $phone.',
+      icon: Icons.lock_rounded,
+      iconAccent: AdminAgencyUi.violet,
+      content: TextField(
+        controller: codeController,
+        keyboardType: TextInputType.number,
+        maxLength: 6,
+        style: TextStyles.kRegularPoppins(
+          fontSize: TextStyles.k14FontSize,
+          colors: kColorWhite,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white38)),
+        decoration: InputDecoration(
+          hintText: 'e.g. 123456',
+          hintStyle: TextStyle(color: kColorWhite.withValues(alpha: 0.4)),
+          enabledBorder: UnderlineInputBorder(
+            borderSide: BorderSide(color: kColorWhite.withValues(alpha: 0.25)),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: kColorPrimary),
-            onPressed: () {
-              final code = codeController.text.trim();
-              if (code.length != 6) return;
-              Get.back();
-              Get.dialog(
-                const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(kColorPrimary))),
-                barrierDismissible: false,
-              );
-              Future.delayed(const Duration(seconds: 2), () {
-                Get.back();
-                AppToast.showSuccess(context, 'Firebase authentication successful!');
-                Get.offAllNamed(Routes.BOTTOM_NAV);
-              });
-            },
-            child: const Text('Verify'),
+          focusedBorder: const UnderlineInputBorder(
+            borderSide: BorderSide(color: AdminAgencyUi.violet),
           ),
-        ],
+        ),
       ),
+      actions: [
+        const CommonAppDialogAction(label: 'Cancel'),
+        CommonAppDialogAction(
+          label: 'Verify',
+          isPrimary: true,
+          onPressed: () {
+            final code = codeController.text.trim();
+            if (code.length != 6) return;
+            Get.dialog(
+              const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(kColorPrimary),
+                ),
+              ),
+              barrierDismissible: false,
+            );
+            Future.delayed(const Duration(seconds: 2), () {
+              Get.back();
+              AppToast.showSuccess(
+                context,
+                'Firebase authentication successful!',
+              );
+              Get.offAllNamed(Routes.BOTTOM_NAV);
+            });
+          },
+        ),
+      ],
     );
   }
 }

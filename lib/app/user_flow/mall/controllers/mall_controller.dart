@@ -8,6 +8,8 @@ import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_dialogs/common_giffy_dialog.dart';
+import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
+import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 
 class MallController extends GetxController {
   MallController({
@@ -447,35 +449,22 @@ class MallController extends GetxController {
     required int price,
     required String itemName,
   }) {
-    Get.dialog(
-      AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.orange),
-            SizedBox(width: 8),
-            Text('Insufficient Coins'),
-          ],
-        ),
-        content: Text(
+    CommonAppDialog.showGet(
+      title: 'Insufficient Coins',
+      message:
           'You need ${price - coinsBalance.value} more Coins to purchase "$itemName". Would you like to recharge?',
+      icon: Icons.warning_amber_rounded,
+      iconAccent: AdminAgencyUi.goldDeep,
+      actions: [
+        const CommonAppDialogAction(label: 'Cancel'),
+        CommonAppDialogAction(
+          label: 'Recharge Now',
+          isPrimary: true,
+          onPressed: () {
+            Get.snackbar('Redirecting', 'Opening recharge panel...');
+          },
         ),
-        actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF761B65),
-            ),
-            onPressed: () {
-              Get.back();
-              Get.snackbar('Redirecting', 'Opening recharge panel...');
-            },
-            child: const Text(
-              'Recharge Now',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
+      ],
     );
   }
 

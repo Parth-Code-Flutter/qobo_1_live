@@ -21,6 +21,8 @@ import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/join_request_in_app_banner.dart';
 import 'package:qobo_one_live/utils/app_dialogs/audio_room_feedback_dialog.dart';
+import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
+import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/session_earnings_dialog.dart';
 import 'package:qobo_one_live/utils/session_earnings_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -4073,81 +4075,39 @@ class LiveBroadcastController extends GetxController {
     final body = isVideo
         ? 'This will end the video room for everyone and close the session.'
         : 'This will end the audio room for everyone and close the session.';
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: const Color(0xFF1D102F),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: SemiBoldText(
-          text: title,
-          fontSize: TextStyles.k18FontSize,
-          color: kColorWhite,
+    CommonAppDialog.showGet(
+      title: title,
+      message: body,
+      icon: Icons.meeting_room_rounded,
+      iconAccent: AdminAgencyUi.rose,
+      actions: [
+        const CommonAppDialogAction(label: 'Cancel'),
+        CommonAppDialogAction(
+          label: 'End Room',
+          isPrimary: true,
+          isDestructive: true,
+          onPressed: endRoomForEveryone,
         ),
-        content: AppText(
-          text: body,
-          fontSize: TextStyles.k12FontSize,
-          color: kColorWhite.withValues(alpha: 0.72),
-        ),
-        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-        actions: [
-          TextButton(
-            onPressed: Get.back,
-            child: AppText(
-              text: 'Cancel',
-              fontSize: TextStyles.k12FontSize,
-              color: kColorWhite.withValues(alpha: 0.72),
-            ),
-          ),
-          TextButton(
-            onPressed: endRoomForEveryone,
-            child: const SemiBoldText(
-              text: 'End Room',
-              fontSize: TextStyles.k12FontSize,
-              color: Color(0xFFFF5A7A),
-            ),
-          ),
-        ],
-      ),
-      barrierDismissible: true,
+      ],
     );
   }
 
   void confirmEndLiveStream() {
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: const Color(0xFF1D102F),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const SemiBoldText(
-          text: 'End live stream?',
-          fontSize: TextStyles.k18FontSize,
-          color: kColorWhite,
+    CommonAppDialog.showGet(
+      title: 'End live stream?',
+      message:
+          'This will end your live stream for all viewers and close the session.',
+      icon: Icons.videocam_off_rounded,
+      iconAccent: AdminAgencyUi.rose,
+      actions: [
+        const CommonAppDialogAction(label: 'Cancel'),
+        CommonAppDialogAction(
+          label: 'End Live',
+          isPrimary: true,
+          isDestructive: true,
+          onPressed: endLiveStreamForEveryone,
         ),
-        content: AppText(
-          text:
-              'This will end your live stream for all viewers and close the session.',
-          fontSize: TextStyles.k12FontSize,
-          color: kColorWhite.withValues(alpha: 0.72),
-        ),
-        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-        actions: [
-          TextButton(
-            onPressed: Get.back,
-            child: AppText(
-              text: 'Cancel',
-              fontSize: TextStyles.k12FontSize,
-              color: kColorWhite.withValues(alpha: 0.72),
-            ),
-          ),
-          TextButton(
-            onPressed: endLiveStreamForEveryone,
-            child: const SemiBoldText(
-              text: 'End Live',
-              fontSize: TextStyles.k12FontSize,
-              color: Color(0xFFFF5A7A),
-            ),
-          ),
-        ],
-      ),
-      barrierDismissible: true,
+      ],
     );
   }
 

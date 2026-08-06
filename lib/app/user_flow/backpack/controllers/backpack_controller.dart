@@ -475,7 +475,7 @@ class BackpackController extends GetxController {
       title: 'Backpack',
       message: message,
       actions: [
-        CommonAppDialogAction(label: 'OK', onPressed: () {}),
+        CommonAppDialogAction(label: 'OK', isPrimary: true, onPressed: () {}),
       ],
     );
   }

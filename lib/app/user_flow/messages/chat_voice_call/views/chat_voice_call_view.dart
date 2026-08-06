@@ -11,6 +11,8 @@ import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
+import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
+import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:zego_uikit/zego_uikit.dart';
 import 'package:zego_uikit_prebuilt_call/zego_uikit_prebuilt_call.dart';
 
@@ -1017,40 +1019,14 @@ class _CallTopOverlay extends GetView<ChatVoiceCallController> {
   }
 
   Future<void> _confirmBackEndsCall(BuildContext context) async {
-    final shouldEnd = await Get.dialog<bool>(
-      AlertDialog(
-        backgroundColor: const Color(0xFF171321),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const SemiBoldText(
-          text: 'End call?',
-          fontSize: TextStyles.k18FontSize,
-          color: kColorWhite,
-        ),
-        content: AppText(
-          text: 'If you back call will be end',
-          fontSize: TextStyles.k14FontSize,
-          color: kColorWhite.withValues(alpha: 0.78),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(result: false),
-            child: AppText(
-              text: 'Cancel',
-              fontSize: TextStyles.k12FontSize,
-              color: kColorWhite.withValues(alpha: 0.74),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Get.back(result: true),
-            child: const SemiBoldText(
-              text: 'End Call',
-              fontSize: TextStyles.k12FontSize,
-              color: kColorPrimary,
-            ),
-          ),
-        ],
-      ),
-      barrierDismissible: true,
+    final shouldEnd = await CommonAppDialog.confirm(
+      title: 'End call?',
+      message: 'If you go back, the call will end.',
+      icon: Icons.call_end_rounded,
+      iconAccent: AdminAgencyUi.rose,
+      confirmLabel: 'End Call',
+      cancelLabel: 'Cancel',
+      destructive: true,
     );
     if (shouldEnd != true || !context.mounted) return;
     await ZegoUIKitPrebuiltCallController().hangUp(

@@ -12,6 +12,8 @@ import 'package:qobo_one_live/services/firebase/firebase_bootstrap.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/zego_call_id_utils.dart';
 import 'package:qobo_one_live/utils/zego_engine_utils.dart';
+import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
+import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 
 /// Listens for Firestore `calls/active` and shows incoming call UI.
 class ChatIncomingCallCoordinator extends GetxService {
@@ -181,49 +183,48 @@ class ChatIncomingCallCoordinator extends GetxService {
     final recordCallHistory = data['recordCallHistory'] != false;
     final isVideo = data['type']?.toString() == 'video';
 
-    Get.dialog<void>(
-      AlertDialog(
-        title: Text(isVideo ? 'Incoming video call' : 'Incoming call'),
-        content: Text(
-          isVideo
-              ? '$callerName is video calling you'
-              : '$callerName is calling you',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              Get.back();
-              _dialogOpen = false;
-              _lastHandledRingKey = null;
-              await _callService.endCall(
-                roomId,
-                endedByUserId: myId,
-              );
-              ChatVoiceCallController.refreshMessagesInbox();
-            },
-            child: const Text('Decline'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Get.back();
-              _dialogOpen = false;
-              _lastHandledRingKey = null;
-              await _acceptCall(
-                roomId: roomId,
-                callId: callId,
-                historyDocId: historyDocId,
-                callStartedAt: callStartedAt,
-                callerId: callerId,
-                callerName: callerName,
-                isVideo: isVideo,
-                recordCallHistory: recordCallHistory,
-              );
-            },
-            child: const Text('Accept'),
-          ),
-        ],
-      ),
+    CommonAppDialog.showGet(
+      title: isVideo ? 'Incoming video call' : 'Incoming call',
+      message: isVideo
+          ? '$callerName is video calling you'
+          : '$callerName is calling you',
+      icon: isVideo ? Icons.videocam_rounded : Icons.call_rounded,
+      iconAccent: AdminAgencyUi.mint,
       barrierDismissible: false,
+      actions: [
+        CommonAppDialogAction(
+          label: 'Decline',
+          isDestructive: true,
+          isPrimary: true,
+          onPressed: () async {
+            _dialogOpen = false;
+            _lastHandledRingKey = null;
+            await _callService.endCall(
+              roomId,
+              endedByUserId: myId,
+            );
+            ChatVoiceCallController.refreshMessagesInbox();
+          },
+        ),
+        CommonAppDialogAction(
+          label: 'Accept',
+          isPrimary: true,
+          onPressed: () async {
+            _dialogOpen = false;
+            _lastHandledRingKey = null;
+            await _acceptCall(
+              roomId: roomId,
+              callId: callId,
+              historyDocId: historyDocId,
+              callStartedAt: callStartedAt,
+              callerId: callerId,
+              callerName: callerName,
+              isVideo: isVideo,
+              recordCallHistory: recordCallHistory,
+            );
+          },
+        ),
+      ],
     ).whenComplete(() {
       _dialogOpen = false;
       _lastHandledRingKey = null;

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
+import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
@@ -8,104 +10,45 @@ import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 /// Reject-reason dialog for agency host review flows.
-Future<String?> showAgencyHostRejectReasonDialog(BuildContext context) {
-  return showDialog<String>(
-    context: context,
+Future<String?> showAgencyHostRejectReasonDialog(BuildContext context) async {
+  final reasonController = TextEditingController();
+  final confirmed = await CommonAppDialog.show<bool>(
+    context,
+    title: 'Reject host application',
+    message: 'Please provide a reason. The applicant will see this message.',
+    icon: Icons.person_off_rounded,
+    iconAccent: AdminAgencyUi.rose,
     barrierDismissible: false,
-    builder: (ctx) => const _RejectReasonDialog(),
+    content: AppTextField(
+      controller: reasonController,
+      hintText: 'Rejection reason',
+      maxLines: 3,
+      minLines: 3,
+      textInputAction: TextInputAction.done,
+    ),
+    actions: const [
+      CommonAppDialogAction(label: 'Cancel', result: false),
+      CommonAppDialogAction(
+        label: 'Reject',
+        isPrimary: true,
+        isDestructive: true,
+        result: true,
+      ),
+    ],
   );
-}
 
-class _RejectReasonDialog extends StatefulWidget {
-  const _RejectReasonDialog();
-
-  @override
-  State<_RejectReasonDialog> createState() => _RejectReasonDialogState();
-}
-
-class _RejectReasonDialogState extends State<_RejectReasonDialog> {
-  late final TextEditingController _reasonController;
-
-  @override
-  void initState() {
-    super.initState();
-    _reasonController = TextEditingController();
-  }
-
-  @override
-  void dispose() {
-    _reasonController.dispose();
-    super.dispose();
-  }
-
-  void _submitReject() {
-    final reason = _reasonController.text.trim();
-    if (reason.isEmpty) {
-      Get.snackbar(
-        'Required',
-        'Please enter a rejection reason.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-      return;
-    }
-    Navigator.of(context).pop(reason);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-
-    return AlertDialog(
-      backgroundColor: const Color(0xFF1A1230),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      insetPadding: EdgeInsets.fromLTRB(24, 24, 24, 24 + bottomInset),
-      title: const SemiBoldText(
-        text: 'Reject host application',
-        fontSize: TextStyles.k16FontSize,
-        color: kColorWhite,
-      ),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const AppText(
-              text:
-                  'Please provide a reason. The applicant will see this message.',
-              fontSize: TextStyles.k12FontSize,
-              color: kColorWhite,
-            ),
-            Spacing.v12,
-            AppTextField(
-              controller: _reasonController,
-              hintText: 'Rejection reason',
-              maxLines: 3,
-              minLines: 3,
-              textInputAction: TextInputAction.done,
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const AppText(
-            text: 'Cancel',
-            fontSize: TextStyles.k14FontSize,
-            color: kColorHint,
-          ),
-        ),
-        TextButton(
-          onPressed: _submitReject,
-          child: const SemiBoldText(
-            text: 'Reject',
-            fontSize: TextStyles.k14FontSize,
-            color: Colors.orangeAccent,
-          ),
-        ),
-      ],
+  final reason = reasonController.text.trim();
+  reasonController.dispose();
+  if (confirmed != true) return null;
+  if (reason.isEmpty) {
+    Get.snackbar(
+      'Required',
+      'Please enter a rejection reason.',
+      snackPosition: SnackPosition.BOTTOM,
     );
+    return null;
   }
+  return reason;
 }
 
 /// Accept / Reject row for pending host cards and bottom sheets.
@@ -154,7 +97,9 @@ class AgencyHostReviewActions extends StatelessWidget {
               onPressed: onReject,
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.orangeAccent,
-                side: BorderSide(color: Colors.orangeAccent.withValues(alpha: 0.7)),
+                side: BorderSide(
+                  color: Colors.orangeAccent.withValues(alpha: 0.7),
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),

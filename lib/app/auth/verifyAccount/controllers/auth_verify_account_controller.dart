@@ -191,11 +191,13 @@ class AuthVerifyAccountController extends GetxController {
       actions: [
         CommonAppDialogAction(
           label: LocaleKeys.sendOtpOnPhone.tr,
+          isPrimary: true,
           onPressed: () =>
               _scheduleOtpSubmitAfterDialogClosed(context, sendToPhone: true),
         ),
         CommonAppDialogAction(
           label: LocaleKeys.sendOtpOnMail.tr,
+          isPrimary: true,
           onPressed: () =>
               _scheduleOtpSubmitAfterDialogClosed(context, sendToPhone: false),
         ),

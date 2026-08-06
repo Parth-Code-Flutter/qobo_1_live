@@ -1,112 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/repo/family/family_repo.dart';
+import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
+import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
 
 class FamilyController extends GetxController {
   FamilyController({FamilyRepo? familyRepo})
     : _familyRepo = familyRepo ?? FamilyRepo();
 
   final FamilyRepo _familyRepo;
-  final isLoading = false.obs;
+  final isLoading = true.obs;
 
   final hasFamily = false.obs;
   final searchQuery = ''.obs;
 
-  // Mock list of popular families
-  final RxList<Map<String, dynamic>> popularFamilies = <Map<String, dynamic>>[
-    {
-      'id': 'fam_1',
-      'name': 'The Royals',
-      'members': 450,
-      'maxMembers': 500,
-      'level': 5,
-      'leader': 'KingArthur',
-      'description': 'The most prestigious family in Qobo Live.',
-    },
-    {
-      'id': 'fam_2',
-      'name': 'Star Gazers',
-      'members': 320,
-      'maxMembers': 400,
-      'level': 4,
-      'leader': 'Luna',
-      'description': 'Late night chats and chill acoustic music sessions.',
-    },
-    {
-      'id': 'fam_3',
-      'name': 'Dragon Fire',
-      'members': 490,
-      'maxMembers': 500,
-      'level': 7,
-      'leader': 'Draco',
-      'description': 'Competitive PK battles and level grinders.',
-    },
-    {
-      'id': 'fam_4',
-      'name': 'Elite Club',
-      'members': 120,
-      'maxMembers': 200,
-      'level': 3,
-      'leader': 'Alpha',
-      'description': 'An exclusive space for SVIP members.',
-    },
-    {
-      'id': 'fam_5',
-      'name': 'Sound Waves',
-      'members': 285,
-      'maxMembers': 300,
-      'level': 4,
-      'leader': 'Vocalist',
-      'description': 'Singers, musicians and music lovers congregate here.',
-    },
-  ].obs;
+  /// 0 = This Week, 1 = Last Week, 2 = Rewards
+  final rankingTab = 0.obs;
+
+  final RxList<Map<String, dynamic>> popularFamilies =
+      <Map<String, dynamic>>[].obs;
 
   // Active family user details (populated when hasFamily is true)
   final RxMap<String, dynamic> myFamily = <String, dynamic>{}.obs;
 
-  // Mock list of members for active family
-  final RxList<Map<String, dynamic>> familyMembers = <Map<String, dynamic>>[
-    {
-      'name': 'KingArthur',
-      'role': 'Leader',
-      'contribution': 12500,
-      'avatar': 'K',
-      'isOnline': true,
-      'level': 45,
-    },
-    {
-      'name': 'SirLancelot',
-      'role': 'Co-Leader',
-      'contribution': 8400,
-      'avatar': 'S',
-      'isOnline': true,
-      'level': 38,
-    },
-    {
-      'name': 'Merlin',
-      'role': 'Elder',
-      'contribution': 5600,
-      'avatar': 'M',
-      'isOnline': false,
-      'level': 32,
-    },
-    {
-      'name': 'Gwen',
-      'role': 'Member',
-      'contribution': 2300,
-      'avatar': 'G',
-      'isOnline': true,
-      'level': 18,
-    },
-    {
-      'name': 'Percival',
-      'role': 'Member',
-      'contribution': 1100,
-      'avatar': 'P',
-      'isOnline': false,
-      'level': 15,
-    },
-  ].obs;
+  final RxList<Map<String, dynamic>> familyMembers =
+      <Map<String, dynamic>>[].obs;
 
   @override
   void onInit() {
@@ -125,6 +46,48 @@ class FamilyController extends GetxController {
       final query = searchQuery.value.toLowerCase();
       return name.contains(query) || id.contains(query);
     }).toList();
+  }
+
+  /// Families sorted for ranking display (level + members).
+  List<Map<String, dynamic>> get rankedFamilies {
+    final list = List<Map<String, dynamic>>.from(filteredFamilies);
+    list.sort((a, b) {
+      final scoreA = _toInt(a['level']) * 1000 + _toInt(a['members']);
+      final scoreB = _toInt(b['level']) * 1000 + _toInt(b['members']);
+      return scoreB.compareTo(scoreA);
+    });
+    // Last-week tab: soft alternate order until a dedicated API exists.
+    if (rankingTab.value == 1 && list.length > 1) {
+      return list.reversed.toList();
+    }
+    return list;
+  }
+
+  Map<String, dynamic>? get topRankedFamily {
+    final ranked = rankedFamilies;
+    return ranked.isEmpty ? null : ranked.first;
+  }
+
+  /// Days / hours / mins / secs until next Monday 00:00 local.
+  ({int days, int hours, int minutes, int seconds}) get weekCountdown {
+    final now = DateTime.now();
+    var daysUntilMonday = (DateTime.monday - now.weekday) % 7;
+    if (daysUntilMonday == 0) {
+      daysUntilMonday = 7;
+    }
+    final end = DateTime(now.year, now.month, now.day)
+        .add(Duration(days: daysUntilMonday));
+    final diff = end.difference(now);
+    return (
+      days: diff.inDays,
+      hours: diff.inHours % 24,
+      minutes: diff.inMinutes % 60,
+      seconds: diff.inSeconds % 60,
+    );
+  }
+
+  void selectRankingTab(int index) {
+    rankingTab.value = index.clamp(0, 2);
   }
 
   Future<void> loadFamilyHub() async {
@@ -168,68 +131,68 @@ class FamilyController extends GetxController {
     final familyId = family?['id']?.toString() ?? '';
     if (familyId.isEmpty) return;
 
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Application Submitted'),
-        content: Text('Send your request to join "$name"?'),
-        actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('OK')),
-          TextButton(
-            onPressed: () async {
-              Get.back();
-              final response = await _familyRepo.joinFamily(
-                familyId: familyId,
-                isShowLoader: true,
-              );
-              if (response == null || response['statusCode'] == 0) {
-                Get.snackbar('Family', 'Could not join this family.');
-                return;
-              }
-              await loadFamilyHub();
-              Get.snackbar(
-                'Welcome!',
-                response['message']?.toString() ??
-                    'Your family request was submitted.',
-                backgroundColor: const Color(0xFF761B65).withValues(alpha: 0.1),
-                colorText: const Color(0xFF761B65),
-              );
-            },
-            child: const Text('Join'),
-          ),
-        ],
-      ),
+    CommonAppDialog.showGet(
+      title: 'Join Family',
+      message: 'Send your request to join "$name"?',
+      icon: Icons.groups_rounded,
+      iconAccent: AdminAgencyUi.pink,
+      actions: [
+        const CommonAppDialogAction(label: 'Cancel'),
+        CommonAppDialogAction(
+          label: 'Join',
+          isPrimary: true,
+          onPressed: () async {
+            final response = await _familyRepo.joinFamily(
+              familyId: familyId,
+              isShowLoader: true,
+            );
+            if (response == null || response['statusCode'] == 0) {
+              Get.snackbar('Family', 'Could not join this family.');
+              return;
+            }
+            await loadFamilyHub();
+            Get.snackbar(
+              'Welcome!',
+              response['message']?.toString() ??
+                  'Your family request was submitted.',
+              backgroundColor: const Color(0xFF761B65).withValues(alpha: 0.1),
+              colorText: const Color(0xFF761B65),
+            );
+          },
+        ),
+      ],
     );
   }
 
   void leaveFamily() {
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Leave Family?'),
-        content: const Text(
+    CommonAppDialog.showGet(
+      title: 'Leave Family?',
+      message:
           'Are you sure you want to leave this family? You will lose access to family chats, tasks and bonuses.',
+      icon: Icons.logout_rounded,
+      iconAccent: AdminAgencyUi.rose,
+      actions: [
+        const CommonAppDialogAction(label: 'Cancel'),
+        CommonAppDialogAction(
+          label: 'Leave',
+          isPrimary: true,
+          isDestructive: true,
+          onPressed: () async {
+            final response = await _familyRepo.leaveFamily(
+              isShowLoader: true,
+            );
+            if (response == null || response['statusCode'] == 0) {
+              Get.snackbar('Family', 'Could not leave this family.');
+              return;
+            }
+            await loadFamilyHub();
+            Get.snackbar(
+              'Left Family',
+              response['message']?.toString() ?? 'You have left the family.',
+            );
+          },
         ),
-        actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () async {
-              Get.back();
-              final response = await _familyRepo.leaveFamily(
-                isShowLoader: true,
-              );
-              if (response == null || response['statusCode'] == 0) {
-                Get.snackbar('Family', 'Could not leave this family.');
-                return;
-              }
-              await loadFamilyHub();
-              Get.snackbar(
-                'Left Family',
-                response['message']?.toString() ?? 'You have left the family.',
-              );
-            },
-            child: const Text('Leave', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+      ],
     );
   }
 
@@ -237,81 +200,102 @@ class FamilyController extends GetxController {
     final nameController = TextEditingController();
     final descController = TextEditingController();
 
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Create a Family'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Creation cost: 1,000 Coins\nCreate your own community and climb the weekly ranks!',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: nameController,
-                maxLength: 20,
-                decoration: const InputDecoration(
-                  labelText: 'Family Name',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.group),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: descController,
-                maxLength: 100,
-                maxLines: 2,
-                decoration: const InputDecoration(
-                  labelText: 'Family Description',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.description),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF761B65),
-              foregroundColor: Colors.white,
+    CommonAppDialog.showGet(
+      title: 'Create a Family',
+      message:
+          'Creation cost: 1,000 Coins. Build your community and climb the weekly ranks!',
+      icon: Icons.diversity_3_rounded,
+      iconAccent: AdminAgencyUi.goldDeep,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: nameController,
+            maxLength: 20,
+            style: TextStyles.kRegularPoppins(
+              fontSize: TextStyles.k14FontSize,
+              colors: kColorWhite,
             ),
-            onPressed: () async {
-              final name = nameController.text.trim();
-              final desc = descController.text.trim();
-              if (name.isEmpty) {
-                Get.snackbar('Error', 'Family name cannot be empty');
-                return;
-              }
-              Get.back();
-              final response = await _familyRepo.createFamily(
-                name: name,
-                description: desc.isNotEmpty
-                    ? desc
-                    : 'A brand new Qobo Live family.',
-                isShowLoader: true,
-              );
-              if (response == null || response['statusCode'] == 0) {
-                Get.snackbar('Family', 'Could not create family.');
-                return;
-              }
-              await loadFamilyHub();
-              Get.snackbar(
-                'Congratulations!',
-                response['message']?.toString() ??
-                    'Family "$name" created successfully!',
-                backgroundColor: const Color(0xFF761B65).withValues(alpha: 0.1),
-                colorText: const Color(0xFF761B65),
-              );
-            },
-            child: const Text('Create'),
+            decoration: InputDecoration(
+              labelText: 'Family Name',
+              labelStyle: TextStyle(color: kColorWhite.withValues(alpha: 0.7)),
+              prefixIcon: const Icon(Icons.group, color: AdminAgencyUi.gold),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: kColorWhite.withValues(alpha: 0.25),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AdminAgencyUi.gold),
+              ),
+            ),
+          ),
+          Spacing.v12,
+          TextField(
+            controller: descController,
+            maxLength: 100,
+            maxLines: 2,
+            style: TextStyles.kRegularPoppins(
+              fontSize: TextStyles.k14FontSize,
+              colors: kColorWhite,
+            ),
+            decoration: InputDecoration(
+              labelText: 'Family Description',
+              labelStyle: TextStyle(color: kColorWhite.withValues(alpha: 0.7)),
+              prefixIcon: const Icon(
+                Icons.description,
+                color: AdminAgencyUi.violet,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: kColorWhite.withValues(alpha: 0.25),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AdminAgencyUi.violet),
+              ),
+            ),
           ),
         ],
       ),
+      actions: [
+        const CommonAppDialogAction(label: 'Cancel'),
+        CommonAppDialogAction(
+          label: 'Create',
+          isPrimary: true,
+          onPressed: () async {
+            final name = nameController.text.trim();
+            final desc = descController.text.trim();
+            if (name.isEmpty) {
+              Get.snackbar('Error', 'Family name cannot be empty');
+              return;
+            }
+            final response = await _familyRepo.createFamily(
+              name: name,
+              description: desc.isNotEmpty
+                  ? desc
+                  : 'A brand new Qobo Live family.',
+              isShowLoader: true,
+            );
+            if (response == null || response['statusCode'] == 0) {
+              Get.snackbar('Family', 'Could not create family.');
+              return;
+            }
+            await loadFamilyHub();
+            Get.snackbar(
+              'Congratulations!',
+              response['message']?.toString() ??
+                  'Family "$name" created successfully!',
+              backgroundColor: const Color(0xFF761B65).withValues(alpha: 0.1),
+              colorText: const Color(0xFF761B65),
+            );
+          },
+        ),
+      ],
     );
   }
 

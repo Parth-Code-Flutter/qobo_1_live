@@ -7,8 +7,9 @@ import 'package:qobo_one_live/repo/chat/chat_repo.dart';
 import 'package:qobo_one_live/repo/user/user_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
-import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
+import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
+import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 
 /// WhatsApp-style contact info for a 1:1 chat partner.
 class ChatContactProfileController extends GetxController {
@@ -177,36 +178,14 @@ class ChatContactProfileController extends GetxController {
     required String title,
     required String message,
   }) async {
-    final result = await showDialog<bool>(
+    final result = await CommonAppDialog.confirm(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: kColorWhite,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          title,
-          style: TextStyles.kSemiBoldPoppins(
-            fontSize: TextStyles.k16FontSize,
-            colors: kColorText,
-          ),
-        ),
-        content: Text(
-          message,
-          style: TextStyles.kRegularPoppins(
-            fontSize: TextStyles.k14FontSize,
-            colors: kColorHint,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Confirm'),
-          ),
-        ],
-      ),
+      title: title,
+      message: message,
+      icon: Icons.help_outline_rounded,
+      iconAccent: AdminAgencyUi.violet,
+      confirmLabel: 'Confirm',
+      cancelLabel: 'Cancel',
     );
     return result == true;
   }

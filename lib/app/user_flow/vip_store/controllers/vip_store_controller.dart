@@ -9,6 +9,8 @@ import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/app/user_flow/wallet/bindings/wallet_binding.dart';
 import 'package:qobo_one_live/app/user_flow/wallet/views/wallet_view.dart';
 import 'package:qobo_one_live/app/user_flow/vip_store/widgets/vip_purchase_success_dialog.dart';
+import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
+import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 
 /// VIP Frames shop (Profile → VIP Frames).
 ///
@@ -176,23 +178,13 @@ class VipStoreController extends GetxController {
 
     if (userCoins.value < price) {
       final need = price - userCoins.value;
-      final goWallet = await Get.dialog<bool>(
-        AlertDialog(
-          title: const Text('Insufficient Coins'),
-          content: Text(
-            'You need $need more coins to buy "$name". Recharge now?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Get.back(result: false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Get.back(result: true),
-              child: const Text('Recharge'),
-            ),
-          ],
-        ),
+      final goWallet = await CommonAppDialog.confirm(
+        title: 'Insufficient Coins',
+        message: 'You need $need more coins to buy "$name". Recharge now?',
+        icon: Icons.warning_amber_rounded,
+        iconAccent: AdminAgencyUi.goldDeep,
+        confirmLabel: 'Recharge',
+        cancelLabel: 'Cancel',
       );
       if (goWallet == true) {
         await Get.to(() => const WalletView(), binding: WalletBinding());

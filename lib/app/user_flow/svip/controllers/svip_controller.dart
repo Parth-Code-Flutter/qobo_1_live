@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/repo/economy/economy_repo.dart';
+import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
+import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 
 class SvipController extends GetxController {
   SvipController({EconomyRepo? economyRepo})
@@ -120,59 +122,33 @@ class SvipController extends GetxController {
       }
       coinsBalance.value -= price;
       isSvipActive.value = true;
-      Get.dialog(
-        AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.stars_rounded, color: Color(0xFFFFD700)),
-              SizedBox(width: 8),
-              Text('SVIP Activated!'),
-            ],
-          ),
-          content: Text(
-            'Congratulations! You are now a Supreme VIP member.\nYour privileges are active immediately.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Get.back(),
-              child: const Text('Enter Hub'),
-            ),
-          ],
-        ),
+      CommonAppDialog.showGet(
+        title: 'SVIP Activated!',
+        message:
+            'Congratulations! You are now a Supreme VIP member. Your privileges are active immediately.',
+        icon: Icons.stars_rounded,
+        iconAccent: AdminAgencyUi.goldDeep,
+        actions: const [
+          CommonAppDialogAction(label: 'Enter Hub', isPrimary: true),
+        ],
       );
     } else {
-      Get.dialog(
-        AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.warning_amber_rounded, color: Colors.orange),
-              SizedBox(width: 8),
-              Text('Insufficient Coins'),
-            ],
-          ),
-          content: Text(
+      CommonAppDialog.showGet(
+        title: 'Insufficient Coins',
+        message:
             'You need ${price - coinsBalance.value} more Coins to open SVIP. Would you like to recharge now?',
+        icon: Icons.warning_amber_rounded,
+        iconAccent: AdminAgencyUi.goldDeep,
+        actions: [
+          const CommonAppDialogAction(label: 'Cancel'),
+          CommonAppDialogAction(
+            label: 'Recharge Now',
+            isPrimary: true,
+            onPressed: () {
+              Get.snackbar('Redirecting', 'Opening recharge panel...');
+            },
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Get.back(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF761B65),
-              ),
-              onPressed: () {
-                Get.back();
-                Get.snackbar('Redirecting', 'Opening recharge panel...');
-              },
-              child: const Text(
-                'Recharge Now',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ],
-        ),
+        ],
       );
     }
   }
