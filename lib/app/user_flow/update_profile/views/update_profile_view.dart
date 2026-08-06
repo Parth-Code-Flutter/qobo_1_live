@@ -64,16 +64,17 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
                           : const SizedBox.shrink(),
                     ),
                     _userNameField(context),
-                    Obx(
-                      () => controller.isComeFromOtpScreen.value
-                          ? Column(
-                              children: [
-                                Spacing.v10,
-                                _emailField(context),
-                              ],
-                            )
-                          : const SizedBox.shrink(),
-                    ),
+                    // First-time email field + OTP flow temporarily disabled.
+                    // Obx(
+                    //   () => controller.isComeFromOtpScreen.value
+                    //       ? Column(
+                    //           children: [
+                    //             Spacing.v10,
+                    //             _emailField(context),
+                    //           ],
+                    //         )
+                    //       : const SizedBox.shrink(),
+                    // ),
                     Spacing.v10,
                     _ageField(context),
                     Spacing.v10,
@@ -379,6 +380,7 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
     );
   }
 
+  // ignore: unused_element - kept while Additional Information email field is commented out
   Widget _emailField(BuildContext context) {
     return AppTextField(
       controller: controller.emailController,

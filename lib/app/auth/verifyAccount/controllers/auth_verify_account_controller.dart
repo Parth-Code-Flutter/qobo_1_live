@@ -103,11 +103,13 @@ class AuthVerifyAccountController extends GetxController {
     if (state == null) return false;
     if (!state.validate()) return false;
     final p = phoneNumberController.text.trim();
-    final e = emailController.text.trim();
+    // Email OTP contact path temporarily disabled — phone only.
+    // final e = emailController.text.trim();
     final phoneOk = p.length == 10;
-    final emailOk =
-        e.isNotEmpty && Validate.emailValidation(context, e) == null;
-    return phoneOk || emailOk;
+    // final emailOk =
+    //     e.isNotEmpty && Validate.emailValidation(context, e) == null;
+    // return phoneOk || emailOk;
+    return phoneOk;
   }
 
   bool validateOtp(BuildContext context) {
@@ -159,15 +161,17 @@ class AuthVerifyAccountController extends GetxController {
     if (!validateContactStep(context)) return;
 
     // Both channels valid: user must pick phone vs email before we hit the API.
-    if (_hasBothPhoneAndEmailFilled(context)) {
-      _showOtpDestinationDialog(context);
-      return;
-    }
+    // Email field is temporarily hidden — skip destination picker.
+    // if (_hasBothPhoneAndEmailFilled(context)) {
+    //   _showOtpDestinationDialog(context);
+    //   return;
+    // }
 
     await _submitLoginPhoneOtp(context);
   }
 
   /// True when the user entered a full 10-digit phone **and** a syntactically valid email.
+  // ignore: unused_element - kept while email OTP contact UI is commented out
   bool _hasBothPhoneAndEmailFilled(BuildContext context) {
     final p = phoneNumberController.text.trim();
     final e = emailController.text.trim();
@@ -179,6 +183,7 @@ class AuthVerifyAccountController extends GetxController {
 
   /// Shown only when both a 10-digit phone and a valid email are present.
   /// Uses [CommonAppDialog]; closes the route first, then runs the same OTP request as Continue.
+  // ignore: unused_element - kept while email OTP contact UI is commented out
   Future<void> _showOtpDestinationDialog(BuildContext context) {
     return CommonAppDialog.show(
       context,

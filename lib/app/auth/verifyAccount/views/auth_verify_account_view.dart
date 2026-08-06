@@ -163,10 +163,11 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 phoneNumberInputWidget(context),
-                                Spacing.v24,
-                                _orDividerWithLabel(),
-                                Spacing.v24,
-                                emailFieldWidget(context),
+                                // Email OTP entry temporarily disabled — phone only.
+                                // Spacing.v24,
+                                // _orDividerWithLabel(),
+                                // Spacing.v24,
+                                // emailFieldWidget(context),
                                 Spacing.v32,
                                 Obx(
                                   () => appButton(
@@ -260,6 +261,7 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
     );
   }
 
+  // ignore: unused_element - kept while email OTP contact UI is commented out
   Widget _orDividerWithLabel() {
     return Row(
       children: [
@@ -295,15 +297,19 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
             controller: controller.phoneNumberController,
             validator: (value) {
               final p = value?.trim() ?? '';
-              final e = controller.emailController.text.trim();
+              // Email OTP path commented — require a 10-digit phone only.
+              // final e = controller.emailController.text.trim();
               if (p.length == 10) return null;
-              final emailOk =
-                  e.isNotEmpty && Validate.emailValidation(context, e) == null;
-              if (emailOk) return null;
-              if (p.isEmpty && e.isEmpty) {
+              // final emailOk =
+              //     e.isNotEmpty && Validate.emailValidation(context, e) == null;
+              // if (emailOk) return null;
+              // if (p.isEmpty && e.isEmpty) {
+              //   return LocaleKeys.verifyEnterPhoneOrEmail.tr;
+              // }
+              // if (p.isEmpty) return null;
+              if (p.isEmpty) {
                 return LocaleKeys.verifyEnterPhoneOrEmail.tr;
               }
-              if (p.isEmpty) return null;
               return Validate.phone10DigitValidation(context, p);
             },
             hintText: LocaleKeys.verifyPhoneHint.tr,

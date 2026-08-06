@@ -353,11 +353,12 @@ class UpdateProfileController extends GetxController
       return;
     }
     if (isComeFromOtpScreen.value) {
-      final emailError = validateEmail(context, emailController.text);
-      if (emailError != null) {
-        AppToast.showError(context, emailError);
-        return;
-      }
+      // First-time email + send/verify email OTP temporarily disabled.
+      // final emailError = validateEmail(context, emailController.text);
+      // if (emailError != null) {
+      //   AppToast.showError(context, emailError);
+      //   return;
+      // }
       final countryError = validateCountrySelection();
       final stateError = validateStateSelection();
       if (countryError != null) {
@@ -368,8 +369,8 @@ class UpdateProfileController extends GetxController
         AppToast.showError(context, stateError);
         return;
       }
-      final verified = await _ensureEmailOtpVerified(context);
-      if (!context.mounted || !verified) return;
+      // final verified = await _ensureEmailOtpVerified(context);
+      // if (!context.mounted || !verified) return;
     }
 
     try {
@@ -378,7 +379,8 @@ class UpdateProfileController extends GetxController
       final state = selectedState.value;
       final request = UpdateProfileApiHelper.buildRequest(
         name: userNameController.text.trim(),
-        email: isComeFromOtpScreen.value ? emailController.text.trim() : null,
+        // email: isComeFromOtpScreen.value ? emailController.text.trim() : null,
+        email: null,
         genderLabel: selectedGender.value,
         dob: selectedBirthdate.value,
         displayPicture: selectedProfileMedia.value,
@@ -497,6 +499,7 @@ class UpdateProfileController extends GetxController
     return Validate.emailValidation(context, value?.trim() ?? '');
   }
 
+  // ignore: unused_element - kept while first-time email OTP flow is commented out
   Future<bool> _ensureEmailOtpVerified(BuildContext context) async {
     final email = emailController.text.trim();
     if (isEmailOtpVerified.value && _lastVerifiedEmail == email) return true;
