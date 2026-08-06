@@ -6,12 +6,13 @@ import 'package:qobo_one_live/app/super_admin/home/controllers/super_admin_home_
 import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui.dart';
 import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui_kit.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 
-/// Dashboard tab — `GET /api/super-admin/dashboard` + generate-link.
+/// Dashboard tab — solid Profile-style colors (no frosted blur widgets).
 class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
   const SuperAdminDashboardTabView({super.key});
 
@@ -19,15 +20,15 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
   Widget build(BuildContext context) {
     return SuperAdminPageScaffold(
       primary: SuperAdminUi.violet,
-      secondary: SuperAdminUi.sky,
+      secondary: SuperAdminUi.pink,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SuperAdminTabHeader(
-            icon: Icons.dashboard_rounded,
+            icon: Icons.dashboard_customize_rounded,
             title: 'Dashboard',
             subtitle: 'Agencies, hosts, and commissions at a glance',
-            accent: SuperAdminUi.violet,
+            accent: SuperAdminUi.sky,
           ),
           Expanded(
             child: Obx(() {
@@ -96,109 +97,61 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
   Widget _statsGrid() {
     return Obx(() {
       final stats = controller.stats.value;
-      final items = [
-        (
-          'Agencies',
-          stats?.totalAgencies ?? 0,
-          Icons.business_rounded,
-          SuperAdminUi.violet,
-          () => _jumpToAgency(filter: 'all'),
+      final items = <_StatSpec>[
+        _StatSpec(
+          label: 'Agencies',
+          value: stats?.totalAgencies ?? 0,
+          icon: Icons.apartment_rounded,
+          accent: const Color(0xFF7C4DFF),
+          accentEnd: const Color(0xFFB388FF),
+          onTap: () => _jumpToAgency(filter: 'all'),
         ),
-        (
-          'Active Hosts',
-          stats?.activeHosts ?? 0,
-          Icons.video_camera_front_rounded,
-          SuperAdminUi.mint,
-          () => _jumpToHost(filter: 'active'),
+        _StatSpec(
+          label: 'Active Hosts',
+          value: stats?.activeHosts ?? 0,
+          icon: Icons.videocam_rounded,
+          accent: const Color(0xFF00C853),
+          accentEnd: const Color(0xFF69F0AE),
+          onTap: () => _jumpToHost(filter: 'active'),
         ),
-        (
-          'Pending',
-          stats?.pendingAgencies ?? 0,
-          Icons.pending_actions_rounded,
-          SuperAdminUi.gold,
-          () => _jumpToAgency(filter: 'pending'),
+        _StatSpec(
+          label: 'Pending',
+          value: stats?.pendingAgencies ?? 0,
+          icon: Icons.hourglass_top_rounded,
+          accent: const Color(0xFFFF9100),
+          accentEnd: const Color(0xFFFFD180),
+          onTap: () => _jumpToAgency(filter: 'pending'),
         ),
-        (
-          'Live Now',
-          stats?.liveHostsNow ?? 0,
-          Icons.sensors_rounded,
-          SuperAdminUi.rose,
-          () => _jumpToHost(),
+        _StatSpec(
+          label: 'Live Now',
+          value: stats?.liveHostsNow ?? 0,
+          icon: Icons.sensors_rounded,
+          accent: const Color(0xFFFF1744),
+          accentEnd: const Color(0xFFFF8A80),
+          onTap: () => _jumpToHost(),
         ),
       ];
 
-      // Two fixed rows avoid GridView shrink-wrap leaving a tall empty gap.
       return Column(
         children: [
           Row(
             children: [
-              Expanded(child: _statTile(items[0], delayMs: 0)),
+              Expanded(child: _StatTile(spec: items[0])),
               Spacing.h12,
-              Expanded(child: _statTile(items[1], delayMs: 40)),
+              Expanded(child: _StatTile(spec: items[1])),
             ],
           ),
           Spacing.v12,
           Row(
             children: [
-              Expanded(child: _statTile(items[2], delayMs: 80)),
+              Expanded(child: _StatTile(spec: items[2])),
               Spacing.h12,
-              Expanded(child: _statTile(items[3], delayMs: 120)),
+              Expanded(child: _StatTile(spec: items[3])),
             ],
           ),
         ],
       );
     });
-  }
-
-  Widget _statTile(
-    (String, int, IconData, Color, VoidCallback) item, {
-    required int delayMs,
-  }) {
-    final accent = item.$4;
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.92, end: 1),
-      duration: Duration(milliseconds: 420 + delayMs),
-      curve: Curves.easeOutBack,
-      builder: (context, scale, child) {
-        return Transform.scale(scale: scale, child: child);
-      },
-      child: SuperAdminGlassCard(
-        glow: accent,
-        onTap: item.$5,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        child: Row(
-          children: [
-            SuperAdminUi.glowIcon(
-              icon: item.$3,
-              accent: accent,
-              size: 40,
-              iconSize: 18,
-            ),
-            Spacing.h12,
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  BoldText(
-                    text: '${item.$2}',
-                    fontSize: TextStyles.k22FontSize,
-                    color: SuperAdminUi.textPrimary,
-                  ),
-                  Spacing.v2,
-                  AppText(
-                    text: item.$1,
-                    fontSize: TextStyles.k10FontSize,
-                    color: SuperAdminUi.textMuted,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Widget _inviteCard() {
@@ -210,11 +163,12 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              SuperAdminUi.glowIcon(
-                icon: Icons.link_rounded,
-                accent: SuperAdminUi.gold,
-                size: 44,
-                iconSize: 22,
+              AdminAgencyUi.glowIcon(
+                icon: Icons.add_link_rounded,
+                accent: const Color(0xFFFFB300),
+                accentEnd: const Color(0xFFFFE082),
+                size: 48,
+                iconSize: 24,
               ),
               Spacing.h12,
               Expanded(
@@ -235,59 +189,14 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
                   ],
                 ),
               ),
-              Spacing.h10,
+              Spacing.h8,
               Obx(() {
                 final busy = controller.isGeneratingAgencyLink.value;
-                return Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: busy ? null : controller.generateAgencyLink,
-                    borderRadius: BorderRadius.circular(14),
-                    child: Ink(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(14),
-                        gradient: SuperAdminUi.goldButtonGradient,
-                        boxShadow: [
-                          BoxShadow(
-                            color: SuperAdminUi.gold.withValues(alpha: 0.28),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 12,
-                        ),
-                        child: busy
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Color(0xFF1A1200),
-                                ),
-                              )
-                            : const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.ios_share_rounded,
-                                    size: 15,
-                                    color: Color(0xFF1A1200),
-                                  ),
-                                  SizedBox(width: 6),
-                                  SemiBoldText(
-                                    text: 'Generate',
-                                    fontSize: TextStyles.k12FontSize,
-                                    color: Color(0xFF1A1200),
-                                  ),
-                                ],
-                              ),
-                      ),
-                    ),
-                  ),
+                return AdminGoldCtaButton(
+                  label: 'Generate',
+                  icon: Icons.ios_share_rounded,
+                  busy: busy,
+                  onTap: controller.generateAgencyLink,
                 );
               }),
             ],
@@ -310,12 +219,14 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
               },
               child: Row(
                 children: [
-                  Icon(
-                    Icons.content_copy_rounded,
-                    size: 16,
-                    color: SuperAdminUi.sky,
+                  AdminAgencyUi.glowIcon(
+                    icon: Icons.content_copy_rounded,
+                    accent: const Color(0xFF2979FF),
+                    accentEnd: const Color(0xFF82B1FF),
+                    size: 36,
+                    iconSize: 16,
                   ),
-                  Spacing.h8,
+                  Spacing.h10,
                   Expanded(
                     child: AppText(
                       text: link,
@@ -325,10 +236,22 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  SemiBoldText(
-                    text: 'Copy',
-                    fontSize: TextStyles.k10FontSize,
-                    color: SuperAdminUi.sky,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF2979FF), Color(0xFF7C4DFF)],
+                      ),
+                    ),
+                    child: const SemiBoldText(
+                      text: 'Copy',
+                      fontSize: TextStyles.k10FontSize,
+                      color: kColorWhite,
+                    ),
                   ),
                 ],
               ),
@@ -346,35 +269,92 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
       final month = stats?.commissionsThisMonth ?? 0;
       return SuperAdminGlassCard(
         glow: SuperAdminUi.gold,
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SuperAdminUi.glowIcon(
-              icon: Icons.payments_rounded,
-              accent: SuperAdminUi.gold,
-              size: 46,
-              iconSize: 22,
+            Row(
+              children: [
+                AdminAgencyUi.glowIcon(
+                  icon: Icons.payments_rounded,
+                  accent: const Color(0xFFFF9100),
+                  accentEnd: const Color(0xFFFFD54F),
+                  size: 48,
+                  iconSize: 24,
+                ),
+                Spacing.h12,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const AppText(
+                        text: 'Total Commissions',
+                        fontSize: TextStyles.k12FontSize,
+                        color: SuperAdminUi.textMuted,
+                      ),
+                      Spacing.v4,
+                      SemiBoldText(
+                        text: total.toStringAsFixed(2),
+                        fontSize: TextStyles.k26FontSize,
+                        color: SuperAdminUi.textPrimary,
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF00C853), Color(0xFF69F0AE)],
+                    ),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.trending_up_rounded,
+                        size: 14,
+                        color: kColorWhite,
+                      ),
+                      SizedBox(width: 4),
+                      SemiBoldText(
+                        text: 'Live',
+                        fontSize: TextStyles.k10FontSize,
+                        color: kColorWhite,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            Spacing.h12,
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            Spacing.v12,
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                color: const Color(0xFF3D1F5C),
+                border: Border.all(color: const Color(0xFFFF5CAB), width: 1.2),
+              ),
+              child: Row(
                 children: [
-                  const AppText(
-                    text: 'Total Commissions',
-                    fontSize: TextStyles.k12FontSize,
-                    color: SuperAdminUi.textMuted,
+                  AdminAgencyUi.glowIcon(
+                    icon: Icons.calendar_month_rounded,
+                    accent: const Color(0xFFFF5CAB),
+                    accentEnd: const Color(0xFFFF8AD8),
+                    size: 28,
+                    iconSize: 14,
                   ),
-                  Spacing.v4,
-                  SemiBoldText(
-                    text: total.toStringAsFixed(2),
-                    fontSize: TextStyles.k22FontSize,
-                    color: SuperAdminUi.textPrimary,
-                  ),
-                  Spacing.v4,
-                  AppText(
-                    text: 'This month · ${month.toStringAsFixed(2)}',
-                    fontSize: TextStyles.k12FontSize,
-                    color: SuperAdminUi.textMuted,
+                  Spacing.h8,
+                  Expanded(
+                    child: AppText(
+                      text: 'This month · ${month.toStringAsFixed(2)}',
+                      fontSize: TextStyles.k12FontSize,
+                      color: SuperAdminUi.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -395,17 +375,37 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
           children: [
             Row(
               children: [
-                SuperAdminUi.glowIcon(
+                AdminAgencyUi.glowIcon(
                   icon: Icons.emoji_events_rounded,
-                  accent: SuperAdminUi.violet,
-                  size: 30,
-                  iconSize: 16,
+                  accent: const Color(0xFFFFB300),
+                  accentEnd: const Color(0xFFFFE082),
+                  size: 36,
+                  iconSize: 18,
                 ),
                 Spacing.h10,
-                const SemiBoldText(
-                  text: 'Top agencies',
-                  fontSize: TextStyles.k14FontSize,
-                  color: SuperAdminUi.textPrimary,
+                const Expanded(
+                  child: SemiBoldText(
+                    text: 'Top agencies',
+                    fontSize: TextStyles.k14FontSize,
+                    color: SuperAdminUi.textPrimary,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF7C4DFF), Color(0xFFB388FF)],
+                    ),
+                  ),
+                  child: SemiBoldText(
+                    text: '${top.length}',
+                    fontSize: TextStyles.k10FontSize,
+                    color: kColorWhite,
+                  ),
                 ),
               ],
             ),
@@ -414,7 +414,8 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
               const SuperAdminEmptyState(
                 icon: Icons.apartment_rounded,
                 title: 'No top agencies yet',
-                subtitle: 'Agency rankings will appear once commissions start.',
+                subtitle:
+                    'Agency rankings will appear once commissions start.',
               )
             else
               ...top.asMap().entries.map((entry) {
@@ -422,8 +423,15 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
                 final agency = entry.value;
                 final isLast = index == top.length - 1;
                 final canOpen = agency.id.isNotEmpty;
+                final rankColors = index == 0
+                    ? const [Color(0xFFFFB300), Color(0xFFFFE082)]
+                    : index == 1
+                        ? const [Color(0xFF2979FF), Color(0xFF82B1FF)]
+                        : index == 2
+                            ? const [Color(0xFFFF5CAB), Color(0xFFFF8AD8)]
+                            : const [Color(0xFF7C4DFF), Color(0xFFB388FF)];
                 return Padding(
-                  padding: EdgeInsets.only(bottom: isLast ? 0 : 8),
+                  padding: EdgeInsets.only(bottom: isLast ? 0 : 10),
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
@@ -431,34 +439,33 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
                           ? () => controller.openAgencyById(agency.id)
                           : null,
                       borderRadius: BorderRadius.circular(14),
-                      child: Container(
+                      child: Ink(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
                           vertical: 12,
                         ),
                         decoration: BoxDecoration(
-                          color: SuperAdminUi.panel.withValues(alpha: 0.45),
                           borderRadius: BorderRadius.circular(14),
+                          color: const Color(0xFF3D1F5C),
                           border: Border.all(
-                            color: SuperAdminUi.textPrimary.withValues(
-                              alpha: 0.06,
-                            ),
+                            color: rankColors.first,
+                            width: 1.2,
                           ),
                         ),
                         child: Row(
                           children: [
                             Container(
-                              width: 28,
-                              height: 28,
+                              width: 30,
+                              height: 30,
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: SuperAdminUi.gold.withValues(alpha: 0.14),
+                                gradient: LinearGradient(colors: rankColors),
                               ),
                               child: SemiBoldText(
                                 text: '${index + 1}',
                                 fontSize: TextStyles.k12FontSize,
-                                color: SuperAdminUi.gold,
+                                color: const Color(0xFF1A1200),
                               ),
                             ),
                             Spacing.h12,
@@ -486,13 +493,13 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
                               text: agency.totalCommissionEarned
                                   .toStringAsFixed(1),
                               fontSize: TextStyles.k12FontSize,
-                              color: SuperAdminUi.gold,
+                              color: rankColors.first,
                             ),
                             if (canOpen) ...[
                               Spacing.h4,
-                              const Icon(
+                              Icon(
                                 Icons.chevron_right_rounded,
-                                color: SuperAdminUi.textFaint,
+                                color: rankColors.first,
                                 size: 18,
                               ),
                             ],
@@ -507,5 +514,74 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
         ),
       );
     });
+  }
+}
+
+class _StatSpec {
+  const _StatSpec({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.accent,
+    required this.accentEnd,
+    required this.onTap,
+  });
+
+  final String label;
+  final int value;
+  final IconData icon;
+  final Color accent;
+  final Color accentEnd;
+  final VoidCallback onTap;
+}
+
+class _StatTile extends StatelessWidget {
+  const _StatTile({required this.spec});
+
+  final _StatSpec spec;
+
+  @override
+  Widget build(BuildContext context) {
+    return SuperAdminGlassCard(
+      glow: spec.accent,
+      onTap: spec.onTap,
+      padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              AdminAgencyUi.glowIcon(
+                icon: spec.icon,
+                accent: spec.accent,
+                accentEnd: spec.accentEnd,
+                size: 44,
+                iconSize: 22,
+              ),
+              const Spacer(),
+              Icon(
+                Icons.arrow_outward_rounded,
+                size: 16,
+                color: spec.accent,
+              ),
+            ],
+          ),
+          Spacing.v12,
+          BoldText(
+            text: '${spec.value}',
+            fontSize: TextStyles.k22FontSize,
+            color: SuperAdminUi.textPrimary,
+          ),
+          Spacing.v4,
+          AppText(
+            text: spec.label,
+            fontSize: TextStyles.k10FontSize,
+            color: SuperAdminUi.textMuted,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/agency_host_list/controllers/agency_host_list_controller.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/agency_host_review_actions.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_shell_background.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/safe_network_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -18,46 +19,33 @@ class AgencyPendingHostsView extends GetView<AgencyPendingHostsController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
-        ),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                const Color(0xFF5C0A68).withValues(alpha: 0.52),
-                const Color(0xFF170D59).withValues(alpha: 0.72),
-              ],
-            ),
-          ),
-          child: SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _topBar(),
-                Expanded(
-                  child: Obx(() {
-                    if (controller.isLoading.value) {
-                      return const Center(
-                        child: CircularProgressIndicator(color: kColorPrimary),
-                      );
-                    }
-                    if (controller.loadError.value.isNotEmpty &&
-                        controller.applications.isEmpty) {
-                      return _errorState();
-                    }
-                    if (controller.applications.isEmpty) {
-                      return _emptyState();
-                    }
-                    return RefreshIndicator(
-                      color: kColorPrimary,
-                      onRefresh: () =>
-                          controller.fetchPendingApplications(showLoader: false),
-                      child: ListView.separated(
-                        physics: const AlwaysScrollableScrollPhysics(
+      backgroundColor: Colors.transparent,
+      body: AppShellBackground(
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _topBar(),
+              Expanded(
+                child: Obx(() {
+                  if (controller.isLoading.value) {
+                    return const Center(
+                      child: CircularProgressIndicator(color: kColorPrimary),
+                    );
+                  }
+                  if (controller.loadError.value.isNotEmpty &&
+                      controller.applications.isEmpty) {
+                    return _errorState();
+                  }
+                  if (controller.applications.isEmpty) {
+                    return _emptyState();
+                  }
+                  return RefreshIndicator(
+                    color: kColorPrimary,
+                    onRefresh: () =>
+                        controller.fetchPendingApplications(showLoader: false),
+                    child: ListView.separated(
+                      physics: const AlwaysScrollableScrollPhysics(
                           parent: BouncingScrollPhysics(),
                         ),
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -89,8 +77,7 @@ class AgencyPendingHostsView extends GetView<AgencyPendingHostsController> {
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 
   Widget _topBar() {
@@ -98,9 +85,12 @@ class AgencyPendingHostsView extends GetView<AgencyPendingHostsController> {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
       child: Row(
         children: [
-          _squareButton(
+          AdminAgencyUi.glassIconButton(
             icon: Icons.arrow_back_ios_new_rounded,
             onTap: controller.onBackPressed,
+            accent: AdminAgencyUi.sky,
+            size: 40,
+            iconSize: 16,
           ),
           Spacing.h12,
           const Expanded(
@@ -125,37 +115,25 @@ class AgencyPendingHostsView extends GetView<AgencyPendingHostsController> {
             if (count == 0 && !controller.isLoading.value) {
               return const SizedBox.shrink();
             }
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.25),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.orangeAccent.withValues(alpha: 0.5)),
-              ),
-              child: SemiBoldText(
-                text: '$count',
-                fontSize: TextStyles.k12FontSize,
-                color: Colors.orangeAccent,
-              ),
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AdminAgencyUi.glowIcon(
+                  icon: Icons.pending_actions_rounded,
+                  accent: AdminAgencyUi.gold,
+                  size: 36,
+                  iconSize: 16,
+                ),
+                Spacing.h8,
+                SemiBoldText(
+                  text: '$count',
+                  fontSize: TextStyles.k14FontSize,
+                  color: AdminAgencyUi.gold,
+                ),
+              ],
             );
           }),
         ],
-      ),
-    );
-  }
-
-  Widget _squareButton({required IconData icon, required VoidCallback onTap}) {
-    return Material(
-      color: kColorWhite,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: SizedBox(
-          width: 38,
-          height: 38,
-          child: Icon(icon, size: 18, color: kColorText),
-        ),
       ),
     );
   }

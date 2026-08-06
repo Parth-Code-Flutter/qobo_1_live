@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui.dart';
+import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -35,22 +36,10 @@ class SuperAdminTabHeader extends StatelessWidget {
       child: Row(
         children: [
           if (canPop) ...[
-            Material(
-              color: SuperAdminUi.panel.withValues(alpha: 0.65),
-              borderRadius: BorderRadius.circular(14),
-              child: InkWell(
-                onTap: Get.back,
-                borderRadius: BorderRadius.circular(14),
-                child: const SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: Icon(
-                    Icons.arrow_back_ios_new_rounded,
-                    color: SuperAdminUi.textPrimary,
-                    size: 18,
-                  ),
-                ),
-              ),
+            AdminAgencyUi.glassIconButton(
+              icon: Icons.arrow_back_ios_new_rounded,
+              onTap: Get.back,
+              accent: SuperAdminUi.sky,
             ),
             Spacing.h10,
           ],

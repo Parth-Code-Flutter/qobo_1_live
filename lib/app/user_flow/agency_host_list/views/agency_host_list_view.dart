@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/icon_constants.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/agency_host_review_actions.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_bottom_sheet.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_shell_background.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -31,26 +32,15 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
   Widget build(BuildContext context) {
     final body = _screenBody(context);
     if (embeddedInBottomNav) return body;
-    return Scaffold(body: body);
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: body,
+    );
   }
 
   Widget _screenBody(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
-      ),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              const Color(0xFF5C0A68).withValues(alpha: 0.52),
-              const Color(0xFF170D59).withValues(alpha: 0.72),
-            ],
-          ),
-        ),
-        child: SafeArea(
+    return AppShellBackground(
+      child: SafeArea(
           bottom: !embeddedInBottomNav,
           child: Obx(() {
             if (controller.isLoading.value) {
@@ -71,8 +61,7 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
             );
           }),
         ),
-      ),
-    );
+      );
   }
 
   Widget _topBar() {
@@ -130,28 +119,26 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
           _squareButton(
             icon: Icons.refresh_rounded,
             onTap: controller.refreshList,
+            accent: AdminAgencyUi.mint,
           ),
         ],
       ),
     );
   }
 
-  Widget _squareButton({required IconData icon, required VoidCallback onTap}) {
-    return Material(
-      color: const Color(0x661B0F36),
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: SizedBox(
-          width: 38,
-          height: 38,
-          child: Icon(icon, color: kColorWhite, size: 19),
-        ),
-      ),
+  Widget _squareButton({
+    required IconData icon,
+    required VoidCallback onTap,
+    Color accent = AdminAgencyUi.sky,
+  }) {
+    return AdminAgencyUi.glassIconButton(
+      icon: icon,
+      onTap: onTap,
+      accent: accent,
+      size: 40,
+      iconSize: 16,
     );
   }
-
   Widget _mapStage(BuildContext context) {
     return GetBuilder<AgencyHostListController>(
       tag: tag,

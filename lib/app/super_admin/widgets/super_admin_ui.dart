@@ -2,7 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_shell_background.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/safe_network_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -10,35 +11,35 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 /// Shared design tokens for the Super Admin shell.
 ///
-/// Dark fintech-glass system: deep navy canvas, opaque-enough panels,
-/// restrained accents, Poppins hierarchy (8px spacing grid).
+/// Matches the main app Messages/Discover canvas (purple→navy [kImgBG]).
+/// Button / icon / nav chrome is shared with Agency via [AdminAgencyUi].
 abstract final class SuperAdminUi {
   SuperAdminUi._();
 
-  // —— Canvas ——
-  static const ink = Color(0xFF07061A);
-  static const inkElevated = Color(0xFF12101F);
-  static const sheet = Color(0xFF14122A);
-  static const panel = Color(0xFF1A1730);
+  // —— Canvas (aligned with Discover / Messages) ——
+  static const ink = Color(0xFF12081F);
+  static const inkElevated = Color(0xFF1E0B36);
+  static const sheet = Color(0xFF24143A);
+  static const panel = Color(0xFF3B2058);
 
   // —— Accents (status / icons only — not full-card paint) ——
-  static const gold = Color(0xFFFFD166);
-  static const goldDeep = Color(0xFFFFB020);
-  static const violet = Color(0xFF9C6BFF);
-  static const mint = Color(0xFF4ADE80);
-  static const rose = Color(0xFFFF6B8A);
-  static const sky = Color(0xFF7C9CFF);
-  static const pink = Color(0xFFFF8AD8);
-  static const teal = Color(0xFF5CE1B0);
+  static const gold = AdminAgencyUi.gold;
+  static const goldDeep = AdminAgencyUi.goldDeep;
+  static const violet = AdminAgencyUi.violet;
+  static const mint = AdminAgencyUi.mint;
+  static const rose = AdminAgencyUi.rose;
+  static const sky = AdminAgencyUi.sky;
+  static const pink = AdminAgencyUi.pink;
+  static const teal = AdminAgencyUi.teal;
   static const danger = Color(0xFFFF8A80);
   static const warning = Color(0xFFFFB74D);
   static const success = Color(0xFF2E9E5B);
 
-  // —— Type colors (cool-tinted, not pure white — avoids glass vibration) ——
-  static const textPrimary = Color(0xFFF0EEF8);
-  static const textSecondary = Color(0xFFB4B0C4);
-  static const textMuted = Color(0xFF8A869C);
-  static const textFaint = Color(0xFF6A6680);
+  // —— Type colors ——
+  static const textPrimary = AdminAgencyUi.textPrimary;
+  static const textSecondary = AdminAgencyUi.textSecondary;
+  static const textMuted = AdminAgencyUi.textMuted;
+  static const textFaint = AdminAgencyUi.textFaint;
 
   // —— Layout (8px grid) ——
   static const double pagePad = 20;
@@ -68,60 +69,31 @@ abstract final class SuperAdminUi {
     ],
   );
 
-  static const goldButtonGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFFFFE8A8), Color(0xFFFFD166), Color(0xFFFFB84D)],
-  );
+  static const goldButtonGradient = AdminAgencyUi.goldButtonGradient;
 
-  /// Opaque-enough dark glass — readable on any backdrop glow.
+  /// Brand CTA gradient — matches main-app Go Live / primary chrome.
+  static const primaryButtonGradient = AdminAgencyUi.primaryButtonGradient;
+
+  /// Solid card panel — Profile-style opaque purple, not frosted glass.
   static BoxDecoration glassDecoration({
     Color? glow,
     double radius = cardRadius,
   }) {
-    return BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          panel.withValues(alpha: 0.88),
-          inkElevated.withValues(alpha: 0.92),
-        ],
-      ),
-      borderRadius: BorderRadius.circular(radius),
-      border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
-      boxShadow: [
-        if (glow != null)
-          BoxShadow(
-            color: glow.withValues(alpha: 0.10),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        BoxShadow(
-          color: kColorBlack.withValues(alpha: 0.32),
-          blurRadius: 20,
-          offset: const Offset(0, 10),
-        ),
-      ],
-    );
+    return appShellGlassDecoration(glow: glow, radius: radius);
   }
 
-  /// Soft icon badge — single accent role, no stacked glow noise.
+  /// Solid gradient icon tile — white glyph (Profile feature style).
   static Widget glowIcon({
     required IconData icon,
     required Color accent,
     double size = 44,
     double iconSize = 22,
   }) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(size * 0.30),
-        color: accent.withValues(alpha: 0.14),
-        border: Border.all(color: accent.withValues(alpha: 0.32)),
-      ),
-      child: Icon(icon, color: accent, size: iconSize),
+    return AdminAgencyUi.glowIcon(
+      icon: icon,
+      accent: accent,
+      size: size,
+      iconSize: iconSize,
     );
   }
 }
@@ -132,7 +104,7 @@ class SuperAdminPageBackdrop extends StatelessWidget {
     super.key,
     required this.child,
     this.primary = SuperAdminUi.violet,
-    this.secondary = SuperAdminUi.sky,
+    this.secondary = SuperAdminUi.pink,
   });
 
   final Widget child;
@@ -141,71 +113,10 @@ class SuperAdminPageBackdrop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        const ColoredBox(color: SuperAdminUi.ink),
-        Opacity(
-          opacity: 0.38,
-          child: Image.asset(kImgBG, fit: BoxFit.cover),
-        ),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                SuperAdminUi.ink.withValues(alpha: 0.35),
-                SuperAdminUi.ink.withValues(alpha: 0.55),
-                SuperAdminUi.ink.withValues(alpha: 0.82),
-              ],
-            ),
-          ),
-        ),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                primary.withValues(alpha: 0.16),
-                Colors.transparent,
-                secondary.withValues(alpha: 0.12),
-              ],
-              stops: const [0, 0.48, 1],
-            ),
-          ),
-        ),
-        Positioned(
-          top: -60,
-          right: -40,
-          child: _blob(primary, 220),
-        ),
-        Positioned(
-          bottom: 120,
-          left: -70,
-          child: _blob(secondary, 200),
-        ),
-        child,
-      ],
-    );
-  }
-
-  Widget _blob(Color color, double size) {
-    return IgnorePointer(
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: RadialGradient(
-            colors: [
-              color.withValues(alpha: 0.22),
-              color.withValues(alpha: 0.0),
-            ],
-          ),
-        ),
-      ),
+    // Exact same canvas as MessagesTabView — bare [kImgBG], no wash/orbs.
+    return AppShellBackground(
+      showOrbs: false,
+      child: child,
     );
   }
 }
@@ -216,7 +127,7 @@ class SuperAdminPageScaffold extends StatelessWidget {
     super.key,
     required this.child,
     this.primary = SuperAdminUi.violet,
-    this.secondary = SuperAdminUi.sky,
+    this.secondary = SuperAdminUi.pink,
     this.bottom = false,
   });
 
@@ -263,14 +174,10 @@ class SuperAdminGlassCard extends StatelessWidget {
       child: child,
     );
 
+    // Never blur — solid Profile-style cards only.
     final clipped = ClipRRect(
       borderRadius: BorderRadius.circular(radius),
-      child: blur
-          ? BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-              child: body,
-            )
-          : body,
+      child: body,
     );
 
     if (onTap == null) return clipped;

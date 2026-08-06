@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/super_admin/agency/views/super_admin_agency_tab_view.dart';
@@ -10,24 +8,21 @@ import 'package:qobo_one_live/app/super_admin/host/views/super_admin_host_tab_vi
 import 'package:qobo_one_live/app/super_admin/settings/views/super_admin_settings_tab_view.dart';
 import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
-import 'package:qobo_one_live/utils/text_utils/app_text.dart';
-import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
-/// Super Admin bottom nav shell — same chrome as user [BottomNavView],
-/// with per-tab accent colors for icons.
+/// Super Admin bottom nav shell — same bar chrome as main [BottomNavView].
 class SuperAdminBottomNavView extends GetView<SuperAdminBottomNavController> {
   const SuperAdminBottomNavView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.paddingOf(context).bottom;
-
     // Opened from host Profile via Get.toNamed — system/back pops to Profile.
     return PopScope(
       canPop: true,
       child: Scaffold(
-        backgroundColor: SuperAdminUi.ink,
+        // Transparent so each tab’s bare [kImgBG] shows through (Messages-style).
+        backgroundColor: Colors.transparent,
         extendBody: true,
         body: Obx(() {
           switch (controller.selectedIndex.value) {
@@ -45,8 +40,7 @@ class SuperAdminBottomNavView extends GetView<SuperAdminBottomNavController> {
               return Spacing.shrink;
           }
         }),
-        // Create actions: + on Agency tab registers a new agency,
-        // + on Host tab submits a new host application.
+        // Create actions: + on Agency / Host tabs (same vibe as Go Live FAB).
         floatingActionButton: Obx(() {
           final index = controller.selectedIndex.value;
           final isAgencyTab =
@@ -55,8 +49,7 @@ class SuperAdminBottomNavView extends GetView<SuperAdminBottomNavController> {
           if (!isAgencyTab && !isHostTab) return const SizedBox.shrink();
 
           final home = Get.find<SuperAdminHomeController>();
-          final accent =
-              isAgencyTab ? SuperAdminUi.pink : SuperAdminUi.teal;
+          final accent = isAgencyTab ? SuperAdminUi.pink : SuperAdminUi.teal;
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Container(
@@ -95,7 +88,7 @@ class SuperAdminBottomNavView extends GetView<SuperAdminBottomNavController> {
                     child: Icon(
                       Icons.add_rounded,
                       size: 30,
-                      color: const Color(0xFF121644),
+                      color: kColorWhite,
                       semanticLabel:
                           isAgencyTab ? 'Create agency' : 'Create host',
                     ),
@@ -105,148 +98,12 @@ class SuperAdminBottomNavView extends GetView<SuperAdminBottomNavController> {
             ),
           );
         }),
-        bottomNavigationBar: ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    SuperAdminUi.sheet.withValues(alpha: 0.92),
-                    SuperAdminUi.ink.withValues(alpha: 0.97),
-                  ],
-                ),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(26),
-                  topRight: Radius.circular(26),
-                ),
-                border: Border(
-                  top: BorderSide(
-                    color: SuperAdminUi.textPrimary.withValues(alpha: 0.10),
-                    width: 0.7,
-                  ),
-                ),
-              ),
-              child: Padding(
-                padding: EdgeInsets.only(bottom: bottomInset),
-                child: SizedBox(
-                  height: 84,
-                  child: Obx(
-                    () => Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: List.generate(controller.items.length, (index) {
-                        final item = controller.items[index];
-                        return Expanded(
-                          child: _SuperAdminNavTab(
-                            label: item.label,
-                            icon: item.icon,
-                            accent: item.accent,
-                            selected: controller.selectedIndex.value == index,
-                            onTap: () => controller.onNavBarTabSelected(index),
-                          ),
-                        );
-                      }),
-                    ),
-                  ),
-                ),
-              ),
-            ),
+        bottomNavigationBar: Obx(
+          () => AdminBottomNavBar(
+            items: controller.items,
+            selectedIndex: controller.selectedIndex.value,
+            onSelected: controller.onNavBarTabSelected,
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SuperAdminNavTab extends StatelessWidget {
-  const _SuperAdminNavTab({
-    required this.label,
-    required this.icon,
-    required this.accent,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
-  final Color accent;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final iconColor =
-        selected ? accent : SuperAdminUi.textMuted.withValues(alpha: 0.85);
-    final labelColor =
-        selected ? accent : SuperAdminUi.textFaint;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        splashColor: accent.withValues(alpha: 0.12),
-        highlightColor: Colors.transparent,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeOutCubic,
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: selected
-                    ? accent.withValues(alpha: 0.18)
-                    : Colors.transparent,
-                boxShadow: selected
-                    ? [
-                        BoxShadow(
-                          color: accent.withValues(alpha: 0.35),
-                          blurRadius: 12,
-                          spreadRadius: 0.5,
-                        ),
-                      ]
-                    : null,
-              ),
-              child: Icon(icon, size: 22, color: iconColor),
-            ),
-            Spacing.v4,
-            AppText(
-              text: label,
-              fontSize: TextStyles.k10FontSize,
-              style: selected
-                  ? TextStyles.kSemiBoldPoppins(
-                      fontSize: TextStyles.k10FontSize,
-                      colors: labelColor,
-                    )
-                  : TextStyles.kRegularPoppins(
-                      fontSize: TextStyles.k10FontSize,
-                      colors: labelColor,
-                    ),
-            ),
-            Spacing.v4,
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeOutCubic,
-              width: selected ? 18 : 0,
-              height: 3,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(4),
-                color: accent,
-                boxShadow: selected
-                    ? [
-                        BoxShadow(
-                          color: accent.withValues(alpha: 0.55),
-                          blurRadius: 6,
-                        ),
-                      ]
-                    : null,
-              ),
-            ),
-          ],
         ),
       ),
     );

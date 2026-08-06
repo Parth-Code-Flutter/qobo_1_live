@@ -22,18 +22,26 @@ class SuperAdminBottomNavController extends GetxController {
   static const int hostTabIndex = 2;
   static const int settingsTabIndex = 3;
 
-  /// Four modules — each tab gets a distinct accent for colorful icons.
+  /// Four modules — bright per-tab accents (shared with Agency chrome).
   final items = const <({String label, IconData icon, Color accent})>[
     (
       label: 'Dashboard',
-      icon: Icons.dashboard_rounded,
+      icon: Icons.dashboard_customize_rounded,
       accent: Color(0xFF7C9CFF),
     ),
-    (label: 'Agency', icon: Icons.business_rounded, accent: Color(0xFFFF8AD8)),
-    (label: 'Host', icon: Icons.mic_rounded, accent: Color(0xFF5CE1B0)),
+    (
+      label: 'Agency',
+      icon: Icons.apartment_rounded,
+      accent: Color(0xFFFF5CAB),
+    ),
+    (
+      label: 'Host',
+      icon: Icons.mic_external_on_rounded,
+      accent: Color(0xFF5CE1B0),
+    ),
     (
       label: 'Settings',
-      icon: Icons.settings_rounded,
+      icon: Icons.tune_rounded,
       accent: Color(0xFFFFD166),
     ),
   ];

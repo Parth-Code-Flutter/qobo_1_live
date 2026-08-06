@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:qobo_one_live/app/super_admin/bottom_nav/controllers/super_admin_bottom_nav_controller.dart';
+import 'package:qobo_one_live/app/super_admin/home/controllers/super_admin_home_controller.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/repo/agency/agency_api_utils.dart';
 import 'package:qobo_one_live/repo/agency/agency_repo.dart';
@@ -11,10 +13,12 @@ import 'package:qobo_one_live/services/agency_session_controller.dart';
 import 'package:qobo_one_live/utils/app_dialogs/common_giffy_dialog.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_media_picker.dart';
 import 'package:qobo_one_live/utils/files_utils/file_utils.dart';
+import 'package:qobo_one_live/utils/geo/country_state_selection_mixin.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/validations/text_field_validations.dart';
 
-class AgencyOwnerRegisterController extends GetxController {
+class AgencyOwnerRegisterController extends GetxController
+    with CountryStateSelectionMixin {
   final formKey = GlobalKey<FormState>();
   final AgencyRepo _agencyRepo = AgencyRepo();
 
@@ -24,8 +28,6 @@ class AgencyOwnerRegisterController extends GetxController {
   final emailController = TextEditingController();
   final countryCodeController = TextEditingController(text: '+91');
   final passwordController = TextEditingController();
-  final countryController = TextEditingController();
-  final stateController = TextEditingController();
   final cityController = TextEditingController();
   final addressController = TextEditingController();
 
@@ -63,8 +65,6 @@ class AgencyOwnerRegisterController extends GetxController {
     emailController.dispose();
     countryCodeController.dispose();
     passwordController.dispose();
-    countryController.dispose();
-    stateController.dispose();
     cityController.dispose();
     addressController.dispose();
     super.onClose();
@@ -134,6 +134,19 @@ class AgencyOwnerRegisterController extends GetxController {
     final isFormValid = formKey.currentState?.validate() ?? false;
     if (!isFormValid) return;
 
+    if (isPublicInvite.value) {
+      final countryError = validateCountrySelection();
+      if (countryError != null) {
+        AppToast.showError(context, countryError);
+        return;
+      }
+      final stateError = validateStateSelection();
+      if (stateError != null) {
+        AppToast.showError(context, stateError);
+        return;
+      }
+    }
+
     final agencyName = agencyNameController.text.trim();
     final ownerName = ownerNameController.text.trim();
     // Keep only digits for WhatsApp / mobile (enforced as 10 digits).
@@ -160,17 +173,22 @@ class AgencyOwnerRegisterController extends GetxController {
       final data = response?['data'];
       if (isAgencyApiSuccess(response) && data is Map) {
         final map = Map<String, dynamic>.from(data);
-        session.appliedAgencyName.value = agencyName;
-        session.appliedOwnerName.value = ownerName;
-        session.appliedPhone.value = phone;
-        await session.applyRegisterResponse(map);
+        final fromSuperAdmin = isFromSuperAdmin.value;
+
+        // Super admin creates agencies for others — do not overwrite their session.
+        if (!fromSuperAdmin) {
+          session.appliedAgencyName.value = agencyName;
+          session.appliedOwnerName.value = ownerName;
+          session.appliedPhone.value = phone;
+          await session.applyRegisterResponse(map);
+        }
+
         isSubmitLoading.value = false;
         if (!context.mounted) return;
 
         final status = map['status']?.toString() ?? '';
         final isPending = isAgencyStatusPending(status);
         final publicInvite = isPublicInvite.value;
-        final fromSuperAdmin = isFromSuperAdmin.value;
 
         await CommonGiffyDialog.showSuccess(
           context,
@@ -189,7 +207,7 @@ class AgencyOwnerRegisterController extends GetxController {
               : (response?['message']?.toString() ??
                     'Your agency "$agencyName" is active. Open the dashboard to manage hosts and revenue.'),
           buttonText: fromSuperAdmin
-              ? 'Done'
+              ? 'Back to Agencies'
               : publicInvite
               ? 'Back to Login'
               : 'Open Dashboard',
@@ -197,8 +215,7 @@ class AgencyOwnerRegisterController extends GetxController {
           onPressed: () {
             Get.back<void>();
             if (fromSuperAdmin) {
-              // Back to the super admin shell; the Agency tab refreshes there.
-              Get.back<void>();
+              _returnToSuperAdminAgencyListing();
               return;
             }
             Get.offNamed(
@@ -248,8 +265,8 @@ class AgencyOwnerRegisterController extends GetxController {
       countryCode: countryCodeController.text,
       password: passwordController.text,
       invitedBy: invitedBy.value,
-      country: countryController.text,
-      state: stateController.text,
+      country: selectedCountry.value?.name ?? '',
+      state: selectedState.value?.name ?? '',
       city: cityController.text,
       address: addressController.text,
       agencyLogo: agencyLogo.value,
@@ -257,5 +274,20 @@ class AgencyOwnerRegisterController extends GetxController {
       docPhotoBack: back,
       isShowLoader: false,
     );
+  }
+
+  /// Pop the register form and land on Super Admin → Agency listing.
+  void _returnToSuperAdminAgencyListing() {
+    Get.back<void>();
+
+    if (Get.isRegistered<SuperAdminBottomNavController>()) {
+      Get.find<SuperAdminBottomNavController>().onNavBarTabSelected(
+        SuperAdminBottomNavController.agencyTabIndex,
+      );
+    }
+    if (Get.isRegistered<SuperAdminHomeController>()) {
+      Get.find<SuperAdminHomeController>().loadAgencies(showLoader: false);
+      Get.find<SuperAdminHomeController>().loadDashboardStats(showLoader: false);
+    }
   }
 }

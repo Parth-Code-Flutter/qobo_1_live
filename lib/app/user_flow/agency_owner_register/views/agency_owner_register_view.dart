@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_shell_background.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
+import 'package:qobo_one_live/utils/app_widgets/country_state_picker_sheet.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 
 import '../controllers/agency_owner_register_controller.dart';
 
@@ -18,10 +20,7 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
-        ),
+      body: AppShellBackground(
         child: GestureDetector(
           onTap: () => FocusScope.of(context).unfocus(),
           child: SafeArea(
@@ -324,26 +323,35 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
           prefix: _fieldIcon(Icons.lock_outline_rounded),
         ),
         Spacing.v16,
-        Row(
-          children: [
-            Expanded(
-              child: _compactField(
-                context,
+        Obx(
+          () => Column(
+            children: [
+              CountryStatePickerField(
                 label: 'Country',
-                controller: controller.countryController,
-                icon: Icons.flag_outlined,
+                value: controller.selectedCountry.value?.name,
+                hint: 'Select country',
+                isLoading: controller.isCountriesLoading.value,
+                onTap: () => _pickCountry(context),
               ),
-            ),
-            Spacing.h12,
-            Expanded(
-              child: _compactField(
-                context,
+              Spacing.v10,
+              CountryStatePickerField(
                 label: 'State',
-                controller: controller.stateController,
-                icon: Icons.map_outlined,
+                value: controller.selectedState.value?.name,
+                hint: controller.selectedCountry.value == null
+                    ? 'Select country first'
+                    : 'Select state',
+                isLoading: controller.isStatesLoading.value,
+                onTap: controller.selectedCountry.value == null
+                    ? () {
+                        AppToast.showError(
+                          context,
+                          'Please select country first',
+                        );
+                      }
+                    : () => _pickState(context),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         Spacing.v16,
         _fieldLabel('City'),
@@ -385,26 +393,30 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
     );
   }
 
-  Widget _compactField(
-    BuildContext context, {
-    required String label,
-    required TextEditingController controller,
-    required IconData icon,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _fieldLabel(label),
-        Spacing.v6,
-        AppTextField(
-          controller: controller,
-          validator: (v) => this.controller.validateRequired(label, v),
-          hintText: label,
-          borderColor: kColorHint,
-          prefix: _fieldIcon(icon),
-        ),
-      ],
+  Future<void> _pickCountry(BuildContext context) async {
+    FocusScope.of(context).unfocus();
+    await controller.ensureCountriesLoaded(forceRefresh: true);
+    if (!context.mounted) return;
+    final picked = await showCountryPickerSheet(
+      context,
+      countries: controller.countries.toList(),
+      selected: controller.selectedCountry.value,
     );
+    if (picked != null) await controller.selectCountry(picked);
+  }
+
+  Future<void> _pickState(BuildContext context) async {
+    final country = controller.selectedCountry.value;
+    if (country == null) return;
+    FocusScope.of(context).unfocus();
+    await controller.loadStatesForCountry(country.id, forceRefresh: true);
+    if (!context.mounted) return;
+    final picked = await showStatePickerSheet(
+      context,
+      states: controller.states.toList(),
+      selected: controller.selectedState.value,
+    );
+    if (picked != null) controller.selectState(picked);
   }
 
   Widget _documentPicker({

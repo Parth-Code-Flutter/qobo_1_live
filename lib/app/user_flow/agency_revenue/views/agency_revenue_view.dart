@@ -3,8 +3,8 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/icon_constants.dart';
 import 'package:qobo_one_live/app/user_flow/agency_owner_dashboard/models/agency_revenue_demo.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/constants/image_constants.dart';
-import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
+import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_shell_background.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -17,10 +17,8 @@ class AgencyRevenueView extends GetView<AgencyRevenueController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
-        ),
+      backgroundColor: Colors.transparent,
+      body: AppShellBackground(
         child: SafeArea(
           child: Column(
             children: [
@@ -56,12 +54,15 @@ class AgencyRevenueView extends GetView<AgencyRevenueController> {
 
   Widget _header() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
       child: Row(
         children: [
-          IconButton(
-            onPressed: Get.back,
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: kColorWhite, size: 18),
+          AdminAgencyUi.glassIconButton(
+            icon: Icons.arrow_back_ios_new_rounded,
+            onTap: Get.back,
+            accent: AdminAgencyUi.sky,
+            size: 40,
+            iconSize: 16,
           ),
           const Expanded(
             child: Center(
@@ -72,7 +73,12 @@ class AgencyRevenueView extends GetView<AgencyRevenueController> {
               ),
             ),
           ),
-          const SizedBox(width: 48),
+          AdminAgencyUi.glowIcon(
+            icon: Icons.account_balance_wallet_rounded,
+            accent: AdminAgencyUi.gold,
+            size: 40,
+            iconSize: 20,
+          ),
         ],
       ),
     );
@@ -346,9 +352,12 @@ class AgencyRevenueView extends GetView<AgencyRevenueController> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          appButton(
-            onPressed: () => controller.requestPayout(context),
-            buttonText: 'Request Payout',
+          AdminGoldCtaButton(
+            label: 'Request Payout',
+            icon: Icons.payments_rounded,
+            expanded: true,
+            height: 52,
+            onTap: () => controller.requestPayout(context),
           ),
           Spacing.v8,
           TextButton(
