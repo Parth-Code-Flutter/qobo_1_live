@@ -79,6 +79,7 @@ dependencies:
   socket_io_client: ^3.1.2
   # Coin recharge checkout (Key ID only on device; secret stays on backend).
   razorpay_flutter: ^1.4.5
+  screen_protector: ^1.5.3
 
 dev_dependencies:
   flutter_test:

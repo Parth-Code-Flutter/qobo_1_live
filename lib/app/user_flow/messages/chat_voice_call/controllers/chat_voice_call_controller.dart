@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/messages/chat_detail/controllers/chat_detail_controller.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/controllers/messages_tab_controller.dart';
@@ -14,6 +15,7 @@ import 'package:qobo_one_live/services/chat/chat_inbox_preview.dart';
 import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
+import 'package:qobo_one_live/utils/security/screen_capture_guard.dart';
 import 'package:qobo_one_live/utils/session_earnings_utils.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_celebration_overlay.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_chat_celebration_tracker.dart';
@@ -23,7 +25,8 @@ import 'package:qobo_one_live/utils/zego_engine_utils.dart';
 import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 import 'package:zego_uikit/zego_uikit.dart';
 
-class ChatVoiceCallController extends GetxController {
+class ChatVoiceCallController extends GetxController
+    with WidgetsBindingObserver {
   ChatVoiceCallController({
     ChatCallService? callService,
     CallingRepo? callingRepo,
@@ -77,6 +80,9 @@ class ChatVoiceCallController extends GetxController {
   bool _giftListenerBound = false;
   Timer? _sessionEarningsTimer;
 
+  /// True after we turned on [ScreenCaptureGuard] for this video session.
+  bool _screenCaptureLocked = false;
+
   String get zegoUserId {
     if (!Get.isRegistered<UserSessionController>()) {
       return ZegoLiveIdUtils.sanitizeUserId('guest');
@@ -102,6 +108,7 @@ class ChatVoiceCallController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    WidgetsBinding.instance.addObserver(this);
     final args = Get.arguments;
     if (args is Map) {
       roomId.value = args['roomId']?.toString() ?? '';
@@ -111,7 +118,7 @@ class ChatVoiceCallController extends GetxController {
       peerCountry.value = _cleanText(args['peerCountry']) ?? '';
       peerBio.value = _cleanText(args['peerBio']) ?? '';
       isCaller.value = args['isCaller'] != false;
-      isVideo.value = args['isVideo'] == true;
+      isVideo.value = _parseBool(args['isVideo']);
       coinsPerSecond.value =
           _positiveDouble(args['coinsPerSecond']) ??
           _currentUserCoinsPerSecond() ??
@@ -137,10 +144,38 @@ class ChatVoiceCallController extends GetxController {
     }
     // Listen for peer gifts once the call room message bus is available.
     _bindGiftMessageListener();
+    // 1:1 video only — block screenshots / screen recording while on this call.
+    _lockScreenCaptureIfVideo();
     LoggerUtils.logInfo(
       'ChatVoiceCallController: Zego join callId=${callId.value} '
       'room=${roomId.value} video=${isVideo.value}',
     );
+  }
+
+  /// Re-apply FLAG_SECURE / SurfaceView.setSecure after resume or late Zego views.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _screenCaptureLocked) {
+      unawaited(ScreenCaptureGuard.reapply());
+    }
+  }
+
+  void _lockScreenCaptureIfVideo() {
+    if (!isVideo.value || _screenCaptureLocked) return;
+    _screenCaptureLocked = true;
+    // Post-frame so native plugins / activity binding are ready.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(ScreenCaptureGuard.enable());
+    });
+  }
+
+  static bool _parseBool(dynamic value) {
+    if (value == true || value == 1) return true;
+    if (value is String) {
+      final normalized = value.trim().toLowerCase();
+      return normalized == 'true' || normalized == '1' || normalized == 'video';
+    }
+    return false;
   }
 
   String get formattedDuration =>
@@ -246,11 +281,17 @@ class ChatVoiceCallController extends GetxController {
 
   @override
   void onClose() {
+    WidgetsBinding.instance.removeObserver(this);
     _ticker?.cancel();
     _stopSessionEarningsPolling();
     _giftMessageSub?.cancel();
     _giftCelebrationTracker.reset();
     GiftCelebrationOverlay.dismiss();
+    // Always clear video screenshot lock when leaving the call screen.
+    if (_screenCaptureLocked) {
+      _screenCaptureLocked = false;
+      unawaited(ScreenCaptureGuard.disable());
+    }
     unawaited(_recordCallIfNeeded());
     super.onClose();
   }
