@@ -137,7 +137,8 @@ class EconomyRepo {
       'room_id': roomId,
       'giftId': giftId,
       'gift_id': giftId,
-      if (normalizedScope == 'user' && normalizedReceiverId.isNotEmpty) ...{
+      // Always send receiver when known (family gifts need it with sessionType=family).
+      if (normalizedReceiverId.isNotEmpty) ...{
         'receiverId': normalizedReceiverId,
         'receiver_id': normalizedReceiverId,
       },

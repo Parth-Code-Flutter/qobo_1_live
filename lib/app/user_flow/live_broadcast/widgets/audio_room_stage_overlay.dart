@@ -3557,27 +3557,6 @@ class _EmptySeatActionsSheet extends GetView<LiveBroadcastController> {
                 );
               },
             ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(
-                Icons.front_hand_rounded,
-                color: Color(0xFF7C9CFF),
-              ),
-              title: const SemiBoldText(
-                text: 'Request to seat (self)',
-                fontSize: TextStyles.k14FontSize,
-                color: kColorWhite,
-              ),
-              subtitle: AppText(
-                text: 'Only if you are not already seated',
-                fontSize: TextStyles.k10FontSize,
-                color: kColorWhite.withValues(alpha: 0.55),
-              ),
-              onTap: () {
-                Get.back<void>();
-                unawaited(controller.requestSeatForSeatNo(seatNo));
-              },
-            ),
           ],
         ),
       ),

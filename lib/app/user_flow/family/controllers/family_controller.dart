@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/repo/chat/chat_navigation_helper.dart';
 import 'package:qobo_one_live/repo/family/family_repo.dart';
+import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
 import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/direct_gift_bottom_sheet.dart';
+import 'package:qobo_one_live/utils/app_widgets/family_member_actions_sheet.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
-import 'package:qobo_one_live/constants/color_constants.dart';
 
 class FamilyController extends GetxController {
   FamilyController({FamilyRepo? familyRepo})
@@ -29,10 +33,127 @@ class FamilyController extends GetxController {
   final RxList<Map<String, dynamic>> familyMembers =
       <Map<String, dynamic>>[].obs;
 
+  /// Sponsor / invite lineage from `sponsor_tree` / `parentId`.
+  final RxList<Map<String, dynamic>> sponsorNodes =
+      <Map<String, dynamic>>[].obs;
+
+  /// 0 = Role tree, 1 = Sponsor tree
+  final treeMode = 0.obs;
+
+  String get _currentUserId {
+    if (!Get.isRegistered<UserSessionController>()) return '';
+    return Get.find<UserSessionController>().userId.trim();
+  }
+
+  /// Role-based tree: leaders (creator/owner/leader) → officers → members.
+  List<Map<String, dynamic>> get treeLeaders =>
+      familyMembers.where((m) => _roleTier(m['role']) == 0).toList();
+
+  List<Map<String, dynamic>> get treeOfficers =>
+      familyMembers.where((m) => _roleTier(m['role']) == 1).toList();
+
+  List<Map<String, dynamic>> get treeMembers =>
+      familyMembers.where((m) => _roleTier(m['role']) >= 2).toList();
+
+  /// Roots of sponsor tree (no parent, or parent not in roster).
+  List<Map<String, dynamic>> get sponsorRoots {
+    final ids = sponsorNodes
+        .map((m) => m['userId']?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    return sponsorNodes.where((m) {
+      final parent = m['parentId']?.toString().trim() ?? '';
+      return parent.isEmpty || !ids.contains(parent);
+    }).toList();
+  }
+
+  List<Map<String, dynamic>> sponsorChildrenOf(String userId) {
+    if (userId.isEmpty) return const [];
+    return sponsorNodes
+        .where((m) => (m['parentId']?.toString().trim() ?? '') == userId)
+        .toList();
+  }
+
+  void selectTreeMode(int index) {
+    treeMode.value = index.clamp(0, 1);
+  }
+
   @override
   void onInit() {
     super.onInit();
     loadFamilyHub();
+  }
+
+  /// Tap a tree node → gift / DM sheet.
+  Future<void> onFamilyMemberTap(
+    BuildContext context,
+    Map<String, dynamic> member,
+  ) async {
+    final userId = member['userId']?.toString().trim() ?? '';
+    final isSelf = userId.isNotEmpty && userId == _currentUserId;
+
+    final action = await FamilyMemberActionsSheet.show(
+      member: member,
+      isSelf: isSelf,
+    );
+    if (action == null || !context.mounted) return;
+
+    switch (action) {
+      case FamilyMemberAction.directMessage:
+        await openMemberDirectMessage(context, member);
+      case FamilyMemberAction.sendGift:
+        await openMemberSendGift(member);
+    }
+  }
+
+  Future<void> openMemberDirectMessage(
+    BuildContext context,
+    Map<String, dynamic> member,
+  ) async {
+    final userId = member['userId']?.toString().trim() ?? '';
+    if (userId.isEmpty) {
+      Get.snackbar(
+        'Message',
+        'This member has no user id from the API yet.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+    await ChatNavigationHelper.openDirectChat(
+      context,
+      targetId: userId,
+      name: member['name']?.toString() ?? 'Member',
+      imageUrl: member['displayPicture']?.toString(),
+    );
+  }
+
+  Future<void> openMemberSendGift(Map<String, dynamic> member) async {
+    final userId = member['userId']?.toString().trim() ?? '';
+    final familyId = myFamily['id']?.toString().trim() ?? '';
+    if (userId.isEmpty) {
+      Get.snackbar(
+        'Gift',
+        'This member has no user id from the API yet.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+    if (familyId.isEmpty) {
+      Get.snackbar(
+        'Gift',
+        'Family id is missing — cannot send gift context.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    // Confirmed backend: roomId = familyId, sessionType/scope = family.
+    await DirectGiftBottomSheet.show(
+      receiverId: userId,
+      receiverName: member['name']?.toString() ?? 'Member',
+      roomId: familyId,
+      sessionType: 'family',
+    );
   }
 
   // Filtered popular families for search
@@ -301,35 +422,223 @@ class FamilyController extends GetxController {
 
   Future<void> _loadFamilyMembers(String familyId) async {
     if (familyId.isEmpty) return;
-    final detailResponse = await _familyRepo.getFamilyDetail(
+
+    // Prefer dedicated roster API (explicit userId / parentId).
+    List? rawList;
+    final membersResponse = await _familyRepo.getFamilyMembers(
       familyId: familyId,
       isShowLoader: false,
     );
-    final data = detailResponse?['data'];
-    if (data is! Map) return;
-    final members = data['members'];
-    if (members is List) {
-      familyMembers.assignAll(
-        members.whereType<Map>().map((member) {
-          final user = member['user'];
-          final userMap = user is Map ? user : const {};
-          final name =
-              userMap['name']?.toString() ??
-              member['name']?.toString() ??
-              'Member';
-          return <String, dynamic>{
-            'name': name,
-            'role': member['role']?.toString() ?? 'member',
-            'contribution': _toInt(member['contribution']),
-            'avatar': name.isNotEmpty
-                ? name.substring(0, 1).toUpperCase()
-                : 'M',
-            'isOnline': member['isOnline'] == true,
-            'level': _toInt(userMap['level']),
-          };
-        }),
-      );
+    final membersData = membersResponse?['data'];
+    if (membersData is List) {
+      rawList = membersData;
     }
+
+    // Tree API: role_tree + sponsor_tree.
+    final treeResponse = await _familyRepo.getFamilyTree(
+      familyId: familyId,
+      isShowLoader: false,
+    );
+    final treeData = treeResponse?['data'];
+    if (treeData is Map) {
+      _applySponsorTree(treeData['sponsor_tree'] ?? treeData['sponsorTree']);
+      if (rawList == null || rawList.isEmpty) {
+        final fromRole = _flattenRoleTree(
+          treeData['role_tree'] ?? treeData['roleTree'],
+        );
+        if (fromRole.isNotEmpty) rawList = fromRole;
+      }
+    }
+
+    // Fallback: detail payload (also may include role_tree / sponsor_tree).
+    if (rawList == null || rawList.isEmpty) {
+      final detailResponse = await _familyRepo.getFamilyDetail(
+        familyId: familyId,
+        isShowLoader: false,
+      );
+      final data = detailResponse?['data'];
+      if (data is Map) {
+        rawList = data['members'] is List
+            ? data['members'] as List
+            : data['memberList'] is List
+            ? data['memberList'] as List
+            : null;
+        if (sponsorNodes.isEmpty) {
+          _applySponsorTree(data['sponsor_tree'] ?? data['sponsorTree']);
+        }
+        if ((rawList == null || rawList.isEmpty)) {
+          final fromRole = _flattenRoleTree(
+            data['role_tree'] ?? data['roleTree'],
+          );
+          if (fromRole.isNotEmpty) rawList = fromRole;
+        }
+        final count = _toInt(data['membersCount'] ?? data['members']);
+        if (count > 0) myFamily['members'] = count;
+      }
+    }
+
+    if (rawList == null) {
+      familyMembers.clear();
+      return;
+    }
+
+    final mapped = rawList
+        .whereType<Map>()
+        .map(_mapMember)
+        .where((m) => (m['name'] as String).isNotEmpty)
+        .toList();
+
+    mapped.sort((a, b) {
+      final tierCmp = _roleTier(a['role']).compareTo(_roleTier(b['role']));
+      if (tierCmp != 0) return tierCmp;
+      return _toInt(b['contribution']).compareTo(_toInt(a['contribution']));
+    });
+
+    familyMembers.assignAll(mapped);
+    myFamily['members'] = mapped.length;
+
+    // If sponsor_tree was empty, derive from roster parentId links.
+    if (sponsorNodes.isEmpty) {
+      sponsorNodes.assignAll(mapped);
+    }
+
+    if (treeLeaders.isNotEmpty) {
+      final leaderName = treeLeaders.first['name']?.toString() ?? '';
+      if (leaderName.isNotEmpty) {
+        myFamily['leader'] = leaderName;
+      }
+    }
+  }
+
+  void _applySponsorTree(dynamic raw) {
+    if (raw is! List) {
+      sponsorNodes.clear();
+      return;
+    }
+    final mapped = raw
+        .whereType<Map>()
+        .map(_mapMember)
+        .where((m) => (m['name'] as String).isNotEmpty)
+        .toList();
+    sponsorNodes.assignAll(mapped);
+  }
+
+  List<Map> _flattenRoleTree(dynamic roleTree) {
+    if (roleTree is! Map) return const [];
+    final out = <Map>[];
+    final creator = roleTree['creator'];
+    if (creator is Map) out.add(Map<String, dynamic>.from(creator));
+    final coLeaders =
+        roleTree['coLeaders'] ?? roleTree['co_leaders'] ?? roleTree['officers'];
+    if (coLeaders is List) {
+      for (final item in coLeaders.whereType<Map>()) {
+        out.add(Map<String, dynamic>.from(item));
+      }
+    }
+    final members = roleTree['members'];
+    if (members is List) {
+      for (final item in members.whereType<Map>()) {
+        out.add(Map<String, dynamic>.from(item));
+      }
+    }
+    return out;
+  }
+
+  Map<String, dynamic> _mapMember(Map raw) {
+    final user = raw['user'];
+    final userMap = user is Map ? Map<String, dynamic>.from(user) : const {};
+
+    String pickText(List<dynamic> candidates) {
+      for (final c in candidates) {
+        final s = c?.toString().trim() ?? '';
+        if (s.isNotEmpty && s.toLowerCase() != 'null') return s;
+      }
+      return '';
+    }
+
+    // Never use membership relation `id` as userId — prefer nested user / userId fields.
+    final resolvedUserId = pickText([
+      userMap['id'],
+      userMap['userId'],
+      userMap['user_id'],
+      raw['userId'],
+      raw['user_id'],
+    ]);
+
+    final name = pickText([userMap['name'], raw['name']]);
+    final displayName = name.isEmpty ? 'Member' : name;
+
+    final displayPicture = pickText([
+      userMap['displayPicture'],
+      userMap['display_picture'],
+      userMap['avatar'],
+      raw['displayPicture'],
+      raw['display_picture'],
+      raw['avatar'],
+    ]);
+
+    final avatarFrameUrl = pickText([
+      userMap['avatarFrameUrl'],
+      userMap['avatar_frame_url'],
+      userMap['profileFrameUrl'],
+      raw['avatarFrameUrl'],
+      raw['avatar_frame_url'],
+    ]);
+
+    final role = pickText([
+      raw['role'],
+      raw['myRole'],
+      userMap['role'],
+    ]);
+    final resolvedRole = role.isEmpty ? 'member' : role;
+
+    final parentId = pickText([
+      raw['parentId'],
+      raw['parent_id'],
+      raw['invitedBy'],
+      raw['invited_by'],
+    ]);
+
+    return <String, dynamic>{
+      'userId': resolvedUserId,
+      'name': displayName,
+      'role': resolvedRole,
+      'contribution': _toInt(raw['contribution']),
+      'avatar': displayName.isNotEmpty
+          ? displayName.substring(0, 1).toUpperCase()
+          : 'M',
+      'displayPicture': displayPicture.isEmpty ? null : displayPicture,
+      'avatarFrameUrl': avatarFrameUrl.isEmpty ? null : avatarFrameUrl,
+      'isOnline':
+          raw['isOnline'] == true ||
+          raw['is_online'] == true ||
+          userMap['isOnline'] == true,
+      'level': _toInt(userMap['level'] ?? raw['level']),
+      'parentId': parentId,
+      'bio': pickText([userMap['bio'], raw['bio']]),
+    };
+  }
+
+  /// 0 = leader, 1 = officer, 2 = member.
+  static int _roleTier(dynamic role) {
+    final r = role?.toString().trim().toLowerCase() ?? '';
+    if (r.contains('creator') ||
+        r.contains('owner') ||
+        r.contains('leader') ||
+        r == 'superadmin' ||
+        r == 'super_admin') {
+      return 0;
+    }
+    if (r.contains('officer') ||
+        r.contains('vice') ||
+        r.contains('deputy') ||
+        r.contains('elder') ||
+        r.contains('co-leader') ||
+        r.contains('coleader') ||
+        r == 'admin') {
+      return 1;
+    }
+    return 2;
   }
 
   Map<String, dynamic> _mapFamily(Map raw) {

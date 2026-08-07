@@ -635,6 +635,12 @@ class FamilyEndpoints {
   /// GET /api/family/detail/:id
   static const String detail = '/api/family/detail';
 
+  /// GET /api/family/members/:id — roster with userId + parentId for gift/DM/tree
+  static const String members = '/api/family/members';
+
+  /// GET /api/family/tree/:id — role_tree + sponsor_tree
+  static const String tree = '/api/family/tree';
+
   /// GET /api/family/my
   static const String my = '/api/family/my';
 

@@ -12,15 +12,35 @@ import '../models/discover_feed_layout.dart';
 import 'discover_user_call_dialog.dart';
 
 /// Discover tab — photo grid or single-profile feed (`GET /api/discover`).
+///
+/// Pass [users] to render an alternate list (e.g. search results) with the
+/// same card UI as the main Discover feed.
 class DiscoverUsersFeed extends StatelessWidget {
-  const DiscoverUsersFeed({super.key, required this.controller});
+  const DiscoverUsersFeed({
+    super.key,
+    required this.controller,
+    this.users,
+    this.isLoading,
+    this.emptyMessage = 'New matches will appear here',
+    this.enablePullToRefresh = true,
+  });
 
   final DiscoverTabController controller;
+
+  /// When set, shown instead of [DiscoverTabController.discoverUsers].
+  final List<SocialUserCard>? users;
+
+  /// Overrides discover loading spinner (used for search).
+  final bool? isLoading;
+
+  final String emptyMessage;
+  final bool enablePullToRefresh;
 
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      if (controller.isDiscoverUsersLoading.value) {
+      final loading = isLoading ?? controller.isDiscoverUsersLoading.value;
+      if (loading) {
         return const Center(
           child: CircularProgressIndicator(
             valueColor: AlwaysStoppedAnimation<Color>(kColorPrimary),
@@ -28,11 +48,11 @@ class DiscoverUsersFeed extends StatelessWidget {
         );
       }
 
-      final users = controller.discoverUsers;
-      if (users.isEmpty) {
+      final feedUsers = users ?? controller.discoverUsers.toList();
+      if (feedUsers.isEmpty) {
         return Center(
           child: AppText(
-            text: 'New matches will appear here',
+            text: emptyMessage,
             fontSize: TextStyles.k14FontSize,
             color: kColorWhite.withValues(alpha: 0.65),
             align: TextAlign.center,
@@ -42,13 +62,17 @@ class DiscoverUsersFeed extends StatelessWidget {
 
       // Read layout inside Obx so grid ↔ single swaps without refetching users.
       final isSingle = controller.feedLayout.value == DiscoverFeedLayout.single;
+      final body = isSingle
+          ? _singleProfileList(context, feedUsers)
+          : _gridList(context, feedUsers);
+
+      if (!enablePullToRefresh) return body;
+
       return RefreshIndicator(
         color: kColorPrimary,
         backgroundColor: LiveRoomUiColors.screenGradientBottom,
         onRefresh: controller.fetchDiscoverUsers,
-        child: isSingle
-            ? _singleProfileList(context, users)
-            : _gridList(context, users),
+        child: body,
       );
     });
   }

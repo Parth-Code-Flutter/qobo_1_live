@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/app/bottom_nav/controllers/bottom_nav_controller.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
@@ -38,7 +39,14 @@ class DiscoverTabView extends StatelessWidget {
               Expanded(
                 child: Obx(() {
                   if (discoverController.searchQuery.value.isNotEmpty) {
-                    return _searchResultsList(context, discoverController);
+                    return DiscoverUsersFeed(
+                      controller: discoverController,
+                      users: discoverController.searchResults.toList(),
+                      isLoading: discoverController.isSearchLoading.value,
+                      emptyMessage:
+                          'No users found matching "${discoverController.searchQuery.value}"',
+                      enablePullToRefresh: false,
+                    );
                   }
                   return DiscoverUsersFeed(controller: discoverController);
                 }),
@@ -71,13 +79,22 @@ class DiscoverTabView extends StatelessWidget {
               children: [
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: FramedUserAvatar(
-                    name: session.displayName,
-                    imageUrl: avatarUrl,
-                    frameUrl: session.profileFrameUrl,
-                    frameSeed: session.userId,
-                    size: 30,
-                    fontSize: TextStyles.k10FontSize,
+                  child: GestureDetector(
+                    onTap: () {
+                      if (!Get.isRegistered<BottomNavController>()) return;
+                      Get.find<BottomNavController>().onNavBarTabSelected(
+                        BottomNavController.profileTabIndex,
+                      );
+                    },
+                    behavior: HitTestBehavior.opaque,
+                    child: FramedUserAvatar(
+                      name: session.displayName,
+                      imageUrl: avatarUrl,
+                      frameUrl: session.profileFrameUrl,
+                      frameSeed: session.userId,
+                      size: 30,
+                      fontSize: TextStyles.k10FontSize,
+                    ),
                   ),
                 ),
                 Column(
@@ -386,124 +403,5 @@ class DiscoverTabView extends StatelessWidget {
       return Get.find<DiscoverTabController>();
     }
     return Get.put(DiscoverTabController());
-  }
-
-  Widget _searchResultsList(
-    BuildContext context,
-    DiscoverTabController controller,
-  ) {
-    if (controller.isSearchLoading.value) {
-      return const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(kColorPrimary),
-        ),
-      );
-    }
-
-    if (controller.searchResults.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.search_off_rounded,
-              color: kColorWhite.withValues(alpha: 0.5),
-              size: 48,
-            ),
-            Spacing.v12,
-            AppText(
-              text: 'No users found matching "${controller.searchQuery.value}"',
-              fontSize: TextStyles.k14FontSize,
-              color: kColorWhite.withValues(alpha: 0.7),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.separated(
-      padding: const EdgeInsets.only(bottom: 24, top: 8),
-      itemCount: controller.searchResults.length,
-      separatorBuilder: (_, __) =>
-          const Divider(color: kColorDiscoverSearchBg, height: 1),
-      itemBuilder: (context, index) {
-        final user = controller.searchResults[index];
-        final String name = user['name']?.toString() ?? 'User';
-        final String id = user['id']?.toString() ?? '';
-
-        final isFollowing =
-            user['isFollowing'] == true ||
-            controller.followingUserIds.contains(id);
-
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Row(
-            children: [
-              AppUserAvatar(
-                name: name,
-                imageUrl: user['displayPicture']?.toString(),
-                size: 44,
-                border: Border.all(
-                  color: kColorWhite.withValues(alpha: 0.15),
-                  width: 1,
-                ),
-              ),
-              Spacing.h12,
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SemiBoldText(
-                      text: name,
-                      fontSize: TextStyles.k16FontSize,
-                      color: kColorWhite,
-                    ),
-                    Spacing.v2,
-                    AppText(
-                      text: 'ID: ${id.length > 8 ? id.substring(0, 8) : id}',
-                      fontSize: TextStyles.k12FontSize,
-                      color: kColorWhite.withValues(alpha: 0.6),
-                    ),
-                  ],
-                ),
-              ),
-              GestureDetector(
-                onTap: () => controller.toggleFollow(context, id),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: isFollowing
-                        ? null
-                        : LinearGradient(
-                            colors: [
-                              kColorProfileActionPinkStart,
-                              kColorProfileActionOrangeEnd,
-                            ],
-                          ),
-                    color: isFollowing ? Colors.transparent : null,
-                    borderRadius: BorderRadius.circular(20),
-                    border: isFollowing
-                        ? Border.all(
-                            color: kColorWhite.withValues(alpha: 0.5),
-                            width: 1,
-                          )
-                        : null,
-                  ),
-                  child: SemiBoldText(
-                    text: isFollowing ? 'Following' : 'Follow',
-                    fontSize: TextStyles.k12FontSize,
-                    color: kColorWhite,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
   }
 }

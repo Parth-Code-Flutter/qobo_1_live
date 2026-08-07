@@ -39,6 +39,34 @@ class FamilyRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
+  /// `GET /api/family/members/:id` — flat roster with `userId` / `parentId`.
+  Future<Map<String, dynamic>?> getFamilyMembers({
+    required String familyId,
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.getRequest(
+      endPoint:
+          '${FamilyEndpoints.members}/${Uri.encodeComponent(familyId.trim())}',
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// `GET /api/family/tree/:id` — `role_tree` + `sponsor_tree`.
+  Future<Map<String, dynamic>?> getFamilyTree({
+    required String familyId,
+    bool isShowLoader = true,
+  }) async {
+    final response = await _apiService.getRequest(
+      endPoint:
+          '${FamilyEndpoints.tree}/${Uri.encodeComponent(familyId.trim())}',
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
   Future<Map<String, dynamic>?> createFamily({
     required String name,
     required String description,

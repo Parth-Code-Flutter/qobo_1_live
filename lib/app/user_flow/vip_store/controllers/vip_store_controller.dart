@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/repo/economy/economy_repo.dart';
 import 'package:qobo_one_live/repo/frame/frame_repo.dart';
-import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/app/user_flow/wallet/bindings/wallet_binding.dart';
@@ -233,8 +232,6 @@ class VipStoreController extends GetxController {
       isPurchasing.value = false;
     }
   }
-
-  void openBackpack() => Get.toNamed(Routes.BACKPACK);
 
   Map<String, Map<String, dynamic>> _ownedByFrameId(List items) {
     final result = <String, Map<String, dynamic>>{};

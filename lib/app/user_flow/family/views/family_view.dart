@@ -8,6 +8,7 @@ import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 import '../controllers/family_controller.dart';
+import '../widgets/family_member_tree.dart';
 
 /// Family Hub — honor / ranking vibe on main-app [kImgBG] + brand accents.
 abstract final class _FamilyUi {
@@ -50,7 +51,7 @@ class FamilyView extends GetView<FamilyController> {
                     );
                   }
                   if (controller.hasFamily.value) {
-                    return _buildMyFamilyDashboard();
+                    return _buildMyFamilyDashboard(context);
                   }
                   return _buildBrowseFamiliesView();
                 }),
@@ -810,7 +811,7 @@ class FamilyView extends GetView<FamilyController> {
   // MY FAMILY DASHBOARD
   // ==========================================
 
-  Widget _buildMyFamilyDashboard() {
+  Widget _buildMyFamilyDashboard(BuildContext context) {
     final fam = controller.myFamily;
     return RefreshIndicator(
       color: kColorPrimary,
@@ -825,7 +826,7 @@ class FamilyView extends GetView<FamilyController> {
           Spacing.v16,
           _buildAnnouncementCard(fam),
           Spacing.v16,
-          _buildMembersSection(),
+          _buildMembersSection(context),
           Spacing.v16,
           _buildQuestsSection(),
         ],
@@ -1049,126 +1050,113 @@ class FamilyView extends GetView<FamilyController> {
     );
   }
 
-  Widget _buildMembersSection() {
+  Widget _buildMembersSection(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
             AdminAgencyUi.glowIcon(
-              icon: Icons.groups_rounded,
+              icon: Icons.account_tree_rounded,
               accent: _FamilyUi.cyan,
               size: 28,
               iconSize: 14,
             ),
             Spacing.h8,
             const SemiBoldText(
-              text: 'MEMBERS',
+              text: 'FAMILY TREE',
               fontSize: TextStyles.k12FontSize,
               color: kColorWhite,
+            ),
+            const Spacer(),
+            Obx(
+              () => AppText(
+                text: '${controller.familyMembers.length}',
+                fontSize: TextStyles.k12FontSize,
+                color: kColorWhite.withValues(alpha: 0.7),
+              ),
             ),
           ],
         ),
         Spacing.v10,
         Obx(() {
-          final members = controller.familyMembers;
-          if (members.isEmpty) {
-            return Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                gradient: const LinearGradient(colors: _FamilyUi.panelGradient),
+          final mode = controller.treeMode.value;
+          return Row(
+            children: [
+              Expanded(
+                child: _treeModeChip(
+                  label: 'Role',
+                  selected: mode == 0,
+                  onTap: () => controller.selectTreeMode(0),
+                ),
               ),
-              child: AppText(
-                text: 'No members loaded yet.',
-                fontSize: TextStyles.k12FontSize,
-                color: kColorWhite.withValues(alpha: 0.8),
-                align: TextAlign.center,
+              Spacing.h8,
+              Expanded(
+                child: _treeModeChip(
+                  label: 'Sponsor',
+                  selected: mode == 1,
+                  onTap: () => controller.selectTreeMode(1),
+                ),
               ),
+            ],
+          );
+        }),
+        Spacing.v10,
+        Obx(() {
+          if (controller.treeMode.value == 1) {
+            return FamilyMemberTree.sponsor(
+              sponsorRoots: controller.sponsorRoots,
+              childrenOf: controller.sponsorChildrenOf,
+              onMemberTap: (member) =>
+                  controller.onFamilyMemberTap(context, member),
             );
           }
-          return Column(
-            children: members.map((member) {
-              return Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  gradient: const LinearGradient(colors: _FamilyUi.rowGradient),
-                ),
-                child: Row(
-                  children: [
-                    Stack(
-                      children: [
-                        CircleAvatar(
-                          radius: 20,
-                          backgroundColor: _FamilyUi.violet,
-                          child: Text(
-                            member['avatar']?.toString() ?? 'U',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: kColorWhite,
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          right: 0,
-                          bottom: 0,
-                          child: Container(
-                            width: 10,
-                            height: 10,
-                            decoration: BoxDecoration(
-                              color: member['isOnline'] == true
-                                  ? Colors.greenAccent
-                                  : Colors.grey,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: kColorWhite, width: 1.5),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Spacing.h12,
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SemiBoldText(
-                            text: member['name']?.toString() ?? 'Member',
-                            fontSize: TextStyles.k14FontSize,
-                            color: kColorWhite,
-                          ),
-                          AppText(
-                            text:
-                                '${member['role']} · Lv.${member['level'] ?? 1}',
-                            fontSize: TextStyles.k10FontSize,
-                            color: kColorWhite.withValues(alpha: 0.75),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        SemiBoldText(
-                          text: '${member['contribution'] ?? 0}',
-                          fontSize: TextStyles.k14FontSize,
-                          color: _FamilyUi.gold,
-                        ),
-                        AppText(
-                          text: 'points',
-                          fontSize: TextStyles.k10FontSize,
-                          color: kColorWhite.withValues(alpha: 0.65),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
+          return FamilyMemberTree.role(
+            leaders: controller.treeLeaders,
+            officers: controller.treeOfficers,
+            members: controller.treeMembers,
+            onMemberTap: (member) =>
+                controller.onFamilyMemberTap(context, member),
           );
         }),
       ],
+    );
+  }
+
+  Widget _treeModeChip({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Ink(
+          height: 40,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            gradient: selected
+                ? const LinearGradient(
+                    colors: [_FamilyUi.violet, _FamilyUi.pink],
+                  )
+                : const LinearGradient(colors: _FamilyUi.rowGradient),
+            border: Border.all(
+              color: selected
+                  ? _FamilyUi.gold.withValues(alpha: 0.55)
+                  : kColorWhite.withValues(alpha: 0.12),
+            ),
+          ),
+          child: Center(
+            child: SemiBoldText(
+              text: label,
+              fontSize: TextStyles.k12FontSize,
+              color: kColorWhite,
+            ),
+          ),
+        ),
+      ),
     );
   }
 

@@ -4,12 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/services/session/session_earnings_tracker.dart';
+import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/session_earnings_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 /// Premium host dialog for session earnings + withdraw entry.
+///
+/// Matches shared glass dialogs / AdminAgencyUi: dark gradient shell,
+/// glow icon, gold hero amount, equal-height CTAs.
 class SessionEarningsDialog extends StatefulWidget {
   const SessionEarningsDialog({
     super.key,
@@ -51,7 +55,7 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
     super.initState();
     _pulse = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 1600),
     )..repeat(reverse: true);
   }
 
@@ -67,22 +71,16 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
       child: TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0.88, end: 1),
-        duration: const Duration(milliseconds: 380),
+        tween: Tween(begin: 0.9, end: 1),
+        duration: const Duration(milliseconds: 320),
         curve: Curves.easeOutBack,
         builder: (context, scale, child) {
-          return Transform.scale(
-            scale: scale,
-            child: Opacity(
-              opacity: ((scale - 0.88) / 0.12).clamp(0.0, 1.0),
-              child: child,
-            ),
-          );
+          return Transform.scale(scale: scale, child: child);
         },
         child: ClipRRect(
           borderRadius: BorderRadius.circular(28),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(28),
@@ -96,59 +94,94 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
                   ],
                 ),
                 border: Border.all(
-                  color: kColorWalletAmount.withValues(alpha: 0.35),
+                  color: AdminAgencyUi.gold.withValues(alpha: 0.38),
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: kColorWalletAmount.withValues(alpha: 0.2),
-                    blurRadius: 32,
-                    spreadRadius: 1,
-                  ),
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.45),
+                    color: AdminAgencyUi.goldDeep.withValues(alpha: 0.22),
                     blurRadius: 28,
-                    offset: const Offset(0, 16),
+                    offset: const Offset(0, 12),
                   ),
                 ],
               ),
               child: Stack(
                 children: [
-                  _glowBlob(
-                    top: -36,
-                    right: -18,
-                    color: kColorWalletAmount.withValues(alpha: 0.18),
-                    size: 120,
+                  Positioned(
+                    top: -48,
+                    right: -28,
+                    child: IgnorePointer(
+                      child: AnimatedBuilder(
+                        animation: _pulse,
+                        builder: (context, _) {
+                          return Container(
+                            width: 140,
+                            height: 140,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: RadialGradient(
+                                colors: [
+                                  AdminAgencyUi.gold.withValues(
+                                    alpha: 0.14 + _pulse.value * 0.08,
+                                  ),
+                                  Colors.transparent,
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
                   ),
-                  _glowBlob(
-                    bottom: -40,
-                    left: -16,
-                    color: const Color(0xFFFF4081).withValues(alpha: 0.12),
-                    size: 130,
+                  Positioned(
+                    bottom: -36,
+                    left: -24,
+                    child: IgnorePointer(
+                      child: Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(
+                            colors: [
+                              AdminAgencyUi.pink.withValues(alpha: 0.12),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        _coinBadge(),
+                        AdminAgencyUi.glowIcon(
+                          icon: Icons.monetization_on_rounded,
+                          accent: AdminAgencyUi.goldDeep,
+                          accentEnd: AdminAgencyUi.gold,
+                          size: 56,
+                          iconSize: 28,
+                        ),
                         Spacing.v16,
                         const SemiBoldText(
                           text: 'Session earnings',
                           fontSize: TextStyles.k18FontSize,
                           color: kColorWhite,
+                          align: TextAlign.center,
                         ),
-                        Spacing.v4,
+                        Spacing.v6,
                         AppText(
                           text: 'Coins earned in this room so far',
                           fontSize: TextStyles.k12FontSize,
-                          color: Colors.white54,
+                          color: AdminAgencyUi.textSecondary,
                           align: TextAlign.center,
                         ),
                         Spacing.v16,
                         _amountHero(),
                         Spacing.v12,
                         _noteBanner(),
-                        Spacing.v16,
+                        Spacing.v20,
                         _actions(),
                       ],
                     ),
@@ -162,101 +195,110 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
     );
   }
 
-  Widget _coinBadge() {
-    return AnimatedBuilder(
-      animation: _pulse,
-      builder: (context, _) {
-        final glow = 0.28 + (_pulse.value * 0.3);
-        return Container(
-          width: 72,
-          height: 72,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: const RadialGradient(
-              colors: [
-                Color(0xFFFFF8E1),
-                Color(0xFFFFC107),
-                Color(0xFFFF8F00),
-              ],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: kColorWalletAmount.withValues(alpha: glow),
-                blurRadius: 22,
-                spreadRadius: 1,
-              ),
-            ],
-          ),
-          child: Container(
-            margin: const EdgeInsets.all(3),
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: Color(0xFF1A1028),
-            ),
-            child: const Icon(
-              Icons.monetization_on_rounded,
-              color: kColorWalletAmount,
-              size: 34,
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   Widget _amountHero() {
     return Obx(() {
       final amount = SessionEarningsUtils.formatAmountForBanner(
         widget.tracker.displayCoins,
       );
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              kColorWalletAmount.withValues(alpha: 0.22),
-              const Color(0xFFFF4081).withValues(alpha: 0.1),
-              Colors.white.withValues(alpha: 0.03),
-            ],
-          ),
-          border: Border.all(
-            color: kColorWalletAmount.withValues(alpha: 0.3),
-          ),
-        ),
-        child: Column(
-          children: [
-            const AppText(
-              text: 'EARNED THIS SESSION',
-              fontSize: TextStyles.k10FontSize,
-              color: Colors.white54,
-            ),
-            Spacing.v8,
-            ShaderMask(
-              shaderCallback: (bounds) => const LinearGradient(
+      final hasEarnings = widget.tracker.displayCoins > 0;
+
+      return AnimatedBuilder(
+        animation: _pulse,
+        builder: (context, _) {
+          final glow = hasEarnings ? 0.18 + _pulse.value * 0.16 : 0.08;
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
                 colors: [
-                  Color(0xFFFFF8E1),
-                  Color(0xFFFFC107),
-                  Color(0xFFFF8F00),
+                  AdminAgencyUi.gold.withValues(alpha: 0.28),
+                  AdminAgencyUi.goldDeep.withValues(alpha: 0.12),
+                  AdminAgencyUi.pink.withValues(alpha: 0.08),
+                  const Color(0xFF1A0B2E),
                 ],
-              ).createShader(bounds),
-              child: SemiBoldText(
-                text: amount,
-                fontSize: 34,
-                color: kColorWhite,
               ),
+              border: Border.all(
+                color: AdminAgencyUi.gold.withValues(alpha: 0.45),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AdminAgencyUi.gold.withValues(alpha: glow),
+                  blurRadius: 20,
+                  spreadRadius: 0,
+                ),
+              ],
             ),
-            Spacing.v4,
-            AppText(
-              text: widget.unitLabel,
-              fontSize: TextStyles.k12FontSize,
-              color: Colors.white60,
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    color: Colors.black.withValues(alpha: 0.28),
+                    border: Border.all(
+                      color: AdminAgencyUi.gold.withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: hasEarnings
+                              ? AdminAgencyUi.mint
+                              : AdminAgencyUi.textFaint,
+                        ),
+                      ),
+                      Spacing.h6,
+                      SemiBoldText(
+                        text: hasEarnings ? 'LIVE SESSION' : 'WAITING FOR GIFTS',
+                        fontSize: 10,
+                        color: AdminAgencyUi.gold,
+                      ),
+                    ],
+                  ),
+                ),
+                Spacing.v12,
+                AppText(
+                  text: 'EARNED THIS SESSION',
+                  fontSize: TextStyles.k10FontSize,
+                  color: AdminAgencyUi.textMuted,
+                ),
+                Spacing.v6,
+                ShaderMask(
+                  shaderCallback: (bounds) => const LinearGradient(
+                    colors: [
+                      Color(0xFFFFF8E1),
+                      Color(0xFFFFD166),
+                      Color(0xFFFFB020),
+                    ],
+                  ).createShader(bounds),
+                  child: SemiBoldText(
+                    text: amount,
+                    fontSize: 40,
+                    color: kColorWhite,
+                  ),
+                ),
+                Spacing.v2,
+                AppText(
+                  text: widget.unitLabel,
+                  fontSize: TextStyles.k12FontSize,
+                  color: AdminAgencyUi.textSecondary,
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       );
     });
   }
@@ -266,27 +308,39 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
       final hasEarnings = widget.tracker.displayCoins > 0;
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          borderRadius: BorderRadius.circular(14),
+          gradient: LinearGradient(
+            colors: [
+              AdminAgencyUi.violet.withValues(alpha: 0.22),
+              AdminAgencyUi.pink.withValues(alpha: 0.1),
+            ],
+          ),
+          border: Border.all(
+            color: AdminAgencyUi.violet.withValues(alpha: 0.35),
+          ),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(
-              Icons.info_outline_rounded,
-              color: Colors.white54,
-              size: 16,
+            AdminAgencyUi.glowIcon(
+              icon: hasEarnings
+                  ? Icons.account_balance_wallet_rounded
+                  : Icons.card_giftcard_rounded,
+              accent: hasEarnings ? AdminAgencyUi.goldDeep : AdminAgencyUi.pink,
+              accentEnd: hasEarnings ? AdminAgencyUi.gold : AdminAgencyUi.violet,
+              size: 34,
+              iconSize: 16,
             ),
-            const SizedBox(width: 8),
+            Spacing.h10,
             Expanded(
               child: AppText(
                 text: hasEarnings
-                    ? 'Withdraw anytime from your wallet. Session total updates live.'
+                    ? 'Withdraw anytime from your wallet. Session total updates live as gifts arrive.'
                     : 'Receive a gift in this room to start earning coins.',
-                fontSize: TextStyles.k10FontSize,
-                color: Colors.white60,
+                fontSize: TextStyles.k12FontSize,
+                color: AdminAgencyUi.textSecondary,
               ),
             ),
           ],
@@ -297,80 +351,25 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
 
   Widget _actions() {
     return Obx(() {
-      // Nothing to withdraw yet — keep a single full-width Close.
       final hasEarnings = widget.tracker.displayCoins > 0;
       return Row(
         children: [
           Expanded(
-            child: SizedBox(
-              height: 50,
-              child: OutlinedButton(
-                onPressed: () => Get.back(),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white70,
-                  side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                child: const SemiBoldText(
-                  text: 'Close',
-                  fontSize: TextStyles.k12FontSize,
-                  color: Colors.white70,
-                ),
-              ),
+            child: _secondaryButton(
+              label: 'Close',
+              onTap: () => Get.back(),
             ),
           ),
           if (hasEarnings) ...[
-            Spacing.h12,
+            Spacing.h10,
             Expanded(
-              flex: 2,
-              child: SizedBox(
-                height: 50,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFFFC107), Color(0xFFFF8F00)],
-                    ),
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: kColorWalletAmount.withValues(alpha: 0.4),
-                        blurRadius: 16,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () {
-                        Get.back();
-                        widget.onWithdraw();
-                      },
-                      borderRadius: BorderRadius.circular(14),
-                      child: const Center(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.account_balance_wallet_rounded,
-                              color: kColorBlack,
-                              size: 18,
-                            ),
-                            SizedBox(width: 6),
-                            SemiBoldText(
-                              text: 'Withdraw',
-                              fontSize: TextStyles.k12FontSize,
-                              color: kColorBlack,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+              child: _primaryButton(
+                label: 'Withdraw',
+                icon: Icons.account_balance_wallet_rounded,
+                onTap: () {
+                  Get.back();
+                  widget.onWithdraw();
+                },
               ),
             ),
           ],
@@ -379,24 +378,69 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
     });
   }
 
-  Widget _glowBlob({
-    double? top,
-    double? bottom,
-    double? left,
-    double? right,
-    required Color color,
-    required double size,
+  Widget _secondaryButton({
+    required String label,
+    required VoidCallback onTap,
   }) {
-    return Positioned(
-      top: top,
-      bottom: bottom,
-      left: left,
-      right: right,
-      child: IgnorePointer(
-        child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Ink(
+          height: 48,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            color: kColorWhite.withValues(alpha: 0.1),
+            border: Border.all(color: kColorWhite.withValues(alpha: 0.22)),
+          ),
+          child: Center(
+            child: SemiBoldText(
+              text: label,
+              fontSize: TextStyles.k14FontSize,
+              color: kColorWhite.withValues(alpha: 0.9),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _primaryButton({
+    required String label,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Ink(
+          height: 48,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            gradient: AdminAgencyUi.goldButtonGradient,
+            boxShadow: [
+              BoxShadow(
+                color: AdminAgencyUi.goldDeep.withValues(alpha: 0.4),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: AdminAgencyUi.ctaInk, size: 18),
+              Spacing.h6,
+              SemiBoldText(
+                text: label,
+                fontSize: TextStyles.k14FontSize,
+                color: AdminAgencyUi.ctaInk,
+              ),
+            ],
+          ),
         ),
       ),
     );

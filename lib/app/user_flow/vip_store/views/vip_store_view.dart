@@ -3,9 +3,9 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/wallet/bindings/wallet_binding.dart';
 import 'package:qobo_one_live/app/user_flow/wallet/views/wallet_view.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
+import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
-import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/app_widgets/network_svga_widget.dart';
 import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -13,119 +13,184 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 import '../controllers/vip_store_controller.dart';
 
+/// VIP Frames shop — dark glass theme aligned with Family / Discover chrome.
 class VipStoreView extends GetView<VipStoreController> {
   const VipStoreView({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kColorAppBackground,
-      appBar: CommonAppBarWidget(
-        title: 'VIP Frames',
-        useMaterialAppBar: true,
-        actions: [
-          IconButton(
-            tooltip: 'My Backpack',
-            onPressed: controller.openBackpack,
-            icon: const Icon(Icons.style_outlined, color: kColorText),
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage(kImgBG),
+            fit: BoxFit.cover,
           ),
-        ],
-      ),
-      body: Obx(() {
-        if (controller.isLoading.value && controller.vipFrames.isEmpty) {
-          return const Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(kColorPrimary),
-            ),
-          );
-        }
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              _header(context),
+              Expanded(
+                child: Obx(() {
+                  if (controller.isLoading.value &&
+                      controller.vipFrames.isEmpty) {
+                    return const Center(
+                      child: CircularProgressIndicator(color: kColorWhite),
+                    );
+                  }
 
-        return RefreshIndicator(
-          color: kColorPrimary,
-          onRefresh: controller.loadStore,
-          child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              SliverToBoxAdapter(child: _balanceCard(context)),
-              SliverToBoxAdapter(child: _sectionHeader()),
-              if (controller.loadError.value.isNotEmpty &&
-                  controller.vipFrames.isEmpty)
-                SliverFillRemaining(hasScrollBody: false, child: _errorState())
-              else if (controller.vipFrames.isEmpty)
-                SliverFillRemaining(hasScrollBody: false, child: _emptyState())
-              else
-                _framesGrid(),
-              const SliverToBoxAdapter(child: SizedBox(height: 28)),
+                  return RefreshIndicator(
+                    color: AdminAgencyUi.gold,
+                    backgroundColor: const Color(0xFF1A0B2E),
+                    onRefresh: controller.loadStore,
+                    child: CustomScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(
+                        parent: BouncingScrollPhysics(),
+                      ),
+                      slivers: [
+                        SliverToBoxAdapter(child: _balanceCard()),
+                        SliverToBoxAdapter(child: _sectionHeader()),
+                        if (controller.loadError.value.isNotEmpty &&
+                            controller.vipFrames.isEmpty)
+                          SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: _errorState(),
+                          )
+                        else if (controller.vipFrames.isEmpty)
+                          SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: _emptyState(),
+                          )
+                        else
+                          _framesGrid(),
+                        const SliverToBoxAdapter(child: SizedBox(height: 28)),
+                      ],
+                    ),
+                  );
+                }),
+              ),
             ],
           ),
-        );
-      }),
+        ),
+      ),
     );
   }
 
-  Widget _balanceCard(BuildContext context) {
+  Widget _header(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      child: Row(
+        children: [
+          AdminAgencyUi.glassIconButton(
+            icon: Icons.arrow_back_ios_new_rounded,
+            accent: AdminAgencyUi.sky,
+            onTap: () => Get.back(),
+            size: 40,
+            iconSize: 16,
+          ),
+          const Expanded(
+            child: SemiBoldText(
+              text: 'VIP Frames',
+              fontSize: TextStyles.k18FontSize,
+              color: kColorWhite,
+              align: TextAlign.center,
+            ),
+          ),
+          // Balance + Recharge already cover wallet — no backpack shortcut.
+          const SizedBox(width: 40),
+        ],
+      ),
+    );
+  }
+
+  Widget _balanceCard() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
       decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
         gradient: const LinearGradient(
-          colors: [Color(0xFF761B65), Color(0xFFC04B9F)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
+          colors: [Color(0xFF6A1B9A), Color(0xFFC2185B)],
         ),
-        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AdminAgencyUi.gold.withValues(alpha: 0.35),
+        ),
         boxShadow: [
           BoxShadow(
-            color: kColorPrimary.withValues(alpha: 0.22),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
+            color: AdminAgencyUi.pink.withValues(alpha: 0.28),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const AppText(
+          AppText(
             text: 'Your Balance',
-            fontSize: 12,
-            color: Color(0xCCFFFFFF),
+            fontSize: TextStyles.k12FontSize,
+            color: kColorWhite.withValues(alpha: 0.85),
           ),
-          Spacing.v8,
+          Spacing.v10,
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.monetization_on_rounded,
-                color: Color(0xFFFFD700),
-                size: 26,
+              AdminAgencyUi.glowIcon(
+                icon: Icons.monetization_on_rounded,
+                accent: AdminAgencyUi.goldDeep,
+                accentEnd: AdminAgencyUi.gold,
+                size: 40,
+                iconSize: 22,
               ),
-              Spacing.h8,
+              Spacing.h10,
               Expanded(
                 child: Obx(
-                  () => BoldText(
-                    text: '${controller.formattedCoins} Coins',
-                    fontSize: TextStyles.k20FontSize,
-                    color: kColorWhite,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  () => Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      BoldText(
+                        text: controller.formattedCoins,
+                        fontSize: TextStyles.k22FontSize,
+                        color: kColorWhite,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      AppText(
+                        text: 'Coins',
+                        fontSize: TextStyles.k12FontSize,
+                        color: kColorWhite.withValues(alpha: 0.85),
+                      ),
+                    ],
                   ),
                 ),
               ),
               Spacing.h8,
-              SizedBox(
-                height: 34,
-                width: 96,
-                child: appButton(
-                  onPressed: () => Get.to(
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => Get.to(
                     () => const WalletView(),
                     binding: WalletBinding(),
                   ),
-                  buttonText: 'Recharge',
-                  buttonColor: kColorWhite,
-                  borderRadius: 17,
-                  buttonWidth: 96,
-                  textStyle: TextStyles.kBoldPoppins(
-                    fontSize: TextStyles.k12FontSize,
-                    colors: kColorPrimary,
+                  borderRadius: BorderRadius.circular(18),
+                  child: Ink(
+                    height: 36,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18),
+                      gradient: AdminAgencyUi.goldButtonGradient,
+                    ),
+                    child: const Center(
+                      child: SemiBoldText(
+                        text: 'Recharge',
+                        fontSize: TextStyles.k12FontSize,
+                        color: AdminAgencyUi.ctaInk,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -135,19 +200,28 @@ class VipStoreView extends GetView<VipStoreController> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: kColorWhite.withValues(alpha: 0.12),
+              color: Colors.black.withValues(alpha: 0.22),
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: kColorWhite.withValues(alpha: 0.12),
+              ),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(Icons.auto_awesome, color: Color(0xFFFFD700), size: 16),
-                SizedBox(width: 8),
+                AdminAgencyUi.glowIcon(
+                  icon: Icons.auto_awesome_rounded,
+                  accent: AdminAgencyUi.goldDeep,
+                  accentEnd: AdminAgencyUi.gold,
+                  size: 28,
+                  iconSize: 14,
+                ),
+                Spacing.h8,
                 Expanded(
                   child: AppText(
                     text:
                         'VIP frames auto-equip on purchase and play as your room entrance.',
-                    fontSize: 11,
-                    color: Color(0xEEFFFFFF),
+                    fontSize: TextStyles.k10FontSize,
+                    color: kColorWhite.withValues(alpha: 0.9),
                   ),
                 ),
               ],
@@ -163,19 +237,30 @@ class VipStoreView extends GetView<VipStoreController> {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
       child: Row(
         children: [
+          AdminAgencyUi.glowIcon(
+            icon: Icons.workspace_premium_rounded,
+            accent: AdminAgencyUi.violet,
+            accentEnd: AdminAgencyUi.pink,
+            size: 28,
+            iconSize: 14,
+          ),
+          Spacing.h8,
           const SemiBoldText(
-            text: 'Available Frames',
-            fontSize: TextStyles.k16FontSize,
-            color: kColorText,
+            text: 'AVAILABLE FRAMES',
+            fontSize: TextStyles.k12FontSize,
+            color: kColorWhite,
           ),
           const Spacer(),
-          Obx(
-            () => AppText(
-              text: '${controller.vipFrames.length} items',
-              fontSize: 12,
-              color: kColorHint,
-            ),
-          ),
+          // Only show count when there is inventory (avoid unused "0 items").
+          Obx(() {
+            final count = controller.vipFrames.length;
+            if (count <= 0) return const SizedBox.shrink();
+            return AppText(
+              text: '$count items',
+              fontSize: TextStyles.k12FontSize,
+              color: kColorWhite.withValues(alpha: 0.65),
+            );
+          }),
         ],
       ),
     );
@@ -213,23 +298,25 @@ class VipStoreView extends GetView<VipStoreController> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.workspace_premium_rounded,
+            AdminAgencyUi.glowIcon(
+              icon: Icons.workspace_premium_rounded,
+              accent: AdminAgencyUi.goldDeep,
+              accentEnd: AdminAgencyUi.gold,
               size: 64,
-              color: Colors.grey.shade400,
+              iconSize: 32,
             ),
             Spacing.v16,
             const SemiBoldText(
               text: 'No VIP frames yet',
-              fontSize: 16,
-              color: kColorText,
+              fontSize: TextStyles.k16FontSize,
+              color: kColorWhite,
             ),
             Spacing.v8,
-            const AppText(
+            AppText(
               text:
                   'When admin adds Avatar Frames with category VIP, they will appear here.',
-              fontSize: 12,
-              color: kColorHint,
+              fontSize: TextStyles.k12FontSize,
+              color: kColorWhite.withValues(alpha: 0.65),
               align: TextAlign.center,
             ),
           ],
@@ -245,31 +332,48 @@ class VipStoreView extends GetView<VipStoreController> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.wifi_off_rounded, size: 56, color: Colors.redAccent),
+            AdminAgencyUi.glowIcon(
+              icon: Icons.wifi_off_rounded,
+              accent: AdminAgencyUi.rose,
+              size: 56,
+              iconSize: 28,
+            ),
             Spacing.v16,
             const SemiBoldText(
               text: 'Could not load VIP frames',
-              fontSize: 16,
-              color: kColorText,
+              fontSize: TextStyles.k16FontSize,
+              color: kColorWhite,
             ),
             Spacing.v8,
             Obx(
               () => AppText(
                 text: controller.loadError.value,
-                fontSize: 12,
-                color: kColorHint,
+                fontSize: TextStyles.k12FontSize,
+                color: kColorWhite.withValues(alpha: 0.65),
                 align: TextAlign.center,
               ),
             ),
             Spacing.v20,
-            SizedBox(
-              width: 140,
-              height: 40,
-              child: appButton(
-                onPressed: controller.loadStore,
-                buttonText: 'Retry',
-                isGradient: true,
-                borderRadius: 12,
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: controller.loadStore,
+                borderRadius: BorderRadius.circular(14),
+                child: Ink(
+                  height: 44,
+                  width: 140,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    gradient: AdminAgencyUi.primaryButtonGradient,
+                  ),
+                  child: const Center(
+                    child: SemiBoldText(
+                      text: 'Retry',
+                      fontSize: TextStyles.k14FontSize,
+                      color: kColorWhite,
+                    ),
+                  ),
+                ),
               ),
             ),
           ],
@@ -300,19 +404,23 @@ class _VipFrameCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: kColorWhite,
         borderRadius: BorderRadius.circular(18),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF3D2068), Color(0xFF25143F)],
+        ),
         border: Border.all(
           color: isEquipped
-              ? const Color(0xFFFFD700)
-              : kColorPrimary.withValues(alpha: 0.08),
+              ? AdminAgencyUi.gold
+              : kColorWhite.withValues(alpha: 0.12),
           width: isEquipped ? 1.6 : 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: kColorBlack.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: AdminAgencyUi.violet.withValues(alpha: 0.22),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -326,8 +434,11 @@ class _VipFrameCard extends StatelessWidget {
                   child: Container(
                     margin: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF7F0F6),
+                      color: Colors.black.withValues(alpha: 0.28),
                       borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: AdminAgencyUi.gold.withValues(alpha: 0.2),
+                      ),
                     ),
                     child: Center(child: _preview(size: 96)),
                   ),
@@ -341,15 +452,17 @@ class _VipFrameCard extends StatelessWidget {
                       vertical: 3,
                     ),
                     decoration: BoxDecoration(
-                      color: isEquipped
-                          ? Colors.green
-                          : const Color(0xFFFFD700),
+                      gradient: isEquipped
+                          ? const LinearGradient(
+                              colors: [Color(0xFF4ADE80), Color(0xFF22C55E)],
+                            )
+                          : AdminAgencyUi.goldButtonGradient,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: AppText(
                       text: isEquipped ? 'ACTIVE' : 'VIP',
                       fontSize: 9,
-                      color: isEquipped ? kColorWhite : kColorText,
+                      color: isEquipped ? kColorWhite : AdminAgencyUi.ctaInk,
                     ),
                   ),
                 ),
@@ -364,7 +477,7 @@ class _VipFrameCard extends StatelessWidget {
                 SemiBoldText(
                   text: name,
                   fontSize: TextStyles.k14FontSize,
-                  color: kColorText,
+                  color: kColorWhite,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -373,28 +486,44 @@ class _VipFrameCard extends StatelessWidget {
                   text: isEquipped
                       ? 'Auto-equipped'
                       : (duration.isEmpty ? 'Limited time' : duration),
-                  fontSize: 11,
-                  color: isEquipped ? Colors.green : kColorHint,
+                  fontSize: TextStyles.k10FontSize,
+                  color: isEquipped
+                      ? AdminAgencyUi.mint
+                      : kColorWhite.withValues(alpha: 0.65),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 Spacing.v10,
-                SizedBox(
-                  width: double.infinity,
-                  height: 36,
-                  child: appButton(
-                    onPressed: isBusy || isOwned ? () {} : onBuy,
-                    buttonText: isOwned
-                        ? (isEquipped ? 'Equipped' : 'Owned')
-                        : _formatPrice(price),
-                    buttonColor: isOwned
-                        ? const Color(0xFFF1E6B8)
-                        : kColorPrimary,
-                    textColor: isOwned ? kColorText : kColorWhite,
-                    borderRadius: 12,
-                    textStyle: TextStyles.kSemiBoldPoppins(
-                      fontSize: TextStyles.k12FontSize,
-                      colors: isOwned ? kColorText : kColorWhite,
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: isBusy || isOwned ? null : onBuy,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Ink(
+                      height: 36,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        gradient: isOwned
+                            ? LinearGradient(
+                                colors: [
+                                  AdminAgencyUi.gold.withValues(alpha: 0.35),
+                                  AdminAgencyUi.goldDeep.withValues(
+                                    alpha: 0.2,
+                                  ),
+                                ],
+                              )
+                            : AdminAgencyUi.primaryButtonGradient,
+                      ),
+                      child: Center(
+                        child: SemiBoldText(
+                          text: isOwned
+                              ? (isEquipped ? 'Equipped' : 'Owned')
+                              : _formatPrice(price),
+                          fontSize: TextStyles.k12FontSize,
+                          color: isOwned ? AdminAgencyUi.gold : kColorWhite,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -412,10 +541,12 @@ class _VipFrameCard extends StatelessWidget {
     final source = svgaUrl.isNotEmpty ? svgaUrl : imageUrl;
 
     if (source.isEmpty) {
-      return Icon(
-        Icons.workspace_premium_rounded,
-        color: kColorPrimary.withValues(alpha: 0.7),
-        size: 40,
+      return AdminAgencyUi.glowIcon(
+        icon: Icons.workspace_premium_rounded,
+        accent: AdminAgencyUi.goldDeep,
+        accentEnd: AdminAgencyUi.gold,
+        size: 44,
+        iconSize: 22,
       );
     }
 
@@ -425,16 +556,20 @@ class _VipFrameCard extends StatelessWidget {
             width: size,
             height: size,
             fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) => Icon(
-              Icons.workspace_premium_rounded,
-              color: kColorPrimary.withValues(alpha: 0.7),
-              size: 40,
+            errorBuilder: (_, __, ___) => AdminAgencyUi.glowIcon(
+              icon: Icons.workspace_premium_rounded,
+              accent: AdminAgencyUi.goldDeep,
+              accentEnd: AdminAgencyUi.gold,
+              size: 44,
+              iconSize: 22,
             ),
           )
-        : Icon(
-            Icons.workspace_premium_rounded,
-            color: kColorPrimary.withValues(alpha: 0.7),
-            size: 40,
+        : AdminAgencyUi.glowIcon(
+            icon: Icons.workspace_premium_rounded,
+            accent: AdminAgencyUi.goldDeep,
+            accentEnd: AdminAgencyUi.gold,
+            size: 44,
+            iconSize: 22,
           );
 
     if (ProfileBackgroundMedia.isSvgaUrl(source) || svgaUrl.isNotEmpty) {

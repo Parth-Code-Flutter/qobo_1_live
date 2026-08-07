@@ -44,7 +44,7 @@ class DiscoverTabController extends GetxController {
   final searchFocusNode = FocusNode();
 
   final discoverUsers = <SocialUserCard>[].obs;
-  final searchResults = <dynamic>[].obs;
+  final searchResults = <SocialUserCard>[].obs;
   final isDiscoverUsersLoading = false.obs;
   final isDiscoverFiltersLoading = false.obs;
   final isSearchLoading = false.obs;
@@ -185,22 +185,21 @@ class DiscoverTabController extends GetxController {
       isSearchLoading.value = true;
       final response = await _authRepo.searchUsers(query: query);
       if (response != null && response['statusCode'] == 1) {
-        final list = response['data'];
-        if (list is List) {
-          searchResults.value = list;
-          for (final raw in list) {
-            if (raw is! Map) continue;
-            final id = raw['id']?.toString() ?? '';
-            if (id.isEmpty) continue;
-            if (raw['isFollowing'] == true) {
-              followingUserIds.add(id);
+        final cards = SocialUserCard.listFromResponseData(response['data']);
+        searchResults.assignAll(
+          cards.map((user) {
+            final following =
+                user.isFollowing || followingUserIds.contains(user.id);
+            if (following) {
+              followingUserIds.add(user.id);
             } else {
-              followingUserIds.remove(id);
+              followingUserIds.remove(user.id);
             }
-          }
-        } else {
-          searchResults.clear();
-        }
+            return following ? user.copyWith(isFollowing: true) : user;
+          }),
+        );
+      } else {
+        searchResults.clear();
       }
     } catch (_) {
       searchResults.clear();
@@ -473,6 +472,9 @@ class DiscoverTabController extends GetxController {
     discoverUsers.value = discoverUsers
         .map((u) => u.id == userId ? u.copyWith(isFavourite: isFavourite) : u)
         .toList();
+    searchResults.value = searchResults
+        .map((u) => u.id == userId ? u.copyWith(isFavourite: isFavourite) : u)
+        .toList();
   }
 
   Future<void> toggleFollow(BuildContext context, String targetId) async {
@@ -577,6 +579,9 @@ class DiscoverTabController extends GetxController {
     discoverUsers.value = discoverUsers
         .map((u) => u.id == userId ? u.copyWith(isFollowing: isFollowing) : u)
         .toList();
+    searchResults.value = searchResults
+        .map((u) => u.id == userId ? u.copyWith(isFollowing: isFollowing) : u)
+        .toList();
   }
 
   void _applyFollowState(
@@ -608,10 +613,14 @@ class DiscoverTabController extends GetxController {
     }
 
     discoverUsers.value = discoverUsers.map(merge).toList();
+    searchResults.value = searchResults.map(merge).toList();
   }
 
   SocialUserCard? userById(String id) {
     for (final u in discoverUsers) {
+      if (u.id == id) return u;
+    }
+    for (final u in searchResults) {
       if (u.id == id) return u;
     }
     return null;

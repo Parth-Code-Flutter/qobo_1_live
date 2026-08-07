@@ -155,83 +155,99 @@ class CommonAppDialog extends StatelessWidget {
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
-      child: TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0.9, end: 1),
-        duration: const Duration(milliseconds: 320),
-        curve: Curves.easeOutBack,
-        builder: (context, scale, child) {
-          return Transform.scale(scale: scale, child: child);
-        },
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(28),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-            child: Container(
-              decoration: BoxDecoration(
+      // Dialog already insets for the keyboard; LayoutBuilder sees the leftover
+      // height so we can scroll instead of overflowing (Create Family, etc.).
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final maxHeight = constraints.maxHeight.isFinite &&
+                  constraints.maxHeight > 0
+              ? constraints.maxHeight
+              : MediaQuery.sizeOf(context).height * 0.85;
+
+          return TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.9, end: 1),
+            duration: const Duration(milliseconds: 320),
+            curve: Curves.easeOutBack,
+            builder: (context, scale, child) {
+              return Transform.scale(scale: scale, child: child);
+            },
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxHeight),
+              child: ClipRRect(
                 borderRadius: BorderRadius.circular(28),
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xF02A1638),
-                    Color(0xF0140C22),
-                    Color(0xF00C0814),
-                  ],
-                ),
-                border: Border.all(
-                  color: iconAccent.withValues(alpha: 0.35),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: iconAccent.withValues(alpha: 0.22),
-                    blurRadius: 28,
-                    offset: const Offset(0, 12),
-                  ),
-                ],
-              ),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (icon != null) ...[
-                      AdminAgencyUi.glowIcon(
-                        icon: icon!,
-                        accent: iconAccent,
-                        size: 56,
-                        iconSize: 28,
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(28),
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Color(0xF02A1638),
+                          Color(0xF0140C22),
+                          Color(0xF00C0814),
+                        ],
                       ),
-                      Spacing.v16,
-                    ],
-                    SemiBoldText(
-                      text: title,
-                      fontSize: TextStyles.k18FontSize,
-                      color: kColorWhite,
-                      align: TextAlign.center,
+                      border: Border.all(
+                        color: iconAccent.withValues(alpha: 0.35),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: iconAccent.withValues(alpha: 0.22),
+                          blurRadius: 28,
+                          offset: const Offset(0, 12),
+                        ),
+                      ],
                     ),
-                    if (body.isNotEmpty) ...[
-                      Spacing.v10,
-                      AppText(
-                        text: body,
-                        fontSize: TextStyles.k14FontSize,
-                        color: kColorWhite.withValues(alpha: 0.78),
-                        align: TextAlign.center,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (icon != null) ...[
+                            AdminAgencyUi.glowIcon(
+                              icon: icon!,
+                              accent: iconAccent,
+                              size: 56,
+                              iconSize: 28,
+                            ),
+                            Spacing.v16,
+                          ],
+                          SemiBoldText(
+                            text: title,
+                            fontSize: TextStyles.k18FontSize,
+                            color: kColorWhite,
+                            align: TextAlign.center,
+                          ),
+                          if (body.isNotEmpty) ...[
+                            Spacing.v10,
+                            AppText(
+                              text: body,
+                              fontSize: TextStyles.k14FontSize,
+                              color: kColorWhite.withValues(alpha: 0.78),
+                              align: TextAlign.center,
+                            ),
+                          ],
+                          if (content != null) ...[
+                            Spacing.v16,
+                            content!,
+                          ],
+                          if (actions.isNotEmpty) ...[
+                            Spacing.v20,
+                            _actionRow(context),
+                          ],
+                        ],
                       ),
-                    ],
-                    if (content != null) ...[
-                      Spacing.v16,
-                      content!,
-                    ],
-                    if (actions.isNotEmpty) ...[
-                      Spacing.v20,
-                      _actionRow(context),
-                    ],
-                  ],
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
