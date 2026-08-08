@@ -894,9 +894,13 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
         constraints: BoxConstraints(minHeight: compact ? 58 : 64),
         child: LayoutBuilder(
           builder: (context, constraints) {
+            // Video rooms carry more trailing actions than audio; shrink the
+            // header chrome when the bar is tight so it never overflows.
+            final dense = compact ||
+                (controller.isVideoRoom && constraints.maxWidth < 420);
             final earningsMaxWidth = (constraints.maxWidth * 0.17).clamp(
               52.0,
-              compact ? 64.0 : 72.0,
+              dense ? 64.0 : 72.0,
             );
 
             return Row(
@@ -904,7 +908,7 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
                 _CircleButton(
                   icon: Icons.arrow_back_ios_new_rounded,
                   onTap: controller.leaveRoom,
-                  compact: compact,
+                  compact: dense,
                   filled: false,
                 ),
                 Spacing.h8,
@@ -914,11 +918,11 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
                   child: AppUserAvatar(
                     name: controller.hostName.value,
                     imageUrl: controller.hostAvatarUrl.value,
-                    size: compact ? 40 : 44,
+                    size: dense ? 38 : 44,
                     border: Border.all(color: kColorWhite, width: 1.5),
                   ),
                 ),
-                Spacing.h10,
+                dense ? Spacing.h6 : Spacing.h10,
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -952,37 +956,37 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
                   _CircleButton(
                     icon: Icons.share_rounded,
                     onTap: () => controller.shareRoom(),
-                    compact: compact,
+                    compact: dense,
                   ),
                   if (controller.canManageAudioRoomMembers) ...[
-                    Spacing.h8,
+                    dense ? Spacing.h6 : Spacing.h8,
                     _CircleButton(
                       icon: Icons.wallpaper_rounded,
                       onTap: controller.openRoomBackgroundSheet,
-                      compact: compact,
+                      compact: dense,
                     ),
                   ],
                 ],
                 // Floor audience moved here from the bottom strip: person + count.
-                Spacing.h8,
-                _FloorAudienceBadge(compact: compact),
+                dense ? Spacing.h6 : Spacing.h8,
+                _FloorAudienceBadge(compact: dense),
                 // Host + audience: local session earnings (gifts to this user).
-                Spacing.h8,
+                dense ? Spacing.h6 : Spacing.h8,
                 SessionEarningsBadge(
                   key: controller.sessionEarningsBadgeKey,
                   tracker: controller.sessionEarnings,
-                  compact: compact,
+                  compact: dense,
                   maxWidth: earningsMaxWidth,
                   icon: Icons.monetization_on_rounded,
                   iconColor: const Color(0xFFFFA10A),
                   onTap: controller.openSessionEarningsDialog,
                 ),
                 if (controller.isHost.value) ...[
-                  Spacing.h8,
+                  dense ? Spacing.h6 : Spacing.h8,
                   _CircleButton(
                     icon: Icons.power_settings_new_rounded,
                     onTap: controller.confirmEndRoom,
-                    compact: compact,
+                    compact: dense,
                     iconColor: const Color(0xFFFF3B5C),
                   ),
                 ],
