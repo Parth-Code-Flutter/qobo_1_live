@@ -18,6 +18,7 @@ import 'package:qobo_one_live/services/chat/chat_logger.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
+import 'package:qobo_one_live/utils/text_utils/phone_mask_utils.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:intl/intl.dart';
 
@@ -667,7 +668,9 @@ class ChatDetailController extends GetxController {
   }
 
   Future<void> sendMessage() async {
-    final text = messageController.text.trim();
+    // Mask any mobile numbers before persisting/sending so they never leave the
+    // device or reach the recipient in clear text.
+    final text = PhoneMaskUtils.mask(messageController.text.trim());
     if (text.isEmpty || targetId.value.isEmpty || _sendInFlight) return;
 
     final myId = _myUserId ?? '';
@@ -1112,12 +1115,12 @@ class ChatDetailController extends GetxController {
 
   static String _extractContent(dynamic content) {
     if (content == null) return '';
-    if (content is String) return content;
+    if (content is String) return PhoneMaskUtils.mask(content);
     if (content is Map) {
       final text = content['text'] ?? content['message'];
-      return text?.toString() ?? '';
+      return PhoneMaskUtils.mask(text?.toString() ?? '');
     }
-    return content.toString();
+    return PhoneMaskUtils.mask(content.toString());
   }
 
   static List<ChatMessageModel> _mergeMessages(

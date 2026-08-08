@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
+import 'package:qobo_one_live/utils/text_utils/phone_mask_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 import '../controllers/chat_detail_controller.dart';
@@ -34,7 +35,7 @@ class ChatTextMessageWidget extends StatelessWidget {
               ),
             ),
             child: AppText(
-              text: message.text,
+              text: PhoneMaskUtils.mask(message.text),
               fontSize: TextStyles.k14FontSize,
               color: message.isMe ? kColorWhite : kColorText,
             ),

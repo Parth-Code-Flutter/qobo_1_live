@@ -255,106 +255,144 @@ class _WalletViewState extends State<WalletView> {
 
   void _openCheckoutBottomSheet(CoinPackage plan) {
     Get.bottomSheet(
-      Container(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-        decoration: const BoxDecoration(
-          color: Color(0xFF1E1E2D),
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(24),
-            topRight: Radius.circular(24),
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(2),
+      Builder(
+        builder: (context) {
+          return Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(context).height * 0.86,
+            ),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFF2A2438),
+                  Color(0xFF1A1528),
+                  Color(0xFF12101C),
+                ],
+              ),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.08),
+              ),
+            ),
+            child: SafeArea(
+              top: false,
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.white24,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    Spacing.v16,
+                    const Center(
+                      child: SemiBoldText(
+                        text: 'Select Payment Method',
+                        fontSize: 16,
+                        color: kColorWhite,
+                      ),
+                    ),
+                    Spacing.v12,
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.amber.withValues(alpha: 0.28),
+                          ),
+                        ),
+                        child: AppText(
+                          text:
+                              'Total Amount: ${plan.priceLabel} (${plan.coinsLabel})',
+                          fontSize: 13,
+                          color: Colors.amber,
+                        ),
+                      ),
+                    ),
+                    Spacing.v16,
+                    _paymentMethodTile(
+                      logoIcon: Icons.credit_card_rounded,
+                      title: 'Razorpay',
+                      subtitle: 'UPI · Cards · NetBanking · Wallets',
+                      color: Colors.deepOrange,
+                      onTap: () => _submitPayment('Razorpay', plan),
+                    ),
+                    const Divider(color: Colors.white10, height: 16),
+                    _paymentMethodTile(
+                      logoIcon: Icons.account_balance_wallet_rounded,
+                      title: 'Google Pay',
+                      subtitle: 'Coming soon',
+                      color: Colors.blue,
+                      onTap: () {
+                        Get.back();
+                        Get.snackbar(
+                          'Coming soon',
+                          'Use Razorpay for coin purchases right now.',
+                          snackPosition: SnackPosition.BOTTOM,
+                          backgroundColor: Colors.black87,
+                          colorText: kColorWhite,
+                        );
+                      },
+                    ),
+                    const Divider(color: Colors.white10, height: 16),
+                    _paymentMethodTile(
+                      logoIcon: Icons.payment_rounded,
+                      title: 'PayPal Gateway',
+                      subtitle: 'Coming soon',
+                      color: Colors.indigo,
+                      onTap: () {
+                        Get.back();
+                        Get.snackbar(
+                          'Coming soon',
+                          'Use Razorpay for coin purchases right now.',
+                          snackPosition: SnackPosition.BOTTOM,
+                          backgroundColor: Colors.black87,
+                          colorText: kColorWhite,
+                        );
+                      },
+                    ),
+                    const Divider(color: Colors.white10, height: 16),
+                    _paymentMethodTile(
+                      logoIcon: Icons.monetization_on_outlined,
+                      title: 'Buy via Coin Seller',
+                      color: Colors.amber,
+                      onTap: () {
+                        Get.back();
+                        Get.snackbar(
+                          'Order Request Submitted',
+                          'Purchase request sent to official coin sellers! They will contact you shortly.',
+                          snackPosition: SnackPosition.TOP,
+                          backgroundColor: Colors.green,
+                          colorText: kColorWhite,
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
             ),
-            Spacing.v16,
-            const Center(
-              child: SemiBoldText(
-                text: 'Select Payment Method',
-                fontSize: 16,
-                color: kColorWhite,
-              ),
-            ),
-            Spacing.v12,
-            Center(
-              child: AppText(
-                text: 'Total Amount: ${plan.priceLabel} (${plan.coinsLabel})',
-                fontSize: 13,
-                color: Colors.amber,
-              ),
-            ),
-            Spacing.v24,
-            _paymentMethodTile(
-              logoIcon: Icons.credit_card_rounded,
-              title: 'Razorpay',
-              subtitle: 'UPI · Cards · NetBanking · Wallets',
-              color: Colors.deepOrange,
-              onTap: () => _submitPayment('Razorpay', plan),
-            ),
-            const Divider(color: Colors.white10, height: 16),
-            _paymentMethodTile(
-              logoIcon: Icons.account_balance_wallet_rounded,
-              title: 'Google Pay',
-              subtitle: 'Coming soon',
-              color: Colors.blue,
-              onTap: () {
-                Get.back();
-                Get.snackbar(
-                  'Coming soon',
-                  'Use Razorpay for coin purchases right now.',
-                  snackPosition: SnackPosition.BOTTOM,
-                  backgroundColor: Colors.black87,
-                  colorText: kColorWhite,
-                );
-              },
-            ),
-            const Divider(color: Colors.white10, height: 16),
-            _paymentMethodTile(
-              logoIcon: Icons.payment_rounded,
-              title: 'PayPal Gateway',
-              subtitle: 'Coming soon',
-              color: Colors.indigo,
-              onTap: () {
-                Get.back();
-                Get.snackbar(
-                  'Coming soon',
-                  'Use Razorpay for coin purchases right now.',
-                  snackPosition: SnackPosition.BOTTOM,
-                  backgroundColor: Colors.black87,
-                  colorText: kColorWhite,
-                );
-              },
-            ),
-            const Divider(color: Colors.white10, height: 16),
-            _paymentMethodTile(
-              logoIcon: Icons.monetization_on_outlined,
-              title: 'Buy via Coin Seller',
-              color: Colors.amber,
-              onTap: () {
-                Get.back();
-                Get.snackbar(
-                  'Order Request Submitted',
-                  'Purchase request sent to official coin sellers! They will contact you shortly.',
-                  snackPosition: SnackPosition.TOP,
-                  backgroundColor: Colors.green,
-                  colorText: kColorWhite,
-                );
-              },
-            ),
-          ],
-        ),
+          );
+        },
       ),
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
     );
   }
