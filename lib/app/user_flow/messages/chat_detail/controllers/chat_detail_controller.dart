@@ -19,6 +19,7 @@ import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/phone_mask_utils.dart';
+import 'package:qobo_one_live/utils/text_utils/profanity_mask_utils.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:intl/intl.dart';
 
@@ -668,9 +669,11 @@ class ChatDetailController extends GetxController {
   }
 
   Future<void> sendMessage() async {
-    // Mask any mobile numbers before persisting/sending so they never leave the
-    // device or reach the recipient in clear text.
-    final text = PhoneMaskUtils.mask(messageController.text.trim());
+    // Mask mobile numbers and abusive words before persisting/sending so they
+    // never leave the device or reach the recipient in clear text.
+    final text = ProfanityMaskUtils.mask(
+      PhoneMaskUtils.mask(messageController.text.trim()),
+    );
     if (text.isEmpty || targetId.value.isEmpty || _sendInFlight) return;
 
     final myId = _myUserId ?? '';
@@ -1115,13 +1118,17 @@ class ChatDetailController extends GetxController {
 
   static String _extractContent(dynamic content) {
     if (content == null) return '';
-    if (content is String) return PhoneMaskUtils.mask(content);
+    if (content is String) return _sanitize(content);
     if (content is Map) {
       final text = content['text'] ?? content['message'];
-      return PhoneMaskUtils.mask(text?.toString() ?? '');
+      return _sanitize(text?.toString() ?? '');
     }
-    return PhoneMaskUtils.mask(content.toString());
+    return _sanitize(content.toString());
   }
+
+  /// Hide mobile numbers and abusive words from displayed/stored chat text.
+  static String _sanitize(String text) =>
+      ProfanityMaskUtils.mask(PhoneMaskUtils.mask(text));
 
   static List<ChatMessageModel> _mergeMessages(
     List<ChatMessageModel> a,
