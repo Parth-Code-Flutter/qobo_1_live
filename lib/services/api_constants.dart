@@ -458,6 +458,60 @@ class PkEndpoints {
   static const String datingAction = '/api/pk/dating-action';
 }
 
+/// Host-vs-host PK Battle v1 endpoints (`/api/v1/pk/*`).
+///
+/// This is the new server-authoritative PK contract (invitations, session
+/// state, gift-to-side scoring, result, history). Kept separate from the
+/// legacy [PkEndpoints] (`/api/pk/*`) so both can coexist during migration.
+class PkV1Endpoints {
+  PkV1Endpoints._();
+
+  /// GET /api/v1/pk/eligible-hosts?page=&pageSize=&search=
+  static const String eligibleHosts = '/api/v1/pk/eligible-hosts';
+
+  /// POST /api/v1/pk/invitations
+  static const String invitations = '/api/v1/pk/invitations';
+
+  /// GET /api/v1/pk/invitations?type=incoming|outgoing
+  static const String invitationsList = '/api/v1/pk/invitations';
+
+  /// POST /api/v1/pk/invitations/{id}/accept
+  static String acceptInvitation(String id) =>
+      '/api/v1/pk/invitations/$id/accept';
+
+  /// POST /api/v1/pk/invitations/{id}/reject
+  static String rejectInvitation(String id) =>
+      '/api/v1/pk/invitations/$id/reject';
+
+  /// POST /api/v1/pk/invitations/{id}/cancel
+  static String cancelInvitation(String id) =>
+      '/api/v1/pk/invitations/$id/cancel';
+
+  /// GET /api/v1/pk/{pkId}
+  static String session(String pkId) => '/api/v1/pk/$pkId';
+
+  /// POST /api/v1/pk/{pkId}/gifts
+  static String sendGift(String pkId) => '/api/v1/pk/$pkId/gifts';
+
+  /// GET /api/v1/pk/{pkId}/gifts
+  static String giftTransactions(String pkId) => '/api/v1/pk/$pkId/gifts';
+
+  /// POST /api/v1/pk/{pkId}/leave
+  static String leave(String pkId) => '/api/v1/pk/$pkId/leave';
+
+  /// POST /api/v1/pk/{pkId}/report
+  static String report(String pkId) => '/api/v1/pk/$pkId/report';
+
+  /// GET /api/v1/pk/{pkId}/result
+  static String result(String pkId) => '/api/v1/pk/$pkId/result';
+
+  /// GET /api/v1/pk/history?page=&pageSize=
+  static const String history = '/api/v1/pk/history';
+
+  /// GET /api/v1/pk/gifts — available virtual gifts (coin cost + PK points).
+  static const String giftCatalog = '/api/v1/pk/gifts';
+}
+
 /// Central place for paid calling related API endpoints.
 class CallingEndpoints {
   CallingEndpoints._();

@@ -94,6 +94,10 @@ import '../app/user_flow/customer_service/bindings/customer_service_binding.dart
 import '../app/user_flow/customer_service/views/customer_service_view.dart';
 import '../app/user_flow/pk_battle/bindings/pk_battle_binding.dart';
 import '../app/user_flow/pk_battle/views/pk_battle_view.dart';
+import '../app/user_flow/pk_battle/bindings/pk_v1_binding.dart';
+import '../app/user_flow/pk_battle/views/pk_v1_arena_view.dart';
+import '../app/user_flow/pk_battle/bindings/pk_v1_history_binding.dart';
+import '../app/user_flow/pk_battle/views/pk_v1_history_view.dart';
 import '../app/user_flow/call/bindings/call_binding.dart';
 import '../app/user_flow/call/views/call_view.dart';
 import '../app/user_flow/coin_seller/bindings/coin_seller_binding.dart';
@@ -349,6 +353,16 @@ class AppPages {
       name: _Paths.PK_BATTLE,
       page: () => const PKBattleView(),
       binding: PKBattleBinding(),
+    ),
+    GetPage(
+      name: _Paths.PK_V1_ARENA,
+      page: () => const PkV1ArenaView(),
+      binding: PkV1Binding(),
+    ),
+    GetPage(
+      name: _Paths.PK_V1_HISTORY,
+      page: () => const PkV1HistoryView(),
+      binding: PkV1HistoryBinding(),
     ),
     GetPage(
       name: _Paths.CALL,

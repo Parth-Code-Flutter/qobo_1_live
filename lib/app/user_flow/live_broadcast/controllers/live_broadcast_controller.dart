@@ -3864,6 +3864,31 @@ class LiveBroadcastController extends GetxController {
     );
   }
 
+  /// Opens the host-vs-host PK Battle v1 arena (host selection → battle).
+  void openPkV1Arena() {
+    final roomApiId = audioRoomApiId.trim().isNotEmpty
+        ? audioRoomApiId.trim()
+        : roomId.value.trim();
+    if (roomApiId.isEmpty) {
+      Get.snackbar(
+        'PK Battle',
+        'Room id is missing. Rejoin the room and try again.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.black87,
+        colorText: kColorWhite,
+      );
+      return;
+    }
+    Get.toNamed(
+      Routes.PK_V1_ARENA,
+      arguments: {
+        'roomId': roomApiId,
+        'selfName': hostName.value,
+        'selfAvatar': hostAvatarUrl.value ?? '',
+      },
+    );
+  }
+
   void joinFollowerPkFromSeat(AudioRoomSeatModel seat) {
     final battle = seat.pkBattle;
     final roomApiId = audioRoomApiId.trim();

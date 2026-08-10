@@ -51,6 +51,8 @@ abstract class Routes {
   static const LIVE_MODERATION = _Paths.LIVE_MODERATION;
   static const CUSTOMER_SERVICE = _Paths.CUSTOMER_SERVICE;
   static const PK_BATTLE = _Paths.PK_BATTLE;
+  static const PK_V1_ARENA = _Paths.PK_V1_ARENA;
+  static const PK_V1_HISTORY = _Paths.PK_V1_HISTORY;
   static const CALL = _Paths.CALL;
   static const COIN_SELLER = _Paths.COIN_SELLER;
   static const AGENCY_OWNER = _Paths.AGENCY_OWNER;
@@ -109,6 +111,8 @@ abstract class _Paths {
   static const LIVE_MODERATION = '/live-moderation';
   static const CUSTOMER_SERVICE = '/customer-service';
   static const PK_BATTLE = '/pk-battle';
+  static const PK_V1_ARENA = '/pk-v1-arena';
+  static const PK_V1_HISTORY = '/pk-v1-history';
   static const CALL = '/call';
   static const COIN_SELLER = '/coin-seller';
   static const AGENCY_OWNER = '/agency-owner';

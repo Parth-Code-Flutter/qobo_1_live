@@ -43,6 +43,30 @@ class UserRealtimeSocketService extends GetxController {
   final _floorAudienceListeners = <void Function(Map<String, dynamic> data)>{};
   final _userKickedListeners = <void Function(Map<String, dynamic> data)>{};
 
+  /// Host-vs-host PK Battle v1 events (`PK_INVITATION_RECEIVED`,
+  /// `PK_SCORE_UPDATED`, `PK_RESULT`, ...). Callback receives (event, data).
+  final _pkBattleV1Listeners =
+      <void Function(String event, Map<String, dynamic> data)>{};
+  String? _joinedPkId;
+
+  /// All PK Battle v1 socket event names (server → client).
+  static const List<String> pkV1Events = [
+    'PK_INVITATION_RECEIVED',
+    'PK_INVITATION_ACCEPTED',
+    'PK_INVITATION_REJECTED',
+    'PK_STARTED',
+    'PK_STATE_SYNC',
+    'PK_SCORE_UPDATED',
+    'PK_GIFT_RECEIVED',
+    'PK_ENDED',
+    'PK_RESULT',
+    'PK_CANCELLED',
+    'PK_HOST_DISCONNECTED',
+    'PK_HOST_RECONNECTED',
+    'PK_MEMBER_JOINED',
+    'PK_MEMBER_LEFT',
+  ];
+
   /// Ensures a singleton exists and connects when the user is logged in.
   static Future<void> ensureConnected() async {
     final service = Get.isRegistered<UserRealtimeSocketService>()
@@ -174,6 +198,11 @@ class UserRealtimeSocketService extends GetxController {
       );
       socket.on('vip_user_joined', _onVipUserJoined);
 
+      // Host-vs-host PK Battle v1 events.
+      for (final event in pkV1Events) {
+        socket.on(event, (raw) => _onPkV1Named(event, raw));
+      }
+
       socket.onDisconnect((_) {
         LoggerUtils.logInfo('RealtimeSocket: disconnected');
       });
@@ -277,6 +306,45 @@ class UserRealtimeSocketService extends GetxController {
     _userKickedListeners.remove(listener);
   }
 
+  void addPkBattleV1Listener(
+    void Function(String event, Map<String, dynamic> data) listener,
+  ) {
+    _pkBattleV1Listeners.add(listener);
+  }
+
+  void removePkBattleV1Listener(
+    void Function(String event, Map<String, dynamic> data) listener,
+  ) {
+    _pkBattleV1Listeners.remove(listener);
+  }
+
+  /// Join a PK session channel so score/gift/result events reach this device.
+  /// Per the spec both room and pk channels use `join_live_room`.
+  Future<void> joinPkChannel(String pkId) async {
+    final id = pkId.trim();
+    if (id.isEmpty) return;
+    await ensureConnected();
+    _joinedPkId = id;
+    final socket = _socket;
+    if (socket == null || !socket.connected) return;
+    socket.emit('join_live_room', id);
+    socket.emit('join_room', id);
+    LoggerUtils.logInfo('RealtimeSocket: joined PK channel $id');
+  }
+
+  Future<void> leavePkChannel([String? pkId]) async {
+    final id = (pkId ?? _joinedPkId)?.trim() ?? '';
+    final socket = _socket;
+    if (id.isNotEmpty && socket != null && socket.connected) {
+      socket.emit('leave_live_room', id);
+      socket.emit('leave_room', id);
+      LoggerUtils.logInfo('RealtimeSocket: left PK channel $id');
+    }
+    if (pkId == null || pkId.trim() == _joinedPkId) {
+      _joinedPkId = null;
+    }
+  }
+
   Future<void> disconnect() async {
     final socket = _socket;
     _socket = null;
@@ -311,6 +379,9 @@ class UserRealtimeSocketService extends GetxController {
       socket.off('user_kicked');
       socket.off('room_user_kicked');
       socket.off('vip_user_joined');
+      for (final event in pkV1Events) {
+        socket.off(event);
+      }
       socket.dispose();
     } catch (e) {
       LoggerUtils.logWarning('RealtimeSocket: disconnect error — $e');
@@ -318,11 +389,18 @@ class UserRealtimeSocketService extends GetxController {
   }
 
   void _rejoinActiveRoom() {
-    final id = _joinedRoomId?.trim();
     final socket = _socket;
-    if (id == null || id.isEmpty || socket == null || !socket.connected) return;
-    socket.emit('join_room', id);
-    socket.emit('joinRoom', id);
+    if (socket == null || !socket.connected) return;
+    final id = _joinedRoomId?.trim();
+    if (id != null && id.isNotEmpty) {
+      socket.emit('join_room', id);
+      socket.emit('joinRoom', id);
+    }
+    final pkId = _joinedPkId?.trim();
+    if (pkId != null && pkId.isNotEmpty) {
+      socket.emit('join_live_room', pkId);
+      socket.emit('join_room', pkId);
+    }
   }
 
   void _onRoomBackgroundUpdated(dynamic raw) {
@@ -362,6 +440,22 @@ class UserRealtimeSocketService extends GetxController {
         'type': event,
     };
     unawaited(_pkBattleHandler.handleSocketEvent(event, payload));
+  }
+
+  void _onPkV1Named(String event, dynamic raw) {
+    final data = _asStringKeyedMap(raw);
+    final payload = <String, dynamic>{
+      ...data,
+      'event': event,
+    };
+    LoggerUtils.logInfo('RealtimeSocket: $event data=$payload');
+    for (final listener in List.of(_pkBattleV1Listeners)) {
+      try {
+        listener(event, payload);
+      } catch (e) {
+        LoggerUtils.logWarning('RealtimeSocket: pkV1 listener error — $e');
+      }
+    }
   }
 
   void _onJoinNamed(String event, dynamic raw) {

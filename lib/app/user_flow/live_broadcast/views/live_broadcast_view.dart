@@ -943,6 +943,14 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                   ),
                 ),
               ],
+              if (controller.isHost.value && !controller.isAudioRoom) ...[
+                Spacing.h8,
+                _bottomActionIcon(
+                  Icons.flash_on_rounded,
+                  color: const Color(0xFFFFC857),
+                  onTap: controller.openPkV1Arena,
+                ),
+              ],
               // Always show gift; alone-room toast is handled in sendGift.
               Spacing.h8,
               _bottomActionIcon(
