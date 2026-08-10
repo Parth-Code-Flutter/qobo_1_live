@@ -90,12 +90,15 @@ class InRoomPkStageOverlay extends StatelessWidget {
               rightColor: _blue,
             ),
             SizedBox(height: compact ? 6 : 8),
-            _TopContributorsRow(
+            _SideAudienceRow(
+              leftMembers: controller.sideAAudience.toList(),
+              rightMembers: controller.sideBAudience.toList(),
               leftAccent: _pink,
               rightAccent: _blue,
               compact: compact,
             ),
-            if (!finished) ...[
+            // Viewers gift during PK; hosts cannot send gifts until battle ends.
+            if (!finished && !controller.isSelfHost) ...[
               SizedBox(height: compact ? 6 : 8),
               _GiftCta(
                 onTap: () {
@@ -267,13 +270,17 @@ class _HostPane extends StatelessWidget {
   }
 }
 
-class _TopContributorsRow extends StatelessWidget {
-  const _TopContributorsRow({
+class _SideAudienceRow extends StatelessWidget {
+  const _SideAudienceRow({
+    required this.leftMembers,
+    required this.rightMembers,
     required this.leftAccent,
     required this.rightAccent,
     required this.compact,
   });
 
+  final List<PkAudienceMember> leftMembers;
+  final List<PkAudienceMember> rightMembers;
   final Color leftAccent;
   final Color rightAccent;
   final bool compact;
@@ -282,36 +289,22 @@ class _TopContributorsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = compact ? 28.0 : 32.0;
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: Row(
-            children: List.generate(
-              3,
-              (i) => Padding(
-                padding: EdgeInsets.only(right: i == 2 ? 0 : 6),
-                child: _ContributorSlot(
-                  rank: i + 1,
-                  accent: leftAccent,
-                  size: size,
-                ),
-              ),
-            ),
+          child: _AudienceCluster(
+            members: leftMembers,
+            accent: leftAccent,
+            size: size,
+            alignEnd: false,
           ),
         ),
         Expanded(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: List.generate(
-              3,
-              (i) => Padding(
-                padding: EdgeInsets.only(left: i == 0 ? 0 : 6),
-                child: _ContributorSlot(
-                  rank: i + 1,
-                  accent: rightAccent,
-                  size: size,
-                ),
-              ),
-            ),
+          child: _AudienceCluster(
+            members: rightMembers,
+            accent: rightAccent,
+            size: size,
+            alignEnd: true,
           ),
         ),
       ],
@@ -319,13 +312,82 @@ class _TopContributorsRow extends StatelessWidget {
   }
 }
 
-class _ContributorSlot extends StatelessWidget {
-  const _ContributorSlot({
+class _AudienceCluster extends StatelessWidget {
+  const _AudienceCluster({
+    required this.members,
+    required this.accent,
+    required this.size,
+    required this.alignEnd,
+  });
+
+  final List<PkAudienceMember> members;
+  final Color accent;
+  final double size;
+  final bool alignEnd;
+
+  static const _maxVisible = 5;
+
+  @override
+  Widget build(BuildContext context) {
+    if (members.isEmpty) {
+      return Align(
+        alignment: alignEnd ? Alignment.centerRight : Alignment.centerLeft,
+        child: AppText(
+          text: 'No audience yet',
+          fontSize: 10,
+          color: Colors.white38,
+        ),
+      );
+    }
+
+    final visible = members.take(_maxVisible).toList();
+    final overflow = members.length - visible.length;
+
+    return Align(
+      alignment: alignEnd ? Alignment.centerRight : Alignment.centerLeft,
+      child: Wrap(
+        alignment: alignEnd ? WrapAlignment.end : WrapAlignment.start,
+        spacing: 6,
+        runSpacing: 4,
+        children: [
+          for (var i = 0; i < visible.length; i++)
+            _AudienceAvatar(
+              member: visible[i],
+              rank: i + 1,
+              accent: accent,
+              size: size,
+            ),
+          if (overflow > 0)
+            Container(
+              width: size,
+              height: size,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.black.withValues(alpha: 0.4),
+                border: Border.all(color: accent.withValues(alpha: 0.7)),
+              ),
+              child: BoldText(
+                text: '+$overflow',
+                fontSize: 9,
+                color: kColorWhite,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AudienceAvatar extends StatelessWidget {
+  const _AudienceAvatar({
+    required this.member,
     required this.rank,
     required this.accent,
     required this.size,
   });
 
+  final PkAudienceMember member;
   final int rank;
   final Color accent;
   final double size;
@@ -336,17 +398,15 @@ class _ContributorSlot extends StatelessWidget {
       clipBehavior: Clip.none,
       children: [
         Container(
-          width: size,
-          height: size,
+          padding: const EdgeInsets.all(1.5),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.black.withValues(alpha: 0.35),
-            border: Border.all(color: accent.withValues(alpha: 0.7)),
+            border: Border.all(color: accent.withValues(alpha: 0.85)),
           ),
-          child: Icon(
-            Icons.event_seat_rounded,
-            size: size * 0.45,
-            color: Colors.white54,
+          child: AppUserAvatar(
+            name: member.displayName,
+            imageUrl: member.avatarUrl,
+            size: size - 3,
           ),
         ),
         Positioned(

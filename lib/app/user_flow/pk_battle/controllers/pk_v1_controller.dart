@@ -65,6 +65,10 @@ class PkV1Controller extends GetxController {
   final lastGift = Rxn<PkGiftEvent>();
   final connectionNote = ''.obs; // e.g. "Reconnecting..."
 
+  /// Per-side room audience (self side synced from live room; opponent from API).
+  final sideAAudience = <PkAudienceMember>[].obs;
+  final sideBAudience = <PkAudienceMember>[].obs;
+
   // Result
   final result = Rxn<PkResult>();
 
@@ -168,6 +172,8 @@ class PkV1Controller extends GetxController {
     scoreB.value = 0;
     remainingSeconds.value = 0;
     connectionNote.value = '';
+    sideAAudience.clear();
+    sideBAudience.clear();
     embeddedInLiveRoom.value = false;
     PkLiveRoomBridge.setActive(false);
     stage.value = PkArenaStage.selecting;
@@ -513,6 +519,7 @@ class PkV1Controller extends GetxController {
     scoreA.value = s.sideA.score;
     scoreB.value = s.sideB.score;
     outgoingInvitation.value = null;
+    _applyAudiencesFromSession(s);
 
     // Server-authoritative clock offset.
     final serverTime = s.serverTime;
@@ -535,6 +542,46 @@ class PkV1Controller extends GetxController {
     _startResync();
     _recomputeRemaining();
     _enterEmbeddedLiveRoomMode();
+  }
+
+  void _applyAudiencesFromSession(PkSession s) {
+    if (s.sideA.audience.isNotEmpty) {
+      sideAAudience.assignAll(s.sideA.audience);
+    }
+    if (s.sideB.audience.isNotEmpty) {
+      sideBAudience.assignAll(s.sideB.audience);
+    }
+  }
+
+  /// Push the current live room's audience onto the local host's PK side.
+  ///
+  /// Opponent-room audience must come from the PK session / socket payload —
+  /// this room only knows its own viewers.
+  void syncLocalRoomAudience(List<PkAudienceMember> members) {
+    final s = session.value;
+    if (s == null) return;
+    final hostIds = {s.sideA.hostId, s.sideB.hostId}
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    final cleaned = members
+        .where((m) => m.userId.isEmpty || !hostIds.contains(m.userId))
+        .toList();
+    if (s.sideA.hostId == selfUserId || s.sideA.roomId == selfRoomId) {
+      sideAAudience.assignAll(cleaned);
+    } else if (s.sideB.hostId == selfUserId || s.sideB.roomId == selfRoomId) {
+      sideBAudience.assignAll(cleaned);
+    }
+  }
+
+  List<PkAudienceMember> audienceForSide(PkBattleSide side) {
+    switch (side) {
+      case PkBattleSide.a:
+        return sideAAudience.toList();
+      case PkBattleSide.b:
+        return sideBAudience.toList();
+      default:
+        return const [];
+    }
   }
 
   /// Converts the current live room into PK UI and closes the selection arena.
@@ -632,6 +679,10 @@ class PkV1Controller extends GetxController {
     required PkBattleSide side,
     int quantity = 1,
   }) async {
+    if (isSelfHost) {
+      _toast('Hosts can’t send gifts during PK Battle');
+      return;
+    }
     final s = session.value;
     if (s == null || side == PkBattleSide.none) return;
     final body = await _repo.sendGift(
@@ -798,6 +849,19 @@ class PkV1Controller extends GetxController {
       scoreB.value = _toInt(sideB['score']);
     } else if (data['scoreB'] != null) {
       scoreB.value = _toInt(data['scoreB']);
+    }
+    // Optional per-side audience updates on score events.
+    if (sideA is Map) {
+      final list = PkAudienceMember.listFrom(
+        sideA['audience'] ?? sideA['viewers'] ?? sideA['topViewers'],
+      );
+      if (list.isNotEmpty) sideAAudience.assignAll(list);
+    }
+    if (sideB is Map) {
+      final list = PkAudienceMember.listFrom(
+        sideB['audience'] ?? sideB['viewers'] ?? sideB['topViewers'],
+      );
+      if (list.isNotEmpty) sideBAudience.assignAll(list);
     }
   }
 

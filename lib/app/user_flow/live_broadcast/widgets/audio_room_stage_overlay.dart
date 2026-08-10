@@ -290,14 +290,17 @@ class _AudioRoomBottomControls extends GetView<LiveBroadcastController> {
               ),
             ],
             _SpeakerControl(compact: compact),
-            // Always show Gift; send blocks with toast when host/person is alone.
-            Obx(
-              () => _GiftControlButton(
+            // Hide Gift for hosts during PK — only viewers support a side.
+            Obx(() {
+              if (controller.isInRoomPkActive && controller.isHost.value) {
+                return const SizedBox.shrink();
+              }
+              return _GiftControlButton(
                 compact: compact,
                 coins: controller.coinsBalance.value,
                 onTap: controller.openGiftsSheet,
-              ),
-            ),
+              );
+            }),
             // Video dock is crowded (Cam/Flip) — tuck these into More.
             // Audio keeps Background / Share / PK Battle on the dock.
             if (controller.isVideoRoom)

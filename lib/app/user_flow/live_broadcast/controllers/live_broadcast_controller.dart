@@ -151,6 +151,7 @@ class LiveBroadcastController extends GetxController {
   Timer? _joinRequestPollTimer;
   final Set<String> _promptedJoinRequestIds = <String>{};
   VoidCallback? _viewerCountListener;
+  Worker? _pkActiveWorker;
   var _exitReported = false;
   var _hostEndConfirmed = false;
 
@@ -186,6 +187,9 @@ class LiveBroadcastController extends GetxController {
     _validateStreamingInput();
     loadWalletBalance();
     loadGiftCatalog();
+    _pkActiveWorker = ever<bool>(PkLiveRoomBridge.isActive, (active) {
+      if (active) _syncPkLocalAudience();
+    });
     if (isHost.value) {
       _startSessionEarningsPolling();
     }
@@ -495,6 +499,8 @@ class LiveBroadcastController extends GetxController {
       ..clear()
       ..addAll(nextIds);
 
+    _syncPkLocalAudience();
+
     if (!_floorAudienceHydrated) {
       _floorAudienceHydrated = true;
       return;
@@ -512,6 +518,65 @@ class LiveBroadcastController extends GetxController {
     for (final user in newcomers.take(2)) {
       unawaited(_playFloorJoinFlyAnimation(user));
     }
+  }
+
+  /// Feeds this room's audience into the local PK side (opponent side needs API).
+  void _syncPkLocalAudience() {
+    if (!isInRoomPkActive || !Get.isRegistered<PkV1Controller>()) return;
+    final pk = Get.find<PkV1Controller>();
+    final members = <PkAudienceMember>[];
+    final seen = <String>{};
+
+    void addMember({
+      required String userId,
+      required String name,
+      String? avatar,
+    }) {
+      final id = userId.trim();
+      if (id.isEmpty || seen.contains(id)) return;
+      seen.add(id);
+      members.add(
+        PkAudienceMember(
+          userId: id,
+          displayName: name.trim().isEmpty ? 'Viewer' : name.trim(),
+          avatarUrl: (avatar ?? '').trim(),
+        ),
+      );
+    }
+
+    for (final user in floorAudience) {
+      addMember(
+        userId: user.userId,
+        name: user.name,
+        avatar: user.avatarUrl,
+      );
+    }
+    for (final seat in audioRoomSeats) {
+      if (!seat.occupied) continue;
+      addMember(
+        userId: seat.userId,
+        name: seat.name,
+        avatar: seat.avatarUrl,
+      );
+    }
+    for (final viewer in liveViewers) {
+      addMember(
+        userId: (viewer['userId'] ?? viewer['user_id'] ?? viewer['id'] ?? '')
+            .toString(),
+        name: (viewer['name'] ??
+                viewer['displayName'] ??
+                viewer['username'] ??
+                'Viewer')
+            .toString(),
+        avatar: (viewer['avatarUrl'] ??
+                viewer['avatar'] ??
+                viewer['displayPicture'] ??
+                '')
+            .toString(),
+      );
+    }
+
+    pk.syncLocalRoomAudience(members);
   }
 
   Future<void> _playFloorJoinFlyAnimation(FloorAudienceUser user) async {
@@ -1154,6 +1219,7 @@ class LiveBroadcastController extends GetxController {
         };
       }),
     );
+    _syncPkLocalAudience();
   }
 
   void _syncChatFromZego(List<ZegoInRoomMessage> messages) {
@@ -1885,6 +1951,18 @@ class LiveBroadcastController extends GetxController {
     bool roomGift = true,
     bool skipFollowerPkTargetPicker = false,
   }) {
+    // Hosts cannot gift during an active host-vs-host PK.
+    if (isInRoomPkActive && isHost.value) {
+      Get.snackbar(
+        'PK Battle',
+        'Hosts can’t send gifts during PK. Viewers support a side with gifts.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.black87,
+        colorText: kColorWhite,
+      );
+      return;
+    }
+
     // Host-vs-host PK: gift to Side A / Side B instead of room-wide gifts.
     if (roomGift &&
         isInRoomPkActive &&
@@ -3926,6 +4004,9 @@ class LiveBroadcastController extends GetxController {
   void setPkBattleActive(bool active) {
     isPkBattleActive.value = active;
     PkLiveRoomBridge.setActive(active);
+    if (active) {
+      _syncPkLocalAudience();
+    }
   }
 
   void joinFollowerPkFromSeat(AudioRoomSeatModel seat) {
@@ -4382,6 +4463,8 @@ class LiveBroadcastController extends GetxController {
 
   @override
   void onClose() {
+    _pkActiveWorker?.dispose();
+    _pkActiveWorker = null;
     CoinFlyOverlay.dismiss();
     AvatarFlyOverlay.dismiss();
     _stopSeatRefreshPolling();

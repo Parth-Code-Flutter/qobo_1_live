@@ -966,13 +966,23 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                   onTap: controller.openPkV1Arena,
                 ),
               ],
-              // Always show gift; alone-room toast is handled in sendGift.
-              Spacing.h8,
-              _bottomActionIcon(
-                kGiftIcon,
-                color: _accent,
-                onTap: controller.openGiftsSheet,
-              ),
+              // Gift: hidden for hosts during PK Battle.
+              Obx(() {
+                if (controller.isInRoomPkActive && controller.isHost.value) {
+                  return const SizedBox.shrink();
+                }
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Spacing.h8,
+                    _bottomActionIcon(
+                      kGiftIcon,
+                      color: _accent,
+                      onTap: controller.openGiftsSheet,
+                    ),
+                  ],
+                );
+              }),
               Spacing.h8,
               _bottomActionIcon(
                 Icons.more_horiz_rounded,

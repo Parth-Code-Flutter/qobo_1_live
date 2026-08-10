@@ -223,6 +223,7 @@ class PkSideInfo {
     required this.avatarUrl,
     required this.roomId,
     required this.score,
+    this.audience = const [],
   });
 
   final String hostId;
@@ -231,23 +232,40 @@ class PkSideInfo {
   final String roomId;
   final int score;
 
+  /// Viewers currently in this host's live room (from PK state / sync).
+  final List<PkAudienceMember> audience;
+
   factory PkSideInfo.fromJson(Map<String, dynamic> j) {
+    final audienceRaw = j['audience'] ??
+        j['viewers'] ??
+        j['topViewers'] ??
+        j['top_viewers'] ??
+        j['roomAudience'] ??
+        j['room_audience'];
     return PkSideInfo(
       hostId: _str(j, const ['hostId', 'host_id', 'userId', 'user_id']),
       displayName: _str(j, const ['displayName', 'display_name', 'name'], 'Host'),
       avatarUrl: _str(j, const ['avatarUrl', 'avatar_url', 'avatar']),
       roomId: _str(j, const ['roomId', 'room_id']),
       score: _int(j, const ['score']),
+      audience: PkAudienceMember.listFrom(audienceRaw),
     );
   }
 
-  PkSideInfo copyWithScore(int newScore) => PkSideInfo(
+  PkSideInfo copyWith({
+    int? score,
+    List<PkAudienceMember>? audience,
+  }) =>
+      PkSideInfo(
         hostId: hostId,
         displayName: displayName,
         avatarUrl: avatarUrl,
         roomId: roomId,
-        score: newScore,
+        score: score ?? this.score,
+        audience: audience ?? this.audience,
       );
+
+  PkSideInfo copyWithScore(int newScore) => copyWith(score: newScore);
 
   static const empty = PkSideInfo(
     hostId: '',
@@ -256,6 +274,45 @@ class PkSideInfo {
     roomId: '',
     score: 0,
   );
+}
+
+/// A viewer / floor audience member belonging to one PK side's room.
+class PkAudienceMember {
+  const PkAudienceMember({
+    required this.userId,
+    required this.displayName,
+    required this.avatarUrl,
+  });
+
+  final String userId;
+  final String displayName;
+  final String avatarUrl;
+
+  factory PkAudienceMember.fromJson(Map<String, dynamic> j) {
+    return PkAudienceMember(
+      userId: _str(j, const ['userId', 'user_id', 'id']),
+      displayName:
+          _str(j, const ['displayName', 'display_name', 'name'], 'Viewer'),
+      avatarUrl: _str(j, const [
+        'avatarUrl',
+        'avatar_url',
+        'avatar',
+        'displayPicture',
+        'profileImage',
+      ]),
+    );
+  }
+
+  static List<PkAudienceMember> listFrom(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((e) => PkAudienceMember.fromJson(
+              e.map((k, v) => MapEntry(k.toString(), v)),
+            ))
+        .where((m) => m.userId.isNotEmpty || m.displayName.isNotEmpty)
+        .toList();
+  }
 }
 
 /// Authoritative PK session state.
