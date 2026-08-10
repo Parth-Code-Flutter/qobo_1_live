@@ -22,7 +22,9 @@ import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 import '../controllers/live_broadcast_controller.dart';
 import '../models/audio_room_models.dart';
 import '../utils/audio_room_seat_layout.dart';
+import 'in_room_pk_stage_overlay.dart';
 import 'room_options_sheet.dart';
+import 'package:qobo_one_live/app/user_flow/pk_battle/controllers/pk_v1_controller.dart';
 
 /// Opens floor-audience user profile (Message / Gift / optional Kick).
 void openFloorAudienceProfileSheet(FloorAudienceUser user) {
@@ -163,10 +165,20 @@ class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
                                 child: SizedBox(
                                   height: videoGridH,
                                   width: double.infinity,
-                                  child: _MemberGrid(
-                                    compact: compact,
-                                    maxHeight: videoGridH,
-                                  ),
+                                  child: Obx(() {
+                                    if (controller.isInRoomPkActive &&
+                                        Get.isRegistered<PkV1Controller>()) {
+                                      return InRoomPkStageOverlay(
+                                        controller: Get.find<PkV1Controller>(),
+                                        compact: compact,
+                                        maxHeight: videoGridH,
+                                      );
+                                    }
+                                    return _MemberGrid(
+                                      compact: compact,
+                                      maxHeight: videoGridH,
+                                    );
+                                  }),
                                 ),
                               ),
                             ),
@@ -190,7 +202,20 @@ class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
                               delegate: SliverChildListDelegate.fixed([
                                 _RoomHeader(compact: compact),
                                 SizedBox(height: gridGap),
-                                _MemberGrid(compact: compact),
+                                Obx(() {
+                                  if (controller.isInRoomPkActive &&
+                                      Get.isRegistered<PkV1Controller>()) {
+                                    return SizedBox(
+                                      height: middleH.clamp(220.0, 360.0),
+                                      child: InRoomPkStageOverlay(
+                                        controller: Get.find<PkV1Controller>(),
+                                        compact: compact,
+                                        maxHeight: middleH.clamp(220.0, 360.0),
+                                      ),
+                                    );
+                                  }
+                                  return _MemberGrid(compact: compact);
+                                }),
                               ]),
                             ),
                           ),
@@ -327,7 +352,7 @@ class _AudioRoomBottomControls extends GetView<LiveBroadcastController> {
                   end: Alignment.bottomRight,
                   colors: [Color(0xFFFFD54F), Color(0xFFFF8F00)],
                 ),
-                onTap: controller.openPkBattle,
+                onTap: controller.openPkV1Arena,
               ),
             ],
           ],

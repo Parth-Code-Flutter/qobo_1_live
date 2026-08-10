@@ -39,9 +39,14 @@ class PkV1ArenaView extends GetView<PkV1Controller> {
               case PkArenaStage.starting:
                 return _startingView();
               case PkArenaStage.battling:
-                return _battleView();
               case PkArenaStage.finished:
-                return _resultView();
+                // Battle UI renders inside the live room overlay.
+                if (controller.embeddedInLiveRoom.value) {
+                  return _returningToRoomView();
+                }
+                return controller.stage.value == PkArenaStage.finished
+                    ? _resultView()
+                    : _battleView();
             }
           }),
         ),
@@ -56,7 +61,16 @@ class PkV1ArenaView extends GetView<PkV1Controller> {
   Widget _selectionView() {
     return Column(
       children: [
-        _topBar('Choose Opponent'),
+        _topBar('Invite Live Host'),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+          child: AppText(
+            text: 'Hosts currently in audio or video rooms',
+            fontSize: TextStyles.k12FontSize,
+            color: kColorWhite.withValues(alpha: 0.55),
+            align: TextAlign.center,
+          ),
+        ),
         _searchField(),
         Expanded(
           child: Obx(() {
@@ -70,7 +84,8 @@ class PkV1ArenaView extends GetView<PkV1Controller> {
               return _emptyState(
                 icon: Icons.podcasts_rounded,
                 title: 'No live hosts available',
-                subtitle: 'Pull to refresh or try again in a moment.',
+                subtitle:
+                    'Ask another host to go live, then pull to refresh.',
               );
             }
             return RefreshIndicator(
@@ -234,6 +249,22 @@ class PkV1ArenaView extends GetView<PkV1Controller> {
         SizedBox(height: 16),
         Center(
           child: AppText(text: 'Starting battle…', color: Colors.white70),
+        ),
+      ],
+    );
+  }
+
+  Widget _returningToRoomView() {
+    return const Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Center(child: CircularProgressIndicator(color: pkGold)),
+        SizedBox(height: 16),
+        Center(
+          child: AppText(
+            text: 'Opening PK Battle in your room…',
+            color: Colors.white70,
+          ),
         ),
       ],
     );

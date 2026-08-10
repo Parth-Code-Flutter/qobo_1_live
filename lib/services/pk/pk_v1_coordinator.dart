@@ -2,10 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/app/user_flow/pk_battle/controllers/pk_v1_controller.dart';
 import 'package:qobo_one_live/app/user_flow/pk_battle/models/v1/pk_v1_models.dart';
 import 'package:qobo_one_live/app/user_flow/pk_battle/widgets/pk_v1_invitation_dialog.dart';
 import 'package:qobo_one_live/repo/pk/pk_v1_repo.dart';
-import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/realtime/user_realtime_socket_service.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 
@@ -35,6 +35,14 @@ class PkV1Coordinator extends GetxService {
         : Get.put(PkV1Coordinator(), permanent: true);
     await UserRealtimeSocketService.ensureConnected();
     coordinator._startListening();
+  }
+
+  /// Shared PK controller used by the live-room overlay + invitation flow.
+  static PkV1Controller ensureController() {
+    if (Get.isRegistered<PkV1Controller>()) {
+      return Get.find<PkV1Controller>();
+    }
+    return Get.put(PkV1Controller(), permanent: true);
   }
 
   void _startListening() {
@@ -72,10 +80,9 @@ class PkV1Coordinator extends GetxService {
       _dialogOpen = false;
 
       if (accepted == true) {
-        Get.toNamed(
-          Routes.PK_V1_ARENA,
-          arguments: {'invitationId': invitation.invitationId},
-        );
+        // Stay in the live room — accept and convert the room into PK UI.
+        final pk = ensureController();
+        unawaited(pk.acceptInvitationById(invitation.invitationId));
       } else {
         // Explicit reject or auto-expire → tell the server (best effort).
         unawaited(

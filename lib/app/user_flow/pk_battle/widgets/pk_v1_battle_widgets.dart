@@ -150,26 +150,55 @@ class PkScoreBar extends StatelessWidget {
         ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: SizedBox(
-            height: 12,
-            child: Row(
+            height: 14,
+            child: Stack(
               children: [
-                Expanded(
-                  flex: (clamped * 1000).round(),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [leftColor, leftColor.withValues(alpha: 0.7)],
+                Row(
+                  children: [
+                    Expanded(
+                      flex: (clamped * 1000).round(),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              leftColor,
+                              leftColor.withValues(alpha: 0.75),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
-                Expanded(
-                  flex: ((1 - clamped) * 1000).round(),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [rightColor.withValues(alpha: 0.7), rightColor],
+                    Expanded(
+                      flex: ((1 - clamped) * 1000).round(),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              rightColor.withValues(alpha: 0.75),
+                              rightColor,
+                            ],
+                          ),
+                        ),
                       ),
+                    ),
+                  ],
+                ),
+                // Center energy glow (reference PK bar flash).
+                Align(
+                  alignment: Alignment((clamped * 2) - 1, 0),
+                  child: Container(
+                    width: 18,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.white.withValues(alpha: 0.85),
+                          blurRadius: 10,
+                          spreadRadius: 2,
+                        ),
+                      ],
                     ),
                   ),
                 ),

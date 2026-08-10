@@ -12,6 +12,11 @@ import 'package:qobo_one_live/repo/economy/economy_repo.dart';
 import 'package:qobo_one_live/repo/chat/chat_navigation_helper.dart';
 import 'package:qobo_one_live/repo/room/room_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/app/user_flow/pk_battle/controllers/pk_v1_controller.dart';
+import 'package:qobo_one_live/app/user_flow/pk_battle/models/v1/pk_v1_models.dart';
+import 'package:qobo_one_live/app/user_flow/pk_battle/widgets/pk_v1_battle_widgets.dart';
+import 'package:qobo_one_live/services/pk/pk_live_room_bridge.dart';
+import 'package:qobo_one_live/services/pk/pk_v1_coordinator.dart';
 import 'package:qobo_one_live/services/realtime/user_realtime_socket_service.dart';
 import 'package:qobo_one_live/services/room/join_approval_service.dart';
 import 'package:qobo_one_live/services/session/session_earnings_tracker.dart';
@@ -60,6 +65,8 @@ class LiveBroadcastController extends GetxController {
   final RoomRepo _roomRepo;
 
   final isHost = false.obs;
+  /// Host-vs-host PK overlay is replacing the seat grid / live stage.
+  final isPkBattleActive = false.obs;
   final roomType = 'VIDEO'.obs;
   final roomId = ''.obs;
   final receiverId = ''.obs;
@@ -1878,6 +1885,25 @@ class LiveBroadcastController extends GetxController {
     bool roomGift = true,
     bool skipFollowerPkTargetPicker = false,
   }) {
+    // Host-vs-host PK: gift to Side A / Side B instead of room-wide gifts.
+    if (roomGift &&
+        isInRoomPkActive &&
+        Get.isRegistered<PkV1Controller>()) {
+      final pk = Get.find<PkV1Controller>();
+      final session = pk.session.value;
+      Get.bottomSheet(
+        PkGiftPickerSheet(
+          controller: pk,
+          sideA: session?.sideA ?? PkSideInfo.empty,
+          sideB: session?.sideB ?? PkSideInfo.empty,
+        ),
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        barrierColor: Colors.black.withValues(alpha: 0.6),
+      );
+      return;
+    }
+
     final pkPlayers = audioRoomSeats
         .where(
           (seat) =>
@@ -3834,37 +3860,14 @@ class LiveBroadcastController extends GetxController {
     );
   }
 
-  /// PK APIs need the backend room id (with dashes), not the
-  /// sanitized Zego channel id used for call login.
-  void openPkBattle() {
-    final roomApiId = audioRoomApiId.trim().isNotEmpty
-        ? audioRoomApiId.trim()
-        : roomId.value.trim();
-    if (roomApiId.isEmpty) {
-      Get.snackbar(
-        'PK Battle',
-        'Room id is missing. Rejoin the room and try again.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.black87,
-        colorText: kColorWhite,
-      );
-      return;
-    }
-    Get.toNamed(
-      Routes.PK_BATTLE,
-      arguments: {
-        'room_id': roomApiId,
-        'title': streamTitle.value,
-        'name': hostName.value,
-        if (!isVideoRoom) ...{
-          'mode': 'audio_follower_pk',
-          'auto_start_follower': true,
-        },
-      },
-    );
-  }
+  /// Opens PK Battle host selection — pick a live audio/video host, then invite.
+  ///
+  /// Never auto-starts a battle. Seat-badge follower joins still use
+  /// [joinFollowerPkFromSeat].
+  void openPkBattle() => openPkV1Arena();
 
-  /// Opens the host-vs-host PK Battle v1 arena (host selection → battle).
+  /// Opens the host-vs-host PK arena on the eligible-hosts selection screen.
+  /// Once a battle starts, the arena pops and this live room converts to PK UI.
   void openPkV1Arena() {
     final roomApiId = audioRoomApiId.trim().isNotEmpty
         ? audioRoomApiId.trim()
@@ -3879,14 +3882,50 @@ class LiveBroadcastController extends GetxController {
       );
       return;
     }
+
+    // Keep a shared controller so the in-room overlay can reuse the same session.
+    final pk = PkV1Coordinator.ensureController();
+    pk.bindLiveRoomContext(
+      roomId: roomApiId,
+      name: hostName.value,
+      avatar: hostAvatarUrl.value,
+    );
+    // Always reopen on the host-selection list (never auto-start).
+    pk.prepareHostSelection();
+
     Get.toNamed(
       Routes.PK_V1_ARENA,
       arguments: {
         'roomId': roomApiId,
+        'room_id': roomApiId,
         'selfName': hostName.value,
         'selfAvatar': hostAvatarUrl.value ?? '',
+        'selectionOnly': true,
       },
     );
+  }
+
+  /// True when host-vs-host PK should replace the seat grid in this room.
+  bool get isInRoomPkActive {
+    // Bridge flag is always readable by Obx (stable rebuild trigger).
+    if (PkLiveRoomBridge.isActive.value || isPkBattleActive.value) {
+      if (!Get.isRegistered<PkV1Controller>()) return true;
+      final pk = Get.find<PkV1Controller>();
+      return pk.stage.value == PkArenaStage.battling ||
+          pk.stage.value == PkArenaStage.starting ||
+          pk.stage.value == PkArenaStage.finished;
+    }
+    if (!Get.isRegistered<PkV1Controller>()) return false;
+    final pk = Get.find<PkV1Controller>();
+    if (!pk.embeddedInLiveRoom.value) return false;
+    return pk.stage.value == PkArenaStage.battling ||
+        pk.stage.value == PkArenaStage.starting ||
+        pk.stage.value == PkArenaStage.finished;
+  }
+
+  void setPkBattleActive(bool active) {
+    isPkBattleActive.value = active;
+    PkLiveRoomBridge.setActive(active);
   }
 
   void joinFollowerPkFromSeat(AudioRoomSeatModel seat) {

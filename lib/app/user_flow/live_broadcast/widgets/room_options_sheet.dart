@@ -195,7 +195,8 @@ class RoomOptionsSheet extends StatelessWidget {
     switch (option.action) {
       case _RoomOptionAction.pkBattle:
         if (Get.isRegistered<LiveBroadcastController>()) {
-          Get.find<LiveBroadcastController>().openPkBattle();
+          // Host selection → invite (never auto-start).
+          Get.find<LiveBroadcastController>().openPkV1Arena();
         }
       case _RoomOptionAction.filters:
         _runAfterClose(
