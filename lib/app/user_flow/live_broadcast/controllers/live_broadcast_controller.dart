@@ -155,6 +155,9 @@ class LiveBroadcastController extends GetxController {
   var _exitReported = false;
   var _hostEndConfirmed = false;
 
+  /// True when PK forced the camera on (e.g. audio room → PK video panes).
+  var _pkForcedCameraOn = false;
+
   /// After join, used to auto-close the room when seat sync shows removal/kick.
   var _roomMembershipConfirmed = false;
   var _currentUserOccupiedMicSeat = false;
@@ -188,7 +191,12 @@ class LiveBroadcastController extends GetxController {
     loadWalletBalance();
     loadGiftCatalog();
     _pkActiveWorker = ever<bool>(PkLiveRoomBridge.isActive, (active) {
-      if (active) _syncPkLocalAudience();
+      if (active) {
+        _syncPkLocalAudience();
+        ensurePkHostVideoReady();
+      } else {
+        restoreCameraAfterPk();
+      }
     });
     if (isHost.value) {
       _startSessionEarningsPolling();
@@ -524,8 +532,26 @@ class LiveBroadcastController extends GetxController {
   void _syncPkLocalAudience() {
     if (!isInRoomPkActive || !Get.isRegistered<PkV1Controller>()) return;
     final pk = Get.find<PkV1Controller>();
+    final pkSession = pk.session.value;
     final members = <PkAudienceMember>[];
     final seen = <String>{};
+
+    final excludeIds = <String>{
+      receiverId.value.trim(),
+      _currentUserId(),
+      pk.selfUserId,
+      if (pkSession != null) pkSession.sideA.hostId,
+      if (pkSession != null) pkSession.sideB.hostId,
+    }.where((id) => id.isNotEmpty).toList();
+
+    bool isExcluded(String userId) {
+      final id = userId.trim();
+      if (id.isEmpty) return true;
+      for (final excluded in excludeIds) {
+        if (_userIdsMatch(id, excluded)) return true;
+      }
+      return false;
+    }
 
     void addMember({
       required String userId,
@@ -533,7 +559,7 @@ class LiveBroadcastController extends GetxController {
       String? avatar,
     }) {
       final id = userId.trim();
-      if (id.isEmpty || seen.contains(id)) return;
+      if (id.isEmpty || seen.contains(id) || isExcluded(id)) return;
       seen.add(id);
       members.add(
         PkAudienceMember(
@@ -545,6 +571,7 @@ class LiveBroadcastController extends GetxController {
     }
 
     for (final user in floorAudience) {
+      if (isExcluded(user.userId)) continue;
       addMember(
         userId: user.userId,
         name: user.name,
@@ -553,6 +580,8 @@ class LiveBroadcastController extends GetxController {
     }
     for (final seat in audioRoomSeats) {
       if (!seat.occupied) continue;
+      if (seat.role.toLowerCase() == 'host') continue;
+      if (isExcluded(seat.userId)) continue;
       addMember(
         userId: seat.userId,
         name: seat.name,
@@ -560,9 +589,17 @@ class LiveBroadcastController extends GetxController {
       );
     }
     for (final viewer in liveViewers) {
+      if (viewer['isHost'] == true) continue;
+      if (isHost.value && viewer['isCurrentUser'] == true) continue;
+      final viewerId = (viewer['targetId'] ??
+              viewer['userId'] ??
+              viewer['user_id'] ??
+              viewer['id'] ??
+              '')
+          .toString();
+      if (isExcluded(viewerId)) continue;
       addMember(
-        userId: (viewer['userId'] ?? viewer['user_id'] ?? viewer['id'] ?? '')
-            .toString(),
+        userId: viewerId,
         name: (viewer['name'] ??
                 viewer['displayName'] ??
                 viewer['username'] ??
@@ -577,6 +614,62 @@ class LiveBroadcastController extends GetxController {
     }
 
     pk.syncLocalRoomAudience(members);
+  }
+
+  /// Ensures the host camera/mic publish when PK battle starts.
+  ///
+  /// Audio rooms join without camera — PK needs video panes, so we force the
+  /// local camera on for the host (group-call or live-stream engine).
+  void ensurePkHostVideoReady() {
+    if (!isHost.value) return;
+    _turnOnPkHostMedia();
+    Future.delayed(const Duration(milliseconds: 400), _turnOnPkHostMedia);
+    Future.delayed(const Duration(milliseconds: 1000), _turnOnPkHostMedia);
+    Future.delayed(const Duration(milliseconds: 2000), _turnOnPkHostMedia);
+  }
+
+  void _turnOnPkHostMedia() {
+    if (!isHost.value) return;
+    try {
+      if (isAudioVideoRoom) {
+        // Party rooms use the group-call Zego engine (not live-streaming).
+        ZegoUIKit().turnCameraOn(true);
+        ZegoUIKit().turnMicrophoneOn(true);
+        isCameraOff.value = false;
+        isMicMuted.value = false;
+        // Audio rooms normally keep camera off — remember so we can restore.
+        if (!isVideoRoom) {
+          _pkForcedCameraOn = true;
+        }
+        return;
+      }
+      // Live-stream host path.
+      final av = ZegoUIKitPrebuiltLiveStreamingController().audioVideo;
+      av.camera.turnOn(true);
+      av.microphone.turnOn(true);
+      isCameraOff.value = false;
+      isMicMuted.value = false;
+      _pkForcedCameraOn = true;
+    } catch (_) {
+      // Engine may still be warming up; retries from ensurePkHostVideoReady cover it.
+    }
+  }
+
+  /// After PK ends, turn camera back off for audio rooms (voice-only again).
+  void restoreCameraAfterPk() {
+    if (!_pkForcedCameraOn) return;
+    _pkForcedCameraOn = false;
+    if (isVideoRoom) return;
+    try {
+      if (isAudioVideoRoom) {
+        ZegoUIKit().turnCameraOn(false);
+      } else {
+        ZegoUIKitPrebuiltLiveStreamingController().audioVideo.camera.turnOn(
+          false,
+        );
+      }
+      isCameraOff.value = true;
+    } catch (_) {}
   }
 
   Future<void> _playFloorJoinFlyAnimation(FloorAudienceUser user) async {
@@ -3947,6 +4040,16 @@ class LiveBroadcastController extends GetxController {
   /// Opens the host-vs-host PK arena on the eligible-hosts selection screen.
   /// Once a battle starts, the arena pops and this live room converts to PK UI.
   void openPkV1Arena() {
+    if (isInRoomPkActive) {
+      Get.snackbar(
+        'PK Battle',
+        'A PK battle is already in progress in this room.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.black87,
+        colorText: kColorWhite,
+      );
+      return;
+    }
     final roomApiId = audioRoomApiId.trim().isNotEmpty
         ? audioRoomApiId.trim()
         : roomId.value.trim();

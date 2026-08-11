@@ -292,6 +292,7 @@ class PkV1ArenaView extends GetView<PkV1Controller> {
                     avatarUrl: a.avatarUrl,
                     accent: pkRed,
                     alignEnd: false,
+                    hostUserId: a.hostId,
                   ),
                 ),
                 Expanded(
@@ -300,6 +301,7 @@ class PkV1ArenaView extends GetView<PkV1Controller> {
                     avatarUrl: b.avatarUrl,
                     accent: pkBlue,
                     alignEnd: true,
+                    hostUserId: b.hostId,
                   ),
                 ),
               ],

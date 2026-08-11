@@ -142,10 +142,17 @@ class AuthRepo {
   ///
   /// Returns decoded JSON map on success, otherwise `null`.
   Future<Map<String, dynamic>?> getProfile({bool isShowLoader = false}) async {
-    final response = await _apiService.getRequest(
+    var response = await _apiService.getRequest(
       endPoint: AuthEndpoints.getProfile,
       isShowLoader: isShowLoader,
     );
+
+    if (response?.statusCode == 404) {
+      response = await _apiService.getRequest(
+        endPoint: AuthEndpoints.getProfileV1,
+        isShowLoader: isShowLoader,
+      );
+    }
 
     if (response == null) return null;
     return ApiResponseUtils.tryDecodeMap(response.body);

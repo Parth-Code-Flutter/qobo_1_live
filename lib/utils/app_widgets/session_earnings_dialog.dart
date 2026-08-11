@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/services/session/session_earnings_tracker.dart';
 import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
@@ -294,6 +295,18 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
                   text: widget.unitLabel,
                   fontSize: TextStyles.k12FontSize,
                   color: AdminAgencyUi.textSecondary,
+                ),
+                Spacing.v6,
+                AppText(
+                  text: formatUsd(coinsToDollars(widget.tracker.displayCoins)),
+                  fontSize: TextStyles.k14FontSize,
+                  color: AdminAgencyUi.gold,
+                ),
+                Spacing.v2,
+                AppText(
+                  text: '≈ USD (1,000 coins = \$1)',
+                  fontSize: TextStyles.k10FontSize,
+                  color: AdminAgencyUi.textMuted,
                 ),
               ],
             ),

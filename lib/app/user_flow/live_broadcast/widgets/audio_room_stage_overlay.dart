@@ -346,17 +346,23 @@ class _AudioRoomBottomControls extends GetView<LiveBroadcastController> {
                 ),
                 onTap: controller.shareRoom,
               ),
-              _ControlButton(
-                icon: Icons.flash_on_rounded,
-                label: 'PK Battle',
-                compact: compact,
-                accentGradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFFFFD54F), Color(0xFFFF8F00)],
-                ),
-                onTap: controller.openPkV1Arena,
-              ),
+              // Hide start-PK while a battle is already converting this room.
+              Obx(() {
+                if (controller.isInRoomPkActive) {
+                  return const SizedBox.shrink();
+                }
+                return _ControlButton(
+                  icon: Icons.flash_on_rounded,
+                  label: 'PK Battle',
+                  compact: compact,
+                  accentGradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFFFD54F), Color(0xFFFF8F00)],
+                  ),
+                  onTap: controller.openPkV1Arena,
+                );
+              }),
             ],
           ],
         ),

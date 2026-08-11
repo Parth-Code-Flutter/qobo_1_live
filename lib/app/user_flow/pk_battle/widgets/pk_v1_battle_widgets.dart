@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/app/user_flow/live_broadcast/controllers/live_broadcast_controller.dart';
 import 'package:qobo_one_live/app/user_flow/pk_battle/controllers/pk_v1_controller.dart';
 import 'package:qobo_one_live/app/user_flow/pk_battle/models/v1/pk_v1_models.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
+import 'package:zego_uikit/zego_uikit.dart';
 
 /// One host's slot in the PK split view.
 ///
-/// Renders an avatar-based tile with the host's accent glow. Real remote video
-/// appears once the backend co-locates both hosts into a playable channel; the
-/// tile is designed to be swapped for a `ZegoAudioVideoView` at that point.
+/// When [hostUserId] is set, renders a live Zego camera feed (same session) with
+/// avatar fallback; otherwise shows the accent avatar tile.
 class PkHostVideoTile extends StatelessWidget {
   const PkHostVideoTile({
     super.key,
@@ -19,15 +21,76 @@ class PkHostVideoTile extends StatelessWidget {
     required this.avatarUrl,
     required this.accent,
     required this.alignEnd,
+    this.hostUserId,
   });
 
   final String name;
   final String? avatarUrl;
   final Color accent;
   final bool alignEnd;
+  final String? hostUserId;
 
   @override
   Widget build(BuildContext context) {
+    final userId = hostUserId?.trim() ?? '';
+    if (userId.isNotEmpty) {
+      return Container(
+        margin: const EdgeInsets.all(4),
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: accent.withValues(alpha: 0.5)),
+        ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            PkHostLiveVideoFill(
+              userId: userId,
+              name: name,
+              imageUrl: avatarUrl,
+            ),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    accent.withValues(alpha: 0.22),
+                    Colors.black.withValues(alpha: 0.45),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              left: 8,
+              right: 8,
+              bottom: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.black.withValues(alpha: 0.4),
+                ),
+                child: Row(
+                  mainAxisAlignment:
+                      alignEnd ? MainAxisAlignment.end : MainAxisAlignment.start,
+                  children: [
+                    SemiBoldText(
+                      text: name.isEmpty ? 'Host' : name,
+                      fontSize: TextStyles.k12FontSize,
+                      color: kColorWhite,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       margin: const EdgeInsets.all(4),
       decoration: BoxDecoration(
@@ -396,6 +459,137 @@ class _PkGiftPickerSheetState extends State<PkGiftPickerSheet> {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Full-bleed Zego camera for PK host panes (live room / co-located streams).
+class PkHostLiveVideoFill extends StatefulWidget {
+  const PkHostLiveVideoFill({
+    super.key,
+    required this.userId,
+    required this.name,
+    this.imageUrl,
+    this.preferLocalUser = false,
+  });
+
+  final String userId;
+  final String name;
+  final String? imageUrl;
+
+  /// When true, bind the local Zego user (reliable self camera during PK).
+  final bool preferLocalUser;
+
+  @override
+  State<PkHostLiveVideoFill> createState() => _PkHostLiveVideoFillState();
+}
+
+class _PkHostLiveVideoFillState extends State<PkHostLiveVideoFill> {
+  bool _screenUtilReady = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _ensureScreenUtil();
+  }
+
+  void _ensureScreenUtil() {
+    if (_screenUtilReady) return;
+    if (MediaQuery.maybeOf(context) == null) return;
+    try {
+      final _ = ZegoScreenUtil().screenWidth;
+      _screenUtilReady = true;
+    } catch (_) {
+      try {
+        ZegoScreenUtil.init(context);
+        _screenUtilReady = true;
+      } catch (_) {
+        _screenUtilReady = false;
+      }
+    }
+    if (_screenUtilReady && mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() {});
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _ensureScreenUtil();
+
+    if (!Get.isRegistered<LiveBroadcastController>()) {
+      return _fallbackAvatar();
+    }
+
+    final controller = Get.find<LiveBroadcastController>();
+    return Obx(() {
+      // Rebuild when camera / zego connection changes so PK panes refresh.
+      final _ = controller.isCameraOff.value;
+      final connected = controller.isZegoConnected.value;
+      if (!connected || !_screenUtilReady) {
+        return _fallbackAvatar();
+      }
+
+      ZegoUIKitUser? zegoUser;
+      try {
+        if (widget.preferLocalUser) {
+          final local = ZegoUIKit().getLocalUser();
+          if (local.id.trim().isNotEmpty) {
+            zegoUser = local;
+          }
+        }
+        if (zegoUser == null) {
+          final zegoId =
+              ZegoLiveIdUtils.sanitizeUserId(widget.userId.trim());
+          if (zegoId.isEmpty) {
+            return _fallbackAvatar();
+          }
+          for (final user in ZegoUIKit().getAllUsers()) {
+            final uid = ZegoLiveIdUtils.sanitizeUserId(user.id);
+            if (user.id == zegoId || uid == zegoId) {
+              zegoUser = user;
+              break;
+            }
+          }
+          zegoUser ??= ZegoUIKitUser(id: zegoId, name: widget.name);
+        }
+      } catch (_) {
+        return _fallbackAvatar();
+      }
+
+      return ZegoAudioVideoView(
+        user: zegoUser,
+        borderRadius: 0,
+        borderColor: Colors.transparent,
+        backgroundBuilder: (context, size, user, extraInfo) {
+          return _fallbackAvatar();
+        },
+        avatarConfig: ZegoAvatarConfig(
+          showInAudioMode: true,
+          showSoundWavesInAudioMode: false,
+          builder: (context, size, user, extraInfo) {
+            return AppUserAvatar(
+              name: widget.name,
+              imageUrl: widget.imageUrl,
+              size: size.shortestSide * 0.42,
+            );
+          },
+        ),
+      );
+    });
+  }
+
+  Widget _fallbackAvatar() {
+    return ColoredBox(
+      color: const Color(0xFF1A1228),
+      child: Center(
+        child: AppUserAvatar(
+          name: widget.name,
+          imageUrl: widget.imageUrl,
+          size: 72,
         ),
       ),
     );

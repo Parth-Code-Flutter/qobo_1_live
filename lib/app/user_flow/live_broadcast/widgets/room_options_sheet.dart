@@ -41,6 +41,9 @@ class RoomOptionsSheet extends StatelessWidget {
   });
 
   List<_RoomOption> get _options {
+    final pkActive = Get.isRegistered<LiveBroadcastController>() &&
+        Get.find<LiveBroadcastController>().isInRoomPkActive;
+
     if (isHost) {
       return [
         if (isVideoRoom)
@@ -65,13 +68,14 @@ class RoomOptionsSheet extends StatelessWidget {
           color: Color(0xFFB8A4FF),
           gradient: [Color(0xFF9B7BFF), Color(0xFF6C4DFF)],
         ),
-        const _RoomOption(
-          action: _RoomOptionAction.pkBattle,
-          icon: Icons.flash_on_rounded,
-          label: 'PK Battle',
-          color: Color(0xFFFFC857),
-          gradient: [Color(0xFFFFD54F), Color(0xFFFF8F00)],
-        ),
+        if (!pkActive)
+          const _RoomOption(
+            action: _RoomOptionAction.pkBattle,
+            icon: Icons.flash_on_rounded,
+            label: 'PK Battle',
+            color: Color(0xFFFFC857),
+            gradient: [Color(0xFFFFD54F), Color(0xFFFF8F00)],
+          ),
       ];
     }
 

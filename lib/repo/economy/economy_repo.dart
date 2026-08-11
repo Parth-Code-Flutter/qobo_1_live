@@ -15,10 +15,17 @@ class EconomyRepo {
   Future<Map<String, dynamic>?> getWalletBalances({
     bool isShowLoader = true,
   }) async {
-    final response = await _apiService.getRequest(
+    var response = await _apiService.getRequest(
       endPoint: EconomyEndpoints.wallet,
       isShowLoader: isShowLoader,
     );
+
+    if (response?.statusCode == 404) {
+      response = await _apiService.getRequest(
+        endPoint: EconomyEndpoints.walletV1,
+        isShowLoader: isShowLoader,
+      );
+    }
 
     if (response == null) return null;
     return ApiResponseUtils.tryDecodeMap(response.body);
@@ -164,6 +171,22 @@ class EconomyRepo {
       requestModel: body,
       isShowLoader: isShowLoader,
     );
+
+    if (response?.statusCode == 404) {
+      response = await _apiService.postRequest(
+        endPoint: EconomyEndpoints.sendGiftV1,
+        requestModel: body,
+        isShowLoader: isShowLoader,
+      );
+    }
+
+    if (response?.statusCode == 404) {
+      response = await _apiService.postRequest(
+        endPoint: EconomyEndpoints.sendGiftTransactionsV1,
+        requestModel: body,
+        isShowLoader: isShowLoader,
+      );
+    }
 
     if (response?.statusCode == 404) {
       response = await _apiService.postRequest(

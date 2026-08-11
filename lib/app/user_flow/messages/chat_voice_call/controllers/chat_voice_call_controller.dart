@@ -59,10 +59,17 @@ class ChatVoiceCallController extends GetxController
   final elapsedSeconds = 0.obs;
   final billableSeconds = 0.obs;
   final coinsBalance = 0.obs;
-  final coinsPerSecond = 1.0.obs;
+  /// Caller spend rate (doc: 2 coins/sec). Keep separate from host earn rate.
+  final coinsPerSecond = 2.0.obs;
+  /// Callee earn rate (doc: 1 coin/sec = 50% of caller spend).
+  final earnCoinsPerSecond = 1.0.obs;
   final sessionEarnings = SessionEarningsTracker();
   final giftCatalog = <Map<String, String>>[].obs;
   final isLoadingGifts = false.obs;
+
+  /// Last successful `calling/charge` payload (coins spent / host diamonds).
+  final lastChargeTotalCoinsDeducted = 0.obs;
+  final lastChargeHostEarnedDiamonds = 0.obs;
 
   DateTime? _startedAt;
   DateTime? _billingStartedAt;
@@ -119,10 +126,13 @@ class ChatVoiceCallController extends GetxController
       peerBio.value = _cleanText(args['peerBio']) ?? '';
       isCaller.value = args['isCaller'] != false;
       isVideo.value = _parseBool(args['isVideo']);
-      coinsPerSecond.value =
-          _positiveDouble(args['coinsPerSecond']) ??
-          _currentUserCoinsPerSecond() ??
-          1;
+      // Earning guide: caller 2 coins/sec, callee 1 coin/sec (50% split).
+      final passedRate = _positiveDouble(args['coinsPerSecond']) ??
+          _currentUserCoinsPerSecond();
+      coinsPerSecond.value = passedRate ?? 2;
+      earnCoinsPerSecond.value =
+          _positiveDouble(args['earnCoinsPerSecond']) ??
+          (passedRate != null ? (passedRate / 2).clamp(0.5, passedRate) : 1);
       final passedCallId = args['callId']?.toString() ?? '';
       callId.value = passedCallId.isNotEmpty
           ? passedCallId
@@ -181,8 +191,12 @@ class ChatVoiceCallController extends GetxController
   String get formattedDuration =>
       hasPeerJoined.value ? _formatDuration(billableSeconds.value) : 'Ringing';
 
-  int get estimatedCoinDelta =>
-      (billableSeconds.value * coinsPerSecond.value).ceil();
+  int get estimatedCoinDelta {
+    final rate = isCaller.value
+        ? coinsPerSecond.value
+        : earnCoinsPerSecond.value;
+    return (billableSeconds.value * rate).ceil();
+  }
 
   int get estimatedRemainingCoins {
     if (!isCaller.value) return coinsBalance.value;
@@ -209,9 +223,25 @@ class ChatVoiceCallController extends GetxController
     return '+${SessionEarningsUtils.formatAmountForPill(sessionTotalCoinsEarned)}';
   }
 
-  String get sessionEarningsSubtitle => isCaller.value
-      ? 'Remaining ${SessionEarningsUtils.formatAmountForPill(estimatedRemainingCoins)}'
-      : 'Session ${SessionEarningsUtils.formatAmountForPill(sessionTotalCoinsEarned)}';
+  String get sessionEarningsSubtitle {
+    if (isCaller.value) {
+      return '${coinsPerSecond.value.toStringAsFixed(0)}/s · left ${SessionEarningsUtils.formatAmountForPill(estimatedRemainingCoins)}';
+    }
+    return '${earnCoinsPerSecond.value.toStringAsFixed(0)}/s · ${SessionEarningsUtils.formatAmountForPill(sessionTotalCoinsEarned)}';
+  }
+
+  String get callChargeSummaryLabel {
+    if (isCaller.value) {
+      final spent = lastChargeTotalCoinsDeducted.value > 0
+          ? lastChargeTotalCoinsDeducted.value
+          : estimatedCoinDelta;
+      return 'Spent ${SessionEarningsUtils.formatAmountForPill(spent)} coins';
+    }
+    final earned = lastChargeHostEarnedDiamonds.value > 0
+        ? lastChargeHostEarnedDiamonds.value
+        : estimatedCoinDelta;
+    return 'Earned ${SessionEarningsUtils.formatAmountForPill(earned)} diamonds';
+  }
 
   void onCallUserEntered(String userId) {
     final rawEnteredId = userId.trim();
@@ -255,8 +285,9 @@ class ChatVoiceCallController extends GetxController
 
   /// Records call + returns summary for chat thread (WhatsApp-style log row).
   Future<Map<String, dynamic>?> finishCall({bool refreshInbox = true}) async {
-    final summary = await _recordCallIfNeeded();
+    // Charge first so the history summary can include spent/earned amounts.
     await _chargeCallIfNeeded();
+    final summary = await _recordCallIfNeeded();
     if (Get.isRegistered<ChatIncomingCallCoordinator>()) {
       Get.find<ChatIncomingCallCoordinator>().setOnCallScreen(false);
     }
@@ -603,6 +634,13 @@ class ChatVoiceCallController extends GetxController
           outcome == 'completed')
         'durationSeconds': durationSeconds,
       if (durationMinutes != null) 'durationMinutes': durationMinutes,
+      'coinsPerSecond': coinsPerSecond.value,
+      'earnCoinsPerSecond': earnCoinsPerSecond.value,
+      if (lastChargeTotalCoinsDeducted.value > 0)
+        'totalCoinsDeducted': lastChargeTotalCoinsDeducted.value,
+      if (lastChargeHostEarnedDiamonds.value > 0)
+        'hostEarnedDiamonds': lastChargeHostEarnedDiamonds.value,
+      'billingSummary': callChargeSummaryLabel,
     };
 
     await _localStore.appendCallEntry(roomId: roomId.value, entry: summary);
@@ -636,11 +674,30 @@ class ChatVoiceCallController extends GetxController
     if (durationSeconds <= 0) return;
 
     try {
-      await _callingRepo.chargeCall(
+      final response = await _callingRepo.chargeCall(
         hostId: hostId.value.trim(),
         durationSeconds: durationSeconds,
         isShowLoader: false,
       );
+      if (!isEconomyApiSuccess(response)) return;
+      final data = response?['data'];
+      if (data is! Map) return;
+      final deducted = parseWalletAmount(
+        data['totalCoinsDeducted'] ??
+            data['total_coins_deducted'] ??
+            data['coinsDeducted'] ??
+            data['coins_deducted'],
+      );
+      final hostEarned = parseWalletAmount(
+        data['hostEarnedDiamonds'] ??
+            data['host_earned_diamonds'] ??
+            data['hostEarnedCoins'] ??
+            data['host_earned_coins'],
+      );
+      if (deducted > 0) lastChargeTotalCoinsDeducted.value = deducted;
+      if (hostEarned > 0) lastChargeHostEarnedDiamonds.value = hostEarned;
+      // Refresh caller wallet after successful charge.
+      unawaited(loadWalletBalance());
     } catch (e) {
       LoggerUtils.logWarning('ChatVoiceCallController: charge failed — $e');
     }

@@ -10,6 +10,10 @@ class CallingRepo {
   final ApiService _apiService;
 
   /// `POST /api/economy/calling/charge` — deducts caller coins for duration.
+  ///
+  /// Earning rule: caller pays **2 coins/sec**; callee earns **1 coin/sec**
+  /// (50% platform fee). Response may include `totalCoinsDeducted` and
+  /// `hostEarnedDiamonds`.
   Future<Map<String, dynamic>?> chargeCall({
     required String hostId,
     required int durationSeconds,
@@ -17,7 +21,9 @@ class CallingRepo {
   }) async {
     final body = <String, dynamic>{
       'host_id': hostId,
+      'hostId': hostId,
       'duration_seconds': durationSeconds,
+      'durationSeconds': durationSeconds,
     };
 
     var response = await _apiService.postRequest(
@@ -25,6 +31,14 @@ class CallingRepo {
       requestModel: body,
       isShowLoader: isShowLoader,
     );
+
+    if (response?.statusCode == 404) {
+      response = await _apiService.postRequest(
+        endPoint: CallingEndpoints.chargeV1,
+        requestModel: body,
+        isShowLoader: isShowLoader,
+      );
+    }
 
     if (response?.statusCode == 404) {
       response = await _apiService.postRequest(

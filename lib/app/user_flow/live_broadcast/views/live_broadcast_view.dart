@@ -958,14 +958,23 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                   ),
                 ),
               ],
-              if (controller.isHost.value) ...[
-                Spacing.h8,
-                _bottomActionIcon(
-                  Icons.flash_on_rounded,
-                  color: const Color(0xFFFFC857),
-                  onTap: controller.openPkV1Arena,
-                ),
-              ],
+              // Hide start-PK while this live/room is already in PK mode.
+              Obx(() {
+                if (!controller.isHost.value || controller.isInRoomPkActive) {
+                  return const SizedBox.shrink();
+                }
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Spacing.h8,
+                    _bottomActionIcon(
+                      Icons.flash_on_rounded,
+                      color: const Color(0xFFFFC857),
+                      onTap: controller.openPkV1Arena,
+                    ),
+                  ],
+                );
+              }),
               // Gift: hidden for hosts during PK Battle.
               Obx(() {
                 if (controller.isInRoomPkActive && controller.isHost.value) {

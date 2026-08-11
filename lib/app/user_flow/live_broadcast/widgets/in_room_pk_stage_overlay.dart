@@ -68,15 +68,24 @@ class InRoomPkStageOverlay extends StatelessWidget {
                     ],
                   ),
                   // Center PK timer badge over the split seam.
-                  Positioned(
-                    top: compact ? 6 : 10,
-                    left: 0,
-                    right: 0,
-                    child: Center(child: _PkBadge(time: controller.formattedTime)),
-                  ),
-                  if (finished)
-                    Positioned.fill(
-                      child: _ResultBanner(controller: controller),
+                  if (!finished)
+                    Positioned(
+                      top: compact ? 6 : 10,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: _PkBadge(time: controller.formattedTime),
+                      ),
+                    ),
+                  // End PK only — never ends the live/audio room.
+                  if (!finished && controller.isSelfHost)
+                    Positioned(
+                      top: compact ? 4 : 8,
+                      right: 6,
+                      child: _EndPkButton(
+                        compact: compact,
+                        onTap: controller.confirmEndEmbeddedBattle,
+                      ),
                     ),
                 ],
               ),
@@ -158,6 +167,63 @@ class _PkBadge extends StatelessWidget {
   }
 }
 
+class _EndPkButton extends StatelessWidget {
+  const _EndPkButton({
+    required this.onTap,
+    required this.compact,
+  });
+
+  final VoidCallback onTap;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 8 : 10,
+            vertical: compact ? 5 : 6,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: const LinearGradient(
+              colors: [Color(0xFFFF5C7A), Color(0xFFE53935)],
+            ),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFE53935).withValues(alpha: 0.4),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.close_rounded,
+                color: Colors.white,
+                size: compact ? 13 : 14,
+              ),
+              const SizedBox(width: 4),
+              BoldText(
+                text: 'End PK',
+                fontSize: compact ? 10 : 11,
+                color: kColorWhite,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _HostPane extends StatelessWidget {
   const _HostPane({
     required this.side,
@@ -182,35 +248,27 @@ class _HostPane extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(14),
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            accent.withValues(alpha: 0.32),
-            Colors.black.withValues(alpha: 0.55),
-          ],
-        ),
         border: Border.all(color: accent.withValues(alpha: 0.55)),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Stack(
+        fit: StackFit.expand,
         children: [
-          Center(
-            child: Container(
-              padding: const EdgeInsets.all(2.5),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: accent, width: 2),
-                boxShadow: [
-                  BoxShadow(
-                    color: accent.withValues(alpha: 0.35),
-                    blurRadius: 16,
-                  ),
+          PkHostLiveVideoFill(
+            userId: side.hostId,
+            name: side.displayName.isEmpty ? 'Host' : side.displayName,
+            imageUrl: side.avatarUrl,
+            preferLocalUser: isSelf,
+          ),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  accent.withValues(alpha: 0.28),
+                  Colors.black.withValues(alpha: 0.55),
                 ],
-              ),
-              child: AppUserAvatar(
-                name: side.displayName.isEmpty ? 'Host' : side.displayName,
-                imageUrl: side.avatarUrl,
-                size: 72,
               ),
             ),
           ),
@@ -469,56 +527,6 @@ class _GiftCta extends StatelessWidget {
             BoldText(text: 'Send Gift', fontSize: 14, color: kColorWhite),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _ResultBanner extends StatelessWidget {
-  const _ResultBanner({required this.controller});
-
-  final PkV1Controller controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final result = controller.result.value;
-    final side = result?.winnerSide ?? PkBattleSide.none;
-    final title = side == PkBattleSide.tie
-        ? "IT'S A TIE!"
-        : side == PkBattleSide.none
-            ? 'PK ENDED'
-            : 'WINNER · SIDE ${pkSideToApi(side)}';
-    return Container(
-      color: Colors.black.withValues(alpha: 0.55),
-      alignment: Alignment.center,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.emoji_events_rounded, color: Color(0xFFFFC857), size: 42),
-          const SizedBox(height: 8),
-          BoldText(text: title, fontSize: 18, color: const Color(0xFFFFC857)),
-          const SizedBox(height: 12),
-          GestureDetector(
-            onTap: () {
-              if (Get.isRegistered<PkV1Controller>()) {
-                controller.clearEmbeddedBattle();
-              }
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-                color: Colors.white.withValues(alpha: 0.14),
-                border: Border.all(color: Colors.white24),
-              ),
-              child: const AppText(
-                text: 'Back to room',
-                color: kColorWhite,
-                fontSize: 12,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

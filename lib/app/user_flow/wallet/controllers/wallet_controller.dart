@@ -88,6 +88,9 @@ class WalletController extends GetxController {
 
   final coinBalance = '0'.obs;
   final diamondBalance = '0'.obs;
+  /// USD equivalent from wallet API (`dollars` / diamonds÷1000).
+  final dollarBalance = '\$0.00'.obs;
+  final dollarBalanceValue = 0.0.obs;
   final withdrawalLimit = '0'.obs;
   final withdrawableBalance = '0'.obs;
   final withdrawCurrencySymbol = '\$'.obs;
@@ -131,19 +134,24 @@ class WalletController extends GetxController {
     final response = await _economyRepo.getWalletBalances(isShowLoader: false);
     final data = response?['data'];
     if (isEconomyApiSuccess(response) && data is Map) {
-      coinBalance.value = _formatAmount(
-        parseWalletAmount(
-          data['coins'] ??
-              data['coin'] ??
-              data['balance'] ??
-              data['coinBalance'],
-        ),
+      final coins = parseWalletAmount(
+        data['coins'] ??
+            data['coin'] ??
+            data['balance'] ??
+            data['coinBalance'],
       );
-      diamondBalance.value = _formatAmount(
-        parseWalletAmount(
-          data['diamonds'] ?? data['diamond'] ?? data['diamondBalance'],
-        ),
+      final diamonds = parseWalletAmount(
+        data['diamonds'] ?? data['diamond'] ?? data['diamondBalance'],
       );
+      coinBalance.value = _formatAmount(coins);
+      diamondBalance.value = _formatAmount(diamonds);
+      final dollars = resolveEarnedDollars(
+        data: data,
+        diamondsFallback: diamonds,
+        coinsFallback: coins,
+      );
+      dollarBalanceValue.value = dollars;
+      dollarBalance.value = formatUsd(dollars);
     }
   }
 

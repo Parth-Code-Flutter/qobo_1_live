@@ -53,6 +53,9 @@ class AuthEndpoints {
   /// GET /api/user/profile
   static const String getProfile = '/api/user/profile';
 
+  /// GET /api/v1/user/profile — earning-flow enriched profile (dollars)
+  static const String getProfileV1 = '/api/v1/user/profile';
+
   /// POST /api/user/poster-upload
   static const String posterUpload = '/api/user/poster-upload';
 
@@ -277,6 +280,9 @@ class EconomyEndpoints {
   /// GET /api/economy/wallet
   static const String wallet = '/api/economy/wallet';
 
+  /// GET /api/v1/economy/wallet — earning-flow v1 fallback
+  static const String walletV1 = '/api/v1/economy/wallet';
+
   /// POST /api/economy/recharge
   static const String recharge = '/api/economy/recharge';
 
@@ -294,6 +300,13 @@ class EconomyEndpoints {
 
   /// POST /api/economy/send-gift
   static const String sendGift = '/api/economy/send-gift';
+
+  /// POST /api/v1/economy/send-gift — earning-flow v1 fallback
+  static const String sendGiftV1 = '/api/v1/economy/send-gift';
+
+  /// POST /api/v1/transactions/send-gift — earning-flow v1 transactions path
+  static const String sendGiftTransactionsV1 =
+      '/api/v1/transactions/send-gift';
 
   /// Legacy transaction route kept as fallback.
   static const String sendGiftTransactionsLegacy =
@@ -518,6 +531,9 @@ class CallingEndpoints {
 
   /// POST /api/economy/calling/charge
   static const String charge = '/api/economy/calling/charge';
+
+  /// POST /api/v1/economy/calling/charge — earning-flow v1 fallback
+  static const String chargeV1 = '/api/v1/economy/calling/charge';
 
   /// Legacy route kept as fallback.
   static const String chargeLegacy = '/api/calling/charge';

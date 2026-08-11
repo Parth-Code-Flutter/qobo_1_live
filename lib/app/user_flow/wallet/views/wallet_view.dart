@@ -79,11 +79,14 @@ class _WalletViewState extends State<WalletView> {
                           title: 'Diamonds',
                           amount: controller.diamondBalance.value,
                           iconData: Icons.diamond_rounded,
+                          subtitle: controller.dollarBalance.value,
                         ),
                       ),
                     ),
                   ],
                 ),
+                Spacing.v12,
+                Obx(() => _earnedDollarsCard()),
                 Spacing.v12,
                 Obx(() => _withdrawalLimitCard()),
                 Spacing.v12,
@@ -566,6 +569,68 @@ class _WalletViewState extends State<WalletView> {
           size: 14,
           color: kColorWhite,
         ),
+      ),
+    );
+  }
+
+  Widget _earnedDollarsCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: const Color(0xFFFFC857).withValues(alpha: 0.45),
+        ),
+        gradient: LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [
+            const Color(0xFFFFC857).withValues(alpha: 0.22),
+            kColorWalletCardBgBottom.withValues(alpha: 0.9),
+          ],
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFC857).withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.attach_money_rounded,
+              size: 22,
+              color: Color(0xFFFFC857),
+            ),
+          ),
+          Spacing.h12,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SemiBoldText(
+                  text: 'Earned dollars',
+                  fontSize: TextStyles.k14FontSize,
+                  color: kColorWhite,
+                ),
+                Spacing.v2,
+                AppText(
+                  text: '1,000 diamonds = \$1.00 USD',
+                  fontSize: TextStyles.k10FontSize,
+                  color: kColorWhite.withValues(alpha: 0.65),
+                ),
+              ],
+            ),
+          ),
+          SemiBoldText(
+            text: controller.dollarBalance.value,
+            fontSize: TextStyles.k18FontSize,
+            color: const Color(0xFFFFC857),
+          ),
+        ],
       ),
     );
   }
@@ -1317,6 +1382,7 @@ class _WalletViewState extends State<WalletView> {
     required String amount,
     String? icon,
     IconData? iconData,
+    String? subtitle,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -1368,6 +1434,14 @@ class _WalletViewState extends State<WalletView> {
               ),
             ],
           ),
+          if (subtitle != null && subtitle.trim().isNotEmpty) ...[
+            Spacing.v4,
+            AppText(
+              text: subtitle,
+              fontSize: TextStyles.k10FontSize,
+              color: kColorWhite.withValues(alpha: 0.7),
+            ),
+          ],
         ],
       ),
     );

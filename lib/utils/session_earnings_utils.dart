@@ -100,7 +100,30 @@ abstract final class SessionEarningsUtils {
         receiver.isNotEmpty &&
         _idsMatch(earnerId, receiver);
 
-    if (!isRoomGiftToParticipant && !isDirectGiftToEarner) return;
+    if (!isRoomGiftToParticipant && !isDirectGiftToEarner) {
+      // Room / split gift: credit when this user is listed in credited_user_ids.
+      final credited = _readCreditedUserIds(data);
+      final isCredited =
+          credited.isNotEmpty &&
+          credited.any((id) => _idsMatch(earnerId, id));
+      if (!isCredited) return;
+
+      final amountEach = _readIntFromMaps(
+        [data],
+        const ['amount_each', 'amountEach', 'amountPerUser', 'amount_per_user'],
+      );
+      if (amountEach != null && amountEach > 0) {
+        tracker.applyDelta(coins: amountEach, diamonds: amountEach);
+        return;
+      }
+      if (fallbackGiftPrice > 0 && credited.isNotEmpty) {
+        final share = (fallbackGiftPrice * 0.8 / credited.length).round();
+        if (share > 0) {
+          tracker.applyDelta(coins: share, diamonds: share);
+        }
+      }
+      return;
+    }
 
     final hostBlock = _asMap(
       data['hostEarnings'] ??
@@ -117,6 +140,8 @@ abstract final class SessionEarningsUtils {
         'coins_added',
         'hostCoinsAdded',
         'host_coins_added',
+        'amount_each',
+        'amountEach',
       ],
     );
     final deltaDiamonds = _readIntFromMaps(
@@ -125,6 +150,8 @@ abstract final class SessionEarningsUtils {
         ...diamondFieldKeys,
         'diamondsAdded',
         'diamonds_added',
+        'amount_each',
+        'amountEach',
       ],
     );
 
@@ -134,8 +161,23 @@ abstract final class SessionEarningsUtils {
     }
 
     if (fallbackGiftPrice > 0) {
-      tracker.applyDelta(coins: fallbackGiftPrice);
+      // Direct gift: receiver gets 80% after platform fee.
+      final net = (fallbackGiftPrice * 0.8).round();
+      tracker.applyDelta(coins: net > 0 ? net : fallbackGiftPrice);
     }
+  }
+
+  static List<String> _readCreditedUserIds(Map<String, dynamic> data) {
+    final raw =
+        data['credited_user_ids'] ??
+        data['creditedUserIds'] ??
+        data['seated_user_ids'] ??
+        data['seatedUserIds'];
+    if (raw is! List) return const [];
+    return raw
+        .map((e) => e?.toString().trim() ?? '')
+        .where((e) => e.isNotEmpty)
+        .toList();
   }
 
   /// Peer gift chat line — estimate share from catalog / embedded price.

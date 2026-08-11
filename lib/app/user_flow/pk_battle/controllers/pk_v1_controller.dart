@@ -6,10 +6,13 @@ import 'package:qobo_one_live/app/user_flow/pk_battle/models/v1/pk_v1_models.dar
 import 'package:qobo_one_live/repo/pk/pk_repo.dart';
 import 'package:qobo_one_live/repo/pk/pk_v1_repo.dart';
 import 'package:qobo_one_live/repo/room/room_repo.dart';
+import 'package:qobo_one_live/app/user_flow/live_broadcast/controllers/live_broadcast_controller.dart';
+import 'package:qobo_one_live/app/user_flow/pk_battle/widgets/pk_winner_celebration_overlay.dart';
 import 'package:qobo_one_live/services/pk/pk_live_room_bridge.dart';
 import 'package:qobo_one_live/services/realtime/user_realtime_socket_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
+import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 
 /// Which sub-screen of the PK arena is active.
 enum PkArenaStage { selecting, waiting, starting, battling, finished }
@@ -80,8 +83,10 @@ class PkV1Controller extends GetxController {
 
   Timer? _clockTimer;
   Timer? _resyncTimer;
+  Timer? _exitAfterResultTimer;
   Duration _serverOffset = Duration.zero;
   int _giftSeq = 0;
+  bool _resultHandled = false;
 
   UserRealtimeSocketService? get _socket =>
       Get.isRegistered<UserRealtimeSocketService>()
@@ -101,6 +106,8 @@ class PkV1Controller extends GetxController {
   void onClose() {
     _clockTimer?.cancel();
     _resyncTimer?.cancel();
+    _exitAfterResultTimer?.cancel();
+    PkWinnerCelebrationOverlay.dismiss();
     _socket?.removePkBattleV1Listener(_onSocketEvent);
     final pkId = session.value?.pkId;
     if (pkId != null && pkId.isNotEmpty) {
@@ -161,6 +168,10 @@ class PkV1Controller extends GetxController {
   void clearEmbeddedBattle() {
     _clockTimer?.cancel();
     _resyncTimer?.cancel();
+    _exitAfterResultTimer?.cancel();
+    _exitAfterResultTimer = null;
+    PkWinnerCelebrationOverlay.dismiss();
+    _resultHandled = false;
     final pkId = session.value?.pkId;
     if (pkId != null && pkId.isNotEmpty) {
       _socket?.leavePkChannel(pkId);
@@ -192,6 +203,7 @@ class PkV1Controller extends GetxController {
     outgoingInvitation.value = null;
     incomingInvitation.value = null;
     result.value = null;
+    _resultHandled = false;
     _startAtSelection();
   }
 
@@ -542,14 +554,48 @@ class PkV1Controller extends GetxController {
     _startResync();
     _recomputeRemaining();
     _enterEmbeddedLiveRoomMode();
+    _ensurePkHostVideoPublishing();
+  }
+
+  void _ensurePkHostVideoPublishing() {
+    if (!Get.isRegistered<LiveBroadcastController>()) return;
+    try {
+      Get.find<LiveBroadcastController>().ensurePkHostVideoReady();
+    } catch (_) {}
+  }
+
+  bool _idsMatch(String left, String right) {
+    final a = left.trim();
+    final b = right.trim();
+    if (a.isEmpty || b.isEmpty) return false;
+    return a == b ||
+        ZegoLiveIdUtils.sanitizeUserId(a) ==
+            ZegoLiveIdUtils.sanitizeUserId(b);
+  }
+
+  bool _isPkHostUserId(String userId, PkSession? s) {
+    final id = userId.trim();
+    if (id.isEmpty) return false;
+    if (_idsMatch(id, selfUserId)) return true;
+    if (s == null) return false;
+    return _idsMatch(id, s.sideA.hostId) || _idsMatch(id, s.sideB.hostId);
+  }
+
+  List<PkAudienceMember> _filterAudienceMembers(
+    List<PkAudienceMember> members,
+  ) {
+    final s = session.value;
+    return members
+        .where((m) => m.userId.isNotEmpty && !_isPkHostUserId(m.userId, s))
+        .toList();
   }
 
   void _applyAudiencesFromSession(PkSession s) {
     if (s.sideA.audience.isNotEmpty) {
-      sideAAudience.assignAll(s.sideA.audience);
+      sideAAudience.assignAll(_filterAudienceMembers(s.sideA.audience));
     }
     if (s.sideB.audience.isNotEmpty) {
-      sideBAudience.assignAll(s.sideB.audience);
+      sideBAudience.assignAll(_filterAudienceMembers(s.sideB.audience));
     }
   }
 
@@ -560,15 +606,11 @@ class PkV1Controller extends GetxController {
   void syncLocalRoomAudience(List<PkAudienceMember> members) {
     final s = session.value;
     if (s == null) return;
-    final hostIds = {s.sideA.hostId, s.sideB.hostId}
-        .where((id) => id.isNotEmpty)
-        .toSet();
-    final cleaned = members
-        .where((m) => m.userId.isEmpty || !hostIds.contains(m.userId))
-        .toList();
-    if (s.sideA.hostId == selfUserId || s.sideA.roomId == selfRoomId) {
+    final cleaned = _filterAudienceMembers(members);
+    if (_idsMatch(s.sideA.hostId, selfUserId) || s.sideA.roomId == selfRoomId) {
       sideAAudience.assignAll(cleaned);
-    } else if (s.sideB.hostId == selfUserId || s.sideB.roomId == selfRoomId) {
+    } else if (_idsMatch(s.sideB.hostId, selfUserId) ||
+        s.sideB.roomId == selfRoomId) {
       sideBAudience.assignAll(cleaned);
     }
   }
@@ -713,15 +755,76 @@ class PkV1Controller extends GetxController {
   Future<void> leaveBattle({String reason = 'host_leave'}) async {
     final s = session.value;
     if (s == null) {
-      Get.back();
+      _exitBattleUi();
       return;
     }
     final body = await _repo.leave(pkId: s.pkId, reason: reason);
     if (PkV1Repo.isSuccess(body)) {
-      _applyResult(PkResult.fromJson(PkV1Repo.dataOf(body)));
+      final data = PkV1Repo.dataOf(body);
+      if (data.isNotEmpty) {
+        // Server may return a forfeit/result — celebrate then restore room.
+        _applyResult(PkResult.fromJson(data));
+      } else {
+        _exitBattleUi();
+      }
     } else {
+      // Don't leave the live room on API failure — only exit PK UI.
+      _toast(PkV1Repo.messageOf(body).isNotEmpty
+          ? PkV1Repo.messageOf(body)
+          : 'Could not end PK — closing locally');
+      _exitBattleUi();
+    }
+  }
+
+  /// Ends in-room PK and restores normal seats/live UI (never ends the room).
+  void _exitBattleUi() {
+    if (embeddedInLiveRoom.value || PkLiveRoomBridge.isActive.value) {
+      clearEmbeddedBattle();
+      return;
+    }
+    if (Get.key.currentState?.canPop() ?? false) {
       Get.back();
     }
+  }
+
+  /// Confirm + end PK from the live room overlay (hosts only).
+  void confirmEndEmbeddedBattle() {
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: const Color(0xFF1E1230),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text(
+          'End PK Battle?',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+        ),
+        content: Text(
+          'This ends the PK only. Your audio/video room stays open.',
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.75)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text(
+              'Keep battling',
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              leaveBattle(reason: 'host_end');
+            },
+            child: const Text(
+              'End PK',
+              style: TextStyle(
+                color: Color(0xFFFF5C7A),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> report({required String reportedUserId, required String reason}) async {
@@ -746,6 +849,9 @@ class PkV1Controller extends GetxController {
   }
 
   void _applyResult(PkResult r) {
+    if (_resultHandled && result.value?.pkId == r.pkId) return;
+    _resultHandled = true;
+
     result.value = r;
     scoreA.value = r.scoreA;
     scoreB.value = r.scoreB;
@@ -754,6 +860,18 @@ class PkV1Controller extends GetxController {
     PkLiveRoomBridge.setActive(true);
     _clockTimer?.cancel();
     _resyncTimer?.cancel();
+    _exitAfterResultTimer?.cancel();
+
+    final currentSession = session.value;
+    PkWinnerCelebrationOverlay.show(
+      result: r,
+      session: currentSession,
+      onFinished: () {
+        if (!isClosed) {
+          clearEmbeddedBattle();
+        }
+      },
+    );
   }
 
   // ========================================================================
@@ -855,13 +973,17 @@ class PkV1Controller extends GetxController {
       final list = PkAudienceMember.listFrom(
         sideA['audience'] ?? sideA['viewers'] ?? sideA['topViewers'],
       );
-      if (list.isNotEmpty) sideAAudience.assignAll(list);
+      if (list.isNotEmpty) {
+        sideAAudience.assignAll(_filterAudienceMembers(list));
+      }
     }
     if (sideB is Map) {
       final list = PkAudienceMember.listFrom(
         sideB['audience'] ?? sideB['viewers'] ?? sideB['topViewers'],
       );
-      if (list.isNotEmpty) sideBAudience.assignAll(list);
+      if (list.isNotEmpty) {
+        sideBAudience.assignAll(_filterAudienceMembers(list));
+      }
     }
   }
 
