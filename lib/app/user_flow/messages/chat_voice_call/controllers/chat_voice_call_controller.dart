@@ -637,8 +637,10 @@ class ChatVoiceCallController extends GetxController
     );
   }
 
-  /// Same glass coins dialog as audio-room earnings badge.
+  /// Same glass coins dialog as audio-room earnings badge (caller / earning side only).
   void openCallCoinsDialog() {
+    if (isSpendingSide) return;
+
     if (!hasPeerJoined.value) {
       Get.snackbar(
         'Call billing',

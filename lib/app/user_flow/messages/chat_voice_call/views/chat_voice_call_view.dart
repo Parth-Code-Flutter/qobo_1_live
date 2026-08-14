@@ -1027,7 +1027,9 @@ class _CallTopOverlay extends GetView<ChatVoiceCallController> {
                   Flexible(
                     flex: 0,
                     child: GestureDetector(
-                      onTap: controller.openCallCoinsDialog,
+                      onTap: controller.isSpendingSide
+                          ? null
+                          : controller.openCallCoinsDialog,
                       behavior: HitTestBehavior.opaque,
                       child: _CoinsPanel(controller: controller),
                     ),

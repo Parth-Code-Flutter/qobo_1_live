@@ -17,9 +17,8 @@ import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 
 import '../controllers/live_broadcast_controller.dart';
 import '../widgets/audio_room_stage_overlay.dart';
-import '../widgets/in_room_pk_stage_overlay.dart';
+import '../widgets/live_room_pk_stage_slot.dart';
 import '../widgets/room_options_sheet.dart';
-import 'package:qobo_one_live/app/user_flow/pk_battle/controllers/pk_v1_controller.dart';
 
 class LiveBroadcastView extends GetView<LiveBroadcastController> {
   const LiveBroadcastView({super.key});
@@ -41,36 +40,48 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
+        fit: StackFit.expand,
         children: [
-          _buildMainVideoBackground(),
+          Obx(() {
+            final pkActive = controller.isInRoomPkActive;
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                // Keep Zego live engine mounted; hide full-screen host feed during PK.
+                IgnorePointer(
+                  ignoring: pkActive,
+                  child: Opacity(
+                    opacity: pkActive ? 0 : 1,
+                    child: _buildMainVideoBackground(),
+                  ),
+                ),
+                if (pkActive) const Positioned.fill(child: LiveRoomPkBattleBackdrop()),
+              ],
+            );
+          }),
           Obx(() {
             if (controller.isVideoRoom || !controller.canOpenZego) {
               return const SizedBox.shrink();
             }
             return Positioned.fill(child: _buildAudioRoomStage());
           }),
-          const Positioned.fill(child: _LiveOverlayScrim()),
+          Obx(() {
+            if (controller.isInRoomPkActive) {
+              return const SizedBox.shrink();
+            }
+            return const Positioned.fill(child: _LiveOverlayScrim());
+          }),
           SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _buildTopHeader(),
                 Expanded(
-                  child: Obx(() {
-                    if (controller.isInRoomPkActive &&
-                        Get.isRegistered<PkV1Controller>()) {
-                      return Padding(
-                        padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
-                        child: InRoomPkStageOverlay(
-                          controller: Get.find<PkV1Controller>(),
-                        ),
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  }),
+                  child: LiveRoomPkStageSlot(
+                    minHeight: 260,
+                    maxHeightCap: 520,
+                  ),
                 ),
-                // ZEGOCLOUD Prebuilt UIKit automatically handles the interactive audio seats/grids
-                // in the viewport background. Hence, we do not double-render our simulated seat layout.
                 _buildChatList(),
                 _buildBottomControls(context),
               ],
