@@ -1,26 +1,31 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-/// Gullak-style coin transfer: coins stream from the gift area toward the
-/// session-earnings badge in the app bar.
+/// Gullak-style coin transfer: coins stream toward (earn) or away from (deduct)
+/// a badge target.
 ///
-/// Uses a transparent [Get.dialog] route (same as [GiftCelebrationOverlay]) so
-/// coins render above Zego PlatformViews and the audio-room overlay stack.
+/// Uses a root [OverlayEntry] with [IgnorePointer] so call controls stay
+/// tappable while coins animate (unlike a modal [Get.dialog] barrier).
 class CoinFlyOverlay {
   CoinFlyOverlay._();
 
-  static BuildContext? _dialogContext;
+  static OverlayEntry? _entry;
+  static Completer<void>? _activeCompleter;
 
-  /// Flies visual coins into [targetKey]'s center.
+  /// Flies visual coins into [targetKey]'s center (earn) or away from it (deduct).
   ///
-  /// [earnedAmount] > 0 shows a brief "+N" flash near the target.
+  /// [earnedAmount] > 0 shows a brief "+N" / "-N" flash near the target.
+  /// Set [isDeduction] for spend — coins burst outward with a red "-N".
   static Future<void> show({
     required GlobalKey targetKey,
     int coinCount = 10,
     int earnedAmount = 0,
     Offset? startFrom,
+    Offset? endAt,
+    bool isDeduction = false,
     Duration delay = const Duration(milliseconds: 650),
   }) async {
     dismiss();
@@ -40,33 +45,26 @@ class CoinFlyOverlay {
     final target = await _resolveTarget(targetKey);
     if (!navigatorContext.mounted) return;
 
-    if (target == null) {
-      final media = MediaQuery.sizeOf(navigatorContext);
-      final padding = MediaQuery.paddingOf(navigatorContext);
-      // Fallback: top-right app-bar coin pill when the key is not laid out yet.
-      final fallback = Offset(media.width - 56, padding.top + 28);
-      _openDialog(
-        navigatorContext: navigatorContext,
-        origin: startFrom ?? _defaultOrigin(navigatorContext),
-        target: fallback,
-        coinCount: coinCount,
-        earnedAmount: earnedAmount,
-      );
-      return;
-    }
+    final resolvedTarget = target ??
+        () {
+          final media = MediaQuery.sizeOf(navigatorContext!);
+          final padding = MediaQuery.paddingOf(navigatorContext);
+          return Offset(media.width - 56, padding.top + 28);
+        }();
 
-    _openDialog(
+    await _openOverlay(
       navigatorContext: navigatorContext,
       origin: startFrom ?? _defaultOrigin(navigatorContext),
-      target: target,
+      target: resolvedTarget,
+      endAt: endAt,
       coinCount: coinCount,
       earnedAmount: earnedAmount,
+      isDeduction: isDeduction,
     );
   }
 
   static Offset _defaultOrigin(BuildContext context) {
     final media = MediaQuery.sizeOf(context);
-    // Bottom gift-button area in audio rooms.
     return Offset(media.width * 0.78, media.height - 96);
   }
 
@@ -87,48 +85,58 @@ class CoinFlyOverlay {
     return null;
   }
 
-  static void _openDialog({
+  static Future<void> _openOverlay({
     required BuildContext navigatorContext,
     required Offset origin,
     required Offset target,
+    Offset? endAt,
     required int coinCount,
     required int earnedAmount,
+    required bool isDeduction,
   }) {
-    if (!navigatorContext.mounted) return;
+    if (!navigatorContext.mounted) return Future<void>.value();
 
-    Get.dialog<void>(
-      barrierColor: Colors.transparent,
-      barrierDismissible: false,
-      useSafeArea: false,
-      Builder(
-        builder: (dialogContext) {
-          _dialogContext = dialogContext;
-          return _CoinFlyLayer(
-            origin: origin,
-            target: target,
-            coinCount: coinCount.clamp(6, 18),
-            earnedAmount: earnedAmount,
-            onCompleted: () {
-              if (dialogContext.mounted &&
-                  Navigator.of(dialogContext).canPop()) {
-                Navigator.of(dialogContext).pop();
-              }
-              if (_dialogContext == dialogContext) {
-                _dialogContext = null;
-              }
-            },
-          );
-        },
+    final overlay =
+        Overlay.maybeOf(navigatorContext, rootOverlay: true) ??
+        Navigator.maybeOf(navigatorContext, rootNavigator: true)?.overlay;
+    if (overlay == null) return Future<void>.value();
+
+    final completer = Completer<void>();
+    _activeCompleter = completer;
+
+    late OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (_) => IgnorePointer(
+        child: _CoinFlyLayer(
+          origin: origin,
+          target: target,
+          endAt: endAt,
+          coinCount: coinCount.clamp(6, 18),
+          earnedAmount: earnedAmount,
+          isDeduction: isDeduction,
+          onCompleted: () {
+            entry.remove();
+            if (_entry == entry) _entry = null;
+            if (!completer.isCompleted) completer.complete();
+            if (_activeCompleter == completer) _activeCompleter = null;
+          },
+        ),
       ),
     );
+    _entry = entry;
+    overlay.insert(entry);
+    return completer.future;
   }
 
   static void dismiss() {
-    final ctx = _dialogContext;
-    if (ctx != null && ctx.mounted && Navigator.of(ctx).canPop()) {
-      Navigator.of(ctx).pop();
+    final entry = _entry;
+    _entry = null;
+    entry?.remove();
+    final completer = _activeCompleter;
+    _activeCompleter = null;
+    if (completer != null && !completer.isCompleted) {
+      completer.complete();
     }
-    _dialogContext = null;
   }
 }
 
@@ -136,15 +144,19 @@ class _CoinFlyLayer extends StatefulWidget {
   const _CoinFlyLayer({
     required this.origin,
     required this.target,
+    this.endAt,
     required this.coinCount,
     required this.earnedAmount,
+    required this.isDeduction,
     required this.onCompleted,
   });
 
   final Offset origin;
   final Offset target;
+  final Offset? endAt;
   final int coinCount;
   final int earnedAmount;
+  final bool isDeduction;
   final VoidCallback onCompleted;
 
   @override
@@ -190,19 +202,34 @@ class _CoinFlyLayerState extends State<_CoinFlyLayer>
 
   _CoinFlight _buildFlight(int index) {
     final spread = 110.0 + _random.nextDouble() * 40;
+    final flyOrigin = widget.isDeduction ? widget.target : widget.origin;
+    final flyTarget = widget.isDeduction
+        ? (widget.endAt ??
+              Offset(
+                widget.target.dx + (_random.nextDouble() - 0.5) * 90,
+                widget.target.dy + 120 + _random.nextDouble() * 80,
+              ))
+        : widget.target;
     final start = Offset(
-      widget.origin.dx + (_random.nextDouble() - 0.5) * spread,
-      widget.origin.dy + (_random.nextDouble() - 0.5) * 28,
+      flyOrigin.dx +
+          (_random.nextDouble() - 0.5) * (widget.isDeduction ? 24 : spread),
+      flyOrigin.dy +
+          (_random.nextDouble() - 0.5) * (widget.isDeduction ? 16 : 28),
     );
     final end = Offset(
-      widget.target.dx + (_random.nextDouble() - 0.5) * 14,
-      widget.target.dy + (_random.nextDouble() - 0.5) * 10,
+      flyTarget.dx + (_random.nextDouble() - 0.5) * 14,
+      flyTarget.dy + (_random.nextDouble() - 0.5) * 10,
     );
     final lift = 100 + _random.nextDouble() * 120;
-    final mid = Offset(
-      (start.dx + end.dx) / 2 + (_random.nextDouble() - 0.5) * 80,
-      math.min(start.dy, end.dy) - lift,
-    );
+    final mid = widget.isDeduction
+        ? Offset(
+            (start.dx + end.dx) / 2 + (_random.nextDouble() - 0.5) * 60,
+            (start.dy + end.dy) / 2 - lift * 0.35,
+          )
+        : Offset(
+            (start.dx + end.dx) / 2 + (_random.nextDouble() - 0.5) * 80,
+            math.min(start.dy, end.dy) - lift,
+          );
     final delay = index * 0.038 + _random.nextDouble() * 0.05;
     return _CoinFlight(
       start: start,
@@ -232,23 +259,21 @@ class _CoinFlyLayerState extends State<_CoinFlyLayer>
 
   @override
   Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Material(
-        type: MaterialType.transparency,
-        child: SizedBox.expand(
-          child: AnimatedBuilder(
-            animation: Listenable.merge([_burst, _flash, _targetPulse]),
-            builder: (context, _) {
-              return Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  for (final flight in _flights) _coin(flight),
-                  _targetGlow(),
-                  if (widget.earnedAmount > 0) _amountFlash(),
-                ],
-              );
-            },
-          ),
+    return Material(
+      type: MaterialType.transparency,
+      child: SizedBox.expand(
+        child: AnimatedBuilder(
+          animation: Listenable.merge([_burst, _flash, _targetPulse]),
+          builder: (context, _) {
+            return Stack(
+              clipBehavior: Clip.none,
+              children: [
+                for (final flight in _flights) _coin(flight),
+                _targetGlow(),
+                if (widget.earnedAmount > 0) _amountFlash(),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -311,6 +336,7 @@ class _CoinFlyLayerState extends State<_CoinFlyLayer>
     final fade = _flash.value < 0.5
         ? 1.0
         : (1 - ((_flash.value - 0.5) / 0.5)).clamp(0.0, 1.0);
+    final deduct = widget.isDeduction;
     return Positioned(
       left: widget.target.dx - 34,
       top: widget.target.dy - 44 - (22 * t),
@@ -321,22 +347,27 @@ class _CoinFlyLayerState extends State<_CoinFlyLayer>
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFFFE082), Color(0xFFFFA10A)],
+              gradient: LinearGradient(
+                colors: deduct
+                    ? const [Color(0xFFFF8A80), Color(0xFFE62572)]
+                    : const [Color(0xFFFFE082), Color(0xFFFFA10A)],
               ),
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFFFFA10A).withValues(alpha: 0.55),
+                  color: (deduct
+                          ? const Color(0xFFE62572)
+                          : const Color(0xFFFFA10A))
+                      .withValues(alpha: 0.55),
                   blurRadius: 12,
                   spreadRadius: 1,
                 ),
               ],
             ),
             child: Text(
-              '+${widget.earnedAmount}',
-              style: const TextStyle(
-                color: Color(0xFF1A0A00),
+              '${deduct ? '-' : '+'}${widget.earnedAmount}',
+              style: TextStyle(
+                color: deduct ? Colors.white : const Color(0xFF1A0A00),
                 fontWeight: FontWeight.w800,
                 fontSize: 14,
                 decoration: TextDecoration.none,

@@ -21,22 +21,48 @@ class SessionEarningsDialog extends StatefulWidget {
     required this.tracker,
     required this.onWithdraw,
     this.unitLabel = 'coins',
+    this.title = 'Session earnings',
+    this.subtitle = 'Coins earned in this room so far',
+    this.noteWithBalance =
+        'Withdraw anytime from your wallet. Session total updates live as gifts arrive.',
+    this.noteEmpty = 'Receive a gift in this room to start earning coins.',
+    this.showWithdraw = true,
+    this.primaryLabel = 'Withdraw',
   });
 
   final SessionEarningsTracker tracker;
   final VoidCallback onWithdraw;
   final String unitLabel;
+  final String title;
+  final String subtitle;
+  final String noteWithBalance;
+  final String noteEmpty;
+  final bool showWithdraw;
+  final String primaryLabel;
 
   static Future<void> show({
     required SessionEarningsTracker tracker,
     required VoidCallback onWithdraw,
     String unitLabel = 'coins',
+    String title = 'Session earnings',
+    String subtitle = 'Coins earned in this room so far',
+    String noteWithBalance =
+        'Withdraw anytime from your wallet. Session total updates live as gifts arrive.',
+    String noteEmpty = 'Receive a gift in this room to start earning coins.',
+    bool showWithdraw = true,
+    String primaryLabel = 'Withdraw',
   }) {
     return Get.dialog<void>(
       SessionEarningsDialog(
         tracker: tracker,
         onWithdraw: onWithdraw,
         unitLabel: unitLabel,
+        title: title,
+        subtitle: subtitle,
+        noteWithBalance: noteWithBalance,
+        noteEmpty: noteEmpty,
+        showWithdraw: showWithdraw,
+        primaryLabel: primaryLabel,
       ),
       barrierDismissible: true,
       barrierColor: Colors.black.withValues(alpha: 0.72),
@@ -165,15 +191,15 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
                           iconSize: 28,
                         ),
                         Spacing.v16,
-                        const SemiBoldText(
-                          text: 'Session earnings',
+                        SemiBoldText(
+                          text: widget.title,
                           fontSize: TextStyles.k18FontSize,
                           color: kColorWhite,
                           align: TextAlign.center,
                         ),
                         Spacing.v6,
                         AppText(
-                          text: 'Coins earned in this room so far',
+                          text: widget.subtitle,
                           fontSize: TextStyles.k12FontSize,
                           color: AdminAgencyUi.textSecondary,
                           align: TextAlign.center,
@@ -350,8 +376,8 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
             Expanded(
               child: AppText(
                 text: hasEarnings
-                    ? 'Withdraw anytime from your wallet. Session total updates live as gifts arrive.'
-                    : 'Receive a gift in this room to start earning coins.',
+                    ? widget.noteWithBalance
+                    : widget.noteEmpty,
                 fontSize: TextStyles.k12FontSize,
                 color: AdminAgencyUi.textSecondary,
               ),
@@ -373,11 +399,11 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
               onTap: () => Get.back(),
             ),
           ),
-          if (hasEarnings) ...[
+          if (hasEarnings && widget.showWithdraw) ...[
             Spacing.h10,
             Expanded(
               child: _primaryButton(
-                label: 'Withdraw',
+                label: widget.primaryLabel,
                 icon: Icons.account_balance_wallet_rounded,
                 onTap: () {
                   Get.back();

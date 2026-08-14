@@ -42,49 +42,49 @@ class ChatVoiceCallView extends GetView<ChatVoiceCallController> {
         body: Stack(
           fit: StackFit.expand,
           children: [
-            SafeArea(
-              child: ZegoUIKitPrebuiltCall(
-                appID: ZegoConfig.callAppId,
-                appSign: ZegoConfig.callAppSign,
-                userID: controller.zegoUserId,
-                userName: controller.zegoUserName,
-                callID: callId,
-                config: config,
-                events: ZegoUIKitPrebuiltCallEvents(
-                  onError: (error) {
-                    controller.onZegoError(error);
-                    if (!context.mounted) return;
-                    AppToast.showError(
-                      context,
-                      error.message.isNotEmpty
-                          ? error.message
-                          : 'Call error (code ${error.code})',
-                      title: 'Call failed',
+            // Zego owns its own safe-area / bottom bar — don't wrap in SafeArea
+            // or our overlays steal hits from camera / hang-up controls.
+            ZegoUIKitPrebuiltCall(
+              appID: ZegoConfig.callAppId,
+              appSign: ZegoConfig.callAppSign,
+              userID: controller.zegoUserId,
+              userName: controller.zegoUserName,
+              callID: callId,
+              config: config,
+              events: ZegoUIKitPrebuiltCallEvents(
+                onError: (error) {
+                  controller.onZegoError(error);
+                  if (!context.mounted) return;
+                  AppToast.showError(
+                    context,
+                    error.message.isNotEmpty
+                        ? error.message
+                        : 'Call error (code ${error.code})',
+                    title: 'Call failed',
+                  );
+                },
+                room: ZegoCallRoomEvents(
+                  onStateChanged: (state) {
+                    LoggerUtils.logInfo(
+                      'ChatVoiceCallView: room ${state.reason} '
+                      'error=${state.errorCode}',
                     );
                   },
-                  room: ZegoCallRoomEvents(
-                    onStateChanged: (state) {
-                      LoggerUtils.logInfo(
-                        'ChatVoiceCallView: room ${state.reason} '
-                        'error=${state.errorCode}',
-                      );
-                    },
-                  ),
-                  user: ZegoCallUserEvents(
-                    onEnter: (user) {
-                      controller.onCallUserEntered(user.id);
-                      LoggerUtils.logInfo(
-                        'ChatVoiceCallView: call user entered ${user.id}',
-                      );
-                    },
-                  ),
-                  onCallEnd: (event, defaultAction) async {
-                    await controller.finishCall(refreshInbox: false);
-                    defaultAction.call();
-                    await controller.onCallScreenDisposed();
-                    ChatVoiceCallController.refreshMessagesInbox();
+                ),
+                user: ZegoCallUserEvents(
+                  onEnter: (user) {
+                    controller.onCallUserEntered(user.id);
+                    LoggerUtils.logInfo(
+                      'ChatVoiceCallView: call user entered ${user.id}',
+                    );
                   },
                 ),
+                onCallEnd: (event, defaultAction) async {
+                  await controller.finishCall(refreshInbox: false);
+                  defaultAction.call();
+                  await controller.onCallScreenDisposed();
+                  ChatVoiceCallController.refreshMessagesInbox();
+                },
               ),
             ),
             if (isVideo)
@@ -106,13 +106,17 @@ class ChatVoiceCallView extends GetView<ChatVoiceCallController> {
       hideAutomatically: false,
       buttons: isVideo
           ? const [
+              ZegoCallMenuBarButtonName.toggleMicrophoneButton,
               ZegoCallMenuBarButtonName.toggleCameraButton,
               ZegoCallMenuBarButtonName.switchCameraButton,
               ZegoCallMenuBarButtonName.hangUpButton,
             ]
           : const [ZegoCallMenuBarButtonName.hangUpButton],
       extendButtons: isVideo
-          ? const [_ChatCallFilterButton()]
+          ? const [
+              ChatCallSpeakerButton(size: 60),
+              _ChatCallFilterButton(),
+            ]
           : const [ChatCallMicButton(), ChatCallSpeakerButton()],
     );
 
@@ -127,6 +131,19 @@ class ChatVoiceCallView extends GetView<ChatVoiceCallController> {
         ..enableAccidentalTouchPrevention = false
         ..duration.isVisible = false
         ..user.requiredUsers.enabled = false
+        // WhatsApp-style: drag the small local preview anywhere.
+        ..layout = ZegoLayout.pictureInPicture(
+          isSmallViewDraggable: true,
+          switchLargeOrSmallViewByClick: true,
+          smallViewPosition: ZegoViewPosition.topRight,
+          smallViewSize: const Size(108, 152),
+          smallViewMargin: const EdgeInsets.only(
+            left: 12,
+            right: 12,
+            top: 96,
+            bottom: 140,
+          ),
+        )
         ..bottomMenuBar = bottomBar
         ..device = device;
     }
@@ -227,6 +244,8 @@ class _VideoParticipantStrip extends GetView<ChatVoiceCallController> {
 
   @override
   Widget build(BuildContext context) {
+    // Only the Gift chip captures taps — pills are visual and must not block
+    // Zego camera / hang-up buttons underneath.
     return SafeArea(
       child: Align(
         alignment: Alignment.bottomLeft,
@@ -905,103 +924,115 @@ class _CallTopOverlay extends GetView<ChatVoiceCallController> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
           child: Obx(
-            () => GestureDetector(
-              onTap: () => _showProfileSheet(context),
-              child: Container(
-                constraints: const BoxConstraints(minHeight: 74),
-                padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.56),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: kColorWhite.withValues(alpha: 0.12),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.25),
-                      blurRadius: 18,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
+            () => Container(
+              constraints: const BoxConstraints(minHeight: 74),
+              padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.56),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: kColorWhite.withValues(alpha: 0.12),
                 ),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => _confirmBackEndsCall(context),
-                      behavior: HitTestBehavior.opaque,
-                      child: Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.25),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: () => _confirmBackEndsCall(context),
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: kColorWhite.withValues(alpha: 0.10),
+                        shape: BoxShape.circle,
+                        border: Border.all(
                           color: kColorWhite.withValues(alpha: 0.10),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: kColorWhite.withValues(alpha: 0.10),
-                          ),
-                        ),
-                        child: const Icon(
-                          Icons.arrow_back_ios_new_rounded,
-                          color: kColorWhite,
-                          size: 20,
                         ),
                       ),
+                      child: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        color: kColorWhite,
+                        size: 20,
+                      ),
                     ),
-                    Spacing.h8,
-                    AppUserAvatar(
-                      name: controller.isVideo.value
-                          ? controller.peerName.value
-                          : controller.currentUserName,
-                      imageUrl: controller.isVideo.value
-                          ? controller.peerAvatar.value
-                          : controller.currentUserAvatar,
-                      size: 40,
-                      fontSize: TextStyles.k14FontSize,
-                    ),
-                    Spacing.h8,
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SemiBoldText(
-                            text: controller.isVideo.value
-                                ? controller.peerName.value
-                                : controller.currentUserName,
-                            fontSize: TextStyles.k14FontSize,
-                            color: kColorWhite,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Spacing.v2,
-                          Row(
+                  ),
+                  Spacing.h8,
+                  GestureDetector(
+                    onTap: () => _showProfileSheet(context),
+                    behavior: HitTestBehavior.opaque,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AppUserAvatar(
+                          name: controller.isVideo.value
+                              ? controller.peerName.value
+                              : controller.currentUserName,
+                          imageUrl: controller.isVideo.value
+                              ? controller.peerAvatar.value
+                              : controller.currentUserAvatar,
+                          size: 40,
+                          fontSize: TextStyles.k14FontSize,
+                        ),
+                        Spacing.h8,
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 110),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Container(
-                                width: 7,
-                                height: 7,
-                                decoration: BoxDecoration(
-                                  color: controller.hasPeerJoined.value
-                                      ? const Color(0xFF24C08A)
-                                      : Colors.amber,
-                                  shape: BoxShape.circle,
-                                ),
+                              SemiBoldText(
+                                text: controller.isVideo.value
+                                    ? controller.peerName.value
+                                    : controller.currentUserName,
+                                fontSize: TextStyles.k14FontSize,
+                                color: kColorWhite,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              Spacing.h6,
-                              AppText(
-                                text: controller.formattedDuration,
-                                fontSize: TextStyles.k10FontSize,
-                                color: kColorWhite.withValues(alpha: 0.78),
+                              Spacing.v2,
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 7,
+                                    height: 7,
+                                    decoration: BoxDecoration(
+                                      color: controller.hasPeerJoined.value
+                                          ? const Color(0xFF24C08A)
+                                          : Colors.amber,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  Spacing.h6,
+                                  AppText(
+                                    text: controller.formattedDuration,
+                                    fontSize: TextStyles.k10FontSize,
+                                    color: kColorWhite.withValues(alpha: 0.78),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                    Flexible(
-                      flex: 0,
+                  ),
+                  const Spacer(),
+                  Flexible(
+                    flex: 0,
+                    child: GestureDetector(
+                      onTap: controller.openCallCoinsDialog,
+                      behavior: HitTestBehavior.opaque,
                       child: _CoinsPanel(controller: controller),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -1043,10 +1074,11 @@ class _CoinsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final earning = !controller.isCaller.value;
+    final earning = controller.isEarningSide;
     final connected = controller.hasPeerJoined.value;
     return Container(
-      constraints: const BoxConstraints(minWidth: 78, maxWidth: 116),
+      key: controller.callBillingBadgeKey,
+      constraints: const BoxConstraints(minWidth: 86, maxWidth: 128),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         gradient: connected
@@ -1079,9 +1111,11 @@ class _CoinsPanel extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
-                        Icons.diamond_rounded,
-                        color: Colors.amber,
+                      Icon(
+                        earning
+                            ? Icons.monetization_on_rounded
+                            : Icons.account_balance_wallet_rounded,
+                        color: earning ? const Color(0xFFFFE082) : Colors.amber,
                         size: 14,
                       ),
                       Spacing.h2,
@@ -1100,6 +1134,22 @@ class _CoinsPanel extends StatelessWidget {
                   fontSize: TextStyles.k12FontSize,
                   color: kColorWhite,
                 ),
+          if (connected) ...[
+            Spacing.v2,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: SemiBoldText(
+                text: controller.billingDeltaLabel,
+                fontSize: TextStyles.k10FontSize,
+                color: earning
+                    ? const Color(0xFFB8F5D8)
+                    : const Color(0xFFFFB4C8),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
           AppText(
             text: connected
                 ? controller.sessionEarningsSubtitle
@@ -1184,15 +1234,15 @@ class _CallProfileSheet extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _ProfileMetric(
-                      label: 'Duration',
-                      value: controller.formattedDuration,
+                      label: controller.isSpendingSide ? 'Wallet left' : 'Wallet',
+                      value: controller.billingAmountLabel,
                     ),
                   ),
                   Spacing.h10,
                   Expanded(
                     child: _ProfileMetric(
-                      label: controller.isCaller.value ? 'Spent' : 'Earned',
-                      value: controller.billingAmountLabel,
+                      label: controller.isSpendingSide ? 'Spent' : 'Earned',
+                      value: controller.billingDeltaLabel,
                     ),
                   ),
                 ],

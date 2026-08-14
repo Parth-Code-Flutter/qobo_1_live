@@ -4,6 +4,8 @@ import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/messages/chat_detail/controllers/chat_detail_controller.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/controllers/messages_tab_controller.dart';
+import 'package:qobo_one_live/app/user_flow/wallet/bindings/wallet_binding.dart';
+import 'package:qobo_one_live/app/user_flow/wallet/views/wallet_view.dart';
 import 'package:qobo_one_live/repo/calling/calling_repo.dart';
 import 'package:qobo_one_live/repo/chat/chat_local_store.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
@@ -14,9 +16,11 @@ import 'package:qobo_one_live/services/session/session_earnings_tracker.dart';
 import 'package:qobo_one_live/services/chat/chat_inbox_preview.dart';
 import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
+import 'package:qobo_one_live/utils/app_widgets/session_earnings_dialog.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 import 'package:qobo_one_live/utils/security/screen_capture_guard.dart';
 import 'package:qobo_one_live/utils/session_earnings_utils.dart';
+import 'package:qobo_one_live/utils/ui_utils/coin_fly_overlay.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_celebration_overlay.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_chat_celebration_tracker.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_media_utils.dart';
@@ -64,6 +68,8 @@ class ChatVoiceCallController extends GetxController
   /// Callee earn rate (doc: 1 coin/sec = 50% of caller spend).
   final earnCoinsPerSecond = 1.0.obs;
   final sessionEarnings = SessionEarningsTracker();
+  /// Target for per-second billing coin fly animation in the call top bar.
+  final callBillingBadgeKey = GlobalKey(debugLabel: 'callBillingBadge');
   final giftCatalog = <Map<String, String>>[].obs;
   final isLoadingGifts = false.obs;
 
@@ -86,6 +92,15 @@ class ChatVoiceCallController extends GetxController
       GiftChatCelebrationTracker();
   bool _giftListenerBound = false;
   Timer? _sessionEarningsTimer;
+  Timer? _walletRefreshTimer;
+  int _lastBillingAnimationSecond = 0;
+  int _lastBillingAnimShownAtSecond = 0;
+  int _pendingAnimCoins = 0;
+  bool _billingAnimInFlight = false;
+  int _callTimeCoinsEarned = 0;
+  int _callTimeCoinsSpent = 0;
+  /// Dialog display tracker (callee earnings or caller spend).
+  final callCoinsDialogTracker = SessionEarningsTracker();
 
   /// True after we turned on [ScreenCaptureGuard] for this video session.
   bool _screenCaptureLocked = false;
@@ -124,9 +139,9 @@ class ChatVoiceCallController extends GetxController
       peerAvatar.value = _cleanText(args['peerAvatar']);
       peerCountry.value = _cleanText(args['peerCountry']) ?? '';
       peerBio.value = _cleanText(args['peerBio']) ?? '';
-      isCaller.value = args['isCaller'] != false;
+      isCaller.value = _parseIsCaller(args['isCaller']);
       isVideo.value = _parseBool(args['isVideo']);
-      // Earning guide: caller 2 coins/sec, callee 1 coin/sec (50% split).
+      // Earning rule: caller earns, receiver pays (2 coins/sec spend, 1/sec earn).
       final passedRate = _positiveDouble(args['coinsPerSecond']) ??
           _currentUserCoinsPerSecond();
       coinsPerSecond.value = passedRate ?? 2;
@@ -149,9 +164,11 @@ class ChatVoiceCallController extends GetxController
     _startTicker();
     unawaited(loadWalletBalance());
     unawaited(loadGiftCatalog());
-    if (!isCaller.value) {
+    // Caller earns → poll session earnings; both sides refresh wallet.
+    if (isEarningSide) {
       _startSessionEarningsPolling();
     }
+    _startWalletRefreshPolling();
     // Listen for peer gifts once the call room message bus is available.
     _bindGiftMessageListener();
     // 1:1 video only — block screenshots / screen recording while on this call.
@@ -188,50 +205,74 @@ class ChatVoiceCallController extends GetxController
     return false;
   }
 
+  /// Caller pays; only explicit false / 0 / "false" means callee.
+  static bool _parseIsCaller(dynamic value) {
+    if (value == false || value == 0) return false;
+    if (value is String) {
+      final normalized = value.trim().toLowerCase();
+      if (normalized == 'false' || normalized == '0' || normalized == 'callee') {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /// Caller earns; receiver (acceptor) pays.
+  bool get isSpendingSide => !isCaller.value;
+  bool get isEarningSide => isCaller.value;
+
   String get formattedDuration =>
       hasPeerJoined.value ? _formatDuration(billableSeconds.value) : 'Ringing';
 
+  int get estimatedRemainingCoins {
+    // Live wallet already decrements per tick for the spending side (receiver).
+    return coinsBalance.value < 0 ? 0 : coinsBalance.value;
+  }
+
   int get estimatedCoinDelta {
-    final rate = isCaller.value
+    final rate = isSpendingSide
         ? coinsPerSecond.value
         : earnCoinsPerSecond.value;
     return (billableSeconds.value * rate).ceil();
   }
 
-  int get estimatedRemainingCoins {
-    if (!isCaller.value) return coinsBalance.value;
-    final remaining = coinsBalance.value - estimatedCoinDelta;
-    return remaining < 0 ? 0 : remaining;
-  }
-
   int get sessionGiftCoinsEarned => sessionEarnings.displayCoins;
 
   int get sessionTotalCoinsEarned {
-    if (isCaller.value) return 0;
-    return sessionGiftCoinsEarned + estimatedCoinDelta;
+    if (isSpendingSide) return 0;
+    // Includes per-second call ticks + gift credits already applied to tracker.
+    return sessionEarnings.displayCoins;
   }
 
   String get billingRoleLabel => hasPeerJoined.value
-      ? (isCaller.value ? 'Coins spending' : 'Session earning')
+      ? (isSpendingSide ? 'Spending' : 'Earning')
       : 'Starts after answer';
 
   String get billingAmountLabel {
     if (!hasPeerJoined.value) return '0';
-    if (isCaller.value) {
-      return '-${SessionEarningsUtils.formatAmountForPill(estimatedCoinDelta)}';
+    if (isSpendingSide) {
+      return SessionEarningsUtils.formatAmountForPill(estimatedRemainingCoins);
+    }
+    return SessionEarningsUtils.formatAmountForPill(coinsBalance.value);
+  }
+
+  String get billingDeltaLabel {
+    if (!hasPeerJoined.value) return '';
+    if (isSpendingSide) {
+      return '-${SessionEarningsUtils.formatAmountForPill(_callTimeCoinsSpent > 0 ? _callTimeCoinsSpent : estimatedCoinDelta)}';
     }
     return '+${SessionEarningsUtils.formatAmountForPill(sessionTotalCoinsEarned)}';
   }
 
   String get sessionEarningsSubtitle {
-    if (isCaller.value) {
-      return '${coinsPerSecond.value.toStringAsFixed(0)}/s · left ${SessionEarningsUtils.formatAmountForPill(estimatedRemainingCoins)}';
+    if (isSpendingSide) {
+      return '${coinsPerSecond.value.toStringAsFixed(0)}/s · spent ${SessionEarningsUtils.formatAmountForPill(_callTimeCoinsSpent > 0 ? _callTimeCoinsSpent : estimatedCoinDelta)}';
     }
-    return '${earnCoinsPerSecond.value.toStringAsFixed(0)}/s · ${SessionEarningsUtils.formatAmountForPill(sessionTotalCoinsEarned)}';
+    return '${earnCoinsPerSecond.value.toStringAsFixed(0)}/s · call ${SessionEarningsUtils.formatAmountForPill(_callTimeCoinsEarned > 0 ? _callTimeCoinsEarned : estimatedCoinDelta)}';
   }
 
   String get callChargeSummaryLabel {
-    if (isCaller.value) {
+    if (isSpendingSide) {
       final spent = lastChargeTotalCoinsDeducted.value > 0
           ? lastChargeTotalCoinsDeducted.value
           : estimatedCoinDelta;
@@ -240,7 +281,7 @@ class ChatVoiceCallController extends GetxController
     final earned = lastChargeHostEarnedDiamonds.value > 0
         ? lastChargeHostEarnedDiamonds.value
         : estimatedCoinDelta;
-    return 'Earned ${SessionEarningsUtils.formatAmountForPill(earned)} diamonds';
+    return 'Earned ${SessionEarningsUtils.formatAmountForPill(earned)} coins';
   }
 
   void onCallUserEntered(String userId) {
@@ -275,6 +316,13 @@ class ChatVoiceCallController extends GetxController
     _peerJoined = true;
     hasPeerJoined.value = true;
     _billingStartedAt ??= DateTime.now();
+    _lastBillingAnimationSecond = 0;
+    _lastBillingAnimShownAtSecond = 0;
+    _pendingAnimCoins = 0;
+    _billingAnimInFlight = false;
+    _callTimeCoinsEarned = 0;
+    _callTimeCoinsSpent = 0;
+    callCoinsDialogTracker.reset();
     // Engine is usually ready once the peer is in — (re)bind gift messages.
     _bindGiftMessageListener(force: true);
   }
@@ -315,6 +363,8 @@ class ChatVoiceCallController extends GetxController
     WidgetsBinding.instance.removeObserver(this);
     _ticker?.cancel();
     _stopSessionEarningsPolling();
+    _stopWalletRefreshPolling();
+    CoinFlyOverlay.dismiss();
     _giftMessageSub?.cancel();
     _giftCelebrationTracker.reset();
     GiftCelebrationOverlay.dismiss();
@@ -460,21 +510,33 @@ class ChatVoiceCallController extends GetxController
               message: m.message,
             ),
           ),
-      onPeerGift: !isCaller.value
-          ? (event) {
-              SessionEarningsUtils.ingestIncomingGiftChat(
+      onPeerGift: (event) {
+              final earned = SessionEarningsUtils.ingestIncomingGiftChat(
                 tracker: sessionEarnings,
                 chatMessage: event.message,
                 giftCatalog: giftCatalog.toList(),
                 earnsGift: true,
               );
-            }
-          : null,
+              if (earned > 0) {
+                coinsBalance.value =
+                    (coinsBalance.value + earned).clamp(0, 1 << 30);
+                if (isEarningSide) {
+                  callCoinsDialogTracker.setFromTotals(
+                    coins: sessionTotalCoinsEarned,
+                    diamonds: sessionTotalCoinsEarned,
+                  );
+                }
+                _playBillingCoinAnimation(
+                  amount: earned,
+                  isDeduction: false,
+                );
+              }
+            },
     );
   }
 
   void _startSessionEarningsPolling() {
-    if (isCaller.value) return;
+    if (!isEarningSide) return;
     _sessionEarningsTimer?.cancel();
     unawaited(_refreshSessionEarnings());
     _sessionEarningsTimer = Timer.periodic(const Duration(seconds: 30), (_) {
@@ -487,8 +549,150 @@ class ChatVoiceCallController extends GetxController
     _sessionEarningsTimer = null;
   }
 
+  void _startWalletRefreshPolling() {
+    _walletRefreshTimer?.cancel();
+    _walletRefreshTimer = Timer.periodic(const Duration(seconds: 45), (_) {
+      unawaited(loadWalletBalance());
+    });
+  }
+
+  void _stopWalletRefreshPolling() {
+    _walletRefreshTimer?.cancel();
+    _walletRefreshTimer = null;
+  }
+
+  void _onBillableSecondAdvanced(int seconds) {
+    if (!_peerJoined || seconds <= _lastBillingAnimationSecond) return;
+    _lastBillingAnimationSecond = seconds;
+
+    // Caller earns; receiver pays.
+    if (isSpendingSide) {
+      final spent = coinsPerSecond.value.ceil();
+      _callTimeCoinsSpent += spent;
+      coinsBalance.value =
+          (coinsBalance.value - spent).clamp(0, 1 << 30);
+      callCoinsDialogTracker.setFromTotals(
+        coins: _callTimeCoinsSpent,
+        diamonds: _callTimeCoinsSpent,
+      );
+      _queueBillingCoinAnimation(amount: spent, isDeduction: true);
+      return;
+    }
+
+    final earned = earnCoinsPerSecond.value.ceil();
+    _callTimeCoinsEarned += earned;
+    sessionEarnings.applyDelta(coins: earned, diamonds: earned);
+    callCoinsDialogTracker.setFromTotals(
+      coins: sessionTotalCoinsEarned,
+      diamonds: sessionTotalCoinsEarned,
+    );
+    coinsBalance.value = (coinsBalance.value + earned).clamp(0, 1 << 30);
+    _queueBillingCoinAnimation(amount: earned, isDeduction: false);
+  }
+
+  /// Batch per-second ticks so overlays don't stack on the video PIP.
+  void _queueBillingCoinAnimation({
+    required int amount,
+    required bool isDeduction,
+  }) {
+    if (amount <= 0) return;
+    _pendingAnimCoins += amount;
+    final secondsSinceLast =
+        _lastBillingAnimationSecond - _lastBillingAnimShownAtSecond;
+    if (_billingAnimInFlight) return;
+    // Show at most every 3s with accumulated coins.
+    if (secondsSinceLast < 3 && _lastBillingAnimShownAtSecond > 0) return;
+    final showAmount = _pendingAnimCoins;
+    _pendingAnimCoins = 0;
+    _lastBillingAnimShownAtSecond = _lastBillingAnimationSecond;
+    _playBillingCoinAnimation(amount: showAmount, isDeduction: isDeduction);
+  }
+
+  void _playBillingCoinAnimation({
+    required int amount,
+    required bool isDeduction,
+  }) {
+    if (amount <= 0) return;
+    _billingAnimInFlight = true;
+    final visualCount = (3 + (amount / 3).ceil()).clamp(3, 8);
+    unawaited(
+      CoinFlyOverlay.show(
+        targetKey: callBillingBadgeKey,
+        coinCount: visualCount,
+        earnedAmount: amount,
+        isDeduction: isDeduction,
+        delay: const Duration(milliseconds: 40),
+      ).whenComplete(() {
+        _billingAnimInFlight = false;
+        if (_pendingAnimCoins > 0 && _peerJoined) {
+          final leftover = _pendingAnimCoins;
+          _pendingAnimCoins = 0;
+          _lastBillingAnimShownAtSecond = _lastBillingAnimationSecond;
+          _playBillingCoinAnimation(
+            amount: leftover,
+            isDeduction: isSpendingSide,
+          );
+        }
+      }),
+    );
+  }
+
+  /// Same glass coins dialog as audio-room earnings badge.
+  void openCallCoinsDialog() {
+    if (!hasPeerJoined.value) {
+      Get.snackbar(
+        'Call billing',
+        'Coins start after the call is answered.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    if (isEarningSide) {
+      callCoinsDialogTracker.setFromTotals(
+        coins: sessionTotalCoinsEarned,
+        diamonds: sessionTotalCoinsEarned,
+      );
+      SessionEarningsDialog.show(
+        tracker: callCoinsDialogTracker,
+        onWithdraw: openWithdrawalWallet,
+        unitLabel: 'coins',
+        title: 'Call earnings',
+        subtitle: 'Coins earned on this call so far',
+        noteWithBalance:
+            'You earn ${earnCoinsPerSecond.value.toStringAsFixed(0)} coin/sec while the call is connected. Withdraw anytime from wallet.',
+        noteEmpty: 'Stay on the call to start earning coins.',
+      );
+      return;
+    }
+
+    callCoinsDialogTracker.setFromTotals(
+      coins: _callTimeCoinsSpent > 0 ? _callTimeCoinsSpent : estimatedCoinDelta,
+      diamonds: _callTimeCoinsSpent > 0 ? _callTimeCoinsSpent : estimatedCoinDelta,
+    );
+    SessionEarningsDialog.show(
+      tracker: callCoinsDialogTracker,
+      onWithdraw: openWithdrawalWallet,
+      unitLabel: 'coins',
+      title: 'Call spending',
+      subtitle: 'Coins spent on this call so far',
+      noteWithBalance:
+          'You are charged ${coinsPerSecond.value.toStringAsFixed(0)} coins/sec. Wallet left: ${SessionEarningsUtils.formatAmountForPill(estimatedRemainingCoins)}.',
+      noteEmpty: 'Spending starts after the call is answered.',
+      showWithdraw: true,
+      primaryLabel: 'Wallet',
+    );
+  }
+
+  void openWithdrawalWallet() {
+    Get.to(
+      () => const WalletView(openWithdrawOnLoad: true),
+      binding: WalletBinding(),
+    );
+  }
+
   Future<void> _refreshSessionEarnings() async {
-    if (isCaller.value) return;
+    if (!isEarningSide) return;
     final currentRoomId = roomId.value.trim();
     if (currentRoomId.isEmpty) return;
 
@@ -509,9 +713,13 @@ class ChatVoiceCallController extends GetxController
       }
       final billingStartedAt = _billingStartedAt;
       if (billingStartedAt != null) {
-        billableSeconds.value = DateTime.now()
+        final nextBillable = DateTime.now()
             .difference(billingStartedAt)
             .inSeconds;
+        if (nextBillable != billableSeconds.value) {
+          billableSeconds.value = nextBillable;
+          _onBillableSecondAdvanced(nextBillable);
+        }
       }
     });
   }
@@ -665,7 +873,8 @@ class ChatVoiceCallController extends GetxController
   }
 
   Future<void> _chargeCallIfNeeded() async {
-    if (_charged || !isCaller.value || hostId.value.trim().isEmpty) return;
+    // Receiver pays the caller (earner). hostId on callee screen is the caller.
+    if (_charged || isCaller.value || hostId.value.trim().isEmpty) return;
     if (!_peerJoined) return;
     _charged = true;
     final startedAt = _billingStartedAt;
@@ -696,7 +905,6 @@ class ChatVoiceCallController extends GetxController
       );
       if (deducted > 0) lastChargeTotalCoinsDeducted.value = deducted;
       if (hostEarned > 0) lastChargeHostEarnedDiamonds.value = hostEarned;
-      // Refresh caller wallet after successful charge.
       unawaited(loadWalletBalance());
     } catch (e) {
       LoggerUtils.logWarning('ChatVoiceCallController: charge failed — $e');
