@@ -435,6 +435,7 @@ class ChatVoiceCallController extends GetxController
       receiverId: receiverId,
       giftId: giftId,
       roomId: currentRoomId,
+      sessionType: 'call',
       isShowLoader: true,
     );
     if (isEconomyApiSuccess(response)) {

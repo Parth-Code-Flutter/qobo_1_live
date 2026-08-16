@@ -429,6 +429,12 @@ class _ProfileTabViewState extends State<ProfileTabView> {
         const [Color(0xFFFFC51D), Color(0xFFFFFF35)],
         onTapRoute: Routes.CUSTOMER_SERVICE,
       ),
+      _ProfileFeatureItem(
+        'Transactions',
+        kIconCoin3,
+        const [Color(0xFFFFB020), Color(0xFFFF6B57)],
+        onTapRoute: Routes.GIFT_TRANSACTIONS,
+      ),
     ];
 
     return Container(

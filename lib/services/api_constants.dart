@@ -298,6 +298,19 @@ class EconomyEndpoints {
   /// GET /api/economy/gift-list
   static const String giftList = '/api/economy/gift-list';
 
+  /// GET /api/economy/gift-history?type=&page=&limit=
+  static const String giftHistory = '/api/economy/gift-history';
+
+  /// GET /api/v1/economy/gift-history — v1 alias fallback
+  static const String giftHistoryV1 = '/api/v1/economy/gift-history';
+
+  /// GET /api/economy/gift-history/summary
+  static const String giftHistorySummary = '/api/economy/gift-history/summary';
+
+  /// GET /api/v1/economy/gift-history/summary — v1 alias fallback
+  static const String giftHistorySummaryV1 =
+      '/api/v1/economy/gift-history/summary';
+
   /// POST /api/economy/send-gift
   static const String sendGift = '/api/economy/send-gift';
 

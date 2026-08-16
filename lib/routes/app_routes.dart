@@ -46,6 +46,7 @@ abstract class Routes {
   static const AWARD = _Paths.AWARD;
   static const BROADCAST_WATCHED = _Paths.BROADCAST_WATCHED;
   static const TRANSACTION_HISTORY = _Paths.TRANSACTION_HISTORY;
+  static const GIFT_TRANSACTIONS = _Paths.GIFT_TRANSACTIONS;
   static const VIP_STORE = _Paths.VIP_STORE;
   static const ENTRANCE_PATTI = _Paths.ENTRANCE_PATTI;
   static const LIVE_MODERATION = _Paths.LIVE_MODERATION;
@@ -106,6 +107,7 @@ abstract class _Paths {
   static const AWARD = '/award';
   static const BROADCAST_WATCHED = '/broadcast-watched';
   static const TRANSACTION_HISTORY = '/transaction-history';
+  static const GIFT_TRANSACTIONS = '/gift-transactions';
   static const VIP_STORE = '/vip-store';
   static const ENTRANCE_PATTI = '/entrance-patti';
   static const LIVE_MODERATION = '/live-moderation';

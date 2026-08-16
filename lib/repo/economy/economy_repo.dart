@@ -104,6 +104,57 @@ class EconomyRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
+  /// Calls `GET /api/economy/gift-history` for sent-gift history by type.
+  Future<Map<String, dynamic>?> getGiftHistory({
+    required String type,
+    int page = 1,
+    int limit = 20,
+    bool isShowLoader = false,
+  }) async {
+    final query = <String, String>{
+      'type': type.trim(),
+      'page': '$page',
+      'limit': '${limit.clamp(1, 50)}',
+    };
+
+    var response = await _apiService.getRequest(
+      endPoint: EconomyEndpoints.giftHistory,
+      queryParams: query,
+      isShowLoader: isShowLoader,
+    );
+
+    if (response?.statusCode == 404) {
+      response = await _apiService.getRequest(
+        endPoint: EconomyEndpoints.giftHistoryV1,
+        queryParams: query,
+        isShowLoader: isShowLoader,
+      );
+    }
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// Calls `GET /api/economy/gift-history/summary` for the four category totals.
+  Future<Map<String, dynamic>?> getGiftHistorySummary({
+    bool isShowLoader = false,
+  }) async {
+    var response = await _apiService.getRequest(
+      endPoint: EconomyEndpoints.giftHistorySummary,
+      isShowLoader: isShowLoader,
+    );
+
+    if (response?.statusCode == 404) {
+      response = await _apiService.getRequest(
+        endPoint: EconomyEndpoints.giftHistorySummaryV1,
+        isShowLoader: isShowLoader,
+      );
+    }
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
   /// Calls `GET /api/economy/gift-list` to fetch the available room gifts list.
   Future<Map<String, dynamic>?> getGiftList({bool isShowLoader = true}) async {
     final response = await _apiService.getRequest(
