@@ -9,6 +9,7 @@ void main() {
       giftIcon: '🌹',
       animationUrl: 'https://cdn.example/rose.svga',
       soundUrl: 'https://cdn.example/rose.mp3',
+      receiverId: 'peer-1',
     );
     expect(label.startsWith('🎁 '), isTrue);
     expect(label.contains('[[giftAnim:https://cdn.example/rose.svga]]'), isTrue);

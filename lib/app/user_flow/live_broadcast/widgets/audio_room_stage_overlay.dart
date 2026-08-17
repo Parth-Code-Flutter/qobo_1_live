@@ -1004,7 +1004,7 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
                 // Floor audience moved here from the bottom strip: person + count.
                 dense ? Spacing.h6 : Spacing.h8,
                 _FloorAudienceBadge(compact: dense),
-                // Host + audience: local session earnings (gifts to this user).
+                // Host session earnings only. Audience can see the pill, not the dialog.
                 dense ? Spacing.h6 : Spacing.h8,
                 SessionEarningsBadge(
                   key: controller.sessionEarningsBadgeKey,
@@ -1013,7 +1013,9 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
                   maxWidth: earningsMaxWidth,
                   icon: Icons.monetization_on_rounded,
                   iconColor: const Color(0xFFFFA10A),
-                  onTap: controller.openSessionEarningsDialog,
+                  onTap: controller.isHost.value
+                      ? controller.openSessionEarningsDialog
+                      : null,
                 ),
                 if (controller.isHost.value) ...[
                   dense ? Spacing.h6 : Spacing.h8,
@@ -1313,20 +1315,7 @@ class _VideoOccupiedSeatTile extends GetView<LiveBroadcastController> {
                                   compact: tiny,
                                 ),
                               ),
-                              if (seat.diamonds > 0) ...[
-                                const SizedBox(width: 4),
-                                Icon(
-                                  Icons.diamond_rounded,
-                                  size: tiny ? 9 : 11,
-                                  color: AudioRoomStageOverlay._seatGold,
-                                ),
-                                const SizedBox(width: 2),
-                                AppText(
-                                  text: '${seat.diamonds}',
-                                  fontSize: TextStyles.k10FontSize,
-                                  color: kColorWhite.withValues(alpha: 0.78),
-                                ),
-                              ],
+                              _SeatSessionCoinInline(seat: seat, compact: tiny),
                             ],
                           ),
                         ],
@@ -1937,7 +1926,7 @@ class _MemberSeat extends GetView<LiveBroadcastController> {
                   ],
                 ),
               ),
-              _DiamondCount(value: seat.diamonds),
+              _SeatSessionCoinCount(seat: seat),
             ],
           ),
         ),
@@ -2162,12 +2151,16 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
                 label: 'Seat ${seat.seatNo}',
                 accent: const Color(0xFF1A9FD4),
               ),
-            if (seat.diamonds > 0)
-              _metaPill(
+            Obx(() {
+              if (!controller.shouldShowSeatSessionCoins(seat)) {
+                return const SizedBox.shrink();
+              }
+              return _metaPill(
                 icon: Icons.diamond_rounded,
-                label: '${seat.diamonds}',
+                label: '${controller.sessionCoinsForSeat(seat)}',
                 accent: const Color(0xFF2ED3FF),
-              ),
+              );
+            }),
             if (seat.isCoinsSeller)
               _metaPill(
                 icon: Icons.storefront_rounded,
@@ -2572,7 +2565,8 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
   }
 
   Widget _badgeShowcase() {
-    final pattiLabel = VipEntranceOverlay.formatPattiLabel(seat.pattiStyle);
+    return Obx(() {
+      final pattiLabel = VipEntranceOverlay.formatPattiLabel(seat.pattiStyle);
     final medals = <_BadgeMedalData>[
       if (seat.isAdmin)
         const _BadgeMedalData(
@@ -2614,9 +2608,9 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
           icon: Icons.mic_rounded,
           colors: [Color(0xFFB9F6CA), Color(0xFF2FE56E), Color(0xFF00C853)],
         ),
-      if (seat.diamonds > 0)
+      if (controller.shouldShowSeatSessionCoins(seat))
         _BadgeMedalData(
-          label: 'x${seat.diamonds}',
+          label: 'x${controller.sessionCoinsForSeat(seat)}',
           icon: Icons.diamond_rounded,
           colors: const [
             Color(0xFFB2EBF2),
@@ -2724,6 +2718,7 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
         ],
       ),
     );
+    });
   }
 
   Widget _badgeMedalCard(_BadgeMedalData medal, {bool featured = false}) {
@@ -2823,27 +2818,34 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
   }
 
   Widget _roomStatsRow() {
-    return Row(
-      children: [
-        _statChip(
-          icon: Icons.diamond_rounded,
-          label: '${seat.diamonds}',
-          color: const Color(0xFF2ED3FF),
-        ),
-        Spacing.h8,
-        _statChip(
-          icon: Icons.event_seat_rounded,
-          label: 'Seat ${seat.seatNo}',
-          color: const Color(0xFFFFB347),
-        ),
-        const Spacer(),
-        Icon(
-          Icons.chevron_right_rounded,
-          color: kColorWhite.withValues(alpha: 0.8),
-          size: 22,
-        ),
-      ],
-    );
+    return Obx(() {
+      final sessionCoins = controller.shouldShowSeatSessionCoins(seat)
+          ? controller.sessionCoinsForSeat(seat)
+          : null;
+      return Row(
+        children: [
+          if (sessionCoins != null) ...[
+            _statChip(
+              icon: Icons.diamond_rounded,
+              label: '$sessionCoins',
+              color: const Color(0xFF2ED3FF),
+            ),
+            Spacing.h8,
+          ],
+          _statChip(
+            icon: Icons.event_seat_rounded,
+            label: 'Seat ${seat.seatNo}',
+            color: const Color(0xFFFFB347),
+          ),
+          const Spacer(),
+          Icon(
+            Icons.chevron_right_rounded,
+            color: kColorWhite.withValues(alpha: 0.8),
+            size: 22,
+          ),
+        ],
+      );
+    });
   }
 
   Widget _statChip({
@@ -4785,6 +4787,55 @@ class _MicBubble extends StatelessWidget {
         size: small ? 19 : 21,
       ),
     );
+  }
+}
+
+class _SeatSessionCoinCount extends GetView<LiveBroadcastController> {
+  const _SeatSessionCoinCount({required this.seat});
+
+  final AudioRoomSeatModel seat;
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      if (!controller.shouldShowSeatSessionCoins(seat)) {
+        return const SizedBox.shrink();
+      }
+      return _DiamondCount(value: controller.sessionCoinsForSeat(seat));
+    });
+  }
+}
+
+class _SeatSessionCoinInline extends GetView<LiveBroadcastController> {
+  const _SeatSessionCoinInline({required this.seat, required this.compact});
+
+  final AudioRoomSeatModel seat;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      if (!controller.shouldShowSeatSessionCoins(seat)) {
+        return const SizedBox.shrink();
+      }
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(width: 4),
+          Icon(
+            Icons.diamond_rounded,
+            size: compact ? 9 : 11,
+            color: AudioRoomStageOverlay._seatGold,
+          ),
+          const SizedBox(width: 2),
+          AppText(
+            text: '${controller.sessionCoinsForSeat(seat)}',
+            fontSize: TextStyles.k10FontSize,
+            color: kColorWhite.withValues(alpha: 0.78),
+          ),
+        ],
+      );
+    });
   }
 }
 

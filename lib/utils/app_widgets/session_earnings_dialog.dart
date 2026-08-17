@@ -228,6 +228,7 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
         widget.tracker.displayCoins,
       );
       final hasEarnings = widget.tracker.displayCoins > 0;
+      final usdLabel = formatWholeUsdFromCoins(widget.tracker.displayCoins);
 
       return AnimatedBuilder(
         animation: _pulse,
@@ -324,7 +325,7 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
                 ),
                 Spacing.v6,
                 AppText(
-                  text: formatUsd(coinsToDollars(widget.tracker.displayCoins)),
+                  text: usdLabel,
                   fontSize: TextStyles.k14FontSize,
                   color: AdminAgencyUi.gold,
                 ),

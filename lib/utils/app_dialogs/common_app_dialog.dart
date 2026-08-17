@@ -103,6 +103,35 @@ class CommonAppDialog extends StatelessWidget {
     );
   }
 
+  /// Gift Send combo: returns `3`, `5`, `10`, or `1` (Single). Null if dismissed.
+  static Future<int?> giftCombo() {
+    return showGet<int>(
+      title: 'Do you want to send combo?',
+      message:
+          'Combo of 3, 5, or 10 sends this gift that many times. Single sends it once.',
+      icon: Icons.card_giftcard_rounded,
+      iconAccent: const Color(0xFFFF5CAB),
+      actions: const [
+        CommonAppDialogAction(
+          label: 'Combo of 3',
+          isPrimary: true,
+          result: 3,
+        ),
+        CommonAppDialogAction(
+          label: 'Combo of 5',
+          isPrimary: true,
+          result: 5,
+        ),
+        CommonAppDialogAction(
+          label: 'Combo of 10',
+          isPrimary: true,
+          result: 10,
+        ),
+        CommonAppDialogAction(label: 'Single', result: 1),
+      ],
+    );
+  }
+
   /// Two-button confirm helper.
   static Future<bool?> confirm({
     BuildContext? context,

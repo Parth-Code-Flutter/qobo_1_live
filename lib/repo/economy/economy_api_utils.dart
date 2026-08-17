@@ -69,6 +69,17 @@ String formatUsd(num dollars) {
   return '\$$fixed';
 }
 
+/// Whole-dollar label from coins/diamonds; `$0` below 1,000 (= $1).
+///
+/// Session UIs should use this instead of [formatUsd] + [coinsToDollars] so
+/// partial amounts (e.g. 9 coins) never show as `$0.01`.
+String formatWholeUsdFromCoins(num coinsOrDiamonds) {
+  final coins = coinsOrDiamonds.toDouble();
+  if (coins < kCoinsPerDollar) return '\$0';
+  final dollars = (coins / kCoinsPerDollar).floor();
+  return '\$$dollars';
+}
+
 String formatLedgerAmount(num value) {
   final abs = value.abs().round();
   final formatted = abs.toString().replaceAllMapped(

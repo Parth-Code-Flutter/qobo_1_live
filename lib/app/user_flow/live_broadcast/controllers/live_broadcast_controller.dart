@@ -29,6 +29,7 @@ import 'package:qobo_one_live/utils/app_dialogs/audio_room_feedback_dialog.dart'
 import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
 import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/session_earnings_dialog.dart';
+import 'package:qobo_one_live/utils/gift_share_economics.dart';
 import 'package:qobo_one_live/utils/session_earnings_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -91,7 +92,11 @@ class LiveBroadcastController extends GetxController {
 
   final coinsBalance = 0.obs;
   final diamondsBalance = 0.obs;
+  /// Host-only session coins shown in the room AppBar (not audience wallet).
   final sessionEarnings = SessionEarningsTracker();
+
+  /// Per-occupant coins earned while seated this visit. Leave + rejoin => 0.
+  final seatSessionCoins = <String, int>{}.obs;
 
   /// Target for gullak-style coin fly animation into the host earnings pill.
   final sessionEarningsBadgeKey = GlobalKey(debugLabel: 'sessionEarningsBadge');
@@ -154,6 +159,7 @@ class LiveBroadcastController extends GetxController {
   Worker? _pkActiveWorker;
   var _exitReported = false;
   var _hostEndConfirmed = false;
+  var _giftSendInFlight = false;
 
   /// True when PK forced the camera on (e.g. audio room → PK video panes).
   var _pkForcedCameraOn = false;
@@ -187,6 +193,7 @@ class LiveBroadcastController extends GetxController {
     _hydrateHostProfile();
     _hydrateRoomBackground();
     _seedSessionEarningsFromRoom();
+    _restoreHostSessionIfNeeded();
     _validateStreamingInput();
     loadWalletBalance();
     loadGiftCatalog();
@@ -198,15 +205,14 @@ class LiveBroadcastController extends GetxController {
         restoreCameraAfterPk();
       }
     });
-    if (isHost.value) {
-      _startSessionEarningsPolling();
-    }
+    // Host + audience both read the host session total for the AppBar pill.
+    _startSessionEarningsPolling();
     if (isAudioVideoRoom) {
       // Open join + seat-request realtime for host and guests.
       unawaited(_bootstrapPartyRoomRealtime());
       final initialSeats = _parseAudioSeats(_roomData);
       if (initialSeats.isNotEmpty) {
-        audioRoomSeats.assignAll(initialSeats);
+        _setAudioRoomSeats(initialSeats);
         _seedVipEntranceBaselineFromSeats(initialSeats);
       }
       if (!isHost.value) {
@@ -447,6 +453,11 @@ class LiveBroadcastController extends GetxController {
     _applyActiveFollowerPkMeta(
       map['active_follower_pk'] ?? map['activeFollowerPk'],
     );
+
+    SessionEarningsUtils.ingestRoomData(sessionEarnings, map);
+    if (sessionEarnings.displayCoins > 0) {
+      _rememberHostSessionIfNeeded();
+    }
   }
 
   /// Mirrors `active_follower_pk` onto the challenger's seat when seats lag.
@@ -490,7 +501,7 @@ class LiveBroadcastController extends GetxController {
       return seat.copyWith(pkBattle: badge);
     }).toList();
     if (changed) {
-      audioRoomSeats.assignAll(next);
+      _setAudioRoomSeats(next);
     }
   }
 
@@ -877,6 +888,31 @@ class LiveBroadcastController extends GetxController {
 
   void _seedSessionEarningsFromRoom() {
     SessionEarningsUtils.ingestRoomData(sessionEarnings, _roomData);
+    _rememberHostSessionIfNeeded();
+  }
+
+  void _rememberHostSessionIfNeeded() {
+    final coins = sessionEarnings.displayCoins;
+    if (coins <= 0) return;
+    HostSessionRoomStore.remember(audioRoomApiId, coins);
+    HostSessionRoomStore.remember(roomId.value, coins);
+  }
+
+  /// Audience leave/rejoin creates a new tracker at 0 — restore host AppBar total.
+  void _restoreHostSessionIfNeeded() {
+    if (sessionEarnings.displayCoins > 0) {
+      _rememberHostSessionIfNeeded();
+      return;
+    }
+    final cached = [
+      HostSessionRoomStore.peek(audioRoomApiId),
+      HostSessionRoomStore.peek(roomId.value),
+    ].fold<int>(0, (max, value) => value > max ? value : max);
+    if (cached <= 0) return;
+    sessionEarnings.setFromTotals(
+      coins: cached,
+      diamonds: sessionEarnings.diamondsEarned.value,
+    );
   }
 
   String get _sessionEarningsType {
@@ -885,12 +921,91 @@ class LiveBroadcastController extends GetxController {
     return 'audio_room';
   }
 
+  String _resolvedHostId() {
+    return resolveHostId(_roomData) ?? receiverId.value.trim();
+  }
+
+  bool _seatIsRoomHost(AudioRoomSeatModel seat) {
+    if (seat.isHost) return true;
+    return _userIdsMatch(seat.userId, _resolvedHostId());
+  }
+
+  int _sessionCoinsForUserId(String userId) {
+    final id = userId.trim();
+    if (id.isEmpty) return 0;
+    final direct = seatSessionCoins[id];
+    if (direct != null) return direct;
+    for (final entry in seatSessionCoins.entries) {
+      if (_userIdsMatch(entry.key, id)) return entry.value;
+    }
+    return 0;
+  }
+
+  /// Seat chip: 0 on join, then this-visit gift credits. Host stays on seat 1.
+  int sessionCoinsForSeat(AudioRoomSeatModel seat) {
+    if (!shouldShowSeatSessionCoins(seat)) return 0;
+    return _sessionCoinsForUserId(seat.userId);
+  }
+
+  bool shouldShowSeatSessionCoins(AudioRoomSeatModel seat) {
+    return seat.occupied && seat.userId.trim().isNotEmpty;
+  }
+
+  void _setAudioRoomSeats(List<AudioRoomSeatModel> seats) {
+    audioRoomSeats.assignAll(seats);
+    _syncSeatSessionOccupants(seats);
+  }
+
+  /// Drop audience coins when they leave so a rejoin starts at 0.
+  /// Host AppBar / host seat session is never cleared here.
+  void _syncSeatSessionOccupants(List<AudioRoomSeatModel> seats) {
+    final present = <String>{};
+    for (final seat in seats) {
+      final id = seat.userId.trim();
+      if (seat.occupied && id.isNotEmpty) present.add(id);
+    }
+    final hostId = _resolvedHostId();
+
+    var changed = false;
+    final stale = seatSessionCoins.keys
+        .where((id) => !present.any((live) => _userIdsMatch(live, id)))
+        .toList();
+    for (final id in stale) {
+      if (hostId.isNotEmpty && _userIdsMatch(id, hostId)) continue;
+      seatSessionCoins.remove(id);
+      changed = true;
+    }
+    for (final id in present) {
+      final already = seatSessionCoins.keys.any(
+        (existing) => _userIdsMatch(existing, id),
+      );
+      if (!already) {
+        seatSessionCoins[id] = 0;
+        changed = true;
+      }
+    }
+    if (changed) seatSessionCoins.refresh();
+  }
+
+  void _addSeatSessionCoins(String userId, int amount) {
+    if (amount <= 0) return;
+    final id = userId.trim();
+    if (id.isEmpty) return;
+    var key = id;
+    for (final existing in seatSessionCoins.keys) {
+      if (_userIdsMatch(existing, id)) {
+        key = existing;
+        break;
+      }
+    }
+    seatSessionCoins[key] = (seatSessionCoins[key] ?? 0) + amount;
+  }
+
   void _startSessionEarningsPolling() {
-    if (!isHost.value) return;
     _sessionEarningsTimer?.cancel();
     unawaited(_refreshSessionEarnings());
     _sessionEarningsTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (_exitReported || !isHost.value) {
+      if (_exitReported) {
         _stopSessionEarningsPolling();
         return;
       }
@@ -904,7 +1019,7 @@ class LiveBroadcastController extends GetxController {
   }
 
   Future<void> _refreshSessionEarnings() async {
-    if (!isHost.value || _exitReported) return;
+    if (_exitReported) return;
     final roomApiId = audioRoomApiId;
     if (roomApiId.isEmpty) return;
 
@@ -914,6 +1029,15 @@ class LiveBroadcastController extends GetxController {
       isShowLoader: false,
     );
     SessionEarningsUtils.ingestApiEnvelope(sessionEarnings, response);
+    debugPrint(
+      '[session-earnings] room=$roomApiId type=$_sessionEarningsType '
+      'display=${sessionEarnings.displayCoins} raw=$response',
+    );
+    if (sessionEarnings.displayCoins > 0) {
+      _rememberHostSessionIfNeeded();
+    } else {
+      _restoreHostSessionIfNeeded();
+    }
   }
 
   void _applySessionEarningsFromGiftResponse({
@@ -922,11 +1046,13 @@ class LiveBroadcastController extends GetxController {
     required String scope,
     String? receiverId,
   }) {
-    final myId = _currentUserId();
-    final hostId = resolveHostId(_roomData) ?? this.receiverId.value.trim();
-    if (myId.isEmpty) return;
+    // Party rooms credit the host pill via [_bumpSeatDiamonds].
+    if (isAudioVideoRoom) return;
 
-    // Sender never earns from their own gift. Room gifts credit peers only.
+    final hostId = _resolvedHostId();
+    if (hostId.isEmpty) return;
+
+    // Sender never earns. Room gifts credit peers via chat on live streams.
     final normalized = scope.trim().toLowerCase();
     if (normalized == 'room') return;
 
@@ -934,7 +1060,7 @@ class LiveBroadcastController extends GetxController {
       tracker: sessionEarnings,
       response: response,
       hostUserId: hostId,
-      earnerUserId: myId,
+      earnerUserId: hostId,
       hostReceivesRoomGifts: false,
       roomParticipantsEarn: false,
       fallbackGiftPrice: fallbackGiftPrice,
@@ -943,44 +1069,41 @@ class LiveBroadcastController extends GetxController {
     );
   }
 
-  /// Whether the local user earns from this gift.
-  ///
-  /// - `room`: seated participants only (floor audience excluded).
-  /// - `user`: only the targeted receiver.
-  /// When [creditedUserIds] is present (backend gift_sent), that list wins.
-  bool _localUserEarnsGift({
+  /// Whether the room host earns from this gift (AppBar host session).
+  bool _hostEarnsGift({
     required String scope,
     String? receiverId,
     String? senderId,
     List<String>? creditedUserIds,
   }) {
-    final myId = _currentUserId();
-    if (myId.isEmpty) return false;
+    final hostId = _resolvedHostId();
+    if (hostId.isEmpty) return false;
     final from = senderId?.trim() ?? '';
-    if (from.isNotEmpty && _userIdsMatch(from, myId)) {
-      // Sender pays — they do not earn.
+    if (from.isNotEmpty && _userIdsMatch(from, hostId)) {
       return false;
     }
 
     if (creditedUserIds != null && creditedUserIds.isNotEmpty) {
-      return creditedUserIds.any((id) => _userIdsMatch(id, myId));
+      return creditedUserIds.any((id) => _userIdsMatch(id, hostId));
     }
 
     final normalized = scope.trim().toLowerCase();
     if (normalized == 'room') {
-      // Room gifts credit mic seats only — not floor audience.
-      return audioRoomSeats.any(
-        (seat) => seat.occupied && _userIdsMatch(seat.userId, myId),
-      );
+      if (isAudioVideoRoom) {
+        return audioRoomSeats.any(
+          (seat) => seat.occupied && _seatIsRoomHost(seat),
+        );
+      }
+      return true;
     }
     final to = receiverId?.trim() ?? '';
-    return to.isNotEmpty && _userIdsMatch(to, myId);
+    return to.isNotEmpty && _userIdsMatch(to, hostId);
   }
 
-  /// Optimistic seat diamond bump for gift recipients.
+  /// Optimistic in-visit seat coins for gift recipients (not lifetime diamonds).
   ///
   /// Room gifts credit occupied seats except [excludeUserId] (sender).
-  /// Floor audience is never bumped.
+  /// Floor audience is never bumped. Host credits also update the AppBar pill.
   void _bumpSeatDiamonds({
     required String scope,
     String? receiverId,
@@ -1002,11 +1125,12 @@ class LiveBroadcastController extends GetxController {
       return;
     }
 
-    var changed = false;
-    final next = audioRoomSeats.map((seat) {
-      if (!seat.occupied) return seat;
+    var hostCredited = false;
+    var seatedCredit = false;
+    for (final seat in audioRoomSeats) {
+      if (!seat.occupied) continue;
       if (exclude.isNotEmpty && _userIdsMatch(seat.userId, exclude)) {
-        return seat;
+        continue;
       }
       final matchCredited =
           credited != null &&
@@ -1017,13 +1141,17 @@ class LiveBroadcastController extends GetxController {
       final matchUser =
           normalized != 'room' && _userIdsMatch(seat.userId, targetId);
       if (matchCredited || matchRoom || matchUser) {
-        changed = true;
-        return seat.copyWith(diamonds: seat.diamonds + amount);
+        seatedCredit = true;
+        _addSeatSessionCoins(seat.userId, amount);
+        if (_seatIsRoomHost(seat)) {
+          hostCredited = true;
+        }
       }
-      return seat;
-    }).toList();
-    if (changed) {
-      audioRoomSeats.assignAll(next);
+    }
+    if (seatedCredit) seatSessionCoins.refresh();
+    if (hostCredited) {
+      sessionEarnings.applyDelta(coins: amount, diamonds: amount);
+      _rememberHostSessionIfNeeded();
     }
   }
 
@@ -1047,8 +1175,9 @@ class LiveBroadcastController extends GetxController {
     );
   }
 
-  /// Shows session earnings dialog; Withdraw navigates to wallet withdraw.
+  /// Host-only session earnings dialog. Audience taps on the AppBar are ignored.
   void openSessionEarningsDialog() {
+    if (!isHost.value) return;
     SessionEarningsDialog.show(
       tracker: sessionEarnings,
       onWithdraw: openWithdrawalWallet,
@@ -1150,9 +1279,29 @@ class LiveBroadcastController extends GetxController {
   /// Send is still gated by [hasGiftAudience] inside [sendGift].
   bool get canSendGifts => true;
 
-  /// True when room-scoped gifts have at least one other seated recipient.
-  ///
   /// Party-room gifts credit **mic seats only** (not floor audience).
+  List<String> _roomGiftRecipientIds({String? excludeUserId}) {
+    if (isAudioVideoRoom) {
+      return _seatedGiftRecipientIds(excludeUserId: excludeUserId);
+    }
+    final exclude = excludeUserId?.trim() ?? '';
+    final ids = <String>[];
+    void addId(String raw) {
+      final id = raw.trim();
+      if (id.isEmpty) return;
+      if (exclude.isNotEmpty && _userIdsMatch(id, exclude)) return;
+      if (ids.any((existing) => _userIdsMatch(existing, id))) return;
+      ids.add(id);
+    }
+
+    final hostId = receiverId.value.trim();
+    if (hostId.isNotEmpty) addId(hostId);
+    for (final viewer in liveViewers) {
+      addId((viewer['targetId'] ?? viewer['id'])?.toString() ?? '');
+    }
+    return ids;
+  }
+
   bool get hasGiftAudience {
     if (isAudioVideoRoom) {
       return _seatedGiftRecipientIds(
@@ -1213,9 +1362,9 @@ class LiveBroadcastController extends GetxController {
 
   String get giftSheetDescription => isRoomGiftMode.value
       ? (isAudioVideoRoom
-            ? 'This gift will be shared with everyone on a mic seat.'
-            : 'This gift will be shared with everyone in the room.')
-      : 'This gift will be sent privately to $giftTargetLabel.';
+            ? 'Shared equally with others on a mic seat after a 20% fee. You are not included.'
+            : 'Shared equally with everyone else in this live after a 20% fee. You are not included.')
+      : 'Sent to $giftTargetLabel. They receive 80% after a 20% platform fee.';
 
   /// Called after Zego room login — ensures host camera publishes and binds chat/users.
   void onZegoRoomLogined() {
@@ -1350,6 +1499,7 @@ class LiveBroadcastController extends GetxController {
               message: m.message,
             ),
           ),
+      giftCatalog: giftCatalog.toList(),
       onPeerGift: (event) {
         unawaited(
           _handlePeerGiftEarnings(event.message, senderId: event.senderId),
@@ -1371,10 +1521,14 @@ class LiveBroadcastController extends GetxController {
         _giftPriceFromCatalogMessage(chatMessage);
     final creditedIds = parseGiftCreditedUserIds(chatMessage);
     final amountEach = parseGiftAmountEach(chatMessage);
-    // Room gifts: prefer per-seat amount_each; fall back to catalog price.
-    final creditAmount = (amountEach != null && amountEach > 0)
-        ? amountEach
-        : price;
+    final creditAmount = GiftShareEconomics.creditAmount(
+      coinsSpent: price,
+      isRoomShare: scope == 'room',
+      recipientCount: creditedIds.isNotEmpty
+          ? creditedIds.length
+          : _roomGiftRecipientIds(excludeUserId: fromId).length,
+      apiAmountEach: amountEach,
+    );
 
     // Room → seated users only (or credited_user_ids when present).
     if (creditAmount > 0) {
@@ -1390,30 +1544,35 @@ class LiveBroadcastController extends GetxController {
       unawaited(loadAudioRoomSeats());
     }
 
-    final iEarn = _localUserEarnsGift(
+    final hostEarns = _hostEarnsGift(
       scope: scope,
       receiverId: receiverId,
       senderId: fromId,
       creditedUserIds: creditedIds,
     );
-    if (!iEarn || _exitReported) return;
+    if (!hostEarns || _exitReported) return;
 
-    final before = sessionEarnings.displayCoins;
-    var earned = SessionEarningsUtils.ingestIncomingGiftChat(
-      tracker: sessionEarnings,
-      chatMessage: chatMessage,
-      giftCatalog: giftCatalog.toList(),
-      earnsGift: true,
-    );
-
-    if (earned <= 0 && creditAmount > 0) {
-      sessionEarnings.applyDelta(coins: creditAmount);
+    var earned = 0;
+    if (!isAudioVideoRoom) {
+      final before = sessionEarnings.displayCoins;
+      earned = SessionEarningsUtils.ingestIncomingGiftChat(
+        tracker: sessionEarnings,
+        chatMessage: chatMessage,
+        giftCatalog: giftCatalog.toList(),
+        earnsGift: true,
+      );
+      if (earned <= 0 && creditAmount > 0) {
+        sessionEarnings.applyDelta(coins: creditAmount);
+        earned = creditAmount;
+      } else if (earned <= 0) {
+        await _refreshSessionEarnings();
+        earned = sessionEarnings.displayCoins - before;
+      }
+    } else {
       earned = creditAmount;
-    } else if (earned <= 0) {
-      await _refreshSessionEarnings();
-      earned = sessionEarnings.displayCoins - before;
     }
 
+    if (!isHost.value) return;
     await GiftCelebrationOverlay.waitUntilIdle();
     if (_exitReported) return;
     _playEarningsCoinFlyAnimation(
@@ -1717,12 +1876,18 @@ class LiveBroadcastController extends GetxController {
     }
   }
 
-  Future<void> sendGift(Map<String, String> gift) async {
+  Future<void> sendGift(
+    Map<String, String> gift, {
+    int comboCount = 1,
+  }) async {
+    if (_giftSendInFlight) return;
+    final count = comboCount < 1 ? 1 : comboCount;
     final int price = int.tryParse(gift['price'] ?? '0') ?? 0;
-    if (coinsBalance.value < price) {
+    final totalCost = price * count;
+    if (coinsBalance.value < totalCost) {
       Get.snackbar(
         'Insufficient Coins',
-        'You need ${price - coinsBalance.value} more coins to send this gift.',
+        'You need ${totalCost - coinsBalance.value} more coins to send this gift.',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: const Color(0xFFD32F2F),
         colorText: const Color(0xFFFFFFFF),
@@ -1749,16 +1914,18 @@ class LiveBroadcastController extends GetxController {
     }
 
     final myId = _currentUserId();
-    final seatedRecipients = scope == 'room' && isAudioVideoRoom
-        ? _seatedGiftRecipientIds(excludeUserId: myId)
+    final seatedRecipients = scope == 'room'
+        ? _roomGiftRecipientIds(excludeUserId: myId)
         : const <String>[];
 
-    // Room gift ("everyone on seats") — need another seated user with a real id.
-    if (scope == 'room' && isAudioVideoRoom) {
+    // Share-to-all: sender pays the catalog price once; 80% is split among others.
+    if (scope == 'room') {
       if (seatedRecipients.isEmpty) {
         Get.snackbar(
           'No audience',
-          'No other seated users can receive this gift. Wait until someone is on a mic seat.',
+          isAudioVideoRoom
+              ? 'No other seated users can receive this gift. Wait until someone is on a mic seat.'
+              : "There's no audience to share gifts. Please wait for someone to join",
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.black87,
           colorText: const Color(0xFFFFFFFF),
@@ -1766,28 +1933,6 @@ class LiveBroadcastController extends GetxController {
         );
         return;
       }
-      final totalCost = price * seatedRecipients.length;
-      if (coinsBalance.value < totalCost) {
-        Get.snackbar(
-          'Insufficient Coins',
-          'Room gifts are shared with ${seatedRecipients.length} seated users '
-              '($totalCost coins). You need ${totalCost - coinsBalance.value} more.',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: const Color(0xFFD32F2F),
-          colorText: const Color(0xFFFFFFFF),
-        );
-        return;
-      }
-    } else if (scope == 'room' && !hasGiftAudience) {
-      Get.snackbar(
-        'No audience',
-        "There's no audience to share gifts. Please wait for someone to join",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.black87,
-        colorText: const Color(0xFFFFFFFF),
-        duration: const Duration(seconds: 3),
-      );
-      return;
     }
 
     if (giftId.isEmpty ||
@@ -1809,109 +1954,91 @@ class LiveBroadcastController extends GetxController {
         ? (isVideoRoom ? 'video_room' : 'audio_room')
         : 'live_stream';
 
-    Map<String, dynamic>? response;
-
-    if (scope == 'room' && isAudioVideoRoom && seatedRecipients.isNotEmpty) {
-      // Party-room backend often returns "No seated users..." for scope=room
-      // even when seats are occupied. Deliver via seated user gifts instead,
-      // and still show a single "to the Room" chat celebration.
-      response = await _sendRoomGiftViaSeatedFanOut(
-        giftId: giftId,
-        roomId: currentRoomId,
-        recipientIds: seatedRecipients,
-        sessionType: sessionType,
-        price: price,
-      );
-
-      // If fan-out failed entirely, one last try at native room scope.
-      if (!isEconomyApiSuccess(response)) {
-        response = await _economyRepo.sendGift(
-          receiverId: null,
+    _giftSendInFlight = true;
+    var sent = 0;
+    try {
+      for (var i = 0; i < count; i++) {
+        var response = await _economyRepo.sendGift(
+          receiverId: scope == 'room' ? null : currentReceiverId,
           giftId: giftId,
           roomId: currentRoomId,
-          scope: 'room',
-          seatedUserIds: seatedRecipients,
+          scope: scope,
+          seatedUserIds: scope == 'room' ? seatedRecipients : null,
           sessionType: sessionType,
-          isShowLoader: true,
+          isShowLoader: i == 0,
+        );
+
+        // Backend `scope=room` often ignores seatedUserIds and says no seats even
+        // when we sent them. One other seated user == individual gift economically
+        // (80% to that person). Do not fan-out N user gifts — that charges N× price.
+        if (!isEconomyApiSuccess(response) &&
+            scope == 'room' &&
+            seatedRecipients.length == 1 &&
+            _isNoSeatedUsersGiftError(response)) {
+          response = await _economyRepo.sendGift(
+            receiverId: seatedRecipients.first,
+            giftId: giftId,
+            roomId: currentRoomId,
+            scope: 'user',
+            sessionType: sessionType,
+            isShowLoader: false,
+          );
+        }
+
+        if (!isEconomyApiSuccess(response)) {
+          Get.snackbar(
+            sent == 0 ? 'Gift not sent' : 'Combo stopped',
+            sent == 0
+                ? (response?['message']?.toString() ??
+                      'Unable to send this gift.')
+                : 'Sent $sent of $count. ${response?['message'] ?? 'Unable to send the rest.'}',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: const Color(0xFFD32F2F),
+            colorText: const Color(0xFFFFFFFF),
+          );
+          break;
+        }
+
+        sent++;
+        await _handleGiftSendSuccess(
+          gift: gift,
+          price: price,
+          scope: scope,
+          myId: myId,
+          currentReceiverId: currentReceiverId,
+          response: response,
+          creditedFallbackIds: seatedRecipients,
+          playCelebration: false,
+          comboIndex: sent,
+          comboTotal: count,
+        );
+
+        // Sender overlay: close the sheet on the first hit, then queue N SVGA
+        // plays so they stay in sync with the peer broadcasts above.
+        if (sent == 1) {
+          if (Get.isBottomSheetOpen == true) {
+            Get.back<void>();
+          }
+          await Future<void>.delayed(const Duration(milliseconds: 300));
+        }
+        GiftMediaUtils.showCelebration(
+          giftName: gift['name'],
+          animationUrl: GiftMediaUtils.animationUrlFromResponse(
+            response,
+            gift,
+          ),
+          soundUrl: GiftMediaUtils.soundUrlFromResponse(response, gift),
+          enqueueIfBusy: sent > 1,
         );
       }
-    } else {
-      response = await _economyRepo.sendGift(
-        receiverId: scope == 'room' ? null : currentReceiverId,
-        giftId: giftId,
-        roomId: currentRoomId,
-        scope: scope,
-        seatedUserIds: scope == 'room' ? seatedRecipients : null,
-        sessionType: sessionType,
-        isShowLoader: true,
-      );
+    } finally {
+      _giftSendInFlight = false;
     }
-
-    if (isEconomyApiSuccess(response)) {
-      await _handleGiftSendSuccess(
-        gift: gift,
-        price: price,
-        scope: scope,
-        myId: myId,
-        currentReceiverId: currentReceiverId,
-        response: response,
-        creditedFallbackIds: seatedRecipients,
-      );
-      return;
-    }
-
-    Get.snackbar(
-      'Gift not sent',
-      response?['message']?.toString() ?? 'Unable to send this gift.',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: const Color(0xFFD32F2F),
-      colorText: const Color(0xFFFFFFFF),
-    );
   }
 
-  /// Delivers a party-room "everyone" gift as per-seat user gifts.
-  Future<Map<String, dynamic>?> _sendRoomGiftViaSeatedFanOut({
-    required String giftId,
-    required String roomId,
-    required List<String> recipientIds,
-    required String sessionType,
-    required int price,
-  }) async {
-    Map<String, dynamic>? lastSuccess;
-    final credited = <String>[];
-    for (var i = 0; i < recipientIds.length; i++) {
-      final targetId = recipientIds[i];
-      final response = await _economyRepo.sendGift(
-        receiverId: targetId,
-        giftId: giftId,
-        roomId: roomId,
-        scope: 'user',
-        sessionType: sessionType,
-        isShowLoader: i == 0,
-      );
-      if (isEconomyApiSuccess(response)) {
-        credited.add(targetId);
-        lastSuccess = response;
-      }
-    }
-    if (credited.isEmpty) return lastSuccess;
-    // Normalize as a room-gift success so chat/UI use room wording + credited list.
-    final data = <String, dynamic>{
-      if (lastSuccess?['data'] is Map)
-        ...Map<String, dynamic>.from(lastSuccess!['data'] as Map),
-      'scope': 'room',
-      'credited_user_ids': credited,
-      'creditedUserIds': credited,
-      'amount_each': price,
-      'amountEach': price,
-      'receiver': null,
-    };
-    return <String, dynamic>{
-      'statusCode': 1,
-      'success': true,
-      'message': 'Gift sent successfully',
-      'data': data,
-    };
+  bool _isNoSeatedUsersGiftError(Map<String, dynamic>? response) {
+    final message = (response?['message'] ?? '').toString().toLowerCase();
+    return message.contains('no seated user');
   }
 
   Future<void> _handleGiftSendSuccess({
@@ -1922,6 +2049,9 @@ class LiveBroadcastController extends GetxController {
     required String currentReceiverId,
     required Map<String, dynamic>? response,
     List<String> creditedFallbackIds = const [],
+    bool playCelebration = true,
+    int comboIndex = 1,
+    int comboTotal = 1,
   }) async {
     final beforeEarnings = sessionEarnings.displayCoins;
     // Direct gifts only — room gifts credit peers via the chat broadcast.
@@ -1931,10 +2061,6 @@ class LiveBroadcastController extends GetxController {
       scope: scope,
       receiverId: currentReceiverId.isEmpty ? null : currentReceiverId,
     );
-    final earnedDelta = (sessionEarnings.displayCoins - beforeEarnings).clamp(
-      0,
-      1 << 30,
-    );
 
     var creditedIds = _parseCreditedUserIdsFromGiftResponse(response);
     if (creditedIds.isEmpty &&
@@ -1942,10 +2068,16 @@ class LiveBroadcastController extends GetxController {
         creditedFallbackIds.isNotEmpty) {
       creditedIds = creditedFallbackIds;
     }
-    final amountEach = _parseAmountEachFromGiftResponse(response);
-    final creditAmount = (amountEach != null && amountEach > 0)
-        ? amountEach
-        : price;
+    final amountEachFromApi = _parseAmountEachFromGiftResponse(response);
+    final creditAmount = GiftShareEconomics.creditAmount(
+      coinsSpent: price,
+      isRoomShare: scope == 'room',
+      recipientCount: creditedIds.isNotEmpty
+          ? creditedIds.length
+          : (scope == 'room' ? creditedFallbackIds.length : 1),
+      apiAmountEach: amountEachFromApi,
+    );
+    final amountEach = creditAmount;
 
     // Room → seated users only; user → targeted seat.
     _bumpSeatDiamonds(
@@ -1954,6 +2086,10 @@ class LiveBroadcastController extends GetxController {
       amount: creditAmount,
       excludeUserId: myId,
       creditedUserIds: creditedIds,
+    );
+    final earnedDelta = (sessionEarnings.displayCoins - beforeEarnings).clamp(
+      0,
+      1 << 30,
     );
     if (isAudioVideoRoom) {
       unawaited(loadAudioRoomSeats());
@@ -1965,19 +2101,20 @@ class LiveBroadcastController extends GetxController {
     );
     final soundUrl = GiftMediaUtils.soundUrlFromResponse(response, gift);
 
-    // Same timing as audio rooms for video / live / group: close the sheet
-    // first so it never covers the SVGA celebration on either side.
-    unawaited(
-      GiftMediaUtils.dismissSheetThenCelebrate(
-        giftName: gift['name'],
-        animationUrl: animationUrl,
-        soundUrl: soundUrl,
-      ),
-    );
+    if (playCelebration) {
+      // Same timing as audio rooms for video / live / group: close the sheet
+      // first so it never covers the SVGA celebration on either side.
+      unawaited(
+        GiftMediaUtils.dismissSheetThenCelebrate(
+          giftName: gift['name'],
+          animationUrl: animationUrl,
+          soundUrl: soundUrl,
+        ),
+      );
+    }
 
-    // Coin-fly only when this device earned (direct gift to self).
-    // Room gifts: peers earn via [_handlePeerGiftEarnings].
-    if (earnedDelta > 0) {
+    // Coin-fly only on the host device when the host pill received coins.
+    if (playCelebration && isHost.value && earnedDelta > 0) {
       unawaited(_playCoinFlyAfterGift(earnedCoins: earnedDelta));
     }
 
@@ -1992,35 +2129,34 @@ class LiveBroadcastController extends GetxController {
       scope: scope,
       senderId: myId,
       receiverId: scope == 'room' ? null : currentReceiverId,
+      giftId: gift['id'],
       giftPrice: price,
       creditedUserIds: creditedIds,
-      amountEach: amountEach ?? (scope == 'room' ? price : null),
+      amountEach: amountEach,
+      comboIndex: comboIndex,
+      comboTotal: comboTotal,
     );
-    // Always try the base UIKit bus. The live-streaming facade
-    // (`message.send`) can silently no-op when its chat relay is unwired.
-    unawaited(
-      ZegoUIKit()
-          .sendInRoomMessage(giftLabel)
-          .then((sent) {
-            if (sent) return;
-            chatMessages.add({
-              'sender': 'You',
-              'message': stripGiftAnimMarker(giftLabel),
-              'translation': '',
-              'isTranslated': false,
-              'isSystem': true,
-            });
-          })
-          .catchError((_) {
-            chatMessages.add({
-              'sender': 'You',
-              'message': stripGiftAnimMarker(giftLabel),
-              'translation': '',
-              'isTranslated': false,
-              'isSystem': true,
-            });
-          }),
-    );
+    // Await so peers receive each combo hit (Zego drops unawaited bursts).
+    try {
+      final sentOk = await ZegoUIKit().sendInRoomMessage(giftLabel);
+      if (!sentOk) {
+        chatMessages.add({
+          'sender': 'You',
+          'message': stripGiftAnimMarker(giftLabel),
+          'translation': '',
+          'isTranslated': false,
+          'isSystem': true,
+        });
+      }
+    } catch (_) {
+      chatMessages.add({
+        'sender': 'You',
+        'message': stripGiftAnimMarker(giftLabel),
+        'translation': '',
+        'isTranslated': false,
+        'isSystem': true,
+      });
+    }
   }
 
   void openViewersSheet() {
@@ -2593,7 +2729,7 @@ class LiveBroadcastController extends GetxController {
     if (isLoadingAudioSeats.value) return;
     final apiRoomId = audioRoomApiId;
     if (apiRoomId.isEmpty) {
-      audioRoomSeats.assignAll(_buildFallbackAudioSeats());
+      _setAudioRoomSeats(_buildFallbackAudioSeats());
       return;
     }
 
@@ -2605,7 +2741,7 @@ class LiveBroadcastController extends GetxController {
       );
       if (_isApiSuccess(response)) {
         final seats = _parseAudioSeats(response?['data']);
-        audioRoomSeats.assignAll(
+        _setAudioRoomSeats(
           seats.isNotEmpty ? seats : _buildFallbackAudioSeats(),
         );
         _applySeatsMeta(response?['data']);
@@ -2628,7 +2764,7 @@ class LiveBroadcastController extends GetxController {
       }
 
       if (audioRoomSeats.isEmpty) {
-        audioRoomSeats.assignAll(_buildFallbackAudioSeats());
+        _setAudioRoomSeats(_buildFallbackAudioSeats());
       }
       if (showErrors) {
         _showRoomApiError('Seats', response, 'Unable to fetch room seats.');
@@ -3167,7 +3303,7 @@ class LiveBroadcastController extends GetxController {
       if (hasHydratedSeats) {
         final seats = _parseAudioSeats(map);
         if (seats.isNotEmpty) {
-          audioRoomSeats.assignAll(seats);
+          _setAudioRoomSeats(seats);
         }
         _applySeatsMeta(map);
         await _syncRoomMembershipFromSeatsResponse(

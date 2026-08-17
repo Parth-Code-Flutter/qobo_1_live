@@ -86,5 +86,48 @@ void main() {
     test('parseGiftSoundUrl returns null when marker missing', () {
       expect(parseGiftSoundUrl('🎁 sent Fireworks'), isNull);
     });
+
+    test('combo markers stay unique and hidden from chat', () {
+      final first = GiftMediaUtils.buildChatLabel(
+        giftName: 'Gift',
+        giftIcon: '',
+        animationUrl: 'https://cdn.example.com/a.svga',
+        soundUrl: 'https://cdn.example.com/a.mp3',
+        giftId: 'g-gift',
+        comboIndex: 1,
+        comboTotal: 10,
+      );
+      final second = GiftMediaUtils.buildChatLabel(
+        giftName: 'Gift',
+        giftIcon: '',
+        animationUrl: 'https://cdn.example.com/a.svga',
+        soundUrl: 'https://cdn.example.com/a.mp3',
+        giftId: 'g-gift',
+        comboIndex: 2,
+        comboTotal: 10,
+      );
+      expect(first.contains('[[giftCombo:1/10]]'), isTrue);
+      expect(second.contains('[[giftCombo:2/10]]'), isTrue);
+      expect(first, isNot(equals(second)));
+      expect(stripGiftAnimMarker(first), '🎁 sent Gift to the Room');
+      expect(parseGiftId(first), 'g-gift');
+    });
+
+    test('catalogMediaForChat resolves generic Gift names by id', () {
+      const catalog = [
+        {
+          'id': 'g-gift',
+          'name': 'Gift',
+          'animationUrl': 'https://cdn.example.com/gift.svga',
+          'soundUrl': 'https://cdn.example.com/gift.mp3',
+        },
+      ];
+      final media = GiftMediaUtils.catalogMediaForChat(
+        '🎁 sent Gift to the Room\n[[giftId:g-gift]]',
+        catalog,
+      );
+      expect(media.$1, 'https://cdn.example.com/gift.svga');
+      expect(media.$2, 'https://cdn.example.com/gift.mp3');
+    });
   });
 }

@@ -890,6 +890,11 @@ class LiveRoomController extends GetxController {
         payload['zegoLiveId'];
     payload['type'] =
         _text(payload['type']) ?? (isRoomsAudioMode ? 'audio' : 'video');
+    payload['sessionEarnings'] =
+        data['sessionEarnings'] ??
+        data['session_earnings'] ??
+        joinedRoom['sessionEarnings'] ??
+        payload['sessionEarnings'];
     return payload;
   }
 

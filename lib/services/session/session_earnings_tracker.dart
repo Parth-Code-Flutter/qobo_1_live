@@ -35,3 +35,21 @@ class SessionEarningsTracker {
     seed(coins: coins, diamonds: diamonds);
   }
 }
+
+/// Host AppBar totals keyed by room id. Survives leave/rejoin in this process.
+abstract final class HostSessionRoomStore {
+  static final Map<String, int> _coinsByRoom = {};
+
+  static void remember(String roomId, int coins) {
+    final id = roomId.trim();
+    if (id.isEmpty || coins <= 0) return;
+    final prev = _coinsByRoom[id] ?? 0;
+    if (coins > prev) _coinsByRoom[id] = coins;
+  }
+
+  static int peek(String roomId) {
+    final id = roomId.trim();
+    if (id.isEmpty) return 0;
+    return _coinsByRoom[id] ?? 0;
+  }
+}

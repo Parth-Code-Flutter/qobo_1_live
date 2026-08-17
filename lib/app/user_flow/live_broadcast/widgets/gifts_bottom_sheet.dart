@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
+import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -271,9 +272,14 @@ class _GiftsBottomSheetState extends State<GiftsBottomSheet> {
             width: 100,
             height: 38,
             child: appButton(
-              onPressed: () {
+              onPressed: () async {
                 if (!canSend) return;
-                controller.sendGift(gifts[_selectedGiftIndex]);
+                final combo = await CommonAppDialog.giftCombo();
+                if (!mounted || combo == null) return;
+                await controller.sendGift(
+                  gifts[_selectedGiftIndex],
+                  comboCount: combo,
+                );
               },
               buttonText: 'Send',
               buttonColor: canSend ? Colors.pinkAccent : kColorHint,

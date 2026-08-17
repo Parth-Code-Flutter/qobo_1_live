@@ -511,6 +511,7 @@ class ChatVoiceCallController extends GetxController
               message: m.message,
             ),
           ),
+      giftCatalog: giftCatalog.toList(),
       onPeerGift: (event) {
               final earned = SessionEarningsUtils.ingestIncomingGiftChat(
                 tracker: sessionEarnings,

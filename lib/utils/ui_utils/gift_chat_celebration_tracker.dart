@@ -21,6 +21,7 @@ class GiftChatCelebrationTracker {
     required Iterable<GiftChatEvent> events,
     required String myUserId,
     void Function(GiftChatEvent event)? onPeerGift,
+    List<Map<String, String>> giftCatalog = const [],
   }) {
     final gifts = events.toList(growable: false);
 
@@ -34,8 +35,9 @@ class GiftChatCelebrationTracker {
     }
     if (gifts.isEmpty) return;
 
-    // Newest first so rapid sends still show the latest gift promptly.
-    for (var i = gifts.length - 1; i >= 0; i--) {
+    GiftChatEvent? lastPeer;
+    var queued = false;
+    for (var i = 0; i < gifts.length; i++) {
       final event = gifts[i];
       if (!_seenKeys.add(event.key)) continue;
       if (event.key == _lastCelebratedKey) continue;
@@ -45,11 +47,16 @@ class GiftChatCelebrationTracker {
           event.senderId.isNotEmpty && event.senderId == myUserId;
       if (isMine) continue;
 
-      _lastCelebratedKey = event.key;
-      GiftMediaUtils.showCelebrationFromChatLabel(event.message);
+      lastPeer = event;
+      GiftMediaUtils.showCelebrationFromChatLabel(
+        event.message,
+        enqueueIfBusy: queued,
+        giftCatalog: giftCatalog,
+      );
+      queued = true;
       onPeerGift?.call(event);
-      return;
     }
+    if (lastPeer != null) _lastCelebratedKey = lastPeer.key;
   }
 
   /// Clears state when leaving a room/call so the next session bootstraps cleanly.

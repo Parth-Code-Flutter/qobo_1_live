@@ -221,7 +221,7 @@ String stripGiftAnimMarker(String text) {
   return text
       .replaceAll(
         RegExp(
-          r'\n?\[\[gift(?:Anim|Sound|To|From|Scope|Price|Credited|AmountEach):.*?\]\]',
+          r'\n?\[\[gift(?:Anim|Sound|To|From|Scope|Price|Credited|AmountEach|Combo|Id):.*?\]\]',
           caseSensitive: false,
         ),
         '',
@@ -249,6 +249,17 @@ String? parseGiftSoundUrl(String text) {
   final url = match?.group(1)?.trim();
   if (url == null || url.isEmpty) return null;
   return url;
+}
+
+/// Catalog gift id (`[[giftId:…]]`) so peers can resolve media if URLs drop.
+String? parseGiftId(String text) {
+  final match = RegExp(
+    r'\[\[giftId:([^\]]+)\]\]',
+    caseSensitive: false,
+  ).firstMatch(text);
+  final id = match?.group(1)?.trim();
+  if (id == null || id.isEmpty) return null;
+  return id;
 }
 
 /// Receiver id for user-scoped gifts (`[[giftTo:…]]`).

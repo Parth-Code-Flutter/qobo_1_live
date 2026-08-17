@@ -713,14 +713,18 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
         ),
         Padding(
           padding: EdgeInsets.only(left: compact ? 5 : 8),
-          child: SessionEarningsBadge(
-            key: controller.sessionEarningsBadgeKey,
-            tracker: controller.sessionEarnings,
-            compact: compact,
-            maxWidth: earningsMaxWidth,
-            icon: Icons.monetization_on_rounded,
-            iconColor: const Color(0xFFFFA10A),
-            onTap: controller.openSessionEarningsDialog,
+          child: Obx(
+            () => SessionEarningsBadge(
+              key: controller.sessionEarningsBadgeKey,
+              tracker: controller.sessionEarnings,
+              compact: compact,
+              maxWidth: earningsMaxWidth,
+              icon: Icons.monetization_on_rounded,
+              iconColor: const Color(0xFFFFA10A),
+              onTap: controller.isHost.value
+                  ? controller.openSessionEarningsDialog
+                  : null,
+            ),
           ),
         ),
         SizedBox(width: compact ? 5 : 8),

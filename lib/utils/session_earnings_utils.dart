@@ -1,6 +1,7 @@
 import 'package:qobo_one_live/app/user_flow/live_broadcast/utils/live_room_profile_utils.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/services/session/session_earnings_tracker.dart';
+import 'package:qobo_one_live/utils/gift_share_economics.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_media_utils.dart';
 
 /// Parse session-earnings fields from room join, gift, and poll responses.
@@ -18,6 +19,8 @@ abstract final class SessionEarningsUtils {
     'current_session_coins',
     'coinsEarnedThisSession',
     'coins_earned_this_session',
+    'giftCoinsEarned',
+    'gift_coins_earned',
   ];
 
   static const diamondFieldKeys = [
@@ -37,12 +40,22 @@ abstract final class SessionEarningsUtils {
     final nested = _asMap(
       roomData['sessionEarnings'] ?? roomData['session_earnings'],
     );
-    final coins = _readIntFromMaps([roomData, nested], sessionFieldKeys);
-    final diamonds = _readIntFromMaps([roomData, nested], diamondFieldKeys);
+    final hostBlock = _asMap(
+      roomData['hostEarnings'] ?? roomData['host_earnings'],
+    );
+    final coins = _readIntFromMaps(
+      [roomData, nested, hostBlock],
+      sessionFieldKeys,
+    );
+    final diamonds = _readIntFromMaps(
+      [roomData, nested, hostBlock],
+      diamondFieldKeys,
+    );
     if (coins != null || diamonds != null) {
-      tracker.setFromTotals(
-        coins: coins ?? tracker.coinsEarned.value,
-        diamonds: diamonds ?? tracker.diamondsEarned.value,
+      _applyIngestedTotals(
+        tracker,
+        coins: coins,
+        diamonds: diamonds,
       );
     }
   }
@@ -58,12 +71,22 @@ abstract final class SessionEarningsUtils {
     final nested = _asMap(
       data['sessionEarnings'] ?? data['session_earnings'] ?? data['earnings'],
     );
-    final coins = _readIntFromMaps([data, nested], sessionFieldKeys);
-    final diamonds = _readIntFromMaps([data, nested], diamondFieldKeys);
+    final hostBlock = _asMap(
+      data['hostEarnings'] ?? data['host_earnings'],
+    );
+    final coins = _readIntFromMaps(
+      [data, nested, hostBlock],
+      sessionFieldKeys,
+    );
+    final diamonds = _readIntFromMaps(
+      [data, nested, hostBlock],
+      diamondFieldKeys,
+    );
     if (coins != null || diamonds != null) {
-      tracker.setFromTotals(
-        coins: coins ?? tracker.coinsEarned.value,
-        diamonds: diamonds ?? tracker.diamondsEarned.value,
+      _applyIngestedTotals(
+        tracker,
+        coins: coins,
+        diamonds: diamonds,
       );
     }
   }
@@ -117,7 +140,10 @@ abstract final class SessionEarningsUtils {
         return;
       }
       if (fallbackGiftPrice > 0 && credited.isNotEmpty) {
-        final share = (fallbackGiftPrice * 0.8 / credited.length).round();
+        final share = GiftShareEconomics.shareEach(
+          coinsSpent: fallbackGiftPrice,
+          recipientCount: credited.length,
+        );
         if (share > 0) {
           tracker.applyDelta(coins: share, diamonds: share);
         }
@@ -161,8 +187,7 @@ abstract final class SessionEarningsUtils {
     }
 
     if (fallbackGiftPrice > 0) {
-      // Direct gift: receiver gets 80% after platform fee.
-      final net = (fallbackGiftPrice * 0.8).round();
+      final net = GiftShareEconomics.netAfterCommission(fallbackGiftPrice);
       tracker.applyDelta(coins: net > 0 ? net : fallbackGiftPrice);
     }
   }
@@ -192,21 +217,22 @@ abstract final class SessionEarningsUtils {
   }) {
     if (!earnsGift || !GiftMediaUtils.isGiftChatMessage(chatMessage)) return 0;
     final amountEach = parseGiftAmountEach(chatMessage);
-    if (amountEach != null && amountEach > 0) {
-      tracker.applyDelta(coins: amountEach);
-      return amountEach;
-    }
     final embedded = parseGiftPrice(chatMessage);
-    if (embedded != null && embedded > 0) {
-      tracker.applyDelta(coins: embedded);
-      return embedded;
-    }
-    final price = _giftPriceFromCatalog(giftCatalog, chatMessage);
-    if (price != null && price > 0) {
-      tracker.applyDelta(coins: price);
-      return price;
-    }
-    return 0;
+    final catalogPrice = _giftPriceFromCatalog(giftCatalog, chatMessage);
+    final price = (embedded != null && embedded > 0)
+        ? embedded
+        : (catalogPrice ?? 0);
+    final scope = parseGiftScope(chatMessage);
+    final credited = parseGiftCreditedUserIds(chatMessage);
+    final credit = GiftShareEconomics.creditAmount(
+      coinsSpent: price > 0 ? price : (amountEach ?? 0),
+      isRoomShare: scope == 'room',
+      recipientCount: credited.isNotEmpty ? credited.length : 1,
+      apiAmountEach: amountEach,
+    );
+    if (credit <= 0) return 0;
+    tracker.applyDelta(coins: credit);
+    return credit;
   }
 
   static int? _giftPriceFromCatalog(
@@ -277,6 +303,22 @@ abstract final class SessionEarningsUtils {
   }
 
   static String formatAmount(int value) => formatAmountForPill(value);
+
+  /// Never wipe a known host session total with a 0 placeholder (audience join).
+  static void _applyIngestedTotals(
+    SessionEarningsTracker tracker, {
+    int? coins,
+    int? diamonds,
+  }) {
+    final nextCoins = coins ?? tracker.coinsEarned.value;
+    final nextDiamonds = diamonds ?? tracker.diamondsEarned.value;
+    if (nextCoins == 0 &&
+        nextDiamonds == 0 &&
+        tracker.displayCoins > 0) {
+      return;
+    }
+    tracker.setFromTotals(coins: nextCoins, diamonds: nextDiamonds);
+  }
 
   static Map<String, dynamic> _asMap(dynamic value) {
     if (value is Map<String, dynamic>) return value;

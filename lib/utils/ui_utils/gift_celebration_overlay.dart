@@ -24,6 +24,7 @@ class GiftCelebrationOverlay {
   static OverlayEntry? _activeEntry;
   static BuildContext? _dialogContext;
   static Completer<void>? _activeCompleter;
+  static final List<_QueuedGiftCelebration> _queue = [];
 
   /// True while a gift SVGA/badge celebration dialog is on screen.
   static bool get isShowing =>
@@ -62,14 +63,29 @@ class GiftCelebrationOverlay {
   /// Shows a non-blocking full-screen gift celebration over the current route.
   ///
   /// Priority: [svgaUrl] (network) → [svgaAsset] (local) → [gifAsset] → badge.
+  /// Set [enqueueIfBusy] so combo sends play back-to-back instead of replacing.
   static void show({
     String? giftName,
     String? svgaUrl,
     String? soundUrl,
     String? svgaAsset,
     String? gifAsset,
+    bool enqueueIfBusy = false,
   }) {
+    if (enqueueIfBusy && isShowing) {
+      _queue.add(
+        _QueuedGiftCelebration(
+          giftName: giftName,
+          svgaUrl: svgaUrl,
+          soundUrl: soundUrl,
+          svgaAsset: svgaAsset,
+          gifAsset: gifAsset,
+        ),
+      );
+      return;
+    }
     // Replace any in-flight celebration so rapid gift sends stay stable.
+    if (!enqueueIfBusy) _queue.clear();
     dismiss();
     _beginCycle();
 
@@ -97,6 +113,7 @@ class GiftCelebrationOverlay {
         _dialogContext = null;
       }
       _endCycle();
+      _playNextQueued();
     }
 
     // Transparent dialog route draws above native video surfaces (PlatformView).
@@ -151,6 +168,7 @@ class GiftCelebrationOverlay {
           _activeEntry?.remove();
           _activeEntry = null;
           _endCycle();
+          _playNextQueued();
         },
       ),
     );
@@ -175,6 +193,35 @@ class GiftCelebrationOverlay {
     _activeEntry = null;
     _endCycle();
   }
+
+  static void _playNextQueued() {
+    if (_queue.isEmpty || isShowing) return;
+    final next = _queue.removeAt(0);
+    show(
+      giftName: next.giftName,
+      svgaUrl: next.svgaUrl,
+      soundUrl: next.soundUrl,
+      svgaAsset: next.svgaAsset,
+      gifAsset: next.gifAsset,
+      enqueueIfBusy: true,
+    );
+  }
+}
+
+class _QueuedGiftCelebration {
+  const _QueuedGiftCelebration({
+    this.giftName,
+    this.svgaUrl,
+    this.soundUrl,
+    this.svgaAsset,
+    this.gifAsset,
+  });
+
+  final String? giftName;
+  final String? svgaUrl;
+  final String? soundUrl;
+  final String? svgaAsset;
+  final String? gifAsset;
 }
 
 class _GiftCelebrationView extends StatefulWidget {
