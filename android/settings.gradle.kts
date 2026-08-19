@@ -1,8 +1,18 @@
 pluginManagement {
+    val localProperties = java.util.Properties().apply {
+        val localPropsFile = file("local.properties")
+        if (localPropsFile.exists()) {
+            localPropsFile.inputStream().use { load(it) }
+        }
+    }
+
+    // Pin Gradle toolchain to JDK 17 from local.properties (avoids JBR 25 Kotlin failures).
+    localProperties.getProperty("org.gradle.java.home")?.trim()?.takeIf { it.isNotEmpty() }?.let { jdkHome ->
+        System.setProperty("org.gradle.java.home", jdkHome)
+    }
+
     val flutterSdkPath = run {
-        val properties = java.util.Properties()
-        file("local.properties").inputStream().use { properties.load(it) }
-        val flutterSdkPath = properties.getProperty("flutter.sdk")
+        val flutterSdkPath = localProperties.getProperty("flutter.sdk")
         require(flutterSdkPath != null) { "flutter.sdk not set in local.properties" }
         flutterSdkPath
     }

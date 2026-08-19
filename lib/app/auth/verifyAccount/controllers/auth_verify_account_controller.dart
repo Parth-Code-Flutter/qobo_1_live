@@ -38,6 +38,7 @@ class AuthVerifyAccountController extends GetxController {
   String _otpPhone = '';
   String _otpEmail = '';
   bool _otpSentToPhone = true;
+  String? _referralCode;
   static const int _otpResendSeconds = 120;
   final otpResendRemainingSeconds = 0.obs;
   Timer? _otpResendTimer;
@@ -49,6 +50,10 @@ class AuthVerifyAccountController extends GetxController {
     if (args is Map) {
       if (args[AuthVerifyAccountArgs.isComeFromForgotPassword] == true) {
         isComeFromForgotPassword = true;
+      }
+      final ref = args[AuthVerifyAccountArgs.referralCode]?.toString().trim();
+      if (ref != null && ref.isNotEmpty) {
+        _referralCode = ref.toUpperCase();
       }
     }
   }
@@ -421,6 +426,7 @@ class AuthVerifyAccountController extends GetxController {
         phone: _otpPhone,
         email: _otpEmail,
         otp: otpDigits,
+        referralCode: _referralCode,
         isShowLoader: false,
       );
       if (!context.mounted) return;

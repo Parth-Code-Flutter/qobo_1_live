@@ -56,24 +56,28 @@ class AuthRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
-  /// Calls `POST /api/auth/register` with email, username, and password.
+  /// Calls `POST /api/auth/register` with username and password.
+  /// [email] is optional when the registration form hides the email field.
   Future<Map<String, dynamic>?> register({
-    required String email,
+    String? email,
     required String username,
     required String password,
     String? phone,
     String? gender,
+    String? referralCode,
     bool isShowLoader = true,
   }) async {
     final response = await _apiService.postRequest(
       endPoint: AuthEndpoints.register,
       requestModel: <String, dynamic>{
         'name': username,
-        'email': email,
         'username': username,
+        if (email != null && email.trim().isNotEmpty) 'email': email.trim(),
         if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
         'password': password,
         if (gender != null && gender.trim().isNotEmpty) 'gender': gender.trim(),
+        if (referralCode != null && referralCode.trim().isNotEmpty)
+          'referralCode': referralCode.trim().toUpperCase(),
       },
       isShowLoader: isShowLoader,
       isLoginCall: true,
@@ -249,6 +253,7 @@ class AuthRepo {
     required String phone,
     required String email,
     required String otp,
+    String? referralCode,
     bool isShowLoader = false,
   }) async {
     final fcmToken = await _fcmTokenService.getToken();
@@ -257,6 +262,7 @@ class AuthRepo {
       email: email,
       otp: otp,
       fcmToken: fcmToken,
+      referralCode: referralCode,
     );
 
     final response = await _apiService.postRequest(

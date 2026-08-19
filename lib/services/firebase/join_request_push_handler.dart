@@ -238,10 +238,7 @@ class JoinRequestPushHandler {
       roomData['type'] = 'live_stream';
       roomData['zegoLiveId'] =
           roomData['zegoLiveId'] ?? roomData['room_id'] ?? payload.roomId;
-      await ZegoEngineUtils.resetForLiveProject().timeout(
-        const Duration(milliseconds: 700),
-        onTimeout: () {},
-      );
+      await ZegoEngineUtils.resetForLiveProject();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Get.toNamed(
           Routes.LIVE_BROADCAST,
@@ -259,10 +256,7 @@ class JoinRequestPushHandler {
         .toUpperCase();
     final roomType = rawType.contains('AUDIO') ? 'AUDIO' : 'VIDEO';
     roomData['type'] = roomType.toLowerCase();
-    await ZegoEngineUtils.resetForRoomProject().timeout(
-      const Duration(milliseconds: 700),
-      onTimeout: () {},
-    );
+    await ZegoEngineUtils.resetForRoomProject();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Get.toNamed(
         Routes.LIVE_BROADCAST,

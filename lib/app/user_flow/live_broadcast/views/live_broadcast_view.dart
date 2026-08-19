@@ -13,10 +13,12 @@ import 'package:zego_uikit_prebuilt_live_streaming/zego_uikit_prebuilt_live_stre
 import 'package:zego_uikit_signaling_plugin/zego_uikit_signaling_plugin.dart';
 import 'package:qobo_one_live/constants/zego_config.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
+import 'package:qobo_one_live/utils/ui_utils/live_heart_reaction_overlay.dart';
 import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 
 import '../controllers/live_broadcast_controller.dart';
 import '../widgets/audio_room_stage_overlay.dart';
+import '../widgets/live_host_video_fill.dart';
 import '../widgets/live_room_pk_stage_slot.dart';
 import '../widgets/room_options_sheet.dart';
 
@@ -30,6 +32,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
 
   @override
   Widget build(BuildContext context) {
+    _ensureZegoScreenUtil(context);
     if (controller.isAudioVideoRoom) {
       return Scaffold(
         backgroundColor: Colors.black,
@@ -48,11 +51,13 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
               fit: StackFit.expand,
               children: [
                 // Keep Zego live engine mounted; hide full-screen host feed during PK.
-                IgnorePointer(
-                  ignoring: pkActive,
-                  child: Opacity(
-                    opacity: pkActive ? 0 : 1,
-                    child: _buildMainVideoBackground(),
+                Positioned.fill(
+                  child: IgnorePointer(
+                    ignoring: pkActive,
+                    child: Opacity(
+                      opacity: pkActive ? 0 : 1,
+                      child: _buildMainVideoBackground(),
+                    ),
                   ),
                 ),
                 if (pkActive) const Positioned.fill(child: LiveRoomPkBattleBackdrop()),
@@ -71,6 +76,8 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
             }
             return const Positioned.fill(child: _LiveOverlayScrim());
           }),
+          if (controller.isLiveStreamingSession)
+            Positioned.fill(child: LiveHeartReactionLayer()),
           SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -92,6 +99,17 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
     );
   }
 
+  void _ensureZegoScreenUtil(BuildContext context) {
+    if (MediaQuery.maybeOf(context) == null) return;
+    try {
+      final _ = ZegoScreenUtil().screenWidth;
+    } catch (_) {
+      try {
+        ZegoScreenUtil.init(context);
+      } catch (_) {}
+    }
+  }
+
   Widget _buildGroupCallRoom() {
     final userSession = Get.find<UserSessionController>();
     final rawUserId = userSession.userId.isNotEmpty
@@ -102,72 +120,32 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
         ? userSession.displayName
         : 'User';
 
-    return Obx(() {
-      final isVideoRoom = controller.isVideoRoom;
-      final conferenceId = controller.roomId.value;
-      final canOpenCall = controller.canOpenZego && conferenceId.isNotEmpty;
-
-      if (isVideoRoom && !canOpenCall) {
-        return _buildConnectionIssueState();
-      }
-
-      final config = _buildGroupCallConfig(isVideoRoom);
-
-      return Stack(
-        children: [
-          if (canOpenCall)
-            call.ZegoUIKitPrebuiltCall(
-              key: ValueKey('group_call_$conferenceId'),
-              appID: ZegoConfig.roomAppId,
-              appSign: ZegoConfig.roomAppSign,
-              userID: currentUserId,
-              userName: currentUserName,
-              callID: conferenceId,
-              config: config,
-              events: call.ZegoUIKitPrebuiltCallEvents(
-                onError: controller.handleGroupCallRoomError,
-                room: call.ZegoCallRoomEvents(
-                  onStateChanged: (state) {
-                    if (state.reason == ZegoRoomStateChangedReason.Logined ||
-                        state.reason ==
-                            ZegoRoomStateChangedReason.Reconnected) {
-                      controller.onGroupCallRoomConnected();
-                    } else if (state.reason ==
-                        ZegoRoomStateChangedReason.LoginFailed) {
-                      controller.handleGroupCallRoomLoginFailed(
-                        state.errorCode,
-                      );
-                    }
-                  },
-                ),
-                onHangUpConfirmation: (event, defaultAction) async {
-                  final confirmed = await defaultAction.call();
-                  if (!confirmed || !controller.isHost.value) {
-                    return confirmed;
-                  }
-                  return controller.endRoomAfterConfirmedHangUp();
-                },
-                onCallEnd: (event, defaultAction) {
-                  // Do not let participant/reconnect lifecycle events navigate
-                  // the host away from an active room.
-                  if (!controller.canProcessGroupCallEnd) return;
-                  if (_shouldReportGroupCallExit(event.reason)) {
-                    controller.reportRoomExit();
-                  }
-                  defaultAction.call();
-                },
-              ),
-            )
-          else
-            const Positioned.fill(child: ColoredBox(color: Colors.black)),
-          // Audio + video party rooms share the same seat grid overlay
-          // (host on seat 1, empty seats, invite / request / floor strip).
-          const Positioned.fill(child: AudioRoomStageOverlay()),
-          if (!canOpenCall) _buildAudioRoomConnectionBanner(),
-          // Gift dock is only for live-stream chrome; party overlay has Gift.
-        ],
-      );
-    });
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Positioned.fill(
+          child: _StableZegoGroupCall(
+            userId: currentUserId,
+            userName: currentUserName,
+            isVideoRoom: controller.isVideoRoom,
+            shouldReportExit: _shouldReportGroupCallExit,
+            configBuilder: _buildGroupCallConfig,
+          ),
+        ),
+        // Audio + video party rooms share the same seat grid overlay
+        // (host on seat 1, empty seats, invite / request / floor strip).
+        const Positioned.fill(child: AudioRoomStageOverlay()),
+        Obx(() {
+          final canOpenCall =
+              controller.canOpenZego && controller.roomId.value.isNotEmpty;
+          if (canOpenCall) return const SizedBox.shrink();
+          if (controller.isVideoRoom) {
+            return Positioned.fill(child: _buildConnectionIssueState());
+          }
+          return _buildAudioRoomConnectionBanner();
+        }),
+      ],
+    );
   }
 
   bool _shouldReportGroupCallExit(call.ZegoCallEndReason reason) {
@@ -317,107 +295,54 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
         ? userSession.displayName
         : 'Host';
 
-    final signalingPlugins = ZegoConfig.useSignalingPlugin
-        ? [ZegoUIKitSignalingPlugin()]
-        : null;
-
-    return Obx(() {
-      if (!controller.canOpenZego) {
-        return Positioned.fill(child: _buildConnectionIssueState());
-      }
-
-      final liveId = controller.roomId.value;
-      if (liveId.isEmpty) {
-        return Positioned.fill(child: _buildConnectionIssueState());
-      }
-
-      final config = controller.isHost.value
-          ? ZegoUIKitPrebuiltLiveStreamingConfig.host(plugins: signalingPlugins)
-          : ZegoUIKitPrebuiltLiveStreamingConfig.audience(
-              plugins: signalingPlugins,
-            );
-      final isAudioVideoRoom = controller.isAudioVideoRoom;
-      final isVideoRoom = controller.isVideoRoom;
-
-      if (isAudioVideoRoom) {
-        config.layout = ZegoLayout.gallery(
-          margin: const EdgeInsets.fromLTRB(8, 116, 8, 120),
-          addBorderRadiusAndSpacingBetweenView: true,
-        );
-        if (!controller.isHost.value) {
-          config.role = ZegoLiveStreamingRole.coHost;
-        }
-      }
-
-      // Custom overlay replaces Zego chrome — hide built-in bars.
-      config.bottomMenuBar = ZegoLiveStreamingBottomMenuBarConfig(
-        hostButtons: [],
-        audienceButtons: [],
-      );
-      config.topMenuBar = ZegoLiveStreamingTopMenuBarConfig(
-        showCloseButton: false,
-        height: 0,
-        hostAvatarBuilder: (_) => const SizedBox.shrink(),
-      );
-      config.memberButton = ZegoLiveStreamingMemberButtonConfig(
-        builder: (_) => const SizedBox.shrink(),
-      );
-      config.inRoomMessage = ZegoLiveStreamingInRoomMessageConfig(
-        visible: false,
-      );
-
-      // Preview page has its own "Start Live" button — our overlay covers it.
-      config.preview.showPreviewForHost = false;
-
-      if (isVideoRoom) {
-        config.turnOnCameraWhenJoining =
-            controller.isHost.value || isAudioVideoRoom;
-        config.turnOnMicrophoneWhenJoining =
-            controller.isHost.value || isAudioVideoRoom;
-        config.useFrontFacingCamera = true;
-      } else {
-        config.turnOnCameraWhenJoining = false;
-        config.turnOnMicrophoneWhenJoining =
-            controller.isHost.value || isAudioVideoRoom;
-        config.audioVideoView.showAvatarInAudioMode = true;
-        config.audioVideoView.showSoundWavesInAudioMode = true;
-      }
-
-      return Positioned.fill(
-        key: ValueKey('zego_$liveId'),
-        child: ZegoUIKitPrebuiltLiveStreaming(
-          appID: ZegoConfig.liveAppId,
-          appSign: ZegoConfig.liveAppSign,
-          userID: currentUserId,
+    return SizedBox.expand(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+        _StableZegoLiveStreaming(
+          key: const ValueKey('stable_live_streaming'),
+          userId: currentUserId,
           userName: currentUserName,
-          liveID: liveId,
-          config: config,
-          events: ZegoUIKitPrebuiltLiveStreamingEvents(
-            room: ZegoLiveStreamingRoomEvents(
-              onStateChanged: (state) {
-                if (state.reason == ZegoRoomStateChangedReason.Logined &&
-                    state.errorCode == 0) {
-                  controller.clearConnectionIssue();
-                  controller.onZegoRoomLogined();
-                }
-              },
-              onLoginFailed: (event, defaultAction) {
-                // Avoid defaultAction dialog — it crashes if Obx rebuilds first.
-                controller.handleZegoLoginFailed(event.errorCode);
-              },
-            ),
-            onEnded: (event, defaultAction) {
-              if (controller.isAudioVideoRoom &&
-                  event.reason == ZegoLiveStreamingEndReason.hostEnd) {
-                return;
-              }
-              controller.leaveRoom();
-              defaultAction.call();
-            },
-          ),
+          isHost: controller.isHost.value,
+          isAudioVideoRoom: controller.isAudioVideoRoom,
+          isVideoRoom: controller.isVideoRoom,
+          isLiveStreamingSession: controller.isLiveStreamingSession,
+          hostName: controller.hostName.value,
+          hostAvatarUrl: controller.hostAvatarUrl.value,
         ),
-      );
-    });
+        Obx(() {
+          if (!controller.isLiveStreamingSession) {
+            return const SizedBox.shrink();
+          }
+          final hostId = controller.hostZegoUserId.value.isNotEmpty
+              ? controller.hostZegoUserId.value
+              : controller.receiverId.value;
+          return Positioned.fill(
+            child: LiveHostVideoFill(
+              isHost: controller.isHost.value,
+              hostUserId: hostId,
+              hostName: controller.hostName.value,
+              hostAvatarUrl: controller.hostAvatarUrl.value,
+            ),
+          );
+        }),
+        Obx(() {
+          if (!controller.canOpenZego || controller.roomId.value.isEmpty) {
+            return Positioned.fill(child: _buildConnectionIssueState());
+          }
+          if (controller.isZegoConnected.value) {
+            return const SizedBox.shrink();
+          }
+          return Positioned.fill(
+            child: _LiveConnectingCover(
+              name: controller.hostName.value,
+              avatarUrl: controller.hostAvatarUrl.value,
+            ),
+          );
+        }),
+        ],
+      ),
+    );
   }
 
   Widget _buildAudioRoomStage() {
@@ -921,112 +846,185 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
   }
 
   Widget _buildBottomControls(BuildContext context) {
+    final isLive = controller.isLiveStreamingSession;
     return SafeArea(
       top: false,
-      minimum: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+      minimum: const EdgeInsets.fromLTRB(12, 8, 12, 14),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: AppTextField(
-                  controller: controller.chatTextController,
-                  hintText: 'Say something...',
-                  fillColor: _surface,
-                  inputBorderRadius: BorderRadius.circular(24),
-                  borderColor: kColorWhite.withValues(alpha: 0.06),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 12,
-                  ),
-                  textStyle: TextStyles.kRegularPoppins(
-                    colors: kColorWhite,
-                    fontSize: 14,
-                  ),
-                  hintStyle: TextStyles.kRegularPoppins(
-                    colors: Colors.white54,
-                    fontSize: 14,
-                  ),
-                  suffix: _sendButton(),
-                ),
+          if (isLive) ...[
+            _buildChatInputField(),
+            Spacing.v8,
+            Obx(
+              () => Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.start,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: _liveStreamActionButtons(context, compact: true),
               ),
-              Spacing.h10,
-              Obx(
-                () => _bottomActionIcon(
-                  controller.isMicMuted.value
-                      ? Icons.mic_off_rounded
-                      : Icons.mic_rounded,
-                  active: !controller.isMicMuted.value,
-                  onTap: controller.toggleMic,
-                ),
-              ),
-              if (controller.isHost.value && controller.isVideoRoom) ...[
-                Spacing.h8,
-                Obx(
-                  () => _bottomActionIcon(
-                    controller.isCameraOff.value
-                        ? Icons.videocam_off_rounded
-                        : Icons.videocam_rounded,
-                    active: !controller.isCameraOff.value,
-                    onTap: controller.toggleCamera,
-                  ),
-                ),
+            ),
+          ] else
+            Row(
+              children: [
+                Expanded(child: _buildChatInputField()),
+                Spacing.h10,
+                ..._partyRoomActionButtons(context),
               ],
-              // Hide start-PK while this live/room is already in PK mode.
-              Obx(() {
-                if (!controller.isHost.value || controller.isInRoomPkActive) {
-                  return const SizedBox.shrink();
-                }
-                return Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Spacing.h8,
-                    _bottomActionIcon(
-                      Icons.flash_on_rounded,
-                      color: const Color(0xFFFFC857),
-                      onTap: controller.openPkV1Arena,
-                    ),
-                  ],
-                );
-              }),
-              // Gift: hidden for hosts during PK Battle.
-              Obx(() {
-                if (controller.isInRoomPkActive && controller.isHost.value) {
-                  return const SizedBox.shrink();
-                }
-                return Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Spacing.h8,
-                    _bottomActionIcon(
-                      kGiftIcon,
-                      color: _accent,
-                      onTap: controller.openGiftsSheet,
-                    ),
-                  ],
-                );
-              }),
-              Spacing.h8,
-              _bottomActionIcon(
-                Icons.more_horiz_rounded,
-                onTap: () {
-                  Get.bottomSheet(
-                    RoomOptionsSheet(
-                      isHost: controller.isHost.value,
-                      isVideoRoom: controller.isVideoRoom,
-                    ),
-                    backgroundColor: Colors.transparent,
-                  );
-                },
-              ),
-            ],
-          ),
+            ),
           Spacing.v10,
           Row(children: [const Spacer(), _bottomViewerStrip(context)]),
         ],
       ),
     );
+  }
+
+  Widget _buildChatInputField() {
+    return AppTextField(
+      controller: controller.chatTextController,
+      hintText: 'Say something...',
+      fillColor: _surface,
+      inputBorderRadius: BorderRadius.circular(24),
+      borderColor: kColorWhite.withValues(alpha: 0.06),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      textStyle: TextStyles.kRegularPoppins(colors: kColorWhite, fontSize: 14),
+      hintStyle: TextStyles.kRegularPoppins(colors: Colors.white54, fontSize: 14),
+      suffix: _sendButton(),
+    );
+  }
+
+  List<Widget> _liveStreamActionButtons(
+    BuildContext context, {
+    required bool compact,
+  }) {
+    return [
+      Obx(
+        () => _bottomActionIcon(
+          controller.isMicMuted.value
+              ? Icons.mic_off_rounded
+              : Icons.mic_rounded,
+          active: !controller.isMicMuted.value,
+          compact: compact,
+          onTap: controller.toggleMic,
+        ),
+      ),
+      _bottomActionIcon(
+        Icons.favorite_rounded,
+        color: LiveHeartReactionLayer.whatsAppHeartGreen,
+        compact: compact,
+        onTap: controller.triggerHeartReaction,
+      ),
+      if (controller.isHost.value)
+        Obx(
+          () => _bottomActionIcon(
+            controller.isCameraOff.value
+                ? Icons.videocam_off_rounded
+                : Icons.videocam_rounded,
+            active: !controller.isCameraOff.value,
+            compact: compact,
+            onTap: controller.toggleCamera,
+          ),
+        ),
+      if (controller.isHost.value && !controller.isInRoomPkActive)
+        _bottomActionIcon(
+          Icons.flash_on_rounded,
+          color: const Color(0xFFFFC857),
+          compact: compact,
+          onTap: controller.openPkV1Arena,
+        ),
+      if (!(controller.isInRoomPkActive && controller.isHost.value))
+        _bottomActionIcon(
+          kGiftIcon,
+          color: _accent,
+          compact: compact,
+          onTap: controller.openGiftsSheet,
+        ),
+      _bottomActionIcon(
+        Icons.more_horiz_rounded,
+        compact: compact,
+        onTap: () {
+          Get.bottomSheet(
+            RoomOptionsSheet(
+              isHost: controller.isHost.value,
+              isVideoRoom: controller.isVideoRoom,
+            ),
+            backgroundColor: Colors.transparent,
+          );
+        },
+      ),
+    ];
+  }
+
+  List<Widget> _partyRoomActionButtons(BuildContext context) {
+    return [
+      Obx(
+        () => _bottomActionIcon(
+          controller.isMicMuted.value
+              ? Icons.mic_off_rounded
+              : Icons.mic_rounded,
+          active: !controller.isMicMuted.value,
+          onTap: controller.toggleMic,
+        ),
+      ),
+      if (controller.isHost.value && controller.isVideoRoom) ...[
+        Spacing.h8,
+        Obx(
+          () => _bottomActionIcon(
+            controller.isCameraOff.value
+                ? Icons.videocam_off_rounded
+                : Icons.videocam_rounded,
+            active: !controller.isCameraOff.value,
+            onTap: controller.toggleCamera,
+          ),
+        ),
+      ],
+      Obx(() {
+        if (!controller.isHost.value || controller.isInRoomPkActive) {
+          return const SizedBox.shrink();
+        }
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Spacing.h8,
+            _bottomActionIcon(
+              Icons.flash_on_rounded,
+              color: const Color(0xFFFFC857),
+              onTap: controller.openPkV1Arena,
+            ),
+          ],
+        );
+      }),
+      Obx(() {
+        if (controller.isInRoomPkActive && controller.isHost.value) {
+          return const SizedBox.shrink();
+        }
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Spacing.h8,
+            _bottomActionIcon(
+              kGiftIcon,
+              color: _accent,
+              onTap: controller.openGiftsSheet,
+            ),
+          ],
+        );
+      }),
+      Spacing.h8,
+      _bottomActionIcon(
+        Icons.more_horiz_rounded,
+        onTap: () {
+          Get.bottomSheet(
+            RoomOptionsSheet(
+              isHost: controller.isHost.value,
+              isVideoRoom: controller.isVideoRoom,
+            ),
+            backgroundColor: Colors.transparent,
+          );
+        },
+      ),
+    ];
   }
 
   Widget _sendButton() {
@@ -1042,27 +1040,31 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
     IconData icon, {
     Color? color,
     bool active = true,
+    bool compact = false,
     VoidCallback? onTap,
   }) {
+    final size = compact ? 42.0 : 50.0;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        width: 50,
-        height: 50,
+        width: size,
+        height: size,
         decoration: BoxDecoration(
           color: active ? _surface : const Color(0xCC351D2B),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(compact ? 16 : 20),
           border: Border.all(color: kColorWhite.withValues(alpha: 0.06)),
         ),
-        child: Icon(icon, color: color ?? kColorWhite, size: 24),
+        child: Icon(icon, color: color ?? kColorWhite, size: compact ? 22 : 24),
       ),
     );
   }
 
   Widget _bottomViewerStrip(BuildContext context) {
     return Obx(() {
-      final viewers = controller.liveViewers.toList();
+      final viewers = controller.liveViewers
+          .where((viewer) => viewer['isHost'] != true)
+          .toList();
       final chatViewers = viewers
           .where((viewer) => viewer['isCurrentUser'] != true)
           .take(4)
@@ -1349,6 +1351,302 @@ class _AudioRoomPlusTile extends StatelessWidget {
             align: TextAlign.center,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Mounts PrebuiltCall once so Obx rebuilds (login, titles, banners) cannot
+/// dispose the native engine and leave a black canvas.
+class _StableZegoGroupCall extends StatefulWidget {
+  const _StableZegoGroupCall({
+    required this.userId,
+    required this.userName,
+    required this.isVideoRoom,
+    required this.shouldReportExit,
+    required this.configBuilder,
+  });
+
+  final String userId;
+  final String userName;
+  final bool isVideoRoom;
+  final bool Function(call.ZegoCallEndReason reason) shouldReportExit;
+  final call.ZegoUIKitPrebuiltCallConfig Function(bool isVideoRoom)
+      configBuilder;
+
+  @override
+  State<_StableZegoGroupCall> createState() => _StableZegoGroupCallState();
+}
+
+class _StableZegoGroupCallState extends State<_StableZegoGroupCall> {
+  Widget? _engine;
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Get.find<LiveBroadcastController>();
+    return Obx(() {
+      final conferenceId = controller.roomId.value;
+      final canOpen = controller.canOpenZego && conferenceId.isNotEmpty;
+      if (_engine == null && canOpen) {
+        _engine = call.ZegoUIKitPrebuiltCall(
+          key: ValueKey('group_call_$conferenceId'),
+          appID: ZegoConfig.roomAppId,
+          appSign: ZegoConfig.roomAppSign,
+          userID: widget.userId,
+          userName: widget.userName,
+          callID: conferenceId,
+          config: widget.configBuilder(widget.isVideoRoom),
+          events: call.ZegoUIKitPrebuiltCallEvents(
+            onError: controller.handleGroupCallRoomError,
+            room: call.ZegoCallRoomEvents(
+              onStateChanged: (state) {
+                if (state.reason == ZegoRoomStateChangedReason.Logined ||
+                    state.reason == ZegoRoomStateChangedReason.Reconnected) {
+                  controller.onGroupCallRoomConnected();
+                } else if (state.reason ==
+                    ZegoRoomStateChangedReason.LoginFailed) {
+                  controller.handleGroupCallRoomLoginFailed(state.errorCode);
+                }
+              },
+            ),
+            onHangUpConfirmation: (event, defaultAction) async {
+              final confirmed = await defaultAction.call();
+              if (!confirmed || !controller.isHost.value) {
+                return confirmed;
+              }
+              return controller.endRoomAfterConfirmedHangUp();
+            },
+            onCallEnd: (event, defaultAction) {
+              if (!controller.canProcessGroupCallEnd) return;
+              if (widget.shouldReportExit(event.reason)) {
+                controller.reportRoomExit();
+              }
+              defaultAction.call();
+            },
+          ),
+        );
+      }
+      return _engine ?? const ColoredBox(color: Colors.black);
+    });
+  }
+}
+
+/// Mounts PrebuiltLiveStreaming once. Login/wallet Obx rebuilds used to recreate
+/// the widget (new config + signaling plugin) and tear down the camera.
+class _StableZegoLiveStreaming extends StatefulWidget {
+  const _StableZegoLiveStreaming({
+    super.key,
+    required this.userId,
+    required this.userName,
+    required this.isHost,
+    required this.isAudioVideoRoom,
+    required this.isVideoRoom,
+    required this.isLiveStreamingSession,
+    required this.hostName,
+    this.hostAvatarUrl,
+  });
+
+  final String userId;
+  final String userName;
+  final bool isHost;
+  final bool isAudioVideoRoom;
+  final bool isVideoRoom;
+  final bool isLiveStreamingSession;
+  final String hostName;
+  final String? hostAvatarUrl;
+
+  @override
+  State<_StableZegoLiveStreaming> createState() =>
+      _StableZegoLiveStreamingState();
+}
+
+class _StableZegoLiveStreamingState extends State<_StableZegoLiveStreaming> {
+  Widget? _engine;
+
+  ZegoUIKitPrebuiltLiveStreamingConfig _buildConfig() {
+    final signalingPlugins =
+        ZegoConfig.useSignalingPlugin ? [ZegoUIKitSignalingPlugin()] : null;
+    final config = widget.isHost
+        ? ZegoUIKitPrebuiltLiveStreamingConfig.host(plugins: signalingPlugins)
+        : ZegoUIKitPrebuiltLiveStreamingConfig.audience(
+            plugins: signalingPlugins,
+          );
+
+    if (widget.isAudioVideoRoom) {
+      config.layout = ZegoLayout.gallery(
+        margin: const EdgeInsets.fromLTRB(8, 116, 8, 120),
+        addBorderRadiusAndSpacingBetweenView: true,
+      );
+      if (!widget.isHost) {
+        config.role = ZegoLiveStreamingRole.coHost;
+      }
+    }
+
+    config.bottomMenuBar = ZegoLiveStreamingBottomMenuBarConfig(
+      hostButtons: [],
+      audienceButtons: [],
+    );
+    config.topMenuBar = ZegoLiveStreamingTopMenuBarConfig(
+      showCloseButton: false,
+      height: 0,
+      hostAvatarBuilder: (_) => const SizedBox.shrink(),
+    );
+    config.memberButton = ZegoLiveStreamingMemberButtonConfig(
+      builder: (_) => const SizedBox.shrink(),
+    );
+    config.inRoomMessage = ZegoLiveStreamingInRoomMessageConfig(
+      visible: false,
+    );
+    config.preview.showPreviewForHost = false;
+    config.showBackgroundTips = false;
+    config.background = const ColoredBox(color: Colors.transparent);
+    config.duration.isVisible = false;
+    config.pip.enableWhenBackground = false;
+    config.audioVideoView.showAvatarInAudioMode = true;
+    config.audioVideoView.showSoundWavesInAudioMode = true;
+    config.audioVideoView.useVideoViewAspectFill = true;
+    config.audioVideoView.backgroundBuilder = (context, size, user, extraInfo) {
+      return ColoredBox(
+        color: const Color(0xFF12081C),
+        child: Center(
+          child: AppUserAvatar(
+            name: widget.hostName,
+            imageUrl: widget.hostAvatarUrl,
+            size: size.shortestSide * 0.28,
+          ),
+        ),
+      );
+    };
+
+    if (widget.isLiveStreamingSession) {
+      // Instagram-style: one host feed — no co-host / audience camera tiles.
+      config.coHost.maxCoHostCount = 0;
+      config.coHost.turnOnCameraWhenCohosted = () => false;
+      config.audioVideoView.playCoHostVideo =
+          (_, __, ___) => false;
+      config.audioVideoView.playCoHostAudio =
+          (_, __, ___) => false;
+      config.audioVideoView.visible =
+          (localUser, localRole, targetUser, targetUserRole) {
+        return targetUserRole == ZegoLiveStreamingRole.host;
+      };
+      // [LiveHostVideoFill] renders the single full-bleed surface.
+      config.audioVideoView.containerBuilder =
+          (context, allUsers, audioVideoUsers, creator) =>
+              const SizedBox.shrink();
+    } else if (!widget.isAudioVideoRoom) {
+      config.layout = ZegoLayout.gallery(
+        margin: EdgeInsets.zero,
+        addBorderRadiusAndSpacingBetweenView: false,
+      );
+    }
+
+    if (widget.isLiveStreamingSession) {
+      config.turnOnCameraWhenJoining = widget.isHost;
+      config.turnOnMicrophoneWhenJoining = widget.isHost;
+      config.useFrontFacingCamera = true;
+    } else if (widget.isVideoRoom) {
+      config.turnOnCameraWhenJoining = widget.isHost || widget.isAudioVideoRoom;
+      config.turnOnMicrophoneWhenJoining =
+          widget.isHost || widget.isAudioVideoRoom;
+      config.useFrontFacingCamera = true;
+    } else {
+      config.turnOnCameraWhenJoining = false;
+      config.turnOnMicrophoneWhenJoining =
+          widget.isHost || widget.isAudioVideoRoom;
+    }
+
+    return config;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Get.find<LiveBroadcastController>();
+    return Obx(() {
+      final liveId = controller.roomId.value;
+      final canOpen = controller.canOpenZego && liveId.isNotEmpty;
+      if (_engine == null && canOpen) {
+        _engine = ZegoUIKitPrebuiltLiveStreaming(
+          key: ValueKey('zego_$liveId'),
+          appID: ZegoConfig.liveAppId,
+          appSign: ZegoConfig.liveAppSign,
+          userID: widget.userId,
+          userName: widget.userName,
+          liveID: liveId,
+          config: _buildConfig(),
+          events: ZegoUIKitPrebuiltLiveStreamingEvents(
+            room: ZegoLiveStreamingRoomEvents(
+              onStateChanged: (state) {
+                if (state.reason == ZegoRoomStateChangedReason.Logined &&
+                    state.errorCode == 0) {
+                  controller.clearConnectionIssue();
+                  controller.onZegoRoomLogined();
+                }
+              },
+              onLoginFailed: (event, defaultAction) {
+                controller.handleZegoLoginFailed(event.errorCode);
+              },
+            ),
+            onEnded: (event, defaultAction) {
+              if (controller.isAudioVideoRoom &&
+                  event.reason == ZegoLiveStreamingEndReason.hostEnd) {
+                return;
+              }
+              controller.leaveRoom();
+              defaultAction.call();
+            },
+          ),
+        );
+      }
+      return _engine ?? const ColoredBox(color: Color(0xFF0B0714));
+    });
+  }
+}
+
+class _LiveConnectingCover extends StatefulWidget {
+  const _LiveConnectingCover({required this.name, this.avatarUrl});
+
+  final String name;
+  final String? avatarUrl;
+
+  @override
+  State<_LiveConnectingCover> createState() => _LiveConnectingCoverState();
+}
+
+class _LiveConnectingCoverState extends State<_LiveConnectingCover> {
+  bool _timedOut = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future<void>.delayed(const Duration(milliseconds: 3500), () {
+      if (mounted) setState(() => _timedOut = true);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_timedOut) return const SizedBox.shrink();
+    return IgnorePointer(
+      child: ColoredBox(
+        color: const Color(0xFF0B0714),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppUserAvatar(
+                name: widget.name,
+                imageUrl: widget.avatarUrl,
+                size: 96,
+              ),
+              const SizedBox(height: 16),
+              const CircularProgressIndicator(
+                color: Color(0xFFFF3F7F),
+                strokeWidth: 2.4,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

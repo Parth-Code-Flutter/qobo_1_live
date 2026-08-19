@@ -13,8 +13,6 @@ abstract final class SessionEarningsUtils {
     'session_coins_earned',
     'hostSessionCoins',
     'host_session_coins',
-    'sessionEarnings',
-    'session_earnings',
     'currentSessionCoins',
     'current_session_coins',
     'coinsEarnedThisSession',
@@ -32,25 +30,28 @@ abstract final class SessionEarningsUtils {
     'diamonds_earned_this_session',
   ];
 
+  /// Nested objects that also carry [sessionFieldKeys] (join / poll payloads).
+  static const _nestedSessionMapKeys = [
+    'sessionEarnings',
+    'session_earnings',
+    'hostEarnings',
+    'host_earnings',
+    'earnings',
+  ];
+
   static void ingestRoomData(
     SessionEarningsTracker tracker,
     Map<String, dynamic>? roomData,
   ) {
     if (roomData == null || roomData.isEmpty) return;
-    final nested = _asMap(
-      roomData['sessionEarnings'] ?? roomData['session_earnings'],
-    );
-    final hostBlock = _asMap(
-      roomData['hostEarnings'] ?? roomData['host_earnings'],
-    );
-    final coins = _readIntFromMaps(
-      [roomData, nested, hostBlock],
-      sessionFieldKeys,
-    );
-    final diamonds = _readIntFromMaps(
-      [roomData, nested, hostBlock],
-      diamondFieldKeys,
-    );
+    final coins = _readHostSessionCoinTotal([
+      roomData,
+      ..._nestedSessionMaps(roomData),
+    ]);
+    final diamonds = _readHostSessionDiamondTotal([
+      roomData,
+      ..._nestedSessionMaps(roomData),
+    ]);
     if (coins != null || diamonds != null) {
       _applyIngestedTotals(
         tracker,
@@ -65,29 +66,40 @@ abstract final class SessionEarningsUtils {
     Map<String, dynamic>? response,
   ) {
     if (!isEconomyApiSuccess(response)) return;
-    final data = _asMap(response?['data']);
+    var data = _asMap(response?['data']);
+    // Some builds return host totals on the envelope itself.
+    if (data.isEmpty) data = _asMap(response);
     if (data.isEmpty) return;
 
-    final nested = _asMap(
-      data['sessionEarnings'] ?? data['session_earnings'] ?? data['earnings'],
-    );
-    final hostBlock = _asMap(
-      data['hostEarnings'] ?? data['host_earnings'],
-    );
-    final coins = _readIntFromMaps(
-      [data, nested, hostBlock],
-      sessionFieldKeys,
-    );
-    final diamonds = _readIntFromMaps(
-      [data, nested, hostBlock],
-      diamondFieldKeys,
-    );
+    final coins = _readHostSessionCoinTotal([
+      data,
+      ..._nestedSessionMaps(data),
+    ]);
+    final diamonds = _readHostSessionDiamondTotal([
+      data,
+      ..._nestedSessionMaps(data),
+    ]);
     if (coins != null || diamonds != null) {
       _applyIngestedTotals(
         tracker,
         coins: coins,
         diamonds: diamonds,
       );
+    }
+  }
+
+  /// Copies backend host-session aliases onto the live-room join payload.
+  static void copyHostSessionFields(
+    Map<String, dynamic> payload, {
+    required Map<String, dynamic> data,
+    Map<String, dynamic> joinedRoom = const {},
+  }) {
+    for (final key in [
+      ..._nestedSessionMapKeys,
+      ...sessionFieldKeys,
+      ...diamondFieldKeys,
+    ]) {
+      payload[key] = data[key] ?? joinedRoom[key] ?? payload[key];
     }
   }
 
@@ -318,6 +330,44 @@ abstract final class SessionEarningsUtils {
       return;
     }
     tracker.setFromTotals(coins: nextCoins, diamonds: nextDiamonds);
+  }
+
+  static int? _readHostSessionCoinTotal(List<Map<String, dynamic>> maps) =>
+      _readMaxIntFromMaps(maps, sessionFieldKeys);
+
+  static int? _readHostSessionDiamondTotal(List<Map<String, dynamic>> maps) =>
+      _readMaxIntFromMaps(maps, diamondFieldKeys);
+
+  /// Join/poll often send `sessionCoinsEarned: 0` (caller) plus
+  /// `hostSessionCoins: 1280`. First-key wins would keep the AppBar at 0.
+  static int? _readMaxIntFromMaps(
+    List<Map<String, dynamic>> maps,
+    List<String> keys,
+  ) {
+    int? best;
+    for (final map in maps) {
+      for (final key in keys) {
+        final parsed = _parsePlainInt(map[key]);
+        if (parsed == null) continue;
+        if (best == null || parsed > best) best = parsed;
+      }
+    }
+    return best;
+  }
+
+  static List<Map<String, dynamic>> _nestedSessionMaps(
+    Map<String, dynamic> source,
+  ) {
+    return _nestedSessionMapKeys
+        .map((key) => _asMap(source[key]))
+        .where((map) => map.isNotEmpty)
+        .toList();
+  }
+
+  static int? _parsePlainInt(dynamic value) {
+    if (value == null || value is Map || value is List) return null;
+    if (value is num) return value.round();
+    return int.tryParse(value.toString().replaceAll(',', ''));
   }
 
   static Map<String, dynamic> _asMap(dynamic value) {

@@ -61,104 +61,115 @@ class _WalletViewState extends State<WalletView> {
               children: [
                 _walletHeader(),
                 Spacing.v20,
-                Row(
-                  children: [
-                    Expanded(
-                      child: Obx(
-                        () => _balanceCard(
-                          title: 'Coin',
-                          amount: controller.coinBalance.value,
-                          icon: kIconCoin2,
-                        ),
-                      ),
-                    ),
-                    Spacing.h12,
-                    Expanded(
-                      child: Obx(
-                        () => _balanceCard(
-                          title: 'Diamonds',
-                          amount: controller.diamondBalance.value,
-                          iconData: Icons.diamond_rounded,
-                          subtitle: controller.dollarBalance.value,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                Spacing.v12,
-                Obx(() => _earnedDollarsCard()),
-                Spacing.v12,
-                Obx(() => _withdrawalLimitCard()),
-                Spacing.v12,
-                Obx(() => _withdrawActionCard()),
-                Spacing.v12,
-                // VIP Store Promo Banner
-                GestureDetector(
-                  onTap: () => Get.toNamed(Routes.VIP_STORE),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF8E2DE2), Color(0xFF4A00E0)],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.15),
-                      ),
-                    ),
-                    child: Row(
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(
                       children: [
-                        const Icon(
-                          Icons.storefront_rounded,
-                          color: kColorWhite,
-                          size: 24,
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Obx(
+                                () => _balanceCard(
+                                  title: 'Diamonds',
+                                  amount: controller.coinBalance.value,
+                                  icon: kIconCoin2,
+                                ),
+                              ),
+                            ),
+                            // Spacing.h12,
+                            // Expanded(
+                            //   child: Obx(
+                            //     () => _balanceCard(
+                            //       title: 'Diamonds',
+                            //       amount: controller.diamondBalance.value,
+                            //       iconData: Icons.diamond_rounded,
+                            //       subtitle: controller.dollarBalance.value,
+                            //     ),
+                            //   ),
+                            // ),
+                          ],
                         ),
-                        Spacing.h12,
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SemiBoldText(
-                                text: 'VIP Decoration Store',
-                                fontSize: TextStyles.k14FontSize,
-                                color: kColorWhite,
+                        Spacing.v12,
+                        Obx(() => _earnedDollarsCard()),
+                        Spacing.v12,
+                        Obx(() => _withdrawalLimitCard()),
+                        Spacing.v12,
+                        Obx(() => _withdrawActionCard()),
+                        Spacing.v12,
+                        GestureDetector(
+                          onTap: () => Get.toNamed(Routes.VIP_STORE),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF8E2DE2), Color(0xFF4A00E0)],
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
                               ),
-                              Spacing.v2,
-                              AppText(
-                                text:
-                                    'Get elite entrances, avatars, & chat bubbles!',
-                                fontSize: 11,
-                                color: kColorWhite.withValues(alpha: 0.8),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.15),
                               ),
-                            ],
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.storefront_rounded,
+                                  color: kColorWhite,
+                                  size: 24,
+                                ),
+                                Spacing.h12,
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const SemiBoldText(
+                                        text: 'VIP Decoration Store',
+                                        fontSize: TextStyles.k14FontSize,
+                                        color: kColorWhite,
+                                      ),
+                                      Spacing.v2,
+                                      AppText(
+                                        text:
+                                            'Get elite entrances, avatars, & chat bubbles!',
+                                        fontSize: 11,
+                                        color: kColorWhite.withValues(
+                                          alpha: 0.8,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(
+                                  Icons.chevron_right_rounded,
+                                  color: kColorWhite,
+                                  size: 22,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          color: kColorWhite,
-                          size: 22,
+                        Spacing.v16,
+                        const Align(
+                          alignment: Alignment.centerLeft,
+                          child: SemiBoldText(
+                            text: 'Buy Coin',
+                            fontSize: TextStyles.k20FontSize,
+                            color: kColorWhite,
+                          ),
                         ),
+                        Spacing.v12,
+                        _coinPackagesPanel(),
                       ],
                     ),
                   ),
                 ),
-                Spacing.v16,
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: SemiBoldText(
-                    text: 'Buy Coin',
-                    fontSize: TextStyles.k20FontSize,
-                    color: kColorWhite,
-                  ),
-                ),
-                Spacing.v12,
-                Expanded(child: _coinPackagesPanel()),
                 Spacing.v20,
                 SizedBox(
                   width: double.infinity,
@@ -214,25 +225,28 @@ class _WalletViewState extends State<WalletView> {
       ),
       child: Obx(() {
         if (controller.isLoadingPackages.value) {
-          return const Center(
-            child: CircularProgressIndicator(color: kColorPrimary),
+          return const SizedBox(
+            height: 140,
+            child: Center(
+              child: CircularProgressIndicator(color: kColorPrimary),
+            ),
           );
         }
         if (controller.packages.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Text(
-                controller.packageError.value.isNotEmpty
-                    ? controller.packageError.value
-                    : 'No coin packages found.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 13, color: kColorHint),
-              ),
+          return Padding(
+            padding: const EdgeInsets.all(20),
+            child: Text(
+              controller.packageError.value.isNotEmpty
+                  ? controller.packageError.value
+                  : 'No coin packages found.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 13, color: kColorHint),
             ),
           );
         }
         return ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           itemCount: controller.packages.length,
           separatorBuilder: (_, __) =>
@@ -1418,7 +1432,7 @@ class _WalletViewState extends State<WalletView> {
           Spacing.v6,
           Row(
             children: [
-              if (title == 'Coin')
+              if (icon != null)
                 SvgPicture.asset(kIconCoin3, width: 14, height: 14)
               else
                 const Icon(

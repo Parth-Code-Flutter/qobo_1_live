@@ -4,6 +4,7 @@ abstract final class AuthVerifyAccountArgs {
 
   static const String isFromLoginWithOtp = 'isFromLoginWithOtp';
   static const String isComeFromForgotPassword = 'isComeFromForgotPassword';
+  static const String referralCode = 'referralCode';
 }
 
 abstract final class AuthNewPasswordArgs {

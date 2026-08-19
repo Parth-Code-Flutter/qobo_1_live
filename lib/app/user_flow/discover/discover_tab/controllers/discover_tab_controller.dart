@@ -328,10 +328,7 @@ class DiscoverTabController extends GetxController {
     final rawType = _text(payload['type'])?.toUpperCase() ?? 'VIDEO';
     final roomType = rawType == 'AUDIO' ? 'AUDIO' : 'VIDEO';
     payload['type'] = roomType.toLowerCase();
-    await ZegoEngineUtils.resetForRoomProject().timeout(
-      const Duration(milliseconds: 700),
-      onTimeout: () {},
-    );
+    await ZegoEngineUtils.resetForRoomProject();
     Get.toNamed(
       Routes.LIVE_BROADCAST,
       arguments: {'isHost': false, 'roomType': roomType, 'roomData': payload},

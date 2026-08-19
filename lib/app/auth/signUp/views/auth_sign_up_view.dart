@@ -42,6 +42,8 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
                     signUpHeader(),
                     Spacing.v24,
                     emailUsernamePasswordTextFields(context),
+                    Spacing.v10,
+                    _referralCodeSection(context),
                     Spacing.v28,
                     Obx(
                       () => appButton(
@@ -120,29 +122,29 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
             ),
           ),
         ),
-        Spacing.v10,
-        AppTextField(
-          controller: controller.emailController,
-          validator: (value) =>
-              Validate.emailValidation(context, value?.trim() ?? ''),
-          hintText: LocaleKeys.loginEmailHint.tr,
-          borderColor: kColorHint,
-          hintStyle: TextStyles.kRegularPoppins(
-            fontSize: TextStyles.k14FontSize,
-            colors: kColorHint,
-          ),
-          textInputType: TextInputType.emailAddress,
-          textInputAction: TextInputAction.next,
-          textCapitalization: TextCapitalization.none,
-          prefix: Padding(
-            padding: const EdgeInsets.only(left: 14, right: 12),
-            child: SvgPicture.asset(
-              kIconMail,
-              colorFilter: const ColorFilter.mode(kColorHint, BlendMode.srcIn),
-            ),
-          ),
-        ),
-
+        // Email field hidden — registration uses username + password only.
+        // Spacing.v10,
+        // AppTextField(
+        //   controller: controller.emailController,
+        //   validator: (value) =>
+        //       Validate.emailValidation(context, value?.trim() ?? ''),
+        //   hintText: LocaleKeys.loginEmailHint.tr,
+        //   borderColor: kColorHint,
+        //   hintStyle: TextStyles.kRegularPoppins(
+        //     fontSize: TextStyles.k14FontSize,
+        //     colors: kColorHint,
+        //   ),
+        //   textInputType: TextInputType.emailAddress,
+        //   textInputAction: TextInputAction.next,
+        //   textCapitalization: TextCapitalization.none,
+        //   prefix: Padding(
+        //     padding: const EdgeInsets.only(left: 14, right: 12),
+        //     child: SvgPicture.asset(
+        //       kIconMail,
+        //       colorFilter: const ColorFilter.mode(kColorHint, BlendMode.srcIn),
+        //     ),
+        //   ),
+        // ),
         Spacing.v10,
         Obx(
           () => AppTextField(
@@ -184,6 +186,101 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
             ),
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _referralCodeSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppText(
+          text: 'Have a referral code? (optional)',
+          fontSize: TextStyles.k12FontSize,
+          color: kColorTextGrey,
+        ),
+        Spacing.v8,
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: AppTextField(
+                controller: controller.referralCodeController,
+                hintText: 'Enter code e.g. QOBO8X9A',
+                borderColor: kColorHint,
+                hintStyle: TextStyles.kRegularPoppins(
+                  fontSize: TextStyles.k14FontSize,
+                  colors: kColorHint,
+                ),
+                textInputAction: TextInputAction.done,
+                textCapitalization: TextCapitalization.characters,
+                maxLength: 8,
+                prefix: const Padding(
+                  padding: EdgeInsets.only(left: 14, right: 10),
+                  child: Icon(
+                    Icons.card_giftcard_outlined,
+                    color: kColorHint,
+                    size: 18,
+                  ),
+                ),
+              ),
+            ),
+            Spacing.h8,
+            Obx(
+              () => SizedBox(
+                height: 52,
+                child: TextButton(
+                  onPressed: controller.isReferralVerifying.value
+                      ? null
+                      : () => controller.verifyReferralCode(context),
+                  style: TextButton.styleFrom(
+                    backgroundColor: controller.isReferralVerified.value
+                        ? const Color(0xFF12B845)
+                        : kColorPrimary,
+                    foregroundColor: kColorWhite,
+                    disabledBackgroundColor: kColorHint.withValues(alpha: 0.35),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: controller.isReferralVerifying.value
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: kColorWhite,
+                          ),
+                        )
+                      : SemiBoldText(
+                          text: controller.isReferralVerified.value
+                              ? 'Verified'
+                              : 'Verify',
+                          fontSize: TextStyles.k12FontSize,
+                          color: kColorWhite,
+                        ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        Obx(() {
+          final message = controller.referralStatusMessage.value;
+          if (message == null || message.trim().isEmpty) {
+            return const SizedBox.shrink();
+          }
+          return Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: AppText(
+              text: message,
+              fontSize: TextStyles.k12FontSize,
+              color: controller.isReferralVerified.value
+                  ? const Color(0xFF12B845)
+                  : kColorTextGrey,
+            ),
+          );
+        }),
       ],
     );
   }

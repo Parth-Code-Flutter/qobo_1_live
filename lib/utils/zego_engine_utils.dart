@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 import 'package:zego_uikit/zego_uikit.dart';
 
@@ -6,6 +8,10 @@ import 'package:zego_uikit/zego_uikit.dart';
 /// Features use different App IDs. ZegoUIKit only initializes once per process,
 /// so switching use cases must uninit the old engine first.
 abstract final class ZegoEngineUtils {
+  /// Native uninit can exceed 700ms. Joining before it finishes paints a black
+  /// canvas, so callers must wait for this full reset (including settle delay).
+  static const Duration resetTimeout = Duration(seconds: 3);
+
   static Future<void> resetForCallProject() async {
     await _resetEngine('call');
   }
@@ -24,15 +30,23 @@ abstract final class ZegoEngineUtils {
 
   static Future<void> _resetEngine(String reason) async {
     try {
-      await ZegoUIKit().leaveRoom();
-    } catch (e) {
-      LoggerUtils.logWarning('ZegoEngineUtils: leaveRoom ($reason) — $e');
-    }
-    try {
-      await ZegoUIKit().uninit();
-      LoggerUtils.logInfo('ZegoEngineUtils: engine reset ($reason)');
-    } catch (e) {
-      LoggerUtils.logWarning('ZegoEngineUtils: uninit ($reason) — $e');
+      await Future<void>(() async {
+        try {
+          await ZegoUIKit().leaveRoom();
+        } catch (e) {
+          LoggerUtils.logWarning('ZegoEngineUtils: leaveRoom ($reason) — $e');
+        }
+        try {
+          await ZegoUIKit().uninit();
+          LoggerUtils.logInfo('ZegoEngineUtils: engine reset ($reason)');
+        } catch (e) {
+          LoggerUtils.logWarning('ZegoEngineUtils: uninit ($reason) — $e');
+        }
+        // Native teardown can lag uninit(); joining immediately causes a black canvas.
+        await Future<void>.delayed(const Duration(milliseconds: 280));
+      }).timeout(resetTimeout);
+    } on TimeoutException {
+      LoggerUtils.logWarning('ZegoEngineUtils: reset timed out ($reason)');
     }
   }
 }

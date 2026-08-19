@@ -390,6 +390,10 @@ class _ProfileTabViewState extends State<ProfileTabView> {
         Color(0xFFFF8A1D),
         Color(0xFFFFD21E),
       ], onTapRoute: Routes.FAMILY),
+      _ProfileFeatureItem('Invite\nFriends', kIconAward, const [
+        Color(0xFFFF3F7F),
+        Color(0xFF8E1B85),
+      ], onTapRoute: Routes.REFERRAL),
       _ProfileFeatureItem('SVIP', kIconSVIP, const [
         Color(0xFF15BDE6),
         Color(0xFF17D7C4),

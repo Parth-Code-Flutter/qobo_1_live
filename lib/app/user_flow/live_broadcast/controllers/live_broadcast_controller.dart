@@ -66,11 +66,14 @@ class LiveBroadcastController extends GetxController {
   final RoomRepo _roomRepo;
 
   final isHost = false.obs;
+
   /// Host-vs-host PK overlay is replacing the seat grid / live stage.
   final isPkBattleActive = false.obs;
   final roomType = 'VIDEO'.obs;
   final roomId = ''.obs;
   final receiverId = ''.obs;
+  /// Sanitized Zego user id for the live host (resolved after room login).
+  final hostZegoUserId = ''.obs;
   final hasExplicitStreamingId = false.obs;
   final connectionIssue = ''.obs;
 
@@ -83,6 +86,12 @@ class LiveBroadcastController extends GetxController {
   final liveViewers = <Map<String, dynamic>>[].obs;
   final isFollowingHost = false.obs;
   final isZegoConnected = false.obs;
+  /// Bumps when Zego user/stream list changes so seat cameras remount.
+  final zegoMediaUsersTick = 0.obs;
+
+  /// Active floating-heart animation tokens (live streaming reactions).
+  final heartReactionTokens = <int>[].obs;
+  var _heartReactionSeq = 0;
 
   final chatMessages = <Map<String, dynamic>>[].obs;
   final chatTextController = TextEditingController();
@@ -92,6 +101,7 @@ class LiveBroadcastController extends GetxController {
 
   final coinsBalance = 0.obs;
   final diamondsBalance = 0.obs;
+
   /// Host-only session coins shown in the room AppBar (not audience wallet).
   final sessionEarnings = SessionEarningsTracker();
 
@@ -100,6 +110,9 @@ class LiveBroadcastController extends GetxController {
 
   /// Target for gullak-style coin fly animation into the host earnings pill.
   final sessionEarningsBadgeKey = GlobalKey(debugLabel: 'sessionEarningsBadge');
+
+  /// Landing spots for audience coin-fly (one GlobalKey per seated user id).
+  final Map<String, GlobalKey> _seatCoinFlyKeys = {};
 
   /// Target for floor-audience join fly animation into the AppBar people badge.
   final floorAudienceBadgeKey = GlobalKey(debugLabel: 'floorAudienceBadge');
@@ -140,6 +153,7 @@ class LiveBroadcastController extends GetxController {
   Map<String, dynamic> _roomData = {};
   StreamSubscription<List<ZegoInRoomMessage>>? _messageSub;
   StreamSubscription<List<ZegoUIKitUser>>? _userSub;
+  StreamSubscription<dynamic>? _mediaSub;
   void Function(Map<String, dynamic>)? _roomBackgroundSocketListener;
   void Function(Map<String, dynamic>)? _vipUserJoinedSocketListener;
 
@@ -191,6 +205,10 @@ class LiveBroadcastController extends GetxController {
       _roomData,
     );
     _hydrateHostProfile();
+    if (isLiveStreamingSession) {
+      final seeded = ZegoLiveIdUtils.sanitizeUserId(receiverId.value);
+      if (seeded.isNotEmpty) hostZegoUserId.value = seeded;
+    }
     _hydrateRoomBackground();
     _seedSessionEarningsFromRoom();
     _restoreHostSessionIfNeeded();
@@ -210,7 +228,10 @@ class LiveBroadcastController extends GetxController {
     if (isAudioVideoRoom) {
       // Open join + seat-request realtime for host and guests.
       unawaited(_bootstrapPartyRoomRealtime());
-      final initialSeats = _parseAudioSeats(_roomData);
+      var initialSeats = _parseAudioSeats(_roomData);
+      if (initialSeats.isEmpty) {
+        initialSeats = _buildFallbackAudioSeats();
+      }
       if (initialSeats.isNotEmpty) {
         _setAudioRoomSeats(initialSeats);
         _seedVipEntranceBaselineFromSeats(initialSeats);
@@ -483,7 +504,8 @@ class LiveBroadcastController extends GetxController {
       battleId: battleId,
       status: status,
       mode: 'audio_follower_pk',
-      active: status == 'waiting_opponent' ||
+      active:
+          status == 'waiting_opponent' ||
           status == 'duration_pending' ||
           status == 'active',
       canJoin: status == 'waiting_opponent',
@@ -583,44 +605,39 @@ class LiveBroadcastController extends GetxController {
 
     for (final user in floorAudience) {
       if (isExcluded(user.userId)) continue;
-      addMember(
-        userId: user.userId,
-        name: user.name,
-        avatar: user.avatarUrl,
-      );
+      addMember(userId: user.userId, name: user.name, avatar: user.avatarUrl);
     }
     for (final seat in audioRoomSeats) {
       if (!seat.occupied) continue;
       if (seat.role.toLowerCase() == 'host') continue;
       if (isExcluded(seat.userId)) continue;
-      addMember(
-        userId: seat.userId,
-        name: seat.name,
-        avatar: seat.avatarUrl,
-      );
+      addMember(userId: seat.userId, name: seat.name, avatar: seat.avatarUrl);
     }
     for (final viewer in liveViewers) {
       if (viewer['isHost'] == true) continue;
       if (isHost.value && viewer['isCurrentUser'] == true) continue;
-      final viewerId = (viewer['targetId'] ??
-              viewer['userId'] ??
-              viewer['user_id'] ??
-              viewer['id'] ??
-              '')
-          .toString();
+      final viewerId =
+          (viewer['targetId'] ??
+                  viewer['userId'] ??
+                  viewer['user_id'] ??
+                  viewer['id'] ??
+                  '')
+              .toString();
       if (isExcluded(viewerId)) continue;
       addMember(
         userId: viewerId,
-        name: (viewer['name'] ??
-                viewer['displayName'] ??
-                viewer['username'] ??
-                'Viewer')
-            .toString(),
-        avatar: (viewer['avatarUrl'] ??
-                viewer['avatar'] ??
-                viewer['displayPicture'] ??
-                '')
-            .toString(),
+        name:
+            (viewer['name'] ??
+                    viewer['displayName'] ??
+                    viewer['username'] ??
+                    'Viewer')
+                .toString(),
+        avatar:
+            (viewer['avatarUrl'] ??
+                    viewer['avatar'] ??
+                    viewer['displayPicture'] ??
+                    '')
+                .toString(),
       );
     }
 
@@ -973,6 +990,7 @@ class LiveBroadcastController extends GetxController {
     for (final id in stale) {
       if (hostId.isNotEmpty && _userIdsMatch(id, hostId)) continue;
       seatSessionCoins.remove(id);
+      _seatCoinFlyKeys.remove(id);
       changed = true;
     }
     for (final id in present) {
@@ -1020,24 +1038,48 @@ class LiveBroadcastController extends GetxController {
 
   Future<void> _refreshSessionEarnings() async {
     if (_exitReported) return;
-    final roomApiId = audioRoomApiId;
-    if (roomApiId.isEmpty) return;
+    final roomIds = _sessionEarningsRoomIds();
+    if (roomIds.isEmpty) return;
 
-    final response = await _roomRepo.getSessionEarnings(
-      roomId: roomApiId,
-      sessionType: _sessionEarningsType,
-      isShowLoader: false,
-    );
-    SessionEarningsUtils.ingestApiEnvelope(sessionEarnings, response);
-    debugPrint(
-      '[session-earnings] room=$roomApiId type=$_sessionEarningsType '
-      'display=${sessionEarnings.displayCoins} raw=$response',
-    );
+    // Spec: room_id may be backend UUID or Zego live id — try both if needed.
+    for (final roomApiId in roomIds) {
+      if (_exitReported) return;
+      final response = await _roomRepo.getSessionEarnings(
+        roomId: roomApiId,
+        sessionType: _sessionEarningsType,
+        isShowLoader: false,
+      );
+      SessionEarningsUtils.ingestApiEnvelope(sessionEarnings, response);
+      debugPrint(
+        '[session-earnings] room=$roomApiId type=$_sessionEarningsType '
+        'display=${sessionEarnings.displayCoins} raw=$response',
+      );
+      if (sessionEarnings.displayCoins > 0) break;
+    }
     if (sessionEarnings.displayCoins > 0) {
       _rememberHostSessionIfNeeded();
     } else {
       _restoreHostSessionIfNeeded();
     }
+  }
+
+  /// Ids the session-earnings GET may accept (UUID first, then Zego channel).
+  List<String> _sessionEarningsRoomIds() {
+    final ids = <String>[];
+    void add(String? value) {
+      final id = value?.trim() ?? '';
+      if (id.isEmpty || ids.contains(id)) return;
+      ids.add(id);
+    }
+
+    add(audioRoomApiId);
+    add(_extractBackendRoomId(_roomData));
+    add(_roomData['room_id']?.toString());
+    add(_roomData['roomId']?.toString());
+    add(_roomData['zegoLiveId']?.toString());
+    add(_roomData['channelName']?.toString());
+    add(roomId.value);
+    return ids;
   }
 
   void _applySessionEarningsFromGiftResponse({
@@ -1100,6 +1142,79 @@ class LiveBroadcastController extends GetxController {
     return to.isNotEmpty && _userIdsMatch(to, hostId);
   }
 
+  /// Whether this occupied seat should receive this gift credit.
+  bool _seatMatchesGiftCredit(
+    AudioRoomSeatModel seat, {
+    required String scope,
+    String? receiverId,
+    String? excludeUserId,
+    List<String>? creditedUserIds,
+  }) {
+    if (!seat.occupied) return false;
+    final exclude = excludeUserId?.trim() ?? '';
+    if (exclude.isNotEmpty && _userIdsMatch(seat.userId, exclude)) {
+      return false;
+    }
+    final credited = creditedUserIds
+        ?.map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    final normalized = scope.trim().toLowerCase();
+    final targetId = normalized == 'room' ? '' : (receiverId?.trim() ?? '');
+    if (normalized != 'room' &&
+        targetId.isEmpty &&
+        (credited == null || credited.isEmpty)) {
+      return false;
+    }
+    final matchCredited =
+        credited != null &&
+        credited.isNotEmpty &&
+        credited.any((id) => _userIdsMatch(id, seat.userId));
+    final matchRoom =
+        normalized == 'room' && (credited == null || credited.isEmpty);
+    final matchUser =
+        normalized != 'room' && _userIdsMatch(seat.userId, targetId);
+    return matchCredited || matchRoom || matchUser;
+  }
+
+  /// Audience (non-host) seats that earned from this gift — coin-fly targets.
+  List<String> _creditedAudienceSeatUserIds({
+    required String scope,
+    String? receiverId,
+    String? excludeUserId,
+    List<String>? creditedUserIds,
+  }) {
+    if (!isAudioVideoRoom) return const [];
+    final hostId = _resolvedHostId();
+    final ids = <String>[];
+    for (final seat in audioRoomSeats) {
+      if (!_seatMatchesGiftCredit(
+        seat,
+        scope: scope,
+        receiverId: receiverId,
+        excludeUserId: excludeUserId,
+        creditedUserIds: creditedUserIds,
+      )) {
+        continue;
+      }
+      final userId = seat.userId.trim();
+      if (userId.isEmpty) continue;
+      if (hostId.isNotEmpty && _userIdsMatch(userId, hostId)) continue;
+      if (ids.any((id) => _userIdsMatch(id, userId))) continue;
+      ids.add(userId);
+    }
+    return ids;
+  }
+
+  /// Key on the on-stage tile so coins can land on that audience seat.
+  GlobalKey seatCoinFlyKeyFor(String userId) {
+    final id = userId.trim();
+    return _seatCoinFlyKeys.putIfAbsent(
+      id,
+      () => GlobalKey(debugLabel: 'seatCoinFly_$id'),
+    );
+  }
+
   /// Optimistic in-visit seat coins for gift recipients (not lifetime diamonds).
   ///
   /// Room gifts credit occupied seats except [excludeUserId] (sender).
@@ -1112,40 +1227,23 @@ class LiveBroadcastController extends GetxController {
     List<String>? creditedUserIds,
   }) {
     if (amount <= 0 || !isAudioVideoRoom) return;
-    final normalized = scope.trim().toLowerCase();
-    final exclude = excludeUserId?.trim() ?? '';
-    final credited = creditedUserIds
-        ?.map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
-    final targetId = normalized == 'room' ? '' : (receiverId?.trim() ?? '');
-    if (normalized != 'room' &&
-        targetId.isEmpty &&
-        (credited == null || credited.isEmpty)) {
-      return;
-    }
 
     var hostCredited = false;
     var seatedCredit = false;
     for (final seat in audioRoomSeats) {
-      if (!seat.occupied) continue;
-      if (exclude.isNotEmpty && _userIdsMatch(seat.userId, exclude)) {
+      if (!_seatMatchesGiftCredit(
+        seat,
+        scope: scope,
+        receiverId: receiverId,
+        excludeUserId: excludeUserId,
+        creditedUserIds: creditedUserIds,
+      )) {
         continue;
       }
-      final matchCredited =
-          credited != null &&
-          credited.isNotEmpty &&
-          credited.any((id) => _userIdsMatch(id, seat.userId));
-      final matchRoom =
-          normalized == 'room' && (credited == null || credited.isEmpty);
-      final matchUser =
-          normalized != 'room' && _userIdsMatch(seat.userId, targetId);
-      if (matchCredited || matchRoom || matchUser) {
-        seatedCredit = true;
-        _addSeatSessionCoins(seat.userId, amount);
-        if (_seatIsRoomHost(seat)) {
-          hostCredited = true;
-        }
+      seatedCredit = true;
+      _addSeatSessionCoins(seat.userId, amount);
+      if (_seatIsRoomHost(seat)) {
+        hostCredited = true;
       }
     }
     if (seatedCredit) seatSessionCoins.refresh();
@@ -1155,12 +1253,7 @@ class LiveBroadcastController extends GetxController {
     }
   }
 
-  Future<void> _playCoinFlyAfterGift({required int earnedCoins}) async {
-    await GiftCelebrationOverlay.waitUntilIdle();
-    if (_exitReported) return;
-    _playEarningsCoinFlyAnimation(earnedCoins);
-  }
-
+  /// Host AppBar coin-fly. Do not change target / timing — audience uses seats.
   void _playEarningsCoinFlyAnimation(int earnedCoins) {
     final visualCount = earnedCoins > 0
         ? (6 + (earnedCoins / 15).ceil()).clamp(6, 16)
@@ -1171,6 +1264,58 @@ class LiveBroadcastController extends GetxController {
         coinCount: visualCount,
         earnedAmount: earnedCoins,
         delay: const Duration(milliseconds: 220),
+      ),
+    );
+  }
+
+  /// After the gift SVGA: host AppBar fly (unchanged) then audience-seat flies.
+  Future<void> _playGiftCoinFliesAfterCelebration({
+    required int hostEarnedCoins,
+    required List<String> audienceUserIds,
+    required int amountEach,
+  }) async {
+    final playHostFly = isHost.value && hostEarnedCoins > 0;
+    if (!playHostFly && audienceUserIds.isEmpty) return;
+
+    await GiftCelebrationOverlay.waitUntilIdle();
+    if (_exitReported) return;
+    if (playHostFly) {
+      _playEarningsCoinFlyAnimation(hostEarnedCoins);
+    }
+
+    if (!isAudioVideoRoom || amountEach <= 0 || audienceUserIds.isEmpty) {
+      return;
+    }
+    var enqueue = playHostFly;
+    for (final userId in audienceUserIds) {
+      _playAudienceSeatCoinFly(
+        userId: userId,
+        earnedCoins: amountEach,
+        enqueueIfBusy: enqueue,
+      );
+      enqueue = true;
+    }
+  }
+
+  /// Coins rise from the bottom and land on that audience member's seat.
+  void _playAudienceSeatCoinFly({
+    required String userId,
+    required int earnedCoins,
+    required bool enqueueIfBusy,
+  }) {
+    if (userId.trim().isEmpty) return;
+    if (_userIdsMatch(userId, _resolvedHostId())) return;
+    final visualCount = earnedCoins > 0
+        ? (6 + (earnedCoins / 15).ceil()).clamp(6, 16)
+        : 10;
+    unawaited(
+      CoinFlyOverlay.show(
+        targetKey: seatCoinFlyKeyFor(userId),
+        coinCount: visualCount,
+        earnedAmount: earnedCoins,
+        delay: const Duration(milliseconds: 220),
+        enqueueIfBusy: enqueueIfBusy,
+        fallbackIfMissing: false,
       ),
     );
   }
@@ -1224,6 +1369,7 @@ class LiveBroadcastController extends GetxController {
   }
 
   void clearConnectionIssue() {
+    if (connectionIssue.value.isEmpty) return;
     connectionIssue.value = '';
   }
 
@@ -1370,6 +1516,7 @@ class LiveBroadcastController extends GetxController {
   void onZegoRoomLogined() {
     isZegoConnected.value = true;
     _bindZegoListeners();
+    _refreshHostZegoUserId();
 
     if (!isHost.value || !isVideoRoom) return;
     _turnOnHostMedia();
@@ -1402,7 +1549,11 @@ class LiveBroadcastController extends GetxController {
     _syncChatFromZego(kit.getInRoomMessages());
 
     _userSub?.cancel();
+    _mediaSub?.cancel();
     _userSub = zego.user.stream(includeFakeUser: false).listen(_syncViewers);
+    _mediaSub = kit.getAudioVideoListStream().listen((_) {
+      zegoMediaUsersTick.value++;
+    });
 
     if (_viewerCountListener != null) {
       zego.user.countNotifier.removeListener(_viewerCountListener!);
@@ -1432,8 +1583,38 @@ class LiveBroadcastController extends GetxController {
         ZegoUIKitPrebuiltLiveStreamingController().user.countNotifier.value;
   }
 
+  /// Keeps the Zego host id in sync for [LiveHostVideoFill] on audience devices.
+  void _refreshHostZegoUserId([List<ZegoUIKitUser>? users]) {
+    if (!isLiveStreamingSession) return;
+
+    final payloadHost = ZegoLiveIdUtils.sanitizeUserId(_resolvedHostId());
+    if (payloadHost.isNotEmpty) {
+      hostZegoUserId.value = payloadHost;
+      return;
+    }
+
+    try {
+      final localId = ZegoUIKit().getLocalUser().id;
+      final avUsers = users ?? ZegoUIKit().getAudioVideoList();
+      for (final user in avUsers) {
+        if (user.id == localId) continue;
+        hostZegoUserId.value = ZegoLiveIdUtils.sanitizeUserId(user.id);
+        return;
+      }
+      final allUsers = users ?? ZegoUIKit().getAllUsers();
+      for (final user in allUsers) {
+        if (user.id == localId) continue;
+        hostZegoUserId.value = ZegoLiveIdUtils.sanitizeUserId(user.id);
+        return;
+      }
+    } catch (_) {}
+  }
+
   void _syncViewers(List<ZegoUIKitUser> users) {
-    final normalizedHostId = ZegoLiveIdUtils.sanitizeUserId(receiverId.value);
+    _refreshHostZegoUserId(users);
+    final normalizedHostId = ZegoLiveIdUtils.sanitizeUserId(
+      hostZegoUserId.value.isNotEmpty ? hostZegoUserId.value : receiverId.value,
+    );
     final hostTargetId = receiverId.value.trim();
     final session = Get.isRegistered<UserSessionController>()
         ? Get.find<UserSessionController>()
@@ -1442,6 +1623,7 @@ class LiveBroadcastController extends GetxController {
       session?.userId.isNotEmpty == true ? session!.userId : '',
     );
 
+    zegoMediaUsersTick.value++;
     liveViewers.assignAll(
       users.map((user) {
         final normalizedUserId = ZegoLiveIdUtils.sanitizeUserId(user.id);
@@ -1550,33 +1732,41 @@ class LiveBroadcastController extends GetxController {
       senderId: fromId,
       creditedUserIds: creditedIds,
     );
-    if (!hostEarns || _exitReported) return;
-
-    var earned = 0;
-    if (!isAudioVideoRoom) {
-      final before = sessionEarnings.displayCoins;
-      earned = SessionEarningsUtils.ingestIncomingGiftChat(
-        tracker: sessionEarnings,
-        chatMessage: chatMessage,
-        giftCatalog: giftCatalog.toList(),
-        earnsGift: true,
-      );
-      if (earned <= 0 && creditAmount > 0) {
-        sessionEarnings.applyDelta(coins: creditAmount);
-        earned = creditAmount;
-      } else if (earned <= 0) {
-        await _refreshSessionEarnings();
-        earned = sessionEarnings.displayCoins - before;
+    var hostEarned = 0;
+    if (hostEarns && !_exitReported) {
+      if (!isAudioVideoRoom) {
+        final before = sessionEarnings.displayCoins;
+        hostEarned = SessionEarningsUtils.ingestIncomingGiftChat(
+          tracker: sessionEarnings,
+          chatMessage: chatMessage,
+          giftCatalog: giftCatalog.toList(),
+          earnsGift: true,
+        );
+        if (hostEarned <= 0 && creditAmount > 0) {
+          sessionEarnings.applyDelta(coins: creditAmount);
+          hostEarned = creditAmount;
+        } else if (hostEarned <= 0) {
+          await _refreshSessionEarnings();
+          hostEarned = sessionEarnings.displayCoins - before;
+        }
+      } else {
+        hostEarned = creditAmount;
       }
-    } else {
-      earned = creditAmount;
     }
 
-    if (!isHost.value) return;
-    await GiftCelebrationOverlay.waitUntilIdle();
-    if (_exitReported) return;
-    _playEarningsCoinFlyAnimation(
-      earned > 0 ? earned : (creditAmount > 0 ? creditAmount : 0),
+    unawaited(
+      _playGiftCoinFliesAfterCelebration(
+        hostEarnedCoins: hostEarned > 0
+            ? hostEarned
+            : (hostEarns && creditAmount > 0 ? creditAmount : 0),
+        audienceUserIds: _creditedAudienceSeatUserIds(
+          scope: scope,
+          receiverId: receiverId,
+          excludeUserId: fromId,
+          creditedUserIds: creditedIds,
+        ),
+        amountEach: creditAmount,
+      ),
     );
   }
 
@@ -1635,7 +1825,9 @@ class LiveBroadcastController extends GetxController {
 
   void onGroupCallRoomConnected({bool bindMessages = true}) {
     isZegoConnected.value = true;
-    connectionIssue.value = '';
+    if (connectionIssue.value.isNotEmpty) {
+      connectionIssue.value = '';
+    }
     if (bindMessages) {
       _bindGroupCallMessageListener();
     }
@@ -1645,10 +1837,14 @@ class LiveBroadcastController extends GetxController {
   /// Keep viewer/participant count reactive for gift visibility in video rooms.
   void _bindGroupCallUserListener() {
     _userSub?.cancel();
+    _mediaSub?.cancel();
     try {
       final kit = ZegoUIKit();
       _syncGroupCallUsers(kit.getAllUsers());
       _userSub = kit.getUserListStream().listen(_syncGroupCallUsers);
+      _mediaSub = kit.getAudioVideoListStream().listen((_) {
+        zegoMediaUsersTick.value++;
+      });
     } catch (_) {
       // Zego user stream may not be ready yet on first connect.
     }
@@ -1656,6 +1852,7 @@ class LiveBroadcastController extends GetxController {
 
   void _syncGroupCallUsers(List<ZegoUIKitUser> users) {
     viewerCount.value = users.length;
+    zegoMediaUsersTick.value++;
     _syncViewers(users);
   }
 
@@ -1739,6 +1936,26 @@ class LiveBroadcastController extends GetxController {
 
   String? _firstNonEmpty(Map<String, dynamic> roomData, List<String> keys) {
     return readRoomField(roomData, keys);
+  }
+
+  /// WhatsApp-status-style heart burst (live streaming only).
+  void triggerHeartReaction() {
+    if (!isLiveStreamingSession) return;
+    _heartReactionSeq++;
+    heartReactionTokens.add(_heartReactionSeq);
+    // Spawn a small cluster per tap, like status reactions.
+    for (var i = 0; i < 2; i++) {
+      Future<void>.delayed(Duration(milliseconds: 90 * (i + 1)), () {
+        if (!isClosed) {
+          _heartReactionSeq++;
+          heartReactionTokens.add(_heartReactionSeq);
+        }
+      });
+    }
+  }
+
+  void removeHeartReactionToken(int token) {
+    heartReactionTokens.remove(token);
   }
 
   Future<void> sendMessage() async {
@@ -1876,10 +2093,7 @@ class LiveBroadcastController extends GetxController {
     }
   }
 
-  Future<void> sendGift(
-    Map<String, String> gift, {
-    int comboCount = 1,
-  }) async {
+  Future<void> sendGift(Map<String, String> gift, {int comboCount = 1}) async {
     if (_giftSendInFlight) return;
     final count = comboCount < 1 ? 1 : comboCount;
     final int price = int.tryParse(gift['price'] ?? '0') ?? 0;
@@ -2023,10 +2237,7 @@ class LiveBroadcastController extends GetxController {
         }
         GiftMediaUtils.showCelebration(
           giftName: gift['name'],
-          animationUrl: GiftMediaUtils.animationUrlFromResponse(
-            response,
-            gift,
-          ),
+          animationUrl: GiftMediaUtils.animationUrlFromResponse(response, gift),
           soundUrl: GiftMediaUtils.soundUrlFromResponse(response, gift),
           enqueueIfBusy: sent > 1,
         );
@@ -2113,10 +2324,19 @@ class LiveBroadcastController extends GetxController {
       );
     }
 
-    // Coin-fly only on the host device when the host pill received coins.
-    if (playCelebration && isHost.value && earnedDelta > 0) {
-      unawaited(_playCoinFlyAfterGift(earnedCoins: earnedDelta));
-    }
+    // Host AppBar fly stays the same. Audience credits land on their seats.
+    unawaited(
+      _playGiftCoinFliesAfterCelebration(
+        hostEarnedCoins: playCelebration ? earnedDelta : 0,
+        audienceUserIds: _creditedAudienceSeatUserIds(
+          scope: scope,
+          receiverId: currentReceiverId.isEmpty ? null : currentReceiverId,
+          excludeUserId: myId,
+          creditedUserIds: creditedIds,
+        ),
+        amountEach: amountEach,
+      ),
+    );
 
     unawaited(loadWalletBalance());
 
@@ -2193,9 +2413,7 @@ class LiveBroadcastController extends GetxController {
     }
 
     // Host-vs-host PK: gift to Side A / Side B instead of room-wide gifts.
-    if (roomGift &&
-        isInRoomPkActive &&
-        Get.isRegistered<PkV1Controller>()) {
+    if (roomGift && isInRoomPkActive && Get.isRegistered<PkV1Controller>()) {
       final pk = Get.find<PkV1Controller>();
       final session = pk.session.value;
       Get.bottomSheet(
@@ -2998,10 +3216,7 @@ class LiveBroadcastController extends GetxController {
       );
     }
 
-    await ZegoEngineUtils.resetForRoomProject().timeout(
-      const Duration(milliseconds: 700),
-      onTimeout: () {},
-    );
+    await ZegoEngineUtils.resetForRoomProject();
 
     await Future<void>.delayed(const Duration(milliseconds: 80));
     final poppedLiveRoute = _popLiveBroadcastRoute();
@@ -4721,6 +4936,7 @@ class LiveBroadcastController extends GetxController {
     VipEntranceOverlay.dismiss();
     _messageSub?.cancel();
     _userSub?.cancel();
+    _mediaSub?.cancel();
     _giftCelebrationTracker.reset();
     GiftCelebrationOverlay.dismiss();
     if (_viewerCountListener != null) {

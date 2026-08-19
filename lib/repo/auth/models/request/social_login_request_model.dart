@@ -11,9 +11,13 @@ class SocialLoginRequestModel {
     required this.authType,
     this.phone,
     this.displayPicture,
+    this.referralCode,
   });
 
-  factory SocialLoginRequestModel.fromSocialUser(SocialAuthUser user) {
+  factory SocialLoginRequestModel.fromSocialUser(
+    SocialAuthUser user, {
+    String? referralCode,
+  }) {
     final name = user.displayName.trim().isNotEmpty
         ? user.displayName.trim()
         : 'User';
@@ -24,6 +28,7 @@ class SocialLoginRequestModel {
       socialId: user.socialId,
       authType: user.providerId,
       displayPicture: user.photoUrl?.trim(),
+      referralCode: referralCode,
     );
   }
 
@@ -33,6 +38,7 @@ class SocialLoginRequestModel {
   final String authType;
   final String? phone;
   final String? displayPicture;
+  final String? referralCode;
 
   /// `POST /api/auth/social` — optional keys omitted when empty.
   Map<String, dynamic> toJson() {
@@ -46,6 +52,8 @@ class SocialLoginRequestModel {
     if (p != null && p.isNotEmpty) map['phone'] = p;
     final pic = displayPicture?.trim();
     if (pic != null && pic.isNotEmpty) map['displayPicture'] = pic;
+    final ref = referralCode?.trim();
+    if (ref != null && ref.isNotEmpty) map['referralCode'] = ref.toUpperCase();
     return map;
   }
 }

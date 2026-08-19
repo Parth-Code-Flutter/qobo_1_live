@@ -136,10 +136,7 @@ class RoomInvitePushHandler {
     final roomType = (roomData['type']?.toString() ?? payload.roomType)
         .toUpperCase();
 
-    await ZegoEngineUtils.resetForRoomProject().timeout(
-      const Duration(milliseconds: 700),
-      onTimeout: () {},
-    );
+    await ZegoEngineUtils.resetForRoomProject();
 
     // Defer navigation until after any pending frame (cold-start race).
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -224,10 +221,7 @@ class RoomInvitePushHandler {
       }
     }
 
-    await ZegoEngineUtils.resetForLiveProject().timeout(
-      const Duration(milliseconds: 700),
-      onTimeout: () {},
-    );
+    await ZegoEngineUtils.resetForLiveProject();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Get.toNamed(

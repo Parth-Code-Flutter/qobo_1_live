@@ -14,11 +14,21 @@ class CoinFlyOverlay {
 
   static OverlayEntry? _entry;
   static Completer<void>? _activeCompleter;
+  static final List<_QueuedCoinFly> _queue = [];
+
+  /// True from [show] until that flight finishes — covers the pre-overlay delay.
+  static var _reserved = false;
+
+  static bool get isShowing =>
+      _activeCompleter != null && !_activeCompleter!.isCompleted;
+
+  static bool get _isBusy => _reserved || isShowing;
 
   /// Flies visual coins into [targetKey]'s center (earn) or away from it (deduct).
   ///
   /// [earnedAmount] > 0 shows a brief "+N" / "-N" flash near the target.
   /// Set [isDeduction] for spend — coins burst outward with a red "-N".
+  /// [enqueueIfBusy] plays after the current flight (audience seats after host).
   static Future<void> show({
     required GlobalKey targetKey,
     int coinCount = 10,
@@ -27,8 +37,27 @@ class CoinFlyOverlay {
     Offset? endAt,
     bool isDeduction = false,
     Duration delay = const Duration(milliseconds: 650),
+    bool enqueueIfBusy = false,
+    bool fallbackIfMissing = true,
   }) async {
-    dismiss();
+    if (enqueueIfBusy && _isBusy) {
+      _queue.add(
+        _QueuedCoinFly(
+          targetKey: targetKey,
+          coinCount: coinCount,
+          earnedAmount: earnedAmount,
+          startFrom: startFrom,
+          endAt: endAt,
+          isDeduction: isDeduction,
+          delay: delay,
+          fallbackIfMissing: fallbackIfMissing,
+        ),
+      );
+      return;
+    }
+    if (!enqueueIfBusy) _queue.clear();
+    dismiss(clearQueue: false);
+    _reserved = true;
 
     BuildContext? navigatorContext;
     try {
@@ -36,16 +65,34 @@ class CoinFlyOverlay {
     } catch (_) {
       navigatorContext = null;
     }
-    if (navigatorContext == null) return;
+    if (navigatorContext == null) {
+      _reserved = false;
+      _playNextQueued();
+      return;
+    }
 
     await Future<void>.delayed(delay);
 
-    if (!navigatorContext.mounted) return;
+    if (!navigatorContext.mounted) {
+      _reserved = false;
+      _playNextQueued();
+      return;
+    }
 
     final target = await _resolveTarget(targetKey);
-    if (!navigatorContext.mounted) return;
+    if (!navigatorContext.mounted) {
+      _reserved = false;
+      _playNextQueued();
+      return;
+    }
+    if (target == null && !fallbackIfMissing) {
+      _reserved = false;
+      _playNextQueued();
+      return;
+    }
 
-    final resolvedTarget = target ??
+    final resolvedTarget =
+        target ??
         () {
           final media = MediaQuery.sizeOf(navigatorContext!);
           final padding = MediaQuery.paddingOf(navigatorContext);
@@ -73,8 +120,7 @@ class CoinFlyOverlay {
     int retries = 8,
   }) async {
     for (var i = 0; i < retries; i++) {
-      final box =
-          targetKey.currentContext?.findRenderObject() as RenderBox?;
+      final box = targetKey.currentContext?.findRenderObject() as RenderBox?;
       if (box != null && box.hasSize && box.attached) {
         return box.localToGlobal(
           Offset(box.size.width / 2, box.size.height / 2),
@@ -94,12 +140,20 @@ class CoinFlyOverlay {
     required int earnedAmount,
     required bool isDeduction,
   }) {
-    if (!navigatorContext.mounted) return Future<void>.value();
+    if (!navigatorContext.mounted) {
+      _reserved = false;
+      _playNextQueued();
+      return Future<void>.value();
+    }
 
     final overlay =
         Overlay.maybeOf(navigatorContext, rootOverlay: true) ??
         Navigator.maybeOf(navigatorContext, rootNavigator: true)?.overlay;
-    if (overlay == null) return Future<void>.value();
+    if (overlay == null) {
+      _reserved = false;
+      _playNextQueued();
+      return Future<void>.value();
+    }
 
     final completer = Completer<void>();
     _activeCompleter = completer;
@@ -119,6 +173,8 @@ class CoinFlyOverlay {
             if (_entry == entry) _entry = null;
             if (!completer.isCompleted) completer.complete();
             if (_activeCompleter == completer) _activeCompleter = null;
+            _reserved = false;
+            _playNextQueued();
           },
         ),
       ),
@@ -128,7 +184,9 @@ class CoinFlyOverlay {
     return completer.future;
   }
 
-  static void dismiss() {
+  static void dismiss({bool clearQueue = true}) {
+    if (clearQueue) _queue.clear();
+    _reserved = false;
     final entry = _entry;
     _entry = null;
     entry?.remove();
@@ -138,6 +196,46 @@ class CoinFlyOverlay {
       completer.complete();
     }
   }
+
+  static void _playNextQueued() {
+    if (_queue.isEmpty || _isBusy) return;
+    final next = _queue.removeAt(0);
+    unawaited(
+      show(
+        targetKey: next.targetKey,
+        coinCount: next.coinCount,
+        earnedAmount: next.earnedAmount,
+        startFrom: next.startFrom,
+        endAt: next.endAt,
+        isDeduction: next.isDeduction,
+        delay: next.delay,
+        enqueueIfBusy: true,
+        fallbackIfMissing: next.fallbackIfMissing,
+      ),
+    );
+  }
+}
+
+class _QueuedCoinFly {
+  const _QueuedCoinFly({
+    required this.targetKey,
+    required this.coinCount,
+    required this.earnedAmount,
+    required this.startFrom,
+    required this.endAt,
+    required this.isDeduction,
+    required this.delay,
+    required this.fallbackIfMissing,
+  });
+
+  final GlobalKey targetKey;
+  final int coinCount;
+  final int earnedAmount;
+  final Offset? startFrom;
+  final Offset? endAt;
+  final bool isDeduction;
+  final Duration delay;
+  final bool fallbackIfMissing;
 }
 
 class _CoinFlyLayer extends StatefulWidget {
@@ -355,10 +453,11 @@ class _CoinFlyLayerState extends State<_CoinFlyLayer>
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: (deduct
-                          ? const Color(0xFFE62572)
-                          : const Color(0xFFFFA10A))
-                      .withValues(alpha: 0.55),
+                  color:
+                      (deduct
+                              ? const Color(0xFFE62572)
+                              : const Color(0xFFFFA10A))
+                          .withValues(alpha: 0.55),
                   blurRadius: 12,
                   spreadRadius: 1,
                 ),
@@ -413,11 +512,7 @@ class _CoinVisual extends StatelessWidget {
         gradient: const RadialGradient(
           center: Alignment(-0.35, -0.4),
           radius: 0.95,
-          colors: [
-            Color(0xFFFFF8E1),
-            Color(0xFFFFD54F),
-            Color(0xFFFF8F00),
-          ],
+          colors: [Color(0xFFFFF8E1), Color(0xFFFFD54F), Color(0xFFFF8F00)],
         ),
         border: Border.all(color: const Color(0xFFFFE082), width: 1.4),
         boxShadow: [

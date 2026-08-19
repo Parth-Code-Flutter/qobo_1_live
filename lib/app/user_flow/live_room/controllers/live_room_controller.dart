@@ -16,6 +16,7 @@ import 'package:qobo_one_live/services/room/join_approval_service.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_dialogs/live_stream_access_denied_dialog.dart';
 import 'package:qobo_one_live/utils/live_streaming_permissions.dart';
+import 'package:qobo_one_live/utils/session_earnings_utils.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/zego_engine_utils.dart';
 import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
@@ -339,7 +340,7 @@ class LiveRoomController extends GetxController {
     return {
       'id': room['_id'] ?? room['id'] ?? '',
       'roomData': Map<String, dynamic>.from(room),
-      'nameAge': seats == 0 ? title : '$title, $seats Seats',
+      'nameAge': (isLiveStream || seats == 0) ? title : '$title, $seats Seats',
       // Rank badge only — never show raw `live_stream` as a card label
       // (green LIVE pill already marks live rooms).
       'badge': _listingBadgeLabel(
@@ -451,10 +452,7 @@ class LiveRoomController extends GetxController {
       );
       if (!context.mounted || !granted) return;
 
-      await ZegoEngineUtils.resetForLiveProject().timeout(
-        const Duration(milliseconds: 700),
-        onTimeout: () {},
-      );
+      await ZegoEngineUtils.resetForLiveProject();
       if (!context.mounted) return;
 
       final successMessage = _isRoomApiSuccess(response)
@@ -662,10 +660,7 @@ class LiveRoomController extends GetxController {
         payload['join_request_id'] = joinRequestId;
       }
     }
-    await ZegoEngineUtils.resetForRoomProject().timeout(
-      const Duration(milliseconds: 700),
-      onTimeout: () {},
-    );
+    await ZegoEngineUtils.resetForRoomProject();
     Get.toNamed(
       Routes.LIVE_BROADCAST,
       arguments: {
@@ -736,10 +731,7 @@ class LiveRoomController extends GetxController {
     }
 
     // Live streams run on the live Zego project, not the rooms project.
-    await ZegoEngineUtils.resetForLiveProject().timeout(
-      const Duration(milliseconds: 700),
-      onTimeout: () {},
-    );
+    await ZegoEngineUtils.resetForLiveProject();
     Get.toNamed(
       Routes.LIVE_BROADCAST,
       arguments: {
@@ -822,10 +814,7 @@ class LiveRoomController extends GetxController {
     // group-call UI as AUDIO or VIDEO only.
     final roomType = rawType == 'AUDIO' ? 'AUDIO' : 'VIDEO';
     payload['type'] = roomType.toLowerCase();
-    await ZegoEngineUtils.resetForRoomProject().timeout(
-      const Duration(milliseconds: 700),
-      onTimeout: () {},
-    );
+    await ZegoEngineUtils.resetForRoomProject();
     Get.toNamed(
       Routes.LIVE_BROADCAST,
       arguments: {'isHost': false, 'roomType': roomType, 'roomData': payload},
@@ -856,7 +845,7 @@ class LiveRoomController extends GetxController {
     required Map<String, dynamic> fallbackRoom,
     required String fallbackRoomId,
   }) {
-    final data = raw is Map ? Map<String, dynamic>.from(raw) : {};
+    final data = raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{};
     final joinedRoom = data['room'] is Map
         ? Map<String, dynamic>.from(data['room'] as Map)
         : <String, dynamic>{};
@@ -890,11 +879,11 @@ class LiveRoomController extends GetxController {
         payload['zegoLiveId'];
     payload['type'] =
         _text(payload['type']) ?? (isRoomsAudioMode ? 'audio' : 'video');
-    payload['sessionEarnings'] =
-        data['sessionEarnings'] ??
-        data['session_earnings'] ??
-        joinedRoom['sessionEarnings'] ??
-        payload['sessionEarnings'];
+    SessionEarningsUtils.copyHostSessionFields(
+      payload,
+      data: data,
+      joinedRoom: joinedRoom,
+    );
     return payload;
   }
 

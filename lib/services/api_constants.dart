@@ -44,6 +44,9 @@ class AuthEndpoints {
   /// POST /api/auth/social
   static const String socialLogin = '/api/auth/social';
 
+  /// POST /api/auth/verify-referral-code — public signup verify
+  static const String verifyReferralCode = '/api/auth/verify-referral-code';
+
   /// POST /api/auth/firebase-login
   static const String firebaseLogin = '/api/auth/firebase-login';
 
@@ -757,4 +760,18 @@ class SupportEndpoints {
 
   /// POST /api/support/chat/send
   static const String chatSend = '/api/support/chat/send';
+}
+
+/// Referral code sharing and earnings (profile + signup verify).
+class ReferralEndpoints {
+  ReferralEndpoints._();
+
+  /// POST /api/user/referral/generate
+  static const String generate = '/api/user/referral/generate';
+
+  /// GET /api/user/referral/my-code
+  static const String myCode = '/api/user/referral/my-code';
+
+  /// GET /api/user/referral/history
+  static const String history = '/api/user/referral/history';
 }

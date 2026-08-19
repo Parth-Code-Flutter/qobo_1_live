@@ -141,7 +141,7 @@ class ChatVoiceCallController extends GetxController
       peerBio.value = _cleanText(args['peerBio']) ?? '';
       isCaller.value = _parseIsCaller(args['isCaller']);
       isVideo.value = _parseBool(args['isVideo']);
-      // Earning rule: caller earns, receiver pays (2 coins/sec spend, 1/sec earn).
+      // A calls B → A spends 2 coins/sec, B earns 1 coin/sec (50% platform fee).
       final passedRate = _positiveDouble(args['coinsPerSecond']) ??
           _currentUserCoinsPerSecond();
       coinsPerSecond.value = passedRate ?? 2;
@@ -164,7 +164,7 @@ class ChatVoiceCallController extends GetxController
     _startTicker();
     unawaited(loadWalletBalance());
     unawaited(loadGiftCatalog());
-    // Caller earns → poll session earnings; both sides refresh wallet.
+    // Callee earns → poll session earnings; both sides refresh wallet.
     if (isEarningSide) {
       _startSessionEarningsPolling();
     }
@@ -217,15 +217,15 @@ class ChatVoiceCallController extends GetxController
     return true;
   }
 
-  /// Caller earns; receiver (acceptor) pays.
-  bool get isSpendingSide => !isCaller.value;
-  bool get isEarningSide => isCaller.value;
+  /// Person A calls person B → A spends coins, B earns.
+  bool get isSpendingSide => isCaller.value;
+  bool get isEarningSide => !isCaller.value;
 
   String get formattedDuration =>
       hasPeerJoined.value ? _formatDuration(billableSeconds.value) : 'Ringing';
 
   int get estimatedRemainingCoins {
-    // Live wallet already decrements per tick for the spending side (receiver).
+    // Live wallet already decrements per tick for the spending side (caller).
     return coinsBalance.value < 0 ? 0 : coinsBalance.value;
   }
 
@@ -567,7 +567,7 @@ class ChatVoiceCallController extends GetxController
     if (!_peerJoined || seconds <= _lastBillingAnimationSecond) return;
     _lastBillingAnimationSecond = seconds;
 
-    // Caller earns; receiver pays.
+    // Caller spends; callee earns.
     if (isSpendingSide) {
       final spent = coinsPerSecond.value.ceil();
       _callTimeCoinsSpent += spent;
@@ -639,7 +639,7 @@ class ChatVoiceCallController extends GetxController
     );
   }
 
-  /// Same glass coins dialog as audio-room earnings badge (caller / earning side only).
+  /// Same glass coins dialog as audio-room earnings badge (callee / earning side).
   void openCallCoinsDialog() {
     if (isSpendingSide) return;
 
@@ -877,8 +877,9 @@ class ChatVoiceCallController extends GetxController
   }
 
   Future<void> _chargeCallIfNeeded() async {
-    // Receiver pays the caller (earner). hostId on callee screen is the caller.
-    if (_charged || isCaller.value || hostId.value.trim().isEmpty) return;
+    // Caller pays; API deducts the authenticated caller and credits host_id
+    // (the callee). hostId on the caller screen is already the callee.
+    if (_charged || !isCaller.value || hostId.value.trim().isEmpty) return;
     if (!_peerJoined) return;
     _charged = true;
     final startedAt = _billingStartedAt;

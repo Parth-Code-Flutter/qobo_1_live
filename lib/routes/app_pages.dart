@@ -86,6 +86,8 @@ import '../app/user_flow/transaction_history/bindings/transaction_history_bindin
 import '../app/user_flow/transaction_history/views/transaction_history_view.dart';
 import '../app/user_flow/gift_transactions/bindings/gift_transactions_binding.dart';
 import '../app/user_flow/gift_transactions/views/gift_transactions_view.dart';
+import '../app/user_flow/referral/bindings/referral_binding.dart';
+import '../app/user_flow/referral/views/referral_view.dart';
 import '../app/user_flow/vip_store/bindings/vip_store_binding.dart';
 import '../app/user_flow/vip_store/views/vip_store_view.dart';
 import '../app/user_flow/entrance_patti/bindings/entrance_patti_binding.dart';
@@ -335,6 +337,11 @@ class AppPages {
       name: _Paths.GIFT_TRANSACTIONS,
       page: () => const GiftTransactionsView(),
       binding: GiftTransactionsBinding(),
+    ),
+    GetPage(
+      name: _Paths.REFERRAL,
+      page: () => const ReferralView(),
+      binding: ReferralBinding(),
     ),
     GetPage(
       name: _Paths.VIP_STORE,
