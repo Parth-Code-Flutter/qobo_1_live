@@ -136,6 +136,9 @@ class RoomInvitePushHandler {
     final roomType = (roomData['type']?.toString() ?? payload.roomType)
         .toUpperCase();
 
+    // Invited users auto-seat on entry (push notification / in-app invite).
+    roomData['joinedViaInvite'] = true;
+
     await ZegoEngineUtils.resetForRoomProject();
 
     // Defer navigation until after any pending frame (cold-start race).

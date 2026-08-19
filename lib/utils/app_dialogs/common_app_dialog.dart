@@ -103,32 +103,12 @@ class CommonAppDialog extends StatelessWidget {
     );
   }
 
-  /// Gift Send combo: returns `3`, `5`, `10`, or `1` (Single). Null if dismissed.
+  /// Gift Send combo: returns `3`, `5`, `10`, or `1`. Null if dismissed.
   static Future<int?> giftCombo() {
-    return showGet<int>(
-      title: 'Do you want to send combo?',
-      message:
-          'Combo of 3, 5, or 10 sends this gift that many times. Single sends it once.',
-      icon: Icons.card_giftcard_rounded,
-      iconAccent: const Color(0xFFFF5CAB),
-      actions: const [
-        CommonAppDialogAction(
-          label: 'Combo of 3',
-          isPrimary: true,
-          result: 3,
-        ),
-        CommonAppDialogAction(
-          label: 'Combo of 5',
-          isPrimary: true,
-          result: 5,
-        ),
-        CommonAppDialogAction(
-          label: 'Combo of 10',
-          isPrimary: true,
-          result: 10,
-        ),
-        CommonAppDialogAction(label: 'Single', result: 1),
-      ],
+    return Get.dialog<int>(
+      const _GiftComboDialog(),
+      barrierDismissible: true,
+      barrierColor: Colors.black.withValues(alpha: 0.72),
     );
   }
 
@@ -376,6 +356,248 @@ class CommonAppDialog extends StatelessWidget {
               fontSize: TextStyles.k14FontSize,
               color: kColorWhite.withValues(alpha: 0.9),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Premium gift-combo picker with gradient tiles and multiplier badges.
+class _GiftComboDialog extends StatelessWidget {
+  const _GiftComboDialog();
+
+  static const _combos = [3, 5, 10];
+
+  static const _comboGradients = [
+    [Color(0xFFFF5CAB), Color(0xFFAE4BFF)],
+    [Color(0xFFFFAB40), Color(0xFFFF5CAB)],
+    [Color(0xFFFF6B6B), Color(0xFFFFA726)],
+  ];
+
+  static const _comboEmojis = ['🔥', '⚡', '🎁'];
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0.88, end: 1),
+        duration: const Duration(milliseconds: 340),
+        curve: Curves.easeOutBack,
+        builder: (context, scale, child) =>
+            Transform.scale(scale: scale, child: child),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(28),
+                gradient: const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0xF0321845),
+                    Color(0xF01A0E2E),
+                    Color(0xF00E0818),
+                  ],
+                ),
+                border: Border.all(
+                  color: const Color(0xFFFF5CAB).withValues(alpha: 0.3),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFFF5CAB).withValues(alpha: 0.18),
+                    blurRadius: 32,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.fromLTRB(20, 26, 20, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Icon
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFF5CAB), Color(0xFF9C6BFF)],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color:
+                              const Color(0xFFFF5CAB).withValues(alpha: 0.4),
+                          blurRadius: 16,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.auto_awesome_rounded,
+                      color: kColorWhite,
+                      size: 28,
+                    ),
+                  ),
+                  Spacing.v16,
+                  const SemiBoldText(
+                    text: 'Send as Combo?',
+                    fontSize: TextStyles.k18FontSize,
+                    color: kColorWhite,
+                    align: TextAlign.center,
+                  ),
+                  Spacing.v6,
+                  AppText(
+                    text: 'Multiply the magic — send multiple gifts at once!',
+                    fontSize: TextStyles.k12FontSize,
+                    color: kColorWhite.withValues(alpha: 0.65),
+                    align: TextAlign.center,
+                  ),
+                  Spacing.v20,
+
+                  // Combo tiles row
+                  Row(
+                    children: List.generate(_combos.length, (i) {
+                      final count = _combos[i];
+                      final colors = _comboGradients[i];
+                      final emoji = _comboEmojis[i];
+                      return Expanded(
+                        child: Padding(
+                          padding: EdgeInsets.only(
+                            left: i == 0 ? 0 : 5,
+                            right: i == _combos.length - 1 ? 0 : 5,
+                          ),
+                          child: _ComboTile(
+                            count: count,
+                            emoji: emoji,
+                            colors: colors,
+                            onTap: () => Navigator.of(context).pop(count),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                  Spacing.v16,
+
+                  // Send 1 Gift button
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => Navigator.of(context).pop(1),
+                      borderRadius: BorderRadius.circular(14),
+                      child: Ink(
+                        height: 48,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(14),
+                          color: kColorWhite.withValues(alpha: 0.08),
+                          border: Border.all(
+                            color: kColorWhite.withValues(alpha: 0.18),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.card_giftcard_rounded,
+                              color: kColorWhite.withValues(alpha: 0.7),
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            SemiBoldText(
+                              text: 'Send 1 Gift',
+                              fontSize: TextStyles.k14FontSize,
+                              color: kColorWhite.withValues(alpha: 0.85),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Individual combo tile with gradient background, multiplier badge, and emoji.
+class _ComboTile extends StatelessWidget {
+  const _ComboTile({
+    required this.count,
+    required this.emoji,
+    required this.colors,
+    required this.onTap,
+  });
+
+  final int count;
+  final String emoji;
+  final List<Color> colors;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                colors[0].withValues(alpha: 0.25),
+                colors[1].withValues(alpha: 0.15),
+              ],
+            ),
+            border: Border.all(
+              color: colors[0].withValues(alpha: 0.45),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: colors[0].withValues(alpha: 0.15),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 22)),
+              const SizedBox(height: 6),
+              // Multiplier badge
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: LinearGradient(colors: colors),
+                  boxShadow: [
+                    BoxShadow(
+                      color: colors[0].withValues(alpha: 0.4),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: SemiBoldText(
+                  text: '×$count',
+                  fontSize: TextStyles.k14FontSize,
+                  color: kColorWhite,
+                ),
+              ),
+            ],
           ),
         ),
       ),

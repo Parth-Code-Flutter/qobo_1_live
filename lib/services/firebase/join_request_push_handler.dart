@@ -232,6 +232,8 @@ class JoinRequestPushHandler {
         roomData['room_id'] ?? roomData['roomId'] ?? payload.roomId;
     roomData['join_request_id'] = payload.requestId;
     roomData['joinApprovalRequired'] = false;
+    // Host-approved entry — auto-seat like push invite joins.
+    roomData['joinedViaInvite'] = true;
 
     final isLive = payload.isLiveStream;
     if (isLive) {

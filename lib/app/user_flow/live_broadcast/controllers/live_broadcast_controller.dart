@@ -182,6 +182,11 @@ class LiveBroadcastController extends GetxController {
   var _roomMembershipConfirmed = false;
   var _currentUserOccupiedMicSeat = false;
 
+  /// True when the user entered via push notification or in-app invite dialog.
+  /// These users auto-seat on join; listing/discover users go to floor instead.
+  var _joinedViaInvite = false;
+  var _autoSeatAttempted = false;
+
   @override
   void onInit() {
     super.onInit();
@@ -201,6 +206,7 @@ class LiveBroadcastController extends GetxController {
         roomId.value = ZegoLiveIdUtils.sanitize(rawId);
       }
     }
+    _joinedViaInvite = _roomData['joinedViaInvite'] == true;
     joinApprovalRequired.value = JoinApprovalService.isApprovalRequired(
       _roomData,
     );
@@ -2971,6 +2977,7 @@ class LiveBroadcastController extends GetxController {
           response?['data'],
           seats.isNotEmpty ? seats : audioRoomSeats.toList(),
         );
+        _tryAutoSeatForInvitedUser();
         return;
       }
 
@@ -3582,6 +3589,29 @@ class LiveBroadcastController extends GetxController {
       return;
     }
     await requestSeatForSeatNo(targetSeat.seatNo);
+  }
+
+  /// Auto-seats users who joined via push notification or in-app invite.
+  /// Users from the room listing go to the floor instead and must manually
+  /// tap a seat (follower → instant, non-follower → host approval).
+  void _tryAutoSeatForInvitedUser() {
+    if (_autoSeatAttempted || !_joinedViaInvite || isHost.value) return;
+    _autoSeatAttempted = true;
+
+    final myId = _currentUserId();
+    if (myId.isEmpty) return;
+
+    // Already seated (e.g. backend placed them on accept).
+    final alreadySeated = audioRoomSeats.any(
+      (s) => s.occupied && _userIdsMatch(s.userId, myId),
+    );
+    if (alreadySeated) return;
+
+    // Defer slightly so the UI has rendered before seat action runs.
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (_exitReported) return;
+      requestAudioSeat();
+    });
   }
 
   /// Follower take-seat / non-follower seat-request for a specific empty seat.
