@@ -2,7 +2,8 @@
 
 This document contains the complete integration specifications for:
 1. **Referral Code System** (Profile screen, Signup screen verification, and Invite Friends screen with stats & history).
-2. **1-to-1 Audio & Video Calling with FCM Push Notifications** (Ringing FCM push payload, Start Call, Accept/Reject Call, and End Call).
+2. **1-to-1 Audio & Video Calling with FCM Push Notifications & 50/50 Call Charge Split** (Ringing FCM push payload, Single push deduplication fix, Start Call, Accept/Reject Call, Call Charging & End Call).
+3. **Audio/Video Room Host Session Earnings & 20% Gift Commission Flow**.
 
 ---
 
@@ -172,19 +173,19 @@ Returns earnings list for the "Earnings" tab and friend list for the "Friends jo
 
 ---
 
-# 📞 SECTION 2: 1-TO-1 AUDIO & VIDEO CALLING WITH FCM PUSH NOTIFICATIONS
+# 📞 SECTION 2: 1-TO-1 AUDIO & VIDEO CALLING WITH FCM PUSH NOTIFICATIONS & CALL CHARGING SPLIT
 
 ## 1️⃣ Start Call & Send FCM Ringing Push Notification
-Initiates a 1-on-1 audio or video call and sends high-priority ringing push notification to the callee.
+Initiates a 1-on-1 audio or video call and sends 1 single high-priority ringing push notification to the callee device.
 
 - **Endpoint**: `POST /api/call/direct/start`
 - **Headers**:
   - `Authorization: Bearer <CALLER_JWT_TOKEN>` (User A Token)
   - `Content-Type: application/json`
-- **Request Body (User A calling User B `9587736762`)**:
+- **Request Body (User A calling User B `idc4658315`)**:
 ```json
 {
-  "calleeUserId": "9587736762",
+  "calleeUserId": "idc4658315",
   "callType": "voice"
 }
 ```
@@ -209,8 +210,8 @@ Initiates a 1-on-1 audio or video call and sends high-priority ringing push noti
 
 ---
 
-## 2️⃣ FCM Push Notification Payload (Sent to Callee Device)
-When `POST /api/call/direct/start` is triggered, FCM sends the following high-priority push payload to the callee's registered device:
+## 2️⃣ FCM Push Notification Payload & Single Push Guarantee
+When `POST /api/call/direct/start` is triggered, FCM sends **1 single high-priority push notification** to the callee's active device (tokens are automatically deduplicated and limited to 1 per user).
 
 ### Android FCM Settings
 - **Priority**: `high`
@@ -273,7 +274,46 @@ When `POST /api/call/direct/start` is triggered, FCM sends the following high-pr
 
 ---
 
-## 4️⃣ End Call
+## 4️⃣ Charge Call (50/50 Revenue Split Rule)
+Debits Caller A's wallet and credits 50% to Callee B's wallet (diamonds) while retaining 50% company commission.
+
+- **Endpoint**: `POST /api/economy/calling/charge`
+- **Headers**:
+  - `Authorization: Bearer <CALLER_JWT_TOKEN>` (User A Token)
+  - `Content-Type: application/json`
+- **Request Body**:
+```json
+{
+  "hostId": "idc4658315",
+  "durationSeconds": 10
+}
+```
+
+### Revenue Split Calculation:
+- **Caller A**: Debited 2 coins/sec (100% total rate).
+- **Callee B**: Credited 1 coin/sec (50% recipient earnings as diamonds).
+- **Company / Platform**: Retains 1 coin/sec (50% platform fee).
+
+### Success Response (200)
+```json
+{
+  "statusCode": 1,
+  "message": "Call charged successfully",
+  "data": {
+    "success": true,
+    "totalCoinsDeducted": 20,
+    "hostEarnedDiamonds": 10,
+    "agencyEarnedCoins": 10,
+    "transactionId": "tx_call_9901"
+  }
+}
+```
+
+---
+
+## 5️⃣ End Call
+Calling `POST /api/call/direct/end` automatically calculates call duration and executes call charging if not already charged.
+
 - **Endpoint**: `POST /api/call/direct/end`
 - **Headers**:
   - `Authorization: Bearer <JWT_TOKEN>`
@@ -288,9 +328,36 @@ When `POST /api/call/direct/start` is triggered, FCM sends the following high-pr
 
 ---
 
-## 📌 Mobile Integration Quick Checklist
+# 💎 SECTION 3: AUDIO/VIDEO ROOM SESSION EARNINGS & 20% GIFT COMMISSION
 
-1. **Send FCM Token**: Pass `fcm_token` during login/signup so the backend registers the device.
-2. **Channel Setup**: Create `incoming_call_channel` notification channel on Android with ringtone sound.
-3. **Listen for Push**: When FCM receives `type == "incoming_call"`, open the call ringing screen (`flutter_callkit_incoming` / Zego call UI).
-4. **Accept / Reject**: Call `POST /api/call/direct/respond` with `action: "accept"` or `"reject"`.
+## 1️⃣ Get Host Session Earnings
+- **Endpoint**: `GET /api/room/session-earnings?room_id=<ROOM_ID>&session_type=audio_room`
+- **Headers**: `Authorization: Bearer <JWT_TOKEN>`
+
+### Rules & Calculations:
+- **Host Self-Sent Gifts Exclusion**: Any gifts sent by the room's host (`senderId === hostId`) are strictly **excluded** from `sessionCoinsEarned`, `hostSessionCoins`, `sessionDiamondsEarned`, and `giftCount`. Host earnings only include gifts received from other room audience members.
+- **20% Platform Fee**: 20% company commission is deducted from all gifts sent in the room. Recipient receives 80% net pool.
+- **"Send to All" Gifts**: Sender is excluded from receiving gifts from self. The 80% net pool is divided equally among remaining audience members.
+
+### Success Response (200)
+```json
+{
+  "statusCode": 1,
+  "message": "Session earnings fetched successfully",
+  "data": {
+    "room_id": "60e1115d-0c08-4dce-a8e6-43a82d74c410",
+    "host_user_id": "6aae455a-9bc0-41e3-88dc-a0e86fc2c6f7",
+    "sessionCoinsEarned": 1200,
+    "session_coins_earned": 1200,
+    "hostSessionCoins": 1200,
+    "host_session_coins": 1200,
+    "giftCoinsEarned": 1500,
+    "gift_coins_earned": 1500,
+    "sessionDiamondsEarned": 1200,
+    "session_diamonds_earned": 1200,
+    "dollars": 1.2,
+    "formattedDollars": "$1.20",
+    "giftCount": 3
+  }
+}
+```

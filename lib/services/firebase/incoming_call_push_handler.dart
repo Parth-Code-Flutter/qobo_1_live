@@ -6,6 +6,7 @@ import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/chat/chat_call_service.dart';
 import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
+import 'package:qobo_one_live/services/firebase/incoming_call_kit_display.dart';
 import 'package:qobo_one_live/services/firebase/incoming_call_push_payload.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/incoming_call_in_app_banner.dart';
@@ -14,6 +15,9 @@ import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/zego_engine_utils.dart';
 
 /// Handles 1:1 call FCM types: `incoming_call`, `call_cancelled`, `call_missed`.
+///
+/// Foreground → branded in-app ring UI.
+/// Background / killed → [IncomingCallKitDisplay] (native CallKit / full-screen).
 class IncomingCallPushHandler {
   IncomingCallPushHandler({
     CallRepo? callRepo,
@@ -33,13 +37,15 @@ class IncomingCallPushHandler {
     final payload = IncomingCallPushPayload.fromMessage(message);
     if (payload == null) return;
 
-    if (payload.isCancelled) {
+    if (payload.isCancelled ||
+        payload.type == PushNotificationTypes.callMissed) {
       await PushNotificationService.instance.cancelLocalNotification(message);
       IncomingCallInAppBanner.dismissIfShowing();
+      await IncomingCallKitDisplay.endForMessage(message);
       return;
     }
 
-    // Backend FCM is the primary ring path — always surface in-app UI.
+    // App is open — prefer in-app WhatsApp-style ring (no CallKit double UI).
     await IncomingCallInAppBanner.tryShow(message, handler: this);
   }
 
@@ -47,8 +53,10 @@ class IncomingCallPushHandler {
     final payload = IncomingCallPushPayload.fromMessage(message);
     if (payload == null) return;
 
-    if (payload.isCancelled) {
+    if (payload.isCancelled ||
+        payload.type == PushNotificationTypes.callMissed) {
       await PushNotificationService.instance.cancelLocalNotification(message);
+      await IncomingCallKitDisplay.endForMessage(message);
       return;
     }
 
@@ -70,8 +78,10 @@ class IncomingCallPushHandler {
     switch (actionId) {
       case PushNotificationActions.acceptCall:
         await acceptCall(payload, sourceMessage: message);
+        return;
       case PushNotificationActions.rejectCall:
         await rejectCall(payload, sourceMessage: message);
+        return;
       default:
         await handleNotificationTap(message);
     }
@@ -88,6 +98,7 @@ class IncomingCallPushHandler {
           sourceMessage,
         );
       }
+      await IncomingCallKitDisplay.endForPayload(payload);
       return;
     }
 
@@ -97,6 +108,7 @@ class IncomingCallPushHandler {
       );
     }
     IncomingCallInAppBanner.dismissIfShowing();
+    await IncomingCallKitDisplay.endForPayload(payload);
 
     if (!await _ensureFirebaseSession()) {
       _showFeedback('Sign in required to accept calls');
@@ -187,6 +199,7 @@ class IncomingCallPushHandler {
       );
     }
     IncomingCallInAppBanner.dismissIfShowing();
+    await IncomingCallKitDisplay.endForPayload(payload);
 
     await _callRepo.respondDirectCall(
       callId: payload.callId,

@@ -116,14 +116,14 @@ class LocalNotificationBridge {
           actions: <DarwinNotificationAction>[
             DarwinNotificationAction.plain(
               PushNotificationActions.acceptCall,
-              'Accept',
+              'Answer',
               options: <DarwinNotificationActionOption>{
                 DarwinNotificationActionOption.foreground,
               },
             ),
             DarwinNotificationAction.plain(
               PushNotificationActions.rejectCall,
-              'Reject',
+              'Decline',
               options: <DarwinNotificationActionOption>{
                 DarwinNotificationActionOption.destructive,
               },
@@ -155,14 +155,18 @@ class LocalNotificationBridge {
           importance: Importance.high,
         ),
       );
+      // Must match backend FCM channel_id + sound: "ringtone"
+      // (android/app/src/main/res/raw/ringtone.wav).
       await androidPlugin?.createNotificationChannel(
-        const AndroidNotificationChannel(
+        AndroidNotificationChannel(
           PushNotificationActions.incomingCallChannelId,
           PushNotificationActions.incomingCallChannelName,
           description: PushNotificationActions.incomingCallChannelDescription,
           importance: Importance.max,
           playSound: true,
+          sound: const RawResourceAndroidNotificationSound('ringtone'),
           enableVibration: true,
+          vibrationPattern: Int64List.fromList([0, 900, 500, 900]),
           enableLights: true,
         ),
       );
@@ -195,21 +199,28 @@ class LocalNotificationBridge {
         actionSet == PushNotificationActionSet.callAcceptReject
         ? PushNotificationActions.incomingCallChannelDescription
         : config.androidNotificationChannelDescription;
+    final isIncomingCall = actionSet == PushNotificationActionSet.callAcceptReject;
     final androidDetails = AndroidNotificationDetails(
       channelId,
       channelName,
       channelDescription: channelDescription,
-      importance: actionSet == PushNotificationActionSet.callAcceptReject
-          ? Importance.max
-          : Importance.high,
-      priority: actionSet == PushNotificationActionSet.callAcceptReject
-          ? Priority.max
-          : Priority.high,
+      importance: isIncomingCall ? Importance.max : Importance.high,
+      priority: isIncomingCall ? Priority.max : Priority.high,
       icon: config.androidDefaultIcon,
       color: const Color(0xFFFF2C4D),
-      category: AndroidNotificationCategory.call,
-      fullScreenIntent: actionSet == PushNotificationActionSet.callAcceptReject,
+      category: isIncomingCall
+          ? AndroidNotificationCategory.call
+          : AndroidNotificationCategory.message,
+      fullScreenIntent: isIncomingCall,
       visibility: NotificationVisibility.public,
+      ongoing: isIncomingCall,
+      playSound: isIncomingCall,
+      sound: isIncomingCall
+          ? const RawResourceAndroidNotificationSound('ringtone')
+          : null,
+      vibrationPattern: isIncomingCall
+          ? Int64List.fromList([0, 900, 500, 900])
+          : null,
       actions: androidActions,
       styleInformation: BigTextStyleInformation(
         body.isEmpty ? title : body,
@@ -222,17 +233,21 @@ class LocalNotificationBridge {
             ? 'Accept or reject this PK challenge'
             : actionSet == PushNotificationActionSet.joinApproveReject
             ? 'Approve or reject this join request'
-            : actionSet == PushNotificationActionSet.callAcceptReject
-            ? 'Accept or reject this call'
+            : isIncomingCall
+            ? 'Incoming call'
             : null,
       ),
-      autoCancel: true,
+      autoCancel: !isIncomingCall,
     );
 
     final iosDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
+      sound: isIncomingCall ? 'default' : null,
+      interruptionLevel: isIncomingCall
+          ? InterruptionLevel.timeSensitive
+          : InterruptionLevel.active,
       categoryIdentifier: switch (actionSet) {
         PushNotificationActionSet.joinReject =>
           PushNotificationActions.roomInviteCategory,
@@ -353,15 +368,15 @@ class LocalNotificationBridge {
         return const <AndroidNotificationAction>[
           AndroidNotificationAction(
             PushNotificationActions.acceptCall,
-            'Accept',
-            icon: DrawableResourceAndroidBitmap('ic_notif_join'),
+            ' ',
+            icon: DrawableResourceAndroidBitmap('ic_notif_call_answer'),
             showsUserInterface: true,
             cancelNotification: true,
           ),
           AndroidNotificationAction(
             PushNotificationActions.rejectCall,
-            'Reject',
-            icon: DrawableResourceAndroidBitmap('ic_notif_reject'),
+            ' ',
+            icon: DrawableResourceAndroidBitmap('ic_notif_call_decline'),
             showsUserInterface: true,
             cancelNotification: true,
           ),

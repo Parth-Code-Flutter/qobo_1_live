@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:push_notification_service/push_notification_service.dart';
 import 'package:qobo_one_live/services/firebase/fcm_token_sync_service.dart';
 import 'package:qobo_one_live/services/firebase/firebase_bootstrap.dart';
+import 'package:qobo_one_live/services/firebase/incoming_call_kit_display.dart';
+import 'package:qobo_one_live/services/firebase/incoming_call_kit_service.dart';
 import 'package:qobo_one_live/services/firebase/incoming_call_push_handler.dart';
 import 'package:qobo_one_live/services/firebase/join_request_push_handler.dart';
 import 'package:qobo_one_live/services/firebase/pk_battle_push_handler.dart';
@@ -33,7 +35,7 @@ abstract final class PushNotificationBootstrap {
   /// Must run before other FCM APIs (Firebase Messaging requirement).
   static void registerBackgroundHandler() {
     if (_backgroundHandlerRegistered || kIsWeb) return;
-    FirebaseMessaging.onBackgroundMessage(pushNotificationBackgroundHandler);
+    FirebaseMessaging.onBackgroundMessage(qoboFirebaseMessagingBackgroundHandler);
     _backgroundHandlerRegistered = true;
   }
 
@@ -143,6 +145,10 @@ abstract final class PushNotificationBootstrap {
       ),
     );
 
+    if (ok) {
+      await IncomingCallKitService.initialize();
+    }
+
     LoggerUtils.logInfo(
       ok
           ? 'PushNotificationBootstrap: listening for notifications'
@@ -153,5 +159,28 @@ abstract final class PushNotificationBootstrap {
   /// Call once after [runApp] so cold-start Accept/Reject can navigate safely.
   static void flushPendingLaunch() {
     PushNotificationService.instance.flushPendingLaunch();
+    unawaited(IncomingCallKitService.initialize());
   }
+}
+
+/// FCM background isolate — CallKit for 1:1 rings, then package handler for others.
+@pragma('vm:entry-point')
+Future<void> qoboFirebaseMessagingBackgroundHandler(
+  RemoteMessage message,
+) async {
+  try {
+    await IncomingCallKitDisplay.handleBackgroundRemoteMessage(message);
+  } catch (_) {
+    // Never block the shared background handler.
+  }
+
+  final mapped = PushNotificationMessage.fromRemoteMessage(message);
+  final type = PushNotificationTypes.resolveType(mapped.data);
+
+  // Native CallKit already shows full-screen ring — skip duplicate Accept/Reject tray.
+  if (PushNotificationTypes.isIncomingCall(type)) {
+    return;
+  }
+
+  await pushNotificationBackgroundHandler(message);
 }

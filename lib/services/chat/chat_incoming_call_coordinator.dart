@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/messages/chat_voice_call/controllers/chat_voice_call_controller.dart';
 import 'package:qobo_one_live/repo/call/call_repo.dart';
@@ -11,10 +10,9 @@ import 'package:qobo_one_live/services/chat/chat_firebase_service.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/firebase/firebase_bootstrap.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
+import 'package:qobo_one_live/utils/app_widgets/incoming_call_ring_ui.dart';
 import 'package:qobo_one_live/utils/zego_call_id_utils.dart';
 import 'package:qobo_one_live/utils/zego_engine_utils.dart';
-import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
-import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 
 /// Listens for Firestore `calls/active` and shows incoming call UI.
 class ChatIncomingCallCoordinator extends GetxService {
@@ -188,58 +186,47 @@ class ChatIncomingCallCoordinator extends GetxService {
     final recordCallHistory = data['recordCallHistory'] != false;
     final isVideo = data['type']?.toString() == 'video';
 
-    CommonAppDialog.showGet(
-      title: isVideo ? 'Incoming video call' : 'Incoming call',
-      message: isVideo
-          ? '$callerName is video calling you'
-          : '$callerName is calling you',
-      icon: isVideo ? Icons.videocam_rounded : Icons.call_rounded,
-      iconAccent: AdminAgencyUi.mint,
-      barrierDismissible: false,
-      actions: [
-        CommonAppDialogAction(
-          label: 'Decline',
-          isDestructive: true,
-          isPrimary: true,
-          onPressed: () async {
-            _dialogOpen = false;
-            _lastHandledRingKey = null;
-            await _callRepo.respondDirectCall(
-              callId: callId,
-              roomId: roomId,
-              action: 'reject',
-              isShowLoader: false,
-            );
-            await _callService.endCall(
-              roomId,
-              endedByUserId: myId,
-            );
-            ChatVoiceCallController.refreshMessagesInbox();
-          },
-        ),
-        CommonAppDialogAction(
-          label: 'Accept',
-          isPrimary: true,
-          onPressed: () async {
-            _dialogOpen = false;
-            _lastHandledRingKey = null;
-            await _acceptCall(
-              roomId: roomId,
-              callId: callId,
-              historyDocId: historyDocId,
-              callStartedAt: callStartedAt,
-              callerId: callerId,
-              callerName: callerName,
-              isVideo: isVideo,
-              recordCallHistory: recordCallHistory,
-            );
-          },
-        ),
-      ],
-    ).whenComplete(() {
-      _dialogOpen = false;
-      _lastHandledRingKey = null;
-    });
+    unawaited(
+      IncomingCallRingUi.show(
+        callerName: callerName,
+        subtitle: isVideo
+            ? '$callerName is video calling you'
+            : '$callerName is calling you',
+        isVideo: isVideo,
+        onDecline: () async {
+          _dialogOpen = false;
+          _lastHandledRingKey = null;
+          await _callRepo.respondDirectCall(
+            callId: callId,
+            roomId: roomId,
+            action: 'reject',
+            isShowLoader: false,
+          );
+          await _callService.endCall(
+            roomId,
+            endedByUserId: myId,
+          );
+          ChatVoiceCallController.refreshMessagesInbox();
+        },
+        onAccept: () async {
+          _dialogOpen = false;
+          _lastHandledRingKey = null;
+          await _acceptCall(
+            roomId: roomId,
+            callId: callId,
+            historyDocId: historyDocId,
+            callStartedAt: callStartedAt,
+            callerId: callerId,
+            callerName: callerName,
+            isVideo: isVideo,
+            recordCallHistory: recordCallHistory,
+          );
+        },
+      ).whenComplete(() {
+        _dialogOpen = false;
+        _lastHandledRingKey = null;
+      }),
+    );
   }
 
   Future<void> _acceptCall({

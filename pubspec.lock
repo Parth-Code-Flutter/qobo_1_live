@@ -503,7 +503,7 @@ packages:
     source: hosted
     version: "3.4.1"
   flutter_callkit_incoming:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: flutter_callkit_incoming
       sha256: "993fb0f0cd990961072f0d13ff815a91773f92bfa1895be17d3366b2225ec9cd"
@@ -591,7 +591,7 @@ packages:
     source: hosted
     version: "2.0.31"
   flutter_ringtone_player:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: flutter_ringtone_player
       sha256: ae4a2caab2cfd14902f3ee5fe0307c454b396f0077fa34700238d6c4bd99cfec

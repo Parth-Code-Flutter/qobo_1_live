@@ -62,6 +62,8 @@ abstract final class CallingChargeParser {
       'platform_commission',
       'companyCommission',
       'company_commission',
+      'agencyEarnedCoins',
+      'agency_earned_coins',
     ]);
     final duration = _readInt(billing, const [
       'durationSeconds',
