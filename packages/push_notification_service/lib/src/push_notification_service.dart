@@ -67,6 +67,12 @@ class PushNotificationService {
       return;
     }
 
+    // Incoming calls are data-only from backend; host shows CallKit / in-app
+    // ring. Never create a second Accept/Reject local tray here.
+    if (PushNotificationTypes.isIncomingCall(type)) {
+      return;
+    }
+
     final actionSet = actionSetForData(mapped.data);
     if (actionSet == PushNotificationActionSet.none) return;
 
@@ -254,6 +260,12 @@ class PushNotificationService {
               await _handlers.onForegroundActionableMessage?.call(message) ??
               false;
           if (handled) return;
+
+          // Incoming calls: never fall back to a local Accept/Reject tray in
+          // foreground — host already owns CallKit / in-app ring (1 UI only).
+          if (actionSet == PushNotificationActionSet.callAcceptReject) {
+            return;
+          }
 
           // iOS already renders the APNs alert + ROOM_INVITE actions when a
           // `notification` block is present — avoid a duplicate local tray.

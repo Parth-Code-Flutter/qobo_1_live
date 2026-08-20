@@ -164,6 +164,10 @@ abstract final class PushNotificationBootstrap {
 }
 
 /// FCM background isolate — CallKit for 1:1 rings, then package handler for others.
+///
+/// Backend sends **data-only** `incoming_call` (no `notification` /
+/// `android.notification`) so the OS does not auto-show tray banners. We must
+/// surface exactly one CallKit / full-screen ring from this handler.
 @pragma('vm:entry-point')
 Future<void> qoboFirebaseMessagingBackgroundHandler(
   RemoteMessage message,
@@ -178,7 +182,9 @@ Future<void> qoboFirebaseMessagingBackgroundHandler(
   final type = PushNotificationTypes.resolveType(mapped.data);
 
   // Native CallKit already shows full-screen ring — skip duplicate Accept/Reject tray.
-  if (PushNotificationTypes.isIncomingCall(type)) {
+  if (PushNotificationTypes.isIncomingCall(type) ||
+      type == PushNotificationTypes.callCancelled ||
+      type == PushNotificationTypes.callMissed) {
     return;
   }
 

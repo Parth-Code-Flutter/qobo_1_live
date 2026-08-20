@@ -211,18 +211,22 @@ Initiates a 1-on-1 audio or video call and sends 1 single high-priority ringing 
 ---
 
 ## 2️⃣ FCM Push Notification Payload & Single Push Guarantee
-When `POST /api/call/direct/start` is triggered, FCM sends **1 single high-priority push notification** to the callee's active device (tokens are automatically deduplicated and limited to 1 per user).
+When `POST /api/call/direct/start` is triggered, FCM sends **1 single high-priority data-only** push to the callee's active device (tokens are automatically deduplicated and limited to 1 per user).
+
+### Why data-only (no duplicate banners)
+For `incoming_call`, the backend **must not** include top-level `notification` or `android.notification`. Those caused Android to auto-display OS trays **in addition to** the app CallKit / in-app ring (3 banners for 1 call).
+
+Mobile owns the single ringing UI from `data`.
 
 ### Android FCM Settings
 - **Priority**: `high`
-- **Sound**: `ringtone`
-- **Channel ID**: `incoming_call_channel`
-- **Priority Max & Visibility Public**: Included
-- **Click Action**: `FLUTTER_NOTIFICATION_CLICK`
+- **TTL**: ~45s
+- **No** `notification` / `android.notification` blocks
+- App channel (when local/CallKit rings): `incoming_call_channel` + ringtone
 
 ### iOS APNs Settings
-- **Header**: `apns-priority: 10`, `apns-push-type: alert`
-- **APS Payload**: `category: "INCOMING_CALL"`, `sound: "ringtone.caf"`, `interruption-level: "time-sensitive"`
+- **Header**: `apns-priority: 10`, `apns-push-type: background` (data wake)
+- **APS**: `content-available: 1` (no alert banner from APNs for the ring)
 
 ### Data Payload Received by App:
 ```json
@@ -245,6 +249,15 @@ When `POST /api/call/direct/start` is triggered, FCM sends **1 single high-prior
   "channel_id": "incoming_call_channel"
 }
 ```
+
+### Mobile handling (exactly 1 ring UI)
+| App state | UI |
+|-----------|-----|
+| Foreground | In-app green/red ring dialog (no local tray) |
+| Background / killed | `flutter_callkit_incoming` full-screen ring |
+| Cancel / miss | End CallKit + dismiss in-app UI |
+
+Do **not** also show `flutter_local_notifications` Accept/Reject for `incoming_call`.
 
 ---
 

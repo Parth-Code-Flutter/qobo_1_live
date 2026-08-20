@@ -13,6 +13,9 @@ import 'package:qobo_one_live/services/firebase/incoming_call_push_payload.dart'
 abstract final class IncomingCallKitDisplay {
   IncomingCallKitDisplay._();
 
+  /// Last CallKit id shown — FCM retries must not open a second ring UI.
+  static String? _activeCallKitId;
+
   static Future<void> handleBackgroundRemoteMessage(
     RemoteMessage message,
   ) async {
@@ -40,6 +43,8 @@ abstract final class IncomingCallKitDisplay {
     Map<String, dynamic>? sourceData,
   }) async {
     final id = callKitIdFor(payload);
+    if (_activeCallKitId == id) return;
+    _activeCallKitId = id;
 
     final extra = <String, dynamic>{
       ...?sourceData,
@@ -122,13 +127,22 @@ abstract final class IncomingCallKitDisplay {
         message.data['callId']?.toString() ??
         '';
     if (id.trim().isNotEmpty) {
-      await FlutterCallkitIncoming.endCall(id.trim());
+      if (_activeCallKitId == id.trim()) _activeCallKitId = null;
+      try {
+        await FlutterCallkitIncoming.endCall(id.trim());
+      } catch (_) {}
+      try {
+        await FlutterCallkitIncoming.hideCallkitIncoming(
+          CallKitParams(id: id.trim()),
+        );
+      } catch (_) {}
     }
   }
 
   static Future<void> endForPayload(IncomingCallPushPayload payload) async {
     final id = callKitIdFor(payload);
     if (id.isEmpty) return;
+    if (_activeCallKitId == id) _activeCallKitId = null;
     try {
       await FlutterCallkitIncoming.endCall(id);
     } catch (_) {}
@@ -140,6 +154,7 @@ abstract final class IncomingCallKitDisplay {
   }
 
   static Future<void> endAll() async {
+    _activeCallKitId = null;
     try {
       await FlutterCallkitIncoming.endAllCalls();
     } catch (_) {}
