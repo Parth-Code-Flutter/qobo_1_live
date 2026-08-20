@@ -40,16 +40,20 @@ class SuperAdminBottomNavView extends GetView<SuperAdminBottomNavController> {
               return Spacing.shrink;
           }
         }),
-        // Create actions: + on Agency / Host tabs (same vibe as Go Live FAB).
+        // Create agency only — super admin must not create hosts (agencies do).
+        // Host-tab FAB + openCreateHost intentionally commented out.
         floatingActionButton: Obx(() {
           final index = controller.selectedIndex.value;
           final isAgencyTab =
               index == SuperAdminBottomNavController.agencyTabIndex;
-          final isHostTab = index == SuperAdminBottomNavController.hostTabIndex;
-          if (!isAgencyTab && !isHostTab) return const SizedBox.shrink();
+          // final isHostTab =
+          //     index == SuperAdminBottomNavController.hostTabIndex;
+          // if (!isAgencyTab && !isHostTab) return const SizedBox.shrink();
+          if (!isAgencyTab) return const SizedBox.shrink();
 
           final home = Get.find<SuperAdminHomeController>();
-          final accent = isAgencyTab ? SuperAdminUi.pink : SuperAdminUi.teal;
+          // final accent = isAgencyTab ? SuperAdminUi.pink : SuperAdminUi.teal;
+          const accent = SuperAdminUi.pink;
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Container(
@@ -68,9 +72,10 @@ class SuperAdminBottomNavView extends GetView<SuperAdminBottomNavController> {
                 shape: const CircleBorder(),
                 child: InkWell(
                   customBorder: const CircleBorder(),
-                  onTap: isAgencyTab
-                      ? home.openCreateAgency
-                      : home.openCreateHost,
+                  // onTap: isAgencyTab
+                  //     ? home.openCreateAgency
+                  //     : home.openCreateHost,
+                  onTap: home.openCreateAgency,
                   child: Ink(
                     width: 56,
                     height: 56,
@@ -85,12 +90,13 @@ class SuperAdminBottomNavView extends GetView<SuperAdminBottomNavController> {
                         ],
                       ),
                     ),
-                    child: Icon(
+                    child: const Icon(
                       Icons.add_rounded,
                       size: 30,
                       color: kColorWhite,
-                      semanticLabel:
-                          isAgencyTab ? 'Create agency' : 'Create host',
+                      // semanticLabel:
+                      //     isAgencyTab ? 'Create agency' : 'Create host',
+                      semanticLabel: 'Create agency',
                     ),
                   ),
                 ),

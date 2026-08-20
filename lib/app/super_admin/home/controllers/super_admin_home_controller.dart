@@ -261,16 +261,18 @@ class SuperAdminHomeController extends GetxController {
     await loadDashboardStats(showLoader: false);
   }
 
-  /// FAB → host onboarding form (`POST /api/agency/host-onboarding`). The
-  /// super admin types the target agency code. Refreshes on return.
-  Future<void> openCreateHost() async {
-    await Get.toNamed(
-      Routes.AGENCY_HOST_ONBOARDING,
-      arguments: {'fromSuperAdmin': true},
-    );
-    await loadTrackedHosts(showLoader: false);
-    await loadDashboardStats(showLoader: false);
-  }
+  /// FAB → host onboarding (`POST /api/agency/host-onboarding`).
+  ///
+  /// Disabled for super admin: they may only create agencies. Hosts are
+  /// onboarded by agencies. Kept commented for easy restore.
+  // Future<void> openCreateHost() async {
+  //   await Get.toNamed(
+  //     Routes.AGENCY_HOST_ONBOARDING,
+  //     arguments: {'fromSuperAdmin': true},
+  //   );
+  //   await loadTrackedHosts(showLoader: false);
+  //   await loadDashboardStats(showLoader: false);
+  // }
 
   Future<void> generateAgencyLink() async {
     if (isGeneratingAgencyLink.value) return;
