@@ -165,4 +165,19 @@ abstract final class PushNotificationTypes {
 
   static bool isIncomingCallType(String type) =>
       isIncomingCall(type) || isCallLifecycle(type);
+
+  /// Resolves push type from FCM data — backend may send `type`, `event`, or
+  /// iOS `category: INCOMING_CALL`.
+  static String resolveType(Map<String, dynamic> data) {
+    final type = data['type']?.toString().trim().toLowerCase() ?? '';
+    if (type.isNotEmpty && type != 'null') return type;
+
+    final event = data['event']?.toString().trim().toLowerCase() ?? '';
+    if (event.isNotEmpty && event != 'null') return event;
+
+    final category = data['category']?.toString().trim().toUpperCase() ?? '';
+    if (category == 'INCOMING_CALL') return incomingCall;
+
+    return '';
+  }
 }

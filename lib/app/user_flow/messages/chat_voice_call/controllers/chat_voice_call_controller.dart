@@ -7,6 +7,7 @@ import 'package:qobo_one_live/app/user_flow/messages/messages_tab/controllers/me
 import 'package:qobo_one_live/app/user_flow/wallet/bindings/wallet_binding.dart';
 import 'package:qobo_one_live/app/user_flow/wallet/views/wallet_view.dart';
 import 'package:qobo_one_live/repo/call/call_repo.dart';
+import 'package:qobo_one_live/repo/calling/calling_charge_utils.dart';
 import 'package:qobo_one_live/repo/calling/calling_repo.dart';
 import 'package:qobo_one_live/repo/chat/chat_local_store.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
@@ -67,6 +68,7 @@ class ChatVoiceCallController extends GetxController
   final elapsedSeconds = 0.obs;
   final billableSeconds = 0.obs;
   final coinsBalance = 0.obs;
+  final diamondsBalance = 0.obs;
   /// Caller spend rate (doc: 2 coins/sec). Keep separate from host earn rate.
   final coinsPerSecond = 2.0.obs;
   /// Callee earn rate (doc: 1 coin/sec = 50% of caller spend).
@@ -257,7 +259,9 @@ class ChatVoiceCallController extends GetxController
     if (isSpendingSide) {
       return SessionEarningsUtils.formatAmountForPill(estimatedRemainingCoins);
     }
-    return SessionEarningsUtils.formatAmountForPill(coinsBalance.value);
+    return SessionEarningsUtils.formatAmountForPill(
+      isEarningSide ? diamondsBalance.value : coinsBalance.value,
+    );
   }
 
   String get billingDeltaLabel {
@@ -285,7 +289,7 @@ class ChatVoiceCallController extends GetxController
     final earned = lastChargeHostEarnedDiamonds.value > 0
         ? lastChargeHostEarnedDiamonds.value
         : estimatedCoinDelta;
-    return 'Earned ${SessionEarningsUtils.formatAmountForPill(earned)} coins';
+    return 'Earned ${SessionEarningsUtils.formatAmountForPill(earned)} diamonds';
   }
 
   void onCallUserEntered(String userId) {
@@ -337,9 +341,7 @@ class ChatVoiceCallController extends GetxController
 
   /// Records call + returns summary for chat thread (WhatsApp-style log row).
   Future<Map<String, dynamic>?> finishCall({bool refreshInbox = true}) async {
-    // Charge first so the history summary can include spent/earned amounts.
-    await _chargeCallIfNeeded();
-    await _notifyBackendCallEnded();
+    await _settleCallBilling();
     final summary = await _recordCallIfNeeded();
     if (Get.isRegistered<ChatIncomingCallCoordinator>()) {
       Get.find<ChatIncomingCallCoordinator>().setOnCallScreen(false);
@@ -388,6 +390,9 @@ class ChatVoiceCallController extends GetxController
     if (!isEconomyApiSuccess(response) || data is! Map) return;
     coinsBalance.value = parseWalletAmount(
       data['coins'] ?? data['coin'] ?? data['balance'] ?? data['coinBalance'],
+    );
+    diamondsBalance.value = parseWalletAmount(
+      data['diamonds'] ?? data['diamond'] ?? data['diamondBalance'],
     );
   }
 
@@ -594,6 +599,7 @@ class ChatVoiceCallController extends GetxController
       diamonds: sessionTotalCoinsEarned,
     );
     coinsBalance.value = (coinsBalance.value + earned).clamp(0, 1 << 30);
+    diamondsBalance.value = (diamondsBalance.value + earned).clamp(0, 1 << 30);
     _queueBillingCoinAnimation(amount: earned, isDeduction: false);
   }
 
@@ -881,36 +887,84 @@ class ChatVoiceCallController extends GetxController
     return Get.find<UserSessionController>().userId;
   }
 
-  /// Tells backend to clear ring state and dismiss callee push UI.
-  Future<void> _notifyBackendCallEnded() async {
+  /// Tells backend to clear ring state; auto-charges 50/50 when duration > 0.
+  Future<Map<String, dynamic>?> _notifyBackendCallEnded({
+    int? durationSeconds,
+  }) async {
     final id = callId.value.trim();
-    if (id.isEmpty) return;
+    if (id.isEmpty) return null;
     final reason = _peerJoined && billableSeconds.value > 0
-        ? 'completed'
+        ? 'user_hangup'
         : (isCaller.value ? 'cancelled' : 'missed');
     try {
-      await _callModuleRepo.endDirectCall(
+      return await _callModuleRepo.endDirectCall(
         callId: id,
         reason: reason,
+        durationSeconds: durationSeconds,
+        hostId: isCaller.value ? hostId.value.trim() : null,
         isShowLoader: false,
       );
     } catch (e) {
       LoggerUtils.logWarning(
         'ChatVoiceCallController: direct/end failed — $e',
       );
+      return null;
     }
   }
 
-  Future<void> _chargeCallIfNeeded() async {
-    // Caller pays; API deducts the authenticated caller and credits host_id
-    // (the callee). hostId on the caller screen is already the callee.
-    if (_charged || !isCaller.value || hostId.value.trim().isEmpty) return;
-    if (!_peerJoined) return;
-    _charged = true;
+  int _billableDurationSeconds() {
     final startedAt = _billingStartedAt;
-    if (startedAt == null) return;
-    final durationSeconds = DateTime.now().difference(startedAt).inSeconds;
-    if (durationSeconds <= 0) return;
+    if (startedAt == null) return 0;
+    return DateTime.now().difference(startedAt).inSeconds;
+  }
+
+  /// Settles billing once per call — backend charges on direct/end when possible.
+  Future<void> _settleCallBilling() async {
+    if (_charged || !_peerJoined) {
+      await _notifyBackendCallEnded();
+      return;
+    }
+
+    final durationSeconds = _billableDurationSeconds();
+    final serverCallId = callId.value.trim();
+
+    if (serverCallId.isNotEmpty) {
+      _charged = true;
+      final endResponse = await _notifyBackendCallEnded(
+        durationSeconds: durationSeconds > 0 ? durationSeconds : null,
+      );
+      final charge = CallingChargeParser.fromResponse(endResponse);
+      if (charge != null && charge.hasBilling) {
+        _applyChargeResult(charge);
+        return;
+      }
+      if (durationSeconds > 0) {
+        unawaited(loadWalletBalance());
+      }
+      return;
+    }
+
+    // Legacy Firestore-only calls without a server callId.
+    if (durationSeconds > 0 && isCaller.value && hostId.value.trim().isNotEmpty) {
+      await _chargeCallExplicit(durationSeconds);
+      return;
+    }
+    await _notifyBackendCallEnded();
+  }
+
+  void _applyChargeResult(CallingChargeResult charge) {
+    if (charge.totalCoinsDeducted > 0) {
+      lastChargeTotalCoinsDeducted.value = charge.totalCoinsDeducted;
+    }
+    if (charge.hostEarnedDiamonds > 0) {
+      lastChargeHostEarnedDiamonds.value = charge.hostEarnedDiamonds;
+    }
+    unawaited(loadWalletBalance());
+  }
+
+  Future<void> _chargeCallExplicit(int durationSeconds) async {
+    if (_charged || !isCaller.value || hostId.value.trim().isEmpty) return;
+    _charged = true;
 
     try {
       final response = await _callingRepo.chargeCall(
@@ -918,24 +972,12 @@ class ChatVoiceCallController extends GetxController
         durationSeconds: durationSeconds,
         isShowLoader: false,
       );
-      if (!isEconomyApiSuccess(response)) return;
-      final data = response?['data'];
-      if (data is! Map) return;
-      final deducted = parseWalletAmount(
-        data['totalCoinsDeducted'] ??
-            data['total_coins_deducted'] ??
-            data['coinsDeducted'] ??
-            data['coins_deducted'],
-      );
-      final hostEarned = parseWalletAmount(
-        data['hostEarnedDiamonds'] ??
-            data['host_earned_diamonds'] ??
-            data['hostEarnedCoins'] ??
-            data['host_earned_coins'],
-      );
-      if (deducted > 0) lastChargeTotalCoinsDeducted.value = deducted;
-      if (hostEarned > 0) lastChargeHostEarnedDiamonds.value = hostEarned;
-      unawaited(loadWalletBalance());
+      final charge = CallingChargeParser.fromResponse(response);
+      if (charge != null && charge.hasBilling) {
+        _applyChargeResult(charge);
+      } else {
+        unawaited(loadWalletBalance());
+      }
     } catch (e) {
       LoggerUtils.logWarning('ChatVoiceCallController: charge failed — $e');
     }

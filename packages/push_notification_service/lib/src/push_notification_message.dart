@@ -17,11 +17,18 @@ class PushNotificationMessage {
 
   factory PushNotificationMessage.fromRemoteMessage(RemoteMessage message) {
     final notification = message.notification;
+    final data = Map<String, dynamic>.from(message.data);
+    final titleFromData = data['title']?.toString().trim() ?? '';
+    final bodyFromData = data['body']?.toString().trim() ?? '';
     return PushNotificationMessage(
       messageId: message.messageId ?? '',
-      title: notification?.title?.trim() ?? '',
-      body: notification?.body?.trim() ?? '',
-      data: Map<String, dynamic>.from(message.data),
+      title: notification?.title?.trim().isNotEmpty == true
+          ? notification!.title!.trim()
+          : titleFromData,
+      body: notification?.body?.trim().isNotEmpty == true
+          ? notification!.body!.trim()
+          : bodyFromData,
+      data: data,
       imageUrl:
           notification?.android?.imageUrl ??
           notification?.apple?.imageUrl ??

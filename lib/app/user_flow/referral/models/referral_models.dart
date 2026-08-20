@@ -10,10 +10,10 @@ class ReferralCodePayload {
 
   factory ReferralCodePayload.fromJson(Map<String, dynamic> json) {
     return ReferralCodePayload(
-      code: json['code']?.toString() ?? '',
-      status: json['status']?.toString() ?? 'ACTIVE',
-      shareMessage: json['shareMessage']?.toString() ?? '',
-      createdAt: json['createdAt']?.toString(),
+      code: _readString(json, const ['code', 'referralCode', 'referral_code']),
+      status: _readString(json, const ['status'], fallback: 'ACTIVE'),
+      shareMessage: _readString(json, const ['shareMessage', 'share_message']),
+      createdAt: _readOptionalString(json, const ['createdAt', 'created_at']),
     );
   }
 
@@ -33,21 +33,32 @@ class ReferralCompletedEntry {
   });
 
   factory ReferralCompletedEntry.fromJson(Map<String, dynamic> json) {
-    final usedBy = json['usedBy'];
+    final usedBy = json['usedBy'] ?? json['used_by'];
     String? name;
     String? avatar;
     if (usedBy is Map) {
-      name = usedBy['name']?.toString();
+      final userMap = Map<String, dynamic>.from(usedBy);
+      name = _readOptionalString(userMap, const ['name', 'fullName', 'username']);
       avatar = ApiImageUtils.normalize(
-        usedBy['displayPicture']?.toString() ??
-            usedBy['avatar']?.toString() ??
-            usedBy['profilePicture']?.toString(),
+        _readOptionalString(userMap, const [
+          'displayPicture',
+          'display_picture',
+          'avatarUrl',
+          'avatar_url',
+          'avatar',
+          'profilePicture',
+          'profile_picture',
+        ]),
       );
     }
     return ReferralCompletedEntry(
-      code: json['code']?.toString() ?? '',
-      coinsEarned: _readInt(json['coinsEarned']),
-      usedAt: json['usedAt']?.toString() ?? '',
+      code: _readString(json, const ['code', 'referralCode', 'referral_code']),
+      coinsEarned: _readIntFromKeys(json, const [
+        'coinsEarned',
+        'coins_earned',
+        'amount',
+      ]),
+      usedAt: _readString(json, const ['usedAt', 'used_at']),
       friendName: name,
       friendAvatarUrl: avatar,
     );
@@ -70,21 +81,38 @@ class ReferralMyCodeDetails {
   });
 
   factory ReferralMyCodeDetails.fromJson(Map<String, dynamic> json) {
-    final historyRaw = json['completedReferralsHistory'];
-    final history = historyRaw is List
-        ? historyRaw
-            .whereType<Map>()
-            .map((e) => ReferralCompletedEntry.fromJson(
-                  Map<String, dynamic>.from(e),
-                ))
-            .toList()
-        : <ReferralCompletedEntry>[];
+    final history = _readMapList(json, const [
+      'completedReferralsHistory',
+      'completed_referrals_history',
+      'friendsJoined',
+      'friends_joined',
+    ])
+        .map(ReferralCompletedEntry.fromJson)
+        .toList();
 
     return ReferralMyCodeDetails(
-      activeCode: json['activeCode']?.toString() ?? '',
-      shareMessage: json['shareMessage']?.toString() ?? '',
-      totalReferralsCompleted: _readInt(json['totalReferralsCompleted']),
-      totalCoinsEarned: _readInt(json['totalCoinsEarned']),
+      activeCode: _readString(json, const [
+        'activeCode',
+        'active_code',
+        'code',
+        'referralCode',
+        'referral_code',
+      ]),
+      shareMessage: _readString(json, const ['shareMessage', 'share_message']),
+      totalReferralsCompleted: _readIntFromKeys(json, const [
+        'totalReferralsCompleted',
+        'total_referrals_completed',
+        'totalFriendsJoined',
+        'total_friends_joined',
+        'totalFriends',
+        'total_friends',
+      ]),
+      totalCoinsEarned: _readIntFromKeys(json, const [
+        'totalCoinsEarned',
+        'total_coins_earned',
+        'totalCoins',
+        'total_coins',
+      ]),
       completedReferralsHistory: history,
     );
   }
@@ -108,10 +136,16 @@ class ReferralVerifyResult {
   factory ReferralVerifyResult.fromJson(Map<String, dynamic> json) {
     return ReferralVerifyResult(
       valid: json['valid'] == true,
-      code: json['code']?.toString() ?? '',
-      rewardCoins: _readInt(json['rewardCoins']),
-      referrerName: json['referrerName']?.toString() ?? '',
-      message: json['message']?.toString() ?? '',
+      code: _readString(json, const ['code', 'referralCode', 'referral_code']),
+      rewardCoins: _readIntFromKeys(json, const [
+        'rewardCoins',
+        'reward_coins',
+      ]),
+      referrerName: _readString(json, const [
+        'referrerName',
+        'referrer_name',
+      ]),
+      message: _readString(json, const ['message']),
     );
   }
 
@@ -138,15 +172,19 @@ class ReferralEarningEntry {
     String? description;
     String? code;
     if (metadata is Map) {
-      description = metadata['description']?.toString();
-      code = metadata['referralCode']?.toString();
+      final metadataMap = Map<String, dynamic>.from(metadata);
+      description = _readOptionalString(metadataMap, const ['description']);
+      code = _readOptionalString(metadataMap, const [
+        'referralCode',
+        'referral_code',
+      ]);
     }
     return ReferralEarningEntry(
-      id: json['id']?.toString() ?? json['_id']?.toString() ?? '',
-      amount: _readInt(json['amount']),
-      type: json['type']?.toString() ?? '',
-      status: json['status']?.toString() ?? '',
-      createdAt: json['createdAt']?.toString() ?? '',
+      id: _readString(json, const ['id', '_id']),
+      amount: _readIntFromKeys(json, const ['amount', 'coins', 'coinsEarned']),
+      type: _readString(json, const ['type']),
+      status: _readString(json, const ['status']),
+      createdAt: _readString(json, const ['createdAt', 'created_at']),
       description: description,
       referralCode: code,
     );
@@ -165,4 +203,45 @@ int _readInt(dynamic value) {
   if (value is int) return value;
   if (value is num) return value.toInt();
   return int.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+int _readIntFromKeys(Map<String, dynamic> json, List<String> keys) {
+  for (final key in keys) {
+    if (json.containsKey(key)) return _readInt(json[key]);
+  }
+  return 0;
+}
+
+String _readString(
+  Map<String, dynamic> json,
+  List<String> keys, {
+  String fallback = '',
+}) {
+  for (final key in keys) {
+    final value = json[key];
+    if (value == null) continue;
+    final text = value.toString().trim();
+    if (text.isNotEmpty) return text;
+  }
+  return fallback;
+}
+
+String? _readOptionalString(Map<String, dynamic> json, List<String> keys) {
+  final value = _readString(json, keys);
+  return value.isEmpty ? null : value;
+}
+
+List<Map<String, dynamic>> _readMapList(
+  Map<String, dynamic> json,
+  List<String> keys,
+) {
+  for (final key in keys) {
+    final raw = json[key];
+    if (raw is! List) continue;
+    return raw
+        .whereType<Map>()
+        .map((entry) => Map<String, dynamic>.from(entry))
+        .toList();
+  }
+  return const [];
 }

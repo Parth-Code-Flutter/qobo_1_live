@@ -81,6 +81,15 @@ void main() {
       PushNotificationActionSet.callAcceptReject,
     );
     expect(
+      PushNotificationService.actionSetForData({'event': 'incoming_call'}),
+      PushNotificationActionSet.callAcceptReject,
+    );
+    expect(
+      PushNotificationService.actionSetForData({'category': 'INCOMING_CALL'}),
+      PushNotificationActionSet.callAcceptReject,
+    );
+    expect(PushNotificationActions.incomingCallChannelId, 'incoming_call_channel');
+    expect(
       PushNotificationService.actionSetForData({'type': 'pk_started'}),
       PushNotificationActionSet.none,
     );

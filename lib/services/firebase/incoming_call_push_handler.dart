@@ -6,7 +6,6 @@ import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/chat/chat_call_service.dart';
 import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
-import 'package:qobo_one_live/services/firebase/firebase_bootstrap.dart';
 import 'package:qobo_one_live/services/firebase/incoming_call_push_payload.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/incoming_call_in_app_banner.dart';
@@ -26,13 +25,8 @@ class IncomingCallPushHandler {
   final ChatCallService _callService;
 
   static bool isIncomingCallMessage(PushNotificationMessage message) {
-    final type = message.data['type']?.toString().trim().toLowerCase() ?? '';
+    final type = PushNotificationTypes.resolveType(message.data);
     return PushNotificationTypes.isIncomingCallType(type);
-  }
-
-  /// Foreground: Firestore coordinator already rings when app is open.
-  static bool shouldDeferToFirestoreCoordinator() {
-    return FirebaseBootstrap.isAvailable;
   }
 
   Future<void> handleForegroundMessage(PushNotificationMessage message) async {
@@ -45,13 +39,7 @@ class IncomingCallPushHandler {
       return;
     }
 
-    if (shouldDeferToFirestoreCoordinator()) {
-      LoggerUtils.logInfo(
-        'IncomingCallPush: defer foreground ring to Firestore coordinator',
-      );
-      return;
-    }
-
+    // Backend FCM is the primary ring path — always surface in-app UI.
     await IncomingCallInAppBanner.tryShow(message, handler: this);
   }
 

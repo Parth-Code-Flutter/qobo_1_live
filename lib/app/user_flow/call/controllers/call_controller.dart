@@ -4,11 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/live_room/controllers/live_room_controller.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/repo/call/call_api_utils.dart';
 import 'package:qobo_one_live/repo/call/call_repo.dart';
 import 'package:qobo_one_live/repo/room/room_repo.dart';
 import 'package:qobo_one_live/services/chat/chat_call_launcher.dart';
 import 'package:qobo_one_live/services/chat/chat_call_service.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
+import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
+import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 
@@ -340,33 +343,43 @@ class CallController extends GetxController {
     isStartingCall.value = true;
     String? serverCallId;
     try {
-      final clientCallId = ZegoLiveIdUtils.sanitize(
-        'vc_${DateTime.now().millisecondsSinceEpoch}_${userId.hashCode.abs()}',
-      );
-
       final response = await _callRepo.startDirectCall(
         calleeUserId: userId,
         callType: isVideo ? 'video' : 'voice',
-        clientCallId: clientCallId,
         isShowLoader: true,
       );
 
-      if (!_isApiSuccess(response)) {
+      if (!isCallModuleApiSuccess(response)) {
         if (context.mounted) {
-          AppToast.showError(
+          await CommonAppDialog.show(
             context,
-            response?['message']?.toString() ?? 'Could not start call',
+            title: 'Call unavailable',
+            message: callModuleApiMessage(
+              response,
+              'Could not start call',
+            ),
+            icon: Icons.phone_disabled_rounded,
+            iconAccent: AdminAgencyUi.pink,
+            actions: const [
+              CommonAppDialogAction(label: 'Got it', isPrimary: true),
+            ],
           );
         }
         return;
       }
 
+      final parsed = DirectCallStartResult.fromResponse(response);
+      serverCallId = parsed.callId;
       final data = response?['data'] is Map
           ? Map<String, dynamic>.from(response!['data'] as Map)
           : <String, dynamic>{};
-      serverCallId = data['callId']?.toString();
-      final chatRoomId = data['chatRoomId']?.toString() ?? '';
+      final chatRoomId =
+          parsed.chatRoomId ??
+          data['roomId']?.toString() ??
+          data['chatRoomId']?.toString() ??
+          '';
       final coins =
+          parsed.coinsPerSecond ??
           _asDouble(data['coinsPerSecond']) ??
           _asDouble(
             isVideo ? user['videoCoinsPerSecond'] : user['voiceCoinsPerSecond'],
@@ -382,16 +395,10 @@ class CallController extends GetxController {
         peerCountry: user['countryCode']?.toString(),
         coinsPerSecond: coins,
         roomId: chatRoomId.isNotEmpty ? chatRoomId : null,
+        serverCallId: serverCallId,
         callType: callType,
       );
 
-      if (serverCallId != null && serverCallId.isNotEmpty) {
-        await _callRepo.endDirectCall(
-          callId: serverCallId,
-          reason: 'completed',
-          isShowLoader: false,
-        );
-      }
       unawaited(fetchHistory(refresh: true));
     } catch (_) {
       if (serverCallId != null && serverCallId.isNotEmpty) {

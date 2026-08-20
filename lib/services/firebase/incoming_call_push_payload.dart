@@ -17,6 +17,8 @@ class IncomingCallPushPayload {
     required this.callStartedAt,
     required this.recordCallHistory,
     required this.expiresAt,
+    required this.pushTitle,
+    required this.pushBody,
     this.cancelReason = '',
   });
 
@@ -34,6 +36,8 @@ class IncomingCallPushPayload {
   final String callStartedAt;
   final bool recordCallHistory;
   final DateTime? expiresAt;
+  final String pushTitle;
+  final String pushBody;
   final String cancelReason;
 
   bool get isIncomingRing => type == PushNotificationTypes.incomingCall;
@@ -45,16 +49,19 @@ class IncomingCallPushPayload {
     return DateTime.now().toUtc().isAfter(expiresAt!.toUtc());
   }
 
-  String get bannerTitle =>
-      isVideo ? 'Incoming video call' : 'Incoming voice call';
+  String get bannerTitle {
+    if (pushTitle.trim().isNotEmpty) return pushTitle.trim();
+    return isVideo ? 'Incoming video call' : 'Incoming voice call';
+  }
 
   String get bannerBody {
+    if (pushBody.trim().isNotEmpty) return pushBody.trim();
     final name = callerName.trim().isNotEmpty ? callerName.trim() : 'Someone';
     return isVideo ? '$name is video calling you' : '$name is calling you';
   }
 
   static IncomingCallPushPayload? tryParse(Map<String, dynamic> data) {
-    final type = (_text(data['type']) ?? '').toLowerCase();
+    final type = PushNotificationTypes.resolveType(data);
     if (!PushNotificationTypes.isIncomingCallType(type)) return null;
 
     final notificationId =
@@ -99,6 +106,8 @@ class IncomingCallPushPayload {
       expiresAt: _parseDate(
         _text(data['expires_at']) ?? _text(data['expiresAt']),
       ),
+      pushTitle: _text(data['title']) ?? '',
+      pushBody: _text(data['body']) ?? '',
       cancelReason: _text(data['reason']) ?? '',
     );
   }

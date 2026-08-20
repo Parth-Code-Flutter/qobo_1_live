@@ -163,6 +163,7 @@ class LocalNotificationBridge {
           importance: Importance.max,
           playSound: true,
           enableVibration: true,
+          enableLights: true,
         ),
       );
     }
@@ -198,12 +199,17 @@ class LocalNotificationBridge {
       channelId,
       channelName,
       channelDescription: channelDescription,
-      importance: Importance.high,
-      priority: Priority.high,
+      importance: actionSet == PushNotificationActionSet.callAcceptReject
+          ? Importance.max
+          : Importance.high,
+      priority: actionSet == PushNotificationActionSet.callAcceptReject
+          ? Priority.max
+          : Priority.high,
       icon: config.androidDefaultIcon,
-      // Brand accent tints the small icon / action chrome on many OEMs.
       color: const Color(0xFFFF2C4D),
       category: AndroidNotificationCategory.call,
+      fullScreenIntent: actionSet == PushNotificationActionSet.callAcceptReject,
+      visibility: NotificationVisibility.public,
       actions: androidActions,
       styleInformation: BigTextStyleInformation(
         body.isEmpty ? title : body,

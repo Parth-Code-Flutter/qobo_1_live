@@ -62,22 +62,12 @@ class CallRepo {
   Future<Map<String, dynamic>?> startDirectCall({
     required String calleeUserId,
     required String callType, // voice | video
-    required String clientCallId,
-    String? roomId,
-    String? historyDocId,
     bool isShowLoader = false,
   }) async {
     final body = <String, dynamic>{
       'calleeUserId': calleeUserId.trim(),
       'callType': callType.trim().toLowerCase(),
-      'clientCallId': clientCallId.trim(),
     };
-    if (roomId != null && roomId.trim().isNotEmpty) {
-      body['roomId'] = roomId.trim();
-    }
-    if (historyDocId != null && historyDocId.trim().isNotEmpty) {
-      body['historyDocId'] = historyDocId.trim();
-    }
 
     final response = await _apiService.postRequest(
       endPoint: CallModuleEndpoints.directStart,
@@ -109,17 +99,32 @@ class CallRepo {
   }
 
   /// `POST /api/call/direct/end`
+  ///
+  /// When [durationSeconds] > 0 the backend auto-runs calling charge (50/50
+  /// split) — do not also call [CallingRepo.chargeCall] for the same session.
   Future<Map<String, dynamic>?> endDirectCall({
     required String callId,
-    required String reason, // completed | missed | rejected | cancelled
+    required String reason, // user_hangup | missed | rejected | cancelled
+    int? durationSeconds,
+    String? hostId,
     bool isShowLoader = false,
   }) async {
+    final body = <String, dynamic>{
+      'callId': callId.trim(),
+      'reason': reason.trim().toLowerCase(),
+    };
+    if (durationSeconds != null && durationSeconds > 0) {
+      body['durationSeconds'] = durationSeconds;
+      body['duration_seconds'] = durationSeconds;
+    }
+    if (hostId != null && hostId.trim().isNotEmpty) {
+      body['hostId'] = hostId.trim();
+      body['host_id'] = hostId.trim();
+    }
+
     final response = await _apiService.postRequest(
       endPoint: CallModuleEndpoints.directEnd,
-      requestModel: <String, dynamic>{
-        'callId': callId.trim(),
-        'reason': reason.trim().toLowerCase(),
-      },
+      requestModel: body,
       isShowLoader: isShowLoader,
     );
     if (response == null) return null;

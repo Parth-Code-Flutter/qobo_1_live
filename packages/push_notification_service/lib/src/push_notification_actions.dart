@@ -24,7 +24,8 @@ abstract final class PushNotificationActions {
   static const String incomingCallCategory = 'INCOMING_CALL';
 
   /// Android channel for high-priority incoming call trays.
-  static const String incomingCallChannelId = 'incoming_calls';
+  /// Must match backend FCM `channel_id: incoming_call_channel`.
+  static const String incomingCallChannelId = 'incoming_call_channel';
 
   static const String incomingCallChannelName = 'Incoming Calls';
 

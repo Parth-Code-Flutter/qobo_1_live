@@ -6,20 +6,19 @@ import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:qobo_one_live/app/user_flow/messages/chat_voice_call/controllers/chat_voice_call_controller.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
-import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/zego_config.dart';
-import 'package:qobo_one_live/repo/chat/chat_repo.dart';
+import 'package:qobo_one_live/repo/call/call_api_utils.dart';
 import 'package:qobo_one_live/repo/call/call_repo.dart';
+import 'package:qobo_one_live/repo/chat/chat_repo.dart';
 import 'package:qobo_one_live/repo/chat/models/chat_room_model.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/chat/chat_call_service.dart';
 import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
-import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
+import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
-import 'package:qobo_one_live/utils/text_utils/app_text.dart';
-import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/zego_call_id_utils.dart';
 import 'package:qobo_one_live/utils/zego_engine_utils.dart';
@@ -42,6 +41,7 @@ abstract final class ChatCallLauncher {
     String? peerBio,
     double? coinsPerSecond,
     String? roomId,
+    String? serverCallId,
     required ChatCallType callType,
     bool recordCallHistory = true,
     ChatRepo? chatRepo,
@@ -77,6 +77,20 @@ abstract final class ChatCallLauncher {
       if (myId.isEmpty) {
         AppToast.showError(context, 'You must be logged in to call');
         return;
+      }
+
+      // Backend must approve the call (wallet, busy state, FCM ring) before UI.
+      var resolvedServerCallId = serverCallId?.trim() ?? '';
+      var effectiveCoinsPerSecond = coinsPerSecond;
+      if (resolvedServerCallId.isEmpty) {
+        final startResult = await _ensureBackendCallStarted(
+          context: context,
+          calleeUserId: targetId,
+          callType: callType,
+        );
+        if (startResult == null || !startResult.isValid) return;
+        resolvedServerCallId = startResult.callId;
+        effectiveCoinsPerSecond ??= startResult.coinsPerSecond;
       }
 
       var callId = ZegoCallIdUtils.fromRoomId(chatRoomId);
@@ -115,17 +129,6 @@ abstract final class ChatCallLauncher {
             if (recordCallHistory) {
               historyDocId = ringResult.historyDocId;
             }
-
-            // Ask backend to FCM-ring callee when app is background/killed.
-            unawaited(
-              _notifyBackendCallStart(
-                calleeUserId: targetId,
-                callType: callType,
-                roomId: chatRoomId,
-                clientCallId: callId,
-                historyDocId: historyDocId,
-              ),
-            );
           } catch (e) {
             LoggerUtils.logWarning(
               'ChatCallLauncher: Firestore ring failed — $e (joining Zego anyway)',
@@ -153,11 +156,15 @@ abstract final class ChatCallLauncher {
         'ChatCallLauncher: ${callType.name} callId=$callId room=$chatRoomId',
       );
 
+      final resolvedCallId = resolvedServerCallId.isNotEmpty
+          ? resolvedServerCallId
+          : callId;
+
       await Get.toNamed(
         Routes.CHAT_VOICE_CALL,
         arguments: {
           'roomId': chatRoomId,
-          'callId': callId,
+          'callId': resolvedCallId,
           if (recordCallHistory && historyDocId.isNotEmpty)
             'historyDocId': historyDocId,
           'callStartedAt': callStartedAt,
@@ -168,8 +175,8 @@ abstract final class ChatCallLauncher {
           if (peerCountry?.trim().isNotEmpty == true)
             'peerCountry': peerCountry!.trim(),
           if (peerBio?.trim().isNotEmpty == true) 'peerBio': peerBio!.trim(),
-          if (coinsPerSecond != null && coinsPerSecond > 0)
-            'coinsPerSecond': coinsPerSecond,
+          if (effectiveCoinsPerSecond != null && effectiveCoinsPerSecond > 0)
+            'coinsPerSecond': effectiveCoinsPerSecond,
           'isCaller': true,
           'isVideo': callType == ChatCallType.video,
           'recordCallHistory': recordCallHistory,
@@ -240,7 +247,7 @@ abstract final class ChatCallLauncher {
     );
     if (!isSocialApiSuccess(response)) {
       if (context.mounted) {
-        await _showCallApiErrorDialog(
+        await _showCallStartFailedDialog(
           context,
           response?['message']?.toString() ?? 'Chat room is not ready yet',
         );
@@ -258,105 +265,73 @@ abstract final class ChatCallLauncher {
     return room.roomId;
   }
 
-  static Future<void> _showCallApiErrorDialog(
+  static Future<DirectCallStartResult?> _ensureBackendCallStarted({
+    required BuildContext context,
+    required String calleeUserId,
+    required ChatCallType callType,
+  }) async {
+    try {
+      final response = await CallRepo().startDirectCall(
+        calleeUserId: calleeUserId,
+        callType: callType == ChatCallType.video ? 'video' : 'voice',
+        isShowLoader: false,
+      );
+      if (!isCallModuleApiSuccess(response)) {
+        if (context.mounted) {
+          await _showCallStartFailedDialog(
+            context,
+            callModuleApiMessage(
+              response,
+              'Unable to start this call right now.',
+            ),
+          );
+        }
+        return null;
+      }
+
+      final parsed = DirectCallStartResult.fromResponse(response);
+      if (!parsed.isValid) {
+        if (context.mounted) {
+          await _showCallStartFailedDialog(
+            context,
+            'Unable to start this call right now.',
+          );
+        }
+        return null;
+      }
+      return parsed;
+    } catch (e) {
+      LoggerUtils.logWarning(
+        'ChatCallLauncher: direct/start failed — $e',
+      );
+      if (context.mounted) {
+        await _showCallStartFailedDialog(
+          context,
+          'Unable to start this call right now.',
+        );
+      }
+      return null;
+    }
+  }
+
+  static Future<void> _showCallStartFailedDialog(
     BuildContext context,
     String message,
-  ) async {
+  ) {
     final cleanMessage = message.trim().isEmpty
         ? 'Unable to start this call right now.'
         : message.trim();
 
-    await showDialog<void>(
-      context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.62),
-      builder: (dialogContext) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 30),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF2A1248),
-                  Color(0xFF1A0E32),
-                  Color(0xFF120822),
-                ],
-              ),
-              border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
-              boxShadow: [
-                BoxShadow(
-                  color: kColorPrimary.withValues(alpha: 0.35),
-                  blurRadius: 28,
-                  offset: const Offset(0, 12),
-                ),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(22, 22, 22, 20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 58,
-                    height: 58,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: kColorBottomNavHeart.withValues(alpha: 0.14),
-                      border: Border.all(
-                        color: kColorBottomNavHeart.withValues(alpha: 0.35),
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.info_rounded,
-                      color: kColorBottomNavHeart,
-                      size: 30,
-                    ),
-                  ),
-                  Spacing.v16,
-                  const SemiBoldText(
-                    text: 'Call unavailable',
-                    fontSize: TextStyles.k20FontSize,
-                    color: kColorWhite,
-                    align: TextAlign.center,
-                  ),
-                  Spacing.v10,
-                  AppText(
-                    text: cleanMessage,
-                    fontSize: TextStyles.k14FontSize - 1,
-                    color: kColorWhite.withValues(alpha: 0.76),
-                    align: TextAlign.center,
-                    maxLines: 5,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Spacing.v20,
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: TextButton(
-                      onPressed: () => Navigator.of(dialogContext).pop(),
-                      style: TextButton.styleFrom(
-                        backgroundColor: kColorWhite,
-                        foregroundColor: kColorPrimary,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      child: const SemiBoldText(
-                        text: 'Got it',
-                        fontSize: TextStyles.k14FontSize,
-                        color: kColorPrimary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+    return CommonAppDialog.show(
+      context,
+      title: 'Call unavailable',
+      message: cleanMessage,
+      icon: Icons.phone_disabled_rounded,
+      iconAccent: AdminAgencyUi.pink,
+      barrierDismissible: true,
+      actions: const [
+        CommonAppDialogAction(label: 'Got it', isPrimary: true),
+      ],
     );
   }
 
@@ -369,29 +344,5 @@ abstract final class ChatCallLauncher {
     if (!Get.isRegistered<UserSessionController>()) return 'User';
     final name = Get.find<UserSessionController>().displayName;
     return name.isNotEmpty ? name : 'User';
-  }
-
-  /// Fire-and-forget REST ring so backend can push FCM to the callee.
-  static Future<void> _notifyBackendCallStart({
-    required String calleeUserId,
-    required ChatCallType callType,
-    required String roomId,
-    required String clientCallId,
-    required String historyDocId,
-  }) async {
-    try {
-      await CallRepo().startDirectCall(
-        calleeUserId: calleeUserId,
-        callType: callType == ChatCallType.video ? 'video' : 'voice',
-        clientCallId: clientCallId,
-        roomId: roomId,
-        historyDocId: historyDocId,
-        isShowLoader: false,
-      );
-    } catch (e) {
-      LoggerUtils.logWarning(
-        'ChatCallLauncher: direct/start for FCM ring failed — $e',
-      );
-    }
   }
 }

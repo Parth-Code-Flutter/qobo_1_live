@@ -11,19 +11,21 @@ class CallingRepo {
 
   /// `POST /api/economy/calling/charge` — deducts caller coins for duration.
   ///
-  /// Earning rule: caller pays **2 coins/sec**; callee earns **1 coin/sec**
-  /// (50% platform fee). Response may include `totalCoinsDeducted` and
-  /// `hostEarnedDiamonds`.
+  /// **50/50 split:** caller pays `rate × duration` coins; callee earns 50%
+  /// as diamonds; platform retains 50%. Prefer settling via
+  /// [CallRepo.endDirectCall] when a server `callId` exists — backend runs
+  /// charge automatically on end.
   Future<Map<String, dynamic>?> chargeCall({
     required String hostId,
     required int durationSeconds,
     bool isShowLoader = false,
   }) async {
     final body = <String, dynamic>{
-      'host_id': hostId,
-      'hostId': hostId,
-      'duration_seconds': durationSeconds,
+      'hostId': hostId.trim(),
       'durationSeconds': durationSeconds,
+      // Legacy snake_case fallbacks for older backends.
+      'host_id': hostId.trim(),
+      'duration_seconds': durationSeconds,
     };
 
     var response = await _apiService.postRequest(

@@ -59,7 +59,7 @@ class PushNotificationService {
     final mapped = PushNotificationMessage.fromRemoteMessage(message);
     _log('background message: $mapped');
 
-    final type = mapped.data['type']?.toString().trim().toLowerCase() ?? '';
+    final type = PushNotificationTypes.resolveType(mapped.data);
     if (type == PushNotificationTypes.callCancelled) {
       final bridge = LocalNotificationBridge();
       await bridge.initialize(_config);
@@ -241,7 +241,7 @@ class PushNotificationService {
         _log('foreground message: $message');
         _handlers.onForegroundMessage?.call(message);
 
-        final type = message.data['type']?.toString().trim().toLowerCase() ?? '';
+        final type = PushNotificationTypes.resolveType(message.data);
         if (type == PushNotificationTypes.callCancelled) {
           await _localNotifications.cancelForMessage(message);
           return;
@@ -318,7 +318,7 @@ class PushNotificationService {
 
   /// Maps FCM `type` → which action buttons the tray should show.
   static PushNotificationActionSet actionSetForData(Map<String, dynamic> data) {
-    final type = data['type']?.toString().trim().toLowerCase() ?? '';
+    final type = PushNotificationTypes.resolveType(data);
     if (PushNotificationTypes.isDirectInvite(type)) {
       return PushNotificationActionSet.joinReject;
     }
@@ -341,7 +341,7 @@ class PushNotificationService {
   static ({String title, String body}) displayCopyFor(
     PushNotificationMessage message,
   ) {
-    final type = message.data['type']?.toString().trim().toLowerCase() ?? '';
+    final type = PushNotificationTypes.resolveType(message.data);
     final host = message.data['host_name']?.toString().trim();
     final roomTitle = message.data['room_title']?.toString().trim();
     final roomType = message.data['room_type']?.toString().trim() ?? 'live';
