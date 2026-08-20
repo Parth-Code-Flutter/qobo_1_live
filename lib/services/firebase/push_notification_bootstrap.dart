@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:push_notification_service/push_notification_service.dart';
 import 'package:qobo_one_live/services/firebase/fcm_token_sync_service.dart';
 import 'package:qobo_one_live/services/firebase/firebase_bootstrap.dart';
+import 'package:qobo_one_live/services/firebase/incoming_call_push_handler.dart';
 import 'package:qobo_one_live/services/firebase/join_request_push_handler.dart';
 import 'package:qobo_one_live/services/firebase/pk_battle_push_handler.dart';
 import 'package:qobo_one_live/services/firebase/room_invite_push_handler.dart';
@@ -22,6 +25,8 @@ abstract final class PushNotificationBootstrap {
   static final PkBattlePushHandler _pkBattleHandler = PkBattlePushHandler();
   static final JoinRequestPushHandler _joinRequestHandler =
       JoinRequestPushHandler();
+  static final IncomingCallPushHandler _incomingCallHandler =
+      IncomingCallPushHandler();
 
   /// Registers the top-level FCM background handler once.
   ///
@@ -53,10 +58,16 @@ abstract final class PushNotificationBootstrap {
           LoggerUtils.logInfo(
             'Push foreground: ${message.title} | data=${message.data}',
           );
+          if (IncomingCallPushHandler.isIncomingCallMessage(message)) {
+            unawaited(_incomingCallHandler.handleForegroundMessage(message));
+          }
         },
-        // Branded Join/Dismiss card while the app is open (OS tray buttons
-        // cannot use app gradients). PK uses Accept/Reject tray actions.
+        // Branded in-app cards while open; PK / join / call use custom UI.
         onForegroundActionableMessage: (message) async {
+          if (IncomingCallPushHandler.isIncomingCallMessage(message)) {
+            await _incomingCallHandler.handleForegroundMessage(message);
+            return true;
+          }
           if (PkBattlePushHandler.isPkMessage(message)) return false;
           if (JoinRequestPushHandler.isJoinRequestMessage(message)) {
             return JoinRequestInAppBanner.tryShow(
@@ -75,13 +86,16 @@ abstract final class PushNotificationBootstrap {
         },
         onTokenRefresh: (token) {
           LoggerUtils.logInfo('Push token refreshed (${token.length} chars)');
-          // Keep backend in sync so follower live-stream pushes stay deliverable.
           FcmTokenSyncService.ensureSynced();
         },
         onNotificationTap: (message) {
           LoggerUtils.logInfo(
             'Push tapped: ${message.title} | ${message.data}',
           );
+          if (IncomingCallPushHandler.isIncomingCallMessage(message)) {
+            _incomingCallHandler.handleNotificationTap(message);
+            return;
+          }
           if (PkBattlePushHandler.isPkMessage(message)) {
             _pkBattleHandler.handleNotificationTap(message);
             return;
@@ -94,6 +108,15 @@ abstract final class PushNotificationBootstrap {
         },
         onNotificationAction: (actionId, message) {
           LoggerUtils.logInfo('Push action=$actionId | data=${message.data}');
+          if (IncomingCallPushHandler.isIncomingCallMessage(message) ||
+              actionId == PushNotificationActions.acceptCall ||
+              actionId == PushNotificationActions.rejectCall) {
+            _incomingCallHandler.handleNotificationAction(
+              actionId: actionId,
+              message: message,
+            );
+            return;
+          }
           if (PkBattlePushHandler.isPkMessage(message) ||
               actionId == PushNotificationActions.acceptPk ||
               actionId == PushNotificationActions.rejectPk) {
@@ -127,7 +150,7 @@ abstract final class PushNotificationBootstrap {
     );
   }
 
-  /// Call once after [runApp] so cold-start Join/Reject can navigate safely.
+  /// Call once after [runApp] so cold-start Accept/Reject can navigate safely.
   static void flushPendingLaunch() {
     PushNotificationService.instance.flushPendingLaunch();
   }

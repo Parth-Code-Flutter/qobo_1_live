@@ -20,6 +20,17 @@ abstract final class PushNotificationActions {
   /// APNs / local-notification category for host join approval.
   static const String joinRequestCategory = 'JOIN_REQUEST';
 
+  /// APNs / local-notification category for 1:1 incoming calls.
+  static const String incomingCallCategory = 'INCOMING_CALL';
+
+  /// Android channel for high-priority incoming call trays.
+  static const String incomingCallChannelId = 'incoming_calls';
+
+  static const String incomingCallChannelName = 'Incoming Calls';
+
+  static const String incomingCallChannelDescription =
+      'Ringing alerts for 1:1 voice and video calls.';
+
   /// Accept / join the invited (or broadcast) room.
   static const String joinRoom = 'JOIN_ROOM';
 
@@ -40,6 +51,12 @@ abstract final class PushNotificationActions {
 
   /// Host rejects a viewer join request.
   static const String rejectJoin = 'REJECT_JOIN';
+
+  /// Accept an incoming 1:1 voice/video call.
+  static const String acceptCall = 'ACCEPT_CALL';
+
+  /// Reject an incoming 1:1 voice/video call.
+  static const String rejectCall = 'REJECT_CALL';
 }
 
 /// Which action buttons to attach to a local notification.
@@ -55,6 +72,9 @@ enum PushNotificationActionSet {
 
   /// Host join request (`join_request`) → Approve + Reject.
   joinApproveReject,
+
+  /// 1:1 incoming call (`incoming_call`) → Accept + Reject.
+  callAcceptReject,
 
   /// No action buttons.
   none,

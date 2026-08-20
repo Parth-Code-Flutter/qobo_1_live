@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/icon_constants.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -193,10 +194,9 @@ class TransactionHistoryView extends GetView<TransactionHistoryController> {
                   color: isAddition ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  _getTransactionIcon(tx['type'] ?? ''),
-                  color: isAddition ? Colors.green : Colors.red,
-                  size: 22,
+                child: _buildTransactionLeading(
+                  tx['type']?.toString() ?? '',
+                  isAddition ? Colors.green : Colors.red,
                 ),
               ),
               Spacing.h16,
@@ -275,7 +275,15 @@ class TransactionHistoryView extends GetView<TransactionHistoryController> {
       case 'official bonus':
         return Icons.emoji_events_rounded;
       default:
-        return Icons.monetization_on_rounded;
+        return Icons.circle_outlined;
     }
+  }
+
+  Widget _buildTransactionLeading(String type, Color color) {
+    final icon = _getTransactionIcon(type);
+    if (icon == Icons.circle_outlined) {
+      return AppCoinIcon(size: 22, color: color);
+    }
+    return Icon(icon, color: color, size: 22);
   }
 }

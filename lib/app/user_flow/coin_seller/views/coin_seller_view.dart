@@ -9,6 +9,7 @@ import 'package:qobo_one_live/app/user_flow/coin_seller/widgets/coin_seller_ui_k
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
@@ -339,10 +340,9 @@ class CoinSellerView extends GetView<CoinSellerController> {
           Positioned(
             right: -20,
             top: -20,
-            child: Icon(
-              Icons.monetization_on_rounded,
-              size: 120,
-              color: CoinSellerUi.gold.withValues(alpha: 0.08),
+            child: Opacity(
+              opacity: 0.08,
+              child: AppCoinIcon(size: 120, color: CoinSellerUi.gold),
             ),
           ),
           Column(
@@ -528,14 +528,15 @@ class CoinSellerView extends GetView<CoinSellerController> {
             _buyerSelector(context),
             Spacing.v12,
             _field(
-              Icons.monetization_on_rounded,
+              AppCoinIcon(size: 20, color: CoinSellerUi.gold),
               controller.coinsController,
               'Coins',
               number: true,
             ),
             Spacing.v12,
             _field(
-              Icons.currency_rupee_rounded,
+              Icon(Icons.currency_rupee_rounded,
+                  size: 20, color: CoinSellerUi.gold),
               controller.priceController,
               'Price (INR)',
               decimal: true,
@@ -720,7 +721,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
   }
 
   Widget _field(
-    IconData icon,
+    Widget prefixIcon,
     TextEditingController ctrl,
     String hint, {
     bool number = false,
@@ -744,7 +745,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
       ),
       prefix: Padding(
         padding: const EdgeInsets.only(left: 12, right: 8),
-        child: Icon(icon, size: 20, color: CoinSellerUi.gold),
+        child: prefixIcon,
       ),
     );
   }
@@ -961,7 +962,12 @@ class CoinSellerView extends GetView<CoinSellerController> {
                 children: [
                   Expanded(
                     child: _metricBlock(
-                      icon: Icons.monetization_on_rounded,
+                      icon: AppCoinIcon(
+                        size: 13,
+                        color: sale.isReversed
+                            ? Colors.white54
+                            : CoinSellerUi.gold,
+                      ),
                       label: 'Coins',
                       value: coinLabel,
                       accent: sale.isReversed ? Colors.white54 : CoinSellerUi.gold,
@@ -970,7 +976,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
                   Spacing.h8,
                   Expanded(
                     child: _metricBlock(
-                      icon: Icons.payments_rounded,
+                      icon: Icon(Icons.payments_rounded, size: 13, color: CoinSellerUi.mint),
                       label: 'Received',
                       value: priceLabel,
                       accent: CoinSellerUi.mint,
@@ -986,7 +992,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
   }
 
   Widget _metricBlock({
-    required IconData icon,
+    required Widget icon,
     required String label,
     required String value,
     required Color accent,
@@ -1003,7 +1009,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
         children: [
           Row(
             children: [
-              Icon(icon, size: 13, color: accent),
+              icon,
               const SizedBox(width: 5),
               AppText(
                 text: label,

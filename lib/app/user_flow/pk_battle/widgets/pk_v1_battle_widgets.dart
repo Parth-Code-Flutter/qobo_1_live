@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/live_broadcast/controllers/live_broadcast_controller.dart';
 import 'package:qobo_one_live/app/user_flow/pk_battle/controllers/pk_v1_controller.dart';
@@ -448,8 +449,7 @@ class _PkGiftPickerSheetState extends State<PkGiftPickerSheet> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.monetization_on_rounded,
-                    color: Color(0xFFFFC857), size: 11),
+                const AppCoinIcon(color: Color(0xFFFFC857), size: 11),
                 const SizedBox(width: 2),
                 AppText(
                   text: '${gift.coinCost}',

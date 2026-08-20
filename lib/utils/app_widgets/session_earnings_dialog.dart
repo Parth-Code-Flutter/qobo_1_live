@@ -183,8 +183,7 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        AdminAgencyUi.glowIcon(
-                          icon: Icons.monetization_on_rounded,
+                        AdminAgencyUi.glowCoinIcon(
                           accent: AdminAgencyUi.goldDeep,
                           accentEnd: AdminAgencyUi.gold,
                           size: 56,

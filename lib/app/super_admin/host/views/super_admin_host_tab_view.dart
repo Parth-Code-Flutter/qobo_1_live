@@ -185,7 +185,7 @@ class SuperAdminHostTabView extends GetView<SuperAdminHomeController> {
                   accent: SuperAdminUi.sky,
                 ),
                 SuperAdminMetricChip(
-                  icon: Icons.monetization_on_rounded,
+                  coinIcon: true,
                   label: host.coins.toStringAsFixed(0),
                   accent: SuperAdminUi.gold,
                 ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -116,8 +117,7 @@ class LiveStreamAccessDeniedDialog extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.monetization_on_outlined,
+                  AppCoinIcon(
                     size: 18,
                     color: kColorWalletAmount.withValues(alpha: 0.9),
                   ),

@@ -274,7 +274,16 @@ class _GiftsBottomSheetState extends State<GiftsBottomSheet> {
             child: appButton(
               onPressed: () async {
                 if (!canSend) return;
-                final combo = await CommonAppDialog.giftCombo();
+                final gift = gifts[_selectedGiftIndex];
+                final combo = await CommonAppDialog.giftCombo(
+                  giftName: gift['name'] ?? 'Gift',
+                  giftPrice: gift['price'],
+                  giftIcon: GiftIconWidget(
+                    icon: gift['icon'],
+                    size: 48,
+                    emojiSize: 34,
+                  ),
+                );
                 if (!mounted || combo == null) return;
                 await controller.sendGift(
                   gifts[_selectedGiftIndex],

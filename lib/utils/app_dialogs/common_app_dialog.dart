@@ -103,10 +103,18 @@ class CommonAppDialog extends StatelessWidget {
     );
   }
 
-  /// Gift Send combo: returns `3`, `5`, `10`, or `1`. Null if dismissed.
-  static Future<int?> giftCombo() {
+  /// Gift combo quantity: returns `1`, `3`, `5`, or `10`. Null if dismissed.
+  static Future<int?> giftCombo({
+    required String giftName,
+    String? giftPrice,
+    Widget? giftIcon,
+  }) {
     return Get.dialog<int>(
-      const _GiftComboDialog(),
+      _GiftComboDialog(
+        giftName: giftName,
+        giftPrice: giftPrice,
+        giftIcon: giftIcon,
+      ),
       barrierDismissible: true,
       barrierColor: Colors.black.withValues(alpha: 0.72),
     );
@@ -363,27 +371,51 @@ class CommonAppDialog extends StatelessWidget {
   }
 }
 
-/// Premium gift-combo picker with gradient tiles and multiplier badges.
+/// Centered gift-combo picker — shows selected gift + 2×2 grid (1 → 3 → 5 → 10).
 class _GiftComboDialog extends StatelessWidget {
-  const _GiftComboDialog();
+  const _GiftComboDialog({
+    required this.giftName,
+    this.giftPrice,
+    this.giftIcon,
+  });
 
-  static const _combos = [3, 5, 10];
+  final String giftName;
+  final String? giftPrice;
+  final Widget? giftIcon;
 
-  static const _comboGradients = [
-    [Color(0xFFFF5CAB), Color(0xFFAE4BFF)],
-    [Color(0xFFFFAB40), Color(0xFFFF5CAB)],
-    [Color(0xFFFF6B6B), Color(0xFFFFA726)],
+  static const _accent = Color(0xFFFF5CAB);
+  static const _accentEnd = Color(0xFF9C6BFF);
+
+  static const _options = <_ComboPick>[
+    _ComboPick(
+      count: 1,
+      icon: Icons.card_giftcard_rounded,
+      colors: [Color(0xFF26C6DA), Color(0xFF448AFF)],
+    ),
+    _ComboPick(
+      count: 3,
+      icon: Icons.local_fire_department_rounded,
+      colors: [Color(0xFFFF5CAB), Color(0xFFAE4BFF)],
+    ),
+    _ComboPick(
+      count: 5,
+      icon: Icons.bolt_rounded,
+      colors: [Color(0xFFFFAB40), Color(0xFFFF7043)],
+    ),
+    _ComboPick(
+      count: 10,
+      icon: Icons.auto_awesome_rounded,
+      colors: [Color(0xFFFFD54F), Color(0xFFFF5252)],
+    ),
   ];
-
-  static const _comboEmojis = ['🔥', '⚡', '🎁'];
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 26, vertical: 28),
       child: TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0.88, end: 1),
+        tween: Tween(begin: 0.9, end: 1),
         duration: const Duration(milliseconds: 340),
         curve: Curves.easeOutBack,
         builder: (context, scale, child) =>
@@ -391,132 +423,57 @@ class _GiftComboDialog extends StatelessWidget {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(28),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(28),
                 gradient: const LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                   colors: [
-                    Color(0xF0321845),
-                    Color(0xF01A0E2E),
-                    Color(0xF00E0818),
+                    Color(0xF02A1638),
+                    Color(0xF0140C22),
+                    Color(0xF00C0814),
                   ],
                 ),
                 border: Border.all(
-                  color: const Color(0xFFFF5CAB).withValues(alpha: 0.3),
+                  color: _accent.withValues(alpha: 0.32),
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFFFF5CAB).withValues(alpha: 0.18),
+                    color: _accent.withValues(alpha: 0.2),
                     blurRadius: 32,
-                    offset: const Offset(0, 12),
+                    offset: const Offset(0, 14),
+                  ),
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.4),
+                    blurRadius: 24,
+                    offset: const Offset(0, 10),
                   ),
                 ],
               ),
-              padding: const EdgeInsets.fromLTRB(20, 26, 20, 20),
+              padding: const EdgeInsets.fromLTRB(22, 22, 22, 24),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Icon
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFFF5CAB), Color(0xFF9C6BFF)],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color:
-                              const Color(0xFFFF5CAB).withValues(alpha: 0.4),
-                          blurRadius: 16,
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.auto_awesome_rounded,
-                      color: kColorWhite,
-                      size: 28,
-                    ),
-                  ),
-                  Spacing.v16,
+                  _selectedGiftCard(),
+                  const SizedBox(height: 18),
                   const SemiBoldText(
                     text: 'Send as Combo?',
                     fontSize: TextStyles.k18FontSize,
                     color: kColorWhite,
                     align: TextAlign.center,
                   ),
-                  Spacing.v6,
+                  Spacing.v8,
                   AppText(
-                    text: 'Multiply the magic — send multiple gifts at once!',
+                    text:
+                        'Pick how many to send — 1, 3, 5 or 10 at once.',
                     fontSize: TextStyles.k12FontSize,
-                    color: kColorWhite.withValues(alpha: 0.65),
+                    color: kColorWhite.withValues(alpha: 0.68),
                     align: TextAlign.center,
                   ),
-                  Spacing.v20,
-
-                  // Combo tiles row
-                  Row(
-                    children: List.generate(_combos.length, (i) {
-                      final count = _combos[i];
-                      final colors = _comboGradients[i];
-                      final emoji = _comboEmojis[i];
-                      return Expanded(
-                        child: Padding(
-                          padding: EdgeInsets.only(
-                            left: i == 0 ? 0 : 5,
-                            right: i == _combos.length - 1 ? 0 : 5,
-                          ),
-                          child: _ComboTile(
-                            count: count,
-                            emoji: emoji,
-                            colors: colors,
-                            onTap: () => Navigator.of(context).pop(count),
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                  Spacing.v16,
-
-                  // Send 1 Gift button
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => Navigator.of(context).pop(1),
-                      borderRadius: BorderRadius.circular(14),
-                      child: Ink(
-                        height: 48,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(14),
-                          color: kColorWhite.withValues(alpha: 0.08),
-                          border: Border.all(
-                            color: kColorWhite.withValues(alpha: 0.18),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.card_giftcard_rounded,
-                              color: kColorWhite.withValues(alpha: 0.7),
-                              size: 18,
-                            ),
-                            const SizedBox(width: 8),
-                            SemiBoldText(
-                              text: 'Send 1 Gift',
-                              fontSize: TextStyles.k14FontSize,
-                              color: kColorWhite.withValues(alpha: 0.85),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
+                  const SizedBox(height: 24),
+                  _grid(),
                 ],
               ),
             ),
@@ -525,79 +482,214 @@ class _GiftComboDialog extends StatelessWidget {
       ),
     );
   }
+
+  Widget _selectedGiftCard() {
+    final price = giftPrice?.trim();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            _accent.withValues(alpha: 0.14),
+            _accentEnd.withValues(alpha: 0.08),
+          ],
+        ),
+        border: Border.all(color: _accent.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: kColorWhite.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
+            ),
+            child: giftIcon ??
+                const Icon(
+                  Icons.card_giftcard_rounded,
+                  color: kColorWhite,
+                  size: 28,
+                ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppText(
+                  text: 'Selected gift',
+                  fontSize: TextStyles.k10FontSize,
+                  color: kColorWhite.withValues(alpha: 0.55),
+                ),
+                const SizedBox(height: 2),
+                SemiBoldText(
+                  text: giftName,
+                  fontSize: TextStyles.k14FontSize,
+                  color: kColorWhite,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (price != null && price.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.diamond_outlined,
+                        size: 12,
+                        color: Colors.orange.withValues(alpha: 0.9),
+                      ),
+                      const SizedBox(width: 4),
+                      AppText(
+                        text: price,
+                        fontSize: TextStyles.k12FontSize,
+                        color: kColorWhite.withValues(alpha: 0.75),
+                      ),
+                      AppText(
+                        text: ' each',
+                        fontSize: TextStyles.k10FontSize,
+                        color: kColorWhite.withValues(alpha: 0.45),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _grid() {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: _options.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 14,
+        crossAxisSpacing: 14,
+        childAspectRatio: 1.05,
+      ),
+      itemBuilder: (context, i) => _ComboPickTile(
+        option: _options[i],
+        delayMs: i * 50,
+      ),
+    );
+  }
 }
 
-/// Individual combo tile with gradient background, multiplier badge, and emoji.
-class _ComboTile extends StatelessWidget {
-  const _ComboTile({
+class _ComboPick {
+  const _ComboPick({
     required this.count,
-    required this.emoji,
+    required this.icon,
     required this.colors,
-    required this.onTap,
   });
 
   final int count;
-  final String emoji;
+  final IconData icon;
   final List<Color> colors;
-  final VoidCallback onTap;
+}
+
+class _ComboPickTile extends StatelessWidget {
+  const _ComboPickTile({required this.option, this.delayMs = 0});
+
+  final _ComboPick option;
+  final int delayMs;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Ink(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                colors[0].withValues(alpha: 0.25),
-                colors[1].withValues(alpha: 0.15),
+    final label = option.count == 1 ? '1' : '×${option.count}';
+    final colors = option.colors;
+    final accent = colors[0];
+    final accentEnd = colors.length > 1 ? colors[1] : colors[0];
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.94, end: 1),
+      duration: Duration(milliseconds: 300 + delayMs),
+      curve: Curves.easeOutBack,
+      builder: (context, scale, child) =>
+          Transform.scale(scale: scale, child: child),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => Navigator.of(context).pop(option.count),
+          borderRadius: BorderRadius.circular(16),
+          child: Ink(
+            height: double.infinity,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  accent.withValues(alpha: 0.22),
+                  accentEnd.withValues(alpha: 0.08),
+                  kColorWhite.withValues(alpha: 0.02),
+                ],
+              ),
+              border: Border.all(
+                color: accent.withValues(
+                  alpha: option.count == 10 ? 0.65 : 0.42,
+                ),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: accent.withValues(alpha: 0.16),
+                  blurRadius: option.count == 10 ? 16 : 10,
+                  offset: const Offset(0, 4),
+                ),
               ],
             ),
-            border: Border.all(
-              color: colors[0].withValues(alpha: 0.45),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: colors[0].withValues(alpha: 0.15),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(emoji, style: const TextStyle(fontSize: 22)),
-              const SizedBox(height: 6),
-              // Multiplier badge
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  gradient: LinearGradient(colors: colors),
-                  boxShadow: [
-                    BoxShadow(
-                      color: colors[0].withValues(alpha: 0.4),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: colors,
                     ),
-                  ],
+                    boxShadow: [
+                      BoxShadow(
+                        color: accent.withValues(alpha: 0.4),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Icon(option.icon, color: kColorWhite, size: 20),
                 ),
-                child: SemiBoldText(
-                  text: '×$count',
-                  fontSize: TextStyles.k14FontSize,
-                  color: kColorWhite,
+                const SizedBox(height: 14),
+                Container(
+                  constraints: const BoxConstraints(minWidth: 52),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    gradient: LinearGradient(colors: colors),
+                  ),
+                  alignment: Alignment.center,
+                  child: SemiBoldText(
+                    text: label,
+                    fontSize: TextStyles.k16FontSize,
+                    color: kColorWhite,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

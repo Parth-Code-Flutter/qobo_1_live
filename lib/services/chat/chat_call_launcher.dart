@@ -9,6 +9,7 @@ import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/zego_config.dart';
 import 'package:qobo_one_live/repo/chat/chat_repo.dart';
+import 'package:qobo_one_live/repo/call/call_repo.dart';
 import 'package:qobo_one_live/repo/chat/models/chat_room_model.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/chat/chat_call_service.dart';
@@ -114,6 +115,17 @@ abstract final class ChatCallLauncher {
             if (recordCallHistory) {
               historyDocId = ringResult.historyDocId;
             }
+
+            // Ask backend to FCM-ring callee when app is background/killed.
+            unawaited(
+              _notifyBackendCallStart(
+                calleeUserId: targetId,
+                callType: callType,
+                roomId: chatRoomId,
+                clientCallId: callId,
+                historyDocId: historyDocId,
+              ),
+            );
           } catch (e) {
             LoggerUtils.logWarning(
               'ChatCallLauncher: Firestore ring failed — $e (joining Zego anyway)',
@@ -357,5 +369,29 @@ abstract final class ChatCallLauncher {
     if (!Get.isRegistered<UserSessionController>()) return 'User';
     final name = Get.find<UserSessionController>().displayName;
     return name.isNotEmpty ? name : 'User';
+  }
+
+  /// Fire-and-forget REST ring so backend can push FCM to the callee.
+  static Future<void> _notifyBackendCallStart({
+    required String calleeUserId,
+    required ChatCallType callType,
+    required String roomId,
+    required String clientCallId,
+    required String historyDocId,
+  }) async {
+    try {
+      await CallRepo().startDirectCall(
+        calleeUserId: calleeUserId,
+        callType: callType == ChatCallType.video ? 'video' : 'voice',
+        clientCallId: clientCallId,
+        roomId: roomId,
+        historyDocId: historyDocId,
+        isShowLoader: false,
+      );
+    } catch (e) {
+      LoggerUtils.logWarning(
+        'ChatCallLauncher: direct/start for FCM ring failed — $e',
+      );
+    }
   }
 }

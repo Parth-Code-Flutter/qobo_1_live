@@ -262,7 +262,7 @@ class SuperAdminHostDetailView extends GetView<SuperAdminHostDetailController> {
               Spacing.h10,
               Expanded(
                 child: SuperAdminStatTile(
-                  icon: Icons.monetization_on_rounded,
+                  coinIcon: true,
                   label: 'Coins',
                   value: e.coins.toStringAsFixed(0),
                   accent: SuperAdminUi.gold,

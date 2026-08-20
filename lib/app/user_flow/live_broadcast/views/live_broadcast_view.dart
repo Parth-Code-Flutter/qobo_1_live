@@ -644,7 +644,6 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
               tracker: controller.sessionEarnings,
               compact: compact,
               maxWidth: earningsMaxWidth,
-              icon: Icons.monetization_on_rounded,
               iconColor: const Color(0xFFFFA10A),
               onTap: controller.isHost.value
                   ? controller.openSessionEarningsDialog

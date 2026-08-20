@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -388,7 +389,7 @@ class _WalletViewState extends State<WalletView> {
                     ),
                     const Divider(color: Colors.white10, height: 16),
                     _paymentMethodTile(
-                      logoIcon: Icons.monetization_on_outlined,
+                      logo: AppCoinIcon(size: 20, color: Colors.amber),
                       title: 'Buy via Coin Seller',
                       color: Colors.amber,
                       onTap: () {
@@ -415,7 +416,8 @@ class _WalletViewState extends State<WalletView> {
   }
 
   Widget _paymentMethodTile({
-    required IconData logoIcon,
+    IconData? logoIcon,
+    Widget? logo,
     required String title,
     required Color color,
     required VoidCallback onTap,
@@ -429,7 +431,9 @@ class _WalletViewState extends State<WalletView> {
           color: color.withValues(alpha: 0.15),
           shape: BoxShape.circle,
         ),
-        child: Icon(logoIcon, color: color, size: 20),
+        child: Center(
+          child: logo ?? Icon(logoIcon, color: color, size: 20),
+        ),
       ),
       title: SemiBoldText(text: title, fontSize: 13, color: kColorWhite),
       subtitle: subtitle == null
@@ -614,11 +618,7 @@ class _WalletViewState extends State<WalletView> {
               color: const Color(0xFFFFC857).withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(
-              Icons.attach_money_rounded,
-              size: 22,
-              color: Color(0xFFFFC857),
-            ),
+            child: AppCoinIcon(size: 22, color: const Color(0xFFFFC857)),
           ),
           Spacing.h12,
           Expanded(

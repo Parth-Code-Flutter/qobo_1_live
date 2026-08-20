@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -262,14 +263,12 @@ class _DiscoverUserCard extends StatelessWidget {
                           const SizedBox(width: 8),
                         ],
                         if (user.coinsPerSecond > 0)
-                          _MetaIcon(
-                            icon: Icons.monetization_on_outlined,
+                          _CoinMetaIcon(
                             label:
                                 '${user.coinsPerSecond.toStringAsFixed(0)}/s',
                           )
                         else if (user.coins > 0)
-                          _MetaIcon(
-                            icon: Icons.monetization_on_outlined,
+                          _CoinMetaIcon(
                             label: user.coins.toStringAsFixed(0),
                           ),
                         if (user.isFollowing) ...[
@@ -422,6 +421,28 @@ class _BadgeChip extends StatelessWidget {
         fontSize: TextStyles.k10FontSize,
         color: textColor,
       ),
+    );
+  }
+}
+
+class _CoinMetaIcon extends StatelessWidget {
+  const _CoinMetaIcon({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AppCoinIcon(size: 12, color: kColorWalletAmount),
+        const SizedBox(width: 3),
+        AppText(
+          text: label,
+          fontSize: TextStyles.k10FontSize,
+          color: kColorWhite.withValues(alpha: 0.88),
+        ),
+      ],
     );
   }
 }

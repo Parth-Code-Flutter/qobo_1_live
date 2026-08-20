@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
@@ -43,7 +44,7 @@ class MallView extends GetView<MallController> {
         children: [
           Row(
             children: [
-              const Icon(Icons.monetization_on, color: Colors.amber, size: 28),
+              AppCoinIcon(size: 28, color: Colors.amber),
               Spacing.h8,
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

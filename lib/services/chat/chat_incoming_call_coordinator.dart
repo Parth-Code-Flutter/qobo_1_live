@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/messages/chat_voice_call/controllers/chat_voice_call_controller.dart';
+import 'package:qobo_one_live/repo/call/call_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/chat/chat_call_service.dart';
 import 'package:qobo_one_live/services/chat/chat_firebase_service.dart';
@@ -17,10 +18,14 @@ import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 
 /// Listens for Firestore `calls/active` and shows incoming call UI.
 class ChatIncomingCallCoordinator extends GetxService {
-  ChatIncomingCallCoordinator({ChatCallService? callService})
-      : _callService = callService ?? ChatCallService();
+  ChatIncomingCallCoordinator({
+    ChatCallService? callService,
+    CallRepo? callRepo,
+  })  : _callService = callService ?? ChatCallService(),
+        _callRepo = callRepo ?? CallRepo();
 
   final ChatCallService _callService;
+  final CallRepo _callRepo;
 
   final Map<String, StreamSubscription<Map<String, dynamic>>> _subscriptions =
       {};
@@ -199,6 +204,12 @@ class ChatIncomingCallCoordinator extends GetxService {
           onPressed: () async {
             _dialogOpen = false;
             _lastHandledRingKey = null;
+            await _callRepo.respondDirectCall(
+              callId: callId,
+              roomId: roomId,
+              action: 'reject',
+              isShowLoader: false,
+            );
             await _callService.endCall(
               roomId,
               endedByUserId: myId,
@@ -251,6 +262,12 @@ class ChatIncomingCallCoordinator extends GetxService {
         await Get.find<ChatSessionService>().ensureSignedIn(isShowLoader: false);
     if (!signedIn) return;
 
+    await _callRepo.respondDirectCall(
+      callId: callId,
+      roomId: roomId,
+      action: 'accept',
+      isShowLoader: false,
+    );
     await _callService.markAccepted(roomId: roomId, userId: myId);
     await ZegoEngineUtils.resetForCallProject();
     _onCallScreen = true;

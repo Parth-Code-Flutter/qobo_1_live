@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 
 /// Gullak-style coin transfer: coins stream toward (earn) or away from (deduct)
 /// a badge target.
@@ -524,11 +525,7 @@ class _CoinVisual extends StatelessWidget {
         ],
       ),
       alignment: Alignment.center,
-      child: Icon(
-        Icons.monetization_on_rounded,
-        size: size * 0.72,
-        color: const Color(0xFF8D4E00),
-      ),
+      child: AppCoinIcon(size: size * 0.72),
     );
   }
 }

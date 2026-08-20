@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_shell_background.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -45,12 +46,14 @@ abstract final class AdminAgencyUi {
   /// Solid gradient icon tile — same language as Profile feature grid.
   /// White glyph on vivid gradient (no washed tint fill).
   static Widget glowIcon({
-    required IconData icon,
+    IconData? icon,
+    Widget? child,
     required Color accent,
     double size = 44,
     double iconSize = 22,
     Color? accentEnd,
   }) {
+    assert(icon != null || child != null);
     final end = accentEnd ?? Color.lerp(accent, const Color(0xFFFFFFFF), 0.22)!;
     return Container(
       width: size,
@@ -71,7 +74,24 @@ abstract final class AdminAgencyUi {
           ),
         ],
       ),
-      child: Icon(icon, color: kColorWhite, size: iconSize),
+      child:
+          child ??
+          Icon(icon!, color: kColorWhite, size: iconSize),
+    );
+  }
+
+  /// Gradient tile with the standard coin SVG (no currency symbol).
+  static Widget glowCoinIcon({
+    required Color accent,
+    double size = 44,
+    double iconSize = 22,
+    Color? accentEnd,
+  }) {
+    return glowIcon(
+      accent: accent,
+      accentEnd: accentEnd,
+      size: size,
+      child: AppCoinIcon(size: iconSize, color: kColorWhite),
     );
   }
 

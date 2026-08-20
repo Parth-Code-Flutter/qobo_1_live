@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
@@ -641,11 +642,7 @@ class FamilyView extends GetView<FamilyController> {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
-                        Icons.monetization_on_rounded,
-                        color: _FamilyUi.gold,
-                        size: 16,
-                      ),
+                      AppCoinIcon(size: 16, color: _FamilyUi.gold),
                       Spacing.h4,
                       SemiBoldText(
                         text: _formatScore(score),

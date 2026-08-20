@@ -139,8 +139,7 @@ class VipStoreView extends GetView<VipStoreController> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              AdminAgencyUi.glowIcon(
-                icon: Icons.monetization_on_rounded,
+              AdminAgencyUi.glowCoinIcon(
                 accent: AdminAgencyUi.goldDeep,
                 accentEnd: AdminAgencyUi.gold,
                 size: 40,

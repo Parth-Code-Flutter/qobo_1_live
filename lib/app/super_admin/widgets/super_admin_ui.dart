@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_shell_background.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/safe_network_avatar.dart';
@@ -91,6 +92,18 @@ abstract final class SuperAdminUi {
   }) {
     return AdminAgencyUi.glowIcon(
       icon: icon,
+      accent: accent,
+      size: size,
+      iconSize: iconSize,
+    );
+  }
+
+  static Widget glowCoinIcon({
+    required Color accent,
+    double size = 44,
+    double iconSize = 22,
+  }) {
+    return AdminAgencyUi.glowCoinIcon(
       accent: accent,
       size: size,
       iconSize: iconSize,
@@ -563,14 +576,16 @@ class SuperAdminAvatarRing extends StatelessWidget {
 class SuperAdminMetricChip extends StatelessWidget {
   const SuperAdminMetricChip({
     super.key,
-    required this.icon,
     required this.label,
     required this.accent,
-  });
+    this.icon,
+    this.coinIcon = false,
+  }) : assert(icon != null || coinIcon);
 
-  final IconData icon;
+  final IconData? icon;
   final String label;
   final Color accent;
+  final bool coinIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -584,7 +599,9 @@ class SuperAdminMetricChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: accent),
+          coinIcon
+              ? AppCoinIcon(size: 14, color: accent)
+              : Icon(icon!, size: 14, color: accent),
           Spacing.h4,
           SemiBoldText(
             text: label,
@@ -601,16 +618,18 @@ class SuperAdminMetricChip extends StatelessWidget {
 class SuperAdminStatTile extends StatelessWidget {
   const SuperAdminStatTile({
     super.key,
-    required this.icon,
     required this.label,
     required this.value,
     required this.accent,
-  });
+    this.icon,
+    this.coinIcon = false,
+  }) : assert(icon != null || coinIcon);
 
-  final IconData icon;
+  final IconData? icon;
   final String label;
   final String value;
   final Color accent;
+  final bool coinIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -624,12 +643,18 @@ class SuperAdminStatTile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SuperAdminUi.glowIcon(
-            icon: icon,
-            accent: accent,
-            size: 34,
-            iconSize: 16,
-          ),
+          coinIcon
+              ? SuperAdminUi.glowCoinIcon(
+                  accent: accent,
+                  size: 34,
+                  iconSize: 16,
+                )
+              : SuperAdminUi.glowIcon(
+                  icon: icon!,
+                  accent: accent,
+                  size: 34,
+                  iconSize: 16,
+                ),
           Spacing.v10,
           BoldText(
             text: value,

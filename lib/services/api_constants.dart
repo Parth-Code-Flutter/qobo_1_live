@@ -570,6 +570,9 @@ class CallModuleEndpoints {
 
   /// POST /api/call/direct/end
   static const String directEnd = '/api/call/direct/end';
+
+  /// POST /api/call/direct/respond — accept/reject from push or in-app ring
+  static const String directRespond = '/api/call/direct/respond';
 }
 
 /// Central place for chat related API endpoints.

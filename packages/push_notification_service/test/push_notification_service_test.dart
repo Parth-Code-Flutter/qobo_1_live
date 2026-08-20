@@ -77,6 +77,10 @@ void main() {
       PushNotificationActionSet.joinApproveReject,
     );
     expect(
+      PushNotificationService.actionSetForData({'type': 'incoming_call'}),
+      PushNotificationActionSet.callAcceptReject,
+    );
+    expect(
       PushNotificationService.actionSetForData({'type': 'pk_started'}),
       PushNotificationActionSet.none,
     );

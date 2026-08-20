@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/icon_constants.dart';
 import 'package:qobo_one_live/app/user_flow/live_broadcast/widgets/gift_icon_widget.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/constants/zego_config.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
@@ -1113,13 +1114,16 @@ class _CoinsPanel extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        earning
-                            ? Icons.monetization_on_rounded
-                            : Icons.account_balance_wallet_rounded,
-                        color: earning ? const Color(0xFFFFE082) : Colors.amber,
-                        size: 14,
-                      ),
+                      earning
+                          ? AppCoinIcon(
+                              size: 14,
+                              color: const Color(0xFFFFE082),
+                            )
+                          : Icon(
+                              Icons.account_balance_wallet_rounded,
+                              color: Colors.amber,
+                              size: 14,
+                            ),
                       Spacing.h2,
                       SemiBoldText(
                         text: controller.billingAmountLabel,

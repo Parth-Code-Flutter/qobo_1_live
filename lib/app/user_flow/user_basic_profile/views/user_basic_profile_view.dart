@@ -10,6 +10,7 @@ import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
@@ -602,13 +603,9 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
       inputFormatters: [
         FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
       ],
-      prefix: const Padding(
+      prefix: Padding(
         padding: EdgeInsets.only(left: 14, right: 12),
-        child: Icon(
-          Icons.monetization_on_outlined,
-          size: 20,
-          color: kColorHint,
-        ),
+        child: AppCoinIcon(size: 20, color: kColorHint),
       ),
       suffix: Padding(
         padding: const EdgeInsets.only(right: 10),

@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -203,10 +204,8 @@ class _CoinSellerConfirmTransferDialogState
               shape: BoxShape.circle,
               color: Color(0xFF1A1028),
             ),
-            child: const Icon(
-              Icons.monetization_on_rounded,
-              color: CoinSellerUi.gold,
-              size: 32,
+            child: Center(
+              child: AppCoinIcon(size: 32, color: CoinSellerUi.gold),
             ),
           ),
         );

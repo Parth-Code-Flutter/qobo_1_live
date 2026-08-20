@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
@@ -413,7 +414,7 @@ class DiscoverPublicProfileView
                             child: _statPill(
                               '${user.followersCount}',
                               'Followers',
-                              Icons.people_alt_rounded,
+                              icon: Icons.people_alt_rounded,
                             ),
                           ),
                           Spacing.h8,
@@ -421,7 +422,7 @@ class DiscoverPublicProfileView
                             child: _statPill(
                               '${user.followingCount}',
                               'Following',
-                              Icons.person_outline_rounded,
+                              icon: Icons.person_outline_rounded,
                             ),
                           ),
                           if (user.coinsPerSecond > 0) ...[
@@ -430,7 +431,10 @@ class DiscoverPublicProfileView
                               child: _statPill(
                                 '${user.coinsPerSecond.toStringAsFixed(0)}/s',
                                 'Coins',
-                                Icons.monetization_on_rounded,
+                                leading: AppCoinIcon(
+                                  size: 14,
+                                  color: const Color(0xFFFF9AD5),
+                                ),
                               ),
                             ),
                           ],
@@ -914,7 +918,7 @@ class DiscoverPublicProfileView
         .join(' ');
   }
 
-  Widget _statPill(String value, String label, IconData icon) {
+  Widget _statPill(String value, String label, {IconData? icon, Widget? leading}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
       decoration: BoxDecoration(
@@ -924,7 +928,7 @@ class DiscoverPublicProfileView
       ),
       child: Row(
         children: [
-          Icon(icon, size: 14, color: const Color(0xFFFF9AD5)),
+          leading ?? Icon(icon!, size: 14, color: const Color(0xFFFF9AD5)),
           Spacing.h6,
           Expanded(
             child: Column(

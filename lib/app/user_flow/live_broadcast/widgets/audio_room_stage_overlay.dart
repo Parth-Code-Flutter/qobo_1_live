@@ -1012,7 +1012,6 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
                   tracker: controller.sessionEarnings,
                   compact: dense,
                   maxWidth: earningsMaxWidth,
-                  icon: Icons.monetization_on_rounded,
                   iconColor: const Color(0xFFFFA10A),
                   onTap: controller.isHost.value
                       ? controller.openSessionEarningsDialog

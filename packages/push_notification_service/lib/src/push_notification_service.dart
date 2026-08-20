@@ -59,6 +59,14 @@ class PushNotificationService {
     final mapped = PushNotificationMessage.fromRemoteMessage(message);
     _log('background message: $mapped');
 
+    final type = mapped.data['type']?.toString().trim().toLowerCase() ?? '';
+    if (type == PushNotificationTypes.callCancelled) {
+      final bridge = LocalNotificationBridge();
+      await bridge.initialize(_config);
+      await bridge.cancelForMessage(mapped);
+      return;
+    }
+
     final actionSet = actionSetForData(mapped.data);
     if (actionSet == PushNotificationActionSet.none) return;
 
@@ -233,6 +241,12 @@ class PushNotificationService {
         _log('foreground message: $message');
         _handlers.onForegroundMessage?.call(message);
 
+        final type = message.data['type']?.toString().trim().toLowerCase() ?? '';
+        if (type == PushNotificationTypes.callCancelled) {
+          await _localNotifications.cancelForMessage(message);
+          return;
+        }
+
         final actionSet = actionSetForData(message.data);
         if (actionSet != PushNotificationActionSet.none) {
           // Prefer branded in-app UI when the host provides one.
@@ -313,6 +327,9 @@ class PushNotificationService {
     }
     if (PushNotificationTypes.isJoinRequest(type)) {
       return PushNotificationActionSet.joinApproveReject;
+    }
+    if (PushNotificationTypes.isIncomingCall(type)) {
+      return PushNotificationActionSet.callAcceptReject;
     }
     if (PushNotificationTypes.isJoinDismiss(type)) {
       return PushNotificationActionSet.joinDismiss;
@@ -458,6 +475,34 @@ class PushNotificationService {
           title: 'Request Expired',
           body: 'Your join request expired. Try again.',
         );
+      case PushNotificationTypes.incomingCall:
+        final caller =
+            message.data['caller_name']?.toString().trim().isNotEmpty == true
+            ? message.data['caller_name']!.toString().trim()
+            : 'Someone';
+        final callType =
+            message.data['call_type']?.toString().trim().toLowerCase() ?? '';
+        final isVideo = callType == 'video';
+        return (
+          title: isVideo ? 'Incoming video call' : 'Incoming call',
+          body: isVideo
+              ? '$caller is video calling you'
+              : '$caller is calling you',
+        );
+      case PushNotificationTypes.callCancelled:
+        return (
+          title: 'Call ended',
+          body: 'The incoming call is no longer available.',
+        );
+      case PushNotificationTypes.callMissed:
+        final callee =
+            message.data['callee_name']?.toString().trim().isNotEmpty == true
+            ? message.data['callee_name']!.toString().trim()
+            : 'User';
+        return (
+          title: 'Missed call',
+          body: '$callee did not answer.',
+        );
       case PushNotificationTypes.general:
       case PushNotificationTypes.custom:
         return (title: 'Notification', body: '');
@@ -501,6 +546,12 @@ class PushNotificationService {
         return 'Join Declined';
       case PushNotificationTypes.joinRequestExpired:
         return 'Request Expired';
+      case PushNotificationTypes.incomingCall:
+        return 'Incoming call';
+      case PushNotificationTypes.callCancelled:
+        return 'Call ended';
+      case PushNotificationTypes.callMissed:
+        return 'Missed call';
       default:
         return 'Notification';
     }

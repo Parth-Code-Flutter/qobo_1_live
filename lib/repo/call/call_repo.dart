@@ -58,19 +58,49 @@ class CallRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
-  /// `POST /api/call/direct/start`
+  /// `POST /api/call/direct/start` — triggers backend FCM ring to callee.
   Future<Map<String, dynamic>?> startDirectCall({
     required String calleeUserId,
     required String callType, // voice | video
     required String clientCallId,
-    bool isShowLoader = true,
+    String? roomId,
+    String? historyDocId,
+    bool isShowLoader = false,
   }) async {
+    final body = <String, dynamic>{
+      'calleeUserId': calleeUserId.trim(),
+      'callType': callType.trim().toLowerCase(),
+      'clientCallId': clientCallId.trim(),
+    };
+    if (roomId != null && roomId.trim().isNotEmpty) {
+      body['roomId'] = roomId.trim();
+    }
+    if (historyDocId != null && historyDocId.trim().isNotEmpty) {
+      body['historyDocId'] = historyDocId.trim();
+    }
+
     final response = await _apiService.postRequest(
       endPoint: CallModuleEndpoints.directStart,
+      requestModel: body,
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// `POST /api/call/direct/respond` — callee accepts or rejects a ring.
+  Future<Map<String, dynamic>?> respondDirectCall({
+    required String callId,
+    required String action, // accept | reject
+    String? roomId,
+    bool isShowLoader = false,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: CallModuleEndpoints.directRespond,
       requestModel: <String, dynamic>{
-        'calleeUserId': calleeUserId.trim(),
-        'callType': callType.trim().toLowerCase(),
-        'clientCallId': clientCallId.trim(),
+        'callId': callId.trim(),
+        'action': action.trim().toLowerCase(),
+        if (roomId != null && roomId.trim().isNotEmpty) 'roomId': roomId.trim(),
       },
       isShowLoader: isShowLoader,
     );

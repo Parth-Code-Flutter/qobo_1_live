@@ -7,6 +7,7 @@ import 'package:qobo_one_live/app/user_flow/referral/models/referral_models.dart
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -262,7 +263,7 @@ class ReferralView extends GetView<ReferralController> {
                   child: _statTile(
                     label: 'Friends joined',
                     value: '${controller.totalReferralsCompleted.value}',
-                    icon: Icons.group_rounded,
+                    icon: Icon(Icons.group_rounded, color: _ReferralUi.violet, size: 16),
                     accent: _ReferralUi.violet,
                   ),
                 ),
@@ -271,7 +272,7 @@ class ReferralView extends GetView<ReferralController> {
                   child: _statTile(
                     label: 'Coins earned',
                     value: '${controller.totalCoinsEarned.value}',
-                    icon: Icons.monetization_on_rounded,
+                    icon: AppCoinIcon(size: 16, color: _ReferralUi.gold),
                     accent: _ReferralUi.gold,
                   ),
                 ),
@@ -286,7 +287,7 @@ class ReferralView extends GetView<ReferralController> {
   Widget _statTile({
     required String label,
     required String value,
-    required IconData icon,
+    required Widget icon,
     required Color accent,
   }) {
     return Container(
@@ -301,7 +302,7 @@ class ReferralView extends GetView<ReferralController> {
         children: [
           Row(
             children: [
-              Icon(icon, color: accent, size: 16),
+              icon,
               Spacing.h6,
               Expanded(
                 child: AppText(
@@ -587,7 +588,7 @@ class ReferralView extends GetView<ReferralController> {
       final items = controller.earningHistory;
       if (items.isEmpty) {
         return _emptyState(
-          icon: Icons.monetization_on_outlined,
+          useCoinIcon: true,
           title: 'No referral earnings yet',
           subtitle: 'Bonuses appear here after friends complete signup.',
         );
@@ -609,8 +610,7 @@ class ReferralView extends GetView<ReferralController> {
         padding: const EdgeInsets.all(14),
         child: Row(
           children: [
-            AdminAgencyUi.glowIcon(
-              icon: Icons.monetization_on_rounded,
+            AdminAgencyUi.glowCoinIcon(
               accent: _ReferralUi.gold,
               size: 40,
               iconSize: 20,
@@ -661,7 +661,8 @@ class ReferralView extends GetView<ReferralController> {
   }
 
   Widget _emptyState({
-    required IconData icon,
+    IconData? icon,
+    bool useCoinIcon = false,
     required String title,
     required String subtitle,
   }) {
@@ -670,12 +671,19 @@ class ReferralView extends GetView<ReferralController> {
       padding: const EdgeInsets.fromLTRB(20, 28, 20, 28),
       child: Column(
         children: [
-          AdminAgencyUi.glowIcon(
-            icon: icon,
-            accent: _ReferralUi.pink,
-            size: 52,
-            iconSize: 26,
-          ),
+          if (useCoinIcon)
+            AdminAgencyUi.glowCoinIcon(
+              accent: _ReferralUi.pink,
+              size: 52,
+              iconSize: 26,
+            )
+          else
+            AdminAgencyUi.glowIcon(
+              icon: icon ?? Icons.inbox_outlined,
+              accent: _ReferralUi.pink,
+              size: 52,
+              iconSize: 26,
+            ),
           Spacing.v12,
           SemiBoldText(
             text: title,

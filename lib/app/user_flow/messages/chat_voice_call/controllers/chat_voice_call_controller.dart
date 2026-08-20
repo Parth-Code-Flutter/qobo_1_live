@@ -6,6 +6,7 @@ import 'package:qobo_one_live/app/user_flow/messages/chat_detail/controllers/cha
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/controllers/messages_tab_controller.dart';
 import 'package:qobo_one_live/app/user_flow/wallet/bindings/wallet_binding.dart';
 import 'package:qobo_one_live/app/user_flow/wallet/views/wallet_view.dart';
+import 'package:qobo_one_live/repo/call/call_repo.dart';
 import 'package:qobo_one_live/repo/calling/calling_repo.dart';
 import 'package:qobo_one_live/repo/chat/chat_local_store.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
@@ -34,17 +35,20 @@ class ChatVoiceCallController extends GetxController
   ChatVoiceCallController({
     ChatCallService? callService,
     CallingRepo? callingRepo,
+    CallRepo? callModuleRepo,
     EconomyRepo? economyRepo,
     RoomRepo? roomRepo,
     ChatLocalStore? localStore,
   }) : _callService = callService ?? ChatCallService(),
        _callingRepo = callingRepo ?? CallingRepo(),
+       _callModuleRepo = callModuleRepo ?? CallRepo(),
        _economyRepo = economyRepo ?? EconomyRepo(),
        _roomRepo = roomRepo ?? RoomRepo(),
        _localStore = localStore ?? ChatLocalStore();
 
   final ChatCallService _callService;
   final CallingRepo _callingRepo;
+  final CallRepo _callModuleRepo;
   final EconomyRepo _economyRepo;
   final RoomRepo _roomRepo;
   final ChatLocalStore _localStore;
@@ -335,6 +339,7 @@ class ChatVoiceCallController extends GetxController
   Future<Map<String, dynamic>?> finishCall({bool refreshInbox = true}) async {
     // Charge first so the history summary can include spent/earned amounts.
     await _chargeCallIfNeeded();
+    await _notifyBackendCallEnded();
     final summary = await _recordCallIfNeeded();
     if (Get.isRegistered<ChatIncomingCallCoordinator>()) {
       Get.find<ChatIncomingCallCoordinator>().setOnCallScreen(false);
@@ -874,6 +879,26 @@ class ChatVoiceCallController extends GetxController
   String get _rawUserId {
     if (!Get.isRegistered<UserSessionController>()) return '';
     return Get.find<UserSessionController>().userId;
+  }
+
+  /// Tells backend to clear ring state and dismiss callee push UI.
+  Future<void> _notifyBackendCallEnded() async {
+    final id = callId.value.trim();
+    if (id.isEmpty) return;
+    final reason = _peerJoined && billableSeconds.value > 0
+        ? 'completed'
+        : (isCaller.value ? 'cancelled' : 'missed');
+    try {
+      await _callModuleRepo.endDirectCall(
+        callId: id,
+        reason: reason,
+        isShowLoader: false,
+      );
+    } catch (e) {
+      LoggerUtils.logWarning(
+        'ChatVoiceCallController: direct/end failed — $e',
+      );
+    }
   }
 
   Future<void> _chargeCallIfNeeded() async {

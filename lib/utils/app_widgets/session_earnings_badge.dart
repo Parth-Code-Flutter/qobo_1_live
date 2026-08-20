@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/services/session/session_earnings_tracker.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/session_earnings_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -14,7 +15,6 @@ class SessionEarningsBadge extends StatelessWidget {
     required this.tracker,
     this.compact = false,
     this.maxWidth,
-    this.icon = Icons.monetization_on_rounded,
     this.iconColor,
     this.textColor,
     this.backgroundColor,
@@ -24,13 +24,14 @@ class SessionEarningsBadge extends StatelessWidget {
 
   final SessionEarningsTracker tracker;
   final bool compact;
+
   /// Caps pill width so large counts never push sibling header actions off-screen.
   final double? maxWidth;
-  final IconData icon;
   final Color? iconColor;
   final Color? textColor;
   final Color? backgroundColor;
   final Color? borderColor;
+
   /// Opens withdraw / wallet flow when the host taps earnings.
   final VoidCallback? onTap;
 
@@ -66,8 +67,7 @@ class SessionEarningsBadge extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  icon,
+                AppCoinIcon(
                   size: iconSize,
                   color: iconColor ?? const Color(0xFFFFA10A),
                 ),
@@ -99,20 +99,20 @@ class SessionEarningsBadge extends StatelessWidget {
   }
 }
 
-/// Host banner for live / video rooms — session earnings, not wallet balance.
-class SessionEarningsHostBanner extends StatelessWidget {
-  const SessionEarningsHostBanner({
+/// Larger session-earnings banner for dialogs / bottom sheets.
+class SessionEarningsBanner extends StatelessWidget {
+  const SessionEarningsBanner({
     super.key,
     required this.tracker,
     this.compact = false,
-    this.onWithdraw,
     this.unitLabel = 'coins',
+    this.onWithdraw,
   });
 
   final SessionEarningsTracker tracker;
   final bool compact;
-  final VoidCallback? onWithdraw;
   final String unitLabel;
+  final VoidCallback? onWithdraw;
 
   @override
   Widget build(BuildContext context) {
@@ -123,7 +123,7 @@ class SessionEarningsHostBanner extends StatelessWidget {
           vertical: compact ? 10 : 12,
         ),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(compact ? 16 : 18),
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -153,10 +153,10 @@ class SessionEarningsHostBanner extends StatelessWidget {
                   color: kColorWalletAmount.withValues(alpha: 0.22),
                 ),
               ),
-              child: const Icon(
-                Icons.monetization_on_rounded,
+              alignment: Alignment.center,
+              child: AppCoinIcon(
+                size: compact ? 20 : 22,
                 color: kColorWalletAmount,
-                size: 22,
               ),
             ),
             Spacing.h10,
@@ -207,15 +207,15 @@ class SessionEarningsHostBanner extends StatelessWidget {
                   minimumSize: Size(compact ? 86 : 96, compact ? 36 : 38),
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   backgroundColor: kColorWalletAmount,
-                  foregroundColor: kColorBlack,
+                  foregroundColor: kColorWhite,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
                 child: const SemiBoldText(
                   text: 'Withdraw',
                   fontSize: TextStyles.k12FontSize,
-                  color: kColorBlack,
+                  color: kColorWhite,
                 ),
               ),
             ],

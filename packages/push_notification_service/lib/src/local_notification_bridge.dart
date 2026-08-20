@@ -111,6 +111,25 @@ class LocalNotificationBridge {
             ),
           ],
         ),
+        DarwinNotificationCategory(
+          PushNotificationActions.incomingCallCategory,
+          actions: <DarwinNotificationAction>[
+            DarwinNotificationAction.plain(
+              PushNotificationActions.acceptCall,
+              'Accept',
+              options: <DarwinNotificationActionOption>{
+                DarwinNotificationActionOption.foreground,
+              },
+            ),
+            DarwinNotificationAction.plain(
+              PushNotificationActions.rejectCall,
+              'Reject',
+              options: <DarwinNotificationActionOption>{
+                DarwinNotificationActionOption.destructive,
+              },
+            ),
+          ],
+        ),
       ],
     );
 
@@ -136,6 +155,16 @@ class LocalNotificationBridge {
           importance: Importance.high,
         ),
       );
+      await androidPlugin?.createNotificationChannel(
+        const AndroidNotificationChannel(
+          PushNotificationActions.incomingCallChannelId,
+          PushNotificationActions.incomingCallChannelName,
+          description: PushNotificationActions.incomingCallChannelDescription,
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+        ),
+      );
     }
 
     _ready = true;
@@ -155,10 +184,20 @@ class LocalNotificationBridge {
     if (title.isEmpty && body.isEmpty) return;
 
     final androidActions = _androidActionsFor(actionSet);
+    final channelId = actionSet == PushNotificationActionSet.callAcceptReject
+        ? PushNotificationActions.incomingCallChannelId
+        : config.androidNotificationChannelId;
+    final channelName = actionSet == PushNotificationActionSet.callAcceptReject
+        ? PushNotificationActions.incomingCallChannelName
+        : config.androidNotificationChannelName;
+    final channelDescription =
+        actionSet == PushNotificationActionSet.callAcceptReject
+        ? PushNotificationActions.incomingCallChannelDescription
+        : config.androidNotificationChannelDescription;
     final androidDetails = AndroidNotificationDetails(
-      config.androidNotificationChannelId,
-      config.androidNotificationChannelName,
-      channelDescription: config.androidNotificationChannelDescription,
+      channelId,
+      channelName,
+      channelDescription: channelDescription,
       importance: Importance.high,
       priority: Priority.high,
       icon: config.androidDefaultIcon,
@@ -177,6 +216,8 @@ class LocalNotificationBridge {
             ? 'Accept or reject this PK challenge'
             : actionSet == PushNotificationActionSet.joinApproveReject
             ? 'Approve or reject this join request'
+            : actionSet == PushNotificationActionSet.callAcceptReject
+            ? 'Accept or reject this call'
             : null,
       ),
       autoCancel: true,
@@ -195,6 +236,8 @@ class LocalNotificationBridge {
           PushNotificationActions.pkRequestCategory,
         PushNotificationActionSet.joinApproveReject =>
           PushNotificationActions.joinRequestCategory,
+        PushNotificationActionSet.callAcceptReject =>
+          PushNotificationActions.incomingCallCategory,
         PushNotificationActionSet.none => null,
       },
     );
@@ -294,6 +337,23 @@ class LocalNotificationBridge {
           ),
           AndroidNotificationAction(
             PushNotificationActions.rejectJoin,
+            'Reject',
+            icon: DrawableResourceAndroidBitmap('ic_notif_reject'),
+            showsUserInterface: true,
+            cancelNotification: true,
+          ),
+        ];
+      case PushNotificationActionSet.callAcceptReject:
+        return const <AndroidNotificationAction>[
+          AndroidNotificationAction(
+            PushNotificationActions.acceptCall,
+            'Accept',
+            icon: DrawableResourceAndroidBitmap('ic_notif_join'),
+            showsUserInterface: true,
+            cancelNotification: true,
+          ),
+          AndroidNotificationAction(
+            PushNotificationActions.rejectCall,
             'Reject',
             icon: DrawableResourceAndroidBitmap('ic_notif_reject'),
             showsUserInterface: true,

@@ -64,6 +64,15 @@ abstract final class PushNotificationTypes {
   /// Host notified that the viewer cancelled their join request.
   static const String joinRequestCancelled = 'join_request_cancelled';
 
+  /// 1:1 voice/video direct call ring → Accept + Reject.
+  static const String incomingCall = 'incoming_call';
+
+  /// Dismiss ringing UI when call cancelled, accepted elsewhere, or timed out.
+  static const String callCancelled = 'call_cancelled';
+
+  /// Optional missed-call alert to caller.
+  static const String callMissed = 'call_missed';
+
   /// All types the app currently handles.
   static const Set<String> all = {
     roomInvite,
@@ -90,6 +99,9 @@ abstract final class PushNotificationTypes {
     joinRejected,
     joinRequestExpired,
     joinRequestCancelled,
+    incomingCall,
+    callCancelled,
+    callMissed,
   };
 
   /// Direct invite that can be rejected on the server.
@@ -143,4 +155,14 @@ abstract final class PushNotificationTypes {
       type == roomCreated ||
       type == liveStreamingCreated ||
       type == liveStreamStarted;
+
+  /// 1:1 direct call ring with Accept / Reject tray actions.
+  static bool isIncomingCall(String type) => type == incomingCall;
+
+  /// Lifecycle pushes that dismiss an active ring UI.
+  static bool isCallLifecycle(String type) =>
+      type == callCancelled || type == callMissed;
+
+  static bool isIncomingCallType(String type) =>
+      isIncomingCall(type) || isCallLifecycle(type);
 }
