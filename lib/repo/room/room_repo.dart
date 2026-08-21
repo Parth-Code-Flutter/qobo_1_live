@@ -159,6 +159,97 @@ class RoomRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
+  /// `GET /api/live-streaming/list` — standalone live streams (not `/api/room/*`).
+  Future<Map<String, dynamic>?> listLiveStreaming({
+    String? category,
+    String? search,
+    int page = 1,
+    int limit = 20,
+    bool isShowLoader = false,
+  }) async {
+    final params = <String, String>{
+      'page': page.toString(),
+      'limit': limit.toString(),
+    };
+    if (category != null && category.trim().isNotEmpty) {
+      params['category'] = category.trim();
+    }
+    if (search != null && search.trim().isNotEmpty) {
+      params['search'] = search.trim();
+    }
+    final path =
+        '${RoomEndpoints.listLiveStreaming}?${Uri(queryParameters: params).query}';
+    final response = await _apiService.getRequest(
+      endPoint: path,
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// `POST /api/live-streaming/join` — audience enters a live stream.
+  Future<Map<String, dynamic>?> joinLiveStreaming({
+    String? roomId,
+    String? liveStreamingId,
+    String? joinRequestId,
+    bool isShowLoader = true,
+  }) async {
+    final room = roomId?.trim() ?? '';
+    final liveId = liveStreamingId?.trim() ?? '';
+    if (room.isEmpty && liveId.isEmpty) return null;
+
+    final body = <String, dynamic>{
+      if (room.isNotEmpty) ...{
+        'roomId': room,
+        'room_id': room,
+      },
+      if (liveId.isNotEmpty) ...{
+        'liveStreamingId': liveId,
+        'live_streaming_id': liveId,
+      },
+      if (joinRequestId != null && joinRequestId.trim().isNotEmpty)
+        'join_request_id': joinRequestId.trim(),
+    };
+
+    final response = await _apiService.postRequest(
+      endPoint: RoomEndpoints.joinLiveStreaming,
+      requestModel: body,
+      isShowLoader: isShowLoader,
+      isLoginCall: false,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// `POST /api/live-streaming/leave` — audience leaves a live stream.
+  Future<Map<String, dynamic>?> leaveLiveStreaming({
+    String? roomId,
+    String? liveStreamingId,
+    bool isShowLoader = false,
+  }) async {
+    final room = roomId?.trim() ?? '';
+    final liveId = liveStreamingId?.trim() ?? '';
+    if (room.isEmpty && liveId.isEmpty) return null;
+
+    final response = await _apiService.postRequest(
+      endPoint: RoomEndpoints.leaveLiveStreaming,
+      requestModel: <String, dynamic>{
+        if (room.isNotEmpty) ...{
+          'roomId': room,
+          'room_id': room,
+        },
+        if (liveId.isNotEmpty) ...{
+          'liveStreamingId': liveId,
+          'live_streaming_id': liveId,
+        },
+      },
+      isShowLoader: isShowLoader,
+      isLoginCall: false,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
   /// `GET /api/live-streaming/verify-access?userId=...`
   Future<Map<String, dynamic>?> verifyLiveStreamingAccess({
     required String userId,

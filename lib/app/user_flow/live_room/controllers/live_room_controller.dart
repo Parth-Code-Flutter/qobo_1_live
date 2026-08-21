@@ -201,6 +201,33 @@ class LiveRoomController extends GetxController {
         }
       }
 
+      // Merge dedicated live-streaming list (isolated from /api/room/*).
+      final liveResponse = await _roomRepo.listLiveStreaming(
+        category: category,
+        page: 1,
+        limit: 40,
+        isShowLoader: false,
+      );
+      if (liveResponse != null &&
+          liveResponse['statusCode'] == 1 &&
+          liveResponse['data'] is List) {
+        final seen = <String>{
+          for (final r in fetchedList)
+            if ((r['id']?.toString() ?? '').isNotEmpty) r['id'].toString(),
+        };
+        for (final item in liveResponse['data'] as List) {
+          if (item is! Map) continue;
+          final mapped = _mapRoom({
+            ...Map<String, dynamic>.from(item),
+            'type': 'live_stream',
+          });
+          final id = mapped['id']?.toString() ?? '';
+          if (id.isNotEmpty && seen.contains(id)) continue;
+          if (id.isNotEmpty) seen.add(id);
+          fetchedList.add(mapped);
+        }
+      }
+
       allRooms.assignAll(fetchedList);
       _applySearchFilter();
     } catch (_) {
@@ -490,10 +517,8 @@ class LiveRoomController extends GetxController {
         : map['liveStreaming'] is Map
         ? Map<String, dynamic>.from(map['liveStreaming'] as Map)
         : const <String, dynamic>{};
-    // Audience joining from the room list / push alerts only knows the backend
-    // room id, so the host must publish the Zego stream on that same id.
-    // Otherwise viewers land in an empty Zego room (no video, count stays 1,
-    // gifts/chat never reach the host).
+    // Backend LIVE_STREAMING doc: Zego liveID = liveStreamingId / zegoLiveId
+    // (ls_…). Backend UUID room_id is for REST join/leave/end only.
     final backendRoomId =
         _text(map['room_id']) ??
         _text(map['roomId']) ??
@@ -503,27 +528,28 @@ class LiveRoomController extends GetxController {
         _text(nestedRoom['roomId']) ??
         _text(nestedRoom['_id']) ??
         _text(nestedRoom['id']);
-    // Backend resource id for `/api/live-streaming/end` — keep it separate
-    // from the Zego channel id.
     final apiStreamingId =
+        _text(map['zegoLiveId']) ??
+        _text(map['zego_live_id']) ??
         _text(map['liveStreamingId']) ??
         _text(map['live_streaming_id']) ??
+        _text(map['channelName']) ??
         liveId;
-    final zegoId = ZegoLiveIdUtils.sanitize(backendRoomId ?? apiStreamingId);
+    final zegoId = ZegoLiveIdUtils.sanitize(apiStreamingId);
     final session = Get.isRegistered<UserSessionController>()
         ? Get.find<UserSessionController>()
         : null;
 
     map['name'] = _text(map['name']) ?? title;
     map['title'] = _text(map['title']) ?? title;
-    // Explicit type keeps the broadcast screen on the live streaming UI even
-    // though the payload now carries backend room-id keys.
     map['type'] = 'live_stream';
     map['liveStreamingId'] = apiStreamingId;
+    map['live_streaming_id'] = apiStreamingId;
     map['zegoLiveId'] = zegoId;
     map['channelName'] = zegoId;
     if (backendRoomId != null) {
       map['room_id'] = backendRoomId;
+      map['roomId'] = backendRoomId;
       map.putIfAbsent('id', () => backendRoomId);
     }
     map['isLive'] = true;
@@ -531,7 +557,7 @@ class LiveRoomController extends GetxController {
     map.putIfAbsent('hostName', () => session?.displayName ?? title);
     map.putIfAbsent('hostAvatar', () => session?.displayPicturePath ?? '');
     map.putIfAbsent('displayPicture', () => session?.displayPicturePath ?? '');
-    return map;
+    return ZegoLiveIdUtils.applyLiveChannelId(map);
   }
 
   Map<String, dynamic> _buildLocalLiveStreamingPayload(
@@ -679,7 +705,11 @@ class LiveRoomController extends GetxController {
         : <String, dynamic>{};
     final payload = _normalizeLiveStreamListPayload(raw);
     final roomId = _roomId(payload);
-    if (roomId.isEmpty && _text(payload['zegoLiveId']) == null) {
+    final liveId =
+        _text(payload['liveStreamingId']) ??
+        _text(payload['zegoLiveId']) ??
+        _text(payload['channelName']);
+    if (roomId.isEmpty && (liveId == null || liveId.isEmpty)) {
       final context = Get.context;
       if (context != null) {
         AppToast.showError(context, 'Live stream id is missing for this room');
@@ -687,50 +717,61 @@ class LiveRoomController extends GetxController {
       return;
     }
 
-    // Always go through the approval gate before opening Zego so the host can
-    // Add/Reject. Backend may auto-join when approval is not required.
-    if (roomId.isNotEmpty) {
-      final response = await JoinApprovalService().joinWithApprovalGate(
+    // Dedicated live-streaming join (not `/api/room/join`).
+    Map<String, dynamic>? response;
+    final needsApproval = JoinApprovalService.isApprovalRequired(payload);
+    if (needsApproval && roomId.isNotEmpty) {
+      response = await JoinApprovalService().joinWithApprovalGate(
         roomId: roomId,
         sessionType: 'live_stream',
         roomHint: payload,
         forceApprovalFlow: true,
         isShowLoader: true,
       );
-      final context = Get.context;
-      if (!_isRoomApiSuccess(response)) {
-        if (context != null) {
-          AppToast.showError(
-            context,
-            response?['message']?.toString() ?? 'Could not join live stream',
-          );
-        }
-        return;
-      }
-      final joined = _normalizeJoinPayload(
-        response?['data'],
-        fallbackRoom: payload,
-        fallbackRoomId: roomId,
+    } else {
+      response = await _roomRepo.joinLiveStreaming(
+        roomId: roomId.isNotEmpty ? roomId : null,
+        liveStreamingId: liveId,
+        isShowLoader: true,
       );
-      payload.addAll(joined);
-      payload['type'] = 'live_stream';
-      payload['join_request_id'] =
-          _text(payload['join_request_id']) ??
-          (response?['data'] is Map
-              ? (_text((response!['data'] as Map)['join_request_id']) ??
-                    _text((response['data'] as Map)['request_id']))
-              : null);
     }
 
+    final context = Get.context;
+    if (!_isRoomApiSuccess(response)) {
+      if (context != null) {
+        AppToast.showError(
+          context,
+          response?['message']?.toString() ?? 'Could not join live stream',
+        );
+      }
+      return;
+    }
+
+    if (response?['data'] is Map) {
+      final joined = _normalizeJoinPayload(
+        response!['data'],
+        fallbackRoom: payload,
+        fallbackRoomId: roomId.isNotEmpty ? roomId : (liveId ?? ''),
+      );
+      payload.addAll(joined);
+    }
+    payload['type'] = 'live_stream';
+    payload['join_request_id'] =
+        _text(payload['join_request_id']) ??
+        (response?['data'] is Map
+            ? (_text((response!['data'] as Map)['join_request_id']) ??
+                  _text((response['data'] as Map)['request_id']))
+            : null);
+    // Prefer zegoLiveId / ls_… from join response (never force UUID).
+    ZegoLiveIdUtils.applyLiveChannelId(payload);
+
     if (_text(payload['zegoLiveId']) == null) {
-      final context = Get.context;
       if (context != null) {
         AppToast.showError(context, 'Live stream id is missing for this room');
       }
       return;
     }
 
-    // Live streams run on the live Zego project, not the rooms project.
     await ZegoEngineUtils.resetForLiveProject();
     Get.toNamed(
       Routes.LIVE_BROADCAST,
@@ -749,28 +790,8 @@ class LiveRoomController extends GetxController {
   ) {
     final payload = Map<String, dynamic>.from(raw);
     payload['type'] = 'live_stream';
-
-    // Hosts publish on the backend room id (see _normalizeLiveStreamingPayload),
-    // so audience must resolve the same id first. Zego-specific keys are only a
-    // fallback for payloads without a backend room id.
-    final streamingId =
-        _text(payload['room_id']) ??
-        _text(payload['roomId']) ??
-        _text(payload['_id']) ??
-        _text(payload['id']) ??
-        _text(payload['zegoLiveId']) ??
-        _text(payload['zego_live_id']) ??
-        _text(payload['channelName']) ??
-        _text(payload['channel_name']) ??
-        _text(payload['liveStreamingId']) ??
-        _text(payload['live_streaming_id']) ??
-        _text(payload['liveStreamId']) ??
-        _text(payload['liveId']);
-    final zegoId = ZegoLiveIdUtils.sanitize(streamingId ?? '');
-    if (zegoId.isNotEmpty) {
-      payload['zegoLiveId'] = zegoId;
-      payload['channelName'] = zegoId;
-    }
+    // Prefer zegoLiveId / liveStreamingId (ls_…) per backend live-streaming doc.
+    ZegoLiveIdUtils.applyLiveChannelId(payload);
     return payload;
   }
 

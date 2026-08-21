@@ -21,7 +21,8 @@ import 'package:qobo_one_live/utils/zego_engine_utils.dart';
 ///
 /// Foreground → branded in-app ring UI.
 /// Background / killed → [IncomingCallKitDisplay] (native CallKit / full-screen).
-/// `call_cancelled` also closes the **caller** outgoing screen when A is waiting.
+/// `call_cancelled` closes caller "Waiting for answer" **and** tears down an
+/// active call UI when either side already connected (`reason: ended`).
 class IncomingCallPushHandler {
   IncomingCallPushHandler({
     CallRepo? callRepo,

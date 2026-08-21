@@ -194,7 +194,7 @@ class LiveRoomCreateController extends GetxController {
         context,
         response['message']?.toString() ?? 'Live streaming started',
       );
-      _openZegoHost(data);
+      await _openZegoHost(data);
       return;
     }
 
@@ -205,11 +205,13 @@ class LiveRoomCreateController extends GetxController {
     if (!context.mounted || !granted) return;
     final localData = _buildLocalStreamPayload(name);
     AppToast.showSuccess(context, 'Starting live stream');
-    _openZegoHost(localData);
+    await _openZegoHost(localData);
   }
 
-  void _openZegoHost(Map<String, dynamic> roomData) {
+  Future<void> _openZegoHost(Map<String, dynamic> roomData) async {
     roomData['type'] = 'live_stream';
+    ZegoLiveIdUtils.applyLiveChannelId(roomData);
+    await ZegoEngineUtils.resetForLiveProject();
     Get.offNamed(
       Routes.LIVE_BROADCAST,
       arguments: {
@@ -374,27 +376,50 @@ class LiveRoomCreateController extends GetxController {
     return code == 1 || code == 200 || code == 201;
   }
 
-  /// Ensures Zego receives `zegoLiveId` even if backend uses another key.
+  /// Ensures Zego receives `zegoLiveId` from create response (`ls_…`).
   Map<String, dynamic> _normalizeStreamPayload(dynamic raw, String name) {
     final map = raw is Map
         ? Map<String, dynamic>.from(raw)
         : <String, dynamic>{};
 
-    final zegoId = ZegoLiveIdUtils.sanitize(
-      map['zegoLiveId']?.toString() ??
-          map['zego_live_id']?.toString() ??
-          map['liveStreamingId']?.toString() ??
-          map['live_streaming_id']?.toString() ??
-          liveStreamingId.value,
-    );
+    final nestedRoom = map['room'] is Map
+        ? Map<String, dynamic>.from(map['room'] as Map)
+        : const <String, dynamic>{};
+    // Backend doc: Zego liveID = liveStreamingId / zegoLiveId (ls_…).
+    // room_id UUID is for REST only — do not publish on the UUID.
+    final backendRoomId =
+        _text(map['room_id']) ??
+        _text(map['roomId']) ??
+        _text(map['_id']) ??
+        _text(map['id']) ??
+        _text(nestedRoom['room_id']) ??
+        _text(nestedRoom['roomId']) ??
+        _text(nestedRoom['_id']) ??
+        _text(nestedRoom['id']);
+    final apiStreamingId =
+        _text(map['zegoLiveId']) ??
+        _text(map['zego_live_id']) ??
+        _text(map['liveStreamingId']) ??
+        _text(map['live_streaming_id']) ??
+        _text(map['channelName']) ??
+        liveStreamingId.value;
+    final zegoId = ZegoLiveIdUtils.sanitize(apiStreamingId);
 
     map['name'] = map['name'] ?? name;
     map['type'] = 'live_stream';
-    map['liveStreamingId'] = zegoId;
+    map['liveStreamingId'] = apiStreamingId;
+    map['live_streaming_id'] = apiStreamingId;
     map['zegoLiveId'] = zegoId;
+    map['channelName'] = zegoId;
+    if (backendRoomId != null) {
+      map['room_id'] = backendRoomId;
+      map['roomId'] = backendRoomId;
+      map.putIfAbsent('id', () => backendRoomId);
+    }
     map['onlyFollows'] = map['onlyFollows'] ?? onlyFollows.value;
     map['joinApprovalRequired'] =
         map['joinApprovalRequired'] ?? joinApprovalRequired.value;
+    map['isLive'] = true;
 
     final session = Get.isRegistered<UserSessionController>()
         ? Get.find<UserSessionController>()
@@ -405,7 +430,7 @@ class LiveRoomCreateController extends GetxController {
       map.putIfAbsent('hostAvatar', () => session.displayPicturePath);
       map.putIfAbsent('displayPicture', () => session.displayPicturePath);
     }
-    return map;
+    return ZegoLiveIdUtils.applyLiveChannelId(map);
   }
 
   @override

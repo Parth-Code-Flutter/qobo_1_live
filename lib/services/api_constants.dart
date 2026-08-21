@@ -100,6 +100,15 @@ class RoomEndpoints {
   static const String verifyLiveStreamingAccess =
       '/api/live-streaming/verify-access';
 
+  /// GET /api/live-streaming/list — active standalone live streams
+  static const String listLiveStreaming = '/api/live-streaming/list';
+
+  /// POST /api/live-streaming/join — audience joins a live stream
+  static const String joinLiveStreaming = '/api/live-streaming/join';
+
+  /// POST /api/live-streaming/leave — audience leaves a live stream
+  static const String leaveLiveStreaming = '/api/live-streaming/leave';
+
   /// GET /api/room/list
   static const String listActiveRooms = '/api/room/list';
 

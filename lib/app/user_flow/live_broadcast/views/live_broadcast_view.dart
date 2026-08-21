@@ -2,23 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/icon_constants.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/constants/zego_config.dart';
+import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/app_widgets/session_earnings_badge.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/utils/ui_utils/live_heart_reaction_overlay.dart';
+import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 import 'package:zego_uikit_prebuilt_call/zego_uikit_prebuilt_call.dart' as call;
 import 'package:zego_uikit_prebuilt_live_streaming/zego_uikit_prebuilt_live_streaming.dart';
 import 'package:zego_uikit_signaling_plugin/zego_uikit_signaling_plugin.dart';
-import 'package:qobo_one_live/constants/zego_config.dart';
-import 'package:qobo_one_live/services/user_session_controller.dart';
-import 'package:qobo_one_live/utils/ui_utils/live_heart_reaction_overlay.dart';
-import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 
 import '../controllers/live_broadcast_controller.dart';
 import '../widgets/audio_room_stage_overlay.dart';
-import '../widgets/live_host_video_fill.dart';
 import '../widgets/live_room_pk_stage_slot.dart';
 import '../widgets/room_options_sheet.dart';
 
@@ -310,22 +309,8 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
           hostName: controller.hostName.value,
           hostAvatarUrl: controller.hostAvatarUrl.value,
         ),
-        Obx(() {
-          if (!controller.isLiveStreamingSession) {
-            return const SizedBox.shrink();
-          }
-          final hostId = controller.hostZegoUserId.value.isNotEmpty
-              ? controller.hostZegoUserId.value
-              : controller.receiverId.value;
-          return Positioned.fill(
-            child: LiveHostVideoFill(
-              isHost: controller.isHost.value,
-              hostUserId: hostId,
-              hostName: controller.hostName.value,
-              hostAvatarUrl: controller.hostAvatarUrl.value,
-            ),
-          );
-        }),
+        // Live stream video is rendered inside Zego's containerBuilder.
+        // Do not overlay LiveHostVideoFill — that hid the real stream (black).
         Obx(() {
           if (!controller.canOpenZego || controller.roomId.value.isEmpty) {
             return Positioned.fill(child: _buildConnectionIssueState());
@@ -652,13 +637,24 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
           ),
         ),
         SizedBox(width: compact ? 5 : 8),
-        // Same end control as audio/video rooms (red power icon).
-        _topIconButton(
-          Icons.power_settings_new_rounded,
-          compact: compact,
-          iconColor: const Color(0xFFFF3B5C),
-          onTap: controller.leaveRoom,
-        ),
+        // Host: end stream (power). Audience on live: close → listing.
+        Obx(() {
+          final isLiveAudience = controller.isLiveStreamingSession &&
+              !controller.isHost.value;
+          if (isLiveAudience) {
+            return _topIconButton(
+              Icons.close_rounded,
+              compact: compact,
+              onTap: controller.leaveRoom,
+            );
+          }
+          return _topIconButton(
+            Icons.power_settings_new_rounded,
+            compact: compact,
+            iconColor: const Color(0xFFFF3B5C),
+            onTap: controller.leaveRoom,
+          );
+        }),
       ],
     );
   }
@@ -1521,18 +1517,26 @@ class _StableZegoLiveStreamingState extends State<_StableZegoLiveStreaming> {
       // Instagram-style: one host feed — no co-host / audience camera tiles.
       config.coHost.maxCoHostCount = 0;
       config.coHost.turnOnCameraWhenCohosted = () => false;
-      config.audioVideoView.playCoHostVideo =
-          (_, __, ___) => false;
-      config.audioVideoView.playCoHostAudio =
-          (_, __, ___) => false;
+      config.audioVideoView.playCoHostVideo = (_, __, ___) => false;
+      config.audioVideoView.playCoHostAudio = (_, __, ___) => false;
       config.audioVideoView.visible =
           (localUser, localRole, targetUser, targetUserRole) {
         return targetUserRole == ZegoLiveStreamingRole.host;
       };
-      // [LiveHostVideoFill] renders the single full-bleed surface.
+      // Critical: never return SizedBox.shrink() here — that kills playback and
+      // leaves a black canvas. Use Zego's view creator so the stream attaches.
       config.audioVideoView.containerBuilder =
-          (context, allUsers, audioVideoUsers, creator) =>
-              const SizedBox.shrink();
+          (context, allUsers, audioVideoUsers, audioVideoViewCreator) {
+        return _LiveStreamHostFill(
+          isHost: widget.isHost,
+          localUserId: widget.userId,
+          hostName: widget.hostName,
+          hostAvatarUrl: widget.hostAvatarUrl,
+          audioVideoUsers: audioVideoUsers,
+          allUsers: allUsers,
+          audioVideoViewCreator: audioVideoViewCreator,
+        );
+      };
     } else if (!widget.isAudioVideoRoom) {
       config.layout = ZegoLayout.gallery(
         margin: EdgeInsets.zero,
@@ -1648,5 +1652,88 @@ class _LiveConnectingCoverState extends State<_LiveConnectingCover> {
         ),
       ),
     );
+  }
+}
+
+/// Full-bleed host camera using Zego's [audioVideoViewCreator] so the stream
+/// actually attaches (unlike a blank [SizedBox.shrink] container).
+class _LiveStreamHostFill extends StatelessWidget {
+  const _LiveStreamHostFill({
+    required this.isHost,
+    required this.localUserId,
+    required this.hostName,
+    required this.audioVideoUsers,
+    required this.allUsers,
+    required this.audioVideoViewCreator,
+    this.hostAvatarUrl,
+  });
+
+  final bool isHost;
+  final String localUserId;
+  final String hostName;
+  final String? hostAvatarUrl;
+  final List<ZegoUIKitUser> audioVideoUsers;
+  final List<ZegoUIKitUser> allUsers;
+  final ZegoAudioVideoView Function(ZegoUIKitUser) audioVideoViewCreator;
+
+  ZegoUIKitUser? _resolveFocusUser() {
+    final local = ZegoLiveIdUtils.sanitizeUserId(localUserId);
+
+    if (isHost) {
+      for (final user in audioVideoUsers) {
+        if (ZegoLiveIdUtils.sanitizeUserId(user.id) == local) return user;
+      }
+      try {
+        final me = ZegoUIKit().getLocalUser();
+        if (!me.isEmpty()) return me;
+      } catch (_) {}
+      return null;
+    }
+
+    for (final user in audioVideoUsers) {
+      if (ZegoLiveIdUtils.sanitizeUserId(user.id) == local) continue;
+      return user;
+    }
+    for (final user in allUsers) {
+      if (ZegoLiveIdUtils.sanitizeUserId(user.id) == local) continue;
+      return user;
+    }
+    return null;
+  }
+
+  Widget _waiting() {
+    return ColoredBox(
+      color: const Color(0xFF12081C),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppUserAvatar(
+              name: hostName,
+              imageUrl: hostAvatarUrl,
+              size: 96,
+            ),
+            const SizedBox(height: 14),
+            Text(
+              isHost ? 'Starting camera…' : 'Waiting for host video…',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.72),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final focus = _resolveFocusUser();
+    if (focus == null || focus.isEmpty()) {
+      return _waiting();
+    }
+    return SizedBox.expand(child: audioVideoViewCreator(focus));
   }
 }

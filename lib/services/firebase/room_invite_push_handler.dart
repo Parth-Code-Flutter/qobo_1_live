@@ -8,6 +8,7 @@ import 'package:qobo_one_live/services/room/join_approval_service.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/zego_engine_utils.dart';
+import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 
 /// Handles Join / Reject / Dismiss for actionable push notifications.
 ///
@@ -22,8 +23,21 @@ class RoomInvitePushHandler {
 
   final RoomRepo _roomRepo;
 
+  /// Set while the branded in-app invite dialog is open so tray / banner taps
+  /// cannot join behind the dialog.
+  static bool suppressTrayJoin = false;
+
   /// Body tap → same as Join for invite / broadcast room alerts.
   Future<void> handleNotificationTap(PushNotificationMessage message) async {
+    // In-app Join dialog owns the decision — ignore tray / banner body taps
+    // so dismissing or tapping outside never accidentally joins.
+    if (suppressTrayJoin) {
+      LoggerUtils.logInfo(
+        'RoomInvitePush: ignore tray tap while in-app invite dialog is open',
+      );
+      return;
+    }
+
     final payload = RoomInvitePushPayload.fromMessage(message);
     if (payload == null) {
       LoggerUtils.logInfo(
@@ -49,14 +63,24 @@ class RoomInvitePushHandler {
 
     switch (actionId) {
       case PushNotificationActions.joinRoom:
+        // Tray Join while the dialog is open: let the dialog result win.
+        if (suppressTrayJoin) {
+          LoggerUtils.logInfo(
+            'RoomInvitePush: ignore tray Join while in-app dialog is open',
+          );
+          return;
+        }
         await joinFromInvite(payload, sourceMessage: message);
+        return;
       case PushNotificationActions.rejectRoom:
         await rejectInvite(payload, sourceMessage: message);
+        return;
       case PushNotificationActions.dismissRoom:
         await PushNotificationService.instance.cancelLocalNotification(message);
         LoggerUtils.logInfo(
           'RoomInvitePush: dismissed type=${payload.type} room=${payload.roomId}',
         );
+        return;
       default:
         LoggerUtils.logInfo('RoomInvitePush: unknown action=$actionId');
     }
@@ -140,18 +164,10 @@ class RoomInvitePushHandler {
     roomData['joinedViaInvite'] = true;
 
     await ZegoEngineUtils.resetForRoomProject();
-
-    // Defer navigation until after any pending frame (cold-start race).
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Get.toNamed(
-        Routes.LIVE_BROADCAST,
-        arguments: {
-          'isHost': false,
-          'roomType': roomType == 'AUDIO' ? 'AUDIO' : 'VIDEO',
-          'roomData': roomData,
-        },
-      );
-    });
+    _openBroadcastRoute(
+      roomType: roomType == 'AUDIO' ? 'AUDIO' : 'VIDEO',
+      roomData: roomData,
+    );
   }
 
   /// Opens the live-streaming UI for follower `live_stream_started` alerts.
@@ -162,6 +178,10 @@ class RoomInvitePushHandler {
     final roomHint = <String, dynamic>{
       'room_id': payload.roomId,
       'type': 'live_stream',
+      if (payload.liveStreamingId.isNotEmpty) ...{
+        'liveStreamingId': payload.liveStreamingId,
+        'zegoLiveId': payload.liveStreamingId,
+      },
     };
 
     final response = await JoinApprovalService().joinWithApprovalGate(
@@ -200,14 +220,15 @@ class RoomInvitePushHandler {
       'type': 'live_stream',
       'room_id': payload.roomId,
       'id': payload.roomId,
-      'zegoLiveId': payload.roomId,
-      'channelName': payload.roomId,
-      'liveStreamingId': payload.roomId,
       'name': payload.roomTitle,
       'title': payload.roomTitle,
       'hostId': payload.hostId,
       'hostName': payload.hostName,
       'isLive': true,
+      if (payload.liveStreamingId.isNotEmpty) ...{
+        'liveStreamingId': payload.liveStreamingId,
+        'zegoLiveId': payload.liveStreamingId,
+      },
     };
     if (_isApiSuccess(response) && response?['data'] is Map) {
       final joined = Map<String, dynamic>.from(response!['data'] as Map);
@@ -223,19 +244,39 @@ class RoomInvitePushHandler {
         roomData['join_request_id'] = joinRequestId;
       }
     }
+    roomData['room_id'] =
+        roomData['room_id'] ?? roomData['roomId'] ?? payload.roomId;
+    roomData['id'] = roomData['id'] ?? roomData['room_id'];
+    // Prefer zegoLiveId / liveStreamingId (ls_…) from join response.
+    ZegoLiveIdUtils.applyLiveChannelId(roomData);
 
     await ZegoEngineUtils.resetForLiveProject();
+    _openBroadcastRoute(
+      roomType: 'LIVE_STREAM',
+      roomData: roomData,
+    );
+  }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+  /// Navigate immediately after invite join. Do not rely on a bare
+  /// [addPostFrameCallback] after async work — with no pending frame the
+  /// callback waits until the next user tap (feels like Join needs 2 clicks).
+  void _openBroadcastRoute({
+    required String roomType,
+    required Map<String, dynamic> roomData,
+  }) {
+    void go() {
       Get.toNamed(
         Routes.LIVE_BROADCAST,
         arguments: {
           'isHost': false,
-          'roomType': 'LIVE_STREAM',
+          'roomType': roomType,
           'roomData': roomData,
         },
       );
-    });
+    }
+
+    // Microtask runs after the invite dialog route is fully popped.
+    Future.microtask(go);
   }
 
   /// Marks a direct invitation as rejected on the backend.

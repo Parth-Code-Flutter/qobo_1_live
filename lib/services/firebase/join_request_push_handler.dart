@@ -10,6 +10,7 @@ import 'package:qobo_one_live/utils/app_widgets/join_request_in_app_banner.dart'
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/zego_engine_utils.dart';
+import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 
 /// Handles FCM / tray / socket events for host join approval.
 class JoinRequestPushHandler {
@@ -238,10 +239,11 @@ class JoinRequestPushHandler {
     final isLive = payload.isLiveStream;
     if (isLive) {
       roomData['type'] = 'live_stream';
-      roomData['zegoLiveId'] =
-          roomData['zegoLiveId'] ?? roomData['room_id'] ?? payload.roomId;
+      roomData['room_id'] =
+          roomData['room_id'] ?? roomData['roomId'] ?? payload.roomId;
+      ZegoLiveIdUtils.applyLiveChannelId(roomData);
       await ZegoEngineUtils.resetForLiveProject();
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.microtask(() {
         Get.toNamed(
           Routes.LIVE_BROADCAST,
           arguments: {
@@ -259,7 +261,7 @@ class JoinRequestPushHandler {
     final roomType = rawType.contains('AUDIO') ? 'AUDIO' : 'VIDEO';
     roomData['type'] = roomType.toLowerCase();
     await ZegoEngineUtils.resetForRoomProject();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    Future.microtask(() {
       Get.toNamed(
         Routes.LIVE_BROADCAST,
         arguments: {

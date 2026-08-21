@@ -125,7 +125,11 @@ class UserActiveSession {
         source['joinApprovalRequired'] ?? source['join_approval_required'],
       ),
       liveStreamingId: _text(
-        source['liveStreamingId'] ?? source['live_streaming_id'],
+        source['liveStreamingId'] ??
+            source['live_streaming_id'] ??
+            source['zegoLiveId'] ??
+            source['zego_live_id'] ??
+            source['channelName'],
       ),
       coverUrl: _text(source['coverUrl'] ?? source['cover_url']),
     );

@@ -12,6 +12,7 @@ class RoomInvitePushPayload {
     required this.notificationId,
     required this.invitationId,
     required this.expiresAt,
+    this.liveStreamingId = '',
     this.title = '',
     this.body = '',
   });
@@ -26,6 +27,9 @@ class RoomInvitePushPayload {
   final String notificationId;
   final String invitationId;
   final DateTime? expiresAt;
+
+  /// Zego / API liveStreamingId (`ls_…`) when present on the push.
+  final String liveStreamingId;
 
   /// Optional FCM notification title/body (admin / general dispatches).
   final String title;
@@ -131,6 +135,12 @@ class RoomInvitePushPayload {
       notificationId: _text(data['notification_id']) ?? '',
       invitationId: _text(data['invitation_id']) ?? '',
       expiresAt: _parseExpiresAt(_text(data['expires_at'])),
+      liveStreamingId:
+          _text(data['liveStreamingId']) ??
+          _text(data['live_streaming_id']) ??
+          _text(data['zegoLiveId']) ??
+          _text(data['zego_live_id']) ??
+          '',
       title: title,
       body: body.isNotEmpty
           ? body

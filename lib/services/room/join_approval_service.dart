@@ -139,13 +139,23 @@ class JoinApprovalService {
         forceApprovalFlow || isApprovalRequired(roomHint);
 
     if (!needsApproval) {
-      final direct = await _roomRepo.joinRoom(
-        roomId: roomId,
-        password: password,
-        invitationId: invitationId,
-        sessionType: sessionType,
-        isShowLoader: isShowLoader,
-      );
+      final direct = sessionType == 'live_stream'
+          ? await _roomRepo.joinLiveStreaming(
+              roomId: roomId,
+              liveStreamingId:
+                  _text(roomHint?['liveStreamingId']) ??
+                  _text(roomHint?['zegoLiveId']) ??
+                  _text(roomHint?['channelName']),
+              joinRequestId: null,
+              isShowLoader: isShowLoader,
+            )
+          : await _roomRepo.joinRoom(
+              roomId: roomId,
+              password: password,
+              invitationId: invitationId,
+              sessionType: sessionType,
+              isShowLoader: isShowLoader,
+            );
       if (isApiSuccess(direct)) return direct;
       if (!isApprovalRequiredError(direct)) return direct;
       // Fall through to join-request when backend gates `/join`.
@@ -180,12 +190,13 @@ class JoinApprovalService {
       final approvedId =
           _text(dataMap['request_id']) ?? _text(dataMap['requestId']);
       if (approvedId != null) {
-        return _roomRepo.joinRoom(
+        return _completeJoin(
           roomId: roomId,
+          sessionType: sessionType,
+          roomHint: roomHint,
           password: password,
           invitationId: invitationId,
           joinRequestId: approvedId,
-          sessionType: sessionType,
           isShowLoader: isShowLoader,
         );
       }
@@ -228,11 +239,42 @@ class JoinApprovalService {
       };
     }
 
+    return _completeJoin(
+      roomId: roomId,
+      sessionType: sessionType,
+      roomHint: roomHint,
+      password: password,
+      invitationId: invitationId,
+      joinRequestId: requestId,
+      isShowLoader: isShowLoader,
+    );
+  }
+
+  Future<Map<String, dynamic>?> _completeJoin({
+    required String roomId,
+    required String sessionType,
+    Map<String, dynamic>? roomHint,
+    String? password,
+    String? invitationId,
+    String? joinRequestId,
+    bool isShowLoader = true,
+  }) {
+    if (sessionType == 'live_stream') {
+      return _roomRepo.joinLiveStreaming(
+        roomId: roomId,
+        liveStreamingId:
+            _text(roomHint?['liveStreamingId']) ??
+            _text(roomHint?['zegoLiveId']) ??
+            _text(roomHint?['channelName']),
+        joinRequestId: joinRequestId,
+        isShowLoader: isShowLoader,
+      );
+    }
     return _roomRepo.joinRoom(
       roomId: roomId,
       password: password,
       invitationId: invitationId,
-      joinRequestId: requestId,
+      joinRequestId: joinRequestId,
       sessionType: sessionType,
       isShowLoader: isShowLoader,
     );

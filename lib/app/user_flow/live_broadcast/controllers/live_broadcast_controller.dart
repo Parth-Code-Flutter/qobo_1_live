@@ -199,11 +199,18 @@ class LiveBroadcastController extends GetxController {
         receiverId.value = _extractReceiverId(_roomData) ?? '';
         final streamingId = _extractStreamingId(_roomData);
         hasExplicitStreamingId.value = streamingId != null;
-        final backendRoomId = _extractBackendRoomId(_roomData);
-        final rawId = _isAudioVideoRoomPayload()
-            ? (backendRoomId ?? streamingId ?? '')
-            : (streamingId ?? backendRoomId ?? '');
-        roomId.value = ZegoLiveIdUtils.sanitize(rawId);
+        // Live streams: Zego liveID = zegoLiveId / liveStreamingId (ls_…).
+        // Backend room UUID is for REST only (see LIVE_STREAMING API doc).
+        final channel =
+            ZegoLiveIdUtils.resolveLiveChannelId(_roomData) ?? '';
+        if (channel.isNotEmpty) {
+          ZegoLiveIdUtils.applyLiveChannelId(_roomData);
+        }
+        roomId.value = channel.isNotEmpty
+            ? channel
+            : ZegoLiveIdUtils.sanitize(
+                streamingId ?? _extractBackendRoomId(_roomData) ?? '',
+              );
       }
     }
     _joinedViaInvite = _roomData['joinedViaInvite'] == true;
@@ -4918,6 +4925,18 @@ class LiveBroadcastController extends GetxController {
     if (isHost.value || _exitReported) return;
     _exitReported = true;
     _stopSeatRefreshPolling();
+
+    if (isLiveStreamingSession) {
+      final liveId = liveStreamingApiId.trim();
+      final backendRoomId = _extractBackendRoomId(_roomData);
+      await _roomRepo.leaveLiveStreaming(
+        roomId: backendRoomId,
+        liveStreamingId: liveId.isNotEmpty ? liveId : null,
+        isShowLoader: false,
+      );
+      return;
+    }
+
     final backendRoomId = _extractBackendRoomId(_roomData);
     if (backendRoomId == null || backendRoomId.trim().isEmpty) return;
 

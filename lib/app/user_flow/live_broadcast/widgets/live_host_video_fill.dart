@@ -58,14 +58,34 @@ class _LiveHostVideoFillState extends State<LiveHostVideoFill> {
     }
   }
 
-  Widget _fallback({Color color = const Color(0xFF12081C)}) {
+  Widget _fallback({
+    Color color = const Color(0xFF12081C),
+    String? message,
+  }) {
     return ColoredBox(
       color: color,
       child: Center(
-        child: AppUserAvatar(
-          name: widget.hostName,
-          imageUrl: widget.hostAvatarUrl,
-          size: 96,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppUserAvatar(
+              name: widget.hostName,
+              imageUrl: widget.hostAvatarUrl,
+              size: 96,
+            ),
+            if (message != null && message.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.72),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -150,12 +170,18 @@ class _LiveHostVideoFillState extends State<LiveHostVideoFill> {
       final _ = controller.zegoMediaUsersTick.value;
 
       if (!controller.isZegoConnected.value || !_screenUtilReady) {
-        return _fallback();
+        return _fallback(
+          message: widget.isHost ? 'Starting camera…' : 'Connecting to live…',
+        );
       }
 
       final user = _resolveVideoUser();
       if (user == null) {
-        return _fallback();
+        return _fallback(
+          message: widget.isHost
+              ? 'Waiting for camera…'
+              : 'Waiting for host video…',
+        );
       }
 
       return ValueListenableBuilder<bool>(

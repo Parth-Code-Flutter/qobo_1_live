@@ -12,6 +12,7 @@ enum _RoomOptionAction {
   pkBattle,
   report,
   follow,
+  leave,
 }
 
 class _RoomOption {
@@ -100,6 +101,13 @@ class RoomOptionsSheet extends StatelessWidget {
         label: 'Follow',
         color: Color(0xFFFF8FB8),
         gradient: [Color(0xFFFF8FB8), Color(0xFFFF4081)],
+      ),
+      _RoomOption(
+        action: _RoomOptionAction.leave,
+        icon: Icons.logout_rounded,
+        label: 'Leave',
+        color: Color(0xFFFF3B5C),
+        gradient: [Color(0xFFFF3B5C), Color(0xFFE11D48)],
       ),
     ];
   }
@@ -226,6 +234,10 @@ class RoomOptionsSheet extends StatelessWidget {
           backgroundColor: Colors.black87,
           colorText: kColorWhite,
         );
+      case _RoomOptionAction.leave:
+        if (Get.isRegistered<LiveBroadcastController>()) {
+          Get.find<LiveBroadcastController>().leaveRoom();
+        }
     }
   }
 

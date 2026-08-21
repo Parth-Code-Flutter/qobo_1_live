@@ -22,6 +22,7 @@ import 'package:qobo_one_live/services/room/join_approval_service.dart';
 import 'package:qobo_one_live/utils/app_widgets/country_state_picker_sheet.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/zego_engine_utils.dart';
+import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 
 /// Controller for Discover tab — user feed from `GET /api/discover`.
 class DiscoverTabController extends GetxController {
@@ -359,8 +360,11 @@ class DiscoverTabController extends GetxController {
       'joinApprovalRequired': session.joinApprovalRequired,
       'isLive': true,
       if (session.liveStreamingId != null &&
-          session.liveStreamingId!.trim().isNotEmpty)
+          session.liveStreamingId!.trim().isNotEmpty) ...{
         'liveStreamingId': session.liveStreamingId,
+        'zegoLiveId': session.liveStreamingId,
+        'channelName': session.liveStreamingId,
+      },
       if (session.coverUrl != null && session.coverUrl!.trim().isNotEmpty)
         'coverUrl': session.coverUrl,
       if (session.viewerCount > 0) 'viewerCount': session.viewerCount,
@@ -442,10 +446,6 @@ class DiscoverTabController extends GetxController {
       'type': 'live_stream',
       'room_id': roomId,
       'id': roomId,
-      'zegoLiveId': roomId,
-      'channelName': roomId,
-      'liveStreamingId':
-          fallback['liveStreamingId']?.toString() ?? roomId,
       'isLive': true,
     };
     if (_isRoomApiSuccess(response) && response?['data'] is Map) {
@@ -462,6 +462,10 @@ class DiscoverTabController extends GetxController {
         roomData['join_request_id'] = joinRequestId;
       }
     }
+    // Bind Zego to zegoLiveId / liveStreamingId (ls_…) from join response.
+    roomData['room_id'] = roomData['room_id'] ?? roomData['roomId'] ?? roomId;
+    roomData['id'] = roomData['id'] ?? roomData['room_id'];
+    ZegoLiveIdUtils.applyLiveChannelId(roomData);
 
     await ZegoEngineUtils.resetForLiveProject();
     Get.toNamed(
