@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/icon_constants.dart';
@@ -12,6 +14,7 @@ import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/ui_utils/live_heart_reaction_overlay.dart';
 import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
+import 'package:zego_express_engine/zego_express_engine.dart' as express;
 import 'package:zego_uikit_prebuilt_call/zego_uikit_prebuilt_call.dart' as call;
 import 'package:zego_uikit_prebuilt_live_streaming/zego_uikit_prebuilt_live_streaming.dart';
 import 'package:zego_uikit_signaling_plugin/zego_uikit_signaling_plugin.dart';
@@ -59,7 +62,8 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                     ),
                   ),
                 ),
-                if (pkActive) const Positioned.fill(child: LiveRoomPkBattleBackdrop()),
+                if (pkActive)
+                  const Positioned.fill(child: LiveRoomPkBattleBackdrop()),
               ],
             );
           }),
@@ -83,10 +87,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
               children: [
                 _buildTopHeader(),
                 Expanded(
-                  child: LiveRoomPkStageSlot(
-                    minHeight: 260,
-                    maxHeightCap: 520,
-                  ),
+                  child: LiveRoomPkStageSlot(minHeight: 260, maxHeightCap: 520),
                 ),
                 _buildChatList(),
                 _buildBottomControls(context),
@@ -293,38 +294,74 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
     final currentUserName = userSession.displayName.isNotEmpty
         ? userSession.displayName
         : 'Host';
+    final liveId = controller.liveZegoRoomId.trim();
+    final zegoAppId = controller.liveZegoAppId;
+    final zegoAppSign = controller.liveZegoAppSign;
+    final zegoToken = controller.liveZegoToken;
+    final publishStreamId = controller.livePublishStreamId;
+    final playStreamId = controller.livePlayStreamId;
+    final liveSessionKey = ValueKey(
+      [
+        'zego_live_engine',
+        controller.isLiveStreamingSession ? 'live' : 'room',
+        controller.isHost.value ? 'host' : 'audience',
+        zegoAppId,
+        currentUserId,
+        liveId,
+        controller.isHost.value ? publishStreamId : playStreamId,
+      ].join('_'),
+    );
 
     return SizedBox.expand(
       child: Stack(
         fit: StackFit.expand,
         children: [
-        _StableZegoLiveStreaming(
-          key: const ValueKey('stable_live_streaming'),
-          userId: currentUserId,
-          userName: currentUserName,
-          isHost: controller.isHost.value,
-          isAudioVideoRoom: controller.isAudioVideoRoom,
-          isVideoRoom: controller.isVideoRoom,
-          isLiveStreamingSession: controller.isLiveStreamingSession,
-          hostName: controller.hostName.value,
-          hostAvatarUrl: controller.hostAvatarUrl.value,
-        ),
-        // Live stream video is rendered inside Zego's containerBuilder.
-        // Do not overlay LiveHostVideoFill — that hid the real stream (black).
-        Obx(() {
-          if (!controller.canOpenZego || controller.roomId.value.isEmpty) {
-            return Positioned.fill(child: _buildConnectionIssueState());
-          }
-          if (controller.isZegoConnected.value) {
-            return const SizedBox.shrink();
-          }
-          return Positioned.fill(
-            child: _LiveConnectingCover(
-              name: controller.hostName.value,
-              avatarUrl: controller.hostAvatarUrl.value,
+          if (controller.isLiveStreamingSession)
+            _StableZegoExpressLiveStreaming(
+              key: liveSessionKey,
+              userId: currentUserId,
+              userName: currentUserName,
+              liveId: liveId,
+              appId: zegoAppId,
+              appSign: zegoAppSign,
+              token: zegoToken,
+              isHost: controller.isHost.value,
+              publishStreamId: publishStreamId,
+              playStreamId: playStreamId,
+              hostName: controller.hostName.value,
+              hostAvatarUrl: controller.hostAvatarUrl.value,
+            )
+          else
+            _StableZegoLiveStreaming(
+              key: liveSessionKey,
+              userId: currentUserId,
+              userName: currentUserName,
+              liveId: liveId,
+              appId: zegoAppId,
+              appSign: zegoAppSign,
+              isHost: controller.isHost.value,
+              isAudioVideoRoom: controller.isAudioVideoRoom,
+              isVideoRoom: controller.isVideoRoom,
+              isLiveStreamingSession: controller.isLiveStreamingSession,
+              hostName: controller.hostName.value,
+              hostAvatarUrl: controller.hostAvatarUrl.value,
             ),
-          );
-        }),
+          // Live stream video is rendered inside Zego's containerBuilder.
+          // Do not overlay LiveHostVideoFill — that hid the real stream (black).
+          Obx(() {
+            if (!controller.canOpenZego || liveId.isEmpty) {
+              return Positioned.fill(child: _buildConnectionIssueState());
+            }
+            if (controller.isZegoConnected.value) {
+              return const SizedBox.shrink();
+            }
+            return Positioned.fill(
+              child: _LiveConnectingCover(
+                name: controller.hostName.value,
+                avatarUrl: controller.hostAvatarUrl.value,
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -639,8 +676,8 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
         SizedBox(width: compact ? 5 : 8),
         // Host: end stream (power). Audience on live: close → listing.
         Obx(() {
-          final isLiveAudience = controller.isLiveStreamingSession &&
-              !controller.isHost.value;
+          final isLiveAudience =
+              controller.isLiveStreamingSession && !controller.isHost.value;
           if (isLiveAudience) {
             return _topIconButton(
               Icons.close_rounded,
@@ -884,7 +921,10 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
       borderColor: kColorWhite.withValues(alpha: 0.06),
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
       textStyle: TextStyles.kRegularPoppins(colors: kColorWhite, fontSize: 14),
-      hintStyle: TextStyles.kRegularPoppins(colors: Colors.white54, fontSize: 14),
+      hintStyle: TextStyles.kRegularPoppins(
+        colors: Colors.white54,
+        fontSize: 14,
+      ),
       suffix: _sendButton(),
     );
   }
@@ -1367,7 +1407,7 @@ class _StableZegoGroupCall extends StatefulWidget {
   final bool isVideoRoom;
   final bool Function(call.ZegoCallEndReason reason) shouldReportExit;
   final call.ZegoUIKitPrebuiltCallConfig Function(bool isVideoRoom)
-      configBuilder;
+  configBuilder;
 
   @override
   State<_StableZegoGroupCall> createState() => _StableZegoGroupCallState();
@@ -1426,6 +1466,380 @@ class _StableZegoGroupCallState extends State<_StableZegoGroupCall> {
   }
 }
 
+/// Standalone live streaming renderer backed by Zego Express.
+///
+/// Live streams use backend-issued `zegoStreaming` payloads:
+/// roomId + token + publish/play stream IDs. Keeping this separate from the
+/// audio/video room prebuilt widgets prevents room APIs/roles from leaking into
+/// the one-to-many live flow.
+class _StableZegoExpressLiveStreaming extends StatefulWidget {
+  const _StableZegoExpressLiveStreaming({
+    super.key,
+    required this.userId,
+    required this.userName,
+    required this.liveId,
+    required this.appId,
+    required this.appSign,
+    required this.token,
+    required this.isHost,
+    required this.publishStreamId,
+    required this.playStreamId,
+    required this.hostName,
+    this.hostAvatarUrl,
+  });
+
+  final String userId;
+  final String userName;
+  final String liveId;
+  final int appId;
+  final String appSign;
+  final String token;
+  final bool isHost;
+  final String publishStreamId;
+  final String playStreamId;
+  final String hostName;
+  final String? hostAvatarUrl;
+
+  @override
+  State<_StableZegoExpressLiveStreaming> createState() =>
+      _StableZegoExpressLiveStreamingState();
+}
+
+class _StableZegoExpressLiveStreamingState
+    extends State<_StableZegoExpressLiveStreaming> {
+  Widget? _canvasView;
+  int? _canvasViewId;
+  var _starting = false;
+  var _loggedIn = false;
+  var _mediaStarted = false;
+  String? _activePlayStreamId;
+  String _status = 'Connecting live stream...';
+
+  LiveBroadcastController get _controller =>
+      Get.find<LiveBroadcastController>();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_start());
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _StableZegoExpressLiveStreaming oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final changed =
+        oldWidget.liveId != widget.liveId ||
+        oldWidget.appId != widget.appId ||
+        oldWidget.appSign != widget.appSign ||
+        oldWidget.token != widget.token ||
+        oldWidget.userId != widget.userId ||
+        oldWidget.isHost != widget.isHost ||
+        oldWidget.publishStreamId != widget.publishStreamId ||
+        oldWidget.playStreamId != widget.playStreamId;
+    if (changed) {
+      unawaited(_restart());
+    }
+  }
+
+  @override
+  void dispose() {
+    unawaited(_stop());
+    super.dispose();
+  }
+
+  Future<void> _restart() async {
+    await _stop();
+    if (mounted) {
+      setState(() {
+        _canvasView = null;
+        _canvasViewId = null;
+        _mediaStarted = false;
+        _status = 'Connecting live stream...';
+      });
+    }
+    await _start();
+  }
+
+  Future<void> _start() async {
+    if (_starting || !mounted) return;
+    _starting = true;
+
+    final roomId = widget.liveId.trim();
+    final publishStream = widget.publishStreamId.trim();
+    final playStream = widget.playStreamId.trim();
+
+    if (roomId.isEmpty) {
+      _fail('Live room id is missing.');
+      return;
+    }
+    if (widget.isHost && publishStream.isEmpty) {
+      _fail('Live publish stream id is missing.');
+      return;
+    }
+    if (!widget.isHost && playStream.isEmpty) {
+      _fail('Live play stream id is missing.');
+      return;
+    }
+
+    try {
+      _controller.isZegoConnected.value = false;
+      _bindExpressCallbacks();
+
+      final profile = express.ZegoEngineProfile(
+        widget.appId,
+        express.ZegoScenario.Broadcast,
+        appSign: widget.appSign.trim().isEmpty ? null : widget.appSign.trim(),
+        enablePlatformView: false,
+      );
+      await express.ZegoExpressEngine.createEngineWithProfile(profile);
+
+      final roomConfig = express.ZegoRoomConfig.defaultConfig()
+        ..isUserStatusNotify = true;
+      final token = widget.token.trim();
+      if (token.isNotEmpty) {
+        roomConfig.token = token;
+      }
+
+      final result = await express.ZegoExpressEngine.instance.loginRoom(
+        roomId,
+        express.ZegoUser(widget.userId, widget.userName),
+        config: roomConfig,
+      );
+      if (result.errorCode != 0) {
+        _fail('Zego room login failed (${result.errorCode}).');
+        return;
+      }
+
+      _loggedIn = true;
+      _controller.onExpressLiveRoomLogined();
+
+      final view = await express.ZegoExpressEngine.instance.createCanvasView((
+        viewId,
+      ) {
+        _canvasViewId = viewId;
+        unawaited(_startMedia(viewId));
+      });
+
+      if (!mounted) return;
+      setState(() {
+        _canvasView = view;
+        _status = widget.isHost
+            ? 'Starting camera...'
+            : 'Opening host video...';
+      });
+    } catch (error) {
+      _fail('Unable to open live stream: $error');
+    } finally {
+      _starting = false;
+    }
+  }
+
+  Future<void> _startMedia(int viewId) async {
+    if (!mounted) return;
+    try {
+      final canvas = express.ZegoCanvas.view(viewId)
+        ..viewMode = express.ZegoViewMode.AspectFill;
+
+      if (widget.isHost) {
+        await express.ZegoExpressEngine.instance.enableCamera(true);
+        await express.ZegoExpressEngine.instance.muteMicrophone(false);
+        await express.ZegoExpressEngine.instance.useFrontCamera(true);
+        await express.ZegoExpressEngine.instance.startPreview(canvas: canvas);
+        await express.ZegoExpressEngine.instance.startPublishingStream(
+          widget.publishStreamId.trim(),
+        );
+      } else {
+        final streamId = widget.playStreamId.trim();
+        _activePlayStreamId = streamId;
+        await express.ZegoExpressEngine.instance.startPlayingStream(
+          streamId,
+          canvas: canvas,
+        );
+      }
+    } catch (error) {
+      _fail('Unable to attach live video: $error');
+    }
+  }
+
+  void _bindExpressCallbacks() {
+    express.ZegoExpressEngine.onRoomStateUpdate =
+        (roomID, state, errorCode, extendedData) {
+          if (roomID != widget.liveId) return;
+          if (errorCode != 0) {
+            _controller.onExpressLiveRoomDisconnected(
+              'Live room connection failed ($errorCode).',
+            );
+          } else if (_loggedIn) {
+            _controller.onExpressLiveRoomLogined();
+          }
+        };
+
+    express.ZegoExpressEngine.onPublisherStateUpdate =
+        (streamID, state, errorCode, extendedData) {
+          if (streamID != widget.publishStreamId.trim()) return;
+          if (!mounted) return;
+          if (state == express.ZegoPublisherState.Publishing) {
+            setState(() {
+              _mediaStarted = true;
+              _status = 'Live';
+            });
+            _controller.onExpressLiveRoomLogined();
+          } else if (errorCode != 0) {
+            _fail('Publishing failed ($errorCode).');
+          } else {
+            setState(() => _status = 'Starting broadcast...');
+          }
+        };
+
+    express.ZegoExpressEngine.onPlayerStateUpdate =
+        (streamID, state, errorCode, extendedData) {
+          if (streamID != _activePlayStreamId) return;
+          if (!mounted) return;
+          if (state == express.ZegoPlayerState.Playing) {
+            setState(() {
+              _mediaStarted = true;
+              _status = 'Live';
+            });
+            _controller.onExpressLiveRoomLogined();
+          } else if (errorCode != 0) {
+            _fail('Playback failed ($errorCode).');
+          } else {
+            setState(() => _status = 'Waiting for host video...');
+          }
+        };
+
+    express.ZegoExpressEngine.onRoomStreamUpdate =
+        (roomID, updateType, streamList, extendedData) {
+          if (widget.isHost || roomID != widget.liveId) return;
+          if (updateType != express.ZegoUpdateType.Add) return;
+          final viewId = _canvasViewId;
+          if (viewId == null) return;
+
+          final expected = widget.playStreamId.trim();
+          final stream = streamList
+              .map((item) => item.streamID.trim())
+              .firstWhere(
+                (id) => expected.isEmpty || id == expected,
+                orElse: () => '',
+              );
+          if (stream.isEmpty) return;
+
+          _activePlayStreamId = stream;
+          final canvas = express.ZegoCanvas.view(viewId)
+            ..viewMode = express.ZegoViewMode.AspectFill;
+          unawaited(
+            express.ZegoExpressEngine.instance.startPlayingStream(
+              stream,
+              canvas: canvas,
+            ),
+          );
+        };
+
+    express.ZegoExpressEngine.onIMRecvBroadcastMessage = (roomID, messageList) {
+      if (roomID != widget.liveId) return;
+      _controller.receiveExpressLiveMessages(messageList);
+    };
+  }
+
+  Future<void> _stop() async {
+    try {
+      if (widget.isHost) {
+        await express.ZegoExpressEngine.instance.stopPublishingStream();
+        await express.ZegoExpressEngine.instance.stopPreview();
+      } else {
+        final streamId = _activePlayStreamId ?? widget.playStreamId.trim();
+        if (streamId.isNotEmpty) {
+          await express.ZegoExpressEngine.instance.stopPlayingStream(streamId);
+        }
+      }
+    } catch (_) {}
+
+    try {
+      if (_loggedIn && widget.liveId.trim().isNotEmpty) {
+        await express.ZegoExpressEngine.instance.logoutRoom(
+          widget.liveId.trim(),
+        );
+      }
+    } catch (_) {}
+
+    final viewId = _canvasViewId;
+    if (viewId != null) {
+      try {
+        await express.ZegoExpressEngine.instance.destroyCanvasView(viewId);
+      } catch (_) {}
+    }
+
+    _loggedIn = false;
+    _mediaStarted = false;
+    _activePlayStreamId = null;
+    express.ZegoExpressEngine.onRoomStateUpdate = null;
+    express.ZegoExpressEngine.onPublisherStateUpdate = null;
+    express.ZegoExpressEngine.onPlayerStateUpdate = null;
+    express.ZegoExpressEngine.onRoomStreamUpdate = null;
+    express.ZegoExpressEngine.onIMRecvBroadcastMessage = null;
+
+    try {
+      await express.ZegoExpressEngine.destroyEngine();
+    } catch (_) {}
+  }
+
+  void _fail(String message) {
+    _starting = false;
+    _controller.onExpressLiveRoomDisconnected(message);
+    if (!mounted) return;
+    setState(() => _status = message);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ColoredBox(color: const Color(0xFF0B0714), child: _canvasView),
+        if (!_mediaStarted)
+          Positioned.fill(
+            child: _LiveConnectingCover(
+              name: widget.hostName,
+              avatarUrl: widget.hostAvatarUrl,
+            ),
+          ),
+        if (!_mediaStarted)
+          Positioned(
+            left: 20,
+            right: 20,
+            bottom: 150,
+            child: IgnorePointer(
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 9,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.42),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: kColorWhite.withValues(alpha: 0.08),
+                    ),
+                  ),
+                  child: AppText(
+                    text: _status,
+                    fontSize: TextStyles.k12FontSize,
+                    color: kColorWhite.withValues(alpha: 0.86),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 /// Mounts PrebuiltLiveStreaming once. Login/wallet Obx rebuilds used to recreate
 /// the widget (new config + signaling plugin) and tear down the camera.
 class _StableZegoLiveStreaming extends StatefulWidget {
@@ -1433,6 +1847,9 @@ class _StableZegoLiveStreaming extends StatefulWidget {
     super.key,
     required this.userId,
     required this.userName,
+    required this.liveId,
+    required this.appId,
+    required this.appSign,
     required this.isHost,
     required this.isAudioVideoRoom,
     required this.isVideoRoom,
@@ -1443,6 +1860,9 @@ class _StableZegoLiveStreaming extends StatefulWidget {
 
   final String userId;
   final String userName;
+  final String liveId;
+  final int appId;
+  final String appSign;
   final bool isHost;
   final bool isAudioVideoRoom;
   final bool isVideoRoom;
@@ -1458,9 +1878,29 @@ class _StableZegoLiveStreaming extends StatefulWidget {
 class _StableZegoLiveStreamingState extends State<_StableZegoLiveStreaming> {
   Widget? _engine;
 
+  @override
+  void didUpdateWidget(covariant _StableZegoLiveStreaming oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final mustRemount =
+        oldWidget.liveId != widget.liveId ||
+        oldWidget.appId != widget.appId ||
+        oldWidget.appSign != widget.appSign ||
+        oldWidget.userId != widget.userId ||
+        oldWidget.isHost != widget.isHost ||
+        oldWidget.isAudioVideoRoom != widget.isAudioVideoRoom ||
+        oldWidget.isLiveStreamingSession != widget.isLiveStreamingSession;
+    if (mustRemount) {
+      // Zego's prebuilt widget owns engine state internally. If a user joins a
+      // live from another path while this route is alive, remount the engine so
+      // audience devices attach to the current liveID instead of a stale room.
+      _engine = null;
+    }
+  }
+
   ZegoUIKitPrebuiltLiveStreamingConfig _buildConfig() {
-    final signalingPlugins =
-        ZegoConfig.useSignalingPlugin ? [ZegoUIKitSignalingPlugin()] : null;
+    final signalingPlugins = ZegoConfig.useSignalingPlugin
+        ? [ZegoUIKitSignalingPlugin()]
+        : null;
     final config = widget.isHost
         ? ZegoUIKitPrebuiltLiveStreamingConfig.host(plugins: signalingPlugins)
         : ZegoUIKitPrebuiltLiveStreamingConfig.audience(
@@ -1489,9 +1929,7 @@ class _StableZegoLiveStreamingState extends State<_StableZegoLiveStreaming> {
     config.memberButton = ZegoLiveStreamingMemberButtonConfig(
       builder: (_) => const SizedBox.shrink(),
     );
-    config.inRoomMessage = ZegoLiveStreamingInRoomMessageConfig(
-      visible: false,
-    );
+    config.inRoomMessage = ZegoLiveStreamingInRoomMessageConfig(visible: false);
     config.preview.showPreviewForHost = false;
     config.showBackgroundTips = false;
     config.background = const ColoredBox(color: Colors.transparent);
@@ -1521,22 +1959,21 @@ class _StableZegoLiveStreamingState extends State<_StableZegoLiveStreaming> {
       config.audioVideoView.playCoHostAudio = (_, __, ___) => false;
       config.audioVideoView.visible =
           (localUser, localRole, targetUser, targetUserRole) {
-        return targetUserRole == ZegoLiveStreamingRole.host;
-      };
+            return targetUserRole == ZegoLiveStreamingRole.host;
+          };
       // Critical: never return SizedBox.shrink() here — that kills playback and
       // leaves a black canvas. Use Zego's view creator so the stream attaches.
       config.audioVideoView.containerBuilder =
           (context, allUsers, audioVideoUsers, audioVideoViewCreator) {
-        return _LiveStreamHostFill(
-          isHost: widget.isHost,
-          localUserId: widget.userId,
-          hostName: widget.hostName,
-          hostAvatarUrl: widget.hostAvatarUrl,
-          audioVideoUsers: audioVideoUsers,
-          allUsers: allUsers,
-          audioVideoViewCreator: audioVideoViewCreator,
-        );
-      };
+            return _LiveStreamHostFill(
+              isHost: widget.isHost,
+              localUserId: widget.userId,
+              hostName: widget.hostName,
+              hostAvatarUrl: widget.hostAvatarUrl,
+              audioVideoUsers: audioVideoUsers,
+              audioVideoViewCreator: audioVideoViewCreator,
+            );
+          };
     } else if (!widget.isAudioVideoRoom) {
       config.layout = ZegoLayout.gallery(
         margin: EdgeInsets.zero,
@@ -1566,13 +2003,13 @@ class _StableZegoLiveStreamingState extends State<_StableZegoLiveStreaming> {
   Widget build(BuildContext context) {
     final controller = Get.find<LiveBroadcastController>();
     return Obx(() {
-      final liveId = controller.roomId.value;
+      final liveId = widget.liveId;
       final canOpen = controller.canOpenZego && liveId.isNotEmpty;
       if (_engine == null && canOpen) {
         _engine = ZegoUIKitPrebuiltLiveStreaming(
           key: ValueKey('zego_$liveId'),
-          appID: ZegoConfig.liveAppId,
-          appSign: ZegoConfig.liveAppSign,
+          appID: widget.appId,
+          appSign: widget.appSign,
           userID: widget.userId,
           userName: widget.userName,
           liveID: liveId,
@@ -1663,7 +2100,6 @@ class _LiveStreamHostFill extends StatelessWidget {
     required this.localUserId,
     required this.hostName,
     required this.audioVideoUsers,
-    required this.allUsers,
     required this.audioVideoViewCreator,
     this.hostAvatarUrl,
   });
@@ -1673,7 +2109,6 @@ class _LiveStreamHostFill extends StatelessWidget {
   final String hostName;
   final String? hostAvatarUrl;
   final List<ZegoUIKitUser> audioVideoUsers;
-  final List<ZegoUIKitUser> allUsers;
   final ZegoAudioVideoView Function(ZegoUIKitUser) audioVideoViewCreator;
 
   ZegoUIKitUser? _resolveFocusUser() {
@@ -1694,10 +2129,9 @@ class _LiveStreamHostFill extends StatelessWidget {
       if (ZegoLiveIdUtils.sanitizeUserId(user.id) == local) continue;
       return user;
     }
-    for (final user in allUsers) {
-      if (ZegoLiveIdUtils.sanitizeUserId(user.id) == local) continue;
-      return user;
-    }
+    // Audience devices must wait for the host to appear in Zego's media list.
+    // Rendering a user that is only in the member list can produce a black
+    // texture before the host camera stream has actually attached.
     return null;
   }
 
@@ -1708,11 +2142,7 @@ class _LiveStreamHostFill extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AppUserAvatar(
-              name: hostName,
-              imageUrl: hostAvatarUrl,
-              size: 96,
-            ),
+            AppUserAvatar(name: hostName, imageUrl: hostAvatarUrl, size: 96),
             const SizedBox(height: 14),
             Text(
               isHost ? 'Starting camera…' : 'Waiting for host video…',

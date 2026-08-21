@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/wallet/bindings/wallet_binding.dart';
 import 'package:qobo_one_live/app/user_flow/wallet/views/wallet_view.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/constants/zego_config.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/repo/economy/economy_repo.dart';
@@ -39,6 +40,7 @@ import 'package:qobo_one_live/utils/ui_utils/gift_media_utils.dart';
 import 'package:qobo_one_live/utils/ui_utils/coin_fly_overlay.dart';
 import 'package:qobo_one_live/utils/ui_utils/avatar_fly_overlay.dart';
 import 'package:qobo_one_live/utils/ui_utils/vip_entrance_overlay.dart';
+import 'package:zego_express_engine/zego_express_engine.dart';
 import 'package:zego_uikit_prebuilt_live_streaming/zego_uikit_prebuilt_live_streaming.dart';
 import 'package:qobo_one_live/utils/zego_engine_utils.dart';
 import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
@@ -72,6 +74,7 @@ class LiveBroadcastController extends GetxController {
   final roomType = 'VIDEO'.obs;
   final roomId = ''.obs;
   final receiverId = ''.obs;
+
   /// Sanitized Zego user id for the live host (resolved after room login).
   final hostZegoUserId = ''.obs;
   final hasExplicitStreamingId = false.obs;
@@ -86,6 +89,7 @@ class LiveBroadcastController extends GetxController {
   final liveViewers = <Map<String, dynamic>>[].obs;
   final isFollowingHost = false.obs;
   final isZegoConnected = false.obs;
+
   /// Bumps when Zego user/stream list changes so seat cameras remount.
   final zegoMediaUsersTick = 0.obs;
 
@@ -156,6 +160,8 @@ class LiveBroadcastController extends GetxController {
   StreamSubscription<dynamic>? _mediaSub;
   void Function(Map<String, dynamic>)? _roomBackgroundSocketListener;
   void Function(Map<String, dynamic>)? _vipUserJoinedSocketListener;
+  void Function(String event, Map<String, dynamic> data)?
+  _liveStreamingSocketListener;
 
   /// Dedupes gift celebrations triggered by Zego gift chat events (all room kinds).
   final GiftChatCelebrationTracker _giftCelebrationTracker =
@@ -164,6 +170,7 @@ class LiveBroadcastController extends GetxController {
   /// Play VIP entrance SVGA only once per user for this room session.
   final Set<String> _vipEntrancePlayedUserIds = <String>{};
   var _vipSeatEntranceBaselineReady = false;
+  final DateTime _liveScreenOpenedAtUtc = DateTime.now().toUtc();
 
   Timer? _seatRefreshTimer;
   Timer? _sessionEarningsTimer;
@@ -201,8 +208,7 @@ class LiveBroadcastController extends GetxController {
         hasExplicitStreamingId.value = streamingId != null;
         // Live streams: Zego liveID = zegoLiveId / liveStreamingId (ls_…).
         // Backend room UUID is for REST only (see LIVE_STREAMING API doc).
-        final channel =
-            ZegoLiveIdUtils.resolveLiveChannelId(_roomData) ?? '';
+        final channel = ZegoLiveIdUtils.resolveLiveChannelId(_roomData) ?? '';
         if (channel.isNotEmpty) {
           ZegoLiveIdUtils.applyLiveChannelId(_roomData);
         }
@@ -267,23 +273,9 @@ class LiveBroadcastController extends GetxController {
   }
 
   void _reportLiveStreamViewerJoin() {
-    final backendRoomId = _extractBackendRoomId(_roomData)?.trim();
-    if (backendRoomId == null || backendRoomId.isEmpty) return;
-    final joinRequestId =
-        _roomData['join_request_id']?.toString().trim() ??
-        _roomData['joinRequestId']?.toString().trim();
-    unawaited(
-      _roomRepo
-          .joinRoom(
-            roomId: backendRoomId,
-            joinRequestId: (joinRequestId != null && joinRequestId.isNotEmpty)
-                ? joinRequestId
-                : null,
-            sessionType: 'live_stream',
-            isShowLoader: false,
-          )
-          .catchError((_) => null),
-    );
+    // Standalone live streaming has its own `/api/live-streaming/join` flow
+    // before this screen opens. Do not call `/api/room/join` here: that is for
+    // audio/video rooms and was causing duplicate/incorrect room joins.
   }
 
   void upsertPendingJoinRequest(Map<String, dynamic> request) {
@@ -1377,6 +1369,122 @@ class LiveBroadcastController extends GetxController {
 
   bool get canOpenZego => connectionIssue.value.isEmpty;
 
+  Map<String, dynamic> get liveZegoStreamingData {
+    Map<String, dynamic>? asMap(dynamic value) {
+      if (value is Map) return Map<String, dynamic>.from(value);
+      return null;
+    }
+
+    final nested =
+        asMap(_roomData['room']) ??
+        asMap(_roomData['liveStreaming']) ??
+        asMap(_roomData['live_streaming']) ??
+        const <String, dynamic>{};
+
+    return asMap(_roomData['zegoStreaming']) ??
+        asMap(_roomData['zego_streaming']) ??
+        asMap(nested['zegoStreaming']) ??
+        asMap(nested['zego_streaming']) ??
+        const <String, dynamic>{};
+  }
+
+  int get liveZegoAppId {
+    final zego = liveZegoStreamingData;
+    final raw =
+        zego['appId'] ??
+        zego['appID'] ??
+        zego['app_id'] ??
+        _roomData['appId'] ??
+        _roomData['appID'] ??
+        _roomData['app_id'];
+    if (raw is int) return raw;
+    return int.tryParse(raw?.toString() ?? '') ?? ZegoConfig.liveAppId;
+  }
+
+  String get liveZegoAppSign {
+    final zego = liveZegoStreamingData;
+    final value =
+        zego['appSign'] ??
+        zego['app_sign'] ??
+        zego['appSignature'] ??
+        _roomData['appSign'] ??
+        _roomData['app_sign'];
+    final sign = value?.toString().trim() ?? '';
+    return sign.isNotEmpty ? sign : ZegoConfig.liveAppSign;
+  }
+
+  String get liveZegoRoomId {
+    final zego = liveZegoStreamingData;
+    final zegoRoomId =
+        (zego['roomId'] ??
+                zego['room_id'] ??
+                zego['liveId'] ??
+                zego['zegoLiveId'])
+            ?.toString()
+            .trim();
+    if (zegoRoomId != null && zegoRoomId.isNotEmpty && zegoRoomId != 'null') {
+      return ZegoLiveIdUtils.sanitize(zegoRoomId);
+    }
+    return roomId.value.trim();
+  }
+
+  String get liveZegoToken {
+    final zego = liveZegoStreamingData;
+    final value = zego['token'] ?? zego['zegoToken'] ?? _roomData['zegoToken'];
+    return value?.toString().trim() ?? '';
+  }
+
+  String get liveHostStreamId {
+    final zego = liveZegoStreamingData;
+    final value =
+        zego['hostStreamId'] ??
+        zego['host_stream_id'] ??
+        zego['playStreamId'] ??
+        zego['play_stream_id'] ??
+        _roomData['hostStreamId'] ??
+        _roomData['host_stream_id'];
+    final streamId = value?.toString().trim() ?? '';
+    if (streamId.isNotEmpty) return streamId;
+    return _fallbackLiveStreamId(_resolvedHostId());
+  }
+
+  String get livePublishStreamId {
+    final zego = liveZegoStreamingData;
+    final value =
+        zego['publishStreamId'] ??
+        zego['publish_stream_id'] ??
+        zego['streamId'] ??
+        zego['stream_id'] ??
+        _roomData['publishStreamId'] ??
+        _roomData['publish_stream_id'];
+    final streamId = value?.toString().trim() ?? '';
+    if (streamId.isNotEmpty) return streamId;
+    return _fallbackLiveStreamId(_currentUserId());
+  }
+
+  String get livePlayStreamId {
+    final zego = liveZegoStreamingData;
+    final value =
+        zego['playStreamId'] ??
+        zego['play_stream_id'] ??
+        zego['hostStreamId'] ??
+        zego['host_stream_id'] ??
+        _roomData['playStreamId'] ??
+        _roomData['play_stream_id'] ??
+        _roomData['hostStreamId'] ??
+        _roomData['host_stream_id'];
+    final streamId = value?.toString().trim() ?? '';
+    if (streamId.isNotEmpty) return streamId;
+    return _fallbackLiveStreamId(_resolvedHostId());
+  }
+
+  String _fallbackLiveStreamId(String userId) {
+    final room = liveZegoRoomId.trim();
+    final user = ZegoLiveIdUtils.sanitizeUserId(userId);
+    if (room.isEmpty || user.isEmpty) return '';
+    return 'stream_${room}_$user';
+  }
+
   void setConnectionIssue(String message) {
     connectionIssue.value = message;
   }
@@ -1531,9 +1639,20 @@ class LiveBroadcastController extends GetxController {
     _bindZegoListeners();
     _refreshHostZegoUserId();
 
+    if (isLiveStreamingSession) return;
     if (!isHost.value || !isVideoRoom) return;
     _turnOnHostMedia();
     Future.delayed(const Duration(milliseconds: 700), _turnOnHostMedia);
+  }
+
+  void onExpressLiveRoomLogined() {
+    isZegoConnected.value = true;
+    clearConnectionIssue();
+  }
+
+  void onExpressLiveRoomDisconnected(String message) {
+    isZegoConnected.value = false;
+    setConnectionIssue(message);
   }
 
   void _turnOnHostMedia() {
@@ -2006,7 +2125,9 @@ class LiveBroadcastController extends GetxController {
     try {
       // Group-call (audio/video) rooms have no live-streaming facade mounted,
       // so their chat must go through the base UIKit message bus directly.
-      final sent = isGroupCallRoom
+      final sent = isLiveStreamingSession
+          ? await _sendExpressLiveMessage(moderatedText)
+          : isGroupCallRoom
           ? await ZegoUIKit().sendInRoomMessage(moderatedText)
           : await ZegoUIKitPrebuiltLiveStreamingController().message.send(
               moderatedText,
@@ -2039,6 +2160,48 @@ class LiveBroadcastController extends GetxController {
         colorText: kColorWhite,
         duration: const Duration(seconds: 3),
       );
+    }
+  }
+
+  Future<bool> _sendExpressLiveMessage(String message) async {
+    final room = liveZegoRoomId.trim();
+    if (room.isEmpty) return false;
+    final result = await ZegoExpressEngine.instance.sendBroadcastMessage(
+      room,
+      message,
+    );
+    final sent = result.errorCode == 0;
+    if (sent) {
+      chatMessages.add({
+        'sender': 'You',
+        'message': message,
+        'translation': '',
+        'isTranslated': false,
+        'isSystem': false,
+      });
+    }
+    return sent;
+  }
+
+  void receiveExpressLiveMessages(List<ZegoBroadcastMessageInfo> messages) {
+    if (messages.isEmpty) return;
+    final localId = ZegoLiveIdUtils.sanitizeUserId(_currentUserId());
+    final incoming = <Map<String, dynamic>>[];
+    for (final message in messages) {
+      final senderId = ZegoLiveIdUtils.sanitizeUserId(message.fromUser.userID);
+      if (senderId.isNotEmpty && senderId == localId) continue;
+      incoming.add({
+        'sender': message.fromUser.userName.trim().isEmpty
+            ? 'Viewer'
+            : message.fromUser.userName.trim(),
+        'message': message.message,
+        'translation': '',
+        'isTranslated': false,
+        'isSystem': false,
+      });
+    }
+    if (incoming.isNotEmpty) {
+      chatMessages.addAll(incoming);
     }
   }
 
@@ -2629,10 +2792,13 @@ class LiveBroadcastController extends GetxController {
   void _bindVipEntranceSocketOnly() {
     final apiRoomId =
         _extractBackendRoomId(_roomData)?.trim() ?? audioRoomApiId;
-    if (apiRoomId.isEmpty) return;
+    final liveStreamId = liveStreamingApiId.trim();
+    final channelId = liveStreamId.isNotEmpty ? liveStreamId : apiRoomId;
+    if (channelId.isEmpty) return;
 
     _unbindRoomBackgroundSocket();
-    _vipUserJoinedSocketListener = _buildVipUserJoinedListener(apiRoomId);
+    _vipUserJoinedSocketListener = _buildVipUserJoinedListener(channelId);
+    _liveStreamingSocketListener = _handleLiveStreamingSocketEvent;
 
     unawaited(() async {
       await UserRealtimeSocketService.ensureConnected();
@@ -2642,7 +2808,11 @@ class LiveBroadcastController extends GetxController {
       if (vipListener != null) {
         socket.addVipUserJoinedListener(vipListener);
       }
-      await socket.joinRoomChannel(apiRoomId);
+      final liveListener = _liveStreamingSocketListener;
+      if (liveListener != null) {
+        socket.addLiveStreamEventListener(liveListener);
+      }
+      await socket.joinLiveStreamChannel(channelId);
     }());
   }
 
@@ -2764,8 +2934,10 @@ class LiveBroadcastController extends GetxController {
   void _unbindRoomBackgroundSocket() {
     final bgListener = _roomBackgroundSocketListener;
     final vipListener = _vipUserJoinedSocketListener;
+    final liveListener = _liveStreamingSocketListener;
     _roomBackgroundSocketListener = null;
     _vipUserJoinedSocketListener = null;
+    _liveStreamingSocketListener = null;
     if (!Get.isRegistered<UserRealtimeSocketService>()) return;
     final socket = Get.find<UserRealtimeSocketService>();
     if (bgListener != null) {
@@ -2774,7 +2946,224 @@ class LiveBroadcastController extends GetxController {
     if (vipListener != null) {
       socket.removeVipUserJoinedListener(vipListener);
     }
-    unawaited(socket.leaveRoomChannel());
+    if (liveListener != null) {
+      socket.removeLiveStreamEventListener(liveListener);
+      unawaited(socket.leaveLiveStreamChannel());
+    } else {
+      unawaited(socket.leaveRoomChannel());
+    }
+  }
+
+  void _handleLiveStreamingSocketEvent(
+    String event,
+    Map<String, dynamic> data,
+  ) {
+    if (!_matchesCurrentLiveStreamEvent(data)) return;
+
+    final normalizedEvent = (data['event'] ?? data['type'] ?? event)
+        .toString()
+        .toLowerCase();
+    if (normalizedEvent.contains('viewer_joined')) {
+      _upsertLiveViewerFromSocket(data);
+      _updateLiveViewerCountFromSocket(data);
+      return;
+    }
+    if (normalizedEvent.contains('viewer_left')) {
+      _removeLiveViewerFromSocket(data);
+      _updateLiveViewerCountFromSocket(data);
+      return;
+    }
+    if (normalizedEvent.contains('ended')) {
+      if (!isHost.value) {
+        unawaited(_closeLiveStreamLocally());
+      }
+      return;
+    }
+    if (normalizedEvent.contains('gift_sent')) {
+      _celebrateLiveGiftFromSocket(data);
+    }
+  }
+
+  bool _matchesCurrentLiveStreamEvent(Map<String, dynamic> data) {
+    final eventId =
+        readRoomField(data, const [
+          'liveStreamingId',
+          'live_streaming_id',
+          'liveId',
+          'live_id',
+          'roomId',
+          'room_id',
+          'zegoLiveId',
+          'zego_live_id',
+        ]) ??
+        readRoomField(
+          (data['data'] is Map)
+              ? Map<String, dynamic>.from(data['data'] as Map)
+              : const <String, dynamic>{},
+          const [
+            'liveStreamingId',
+            'live_streaming_id',
+            'liveId',
+            'live_id',
+            'roomId',
+            'room_id',
+            'zegoLiveId',
+            'zego_live_id',
+          ],
+        );
+    if (eventId == null || eventId.isEmpty) return true;
+
+    final localIds = <String>{
+      liveStreamingApiId,
+      liveZegoRoomId,
+      roomId.value,
+      _extractBackendRoomId(_roomData) ?? '',
+    }.map((id) => id.trim()).where((id) => id.isNotEmpty).toSet();
+    return localIds.contains(eventId.trim());
+  }
+
+  void _updateLiveViewerCountFromSocket(Map<String, dynamic> data) {
+    final raw =
+        data['viewerCount'] ??
+        data['viewer_count'] ??
+        data['count'] ??
+        data['onlineCount'] ??
+        data['online_count'];
+    final count = raw is num
+        ? raw.toInt()
+        : int.tryParse(raw?.toString() ?? '');
+    if (count != null && count >= 0) {
+      viewerCount.value = count;
+    }
+  }
+
+  void _upsertLiveViewerFromSocket(Map<String, dynamic> data) {
+    final viewer = _liveViewerFromSocket(data);
+    if (viewer == null) return;
+    final id = viewer['id']?.toString().trim() ?? '';
+    if (id.isEmpty) return;
+    final next = liveViewers.toList();
+    final index = next.indexWhere((item) => item['id']?.toString() == id);
+    if (index >= 0) {
+      next[index] = {...next[index], ...viewer};
+    } else {
+      next.add(viewer);
+    }
+    liveViewers.assignAll(next);
+    viewerCount.value = next.length;
+  }
+
+  void _removeLiveViewerFromSocket(Map<String, dynamic> data) {
+    final viewer = _liveViewerFromSocket(data);
+    final id =
+        viewer?['id']?.toString().trim() ??
+        readRoomField(data, const [
+          'userId',
+          'user_id',
+          'viewerId',
+          'viewer_id',
+        ]);
+    if (id == null || id.isEmpty) return;
+    liveViewers.removeWhere((item) => item['id']?.toString() == id);
+    viewerCount.value = liveViewers.length;
+  }
+
+  Map<String, dynamic>? _liveViewerFromSocket(Map<String, dynamic> data) {
+    Map<String, dynamic>? asMap(dynamic value) {
+      if (value is Map) return Map<String, dynamic>.from(value);
+      return null;
+    }
+
+    final viewer =
+        asMap(data['viewer']) ??
+        asMap(data['user']) ??
+        asMap(data['data']) ??
+        data;
+    final id = readRoomField(viewer, const [
+      'id',
+      'userId',
+      'user_id',
+      'viewerId',
+      'viewer_id',
+    ]);
+    if (id == null || id.isEmpty) return null;
+    return <String, dynamic>{
+      'id': id,
+      'targetId': id,
+      'name':
+          readRoomField(viewer, const ['name', 'userName', 'user_name']) ??
+          'Viewer',
+      'avatarUrl': ApiImageUtils.normalize(
+        readRoomField(viewer, const [
+          'avatar',
+          'avatarUrl',
+          'avatar_url',
+          'displayPicture',
+          'display_picture',
+        ]),
+      ),
+      'isHost': false,
+      'isCurrentUser': _userIdsMatch(id, _currentUserId()),
+    };
+  }
+
+  void _celebrateLiveGiftFromSocket(Map<String, dynamic> data) {
+    Map<String, dynamic>? asMap(dynamic value) {
+      if (value is Map) return Map<String, dynamic>.from(value);
+      return null;
+    }
+
+    final senderId =
+        readRoomField(data, const ['senderId', 'sender_id', 'fromUserId']) ??
+        readRoomField(asMap(data['sender']) ?? const {}, const [
+          'id',
+          'userId',
+        ]);
+    if (senderId != null && _userIdsMatch(senderId, _currentUserId())) {
+      return;
+    }
+
+    final gift = asMap(data['gift']) ?? asMap(data['data']?['gift']);
+    final giftName =
+        readRoomField(gift ?? const {}, const ['name', 'title']) ??
+        readRoomField(data, const ['giftName', 'gift_name']) ??
+        'Gift';
+    final animationUrl =
+        ApiImageUtils.normalize(
+          readRoomField(gift ?? const {}, const [
+                'animationUrl',
+                'animation_url',
+                'svgaUrl',
+              ]) ??
+              readRoomField(data, const [
+                'animationUrl',
+                'animation_url',
+                'svgaUrl',
+              ]),
+        ) ??
+        '';
+    final soundUrl =
+        ApiImageUtils.normalize(
+          readRoomField(gift ?? const {}, const [
+                'soundUrl',
+                'sound_url',
+                'audioUrl',
+                'audio_url',
+              ]) ??
+              readRoomField(data, const [
+                'soundUrl',
+                'sound_url',
+                'audioUrl',
+                'audio_url',
+              ]),
+        ) ??
+        '';
+    GiftMediaUtils.showCelebration(
+      giftName: giftName,
+      animationUrl: animationUrl,
+      soundUrl: soundUrl,
+      enqueueIfBusy: true,
+    );
   }
 
   void _applyRoomBackgroundFromMap(Map<String, dynamic> data) {
@@ -4649,6 +5038,14 @@ class LiveBroadcastController extends GetxController {
   }
 
   void toggleMic() {
+    if (isLiveStreamingSession) {
+      final nextMuted = !isMicMuted.value;
+      isMicMuted.value = nextMuted;
+      try {
+        unawaited(ZegoExpressEngine.instance.muteMicrophone(nextMuted));
+      } catch (_) {}
+      return;
+    }
     try {
       final mic =
           ZegoUIKitPrebuiltLiveStreamingController().audioVideo.microphone;
@@ -4661,6 +5058,14 @@ class LiveBroadcastController extends GetxController {
 
   void toggleCamera() {
     if (!isVideoRoom) return;
+    if (isLiveStreamingSession) {
+      final nextOff = !isCameraOff.value;
+      isCameraOff.value = nextOff;
+      try {
+        unawaited(ZegoExpressEngine.instance.enableCamera(!nextOff));
+      } catch (_) {}
+      return;
+    }
     try {
       // Party video rooms use the group-call Zego engine (not live-streaming).
       if (isAudioVideoRoom) {
@@ -4756,8 +5161,17 @@ class LiveBroadcastController extends GetxController {
     // Keep this path isolated so closing a Go Live stream never calls room APIs.
     if (liveStreamingId.isNotEmpty) {
       try {
+        final endedAt = DateTime.now().toUtc();
+        final startedAt = _resolveLiveStartedAtUtc();
+        final durationSeconds = endedAt
+            .difference(startedAt)
+            .inSeconds
+            .clamp(0, 1 << 31);
         response = await _roomRepo.endLiveStreaming(
           liveStreamingId: liveStreamingId,
+          startedAt: startedAt.toIso8601String(),
+          endedAt: endedAt.toIso8601String(),
+          durationSeconds: durationSeconds,
           isShowLoader: true,
         );
       } catch (_) {
@@ -4780,6 +5194,35 @@ class LiveBroadcastController extends GetxController {
       backgroundColor: Colors.black87,
       colorText: kColorWhite,
     );
+  }
+
+  DateTime _resolveLiveStartedAtUtc() {
+    Map<String, dynamic>? asMap(dynamic value) {
+      if (value is Map) return Map<String, dynamic>.from(value);
+      return null;
+    }
+
+    final nested =
+        asMap(_roomData['room']) ??
+        asMap(_roomData['liveStreaming']) ??
+        asMap(_roomData['live_streaming']);
+    final raw =
+        readRoomField(_roomData, const [
+          'startedAt',
+          'started_at',
+          'createdAt',
+          'created_at',
+        ]) ??
+        (nested == null
+            ? null
+            : readRoomField(nested, const [
+                'startedAt',
+                'started_at',
+                'createdAt',
+                'created_at',
+              ]));
+    final parsed = DateTime.tryParse(raw ?? '');
+    return parsed?.toUtc() ?? _liveScreenOpenedAtUtc;
   }
 
   Future<void> _closeLiveStreamLocally() async {

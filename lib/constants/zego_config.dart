@@ -6,12 +6,16 @@ class ZegoConfig {
 
   // ---------------------------------------------------------------------------
   // Live streaming — `zego_uikit_prebuilt_live_streaming` (Go Live tab)
-  // Console: Live Streaming — AppID 1085111149
+  // Console: Live Streaming — AppID supplied by `/api/live-streaming/*`.
+  //
+  // These values are only fallbacks. The live broadcast screen now prefers the
+  // `zegoStreaming.appId/appSign` values returned by the backend join/create
+  // APIs so host and audience always open the same Zego project.
   // ---------------------------------------------------------------------------
 
-  static const int liveAppId = 1085111149;
+  static const int liveAppId = 1538269104;
   static const String liveAppSign =
-      'c656f510bf3d036802d2b641ddad3828e8058de4194b4c7d12eeccecf2bfd744';
+      '72022e423995fb9f3bc6d7ef3b084f2eaf421b49477b78048a75dca27ee7d101';
 
   static const bool useSignalingPlugin = false;
 

@@ -139,18 +139,29 @@ class RoomRepo {
   /// Calls `POST /api/live-streaming/end` to close a host live stream.
   Future<Map<String, dynamic>?> endLiveStreaming({
     required String liveStreamingId,
+    String? startedAt,
+    String? endedAt,
+    int? durationSeconds,
     bool isShowLoader = true,
   }) async {
     final id = liveStreamingId.trim();
     if (id.isEmpty) return null;
 
+    final started = startedAt?.trim() ?? '';
+    final ended = endedAt?.trim() ?? '';
+    final duration = durationSeconds ?? 0;
+    final body = <String, dynamic>{
+      'liveStreamingId': id,
+      'live_streaming_id': id,
+      'liveId': id,
+      if (started.isNotEmpty) 'startedAt': started,
+      if (ended.isNotEmpty) 'endedAt': ended,
+      if (duration > 0) 'durationSeconds': duration,
+    };
+
     final response = await _apiService.postRequest(
       endPoint: RoomEndpoints.endLiveStreaming,
-      requestModel: <String, dynamic>{
-        'liveStreamingId': id,
-        'live_streaming_id': id,
-        'liveId': id,
-      },
+      requestModel: body,
       isShowLoader: isShowLoader,
       isLoginCall: false,
     );
@@ -199,10 +210,7 @@ class RoomRepo {
     if (room.isEmpty && liveId.isEmpty) return null;
 
     final body = <String, dynamic>{
-      if (room.isNotEmpty) ...{
-        'roomId': room,
-        'room_id': room,
-      },
+      if (room.isNotEmpty) ...{'roomId': room, 'room_id': room},
       if (liveId.isNotEmpty) ...{
         'liveStreamingId': liveId,
         'live_streaming_id': liveId,
@@ -234,10 +242,7 @@ class RoomRepo {
     final response = await _apiService.postRequest(
       endPoint: RoomEndpoints.leaveLiveStreaming,
       requestModel: <String, dynamic>{
-        if (room.isNotEmpty) ...{
-          'roomId': room,
-          'room_id': room,
-        },
+        if (room.isNotEmpty) ...{'roomId': room, 'room_id': room},
         if (liveId.isNotEmpty) ...{
           'liveStreamingId': liveId,
           'live_streaming_id': liveId,
@@ -460,7 +465,8 @@ class RoomRepo {
       if (status.trim().isNotEmpty) 'status': status.trim(),
     };
     final response = await _apiService.getRequest(
-      endPoint: '${RoomEndpoints.joinRequests}?${Uri(queryParameters: params).query}',
+      endPoint:
+          '${RoomEndpoints.joinRequests}?${Uri(queryParameters: params).query}',
       isShowLoader: isShowLoader,
     );
     if (response == null) return null;
@@ -525,10 +531,7 @@ class RoomRepo {
     bool isShowLoader = false,
   }) async {
     final id = roomId.trim();
-    final params = <String, String>{
-      'room_id': id,
-      'roomId': id,
-    };
+    final params = <String, String>{'room_id': id, 'roomId': id};
     final response = await _apiService.getRequest(
       endPoint: '${RoomEndpoints.seats}?${Uri(queryParameters: params).query}',
       isShowLoader: isShowLoader,

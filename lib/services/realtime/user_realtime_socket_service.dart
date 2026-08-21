@@ -19,6 +19,7 @@ import 'package:socket_io_client/socket_io_client.dart' as io;
 /// - `join_room` / `leave_room` + `room_background_updated` → live room themes
 /// - `pk_*` events → PK battle realtime (request / scores / complete)
 /// - `join_*` events → host join-approval realtime
+/// - `live_stream.*` events → standalone live-stream viewer/gift/end updates
 /// - `vip_user_joined` → VIP frame entrance overlay in rooms
 class UserRealtimeSocketService extends GetxController {
   UserRealtimeSocketService({
@@ -36,12 +37,15 @@ class UserRealtimeSocketService extends GetxController {
   io.Socket? _socket;
   bool _connecting = false;
   String? _joinedRoomId;
+  String? _joinedLiveStreamId;
 
   final _roomBackgroundListeners = <void Function(Map<String, dynamic> data)>{};
   final _vipUserJoinedListeners = <void Function(Map<String, dynamic> data)>{};
   final _seatRequestListeners = <void Function(Map<String, dynamic> data)>{};
   final _floorAudienceListeners = <void Function(Map<String, dynamic> data)>{};
   final _userKickedListeners = <void Function(Map<String, dynamic> data)>{};
+  final _liveStreamEventListeners =
+      <void Function(String event, Map<String, dynamic> data)>{};
 
   /// Host-vs-host PK Battle v1 events (`PK_INVITATION_RECEIVED`,
   /// `PK_SCORE_UPDATED`, `PK_RESULT`, ...). Callback receives (event, data).
@@ -128,6 +132,32 @@ class UserRealtimeSocketService extends GetxController {
 
       socket.on('host_live_started', _onHostLiveStarted);
       socket.on('room_background_updated', _onRoomBackgroundUpdated);
+      socket.on(
+        'live_stream.viewer_joined',
+        (raw) => _onLiveStreamNamed('live_stream.viewer_joined', raw),
+      );
+      socket.on(
+        'viewer_joined',
+        (raw) => _onLiveStreamNamed('viewer_joined', raw),
+      );
+      socket.on(
+        'live_stream.viewer_left',
+        (raw) => _onLiveStreamNamed('live_stream.viewer_left', raw),
+      );
+      socket.on('viewer_left', (raw) => _onLiveStreamNamed('viewer_left', raw));
+      socket.on(
+        'live_stream.ended',
+        (raw) => _onLiveStreamNamed('live_stream.ended', raw),
+      );
+      socket.on(
+        'live_stream_ended',
+        (raw) => _onLiveStreamNamed('live_stream_ended', raw),
+      );
+      socket.on(
+        'live_stream.gift_sent',
+        (raw) => _onLiveStreamNamed('live_stream.gift_sent', raw),
+      );
+      socket.on('gift_sent', (raw) => _onLiveStreamNamed('gift_sent', raw));
       socket.on('pk_request', (raw) => _onPkNamed('pk_request', raw));
       socket.on('pk_started', (raw) => _onPkNamed('pk_started', raw));
       socket.on('pk_accepted', (raw) => _onPkNamed('pk_accepted', raw));
@@ -246,6 +276,32 @@ class UserRealtimeSocketService extends GetxController {
     }
   }
 
+  Future<void> joinLiveStreamChannel(String liveStreamingId) async {
+    final id = liveStreamingId.trim();
+    if (id.isEmpty) return;
+    await ensureConnected();
+    _joinedLiveStreamId = id;
+    final socket = _socket;
+    if (socket == null || !socket.connected) return;
+    socket.emit('join_live_room', id);
+    socket.emit('join_room', id);
+    LoggerUtils.logInfo('RealtimeSocket: joined live stream channel $id');
+  }
+
+  Future<void> leaveLiveStreamChannel([String? liveStreamingId]) async {
+    final id = (liveStreamingId ?? _joinedLiveStreamId)?.trim() ?? '';
+    final socket = _socket;
+    if (id.isNotEmpty && socket != null && socket.connected) {
+      socket.emit('leave_live_room', id);
+      socket.emit('leave_room', id);
+      LoggerUtils.logInfo('RealtimeSocket: left live stream channel $id');
+    }
+    if (liveStreamingId == null ||
+        liveStreamingId.trim() == _joinedLiveStreamId) {
+      _joinedLiveStreamId = null;
+    }
+  }
+
   void addRoomBackgroundListener(
     void Function(Map<String, dynamic> data) listener,
   ) {
@@ -306,6 +362,18 @@ class UserRealtimeSocketService extends GetxController {
     _userKickedListeners.remove(listener);
   }
 
+  void addLiveStreamEventListener(
+    void Function(String event, Map<String, dynamic> data) listener,
+  ) {
+    _liveStreamEventListeners.add(listener);
+  }
+
+  void removeLiveStreamEventListener(
+    void Function(String event, Map<String, dynamic> data) listener,
+  ) {
+    _liveStreamEventListeners.remove(listener);
+  }
+
   void addPkBattleV1Listener(
     void Function(String event, Map<String, dynamic> data) listener,
   ) {
@@ -352,6 +420,14 @@ class UserRealtimeSocketService extends GetxController {
     try {
       socket.off('host_live_started');
       socket.off('room_background_updated');
+      socket.off('live_stream.viewer_joined');
+      socket.off('viewer_joined');
+      socket.off('live_stream.viewer_left');
+      socket.off('viewer_left');
+      socket.off('live_stream.ended');
+      socket.off('live_stream_ended');
+      socket.off('live_stream.gift_sent');
+      socket.off('gift_sent');
       socket.off('pk_request');
       socket.off('pk_started');
       socket.off('pk_accepted');
@@ -401,6 +477,11 @@ class UserRealtimeSocketService extends GetxController {
       socket.emit('join_live_room', pkId);
       socket.emit('join_room', pkId);
     }
+    final liveId = _joinedLiveStreamId?.trim();
+    if (liveId != null && liveId.isNotEmpty) {
+      socket.emit('join_live_room', liveId);
+      socket.emit('join_room', liveId);
+    }
   }
 
   void _onRoomBackgroundUpdated(dynamic raw) {
@@ -442,12 +523,30 @@ class UserRealtimeSocketService extends GetxController {
     unawaited(_pkBattleHandler.handleSocketEvent(event, payload));
   }
 
-  void _onPkV1Named(String event, dynamic raw) {
+  void _onLiveStreamNamed(String event, dynamic raw) {
     final data = _asStringKeyedMap(raw);
+    if (data.isEmpty && event.isEmpty) return;
     final payload = <String, dynamic>{
       ...data,
-      'event': event,
+      'event': data['event']?.toString().trim().isNotEmpty == true
+          ? data['event']
+          : event,
+      if (data['type'] == null || data['type'].toString().trim().isEmpty)
+        'type': event,
     };
+    LoggerUtils.logInfo('RealtimeSocket: $event data=$payload');
+    for (final listener in List.of(_liveStreamEventListeners)) {
+      try {
+        listener(event, payload);
+      } catch (e) {
+        LoggerUtils.logWarning('RealtimeSocket: live listener error — $e');
+      }
+    }
+  }
+
+  void _onPkV1Named(String event, dynamic raw) {
+    final data = _asStringKeyedMap(raw);
+    final payload = <String, dynamic>{...data, 'event': event};
     LoggerUtils.logInfo('RealtimeSocket: $event data=$payload');
     for (final listener in List.of(_pkBattleV1Listeners)) {
       try {
