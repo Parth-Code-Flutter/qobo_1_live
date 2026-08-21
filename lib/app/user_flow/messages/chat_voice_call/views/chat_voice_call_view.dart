@@ -82,7 +82,10 @@ class ChatVoiceCallView extends GetView<ChatVoiceCallController> {
                 ),
                 onCallEnd: (event, defaultAction) async {
                   await controller.finishCall(refreshInbox: false);
-                  defaultAction.call();
+                  // closeOutgoingRing already Get.back()'d — skip second pop.
+                  if (!controller.didForceLeaveOutgoingRing) {
+                    defaultAction.call();
+                  }
                   await controller.onCallScreenDisposed();
                   ChatVoiceCallController.refreshMessagesInbox();
                 },

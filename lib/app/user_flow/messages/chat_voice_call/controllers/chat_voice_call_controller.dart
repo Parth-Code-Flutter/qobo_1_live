@@ -26,10 +26,13 @@ import 'package:qobo_one_live/utils/ui_utils/coin_fly_overlay.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_celebration_overlay.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_chat_celebration_tracker.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_media_utils.dart';
+import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/zego_call_id_utils.dart';
 import 'package:qobo_one_live/utils/zego_engine_utils.dart';
 import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 import 'package:zego_uikit/zego_uikit.dart';
+import 'package:zego_uikit_prebuilt_call/zego_uikit_prebuilt_call.dart';
+import 'package:qobo_one_live/services/firebase/incoming_call_push_payload.dart';
 
 class ChatVoiceCallController extends GetxController
     with WidgetsBindingObserver {
@@ -91,6 +94,17 @@ class ChatVoiceCallController extends GetxController
   bool _peerJoined = false;
   bool _recordCallHistory = true;
   Timer? _ticker;
+
+  /// Outgoing ring: Firestore listen + poll + local 15s timeout.
+  StreamSubscription<Map<String, dynamic>>? _outgoingRingSub;
+  Timer? _ringTimeoutTimer;
+  Timer? _ringPollTimer;
+  DateTime? _ringWatchStartedAt;
+  bool _sawActiveRingDoc = false;
+  bool _remoteRingEndHandled = false;
+  static const Duration _outgoingRingTimeout = Duration(seconds: 15);
+  /// Ignore empty `calls/active` only for this grace (doc may not be written yet).
+  static const Duration _ringEmptyGrace = Duration(milliseconds: 1500);
 
   /// Peer gift celebration via Zego in-room messages (same markers as live rooms).
   StreamSubscription<List<ZegoInRoomMessage>>? _giftMessageSub;
@@ -166,6 +180,10 @@ class ChatVoiceCallController extends GetxController
     _callStartedAtIso ??= _startedAt!.toUtc().toIso8601String();
     if (!isCaller.value) {
       _markPeerJoined();
+    } else {
+      // Caller waits for answer — watch Firestore + local timeout so we leave
+      // when B declines / misses (Zego alone does not signal reject).
+      _startOutgoingRingMonitoring();
     }
     _startTicker();
     unawaited(loadWalletBalance());
@@ -331,12 +349,260 @@ class ChatVoiceCallController extends GetxController
     _callTimeCoinsEarned = 0;
     _callTimeCoinsSpent = 0;
     callCoinsDialogTracker.reset();
+    // Connected — stop decline / miss ring watchers.
+    _stopOutgoingRingMonitoring();
     // Engine is usually ready once the peer is in — (re)bind gift messages.
     _bindGiftMessageListener(force: true);
   }
 
   void onZegoError(Object error) {
     LoggerUtils.logWarning('ChatVoiceCallController: $error');
+  }
+
+  /// FCM backup: `call_cancelled` / `call_missed` while A is still ringing.
+  static void tryHandleRemoteCancelPush(IncomingCallPushPayload payload) {
+    if (!Get.isRegistered<ChatVoiceCallController>()) return;
+    Get.find<ChatVoiceCallController>().onRemoteCallCancelled(payload);
+  }
+
+  void onRemoteCallCancelled(IncomingCallPushPayload payload) {
+    if (!_matchesOutgoingRing(payload)) return;
+    var reason = payload.cancelReason.trim().toLowerCase();
+    if (reason.isEmpty &&
+        payload.type.trim().toLowerCase() == 'call_missed') {
+      reason = 'missed';
+    }
+    final toast = switch (reason) {
+      'rejected' => 'Call declined',
+      'missed' => 'No answer',
+      'cancelled' => 'Call cancelled',
+      _ => 'Call ended',
+    };
+    unawaited(
+      closeOutgoingRing(
+        toastMessage: toast,
+        notifyBackendAsMissed: false,
+      ),
+    );
+  }
+
+  bool _matchesOutgoingRing(IncomingCallPushPayload payload) {
+    if (!isCaller.value || _peerJoined || _remoteRingEndHandled) return false;
+    final myCall = callId.value.trim().toLowerCase();
+    final myRoom = roomId.value.trim().toLowerCase();
+    final pushCall = payload.callId.trim().toLowerCase();
+    final pushZego = payload.zegoCallId.trim().toLowerCase();
+    final pushRoom = payload.roomId.trim().toLowerCase();
+    if (pushCall.isNotEmpty && myCall.isNotEmpty) {
+      if (pushCall == myCall ||
+          pushZego == myCall ||
+          pushCall.contains(myCall) ||
+          myCall.contains(pushCall)) {
+        return true;
+      }
+    }
+    if (pushRoom.isNotEmpty && myRoom.isNotEmpty) {
+      if (pushRoom == myRoom ||
+          pushRoom.contains(myRoom) ||
+          myRoom.contains(pushRoom)) {
+        return true;
+      }
+    }
+    // Waiting on outgoing UI and cancel push has no usable ids — still close.
+    if (pushCall.isEmpty && pushRoom.isEmpty && pushZego.isEmpty) {
+      return true;
+    }
+    return false;
+  }
+
+  /// Firestore listen + 2s poll + 15s hard timeout (caller only).
+  void _startOutgoingRingMonitoring() {
+    final id = roomId.value.trim();
+    if (id.isEmpty || !isCaller.value) return;
+
+    _ringWatchStartedAt = DateTime.now();
+    _sawActiveRingDoc = false;
+
+    _outgoingRingSub?.cancel();
+    _outgoingRingSub = _callService.watchActiveCall(id).listen(
+      _onOutgoingActiveCallSnapshot,
+      onError: (Object e) {
+        LoggerUtils.logWarning(
+          'ChatVoiceCallController: outgoing ring watch failed — $e',
+        );
+      },
+    );
+
+    // Snapshot delete can be missed; poll as a backup.
+    _ringPollTimer?.cancel();
+    _ringPollTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+      unawaited(_pollOutgoingActiveCall());
+    });
+
+    _ringTimeoutTimer?.cancel();
+    _ringTimeoutTimer = Timer(_outgoingRingTimeout, () {
+      if (_remoteRingEndHandled || _peerJoined) return;
+      LoggerUtils.logInfo(
+        'ChatVoiceCallController: local ring timeout '
+        '(${_outgoingRingTimeout.inSeconds}s) — auto cut',
+      );
+      unawaited(
+        closeOutgoingRing(
+          toastMessage: 'No answer',
+          notifyBackendAsMissed: true,
+        ),
+      );
+    });
+  }
+
+  void _stopOutgoingRingMonitoring() {
+    _outgoingRingSub?.cancel();
+    _outgoingRingSub = null;
+    _ringTimeoutTimer?.cancel();
+    _ringTimeoutTimer = null;
+    _ringPollTimer?.cancel();
+    _ringPollTimer = null;
+  }
+
+  Future<void> _pollOutgoingActiveCall() async {
+    if (_remoteRingEndHandled || _peerJoined || !isCaller.value) return;
+    final rid = roomId.value.trim();
+    if (rid.isEmpty) return;
+    final data = await _callService.fetchActiveCall(rid);
+    _onOutgoingActiveCallSnapshot(data);
+  }
+
+  void _onOutgoingActiveCallSnapshot(Map<String, dynamic> data) {
+    if (_remoteRingEndHandled || _peerJoined || !isCaller.value) return;
+
+    if (data.isEmpty) {
+      final started = _ringWatchStartedAt;
+      final pastGrace = started != null &&
+          DateTime.now().difference(started) >= _ringEmptyGrace;
+      // Close when doc is gone after we saw ringing, or after grace (Backend
+      // may clear active before our first ringing snapshot arrives).
+      if (!_sawActiveRingDoc && !pastGrace) return;
+      unawaited(
+        closeOutgoingRing(
+          toastMessage: 'Call ended',
+          notifyBackendAsMissed: false,
+        ),
+      );
+      return;
+    }
+
+    final status = data['status']?.toString().trim().toLowerCase() ?? '';
+    if (status == 'ringing' || status == 'accepted') {
+      _sawActiveRingDoc = true;
+      return;
+    }
+
+    if (status == 'rejected' ||
+        status == 'cancelled' ||
+        status == 'ended' ||
+        status == 'missed') {
+      _sawActiveRingDoc = true;
+      final toast = switch (status) {
+        'rejected' => 'Call declined',
+        'missed' => 'No answer',
+        'cancelled' => 'Call cancelled',
+        _ => 'Call ended',
+      };
+      unawaited(
+        closeOutgoingRing(
+          toastMessage: toast,
+          notifyBackendAsMissed: false,
+        ),
+      );
+    }
+  }
+
+  /// Leaves "Waiting for answer" when B declines / miss / cancel / 15s timeout.
+  ///
+  /// Does not run after the call is connected ([_peerJoined]).
+  Future<void> closeOutgoingRing({
+    required String toastMessage,
+    bool notifyBackendAsMissed = false,
+  }) async {
+    if (_remoteRingEndHandled || _peerJoined || !isCaller.value) return;
+    _remoteRingEndHandled = true;
+    _stopOutgoingRingMonitoring();
+
+    LoggerUtils.logInfo(
+      'ChatVoiceCallController: closeOutgoingRing — $toastMessage '
+      '(missedBackend=$notifyBackendAsMissed)',
+    );
+    _showCallFeedback(toastMessage);
+
+    if (notifyBackendAsMissed) {
+      final id = callId.value.trim();
+      if (id.isNotEmpty) {
+        unawaited(
+          _callModuleRepo.endDirectCall(
+            callId: id,
+            reason: 'missed',
+            isShowLoader: false,
+          ),
+        );
+      }
+      final rid = roomId.value.trim();
+      if (rid.isNotEmpty) {
+        unawaited(
+          _callService.clearActiveCall(
+            rid,
+            endedByUserId: _rawUserId,
+          ),
+        );
+      }
+    }
+
+    // Try Zego hang-up, but do NOT rely on onCallEnd — while still ringing it
+    // often does not pop the route. Always finish + Get.back below.
+    try {
+      final context = Get.overlayContext ?? Get.context;
+      if (context != null) {
+        await ZegoUIKitPrebuiltCallController()
+            .hangUp(
+              context,
+              reason: ZegoCallEndReason.remoteHangUp,
+            )
+            .timeout(const Duration(seconds: 2));
+      }
+    } catch (e) {
+      LoggerUtils.logWarning(
+        'ChatVoiceCallController: hangUp after ring end — $e',
+      );
+    }
+
+    try {
+      await finishCall(refreshInbox: true);
+    } catch (e) {
+      LoggerUtils.logWarning(
+        'ChatVoiceCallController: finishCall after ring end — $e',
+      );
+    }
+
+    // Force leave the waiting UI on this device.
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    if (Get.isDialogOpen == true) {
+      Get.back<void>();
+    }
+    if (Get.key.currentState?.canPop() ?? false) {
+      Get.back<void>();
+    }
+  }
+
+  /// True after [closeOutgoingRing] already popped the route (avoid double pop).
+  bool get didForceLeaveOutgoingRing =>
+      _remoteRingEndHandled && !_peerJoined;
+
+  void _showCallFeedback(String message) {
+    final context = Get.overlayContext ?? Get.context;
+    if (context != null) {
+      AppToast.showWarning(context, message);
+      return;
+    }
+    Get.snackbar('Call', message, snackPosition: SnackPosition.BOTTOM);
   }
 
   /// Records call + returns summary for chat thread (WhatsApp-style log row).
@@ -368,6 +634,7 @@ class ChatVoiceCallController extends GetxController
   @override
   void onClose() {
     WidgetsBinding.instance.removeObserver(this);
+    _stopOutgoingRingMonitoring();
     _ticker?.cancel();
     _stopSessionEarningsPolling();
     _stopWalletRefreshPolling();

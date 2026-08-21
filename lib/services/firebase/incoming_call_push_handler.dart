@@ -6,6 +6,7 @@ import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/chat/chat_call_service.dart';
 import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
+import 'package:qobo_one_live/app/user_flow/messages/chat_voice_call/controllers/chat_voice_call_controller.dart';
 import 'package:qobo_one_live/services/firebase/incoming_call_kit_display.dart';
 import 'package:qobo_one_live/services/firebase/incoming_call_presentation.dart';
 import 'package:qobo_one_live/services/firebase/incoming_call_push_payload.dart';
@@ -20,7 +21,7 @@ import 'package:qobo_one_live/utils/zego_engine_utils.dart';
 ///
 /// Foreground → branded in-app ring UI.
 /// Background / killed → [IncomingCallKitDisplay] (native CallKit / full-screen).
-/// Opening the app while CallKit is already ringing must **not** open a second UI.
+/// `call_cancelled` also closes the **caller** outgoing screen when A is waiting.
 class IncomingCallPushHandler {
   IncomingCallPushHandler({
     CallRepo? callRepo,
@@ -46,6 +47,8 @@ class IncomingCallPushHandler {
       await PushNotificationService.instance.cancelLocalNotification(message);
       IncomingCallInAppBanner.dismissIfShowing();
       await IncomingCallKitDisplay.endForMessage(message);
+      // Caller A may be on "Waiting for answer" — close that UI (decline / miss).
+      ChatVoiceCallController.tryHandleRemoteCancelPush(payload);
       return;
     }
 
@@ -63,6 +66,7 @@ class IncomingCallPushHandler {
       IncomingCallPresentation.markHandled(payload.callId);
       await PushNotificationService.instance.cancelLocalNotification(message);
       await IncomingCallKitDisplay.endForMessage(message);
+      ChatVoiceCallController.tryHandleRemoteCancelPush(payload);
       return;
     }
 

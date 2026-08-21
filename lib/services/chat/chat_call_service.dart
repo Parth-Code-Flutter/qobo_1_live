@@ -57,6 +57,23 @@ class ChatCallService {
         .doc(activeDocId);
   }
 
+  /// One-shot read of `calls/active` (used by caller ring poll).
+  Future<Map<String, dynamic>> fetchActiveCall(String roomId) async {
+    final ref = _activeRef(roomId);
+    if (ref == null) return <String, dynamic>{};
+    try {
+      final snap = await ref.get();
+      if (!snap.exists) return <String, dynamic>{};
+      return {
+        ...Map<String, dynamic>.from(snap.data() ?? {}),
+        'id': snap.id,
+      };
+    } catch (e) {
+      LoggerUtils.logWarning('ChatCallService: fetchActiveCall failed — $e');
+      return <String, dynamic>{};
+    }
+  }
+
   DocumentReference<Map<String, dynamic>>? _userIncomingCallRef(String userId) {
     final firestore = _firestore;
     if (userId.isEmpty || firestore == null) return null;
