@@ -5,6 +5,7 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/live_session_badge.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -368,29 +369,35 @@ class _TopBadgesRow extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    return Wrap(
-      spacing: 6,
-      runSpacing: 6,
-      children: [
-        if (showLive)
-          _BadgeChip(
-            label: user.activeSession?.liveBadgeLabel ?? 'LIVE',
-            backgroundColor: const Color(0xFFE11D48),
-            textColor: kColorWhite,
-          ),
-        if (user.isVip)
-          const _BadgeChip(
-            label: 'VIP',
-            backgroundColor: kColorWalletAmount,
-            textColor: kColorBlack,
-          ),
-        if (user.level > 0)
-          _BadgeChip(
-            label: 'Lv ${user.level}',
-            backgroundColor: kColorPrimary,
-            textColor: kColorWhite,
-          ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            if (showLive)
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: constraints.maxWidth),
+                child: LiveSessionBadge.fromSession(
+                  user.activeSession,
+                  compact: true,
+                ),
+              ),
+            if (user.isVip)
+              const _BadgeChip(
+                label: 'VIP',
+                backgroundColor: kColorWalletAmount,
+                textColor: kColorBlack,
+              ),
+            if (user.level > 0)
+              _BadgeChip(
+                label: 'Lv ${user.level}',
+                backgroundColor: kColorPrimary,
+                textColor: kColorWhite,
+              ),
+          ],
+        );
+      },
     );
   }
 }

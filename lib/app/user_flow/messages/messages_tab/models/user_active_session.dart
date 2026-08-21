@@ -88,6 +88,20 @@ class UserActiveSession {
     }
   }
 
+  /// Short label for tight grid cards (icon already conveys type).
+  String get liveBadgeLabelCompact {
+    switch (normalizedRoomType) {
+      case 'AUDIO':
+        return 'AUDIO';
+      case 'VIDEO':
+        return 'VIDEO';
+      case 'LIVE_STREAM':
+        return 'LIVE';
+      default:
+        return 'LIVE';
+    }
+  }
+
   factory UserActiveSession.fromJson(Map<String, dynamic> json) {
     final nested = json['activeSession'] ?? json['active_session'];
     final Map<String, dynamic> source;

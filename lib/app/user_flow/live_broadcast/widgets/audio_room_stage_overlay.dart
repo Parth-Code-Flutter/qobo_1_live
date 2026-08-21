@@ -928,15 +928,60 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
         constraints: BoxConstraints(minHeight: compact ? 58 : 64),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            // Video rooms carry more trailing actions than audio; shrink the
-            // header chrome when the bar is tight so it never overflows.
+            // Video rooms add share + background actions; always use denser
+            // chrome and allow the trailing cluster to scale so the bar never
+            // overflows (was OVERFLOWED BY ~11px on narrow phones).
             final dense =
                 compact ||
-                (controller.isVideoRoom && constraints.maxWidth < 420);
-            final earningsMaxWidth = (constraints.maxWidth * 0.17).clamp(
-              52.0,
-              dense ? 64.0 : 72.0,
+                controller.isVideoRoom ||
+                constraints.maxWidth < 440;
+            final earningsMaxWidth = (constraints.maxWidth * 0.15).clamp(
+              48.0,
+              dense ? 58.0 : 68.0,
             );
+            final trailGap = dense ? Spacing.h4 : Spacing.h8;
+
+            final trailing = <Widget>[
+              if (controller.isVideoRoom) ...[
+                _CircleButton(
+                  icon: Icons.share_rounded,
+                  onTap: () => controller.shareRoom(),
+                  compact: dense,
+                ),
+                if (controller.canManageAudioRoomMembers) ...[
+                  trailGap,
+                  _CircleButton(
+                    icon: Icons.wallpaper_rounded,
+                    onTap: controller.openRoomBackgroundSheet,
+                    compact: dense,
+                  ),
+                ],
+                trailGap,
+              ],
+              // Floor audience: person + count.
+              _FloorAudienceBadge(compact: dense),
+              trailGap,
+              // Host session earnings (audience can see the pill, not the dialog).
+              SessionEarningsBadge(
+                key: controller.sessionEarningsBadgeKey,
+                tracker: controller.sessionEarnings,
+                compact: dense,
+                maxWidth: earningsMaxWidth,
+                iconColor: const Color(0xFFFFA10A),
+                onTap: controller.isHost.value
+                    ? controller.openSessionEarningsDialog
+                    : null,
+              ),
+              if (controller.isHost.value) ...[
+                trailGap,
+                _CircleButton(
+                  icon: Icons.power_settings_new_rounded,
+                  onTap: controller.confirmEndRoom,
+                  compact: dense,
+                  iconColor: const Color(0xFFFF3B5C),
+                ),
+              ],
+            ];
 
             return Row(
               children: [
@@ -946,14 +991,14 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
                   compact: dense,
                   filled: false,
                 ),
-                Spacing.h8,
+                dense ? Spacing.h6 : Spacing.h8,
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: _openHostProfileSheet,
                   child: AppUserAvatar(
                     name: controller.hostName.value,
                     imageUrl: controller.hostAvatarUrl.value,
-                    size: dense ? 38 : 44,
+                    size: dense ? 36 : 44,
                     border: Border.all(color: kColorWhite, width: 1.5),
                   ),
                 ),
@@ -965,7 +1010,7 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
                     children: [
                       SemiBoldText(
                         text: title,
-                        fontSize: compact
+                        fontSize: dense
                             ? TextStyles.k14FontSize
                             : TextStyles.k16FontSize,
                         color: AudioRoomStageOverlay._ink,
@@ -975,7 +1020,7 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
                       Spacing.v2,
                       AppText(
                         text: 'Room Id : ${roomId.isEmpty ? '--' : roomId}',
-                        fontSize: compact
+                        fontSize: dense
                             ? TextStyles.k10FontSize
                             : TextStyles.k12FontSize,
                         color: kColorWhite.withValues(alpha: 0.82),
@@ -985,47 +1030,19 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
                     ],
                   ),
                 ),
-                // Share + background stay on video rooms only — removed from audio AppBar.
-                // Audio hosts can still change background from More → Background.
-                if (controller.isVideoRoom) ...[
-                  _CircleButton(
-                    icon: Icons.share_rounded,
-                    onTap: () => controller.shareRoom(),
-                    compact: dense,
-                  ),
-                  if (controller.canManageAudioRoomMembers) ...[
-                    dense ? Spacing.h6 : Spacing.h8,
-                    _CircleButton(
-                      icon: Icons.wallpaper_rounded,
-                      onTap: controller.openRoomBackgroundSheet,
-                      compact: dense,
+                Flexible(
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: trailing,
+                      ),
                     ),
-                  ],
-                ],
-                // Floor audience moved here from the bottom strip: person + count.
-                dense ? Spacing.h6 : Spacing.h8,
-                _FloorAudienceBadge(compact: dense),
-                // Host session earnings only. Audience can see the pill, not the dialog.
-                dense ? Spacing.h6 : Spacing.h8,
-                SessionEarningsBadge(
-                  key: controller.sessionEarningsBadgeKey,
-                  tracker: controller.sessionEarnings,
-                  compact: dense,
-                  maxWidth: earningsMaxWidth,
-                  iconColor: const Color(0xFFFFA10A),
-                  onTap: controller.isHost.value
-                      ? controller.openSessionEarningsDialog
-                      : null,
-                ),
-                if (controller.isHost.value) ...[
-                  dense ? Spacing.h6 : Spacing.h8,
-                  _CircleButton(
-                    icon: Icons.power_settings_new_rounded,
-                    onTap: controller.confirmEndRoom,
-                    compact: dense,
-                    iconColor: const Color(0xFFFF3B5C),
                   ),
-                ],
+                ),
               ],
             );
           },
@@ -3636,48 +3653,97 @@ class _FloorAudienceBadge extends GetView<LiveBroadcastController> {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final count = controller.floorAudience.length;
+      final users = controller.floorAudience;
+      final count = users.length;
+      final first = users.isEmpty ? null : users.first;
       final size = compact ? 36.0 : 40.0;
+      final countLabel = count > 99 ? '99+' : '$count';
+
       return Material(
         color: Colors.transparent,
         child: InkWell(
           key: controller.floorAudienceBadgeKey,
           onTap: _openFloorAudienceListSheet,
-          borderRadius: BorderRadius.circular(20),
-          child: Ink(
-            height: size,
-            padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 10),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFFFF6AD5), Color(0xFF9B1FE8)],
-              ),
-              border: Border.all(color: kColorWhite.withValues(alpha: 0.18)),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFFF3EA5).withValues(alpha: 0.28),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+          customBorder: const CircleBorder(),
+          child: SizedBox(
+            width: size + 4,
+            height: size + 4,
+            child: Stack(
+              clipBehavior: Clip.none,
               children: [
-                Icon(
-                  Icons.people_alt_rounded,
-                  color: kColorWhite,
-                  size: compact ? 15 : 17,
+                Positioned(
+                  left: 0,
+                  top: 2,
+                  child: Container(
+                    width: size,
+                    height: size,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFFFF6AD5), Color(0xFF9B1FE8)],
+                      ),
+                      border: Border.all(
+                        color: kColorWhite.withValues(alpha: 0.35),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFFF3EA5).withValues(alpha: 0.28),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: first == null
+                        ? Icon(
+                            Icons.people_alt_rounded,
+                            color: kColorWhite,
+                            size: compact ? 16 : 18,
+                          )
+                        : AppUserAvatar(
+                            name: first.name,
+                            imageUrl: first.avatarUrl,
+                            size: size - 3,
+                            fontSize: compact
+                                ? TextStyles.k10FontSize
+                                : TextStyles.k12FontSize,
+                          ),
+                  ),
                 ),
-                Spacing.h6,
-                SemiBoldText(
-                  text: '$count',
-                  fontSize: compact
-                      ? TextStyles.k10FontSize
-                      : TextStyles.k12FontSize,
-                  color: kColorWhite,
+                // Count chip overlaid on the avatar (bottom-right).
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    constraints: BoxConstraints(
+                      minWidth: compact ? 16 : 18,
+                      minHeight: compact ? 16 : 18,
+                    ),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: countLabel.length > 1 ? 4 : 0,
+                    ),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE11D48),
+                      borderRadius: BorderRadius.circular(99),
+                      border: Border.all(color: kColorWhite, width: 1.2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.35),
+                          blurRadius: 4,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    child: SemiBoldText(
+                      text: countLabel,
+                      fontSize: compact ? 8 : 9,
+                      color: kColorWhite,
+                    ),
+                  ),
                 ),
               ],
             ),

@@ -5,6 +5,7 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/live_session_badge.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
@@ -74,14 +75,22 @@ class DiscoverUserPreviewSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final photo = resolveUserAvatarUrl(user.displayPicture);
+    final isLive = user.isLiveNow;
+    final session = user.activeSession;
+    final liveKind = liveSessionKindFrom(session);
+    final liveGlow = switch (liveKind) {
+      LiveSessionKind.audio => const Color(0xFFFF3EA5),
+      LiveSessionKind.video => const Color(0xFF06B6D4),
+      LiveSessionKind.liveStream => const Color(0xFFFF355D),
+    };
 
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: kColorPrimary.withValues(alpha: 0.35),
-            blurRadius: 28,
+            color: (isLive ? liveGlow : kColorPrimary).withValues(alpha: 0.38),
+            blurRadius: isLive ? 32 : 28,
             offset: const Offset(0, 12),
           ),
         ],
@@ -122,6 +131,25 @@ class DiscoverUserPreviewSheet extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (isLive)
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: 72,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                liveGlow.withValues(alpha: 0.28),
+                                Colors.transparent,
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                     Positioned(
                       top: 10,
                       left: 0,
@@ -148,6 +176,15 @@ class DiscoverUserPreviewSheet extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (isLive)
+                      Positioned(
+                        top: 44,
+                        left: 18,
+                        child: LiveSessionBadge.fromSession(
+                          session,
+                          compact: false,
+                        ),
+                      ),
                     Positioned(
                       left: 18,
                       right: 18,
@@ -175,7 +212,7 @@ class DiscoverUserPreviewSheet extends StatelessWidget {
                             ],
                           ),
                           Spacing.v8,
-                          _statusRow(),
+                          _statusRow(excludeLiveBadge: isLive),
                         ],
                       ),
                     ),
@@ -187,13 +224,20 @@ class DiscoverUserPreviewSheet extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    if (isLive && session != null) ...[
+                      LiveSessionPreviewBanner(
+                        session: session,
+                        hostName: user.name,
+                      ),
+                      Spacing.v12,
+                    ],
                     if (user.bio.trim().isNotEmpty) ...[
                       _bioCard(),
                       Spacing.v12,
                     ],
                     _statsRow(),
                     Spacing.v16,
-                    if (user.isLiveNow) ...[
+                    if (isLive) ...[
                       _joinLiveButton(context),
                       Spacing.v10,
                     ],
@@ -228,18 +272,14 @@ class DiscoverUserPreviewSheet extends StatelessWidget {
     );
   }
 
-  Widget _statusRow() {
+  Widget _statusRow({bool excludeLiveBadge = false}) {
     final session = user.activeSession;
     return Wrap(
       spacing: 8,
       runSpacing: 6,
       children: [
-        if (user.isLiveNow)
-          _chip(
-            session?.liveBadgeLabel ?? 'LIVE',
-            Icons.sensors_rounded,
-            accent: true,
-          ),
+        if (user.isLiveNow && !excludeLiveBadge)
+          LiveSessionBadge.fromSession(session, compact: true),
         if (user.isLiveNow && (session?.viewerCount ?? 0) > 0)
           _chip(
             '${session!.viewerCount} watching',
@@ -247,7 +287,8 @@ class DiscoverUserPreviewSheet extends StatelessWidget {
           ),
         if (user.level > 0)
           _chip('Lv ${user.level}', Icons.military_tech_rounded),
-        if (user.isVip) _chip('VIP', Icons.workspace_premium_rounded, accent: true),
+        if (user.isVip)
+          _chip('VIP', Icons.workspace_premium_rounded, accent: true),
         if (user.isMutual)
           _chip('Mutual', Icons.favorite_rounded, accent: true)
         else if (user.isFollowing)
@@ -268,6 +309,9 @@ class DiscoverUserPreviewSheet extends StatelessWidget {
             ? kColorPrimary.withValues(alpha: 0.85)
             : kColorWhite.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: kColorWhite.withValues(alpha: accent ? 0.22 : 0.12),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -382,32 +426,38 @@ class DiscoverUserPreviewSheet extends StatelessWidget {
 
   Widget _joinLiveButton(BuildContext sheetContext) {
     final session = user.activeSession;
+    final kind = liveSessionKindFrom(session);
     final subtitle = (session?.title?.trim().isNotEmpty == true)
         ? session!.title!.trim()
         : null;
+    final hint = switch (kind) {
+      LiveSessionKind.audio => 'Jump into their audio room',
+      LiveSessionKind.video => 'Jump into their video room',
+      LiveSessionKind.liveStream => 'Watch their live stream',
+    };
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _DatingActionButton(
           label: session?.joinButtonLabel ?? 'Enter Room',
-          icon: session?.isLiveStream == true
-              ? Icons.videocam_rounded
-              : Icons.meeting_room_rounded,
+          icon: switch (kind) {
+            LiveSessionKind.audio => Icons.headphones_rounded,
+            LiveSessionKind.video => Icons.videocam_rounded,
+            LiveSessionKind.liveStream => Icons.play_circle_filled_rounded,
+          },
           style: _DatingActionStyle.joinLive,
           onTap: () => _onJoinLivePressed(sheetContext),
         ),
-        if (subtitle != null) ...[
-          Spacing.v6,
-          AppText(
-            text: subtitle,
-            fontSize: TextStyles.k10FontSize,
-            color: kColorWhite.withValues(alpha: 0.62),
-            align: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+        Spacing.v6,
+        AppText(
+          text: subtitle ?? hint,
+          fontSize: TextStyles.k10FontSize,
+          color: kColorWhite.withValues(alpha: 0.62),
+          align: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
       ],
     );
   }
