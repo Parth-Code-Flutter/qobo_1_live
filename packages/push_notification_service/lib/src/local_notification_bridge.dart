@@ -387,10 +387,19 @@ class LocalNotificationBridge {
   }
 
   int _notificationIdFor(PushNotificationMessage message) {
-    // Prefer backend notification_id so retries replace the same tray entry.
-    final notificationId = message.data['notification_id']?.toString().trim();
+    // Prefer backend notification_id / call_id so retries replace the same tray
+    // and call_cancelled / call_missed can cancel the matching banner.
+    final notificationId =
+        message.data['notification_id']?.toString().trim() ??
+        message.data['notificationId']?.toString().trim();
     if (notificationId != null && notificationId.isNotEmpty) {
       return notificationId.hashCode & 0x7fffffff;
+    }
+    final callId =
+        message.data['call_id']?.toString().trim() ??
+        message.data['callId']?.toString().trim();
+    if (callId != null && callId.isNotEmpty) {
+      return callId.hashCode & 0x7fffffff;
     }
     if (message.messageId.isNotEmpty) {
       return message.messageId.hashCode & 0x7fffffff;

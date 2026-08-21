@@ -9,6 +9,7 @@ import 'package:qobo_one_live/services/chat/chat_call_service.dart';
 import 'package:qobo_one_live/services/chat/chat_firebase_service.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/firebase/firebase_bootstrap.dart';
+import 'package:qobo_one_live/services/firebase/incoming_call_presentation.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/incoming_call_ring_ui.dart';
 import 'package:qobo_one_live/utils/zego_call_id_utils.dart';
@@ -168,34 +169,87 @@ class ChatIncomingCallCoordinator extends GetxService {
 
     final status = data['status']?.toString() ?? '';
     final callerId = data['callerId']?.toString() ?? '';
-    if (status != 'ringing' || callerId.isEmpty || callerId == myId) return;
+    final callId =
+        data['callId']?.toString() ?? ZegoCallIdUtils.fromRoomId(roomId);
+    final ringKey = '$roomId:$callId:ringing';
+
+    if (status != 'ringing' || callerId.isEmpty || callerId == myId) {
+      // Call left ringing — allow a future ring for a new callId.
+      if (_lastHandledRingKey == ringKey ||
+          (_lastHandledRingKey?.startsWith('$roomId:') ?? false)) {
+        _lastHandledRingKey = null;
+      }
+      return;
+    }
 
     final calleeId = data['calleeId']?.toString() ?? '';
     if (calleeId.isNotEmpty && calleeId != myId) return;
 
-    final callId =
-        data['callId']?.toString() ?? ZegoCallIdUtils.fromRoomId(roomId);
-    final ringKey = '$roomId:$callId:ringing';
     if (_lastHandledRingKey == ringKey) return;
-    _lastHandledRingKey = ringKey;
+    if (IncomingCallPresentation.isHandled(callId)) {
+      _lastHandledRingKey = ringKey;
+      return;
+    }
 
+    // Defer UI decision — CallKit may already be up from the background isolate.
+    unawaited(
+      _presentIncomingIfNeeded(
+        roomId: roomId,
+        callId: callId,
+        ringKey: ringKey,
+        data: data,
+        callerId: callerId,
+        myId: myId,
+      ),
+    );
+  }
+
+  Future<void> _presentIncomingIfNeeded({
+    required String roomId,
+    required String callId,
+    required String ringKey,
+    required Map<String, dynamic> data,
+    required String callerId,
+    required String myId,
+  }) async {
+    if (_onCallScreen || _dialogOpen) return;
+    if (_lastHandledRingKey == ringKey) return;
+    if (IncomingCallPresentation.isHandled(callId)) {
+      _lastHandledRingKey = ringKey;
+      return;
+    }
+
+    // Native CallKit already owns this ring (user opened app from background).
+    // Do not lock the ring key — if CallKit is dismissed while still ringing,
+    // a later snapshot can open the in-app UI once.
+    if (await IncomingCallPresentation.hasActiveCallKit(callId)) {
+      return;
+    }
+    if (IncomingCallRingUi.isShowing ||
+        IncomingCallPresentation.inAppCallId == callId) {
+      return;
+    }
+
+    _lastHandledRingKey = ringKey;
     _dialogOpen = true;
+    IncomingCallPresentation.markInAppShowing(callId);
+
     final callerName = data['callerName']?.toString() ?? 'Someone';
     final historyDocId = data['historyDocId']?.toString() ?? '';
     final callStartedAt = data['callStartedAt']?.toString() ?? '';
     final recordCallHistory = data['recordCallHistory'] != false;
     final isVideo = data['type']?.toString() == 'video';
 
-    unawaited(
-      IncomingCallRingUi.show(
+    try {
+      await IncomingCallRingUi.show(
         callerName: callerName,
         subtitle: isVideo
             ? '$callerName is video calling you'
             : '$callerName is calling you',
         isVideo: isVideo,
         onDecline: () async {
+          IncomingCallPresentation.markHandled(callId);
           _dialogOpen = false;
-          _lastHandledRingKey = null;
           await _callRepo.respondDirectCall(
             callId: callId,
             roomId: roomId,
@@ -209,8 +263,8 @@ class ChatIncomingCallCoordinator extends GetxService {
           ChatVoiceCallController.refreshMessagesInbox();
         },
         onAccept: () async {
+          IncomingCallPresentation.markHandled(callId);
           _dialogOpen = false;
-          _lastHandledRingKey = null;
           await _acceptCall(
             roomId: roomId,
             callId: callId,
@@ -222,11 +276,12 @@ class ChatIncomingCallCoordinator extends GetxService {
             recordCallHistory: recordCallHistory,
           );
         },
-      ).whenComplete(() {
-        _dialogOpen = false;
-        _lastHandledRingKey = null;
-      }),
-    );
+      );
+    } finally {
+      _dialogOpen = false;
+      IncomingCallPresentation.clearInAppShowing(callId);
+      // Keep _lastHandledRingKey while still ringing so resume does not reopen.
+    }
   }
 
   Future<void> _acceptCall({

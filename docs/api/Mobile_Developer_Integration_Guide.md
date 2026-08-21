@@ -234,6 +234,7 @@ Mobile owns the single ringing UI from `data`.
   "type": "incoming_call",
   "event": "incoming_call",
   "category": "INCOMING_CALL",
+  "notification_id": "call_history_uuid",
   "call_type": "voice",
   "callType": "voice",
   "call_id": "vc_chat_444a2f6f-1a84-4170-ad92-a868caaf6513_idc4658315",
@@ -243,6 +244,7 @@ Mobile owns the single ringing UI from `data`.
   "caller_name": "Test Agency 123456",
   "caller_avatar": "https://my-backend-api-960q.onrender.com/uploads/profile.jpg",
   "callee_id": "idc4658315",
+  "expires_at": "2026-08-21T00:15:00.000Z",
   "title": "Incoming Voice Call",
   "body": "Test Agency 123456 is calling you...",
   "sound": "ringtone",
@@ -255,9 +257,13 @@ Mobile owns the single ringing UI from `data`.
 |-----------|-----|
 | Foreground | In-app green/red ring dialog (no local tray) |
 | Background / killed | `flutter_callkit_incoming` full-screen ring |
-| Cancel / miss | End CallKit + dismiss in-app UI |
+| Open app while CallKit is ringing | **Keep CallKit only** — do **not** open in-app ring again |
+| Accept from CallKit / notification | `POST /api/call/direct/respond` + navigate to Zego room — **never** show ringing UI again |
+| Cancel / miss | End CallKit + dismiss in-app UI (`notification_id` / `call_id` tag) |
 
 Do **not** also show `flutter_local_notifications` Accept/Reject for `incoming_call`.
+
+Backend also sets `fcmSent: true` so Firestore `userIncomingCalls` does not dispatch a second FCM for the same call.
 
 ---
 

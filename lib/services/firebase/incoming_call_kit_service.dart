@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_callkit_incoming/entities/call_event.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:push_notification_service/push_notification_service.dart';
 import 'package:qobo_one_live/services/firebase/incoming_call_kit_display.dart';
+import 'package:qobo_one_live/services/firebase/incoming_call_presentation.dart';
 import 'package:qobo_one_live/services/firebase/incoming_call_push_handler.dart';
 import 'package:qobo_one_live/services/firebase/incoming_call_push_payload.dart';
 import 'package:qobo_one_live/utils/app_widgets/incoming_call_ring_ui.dart';
@@ -17,10 +19,12 @@ abstract final class IncomingCallKitService {
 
   static StreamSubscription<CallEvent?>? _eventSub;
   static bool _listening = false;
+  static _IncomingCallLifecycleObserver? _lifecycleObserver;
 
   static Future<void> initialize() async {
     if (kIsWeb) return;
     await _ensureEventListener();
+    _ensureLifecycleObserver();
     try {
       await FlutterCallkitIncoming.requestNotificationPermission({
         'title': 'Call notifications',
@@ -38,6 +42,7 @@ abstract final class IncomingCallKitService {
       LoggerUtils.logWarning('IncomingCallKit: full-screen intent — $e');
     }
     await _consumeAcceptedCallOnLaunch();
+    await onAppResumed();
   }
 
   static Future<void> endForPayload(IncomingCallPushPayload payload) {
@@ -46,6 +51,25 @@ abstract final class IncomingCallKitService {
 
   static Future<void> endForMessage(PushNotificationMessage message) {
     return IncomingCallKitDisplay.endForMessage(message);
+  }
+
+  /// When returning to foreground: keep CallKit if it owns the ring; never
+  /// stack a second in-app ringing dialog on top.
+  static Future<void> onAppResumed() async {
+    if (kIsWeb) return;
+    final activeIds = await IncomingCallPresentation.activeCallKitIds();
+    if (activeIds.isEmpty) return;
+
+    // CallKit is already ringing — drop any duplicate in-app dialog.
+    if (IncomingCallRingUi.isShowing) {
+      IncomingCallRingUi.dismissIfShowing();
+    }
+  }
+
+  static void _ensureLifecycleObserver() {
+    if (_lifecycleObserver != null) return;
+    _lifecycleObserver = _IncomingCallLifecycleObserver();
+    WidgetsBinding.instance.addObserver(_lifecycleObserver!);
   }
 
   static Future<void> _ensureEventListener() async {
@@ -71,6 +95,7 @@ abstract final class IncomingCallKitService {
       case Event.actionCallAccept:
         IncomingCallRingUi.dismissIfShowing();
         if (payload != null) {
+          // Accept → respond + navigate to room (never re-show ringing UI).
           await handler.acceptCall(payload, sourceMessage: message);
         }
         return;
@@ -83,6 +108,9 @@ abstract final class IncomingCallKitService {
         return;
       case Event.actionCallEnded:
         IncomingCallRingUi.dismissIfShowing();
+        if (payload != null) {
+          IncomingCallPresentation.markHandled(payload.callId);
+        }
         return;
       default:
         return;
@@ -135,5 +163,14 @@ abstract final class IncomingCallKitService {
       } catch (_) {}
     }
     return map;
+  }
+}
+
+class _IncomingCallLifecycleObserver with WidgetsBindingObserver {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(IncomingCallKitService.onAppResumed());
+    }
   }
 }

@@ -1,4 +1,5 @@
 import 'package:push_notification_service/push_notification_service.dart';
+import 'package:qobo_one_live/services/firebase/incoming_call_presentation.dart';
 import 'package:qobo_one_live/services/firebase/incoming_call_push_handler.dart';
 import 'package:qobo_one_live/services/firebase/incoming_call_push_payload.dart';
 import 'package:qobo_one_live/utils/app_widgets/incoming_call_ring_ui.dart';
@@ -17,23 +18,31 @@ abstract final class IncomingCallInAppBanner {
     final payload = IncomingCallPushPayload.fromMessage(message);
     if (payload == null || !payload.isIncomingRing) return false;
     if (IncomingCallRingUi.isShowing) return true;
+    if (await IncomingCallPresentation.isAlreadyPresented(payload.callId)) {
+      return true;
+    }
 
     final callHandler = handler ?? IncomingCallPushHandler();
+    IncomingCallPresentation.markInAppShowing(payload.callId);
 
-    await IncomingCallRingUi.show(
-      callerName: payload.callerName,
-      subtitle: payload.bannerBody,
-      isVideo: payload.isVideo,
-      avatarUrl: payload.callerAvatar,
-      onDecline: () => callHandler.handleNotificationAction(
-        actionId: PushNotificationActions.rejectCall,
-        message: message,
-      ),
-      onAccept: () => callHandler.handleNotificationAction(
-        actionId: PushNotificationActions.acceptCall,
-        message: message,
-      ),
-    );
+    try {
+      await IncomingCallRingUi.show(
+        callerName: payload.callerName,
+        subtitle: payload.bannerBody,
+        isVideo: payload.isVideo,
+        avatarUrl: payload.callerAvatar,
+        onDecline: () => callHandler.handleNotificationAction(
+          actionId: PushNotificationActions.rejectCall,
+          message: message,
+        ),
+        onAccept: () => callHandler.handleNotificationAction(
+          actionId: PushNotificationActions.acceptCall,
+          message: message,
+        ),
+      );
+    } finally {
+      IncomingCallPresentation.clearInAppShowing(payload.callId);
+    }
     return true;
   }
 }

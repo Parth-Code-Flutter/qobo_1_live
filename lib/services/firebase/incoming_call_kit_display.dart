@@ -160,6 +160,7 @@ abstract final class IncomingCallKitDisplay {
     } catch (_) {}
   }
 
+  /// Stable CallKit / notification id — prefer `call_id`, then `notification_id`.
   static String callKitIdFor(IncomingCallPushPayload payload) {
     final id = payload.callId.trim().isNotEmpty
         ? payload.callId.trim()

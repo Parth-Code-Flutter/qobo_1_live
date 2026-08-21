@@ -7,6 +7,7 @@ import 'package:qobo_one_live/services/chat/chat_call_service.dart';
 import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/firebase/incoming_call_kit_display.dart';
+import 'package:qobo_one_live/services/firebase/incoming_call_presentation.dart';
 import 'package:qobo_one_live/services/firebase/incoming_call_push_payload.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/incoming_call_in_app_banner.dart';
@@ -18,6 +19,7 @@ import 'package:qobo_one_live/utils/zego_engine_utils.dart';
 ///
 /// Foreground → branded in-app ring UI.
 /// Background / killed → [IncomingCallKitDisplay] (native CallKit / full-screen).
+/// Opening the app while CallKit is already ringing must **not** open a second UI.
 class IncomingCallPushHandler {
   IncomingCallPushHandler({
     CallRepo? callRepo,
@@ -39,9 +41,15 @@ class IncomingCallPushHandler {
 
     if (payload.isCancelled ||
         payload.type == PushNotificationTypes.callMissed) {
+      IncomingCallPresentation.markHandled(payload.callId);
       await PushNotificationService.instance.cancelLocalNotification(message);
       IncomingCallInAppBanner.dismissIfShowing();
       await IncomingCallKitDisplay.endForMessage(message);
+      return;
+    }
+
+    // CallKit already ringing (e.g. user just foregrounded) — keep that UI only.
+    if (await IncomingCallPresentation.isAlreadyPresented(payload.callId)) {
       return;
     }
 
@@ -55,8 +63,15 @@ class IncomingCallPushHandler {
 
     if (payload.isCancelled ||
         payload.type == PushNotificationTypes.callMissed) {
+      IncomingCallPresentation.markHandled(payload.callId);
       await PushNotificationService.instance.cancelLocalNotification(message);
       await IncomingCallKitDisplay.endForMessage(message);
+      return;
+    }
+
+    // Body tap / open-from-notification must not re-open the ringing screen when
+    // CallKit (or in-app) already owns this call. Accept goes via action buttons.
+    if (await IncomingCallPresentation.isAlreadyPresented(payload.callId)) {
       return;
     }
 
@@ -91,6 +106,9 @@ class IncomingCallPushHandler {
     IncomingCallPushPayload payload, {
     PushNotificationMessage? sourceMessage,
   }) async {
+    // Accept → respond API + Zego room only. Never show the ringing screen again.
+    IncomingCallPresentation.markHandled(payload.callId);
+
     if (payload.isExpired) {
       _showFeedback('This call has expired');
       if (sourceMessage != null) {
@@ -193,6 +211,7 @@ class IncomingCallPushHandler {
     IncomingCallPushPayload payload, {
     PushNotificationMessage? sourceMessage,
   }) async {
+    IncomingCallPresentation.markHandled(payload.callId);
     if (sourceMessage != null) {
       await PushNotificationService.instance.cancelLocalNotification(
         sourceMessage,
