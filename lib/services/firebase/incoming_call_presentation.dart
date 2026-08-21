@@ -1,18 +1,38 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 
 /// Cross-path dedupe for 1:1 rings (FCM, CallKit, Firestore).
 ///
 /// CallKit may be shown from the FCM **background isolate**. That isolate's
 /// static fields are not shared with the main isolate, so when the user opens
-/// the app we must consult native [FlutterCallkitIncoming.activeCalls] before
-/// opening the in-app ring UI again.
+/// the app we must consult native [FlutterCallkitIncoming.activeCalls].
+///
+/// When the app is **foreground**, we always prefer the in-app green/red ring
+/// UI — CallKit alone must not suppress it.
 abstract final class IncomingCallPresentation {
   IncomingCallPresentation._();
 
   static final Set<String> _handledCallIds = <String>{};
   static String? _inAppCallId;
+  static bool _appInForeground = true;
 
   static String? get inAppCallId => _inAppCallId;
+
+  static bool get isAppInForeground => _appInForeground;
+
+  static void setAppLifecycle(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.resumed:
+        _appInForeground = true;
+      case AppLifecycleState.inactive:
+        // Transient (e.g. control center) — still treat as open for ring UI.
+        _appInForeground = true;
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+        _appInForeground = false;
+    }
+  }
 
   static void markInAppShowing(String callId) {
     final id = callId.trim();
@@ -40,12 +60,15 @@ abstract final class IncomingCallPresentation {
     return id.isNotEmpty && _handledCallIds.contains(id);
   }
 
-  /// True when CallKit or in-app already owns this ring.
+  /// True when we should **not** open another ring surface.
+  ///
+  /// In foreground, CallKit does not count — in-app full-screen owns the UI.
   static Future<bool> isAlreadyPresented(String callId) async {
     final id = callId.trim();
-    if (id.isEmpty) return true;
+    if (id.isEmpty) return false;
     if (_handledCallIds.contains(id)) return true;
     if (_inAppCallId == id) return true;
+    if (_appInForeground) return false;
     return hasActiveCallKit(id);
   }
 

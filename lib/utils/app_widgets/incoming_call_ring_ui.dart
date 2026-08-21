@@ -23,6 +23,12 @@ abstract final class IncomingCallRingUi {
     _isShowing = true;
     await IncomingCallRinger.start();
     try {
+      // Ensure overlay exists (FCM can arrive before first frame after resume).
+      var attempts = 0;
+      while (Get.overlayContext == null && attempts < 20) {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        attempts++;
+      }
       await Get.dialog<void>(
         IncomingCallRingDialog(
           callerName: callerName,

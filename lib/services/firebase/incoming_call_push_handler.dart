@@ -11,6 +11,7 @@ import 'package:qobo_one_live/services/firebase/incoming_call_presentation.dart'
 import 'package:qobo_one_live/services/firebase/incoming_call_push_payload.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/incoming_call_in_app_banner.dart';
+import 'package:qobo_one_live/utils/app_widgets/incoming_call_ring_ui.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/zego_engine_utils.dart';
@@ -48,12 +49,8 @@ class IncomingCallPushHandler {
       return;
     }
 
-    // CallKit already ringing (e.g. user just foregrounded) — keep that UI only.
-    if (await IncomingCallPresentation.isAlreadyPresented(payload.callId)) {
-      return;
-    }
-
-    // App is open — prefer in-app WhatsApp-style ring (no CallKit double UI).
+    // App is open — always show WhatsApp-style full-screen green/red ring.
+    // (CallKit is for background/killed only; do not suppress in-app here.)
     await IncomingCallInAppBanner.tryShow(message, handler: this);
   }
 
@@ -69,9 +66,20 @@ class IncomingCallPushHandler {
       return;
     }
 
-    // Body tap / open-from-notification must not re-open the ringing screen when
-    // CallKit (or in-app) already owns this call. Accept goes via action buttons.
-    if (await IncomingCallPresentation.isAlreadyPresented(payload.callId)) {
+    // Already answering / ringing in-app — do not stack another UI.
+    if (IncomingCallRingUi.isShowing ||
+        IncomingCallPresentation.inAppCallId == payload.callId ||
+        IncomingCallPresentation.isHandled(payload.callId)) {
+      return;
+    }
+
+    // Opened from tray while CallKit was up (background → tap): keep CallKit /
+    // accept path. If app is already foreground, show in-app ring.
+    if (IncomingCallPresentation.isAppInForeground) {
+      await IncomingCallInAppBanner.tryShow(message, handler: this);
+      return;
+    }
+    if (await IncomingCallPresentation.hasActiveCallKit(payload.callId)) {
       return;
     }
 

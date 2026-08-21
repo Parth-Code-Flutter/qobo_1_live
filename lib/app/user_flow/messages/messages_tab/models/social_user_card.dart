@@ -1,3 +1,4 @@
+import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/user_active_session.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 
 /// Sanitized public user card from discover / search / public profile APIs.
@@ -23,6 +24,7 @@ class SocialUserCard {
     this.coinsPerSecond = 0,
     this.followersCount = 0,
     this.followingCount = 0,
+    this.activeSession,
   });
 
   final String id;
@@ -48,6 +50,11 @@ class SocialUserCard {
   final int followersCount;
   final int followingCount;
 
+  /// Host audio / video / live session from public profile / discover feed.
+  final UserActiveSession? activeSession;
+
+  bool get isLiveNow => activeSession?.isJoinable == true;
+
   SocialUserCard copyWith({
     bool? isFollowing,
     bool? isFollower,
@@ -57,6 +64,7 @@ class SocialUserCard {
     int? followersCount,
     int? followingCount,
     Object? profileBackgroundUrl = _copyWithUnset,
+    Object? activeSession = _copyWithUnset,
   }) {
     return SocialUserCard(
       id: id,
@@ -83,6 +91,9 @@ class SocialUserCard {
       coinsPerSecond: coinsPerSecond,
       followersCount: followersCount ?? this.followersCount,
       followingCount: followingCount ?? this.followingCount,
+      activeSession: identical(activeSession, _copyWithUnset)
+          ? this.activeSession
+          : activeSession as UserActiveSession?,
     );
   }
 
@@ -130,6 +141,7 @@ class SocialUserCard {
       coinsPerSecond: _toDouble(json['coinsPerSecond']),
       followersCount: _toInt(json['followersCount']),
       followingCount: _toInt(json['followingCount']),
+      activeSession: UserActiveSession.tryParse(json),
     );
   }
 

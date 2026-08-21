@@ -335,6 +335,145 @@ class DiscoverTabController extends GetxController {
     );
   }
 
+  /// Join the selected Discover user's active audio / video / live session.
+  Future<void> joinUserActiveSession(
+    BuildContext context,
+    SocialUserCard user,
+  ) async {
+    final session = user.activeSession;
+    if (session == null || !session.isJoinable) {
+      AppToast.showError(context, 'This session is no longer live');
+      return;
+    }
+
+    final roomId = session.roomId!.trim();
+    final roomHint = <String, dynamic>{
+      'room_id': roomId,
+      'roomId': roomId,
+      'id': roomId,
+      'type': session.normalizedRoomType,
+      'title': session.title ?? user.name,
+      'name': session.title ?? user.name,
+      'hostId': session.hostId ?? user.id,
+      'hostName': user.name,
+      'joinApprovalRequired': session.joinApprovalRequired,
+      'isLive': true,
+      if (session.liveStreamingId != null &&
+          session.liveStreamingId!.trim().isNotEmpty)
+        'liveStreamingId': session.liveStreamingId,
+      if (session.coverUrl != null && session.coverUrl!.trim().isNotEmpty)
+        'coverUrl': session.coverUrl,
+      if (session.viewerCount > 0) 'viewerCount': session.viewerCount,
+    };
+
+    final response = await JoinApprovalService().joinWithApprovalGate(
+      roomId: roomId,
+      sessionType: session.resolvedSessionType,
+      roomHint: roomHint,
+      forceApprovalFlow: session.joinApprovalRequired,
+      isShowLoader: true,
+    );
+    if (!context.mounted) return;
+
+    if (session.isLiveStream) {
+      await _openJoinedLiveStream(
+        context: context,
+        response: response,
+        fallback: roomHint,
+        roomId: roomId,
+      );
+      return;
+    }
+
+    if (!_isRoomApiSuccess(response)) {
+      AppToast.showError(
+        context,
+        response?['message']?.toString() ?? 'Could not join room',
+      );
+      return;
+    }
+
+    final payload = _normalizeJoinPayload(
+      response?['data'],
+      fallbackRoom: roomHint,
+      fallbackRoomId: roomId,
+    );
+    final roomType =
+        session.normalizedRoomType == 'AUDIO' ? 'AUDIO' : 'VIDEO';
+    payload['type'] = roomType.toLowerCase();
+    await ZegoEngineUtils.resetForRoomProject();
+    Get.toNamed(
+      Routes.LIVE_BROADCAST,
+      arguments: {
+        'isHost': false,
+        'roomType': roomType,
+        'roomData': payload,
+      },
+    );
+  }
+
+  Future<void> _openJoinedLiveStream({
+    required BuildContext context,
+    required Map<String, dynamic>? response,
+    required Map<String, dynamic> fallback,
+    required String roomId,
+  }) async {
+    if (!_isRoomApiSuccess(response)) {
+      final status = response?['data'] is Map
+          ? (response!['data'] as Map)['status']?.toString().toLowerCase()
+          : null;
+      final blocked = JoinApprovalService.isApprovalRequiredError(response) ||
+          status == 'rejected' ||
+          status == 'blocked' ||
+          status == 'expired' ||
+          status == 'cancelled';
+      if (blocked) {
+        AppToast.showError(
+          context,
+          response?['message']?.toString() ?? 'Could not join live stream',
+        );
+        return;
+      }
+      // Legacy open rooms: continue even if optional join reporting failed.
+    }
+
+    final roomData = <String, dynamic>{
+      ...fallback,
+      'type': 'live_stream',
+      'room_id': roomId,
+      'id': roomId,
+      'zegoLiveId': roomId,
+      'channelName': roomId,
+      'liveStreamingId':
+          fallback['liveStreamingId']?.toString() ?? roomId,
+      'isLive': true,
+    };
+    if (_isRoomApiSuccess(response) && response?['data'] is Map) {
+      final joined = Map<String, dynamic>.from(response!['data'] as Map);
+      roomData.addAll(joined);
+      if (joined['room'] is Map) {
+        roomData.addAll(Map<String, dynamic>.from(joined['room'] as Map));
+      }
+      roomData['type'] = 'live_stream';
+      final joinRequestId =
+          joined['join_request_id']?.toString() ??
+          joined['request_id']?.toString();
+      if (joinRequestId != null && joinRequestId.isNotEmpty) {
+        roomData['join_request_id'] = joinRequestId;
+      }
+    }
+
+    await ZegoEngineUtils.resetForLiveProject();
+    Get.toNamed(
+      Routes.LIVE_BROADCAST,
+      arguments: {
+        'isHost': false,
+        'roomType': 'LIVE_STREAM',
+        'roomData': roomData,
+      },
+    );
+  }
+
   Future<void> toggleGenderFilter(String gender) async {
     final current = filters.value;
     final nextGender = current.gender?.toLowerCase() == gender.toLowerCase()
@@ -632,21 +771,54 @@ class DiscoverTabController extends GetxController {
         isShowLoader: false,
       );
       if (isSocialApiSuccess(response) && response?['data'] is Map) {
-        final fresh = SocialUserCard.fromJson(
+        var fresh = SocialUserCard.fromJson(
           Map<String, dynamic>.from(response!['data'] as Map),
         );
         if (cached != null) {
-          return fresh.copyWith(
+          fresh = fresh.copyWith(
             isFollowing: cached.isFollowing || fresh.isFollowing,
             isFollower: cached.isFollower || fresh.isFollower,
             isMutual: cached.isMutual || fresh.isMutual,
             canMessage: cached.canMessage || fresh.canMessage,
+            isFavourite: cached.isFavourite || fresh.isFavourite,
           );
         }
+        _upsertUserCard(fresh);
         return fresh;
       }
     } catch (_) {}
     return cached;
+  }
+
+  /// Keep Discover / search lists in sync so sheet Obx sees `activeSession`.
+  void _upsertUserCard(SocialUserCard user) {
+    if (user.id.isEmpty) return;
+
+    SocialUserCard merge(SocialUserCard existing) {
+      if (existing.id != user.id) return existing;
+      return user.copyWith(
+        isFollowing: existing.isFollowing || user.isFollowing,
+        isFollower: existing.isFollower || user.isFollower,
+        isMutual: existing.isMutual || user.isMutual,
+        canMessage: existing.canMessage || user.canMessage,
+        isFavourite: existing.isFavourite || user.isFavourite,
+      );
+    }
+
+    var found = false;
+    discoverUsers.value = discoverUsers.map((u) {
+      if (u.id != user.id) return u;
+      found = true;
+      return merge(u);
+    }).toList();
+    searchResults.value = searchResults.map((u) {
+      if (u.id != user.id) return u;
+      found = true;
+      return merge(u);
+    }).toList();
+    if (!found) {
+      // Sheet can still render [user] directly when not in the current feed page.
+    }
   }
 
   Future<void> openChat(BuildContext context, SocialUserCard user) async {

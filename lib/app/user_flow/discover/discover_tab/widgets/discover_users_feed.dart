@@ -363,12 +363,21 @@ class _TopBadgesRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!user.isVip && user.level <= 0) return const SizedBox.shrink();
+    final showLive = user.isLiveNow;
+    if (!showLive && !user.isVip && user.level <= 0) {
+      return const SizedBox.shrink();
+    }
 
     return Wrap(
       spacing: 6,
       runSpacing: 6,
       children: [
+        if (showLive)
+          _BadgeChip(
+            label: user.activeSession?.liveBadgeLabel ?? 'LIVE',
+            backgroundColor: const Color(0xFFE11D48),
+            textColor: kColorWhite,
+          ),
         if (user.isVip)
           const _BadgeChip(
             label: 'VIP',

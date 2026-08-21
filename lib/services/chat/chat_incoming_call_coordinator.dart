@@ -9,6 +9,7 @@ import 'package:qobo_one_live/services/chat/chat_call_service.dart';
 import 'package:qobo_one_live/services/chat/chat_firebase_service.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/firebase/firebase_bootstrap.dart';
+import 'package:qobo_one_live/services/firebase/incoming_call_kit_display.dart';
 import 'package:qobo_one_live/services/firebase/incoming_call_presentation.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/incoming_call_ring_ui.dart';
@@ -219,11 +220,15 @@ class ChatIncomingCallCoordinator extends GetxService {
       return;
     }
 
-    // Native CallKit already owns this ring (user opened app from background).
-    // Do not lock the ring key — if CallKit is dismissed while still ringing,
-    // a later snapshot can open the in-app UI once.
+    // Native CallKit already owns this ring while app was backgrounded.
+    // In foreground, end CallKit and show the full-screen green/red UI instead.
     if (await IncomingCallPresentation.hasActiveCallKit(callId)) {
-      return;
+      if (!IncomingCallPresentation.isAppInForeground) {
+        return;
+      }
+      try {
+        await IncomingCallKitDisplay.endAll();
+      } catch (_) {}
     }
     if (IncomingCallRingUi.isShowing ||
         IncomingCallPresentation.inAppCallId == callId) {
@@ -235,6 +240,9 @@ class ChatIncomingCallCoordinator extends GetxService {
     IncomingCallPresentation.markInAppShowing(callId);
 
     final callerName = data['callerName']?.toString() ?? 'Someone';
+    final callerAvatar =
+        data['callerAvatar']?.toString() ??
+        data['caller_avatar']?.toString();
     final historyDocId = data['historyDocId']?.toString() ?? '';
     final callStartedAt = data['callStartedAt']?.toString() ?? '';
     final recordCallHistory = data['recordCallHistory'] != false;
@@ -247,6 +255,7 @@ class ChatIncomingCallCoordinator extends GetxService {
             ? '$callerName is video calling you'
             : '$callerName is calling you',
         isVideo: isVideo,
+        avatarUrl: callerAvatar,
         onDecline: () async {
           IncomingCallPresentation.markHandled(callId);
           _dialogOpen = false;

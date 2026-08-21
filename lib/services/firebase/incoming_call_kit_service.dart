@@ -53,23 +53,22 @@ abstract final class IncomingCallKitService {
     return IncomingCallKitDisplay.endForMessage(message);
   }
 
-  /// When returning to foreground: keep CallKit if it owns the ring; never
-  /// stack a second in-app ringing dialog on top.
+  /// When returning to foreground with CallKit still ringing: keep CallKit
+  /// (user opened from notification). Do **not** dismiss an in-app ring that
+  /// was shown while already foreground.
   static Future<void> onAppResumed() async {
     if (kIsWeb) return;
-    final activeIds = await IncomingCallPresentation.activeCallKitIds();
-    if (activeIds.isEmpty) return;
-
-    // CallKit is already ringing — drop any duplicate in-app dialog.
-    if (IncomingCallRingUi.isShowing) {
-      IncomingCallRingUi.dismissIfShowing();
-    }
+    IncomingCallPresentation.setAppLifecycle(AppLifecycleState.resumed);
   }
 
   static void _ensureLifecycleObserver() {
     if (_lifecycleObserver != null) return;
     _lifecycleObserver = _IncomingCallLifecycleObserver();
     WidgetsBinding.instance.addObserver(_lifecycleObserver!);
+    final state = WidgetsBinding.instance.lifecycleState;
+    if (state != null) {
+      IncomingCallPresentation.setAppLifecycle(state);
+    }
   }
 
   static Future<void> _ensureEventListener() async {
@@ -169,6 +168,7 @@ abstract final class IncomingCallKitService {
 class _IncomingCallLifecycleObserver with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    IncomingCallPresentation.setAppLifecycle(state);
     if (state == AppLifecycleState.resumed) {
       unawaited(IncomingCallKitService.onAppResumed());
     }

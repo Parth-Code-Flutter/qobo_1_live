@@ -1,10 +1,15 @@
+import 'package:flutter/scheduler.dart';
 import 'package:push_notification_service/push_notification_service.dart';
+import 'package:qobo_one_live/services/firebase/incoming_call_kit_display.dart';
 import 'package:qobo_one_live/services/firebase/incoming_call_presentation.dart';
 import 'package:qobo_one_live/services/firebase/incoming_call_push_handler.dart';
 import 'package:qobo_one_live/services/firebase/incoming_call_push_payload.dart';
 import 'package:qobo_one_live/utils/app_widgets/incoming_call_ring_ui.dart';
 
 /// Foreground incoming-call surface (FCM push path).
+///
+/// Always uses the WhatsApp-style full-screen green/red [IncomingCallRingUi]
+/// while the app is open — never a small banner / tray only.
 abstract final class IncomingCallInAppBanner {
   IncomingCallInAppBanner._();
 
@@ -17,17 +22,27 @@ abstract final class IncomingCallInAppBanner {
   }) async {
     final payload = IncomingCallPushPayload.fromMessage(message);
     if (payload == null || !payload.isIncomingRing) return false;
+    if (payload.isExpired) return false;
+    if (IncomingCallPresentation.isHandled(payload.callId)) return false;
     if (IncomingCallRingUi.isShowing) return true;
-    if (await IncomingCallPresentation.isAlreadyPresented(payload.callId)) {
-      return true;
+    if (IncomingCallPresentation.inAppCallId == payload.callId) return true;
+
+    // Foreground owns the full-screen ring. End any leftover CallKit first so
+    // we never suppress green/red buttons because of a stale native session.
+    if (await IncomingCallPresentation.hasActiveCallKit(payload.callId)) {
+      await IncomingCallKitDisplay.endForPayload(payload);
     }
 
     final callHandler = handler ?? IncomingCallPushHandler();
     IncomingCallPresentation.markInAppShowing(payload.callId);
 
     try {
+      // Wait a frame so Get.dialog has an overlay (cold FCM race).
+      await SchedulerBinding.instance.endOfFrame;
       await IncomingCallRingUi.show(
-        callerName: payload.callerName,
+        callerName: payload.callerName.trim().isEmpty
+            ? 'Incoming call'
+            : payload.callerName.trim(),
         subtitle: payload.bannerBody,
         isVideo: payload.isVideo,
         avatarUrl: payload.callerAvatar,

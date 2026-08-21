@@ -31,7 +31,13 @@ Future<void> showDiscoverUserCallDialog(
     builder: (sheetContext) {
       return Obx(() {
         final live = controller.userById(profile.id) ?? profile;
-        final isProcessing = controller.processingFollowId.value == live.id;
+        // Prefer freshest activeSession from the public-profile refresh.
+        final sheetUser = live.activeSession?.isJoinable == true
+            ? live
+            : (profile.activeSession != null
+                ? live.copyWith(activeSession: profile.activeSession)
+                : live);
+        final isProcessing = controller.processingFollowId.value == sheetUser.id;
 
         return Padding(
           padding: EdgeInsets.only(
@@ -41,7 +47,7 @@ Future<void> showDiscoverUserCallDialog(
           ),
           child: DiscoverUserPreviewSheet(
             hostContext: context,
-            user: live,
+            user: sheetUser,
             controller: controller,
             isFollowProcessing: isProcessing,
           ),
@@ -187,6 +193,10 @@ class DiscoverUserPreviewSheet extends StatelessWidget {
                     ],
                     _statsRow(),
                     Spacing.v16,
+                    if (user.isLiveNow) ...[
+                      _joinLiveButton(context),
+                      Spacing.v10,
+                    ],
                     _primaryActions(context),
                     Spacing.v10,
                     _viewProfileButton(context),
@@ -219,10 +229,22 @@ class DiscoverUserPreviewSheet extends StatelessWidget {
   }
 
   Widget _statusRow() {
+    final session = user.activeSession;
     return Wrap(
       spacing: 8,
       runSpacing: 6,
       children: [
+        if (user.isLiveNow)
+          _chip(
+            session?.liveBadgeLabel ?? 'LIVE',
+            Icons.sensors_rounded,
+            accent: true,
+          ),
+        if (user.isLiveNow && (session?.viewerCount ?? 0) > 0)
+          _chip(
+            '${session!.viewerCount} watching',
+            Icons.visibility_rounded,
+          ),
         if (user.level > 0)
           _chip('Lv ${user.level}', Icons.military_tech_rounded),
         if (user.isVip) _chip('VIP', Icons.workspace_premium_rounded, accent: true),
@@ -358,6 +380,38 @@ class DiscoverUserPreviewSheet extends StatelessWidget {
     );
   }
 
+  Widget _joinLiveButton(BuildContext sheetContext) {
+    final session = user.activeSession;
+    final subtitle = (session?.title?.trim().isNotEmpty == true)
+        ? session!.title!.trim()
+        : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _DatingActionButton(
+          label: session?.joinButtonLabel ?? 'Enter Room',
+          icon: session?.isLiveStream == true
+              ? Icons.videocam_rounded
+              : Icons.meeting_room_rounded,
+          style: _DatingActionStyle.joinLive,
+          onTap: () => _onJoinLivePressed(sheetContext),
+        ),
+        if (subtitle != null) ...[
+          Spacing.v6,
+          AppText(
+            text: subtitle,
+            fontSize: TextStyles.k10FontSize,
+            color: kColorWhite.withValues(alpha: 0.62),
+            align: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ],
+    );
+  }
+
   Widget _viewProfileButton(BuildContext sheetContext) {
     return _DatingActionButton(
       label: 'View Profile',
@@ -412,6 +466,14 @@ class DiscoverUserPreviewSheet extends StatelessWidget {
     final launchContext = hostContext.mounted ? hostContext : Get.context;
     if (launchContext == null || !launchContext.mounted) return;
     await controller.openChat(launchContext, user);
+  }
+
+  Future<void> _onJoinLivePressed(BuildContext sheetContext) async {
+    Navigator.of(sheetContext).pop();
+    await Future<void>.delayed(Duration.zero);
+    final launchContext = hostContext.mounted ? hostContext : Get.context;
+    if (launchContext == null || !launchContext.mounted) return;
+    await controller.joinUserActiveSession(launchContext, user);
   }
 
   Future<void> _openFullProfile(BuildContext sheetContext) async {
@@ -502,6 +564,16 @@ class _DatingActionStyle {
       colors: [Color(0xFFFF9A3D), Color(0xFFFF5E7A), Color(0xFFFF3DAA)],
     ),
     glow: Color(0xFFFF6A4E),
+  );
+
+  /// Live neon green / cyan for Join / Enter.
+  static const joinLive = _DatingActionStyle._(
+    gradient: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFF22C55E), Color(0xFF06B6D4), Color(0xFF3B82F6)],
+    ),
+    glow: Color(0xFF22C55E),
   );
 }
 

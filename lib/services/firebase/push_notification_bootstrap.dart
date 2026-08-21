@@ -60,9 +60,8 @@ abstract final class PushNotificationBootstrap {
           LoggerUtils.logInfo(
             'Push foreground: ${message.title} | data=${message.data}',
           );
-          if (IncomingCallPushHandler.isIncomingCallMessage(message)) {
-            unawaited(_incomingCallHandler.handleForegroundMessage(message));
-          }
+          // Incoming calls are handled only in onForegroundActionableMessage
+          // so the full-screen ring is not started twice.
         },
         // Branded in-app cards while open; PK / join / call use custom UI.
         onForegroundActionableMessage: (message) async {
