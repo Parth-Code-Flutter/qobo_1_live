@@ -20,6 +20,7 @@ import 'package:socket_io_client/socket_io_client.dart' as io;
 /// - `pk_*` events → PK battle realtime (request / scores / complete)
 /// - `join_*` events → host join-approval realtime
 /// - `live_stream.*` events → standalone live-stream viewer/gift/end updates
+/// - `room_emoji` / `emoji_received` → direct emoji animations in rooms
 /// - `vip_user_joined` → VIP frame entrance overlay in rooms
 class UserRealtimeSocketService extends GetxController {
   UserRealtimeSocketService({
@@ -45,6 +46,8 @@ class UserRealtimeSocketService extends GetxController {
   final _floorAudienceListeners = <void Function(Map<String, dynamic> data)>{};
   final _userKickedListeners = <void Function(Map<String, dynamic> data)>{};
   final _liveStreamEventListeners =
+      <void Function(String event, Map<String, dynamic> data)>{};
+  final _emojiEventListeners =
       <void Function(String event, Map<String, dynamic> data)>{};
 
   /// Host-vs-host PK Battle v1 events (`PK_INVITATION_RECEIVED`,
@@ -158,6 +161,11 @@ class UserRealtimeSocketService extends GetxController {
         (raw) => _onLiveStreamNamed('live_stream.gift_sent', raw),
       );
       socket.on('gift_sent', (raw) => _onLiveStreamNamed('gift_sent', raw));
+      socket.on('room_emoji', (raw) => _onEmojiNamed('room_emoji', raw));
+      socket.on(
+        'emoji_received',
+        (raw) => _onEmojiNamed('emoji_received', raw),
+      );
       socket.on('pk_request', (raw) => _onPkNamed('pk_request', raw));
       socket.on('pk_started', (raw) => _onPkNamed('pk_started', raw));
       socket.on('pk_accepted', (raw) => _onPkNamed('pk_accepted', raw));
@@ -374,6 +382,18 @@ class UserRealtimeSocketService extends GetxController {
     _liveStreamEventListeners.remove(listener);
   }
 
+  void addEmojiEventListener(
+    void Function(String event, Map<String, dynamic> data) listener,
+  ) {
+    _emojiEventListeners.add(listener);
+  }
+
+  void removeEmojiEventListener(
+    void Function(String event, Map<String, dynamic> data) listener,
+  ) {
+    _emojiEventListeners.remove(listener);
+  }
+
   void addPkBattleV1Listener(
     void Function(String event, Map<String, dynamic> data) listener,
   ) {
@@ -428,6 +448,8 @@ class UserRealtimeSocketService extends GetxController {
       socket.off('live_stream_ended');
       socket.off('live_stream.gift_sent');
       socket.off('gift_sent');
+      socket.off('room_emoji');
+      socket.off('emoji_received');
       socket.off('pk_request');
       socket.off('pk_started');
       socket.off('pk_accepted');
@@ -583,6 +605,25 @@ class UserRealtimeSocketService extends GetxController {
         listener(payload);
       } catch (e) {
         LoggerUtils.logWarning('RealtimeSocket: seat listener error — $e');
+      }
+    }
+  }
+
+  void _onEmojiNamed(String event, dynamic raw) {
+    final data = _asStringKeyedMap(raw);
+    if (data.isEmpty && event.isEmpty) return;
+    final payload = <String, dynamic>{
+      ...data,
+      'event': event,
+      if (data['type'] == null || data['type'].toString().trim().isEmpty)
+        'type': event,
+    };
+    LoggerUtils.logInfo('RealtimeSocket: $event data=$payload');
+    for (final listener in List.of(_emojiEventListeners)) {
+      try {
+        listener(event, payload);
+      } catch (e) {
+        LoggerUtils.logWarning('RealtimeSocket: emoji listener error — $e');
       }
     }
   }

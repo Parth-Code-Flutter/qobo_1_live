@@ -4,7 +4,19 @@ class ApiConstants {
   static const String appVersionLabel = '1.0.0+1';
 
   /// Backend base URL for API calls.
-  static const String baseUrl = 'https://my-backend-api-960q.onrender.com';
+  static const String baseUrl = 'https://dev-api.qobo1live.in';
+
+/*  Render :
+  dev-admin.qobo1live.in
+  dev-api.qobo1live.in
+
+  Prod:
+  api.qobo1live.in
+  admin.qobo1live.in
+
+  Staging:
+  staging-api.qobo1live.in
+  staging-admin.qobo1live.in*/
 }
 
 /// Central place for auth related API endpoints.
@@ -330,8 +342,7 @@ class EconomyEndpoints {
   static const String sendGiftV1 = '/api/v1/economy/send-gift';
 
   /// POST /api/v1/transactions/send-gift — earning-flow v1 transactions path
-  static const String sendGiftTransactionsV1 =
-      '/api/v1/transactions/send-gift';
+  static const String sendGiftTransactionsV1 = '/api/v1/transactions/send-gift';
 
   /// Legacy transaction route kept as fallback.
   static const String sendGiftTransactionsLegacy =
@@ -375,6 +386,23 @@ class EconomyEndpoints {
 
   /// GET /api/economy/seller/dashboard
   static const String sellerDashboard = '/api/economy/seller/dashboard';
+}
+
+/// Central place for emoji catalog / sending APIs.
+class EmojiEndpoints {
+  EmojiEndpoints._();
+
+  /// GET /api/emoji/list?category=
+  static const String list = '/api/emoji/list';
+
+  /// GET /api/v1/emoji/list?category= — v1 alias fallback.
+  static const String listV1 = '/api/v1/emoji/list';
+
+  /// POST /api/emoji/send
+  static const String send = '/api/emoji/send';
+
+  /// POST /api/v1/emoji/send — v1 alias fallback.
+  static const String sendV1 = '/api/v1/emoji/send';
 }
 
 /// Coin Seller Portal (`seller_admin`) under `/api/admin/...`.

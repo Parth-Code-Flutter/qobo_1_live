@@ -932,9 +932,7 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
             // chrome and allow the trailing cluster to scale so the bar never
             // overflows (was OVERFLOWED BY ~11px on narrow phones).
             final dense =
-                compact ||
-                controller.isVideoRoom ||
-                constraints.maxWidth < 440;
+                compact || controller.isVideoRoom || constraints.maxWidth < 440;
             final earningsMaxWidth = (constraints.maxWidth * 0.15).clamp(
               48.0,
               dense ? 58.0 : 68.0,
@@ -2451,6 +2449,12 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
           onTap: () => _openMessage(context),
         ),
         _SeatActionData(
+          icon: Icons.emoji_emotions_rounded,
+          label: 'Emoji',
+          accent: const Color(0xFFFFD84D),
+          onTap: _openEmoji,
+        ),
+        _SeatActionData(
           icon: kGiftIcon,
           label: 'Gift',
           accent: const Color(0xFFFFB347),
@@ -2465,6 +2469,12 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
         label: 'Message',
         accent: const Color(0xFFFF8FB8),
         onTap: () => _openMessage(context),
+      ),
+      _SeatActionData(
+        icon: Icons.emoji_emotions_rounded,
+        label: 'Emoji',
+        accent: const Color(0xFFFFD84D),
+        onTap: _openEmoji,
       ),
       _SeatActionData(
         icon: kGiftIcon,
@@ -3009,6 +3019,22 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
       receiverName: seat.name,
       roomGift: false,
     );
+  }
+
+  void _openEmoji() {
+    final receiverId = seat.userId.trim();
+    if (receiverId.isEmpty) {
+      Get.back();
+      Get.snackbar(
+        'Emoji not available',
+        'This user id is missing from the room member data.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFF1E1E2D),
+        colorText: kColorWhite,
+      );
+      return;
+    }
+    controller.openEmojiSheet(receiverId: receiverId, receiverName: seat.name);
   }
 }
 
@@ -3690,7 +3716,9 @@ class _FloorAudienceBadge extends GetView<LiveBroadcastController> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFFFF3EA5).withValues(alpha: 0.28),
+                          color: const Color(
+                            0xFFFF3EA5,
+                          ).withValues(alpha: 0.28),
                           blurRadius: 10,
                           offset: const Offset(0, 3),
                         ),
@@ -4056,7 +4084,16 @@ class FloorAudienceProfileSheet extends GetView<LiveBroadcastController> {
                       onTap: () => _openMessage(context),
                     ),
                   ),
-                  Spacing.h10,
+                  Spacing.h8,
+                  Expanded(
+                    child: _floorActionButton(
+                      icon: Icons.emoji_emotions_rounded,
+                      label: 'Emoji',
+                      colors: const [Color(0xFFFFD84D), Color(0xFFFF8F00)],
+                      onTap: _openEmoji,
+                    ),
+                  ),
+                  Spacing.h8,
                   Expanded(
                     child: _floorActionButton(
                       icon: kGiftIcon,
@@ -4187,6 +4224,15 @@ class FloorAudienceProfileSheet extends GetView<LiveBroadcastController> {
       receiverName: user.name,
       roomGift: false,
     );
+  }
+
+  void _openEmoji() {
+    final receiverId = user.userId.trim();
+    if (receiverId.isEmpty) {
+      Get.back<void>();
+      return;
+    }
+    controller.openEmojiSheet(receiverId: receiverId, receiverName: user.name);
   }
 
   void _openSeatPicker() {
@@ -4731,38 +4777,6 @@ class _LockedSeat extends StatelessWidget {
             const _DiamondCount(value: 20),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _HeaderMetric extends StatelessWidget {
-  const _HeaderMetric({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 42,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.22),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.06)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: AudioRoomStageOverlay._seatGold),
-          Spacing.h4,
-          AppText(
-            text: label,
-            fontSize: TextStyles.k10FontSize,
-            color: AudioRoomStageOverlay._ink,
-          ),
-        ],
       ),
     );
   }

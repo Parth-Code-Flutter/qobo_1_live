@@ -10,6 +10,7 @@ import 'package:qobo_one_live/constants/zego_config.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/repo/economy/economy_repo.dart';
+import 'package:qobo_one_live/repo/emoji/emoji_repo.dart';
 import 'package:qobo_one_live/repo/chat/chat_navigation_helper.dart';
 import 'package:qobo_one_live/repo/room/room_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
@@ -34,6 +35,7 @@ import 'package:qobo_one_live/utils/gift_share_economics.dart';
 import 'package:qobo_one_live/utils/session_earnings_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/utils/ui_utils/emoji_celebration_overlay.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_celebration_overlay.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_chat_celebration_tracker.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_media_utils.dart';
@@ -48,6 +50,7 @@ import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 import '../models/audio_room_models.dart';
 import '../models/room_background_theme.dart';
 import '../utils/live_room_profile_utils.dart';
+import '../widgets/emoji_picker_bottom_sheet.dart';
 import '../widgets/gifts_bottom_sheet.dart';
 import '../widgets/follower_pk_gift_target_sheet.dart';
 import '../widgets/live_filters_sheet.dart';
@@ -59,13 +62,16 @@ class LiveBroadcastController extends GetxController {
     EconomyRepo? economyRepo,
     AuthRepo? authRepo,
     RoomRepo? roomRepo,
+    EmojiRepo? emojiRepo,
   }) : _economyRepo = economyRepo ?? EconomyRepo(),
        _authRepo = authRepo ?? AuthRepo(),
-       _roomRepo = roomRepo ?? RoomRepo();
+       _roomRepo = roomRepo ?? RoomRepo(),
+       _emojiRepo = emojiRepo ?? EmojiRepo();
 
   final EconomyRepo _economyRepo;
   final AuthRepo _authRepo;
   final RoomRepo _roomRepo;
+  final EmojiRepo _emojiRepo;
 
   final isHost = false.obs;
 
@@ -125,6 +131,10 @@ class LiveBroadcastController extends GetxController {
   final selectedGiftReceiverId = RxnString();
   final selectedGiftReceiverName = RxnString();
   final isRoomGiftMode = true.obs;
+  final emojiCatalog = <Map<String, String>>[].obs;
+  final isLoadingEmojis = false.obs;
+  final selectedEmojiReceiverId = RxnString();
+  final selectedEmojiReceiverName = RxnString();
   final audioRoomSeats = <AudioRoomSeatModel>[].obs;
   final floorAudience = <FloorAudienceUser>[].obs;
 
@@ -181,6 +191,8 @@ class LiveBroadcastController extends GetxController {
   var _exitReported = false;
   var _hostEndConfirmed = false;
   var _giftSendInFlight = false;
+  var _emojiSendInFlight = false;
+  final Set<String> _playedEmojiEventKeys = <String>{};
 
   /// True when PK forced the camera on (e.g. audio room → PK video panes).
   var _pkForcedCameraOn = false;
@@ -234,6 +246,7 @@ class LiveBroadcastController extends GetxController {
     _validateStreamingInput();
     loadWalletBalance();
     loadGiftCatalog();
+    loadEmojiCatalog();
     _pkActiveWorker = ever<bool>(PkLiveRoomBridge.isActive, (active) {
       if (active) {
         _syncPkLocalAudience();
@@ -352,6 +365,7 @@ class LiveBroadcastController extends GetxController {
   void Function(Map<String, dynamic>)? _seatRequestSocketListener;
   void Function(Map<String, dynamic>)? _floorAudienceSocketListener;
   void Function(Map<String, dynamic>)? _userKickedSocketListener;
+  void Function(String event, Map<String, dynamic> data)? _emojiSocketListener;
 
   void _startSeatRequestPolling() {
     if (!isHost.value) return;
@@ -1367,6 +1381,293 @@ class LiveBroadcastController extends GetxController {
     return filtered.isNotEmpty ? filtered : giftCatalog.toList();
   }
 
+  Future<void> loadEmojiCatalog() async {
+    isLoadingEmojis.value = true;
+    try {
+      final response = await _emojiRepo.getEmojiCatalog(isShowLoader: false);
+      final parsed = _parseEmojiList(response?['data']);
+      emojiCatalog.assignAll(parsed.isEmpty ? _fallbackEmojiCatalog() : parsed);
+    } catch (_) {
+      if (emojiCatalog.isEmpty) {
+        emojiCatalog.assignAll(_fallbackEmojiCatalog());
+      }
+    } finally {
+      isLoadingEmojis.value = false;
+    }
+  }
+
+  List<Map<String, String>> _parseEmojiList(dynamic raw) {
+    final list = raw is List
+        ? raw
+        : raw is Map
+        ? (raw['emojis'] ?? raw['items'] ?? raw['list'])
+        : null;
+    if (list is! List) return const [];
+
+    return list
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .map((item) {
+          final id = _readEmojiField(item, const ['id', '_id', 'emojiId']);
+          final image = _readEmojiField(item, const [
+            'image',
+            'emojiImage',
+            'url',
+            'icon',
+            'svg',
+          ]);
+          final code = _readEmojiField(item, const [
+            'code',
+            'unicode',
+            'emoji',
+          ]);
+          return <String, String>{
+            'id': id ?? '',
+            'name':
+                _readEmojiField(item, const ['name', 'title', 'label']) ??
+                'Emoji',
+            'image': image ?? code ?? '😊',
+            'code': code ?? '',
+            'category':
+                _readEmojiField(item, const ['category', 'type']) ?? 'emoji',
+          };
+        })
+        .where((emoji) => (emoji['id'] ?? '').isNotEmpty)
+        .toList();
+  }
+
+  List<Map<String, String>> _fallbackEmojiCatalog() {
+    const seeds = [
+      ('heart_eyes', 'Heart Eyes', '😍', 'expressive'),
+      ('joy', 'Laughing Tears', '😂', 'expressive'),
+      ('rose', 'Rose', '🌹', 'reaction'),
+      ('fire', 'Fire', '🔥', 'trending'),
+      ('clap', 'Clap', '👏', 'reaction'),
+      ('heart', 'Heart', '❤️', 'reaction'),
+      ('party', 'Party', '🥳', 'celebration'),
+      ('sparkles', 'Sparkles', '✨', 'vip'),
+    ];
+    return seeds
+        .map(
+          (seed) => {
+            'id': seed.$1,
+            'name': seed.$2,
+            'image': seed.$3,
+            'code': seed.$3,
+            'category': seed.$4,
+          },
+        )
+        .toList();
+  }
+
+  String? _readEmojiField(Map<String, dynamic> map, List<String> keys) {
+    for (final key in keys) {
+      final value = map[key];
+      if (value == null) continue;
+      final text = value.toString().trim();
+      if (text.isNotEmpty && text.toLowerCase() != 'null') return text;
+    }
+    return null;
+  }
+
+  void openEmojiSheet({required String receiverId, String? receiverName}) {
+    final targetId = receiverId.trim();
+    if (targetId.isEmpty) {
+      Get.snackbar(
+        'Emoji not available',
+        'This user id is missing from the room member data.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFF1E1E2D),
+        colorText: kColorWhite,
+      );
+      return;
+    }
+
+    selectedEmojiReceiverId.value = targetId;
+    selectedEmojiReceiverName.value = receiverName?.trim().isNotEmpty == true
+        ? receiverName!.trim()
+        : 'this user';
+
+    if (emojiCatalog.isEmpty && !isLoadingEmojis.value) {
+      unawaited(loadEmojiCatalog());
+    }
+
+    if (Get.isDialogOpen == true) Get.back<void>();
+    if (Get.isBottomSheetOpen == true) Get.back<void>();
+
+    Future.delayed(const Duration(milliseconds: 140), () {
+      Get.bottomSheet(
+        const EmojiPickerBottomSheet(),
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        barrierColor: Colors.black.withValues(alpha: 0.58),
+      );
+    });
+  }
+
+  Future<void> sendEmoji(Map<String, String> emoji) async {
+    if (_emojiSendInFlight) return;
+
+    final emojiId = emoji['id']?.trim() ?? '';
+    final receiver = selectedEmojiReceiverId.value?.trim() ?? '';
+    final currentRoomId = audioRoomApiId.isNotEmpty
+        ? audioRoomApiId
+        : roomId.value.trim();
+    if (emojiId.isEmpty || receiver.isEmpty || currentRoomId.isEmpty) {
+      Get.snackbar(
+        'Emoji not sent',
+        'Emoji, receiver, or room id is missing.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFFD32F2F),
+        colorText: kColorWhite,
+      );
+      return;
+    }
+
+    final clientReqId = 'emoji_${DateTime.now().microsecondsSinceEpoch}';
+    // The emoji API currently documents `audio_room` as the shared room scope.
+    // Keep video-room emoji sends on the same scope until backend exposes a
+    // dedicated `video_room` enum for emoji delivery.
+    final sessionType = isAudioVideoRoom ? 'audio_room' : 'live_stream';
+
+    _emojiSendInFlight = true;
+    try {
+      final response = await _emojiRepo.sendEmoji(
+        emojiId: emojiId,
+        receiverId: receiver,
+        roomId: currentRoomId,
+        type: sessionType,
+        clientReqId: clientReqId,
+      );
+
+      if (!isEconomyApiSuccess(response)) {
+        Get.snackbar(
+          'Emoji not sent',
+          response?['message']?.toString() ?? 'Unable to send this emoji.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFFD32F2F),
+          colorText: kColorWhite,
+        );
+        return;
+      }
+
+      if (Get.isBottomSheetOpen == true) Get.back<void>();
+      final sentEmoji = _emojiFromResponse(response) ?? emoji;
+      _showEmojiCelebration(sentEmoji);
+      unawaited(_broadcastEmojiMarker(sentEmoji, receiver, clientReqId));
+    } finally {
+      _emojiSendInFlight = false;
+    }
+  }
+
+  Map<String, String>? _emojiFromResponse(Map<String, dynamic>? response) {
+    Map<String, dynamic>? asMap(dynamic value) {
+      if (value is Map) return Map<String, dynamic>.from(value);
+      return null;
+    }
+
+    final data = asMap(response?['data']) ?? const <String, dynamic>{};
+    final emoji =
+        asMap(data['emoji']) ??
+        asMap(response?['emoji']) ??
+        asMap(data['data']);
+    if (emoji == null) return null;
+
+    final id = _readEmojiField(emoji, const ['id', '_id', 'emojiId']) ?? '';
+    final image =
+        _readEmojiField(emoji, const [
+          'image',
+          'emojiImage',
+          'url',
+          'icon',
+          'svg',
+        ]) ??
+        _readEmojiField(emoji, const ['code', 'unicode', 'emoji']) ??
+        '😊';
+    return {
+      'id': id,
+      'name':
+          _readEmojiField(emoji, const ['name', 'title', 'label']) ?? 'Emoji',
+      'image': image,
+      'code': _readEmojiField(emoji, const ['code', 'unicode', 'emoji']) ?? '',
+      'category': _readEmojiField(emoji, const ['category', 'type']) ?? 'emoji',
+    };
+  }
+
+  void _showEmojiCelebration(Map<String, String> emoji) {
+    final image = emoji['image']?.trim().isNotEmpty == true
+        ? emoji['image']!.trim()
+        : emoji['code']?.trim() ?? '😊';
+    EmojiCelebrationOverlay.show(image: image, name: emoji['name']);
+  }
+
+  Future<void> _broadcastEmojiMarker(
+    Map<String, String> emoji,
+    String receiver,
+    String clientReqId,
+  ) async {
+    final label = _buildEmojiMarker(
+      emoji: emoji,
+      receiverId: receiver,
+      clientReqId: clientReqId,
+    );
+    try {
+      await ZegoUIKit().sendInRoomMessage(label);
+    } catch (_) {
+      // Socket events remain the primary delivery channel; Zego chat is fallback.
+    }
+  }
+
+  String _buildEmojiMarker({
+    required Map<String, String> emoji,
+    required String receiverId,
+    required String clientReqId,
+  }) {
+    final fields = <String, String>{
+      'clientReqId': clientReqId,
+      'senderId': _currentUserId(),
+      'receiverId': receiverId,
+      'roomId': audioRoomApiId.isNotEmpty ? audioRoomApiId : roomId.value,
+      'emojiId': emoji['id'] ?? '',
+      'code': emoji['code'] ?? '',
+      'name': emoji['name'] ?? 'Emoji',
+    };
+    final marker = fields.entries
+        .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
+        .join(';');
+    return '🫶 ${emoji['name'] ?? 'Emoji'} [emoji_anim:$marker]';
+  }
+
+  bool _isEmojiMarker(String message) {
+    return message.contains('[emoji_anim:');
+  }
+
+  Map<String, String> _parseEmojiMarker(String message) {
+    final start = message.indexOf('[emoji_anim:');
+    if (start < 0) return const {};
+    final end = message.indexOf(']', start);
+    if (end < 0) return const {};
+    final raw = message.substring(start + '[emoji_anim:'.length, end);
+    final result = <String, String>{};
+    for (final pair in raw.split(';')) {
+      final equals = pair.indexOf('=');
+      if (equals <= 0) continue;
+      result[pair.substring(0, equals)] = Uri.decodeComponent(
+        pair.substring(equals + 1),
+      );
+    }
+    return result;
+  }
+
+  Map<String, String>? _emojiById(String emojiId) {
+    final id = emojiId.trim();
+    if (id.isEmpty) return null;
+    for (final emoji in emojiCatalog) {
+      if ((emoji['id'] ?? '').trim() == id) return emoji;
+    }
+    return null;
+  }
+
   bool get canOpenZego => connectionIssue.value.isEmpty;
 
   Map<String, dynamic> get liveZegoStreamingData {
@@ -1410,7 +1711,23 @@ class LiveBroadcastController extends GetxController {
         _roomData['appSign'] ??
         _roomData['app_sign'];
     final sign = value?.toString().trim() ?? '';
-    return sign.isNotEmpty ? sign : ZegoConfig.liveAppSign;
+    return _isValidZegoAppSign(sign) ? sign : ZegoConfig.liveAppSign;
+  }
+
+  bool _isValidZegoAppSign(String value) {
+    return RegExp(r'^[a-fA-F0-9]{64}$').hasMatch(value.trim());
+  }
+
+  String get liveZegoUserId {
+    final zego = liveZegoStreamingData;
+    final value =
+        zego['userId'] ??
+        zego['user_id'] ??
+        zego['zegoUserId'] ??
+        zego['zego_user_id'];
+    final userId = ZegoLiveIdUtils.sanitizeUserId(value?.toString() ?? '');
+    if (userId.isNotEmpty) return userId;
+    return _currentUserId();
   }
 
   String get liveZegoRoomId {
@@ -1789,11 +2106,14 @@ class LiveBroadcastController extends GetxController {
     );
 
     chatMessages.assignAll(
-      messages.map((message) => _mapZegoMessage(message, myId)),
+      messages
+          .where((message) => !_isEmojiMarker(message.message))
+          .map((message) => _mapZegoMessage(message, myId)),
     );
 
     // When someone else shares a gift in the room, play the celebration.
     _maybeCelebrateIncomingGift(messages, myId);
+    _maybeCelebrateIncomingEmoji(messages, myId);
   }
 
   /// Plays the gift SVGA/sound for peer (non-self) gift chat events in any room
@@ -1820,6 +2140,42 @@ class LiveBroadcastController extends GetxController {
         );
       },
     );
+  }
+
+  void _maybeCelebrateIncomingEmoji(
+    List<ZegoInRoomMessage> messages,
+    String myUserId,
+  ) {
+    for (final message in messages) {
+      final text = message.message;
+      if (!_isEmojiMarker(text)) continue;
+      final marker = _parseEmojiMarker(text);
+      if (marker.isEmpty) continue;
+
+      final senderId = marker['senderId'] ?? message.user.id;
+      if (_userIdsMatch(senderId, myUserId)) continue;
+
+      final receiver = marker['receiverId'] ?? '';
+      if (receiver.isEmpty || !_userIdsMatch(receiver, myUserId)) continue;
+
+      final key =
+          marker['clientReqId'] ??
+          '${message.messageID}_${message.timestamp}_${senderId}_$receiver';
+      if (!_playedEmojiEventKeys.add(key)) continue;
+
+      final emoji =
+          _emojiById(marker['emojiId'] ?? '') ??
+          {
+            'id': marker['emojiId'] ?? '',
+            'name': marker['name'] ?? 'Emoji',
+            'image': marker['code']?.isNotEmpty == true
+                ? marker['code']!
+                : '😊',
+            'code': marker['code'] ?? '',
+            'category': 'emoji',
+          };
+      _showEmojiCelebration(emoji);
+    }
   }
 
   /// Updates seat diamonds + local session earnings when a peer gift arrives.
@@ -2982,6 +3338,66 @@ class LiveBroadcastController extends GetxController {
     if (normalizedEvent.contains('gift_sent')) {
       _celebrateLiveGiftFromSocket(data);
     }
+  }
+
+  void _handleEmojiSocketEvent(String event, Map<String, dynamic> data) {
+    Map<String, dynamic>? asMap(dynamic value) {
+      if (value is Map) return Map<String, dynamic>.from(value);
+      return null;
+    }
+
+    final payload = asMap(data['data']) ?? data;
+    final eventRoom =
+        readRoomField(payload, const [
+          'roomId',
+          'room_id',
+          'liveStreamingId',
+          'live_streaming_id',
+        ]) ??
+        readRoomField(data, const ['roomId', 'room_id']);
+    final currentRoom = audioRoomApiId.isNotEmpty
+        ? audioRoomApiId
+        : roomId.value.trim();
+    if (eventRoom != null &&
+        eventRoom.trim().isNotEmpty &&
+        currentRoom.isNotEmpty &&
+        eventRoom.trim() != currentRoom &&
+        ZegoLiveIdUtils.sanitize(eventRoom) !=
+            ZegoLiveIdUtils.sanitize(currentRoom)) {
+      return;
+    }
+
+    final receiver =
+        readRoomField(payload, const ['receiverId', 'receiver_id']) ??
+        readRoomField(asMap(payload['receiver']) ?? const {}, const [
+          'id',
+          '_id',
+          'userId',
+          'user_id',
+        ]);
+    final myId = _currentUserId();
+    if (receiver == null || !_userIdsMatch(receiver, myId)) return;
+
+    final sender =
+        readRoomField(payload, const ['senderId', 'sender_id']) ??
+        readRoomField(asMap(payload['sender']) ?? const {}, const [
+          'id',
+          '_id',
+          'userId',
+          'user_id',
+        ]);
+    if (sender != null && _userIdsMatch(sender, myId)) return;
+
+    final eventKey =
+        readRoomField(payload, const ['clientReqId', 'client_req_id', 'id']) ??
+        '$event:${payload.hashCode}';
+    if (!_playedEmojiEventKeys.add(eventKey)) return;
+
+    final emoji =
+        _emojiFromResponse({'data': payload}) ??
+        _emojiById(readRoomField(payload, const ['emojiId', 'emoji_id']) ?? '');
+    if (emoji == null) return;
+    _showEmojiCelebration(emoji);
   }
 
   bool _matchesCurrentLiveStreamEvent(Map<String, dynamic> data) {
@@ -4340,6 +4756,10 @@ class LiveBroadcastController extends GetxController {
       unawaited(loadAudioRoomSeats());
     };
 
+    _emojiSocketListener = (event, data) {
+      _handleEmojiSocketEvent(event, data);
+    };
+
     _userKickedSocketListener = (data) {
       if (isHost.value || _exitReported) return;
       final apiRoomId = audioRoomApiId.trim();
@@ -4386,6 +4806,7 @@ class LiveBroadcastController extends GetxController {
       final seatListener = _seatRequestSocketListener;
       final floorListener = _floorAudienceSocketListener;
       final kickListener = _userKickedSocketListener;
+      final emojiListener = _emojiSocketListener;
       if (seatListener != null) {
         socket.addSeatRequestListener(seatListener);
       }
@@ -4394,6 +4815,9 @@ class LiveBroadcastController extends GetxController {
       }
       if (kickListener != null) {
         socket.addUserKickedListener(kickListener);
+      }
+      if (emojiListener != null) {
+        socket.addEmojiEventListener(emojiListener);
       }
       await socket.joinRoomChannel(apiRoomId);
     }());
@@ -4404,12 +4828,14 @@ class LiveBroadcastController extends GetxController {
       _seatRequestSocketListener = null;
       _floorAudienceSocketListener = null;
       _userKickedSocketListener = null;
+      _emojiSocketListener = null;
       return;
     }
     final socket = Get.find<UserRealtimeSocketService>();
     final seatListener = _seatRequestSocketListener;
     final floorListener = _floorAudienceSocketListener;
     final kickListener = _userKickedSocketListener;
+    final emojiListener = _emojiSocketListener;
     if (seatListener != null) {
       socket.removeSeatRequestListener(seatListener);
     }
@@ -4419,9 +4845,13 @@ class LiveBroadcastController extends GetxController {
     if (kickListener != null) {
       socket.removeUserKickedListener(kickListener);
     }
+    if (emojiListener != null) {
+      socket.removeEmojiEventListener(emojiListener);
+    }
     _seatRequestSocketListener = null;
     _floorAudienceSocketListener = null;
     _userKickedSocketListener = null;
+    _emojiSocketListener = null;
   }
 
   Future<void> _runSeatAction({
@@ -5431,6 +5861,7 @@ class LiveBroadcastController extends GetxController {
     _mediaSub?.cancel();
     _giftCelebrationTracker.reset();
     GiftCelebrationOverlay.dismiss();
+    EmojiCelebrationOverlay.dismiss();
     if (_viewerCountListener != null) {
       try {
         ZegoUIKitPrebuiltLiveStreamingController().user.countNotifier
