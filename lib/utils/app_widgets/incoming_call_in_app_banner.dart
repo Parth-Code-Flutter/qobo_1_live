@@ -1,6 +1,5 @@
 import 'package:flutter/scheduler.dart';
 import 'package:push_notification_service/push_notification_service.dart';
-import 'package:qobo_one_live/services/firebase/incoming_call_kit_display.dart';
 import 'package:qobo_one_live/services/firebase/incoming_call_presentation.dart';
 import 'package:qobo_one_live/services/firebase/incoming_call_push_handler.dart';
 import 'package:qobo_one_live/services/firebase/incoming_call_push_payload.dart';
@@ -26,12 +25,6 @@ abstract final class IncomingCallInAppBanner {
     if (IncomingCallPresentation.isHandled(payload.callId)) return false;
     if (IncomingCallRingUi.isShowing) return true;
     if (IncomingCallPresentation.inAppCallId == payload.callId) return true;
-
-    // Foreground owns the full-screen ring. End any leftover CallKit first so
-    // we never suppress green/red buttons because of a stale native session.
-    if (await IncomingCallPresentation.hasActiveCallKit(payload.callId)) {
-      await IncomingCallKitDisplay.endForPayload(payload);
-    }
 
     final callHandler = handler ?? IncomingCallPushHandler();
     IncomingCallPresentation.markInAppShowing(payload.callId);

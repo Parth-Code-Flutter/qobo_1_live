@@ -6,7 +6,7 @@ class ApiConstants {
   /// Backend base URL for API calls.
   static const String baseUrl = 'https://dev-api.qobo1live.in';
 
-/*  Render :
+  /*  Render :
   dev-admin.qobo1live.in
   dev-api.qobo1live.in
 
@@ -602,14 +602,19 @@ class CallModuleEndpoints {
   /// GET /api/call/users/search?q=
   static const String usersSearch = '/api/call/users/search';
 
-  /// POST /api/call/direct/start
-  static const String directStart = '/api/call/direct/start';
+  /// POST /api/call/start
+  static const String directStart = '/api/call/start';
 
-  /// POST /api/call/direct/end
-  static const String directEnd = '/api/call/direct/end';
+  /// POST /api/call/end
+  static const String directEnd = '/api/call/end';
 
-  /// POST /api/call/direct/respond — accept/reject from push or in-app ring
-  static const String directRespond = '/api/call/direct/respond';
+  /// POST /api/call/respond — accept/reject from in-app ring
+  static const String directRespond = '/api/call/respond';
+
+  /// Legacy direct-call endpoints kept only as rollout fallback.
+  static const String legacyDirectStart = '/api/call/direct/start';
+  static const String legacyDirectEnd = '/api/call/direct/end';
+  static const String legacyDirectRespond = '/api/call/direct/respond';
 }
 
 /// Central place for chat related API endpoints.

@@ -53,7 +53,9 @@ abstract final class AuthSessionHelper {
 
       if (data is Map) {
         // Flatten `{ "user": {...}, "token": "..." }` so [UserSessionController] reads top-level keys.
-        final merged = coalesceStoredProfileMap(Map<String, dynamic>.from(data));
+        final merged = coalesceStoredProfileMap(
+          Map<String, dynamic>.from(data),
+        );
         final token = extractToken(merged);
         if (token.isNotEmpty) {
           await storage.writeStringStorage(kStorageToken, token);
@@ -69,8 +71,10 @@ abstract final class AuthSessionHelper {
       if (!Get.isRegistered<ChatSessionService>()) {
         Get.put(ChatSessionService(), permanent: true);
       }
-      // Fire-and-forget — chat screens retry if this fails.
-      unawaited(Get.find<ChatSessionService>().ensureSignedIn());
+      // Firestore call ringing requires Firebase Auth immediately after REST
+      // login, otherwise the first outgoing/incoming ring can hit
+      // `permission-denied` before chat screens get a chance to retry.
+      await Get.find<ChatSessionService>().ensureSignedIn();
       // Follower live alerts: register device token + open realtime socket.
       unawaited(FcmTokenSyncService.ensureSynced());
       unawaited(UserRealtimeSocketService.ensureConnected());

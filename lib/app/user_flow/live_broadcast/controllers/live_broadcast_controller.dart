@@ -1724,7 +1724,9 @@ class LiveBroadcastController extends GetxController {
         zego['userId'] ??
         zego['user_id'] ??
         zego['zegoUserId'] ??
-        zego['zego_user_id'];
+        zego['zego_user_id'] ??
+        _roomData['userId'] ??
+        _roomData['user_id'];
     final userId = ZegoLiveIdUtils.sanitizeUserId(value?.toString() ?? '');
     if (userId.isNotEmpty) return userId;
     return _currentUserId();
@@ -1736,7 +1738,11 @@ class LiveBroadcastController extends GetxController {
         (zego['roomId'] ??
                 zego['room_id'] ??
                 zego['liveId'] ??
-                zego['zegoLiveId'])
+                zego['live_id'] ??
+                zego['zegoLiveId'] ??
+                zego['zego_live_id'] ??
+                zego['channelName'] ??
+                zego['channel_name'])
             ?.toString()
             .trim();
     if (zegoRoomId != null && zegoRoomId.isNotEmpty && zegoRoomId != 'null') {
@@ -1747,7 +1753,12 @@ class LiveBroadcastController extends GetxController {
 
   String get liveZegoToken {
     final zego = liveZegoStreamingData;
-    final value = zego['token'] ?? zego['zegoToken'] ?? _roomData['zegoToken'];
+    final value =
+        zego['token'] ??
+        zego['zegoToken'] ??
+        zego['zego_token'] ??
+        _roomData['zegoToken'] ??
+        _roomData['zego_token'];
     return value?.toString().trim() ?? '';
   }
 
@@ -1758,6 +1769,8 @@ class LiveBroadcastController extends GetxController {
         zego['host_stream_id'] ??
         zego['playStreamId'] ??
         zego['play_stream_id'] ??
+        zego['streamId'] ??
+        zego['stream_id'] ??
         _roomData['hostStreamId'] ??
         _roomData['host_stream_id'];
     final streamId = value?.toString().trim() ?? '';
@@ -1772,6 +1785,8 @@ class LiveBroadcastController extends GetxController {
         zego['publish_stream_id'] ??
         zego['streamId'] ??
         zego['stream_id'] ??
+        zego['zegoStreamId'] ??
+        zego['zego_stream_id'] ??
         _roomData['publishStreamId'] ??
         _roomData['publish_stream_id'];
     final streamId = value?.toString().trim() ?? '';
@@ -1786,6 +1801,8 @@ class LiveBroadcastController extends GetxController {
         zego['play_stream_id'] ??
         zego['hostStreamId'] ??
         zego['host_stream_id'] ??
+        zego['streamId'] ??
+        zego['stream_id'] ??
         _roomData['playStreamId'] ??
         _roomData['play_stream_id'] ??
         _roomData['hostStreamId'] ??

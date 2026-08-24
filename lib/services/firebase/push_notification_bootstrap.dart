@@ -1,12 +1,8 @@
-import 'dart:async';
-
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:push_notification_service/push_notification_service.dart';
 import 'package:qobo_one_live/services/firebase/fcm_token_sync_service.dart';
 import 'package:qobo_one_live/services/firebase/firebase_bootstrap.dart';
-import 'package:qobo_one_live/services/firebase/incoming_call_kit_display.dart';
-import 'package:qobo_one_live/services/firebase/incoming_call_kit_service.dart';
 import 'package:qobo_one_live/services/firebase/incoming_call_push_handler.dart';
 import 'package:qobo_one_live/services/firebase/join_request_push_handler.dart';
 import 'package:qobo_one_live/services/firebase/pk_battle_push_handler.dart';
@@ -35,7 +31,9 @@ abstract final class PushNotificationBootstrap {
   /// Must run before other FCM APIs (Firebase Messaging requirement).
   static void registerBackgroundHandler() {
     if (_backgroundHandlerRegistered || kIsWeb) return;
-    FirebaseMessaging.onBackgroundMessage(qoboFirebaseMessagingBackgroundHandler);
+    FirebaseMessaging.onBackgroundMessage(
+      qoboFirebaseMessagingBackgroundHandler,
+    );
     _backgroundHandlerRegistered = true;
   }
 
@@ -144,10 +142,6 @@ abstract final class PushNotificationBootstrap {
       ),
     );
 
-    if (ok) {
-      await IncomingCallKitService.initialize();
-    }
-
     LoggerUtils.logInfo(
       ok
           ? 'PushNotificationBootstrap: listening for notifications'
@@ -158,29 +152,21 @@ abstract final class PushNotificationBootstrap {
   /// Call once after [runApp] so cold-start Accept/Reject can navigate safely.
   static void flushPendingLaunch() {
     PushNotificationService.instance.flushPendingLaunch();
-    unawaited(IncomingCallKitService.initialize());
   }
 }
 
-/// FCM background isolate — CallKit for 1:1 rings, then package handler for others.
+/// FCM background isolate.
 ///
-/// Backend sends **data-only** `incoming_call` (no `notification` /
-/// `android.notification`) so the OS does not auto-show tray banners. We must
-/// surface exactly one CallKit / full-screen ring from this handler.
+/// New 1:1 calls are app-active only, so incoming-call pushes are ignored while
+/// backgrounded/killed. Backend must avoid notification payloads for calls.
 @pragma('vm:entry-point')
 Future<void> qoboFirebaseMessagingBackgroundHandler(
   RemoteMessage message,
 ) async {
-  try {
-    await IncomingCallKitDisplay.handleBackgroundRemoteMessage(message);
-  } catch (_) {
-    // Never block the shared background handler.
-  }
-
   final mapped = PushNotificationMessage.fromRemoteMessage(message);
   final type = PushNotificationTypes.resolveType(mapped.data);
 
-  // Native CallKit already shows full-screen ring — skip duplicate Accept/Reject tray.
+  // In-app-only direct calls: no heads-up banner, no CallKit, no tray fallback.
   if (PushNotificationTypes.isIncomingCall(type) ||
       type == PushNotificationTypes.callCancelled ||
       type == PushNotificationTypes.callMissed) {

@@ -9,20 +9,20 @@ import 'package:qobo_one_live/services/chat/chat_call_service.dart';
 import 'package:qobo_one_live/services/chat/chat_firebase_service.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/firebase/firebase_bootstrap.dart';
-import 'package:qobo_one_live/services/firebase/incoming_call_kit_display.dart';
 import 'package:qobo_one_live/services/firebase/incoming_call_presentation.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/incoming_call_ring_ui.dart';
 import 'package:qobo_one_live/utils/zego_call_id_utils.dart';
 import 'package:qobo_one_live/utils/zego_engine_utils.dart';
 
-/// Listens for Firestore `calls/active` and shows incoming call UI.
+/// Listens for Firestore `userIncomingCalls/{userId}` / `calls/active` and
+/// shows the app-active incoming call popup.
 class ChatIncomingCallCoordinator extends GetxService {
   ChatIncomingCallCoordinator({
     ChatCallService? callService,
     CallRepo? callRepo,
-  })  : _callService = callService ?? ChatCallService(),
-        _callRepo = callRepo ?? CallRepo();
+  }) : _callService = callService ?? ChatCallService(),
+       _callRepo = callRepo ?? CallRepo();
 
   final ChatCallService _callService;
   final CallRepo _callRepo;
@@ -80,8 +80,9 @@ class ChatIncomingCallCoordinator extends GetxService {
     if (!Get.isRegistered<ChatSessionService>()) {
       Get.put(ChatSessionService(), permanent: true);
     }
-    final signedIn =
-        await Get.find<ChatSessionService>().ensureSignedIn(isShowLoader: false);
+    final signedIn = await Get.find<ChatSessionService>().ensureSignedIn(
+      isShowLoader: false,
+    );
     if (!signedIn) return;
 
     final rows = await ChatFirebaseService().fetchInboxRoomsForUser(myId);
@@ -100,8 +101,9 @@ class ChatIncomingCallCoordinator extends GetxService {
     if (!Get.isRegistered<ChatSessionService>()) {
       Get.put(ChatSessionService(), permanent: true);
     }
-    final signedIn =
-        await Get.find<ChatSessionService>().ensureSignedIn(isShowLoader: false);
+    final signedIn = await Get.find<ChatSessionService>().ensureSignedIn(
+      isShowLoader: false,
+    );
     if (!signedIn) return;
 
     await _userChatsSub?.cancel();
@@ -110,34 +112,28 @@ class ChatIncomingCallCoordinator extends GetxService {
         .doc(myId)
         .collection('rooms')
         .snapshots()
-        .listen(
-          (snapshot) {
-            final roomIds = snapshot.docs
-                .map((doc) => doc.data()['roomId']?.toString() ?? doc.id)
-                .where((id) => id.isNotEmpty);
-            syncWatchedRooms(roomIds, replace: false);
-          },
-          onError: (_) {},
-        );
+        .listen((snapshot) {
+          final roomIds = snapshot.docs
+              .map((doc) => doc.data()['roomId']?.toString() ?? doc.id)
+              .where((id) => id.isNotEmpty);
+          syncWatchedRooms(roomIds, replace: false);
+        }, onError: (_) {});
 
     await _userRingSub?.cancel();
     _userRingSub = FirebaseFirestore.instance
         .collection('userIncomingCalls')
         .doc(myId)
         .snapshots()
-        .listen(
-          (snapshot) {
-            if (!snapshot.exists) {
-              _lastHandledRingKey = null;
-              return;
-            }
-            final data = Map<String, dynamic>.from(snapshot.data() ?? {});
-            final roomId = data['roomId']?.toString() ?? '';
-            if (roomId.isEmpty) return;
-            _onActiveCallSnapshot(roomId: roomId, data: data);
-          },
-          onError: (_) {},
-        );
+        .listen((snapshot) {
+          if (!snapshot.exists) {
+            _lastHandledRingKey = null;
+            return;
+          }
+          final data = Map<String, dynamic>.from(snapshot.data() ?? {});
+          final roomId = data['roomId']?.toString() ?? '';
+          if (roomId.isEmpty) return;
+          _onActiveCallSnapshot(roomId: roomId, data: data);
+        }, onError: (_) {});
   }
 
   void _applyWatchers() {
@@ -192,7 +188,7 @@ class ChatIncomingCallCoordinator extends GetxService {
       return;
     }
 
-    // Defer UI decision — CallKit may already be up from the background isolate.
+    // Defer UI work so Firestore callbacks never block the listener.
     unawaited(
       _presentIncomingIfNeeded(
         roomId: roomId,
@@ -220,16 +216,8 @@ class ChatIncomingCallCoordinator extends GetxService {
       return;
     }
 
-    // Native CallKit already owns this ring while app was backgrounded.
-    // In foreground, end CallKit and show the full-screen green/red UI instead.
-    if (await IncomingCallPresentation.hasActiveCallKit(callId)) {
-      if (!IncomingCallPresentation.isAppInForeground) {
-        return;
-      }
-      try {
-        await IncomingCallKitDisplay.endAll();
-      } catch (_) {}
-    }
+    // New 1:1 flow is app-active only: Firestore opens the in-app popup.
+    // Background CallKit / system banners are intentionally not used here.
     if (IncomingCallRingUi.isShowing ||
         IncomingCallPresentation.inAppCallId == callId) {
       return;
@@ -241,8 +229,7 @@ class ChatIncomingCallCoordinator extends GetxService {
 
     final callerName = data['callerName']?.toString() ?? 'Someone';
     final callerAvatar =
-        data['callerAvatar']?.toString() ??
-        data['caller_avatar']?.toString();
+        data['callerAvatar']?.toString() ?? data['caller_avatar']?.toString();
     final historyDocId = data['historyDocId']?.toString() ?? '';
     final callStartedAt = data['callStartedAt']?.toString() ?? '';
     final recordCallHistory = data['recordCallHistory'] != false;
@@ -265,10 +252,7 @@ class ChatIncomingCallCoordinator extends GetxService {
             action: 'reject',
             isShowLoader: false,
           );
-          await _callService.endCall(
-            roomId,
-            endedByUserId: myId,
-          );
+          await _callService.endCall(roomId, endedByUserId: myId);
           ChatVoiceCallController.refreshMessagesInbox();
         },
         onAccept: () async {
@@ -309,8 +293,9 @@ class ChatIncomingCallCoordinator extends GetxService {
     if (!Get.isRegistered<ChatSessionService>()) {
       Get.put(ChatSessionService(), permanent: true);
     }
-    final signedIn =
-        await Get.find<ChatSessionService>().ensureSignedIn(isShowLoader: false);
+    final signedIn = await Get.find<ChatSessionService>().ensureSignedIn(
+      isShowLoader: false,
+    );
     if (!signedIn) return;
 
     await _callRepo.respondDirectCall(

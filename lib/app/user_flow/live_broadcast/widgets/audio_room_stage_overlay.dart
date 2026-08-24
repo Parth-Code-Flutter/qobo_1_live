@@ -70,13 +70,13 @@ class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
         children: [
           const DecoratedBox(
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [_roomTop, _roomMid, _roomBottom],
-                stops: [0, 0.46, 1],
-              ),
-            ),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [_roomTop, _roomMid, _roomBottom],
+          stops: [0, 0.46, 1],
+        ),
+      ),
           ),
           // Video rooms only: deepen the stage behind rectangular tiles.
           if (controller.isVideoRoom)
@@ -112,10 +112,10 @@ class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
               ),
             ),
           SafeArea(
-            bottom: false,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final compact = constraints.maxWidth < 390;
+        bottom: false,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 390;
                 final isVideo = controller.isVideoRoom;
                 // Keep audio padding identical to the previous working UI.
                 final side = isVideo
@@ -146,8 +146,8 @@ class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
                     AudioRoomSeatLayoutMetrics.videoStageFillRatio(seatCount);
                 final videoGridH = middleH * fillRatio;
 
-                return Stack(
-                  children: [
+            return Stack(
+              children: [
                     if (isVideo)
                       Positioned(
                         left: side,
@@ -186,21 +186,21 @@ class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
                         ),
                       )
                     else
-                      CustomScrollView(
-                        physics: const BouncingScrollPhysics(),
-                        slivers: [
-                          SliverPadding(
-                            padding: EdgeInsets.fromLTRB(
+                CustomScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  slivers: [
+                    SliverPadding(
+                      padding: EdgeInsets.fromLTRB(
                               side,
                               top,
                               side,
                               // Keep the last seat row reachable above the chat
                               // feed + input + control dock.
                               bottomPad,
-                            ),
-                            sliver: SliverList(
-                              delegate: SliverChildListDelegate.fixed([
-                                _RoomHeader(compact: compact),
+                      ),
+                      sliver: SliverList(
+                        delegate: SliverChildListDelegate.fixed([
+                          _RoomHeader(compact: compact),
                                 SizedBox(height: gridGap),
                                 Obx(() {
                                   if (controller.isInRoomPkActive &&
@@ -216,15 +216,15 @@ class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
                                   }
                                   return _MemberGrid(compact: compact);
                                 }),
-                              ]),
-                            ),
-                          ),
-                        ],
+                        ]),
                       ),
-                    Positioned(
-                      left: compact ? 10 : 16,
-                      right: compact ? 10 : 16,
-                      bottom: 8,
+                    ),
+                  ],
+                ),
+                Positioned(
+                  left: compact ? 10 : 16,
+                  right: compact ? 10 : 16,
+                  bottom: 8,
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -238,14 +238,14 @@ class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
                           _AudioRoomBottomControls(compact: compact),
                         ],
                       ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
         ],
-      );
+    );
     });
   }
 }
@@ -304,10 +304,10 @@ class _AudioRoomBottomControls extends GetView<LiveBroadcastController> {
             // Video dock is crowded (Cam/Flip) — tuck these into More.
             // Audio keeps Background / Share / PK Battle on the dock.
             if (controller.isVideoRoom)
-              _ControlButton(
+            _ControlButton(
                 icon: Icons.more_horiz_rounded,
                 label: 'More',
-                compact: compact,
+              compact: compact,
                 accentGradient: const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -324,10 +324,10 @@ class _AudioRoomBottomControls extends GetView<LiveBroadcastController> {
                 },
               )
             else ...[
-              _ControlButton(
+            _ControlButton(
                 icon: Icons.image_rounded,
                 label: 'Background',
-                compact: compact,
+              compact: compact,
                 accentGradient: const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -575,7 +575,7 @@ class _MicControl extends StatelessWidget {
           onTap: null,
         );
       }
-      final userId = ZegoUIKit().getLocalUser().id;
+    final userId = ZegoUIKit().getLocalUser().id;
       if (userId.isEmpty) {
         return _ControlButton(
           icon: Icons.mic_off_rounded,
@@ -585,18 +585,18 @@ class _MicControl extends StatelessWidget {
           onTap: null,
         );
       }
-      return ValueListenableBuilder<bool>(
-        valueListenable: ZegoUIKit().getMicrophoneStateNotifier(userId),
-        builder: (context, isOn, _) {
-          return _ControlButton(
-            icon: isOn ? Icons.mic_rounded : Icons.mic_off_rounded,
-            label: isOn ? 'Mic On' : 'Muted',
-            compact: compact,
+    return ValueListenableBuilder<bool>(
+      valueListenable: ZegoUIKit().getMicrophoneStateNotifier(userId),
+      builder: (context, isOn, _) {
+        return _ControlButton(
+          icon: isOn ? Icons.mic_rounded : Icons.mic_off_rounded,
+          label: isOn ? 'Mic On' : 'Muted',
+          compact: compact,
             accentGradient: isOn ? _onGradient : _offGradient,
-            onTap: () => ZegoUIKit().turnMicrophoneOn(!isOn, muteMode: true),
-          );
-        },
-      );
+          onTap: () => ZegoUIKit().turnMicrophoneOn(!isOn, muteMode: true),
+        );
+      },
+    );
     });
   }
 }
@@ -675,7 +675,7 @@ class _SpeakerControl extends StatelessWidget {
           onTap: null,
         );
       }
-      final userId = ZegoUIKit().getLocalUser().id;
+    final userId = ZegoUIKit().getLocalUser().id;
       if (userId.isEmpty) {
         return _ControlButton(
           icon: Icons.volume_up_rounded,
@@ -685,24 +685,24 @@ class _SpeakerControl extends StatelessWidget {
           onTap: null,
         );
       }
-      return ValueListenableBuilder<ZegoUIKitAudioRoute>(
-        valueListenable: ZegoUIKit().getAudioOutputDeviceNotifier(userId),
-        builder: (context, route, _) {
-          final isSpeaker = route == ZegoUIKitAudioRoute.speaker;
-          final isLocked =
-              route == ZegoUIKitAudioRoute.headphone ||
-              route == ZegoUIKitAudioRoute.bluetooth;
-          return _ControlButton(
-            icon: isSpeaker ? Icons.volume_up_rounded : Icons.hearing_rounded,
-            label: isSpeaker ? 'Speaker' : 'Earpiece',
-            compact: compact,
+    return ValueListenableBuilder<ZegoUIKitAudioRoute>(
+      valueListenable: ZegoUIKit().getAudioOutputDeviceNotifier(userId),
+      builder: (context, route, _) {
+        final isSpeaker = route == ZegoUIKitAudioRoute.speaker;
+        final isLocked =
+            route == ZegoUIKitAudioRoute.headphone ||
+            route == ZegoUIKitAudioRoute.bluetooth;
+        return _ControlButton(
+          icon: isSpeaker ? Icons.volume_up_rounded : Icons.hearing_rounded,
+          label: isSpeaker ? 'Speaker' : 'Earpiece',
+          compact: compact,
             accentGradient: isSpeaker ? _speakerGradient : _earpieceGradient,
-            onTap: isLocked
-                ? null
-                : () => ZegoUIKit().setAudioOutputToSpeaker(!isSpeaker),
-          );
-        },
-      );
+          onTap: isLocked
+              ? null
+              : () => ZegoUIKit().setAudioOutputToSpeaker(!isSpeaker),
+        );
+      },
+    );
     });
   }
 }
@@ -735,44 +735,44 @@ class _ControlButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           child: FittedBox(
             fit: BoxFit.scaleDown,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: size,
-                  height: size,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
                     gradient: accentGradient,
                     color: accentGradient != null
-                        ? null
-                        : active
-                        ? kColorWhite
-                        : kColorWhite.withValues(alpha: 0.12),
-                    border: Border.all(
-                      color: kColorWhite.withValues(alpha: 0.08),
-                    ),
+                      ? null
+                      : active
+                      ? kColorWhite
+                      : kColorWhite.withValues(alpha: 0.12),
+                  border: Border.all(
+                    color: kColorWhite.withValues(alpha: 0.08),
                   ),
-                  child: Icon(
-                    icon,
-                    size: compact ? 19 : 22,
+                ),
+                child: Icon(
+                  icon,
+                  size: compact ? 19 : 22,
                     color: accentGradient != null
-                        ? kColorWhite
-                        : active
-                        ? kColorPrimary
-                        : kColorWhite.withValues(alpha: 0.88),
-                  ),
+                      ? kColorWhite
+                      : active
+                      ? kColorPrimary
+                      : kColorWhite.withValues(alpha: 0.88),
                 ),
-                Spacing.v4,
-                AppText(
-                  text: label,
-                  fontSize: compact ? 8 : 9,
-                  color: kColorWhite.withValues(alpha: 0.78),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  align: TextAlign.center,
-                ),
-              ],
+              ),
+              Spacing.v4,
+              AppText(
+                text: label,
+                fontSize: compact ? 8 : 9,
+                color: kColorWhite.withValues(alpha: 0.78),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                align: TextAlign.center,
+              ),
+            ],
             ),
           ),
         ),
@@ -805,17 +805,17 @@ class _GiftControlButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           child: FittedBox(
             fit: BoxFit.scaleDown,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      width: compact ? 40 : 46,
-                      height: compact ? 40 : 46,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: compact ? 40 : 46,
+                    height: compact ? 40 : 46,
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
+                      shape: BoxShape.circle,
                         gradient: const LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
@@ -837,56 +837,56 @@ class _GiftControlButton extends StatelessWidget {
                       ),
                       child: Icon(
                         kGiftIcon,
-                        color: kColorWhite,
+                      color: kColorWhite,
                         size: compact ? 20 : 22,
-                      ),
                     ),
-                    if (!compact)
-                      Positioned(
-                        right: -8,
-                        top: -6,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 5,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF262D38),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: kColorWhite.withValues(alpha: 0.10),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.diamond_rounded,
-                                color: kColorWalletAmount,
-                                size: 10,
-                              ),
-                              const SizedBox(width: 2),
-                              SemiBoldText(
-                                text: label,
-                                fontSize: TextStyles.k10FontSize,
-                                color: kColorWhite,
-                              ),
-                            ],
+                  ),
+                  if (!compact)
+                    Positioned(
+                      right: -8,
+                      top: -6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF262D38),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: kColorWhite.withValues(alpha: 0.10),
                           ),
                         ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.diamond_rounded,
+                              color: kColorWalletAmount,
+                              size: 10,
+                            ),
+                            const SizedBox(width: 2),
+                            SemiBoldText(
+                              text: label,
+                              fontSize: TextStyles.k10FontSize,
+                              color: kColorWhite,
+                            ),
+                          ],
+                        ),
                       ),
-                  ],
-                ),
-                Spacing.v4,
-                AppText(
-                  text: 'Gift',
-                  fontSize: compact ? 8 : 9,
-                  color: kColorWhite.withValues(alpha: 0.78),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  align: TextAlign.center,
-                ),
-              ],
+                    ),
+                ],
+              ),
+              Spacing.v4,
+              AppText(
+                text: 'Gift',
+                fontSize: compact ? 8 : 9,
+                color: kColorWhite.withValues(alpha: 0.78),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                align: TextAlign.center,
+              ),
+            ],
             ),
           ),
         ),
@@ -982,52 +982,52 @@ class _RoomHeader extends GetView<LiveBroadcastController> {
             ];
 
             return Row(
-              children: [
-                _CircleButton(
-                  icon: Icons.arrow_back_ios_new_rounded,
-                  onTap: controller.leaveRoom,
+          children: [
+            _CircleButton(
+              icon: Icons.arrow_back_ios_new_rounded,
+              onTap: controller.leaveRoom,
                   compact: dense,
-                  filled: false,
-                ),
+              filled: false,
+            ),
                 dense ? Spacing.h6 : Spacing.h8,
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: _openHostProfileSheet,
                   child: AppUserAvatar(
-                    name: controller.hostName.value,
-                    imageUrl: controller.hostAvatarUrl.value,
+              name: controller.hostName.value,
+              imageUrl: controller.hostAvatarUrl.value,
                     size: dense ? 36 : 44,
-                    border: Border.all(color: kColorWhite, width: 1.5),
-                  ),
+              border: Border.all(color: kColorWhite, width: 1.5),
+            ),
                 ),
                 dense ? Spacing.h6 : Spacing.h10,
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SemiBoldText(
-                        text: title,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SemiBoldText(
+                    text: title,
                         fontSize: dense
-                            ? TextStyles.k14FontSize
-                            : TextStyles.k16FontSize,
-                        color: AudioRoomStageOverlay._ink,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Spacing.v2,
-                      AppText(
-                        text: 'Room Id : ${roomId.isEmpty ? '--' : roomId}',
-                        fontSize: dense
-                            ? TextStyles.k10FontSize
-                            : TextStyles.k12FontSize,
-                        color: kColorWhite.withValues(alpha: 0.82),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                        ? TextStyles.k14FontSize
+                        : TextStyles.k16FontSize,
+                    color: AudioRoomStageOverlay._ink,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
+                  Spacing.v2,
+                  AppText(
+                    text: 'Room Id : ${roomId.isEmpty ? '--' : roomId}',
+                        fontSize: dense
+                        ? TextStyles.k10FontSize
+                        : TextStyles.k12FontSize,
+                    color: kColorWhite.withValues(alpha: 0.82),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
                 Flexible(
                   child: Align(
                     alignment: Alignment.centerRight,
@@ -1857,41 +1857,41 @@ class _MemberSeat extends GetView<LiveBroadcastController> {
     return KeyedSubtree(
       key: controller.seatCoinFlyKeyFor(seat.userId),
       child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => _openSeatActions(context),
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _openSeatActions(context),
         child: _seatCellShell(
           child: SizedBox(
             width: metrics.frameSize + metrics.badgeSize,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
                 SizedBox(height: metrics.topInset),
-                Stack(
-                  clipBehavior: Clip.none,
-                  alignment: Alignment.center,
-                  children: [
-                    _PremiumAvatarFrame(
-                      name: seat.name,
-                      imageUrl: seat.avatarUrl,
+          Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              _PremiumAvatarFrame(
+                name: seat.name,
+                imageUrl: seat.avatarUrl,
                       frameUrl: seat.avatarFrameUrl,
-                      muted: seat.isMuted,
-                      isHost: seat.isHost,
-                      seatNo: seat.seatNo,
+                muted: seat.isMuted,
+                isHost: seat.isHost,
+                seatNo: seat.seatNo,
                       frameSize: metrics.frameSize,
                       avatarSize: metrics.avatarSize,
-                    ),
-                    Positioned(
+              ),
+              Positioned(
                       left: -6,
                       top: -6,
                       child: _SeatBadge(
                         number: seat.seatNo,
                         size: metrics.badgeSize,
                       ),
-                    ),
-                    Positioned(
+              ),
+              Positioned(
                       right: -6,
                       bottom: -4,
-                      child: _MicBubble(muted: seat.isMuted, small: true),
+                child: _MicBubble(muted: seat.isMuted, small: true),
                     ),
                     if (seat.hasJoinableFollowerPk)
                       Positioned(
@@ -1918,9 +1918,9 @@ class _MemberSeat extends GetView<LiveBroadcastController> {
                                     0xFFFF3EA5,
                                   ).withValues(alpha: 0.5),
                                   blurRadius: 10,
-                                ),
-                              ],
-                            ),
+              ),
+            ],
+          ),
                             child: const Icon(
                               Icons.bolt_rounded,
                               color: kColorWhite,
@@ -1947,15 +1947,15 @@ class _MemberSeat extends GetView<LiveBroadcastController> {
                         const SizedBox(width: 2),
                       ],
                       Flexible(
-                        child: SemiBoldText(
-                          text: seat.name,
-                          fontSize: TextStyles.k10FontSize,
-                          color: kColorWhite,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          align: TextAlign.center,
-                        ),
-                      ),
+            child: SemiBoldText(
+              text: seat.name,
+              fontSize: TextStyles.k10FontSize,
+              color: kColorWhite,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              align: TextAlign.center,
+            ),
+          ),
                     ],
                   ),
                 ),
@@ -2413,9 +2413,9 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
           seat.occupied &&
           seat.role.trim().toLowerCase() != 'host';
       return [
-        _SeatActionData(
-          icon: seat.isMuted ? Icons.mic_rounded : Icons.mic_off_rounded,
-          label: seat.isMuted ? 'Unmute' : 'Mute',
+            _SeatActionData(
+              icon: seat.isMuted ? Icons.mic_rounded : Icons.mic_off_rounded,
+              label: seat.isMuted ? 'Unmute' : 'Mute',
           accent: const Color(0xFF7AD7FF),
           onTap: () =>
               controller.updateAudioSeatMic(seat: seat, mute: !seat.isMuted),
@@ -2426,23 +2426,23 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
             label: 'Remove from seat',
             accent: const Color(0xFFFFB347),
             onTap: () => controller.removeUserFromAudioSeat(seat),
-          ),
-        _SeatActionData(
-          icon: Icons.person_remove_rounded,
-          label: 'Kick off',
+            ),
+            _SeatActionData(
+              icon: Icons.person_remove_rounded,
+              label: 'Kick off',
           accent: const Color(0xFFFF6B6B),
-          onTap: () => controller.kickAudioRoomUser(seat),
-        ),
-        _SeatActionData(
-          icon: Icons.admin_panel_settings_rounded,
-          label: seat.isAdmin ? 'Remove admin' : 'Make admin',
+              onTap: () => controller.kickAudioRoomUser(seat),
+            ),
+            _SeatActionData(
+              icon: Icons.admin_panel_settings_rounded,
+              label: seat.isAdmin ? 'Remove admin' : 'Make admin',
           accent: _goldBright,
-          onTap: () => controller.setAudioRoomAdmin(
-            seat: seat,
-            makeAdmin: !seat.isAdmin,
-          ),
-        ),
-        _SeatActionData(
+              onTap: () => controller.setAudioRoomAdmin(
+                seat: seat,
+                makeAdmin: !seat.isAdmin,
+              ),
+            ),
+            _SeatActionData(
           icon: Icons.chat_bubble_outline_rounded,
           label: 'Message',
           accent: const Color(0xFFFF8FB8),
@@ -2456,15 +2456,15 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
         ),
         _SeatActionData(
           icon: kGiftIcon,
-          label: 'Gift',
+              label: 'Gift',
           accent: const Color(0xFFFFB347),
-          onTap: _openGift,
-        ),
+              onTap: _openGift,
+            ),
       ];
     }
 
     return [
-      _SeatActionData(
+            _SeatActionData(
         icon: Icons.chat_bubble_outline_rounded,
         label: 'Message',
         accent: const Color(0xFFFF8FB8),
@@ -2478,11 +2478,11 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
       ),
       _SeatActionData(
         icon: kGiftIcon,
-        label: 'Send gift',
+              label: 'Send gift',
         accent: const Color(0xFFFFB347),
-        onTap: _openGift,
-      ),
-    ];
+              onTap: _openGift,
+            ),
+          ];
   }
 
   Widget _dragHandle() {
@@ -2562,7 +2562,7 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-      decoration: BoxDecoration(
+              decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -2857,14 +2857,14 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
             child: SemiBoldText(
               text: medal.label,
               fontSize: TextStyles.k10FontSize,
-              color: kColorWhite,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+                        color: kColorWhite,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
               align: TextAlign.center,
             ),
-          ),
-        ],
-      ),
+                      ),
+                    ],
+                  ),
     );
   }
 
@@ -2928,16 +2928,16 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
   Widget _actionsGrid(List<_SeatActionData> actions) {
     if (actions.length <= 2) {
       return Row(
-        children: actions
-            .map(
+              children: actions
+                  .map(
               (action) => Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: _SeatActionButton(action: action),
                 ),
               ),
-            )
-            .toList(),
+                  )
+                  .toList(),
       );
     }
 
@@ -3062,18 +3062,18 @@ class _SeatActionButton extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: action.onTap,
+      onTap: action.onTap,
         borderRadius: BorderRadius.circular(18),
-        child: Padding(
+      child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
                 width: 52,
                 height: 52,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
                   color: kColorWhite,
                   border: Border.all(
                     color: action.accent.withValues(alpha: 0.55),
@@ -3093,16 +3093,16 @@ class _SeatActionButton extends StatelessWidget {
                   ],
                 ),
                 child: Icon(action.icon, color: action.accent, size: 23),
-              ),
-              Spacing.v6,
+            ),
+            Spacing.v6,
               SemiBoldText(
-                text: action.label,
+              text: action.label,
                 fontSize: TextStyles.k10FontSize,
                 color: const Color(0xFF2A1A12),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                align: TextAlign.center,
-              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              align: TextAlign.center,
+            ),
             ],
           ),
         ),
@@ -3349,7 +3349,7 @@ class _AudioSeatFrame extends StatelessWidget {
             if (customFrame.isNotEmpty && customFrame != assetPath)
               IgnorePointer(
                 child: _FrameMedia(source: customFrame, size: size),
-              ),
+            ),
             Container(
               width: innerSize,
               height: innerSize,
@@ -3481,24 +3481,24 @@ class _GridEmptySeat extends GetView<LiveBroadcastController> {
       child: _seatCellShell(
         child: SizedBox(
           width: metrics.frameSize + metrics.badgeSize,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
               SizedBox(height: metrics.topInset),
-              Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.center,
-                children: [
-                  _AudioSeatFrame(
+          Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              _AudioSeatFrame(
                     assetPath: _AudioSeatFrame.assetForSeat(
                       seatNo,
                       isHost: false,
                     ),
                     size: metrics.frameSize,
                     contentSize: metrics.avatarSize,
-                    child: _EmptySeatPlaceholder(seatNo: seatNo),
-                  ),
-                  Positioned(
+                child: _EmptySeatPlaceholder(seatNo: seatNo),
+              ),
+              Positioned(
                     left: -6,
                     top: -6,
                     child: _SeatBadge(number: seatNo, size: metrics.badgeSize),
@@ -3506,26 +3506,26 @@ class _GridEmptySeat extends GetView<LiveBroadcastController> {
                   Positioned(
                     right: -4,
                     bottom: -4,
-                    child: Container(
+                child: Container(
                       width: metrics.addButtonSize,
                       height: metrics.addButtonSize,
-                      decoration: BoxDecoration(
-                        color: kColorWhite,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: kColorPrimary.withValues(alpha: 0.12),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: kColorPrimary.withValues(alpha: 0.10),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+                  decoration: BoxDecoration(
+                    color: kColorWhite,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: kColorPrimary.withValues(alpha: 0.12),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: kColorPrimary.withValues(alpha: 0.10),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
                       ),
+                    ],
+                  ),
                       child: Icon(
-                        Icons.add_rounded,
-                        color: AudioRoomStageOverlay._deepPurple,
+                    Icons.add_rounded,
+                    color: AudioRoomStageOverlay._deepPurple,
                         size: metrics.addButtonSize * 0.66,
                       ),
                     ),
@@ -3944,7 +3944,7 @@ class _FloorAudienceListSheet extends GetView<LiveBroadcastController> {
                                     ? const Icon(
                                         Icons.person,
                                         color: kColorWhite,
-                                        size: 20,
+                    size: 20,
                                       )
                                     : null,
                               ),
@@ -4037,8 +4037,8 @@ class FloorAudienceProfileSheet extends GetView<LiveBroadcastController> {
               text: user.name.trim().isEmpty ? 'Guest' : user.name.trim(),
               fontSize: TextStyles.k18FontSize,
               color: kColorWhite,
-            ),
-            Spacing.v6,
+          ),
+          Spacing.v6,
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
@@ -4050,7 +4050,7 @@ class FloorAudienceProfileSheet extends GetView<LiveBroadcastController> {
               ),
               child: const SemiBoldText(
                 text: 'Floor audience',
-                fontSize: TextStyles.k10FontSize,
+            fontSize: TextStyles.k10FontSize,
                 color: Color(0xFFFF8FB8),
               ),
             ),
@@ -4327,8 +4327,8 @@ class _EmptySeatsForFloorUserSheet extends GetView<LiveBroadcastController> {
                       text: 'No empty seats available right now.',
                       fontSize: TextStyles.k12FontSize,
                       color: kColorWhite.withValues(alpha: 0.7),
-                      align: TextAlign.center,
-                    ),
+            align: TextAlign.center,
+          ),
                   );
                 }
                 return ListView.separated(
@@ -4740,23 +4740,23 @@ class _LockedSeat extends StatelessWidget {
       child: SizedBox(
         width: metrics.frameSize + metrics.badgeSize,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+      mainAxisSize: MainAxisSize.min,
+      children: [
             SizedBox(height: metrics.topInset),
-            Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.center,
-              children: [
-                _AudioSeatFrame(
-                  assetPath: _AudioSeatFrame._empty,
-                  locked: true,
+        Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            _AudioSeatFrame(
+              assetPath: _AudioSeatFrame._empty,
+              locked: true,
                   size: metrics.frameSize,
                   contentSize: metrics.avatarSize * 0.9,
-                  child: Icon(
-                    Icons.lock_rounded,
-                    color: AudioRoomStageOverlay._deepPurple.withValues(
-                      alpha: 0.45,
-                    ),
+              child: Icon(
+                Icons.lock_rounded,
+                color: AudioRoomStageOverlay._deepPurple.withValues(
+                  alpha: 0.45,
+                ),
                     size: metrics.avatarSize * 0.45,
                   ),
                 ),
@@ -4768,14 +4768,14 @@ class _LockedSeat extends StatelessWidget {
               ],
             ),
             SizedBox(height: metrics.gapAfterFrame),
-            const AppText(
-              text: 'Locked',
-              fontSize: TextStyles.k10FontSize,
-              color: AudioRoomStageOverlay._muted,
-              align: TextAlign.center,
-            ),
-            const _DiamondCount(value: 20),
-          ],
+        const AppText(
+          text: 'Locked',
+          fontSize: TextStyles.k10FontSize,
+          color: AudioRoomStageOverlay._muted,
+          align: TextAlign.center,
+        ),
+        const _DiamondCount(value: 20),
+      ],
         ),
       ),
     );

@@ -32,8 +32,8 @@ class ChatCallService {
   ChatCallService({
     FirebaseFirestore? firestore,
     ChatFirebaseService? firebaseService,
-  })  : _firestoreOverride = firestore,
-        _firebaseService = firebaseService ?? ChatFirebaseService();
+  }) : _firestoreOverride = firestore,
+       _firebaseService = firebaseService ?? ChatFirebaseService();
 
   final FirebaseFirestore? _firestoreOverride;
   final ChatFirebaseService _firebaseService;
@@ -64,10 +64,7 @@ class ChatCallService {
     try {
       final snap = await ref.get();
       if (!snap.exists) return <String, dynamic>{};
-      return {
-        ...Map<String, dynamic>.from(snap.data() ?? {}),
-        'id': snap.id,
-      };
+      return {...Map<String, dynamic>.from(snap.data() ?? {}), 'id': snap.id};
     } catch (e) {
       LoggerUtils.logWarning('ChatCallService: fetchActiveCall failed — $e');
       return <String, dynamic>{};
@@ -122,6 +119,7 @@ class ChatCallService {
     required String callerName,
     required String calleeId,
     required ChatCallType callType,
+    String? callIdOverride,
     bool recordCallHistory = true,
   }) async {
     final ref = _activeRef(roomId);
@@ -129,7 +127,11 @@ class ChatCallService {
       throw StateError('Firebase is not available');
     }
 
-    final callId = ZegoCallIdUtils.fromRoomId(roomId);
+    // Prefer backend callId from /api/call/start. Both peers then use the
+    // same id for backend respond/end and Zego room login.
+    final callId = callIdOverride?.trim().isNotEmpty == true
+        ? callIdOverride!.trim()
+        : ZegoCallIdUtils.fromRoomId(roomId);
     final historyDocId = 'call_${DateTime.now().microsecondsSinceEpoch}';
     final callStartedAt = DateTime.now().toUtc().toIso8601String();
     await ref.set({
@@ -182,10 +184,7 @@ class ChatCallService {
   }
 
   /// Removes ephemeral `calls/active` only — no call history or chat log writes.
-  Future<void> clearActiveCall(
-    String roomId, {
-    String? endedByUserId,
-  }) async {
+  Future<void> clearActiveCall(String roomId, {String? endedByUserId}) async {
     final ref = _activeRef(roomId);
     if (ref == null) return;
 
@@ -280,10 +279,8 @@ class ChatCallService {
       outcomeOverride: outcomeOverride,
       durationSeconds: durationSeconds,
       zegoCallId: active['callId']?.toString(),
-      historyDocId:
-          historyDocId ?? active['historyDocId']?.toString(),
-      callStartedAt:
-          callStartedAt ?? active['callStartedAt']?.toString(),
+      historyDocId: historyDocId ?? active['historyDocId']?.toString(),
+      callStartedAt: callStartedAt ?? active['callStartedAt']?.toString(),
     );
     return true;
   }
@@ -334,7 +331,8 @@ class ChatCallService {
   }) async {
     if (callerId.isEmpty || calleeId.isEmpty) return;
 
-    final outcome = outcomeOverride ??
+    final outcome =
+        outcomeOverride ??
         _resolveOutcome(
           status: status,
           endedByUserId: endedByUserId,
@@ -430,8 +428,9 @@ class ChatCallService {
       final docId = historyDocId?.trim().isNotEmpty == true
           ? historyDocId!.trim()
           : firestore.collection('chatRooms').doc().id;
-      final durationMinutes =
-          ChatInboxPreviewType.durationMinutesFromSeconds(durationSeconds);
+      final durationMinutes = ChatInboxPreviewType.durationMinutesFromSeconds(
+        durationSeconds,
+      );
 
       final ref = firestore
           .collection('chatRooms')
@@ -446,7 +445,8 @@ class ChatCallService {
         'calleeId': calleeId,
         'type': isVideo ? 'video' : 'voice',
         'status': outcome.name,
-        if (zegoCallId != null && zegoCallId.isNotEmpty) 'zegoCallId': zegoCallId,
+        if (zegoCallId != null && zegoCallId.isNotEmpty)
+          'zegoCallId': zegoCallId,
         if (callStartedAt != null && callStartedAt.isNotEmpty)
           'callStartedAt': callStartedAt,
         'clientEndedAt': DateTime.now().toUtc().toIso8601String(),
@@ -498,19 +498,19 @@ class ChatCallService {
             .collection('rooms')
             .doc(roomId)
             .set({
-          'roomId': roomId,
-          'peerId': peerId,
-          'lastMessagePreview': preview,
-          'lastMessageAt': now,
-          'lastMessageType': inboxType,
-          'lastCallType': isVideo ? 'video' : 'voice',
-          'lastCallStatus': outcomeName,
-          'lastCallDirection': direction,
-          'lastCallAt': now,
-          if (durationSeconds != null && durationSeconds > 0)
-            'lastCallDurationSeconds': durationSeconds,
-          'updatedAt': now,
-        }, SetOptions(merge: true));
+              'roomId': roomId,
+              'peerId': peerId,
+              'lastMessagePreview': preview,
+              'lastMessageAt': now,
+              'lastMessageType': inboxType,
+              'lastCallType': isVideo ? 'video' : 'voice',
+              'lastCallStatus': outcomeName,
+              'lastCallDirection': direction,
+              'lastCallAt': now,
+              if (durationSeconds != null && durationSeconds > 0)
+                'lastCallDurationSeconds': durationSeconds,
+              'updatedAt': now,
+            }, SetOptions(merge: true));
       } catch (e) {
         LoggerUtils.logWarning(
           'ChatCallService: inbox call preview skipped for $userId — $e',

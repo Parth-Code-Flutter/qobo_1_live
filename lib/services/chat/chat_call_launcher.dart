@@ -65,7 +65,7 @@ abstract final class ChatCallLauncher {
 
       final repo = chatRepo ?? ChatRepo();
       final signaling = callService ?? ChatCallService();
-      final chatRoomId = await _resolveChatRoomId(
+      var chatRoomId = await _resolveChatRoomId(
         context,
         targetId: targetId,
         roomId: roomId,
@@ -91,6 +91,9 @@ abstract final class ChatCallLauncher {
         if (startResult == null || !startResult.isValid) return;
         resolvedServerCallId = startResult.callId;
         effectiveCoinsPerSecond ??= startResult.coinsPerSecond;
+        chatRoomId = startResult.chatRoomId?.trim().isNotEmpty == true
+            ? startResult.chatRoomId!.trim()
+            : chatRoomId;
       }
 
       var callId = ZegoCallIdUtils.fromRoomId(chatRoomId);
@@ -123,6 +126,7 @@ abstract final class ChatCallLauncher {
               callerName: _myDisplayName,
               calleeId: targetId,
               callType: callType,
+              callIdOverride: resolvedServerCallId,
               recordCallHistory: recordCallHistory,
             );
             callId = ringResult.zegoCallId;
@@ -301,9 +305,7 @@ abstract final class ChatCallLauncher {
       }
       return parsed;
     } catch (e) {
-      LoggerUtils.logWarning(
-        'ChatCallLauncher: direct/start failed — $e',
-      );
+      LoggerUtils.logWarning('ChatCallLauncher: direct/start failed — $e');
       if (context.mounted) {
         await _showCallStartFailedDialog(
           context,
@@ -329,9 +331,7 @@ abstract final class ChatCallLauncher {
       icon: Icons.phone_disabled_rounded,
       iconAccent: AdminAgencyUi.pink,
       barrierDismissible: true,
-      actions: const [
-        CommonAppDialogAction(label: 'Got it', isPrimary: true),
-      ],
+      actions: const [CommonAppDialogAction(label: 'Got it', isPrimary: true)],
     );
   }
 

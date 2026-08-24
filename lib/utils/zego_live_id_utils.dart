@@ -72,7 +72,14 @@ abstract final class ZegoLiveIdUtils {
         text(nested['live_streaming_id']) ??
         text(roomData['liveStreamId']) ??
         text(roomData['liveId']) ??
-        (zegoStreaming != null ? text(zegoStreaming['roomId']) : null);
+        (zegoStreaming != null
+            ? text(zegoStreaming['roomId']) ??
+                  text(zegoStreaming['room_id']) ??
+                  text(zegoStreaming['liveId']) ??
+                  text(zegoStreaming['live_id']) ??
+                  text(zegoStreaming['zegoLiveId']) ??
+                  text(zegoStreaming['zego_live_id'])
+            : null);
 
     if (streamChannel != null && streamChannel.isNotEmpty) {
       return sanitize(streamChannel);

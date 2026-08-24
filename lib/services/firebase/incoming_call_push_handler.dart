@@ -7,7 +7,6 @@ import 'package:qobo_one_live/services/chat/chat_call_service.dart';
 import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/app/user_flow/messages/chat_voice_call/controllers/chat_voice_call_controller.dart';
-import 'package:qobo_one_live/services/firebase/incoming_call_kit_display.dart';
 import 'package:qobo_one_live/services/firebase/incoming_call_presentation.dart';
 import 'package:qobo_one_live/services/firebase/incoming_call_push_payload.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
@@ -20,15 +19,14 @@ import 'package:qobo_one_live/utils/zego_engine_utils.dart';
 /// Handles 1:1 call FCM types: `incoming_call`, `call_cancelled`, `call_missed`.
 ///
 /// Foreground → branded in-app ring UI.
-/// Background / killed → [IncomingCallKitDisplay] (native CallKit / full-screen).
+/// Background / killed calls are no longer surfaced by mobile per the new
+/// in-app-only calling flow; backend/Firestore rings are handled while app-active.
 /// `call_cancelled` closes caller "Waiting for answer" **and** tears down an
 /// active call UI when either side already connected (`reason: ended`).
 class IncomingCallPushHandler {
-  IncomingCallPushHandler({
-    CallRepo? callRepo,
-    ChatCallService? callService,
-  })  : _callRepo = callRepo ?? CallRepo(),
-        _callService = callService ?? ChatCallService();
+  IncomingCallPushHandler({CallRepo? callRepo, ChatCallService? callService})
+    : _callRepo = callRepo ?? CallRepo(),
+      _callService = callService ?? ChatCallService();
 
   final CallRepo _callRepo;
   final ChatCallService _callService;
@@ -47,14 +45,12 @@ class IncomingCallPushHandler {
       IncomingCallPresentation.markHandled(payload.callId);
       await PushNotificationService.instance.cancelLocalNotification(message);
       IncomingCallInAppBanner.dismissIfShowing();
-      await IncomingCallKitDisplay.endForMessage(message);
       // Caller A may be on "Waiting for answer" — close that UI (decline / miss).
       ChatVoiceCallController.tryHandleRemoteCancelPush(payload);
       return;
     }
 
-    // App is open — always show WhatsApp-style full-screen green/red ring.
-    // (CallKit is for background/killed only; do not suppress in-app here.)
+    // App is open — show only the in-app green/red ring popup.
     await IncomingCallInAppBanner.tryShow(message, handler: this);
   }
 
@@ -66,7 +62,6 @@ class IncomingCallPushHandler {
         payload.type == PushNotificationTypes.callMissed) {
       IncomingCallPresentation.markHandled(payload.callId);
       await PushNotificationService.instance.cancelLocalNotification(message);
-      await IncomingCallKitDisplay.endForMessage(message);
       ChatVoiceCallController.tryHandleRemoteCancelPush(payload);
       return;
     }
@@ -78,17 +73,12 @@ class IncomingCallPushHandler {
       return;
     }
 
-    // Opened from tray while CallKit was up (background → tap): keep CallKit /
-    // accept path. If app is already foreground, show in-app ring.
+    // New flow is in-app only. If a data notification tap arrives while the app
+    // is foreground/resumed, show the same popup; otherwise ignore until the
+    // Firestore app-active listener receives a fresh ring.
     if (IncomingCallPresentation.isAppInForeground) {
       await IncomingCallInAppBanner.tryShow(message, handler: this);
-      return;
     }
-    if (await IncomingCallPresentation.hasActiveCallKit(payload.callId)) {
-      return;
-    }
-
-    await IncomingCallInAppBanner.tryShow(message, handler: this);
   }
 
   Future<void> handleNotificationAction({
@@ -129,7 +119,6 @@ class IncomingCallPushHandler {
           sourceMessage,
         );
       }
-      await IncomingCallKitDisplay.endForPayload(payload);
       return;
     }
 
@@ -139,7 +128,6 @@ class IncomingCallPushHandler {
       );
     }
     IncomingCallInAppBanner.dismissIfShowing();
-    await IncomingCallKitDisplay.endForPayload(payload);
 
     if (!await _ensureFirebaseSession()) {
       _showFeedback('Sign in required to accept calls');
@@ -189,10 +177,7 @@ class IncomingCallPushHandler {
     final isVideo = callType.trim().toLowerCase() == 'video';
 
     if (roomId.isNotEmpty) {
-      await _callService.markAccepted(
-        roomId: roomId,
-        userId: _myUserId(),
-      );
+      await _callService.markAccepted(roomId: roomId, userId: _myUserId());
     }
 
     await ZegoEngineUtils.resetForCallProject();
@@ -231,7 +216,6 @@ class IncomingCallPushHandler {
       );
     }
     IncomingCallInAppBanner.dismissIfShowing();
-    await IncomingCallKitDisplay.endForPayload(payload);
 
     await _callRepo.respondDirectCall(
       callId: payload.callId,
@@ -241,10 +225,7 @@ class IncomingCallPushHandler {
     );
 
     if (payload.roomId.isNotEmpty) {
-      await _callService.endCall(
-        payload.roomId,
-        endedByUserId: _myUserId(),
-      );
+      await _callService.endCall(payload.roomId, endedByUserId: _myUserId());
     }
   }
 

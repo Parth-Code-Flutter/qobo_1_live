@@ -58,7 +58,7 @@ class CallRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
-  /// `POST /api/call/direct/start` — triggers backend FCM ring to callee.
+  /// `POST /api/call/start` — backend creates the active call session.
   Future<Map<String, dynamic>?> startDirectCall({
     required String calleeUserId,
     required String callType, // voice | video
@@ -69,36 +69,39 @@ class CallRepo {
       'callType': callType.trim().toLowerCase(),
     };
 
-    final response = await _apiService.postRequest(
+    final response = await _postWithLegacyFallback(
       endPoint: CallModuleEndpoints.directStart,
+      legacyEndPoint: CallModuleEndpoints.legacyDirectStart,
       requestModel: body,
       isShowLoader: isShowLoader,
     );
-    if (response == null) return null;
-    return ApiResponseUtils.tryDecodeMap(response.body);
+    return response;
   }
 
-  /// `POST /api/call/direct/respond` — callee accepts or rejects a ring.
+  /// `POST /api/call/respond` — callee accepts or rejects an in-app ring.
   Future<Map<String, dynamic>?> respondDirectCall({
     required String callId,
     required String action, // accept | reject
     String? roomId,
     bool isShowLoader = false,
   }) async {
-    final response = await _apiService.postRequest(
+    return _postWithLegacyFallback(
       endPoint: CallModuleEndpoints.directRespond,
+      legacyEndPoint: CallModuleEndpoints.legacyDirectRespond,
       requestModel: <String, dynamic>{
         'callId': callId.trim(),
+        'call_id': callId.trim(),
         'action': action.trim().toLowerCase(),
-        if (roomId != null && roomId.trim().isNotEmpty) 'roomId': roomId.trim(),
+        if (roomId != null && roomId.trim().isNotEmpty) ...{
+          'roomId': roomId.trim(),
+          'room_id': roomId.trim(),
+        },
       },
       isShowLoader: isShowLoader,
     );
-    if (response == null) return null;
-    return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
-  /// `POST /api/call/direct/end`
+  /// `POST /api/call/end`
   ///
   /// When [durationSeconds] > 0 the backend auto-runs calling charge (50/50
   /// split) — do not also call [CallingRepo.chargeCall] for the same session.
@@ -111,6 +114,7 @@ class CallRepo {
   }) async {
     final body = <String, dynamic>{
       'callId': callId.trim(),
+      'call_id': callId.trim(),
       'reason': reason.trim().toLowerCase(),
     };
     if (durationSeconds != null && durationSeconds > 0) {
@@ -122,12 +126,38 @@ class CallRepo {
       body['host_id'] = hostId.trim();
     }
 
-    final response = await _apiService.postRequest(
+    final response = await _postWithLegacyFallback(
       endPoint: CallModuleEndpoints.directEnd,
+      legacyEndPoint: CallModuleEndpoints.legacyDirectEnd,
       requestModel: body,
       isShowLoader: isShowLoader,
     );
+    return response;
+  }
+
+  Future<Map<String, dynamic>?> _postWithLegacyFallback({
+    required String endPoint,
+    required String legacyEndPoint,
+    required Map<String, dynamic> requestModel,
+    required bool isShowLoader,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: endPoint,
+      requestModel: requestModel,
+      isShowLoader: isShowLoader,
+    );
     if (response == null) return null;
+
+    if (response.statusCode == 404) {
+      final legacyResponse = await _apiService.postRequest(
+        endPoint: legacyEndPoint,
+        requestModel: requestModel,
+        isShowLoader: false,
+      );
+      if (legacyResponse == null) return null;
+      return ApiResponseUtils.tryDecodeMap(legacyResponse.body);
+    }
+
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 }

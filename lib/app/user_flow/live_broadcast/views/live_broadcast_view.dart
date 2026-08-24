@@ -287,10 +287,12 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
 
   Widget _buildMainVideoBackground() {
     final userSession = Get.find<UserSessionController>();
-    final rawUserId = userSession.userId.isNotEmpty
+    final fallbackUserId = userSession.userId.isNotEmpty
         ? userSession.userId
         : 'user_${userSession.hashCode}';
-    final currentUserId = ZegoLiveIdUtils.sanitizeUserId(rawUserId);
+    final currentUserId = controller.isLiveStreamingSession
+        ? controller.liveZegoUserId
+        : ZegoLiveIdUtils.sanitizeUserId(fallbackUserId);
     final currentUserName = userSession.displayName.isNotEmpty
         ? userSession.displayName
         : 'Host';

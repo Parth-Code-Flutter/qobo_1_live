@@ -8,7 +8,7 @@ String callModuleApiMessage(Map<String, dynamic>? response, String fallback) {
   return ApiResponseUtils.tryGetMessage(response) ?? fallback;
 }
 
-/// Parsed `POST /api/call/direct/start` payload.
+/// Parsed `POST /api/call/start` payload.
 class DirectCallStartResult {
   const DirectCallStartResult({
     required this.callId,
@@ -22,8 +22,11 @@ class DirectCallStartResult {
       return const DirectCallStartResult(callId: '');
     }
     final map = Map<String, dynamic>.from(data);
-    final callId = map['zegoCallId']?.toString() ??
+    final callId =
         map['callId']?.toString() ??
+        map['call_id']?.toString() ??
+        map['zegoCallId']?.toString() ??
+        map['zego_call_id']?.toString() ??
         map['id']?.toString() ??
         '';
     final coinsRaw = map['coinsPerSecond'] ?? map['coins_per_second'];
@@ -34,7 +37,11 @@ class DirectCallStartResult {
       coins = double.tryParse(coinsRaw?.toString() ?? '');
     }
     final roomId =
-        map['roomId']?.toString() ?? map['chatRoomId']?.toString() ?? '';
+        map['roomId']?.toString() ??
+        map['room_id']?.toString() ??
+        map['chatRoomId']?.toString() ??
+        map['chat_room_id']?.toString() ??
+        '';
     return DirectCallStartResult(
       callId: callId.trim(),
       coinsPerSecond: coins != null && coins > 0 ? coins : null,
