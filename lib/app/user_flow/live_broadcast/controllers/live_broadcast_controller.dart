@@ -132,6 +132,7 @@ class LiveBroadcastController extends GetxController {
   final selectedGiftReceiverName = RxnString();
   final isRoomGiftMode = true.obs;
   final emojiCatalog = <Map<String, String>>[].obs;
+  final emojiPackVersion = 1.obs;
   final isLoadingEmojis = false.obs;
   final selectedEmojiReceiverId = RxnString();
   final selectedEmojiReceiverName = RxnString();
@@ -1385,6 +1386,13 @@ class LiveBroadcastController extends GetxController {
     isLoadingEmojis.value = true;
     try {
       final response = await _emojiRepo.getEmojiCatalog(isShowLoader: false);
+      final data = response?['data'];
+      if (data is Map) {
+        final version = int.tryParse(data['packVersion']?.toString() ?? '');
+        if (version != null && version > 0) {
+          emojiPackVersion.value = version;
+        }
+      }
       final parsed = _parseEmojiList(response?['data']);
       emojiCatalog.assignAll(parsed.isEmpty ? _fallbackEmojiCatalog() : parsed);
     } catch (_) {
@@ -1412,6 +1420,10 @@ class LiveBroadcastController extends GetxController {
           final image = _readEmojiField(item, const [
             'image',
             'emojiImage',
+            'gifUrl',
+            'gif_url',
+            'previewUrl',
+            'preview_url',
             'url',
             'icon',
             'svg',
@@ -1428,6 +1440,9 @@ class LiveBroadcastController extends GetxController {
                 'Emoji',
             'image': image ?? code ?? '😊',
             'code': code ?? '',
+            'packVersion':
+                _readEmojiField(item, const ['packVersion', 'pack_version']) ??
+                emojiPackVersion.value.toString(),
             'category':
                 _readEmojiField(item, const ['category', 'type']) ?? 'emoji',
           };
@@ -1513,7 +1528,11 @@ class LiveBroadcastController extends GetxController {
     final currentRoomId = audioRoomApiId.isNotEmpty
         ? audioRoomApiId
         : roomId.value.trim();
-    if (emojiId.isEmpty || receiver.isEmpty || currentRoomId.isEmpty) {
+    final liveEmojiStreamId = liveStreamingApiId.trim();
+    final targetSessionId = isLiveStreamingSession
+        ? liveEmojiStreamId
+        : currentRoomId;
+    if (emojiId.isEmpty || receiver.isEmpty || targetSessionId.isEmpty) {
       Get.snackbar(
         'Emoji not sent',
         'Emoji, receiver, or room id is missing.',
@@ -1525,20 +1544,28 @@ class LiveBroadcastController extends GetxController {
     }
 
     final clientReqId = 'emoji_${DateTime.now().microsecondsSinceEpoch}';
-    // The emoji API currently documents `audio_room` as the shared room scope.
-    // Keep video-room emoji sends on the same scope until backend exposes a
-    // dedicated `video_room` enum for emoji delivery.
-    final sessionType = isAudioVideoRoom ? 'audio_room' : 'live_stream';
+    final packVersion =
+        int.tryParse(emoji['packVersion'] ?? '') ?? emojiPackVersion.value;
+    final sessionType = isVideoRoom ? 'video_room' : 'audio_room';
 
     _emojiSendInFlight = true;
     try {
-      final response = await _emojiRepo.sendEmoji(
-        emojiId: emojiId,
-        receiverId: receiver,
-        roomId: currentRoomId,
-        type: sessionType,
-        clientReqId: clientReqId,
-      );
+      final response = isLiveStreamingSession
+          ? await _emojiRepo.sendLiveStreamingEmoji(
+              liveStreamingId: liveEmojiStreamId,
+              emojiId: emojiId,
+              receiverId: receiver,
+              packVersion: packVersion,
+              clientEventId: clientReqId,
+            )
+          : await _emojiRepo.sendRoomEmoji(
+              roomId: currentRoomId,
+              emojiId: emojiId,
+              sessionType: sessionType,
+              receiverId: receiver,
+              packVersion: packVersion,
+              clientEventId: clientReqId,
+            );
 
       if (!isEconomyApiSuccess(response)) {
         Get.snackbar(
@@ -1552,7 +1579,8 @@ class LiveBroadcastController extends GetxController {
       }
 
       if (Get.isBottomSheetOpen == true) Get.back<void>();
-      final sentEmoji = _emojiFromResponse(response) ?? emoji;
+      final sentEmoji = _emojiFromResponse(response) ?? Map.of(emoji);
+      sentEmoji['packVersion'] = packVersion.toString();
       _showEmojiCelebration(sentEmoji);
       unawaited(_broadcastEmojiMarker(sentEmoji, receiver, clientReqId));
     } finally {
@@ -1571,26 +1599,42 @@ class LiveBroadcastController extends GetxController {
         asMap(data['emoji']) ??
         asMap(response?['emoji']) ??
         asMap(data['data']);
-    if (emoji == null) return null;
+    final source = emoji ?? data;
 
-    final id = _readEmojiField(emoji, const ['id', '_id', 'emojiId']) ?? '';
+    final id = _readEmojiField(source, const ['id', '_id', 'emojiId']) ?? '';
     final image =
-        _readEmojiField(emoji, const [
+        _readEmojiField(source, const [
           'image',
           'emojiImage',
+          'emoji_image',
+          'gifUrl',
+          'gif_url',
+          'previewUrl',
+          'preview_url',
           'url',
           'icon',
           'svg',
         ]) ??
-        _readEmojiField(emoji, const ['code', 'unicode', 'emoji']) ??
+        _readEmojiField(source, const ['code', 'unicode', 'emoji']) ??
         '😊';
     return {
       'id': id,
       'name':
-          _readEmojiField(emoji, const ['name', 'title', 'label']) ?? 'Emoji',
+          _readEmojiField(source, const [
+            'name',
+            'emojiName',
+            'emoji_name',
+            'title',
+            'label',
+          ]) ??
+          'Emoji',
       'image': image,
-      'code': _readEmojiField(emoji, const ['code', 'unicode', 'emoji']) ?? '',
-      'category': _readEmojiField(emoji, const ['category', 'type']) ?? 'emoji',
+      'code': _readEmojiField(source, const ['code', 'unicode', 'emoji']) ?? '',
+      'packVersion':
+          _readEmojiField(source, const ['packVersion', 'pack_version']) ??
+          emojiPackVersion.value.toString(),
+      'category':
+          _readEmojiField(source, const ['category', 'type']) ?? 'emoji',
     };
   }
 
@@ -1630,6 +1674,7 @@ class LiveBroadcastController extends GetxController {
       'roomId': audioRoomApiId.isNotEmpty ? audioRoomApiId : roomId.value,
       'emojiId': emoji['id'] ?? '',
       'code': emoji['code'] ?? '',
+      'packVersion': emoji['packVersion'] ?? emojiPackVersion.value.toString(),
       'name': emoji['name'] ?? 'Emoji',
     };
     final marker = fields.entries
@@ -1716,6 +1761,18 @@ class LiveBroadcastController extends GetxController {
 
   bool _isValidZegoAppSign(String value) {
     return RegExp(r'^[a-fA-F0-9]{64}$').hasMatch(value.trim());
+  }
+
+  bool get liveZegoUseAppSignMode {
+    final zego = liveZegoStreamingData;
+    final raw =
+        zego['appSignMode'] ??
+        zego['app_sign_mode'] ??
+        _roomData['appSignMode'] ??
+        _roomData['app_sign_mode'];
+    if (raw is bool) return raw;
+    final text = raw?.toString().trim().toLowerCase();
+    return text == 'true' || text == '1' || text == 'yes';
   }
 
   String get liveZegoUserId {
@@ -3385,12 +3442,21 @@ class LiveBroadcastController extends GetxController {
     }
 
     final receiver =
-        readRoomField(payload, const ['receiverId', 'receiver_id']) ??
+        readRoomField(payload, const [
+          'receiverId',
+          'receiver_id',
+          'targetUserId',
+          'target_user_id',
+          'toUserId',
+          'to_user_id',
+        ]) ??
         readRoomField(asMap(payload['receiver']) ?? const {}, const [
           'id',
           '_id',
           'userId',
           'user_id',
+          'targetUserId',
+          'target_user_id',
         ]);
     final myId = _currentUserId();
     if (receiver == null || !_userIdsMatch(receiver, myId)) return;

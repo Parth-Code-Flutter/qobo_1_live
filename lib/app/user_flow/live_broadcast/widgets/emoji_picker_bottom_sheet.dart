@@ -151,38 +151,55 @@ class _EmojiTile extends StatelessWidget {
         : emoji['code'] ?? '😊');
     final name = emoji['name']?.trim();
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Ink(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            color: Colors.white.withValues(alpha: 0.06),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
-            child: Column(
-              children: [
-                Expanded(
-                  child: EmojiMediaView(
-                    image: image,
-                    emojiFontSize: 34,
-                    fit: BoxFit.contain,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(18),
+          child: Ink(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              color: Colors.white.withValues(alpha: 0.06),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final side = (constraints.biggest.shortestSide - 2)
+                            .clamp(36.0, 64.0);
+                        return Center(
+                          child: SizedBox.square(
+                            dimension: side,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: EmojiMediaView(
+                                image: image,
+                                emojiFontSize: side * 0.58,
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                ),
-                Spacing.v6,
-                SemiBoldText(
-                  text: name?.isNotEmpty == true ? name! : 'Emoji',
-                  fontSize: TextStyles.k10FontSize,
-                  color: kColorWhite,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  align: TextAlign.center,
-                ),
-              ],
+                  Spacing.v6,
+                  SemiBoldText(
+                    text: name?.isNotEmpty == true ? name! : 'Emoji',
+                    fontSize: TextStyles.k10FontSize,
+                    color: kColorWhite,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    align: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
           ),
         ),

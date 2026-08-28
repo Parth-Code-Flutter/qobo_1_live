@@ -5,9 +5,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
-import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/utils/text_utils/app_text.dart';
-import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 /// Short full-screen emoji pop used for direct room emojis.
 ///
@@ -49,7 +46,7 @@ class EmojiCelebrationOverlay {
         builder: (dialogContext) {
           _dialogContext = dialogContext;
           _dismissTimer = Timer(duration, () => close(dialogContext));
-          return _EmojiCelebrationView(image: image, name: name);
+          return _EmojiCelebrationView(image: image);
         },
       ),
     );
@@ -72,10 +69,9 @@ class EmojiCelebrationOverlay {
 }
 
 class _EmojiCelebrationView extends StatefulWidget {
-  const _EmojiCelebrationView({required this.image, this.name});
+  const _EmojiCelebrationView({required this.image});
 
   final String image;
-  final String? name;
 
   @override
   State<_EmojiCelebrationView> createState() => _EmojiCelebrationViewState();
@@ -103,7 +99,9 @@ class _EmojiCelebrationViewState extends State<_EmojiCelebrationView>
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
-    final emojiSize = math.min(size.width * 0.58, 260.0);
+    final emojiWidth = math.min(size.width * 0.96, 620.0);
+    final emojiHeight = math.min(size.height * 0.74, 720.0);
+    final emojiFontSize = math.min(size.width * 0.78, 360.0);
     return SizedBox.expand(
       child: IgnorePointer(
         child: AnimatedBuilder(
@@ -134,39 +132,14 @@ class _EmojiCelebrationViewState extends State<_EmojiCelebrationView>
                   ),
                   Transform.scale(
                     scale: 0.72 + (0.28 * value),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          width: emojiSize,
-                          height: emojiSize,
-                          child: EmojiMediaView(
-                            image: widget.image,
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                        if (widget.name?.trim().isNotEmpty == true) ...[
-                          const SizedBox(height: 10),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.54),
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(
-                                color: kColorWhite.withValues(alpha: 0.14),
-                              ),
-                            ),
-                            child: SemiBoldText(
-                              text: widget.name!.trim(),
-                              fontSize: TextStyles.k14FontSize,
-                              color: kColorWhite,
-                            ),
-                          ),
-                        ],
-                      ],
+                    child: SizedBox(
+                      width: emojiWidth,
+                      height: emojiHeight,
+                      child: EmojiMediaView(
+                        image: widget.image,
+                        fit: BoxFit.contain,
+                        emojiFontSize: emojiFontSize,
+                      ),
                     ),
                   ),
                 ],
@@ -250,12 +223,20 @@ class _EmojiFallback extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Icon(
-        Icons.emoji_emotions_rounded,
-        size: 112,
-        color: Color(0xFFFFD84D),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxSide = constraints.biggest.shortestSide;
+        final iconSize = maxSide.isFinite
+            ? (maxSide * 0.72).clamp(22.0, 112.0)
+            : 112.0;
+        return Center(
+          child: Icon(
+            Icons.emoji_emotions_rounded,
+            size: iconSize,
+            color: const Color(0xFFFFD84D),
+          ),
+        );
+      },
     );
   }
 }

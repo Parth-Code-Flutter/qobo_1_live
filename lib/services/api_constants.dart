@@ -392,6 +392,12 @@ class EconomyEndpoints {
 class EmojiEndpoints {
   EmojiEndpoints._();
 
+  /// GET /api/chat/emojis?packVersion=
+  static const String chatCatalog = '/api/chat/emojis';
+
+  /// GET /api/emoji/catalog?packVersion=
+  static const String catalog = '/api/emoji/catalog';
+
   /// GET /api/emoji/list?category=
   static const String list = '/api/emoji/list';
 
@@ -403,6 +409,12 @@ class EmojiEndpoints {
 
   /// POST /api/v1/emoji/send — v1 alias fallback.
   static const String sendV1 = '/api/v1/emoji/send';
+
+  /// POST /api/room/emoji/send
+  static const String sendRoom = '/api/room/emoji/send';
+
+  /// POST /api/live-streaming/emoji/send
+  static const String sendLiveStreaming = '/api/live-streaming/emoji/send';
 }
 
 /// Coin Seller Portal (`seller_admin`) under `/api/admin/...`.

@@ -300,6 +300,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
     final zegoAppId = controller.liveZegoAppId;
     final zegoAppSign = controller.liveZegoAppSign;
     final zegoToken = controller.liveZegoToken;
+    final useAppSignMode = controller.liveZegoUseAppSignMode;
     final publishStreamId = controller.livePublishStreamId;
     final playStreamId = controller.livePlayStreamId;
     final liveSessionKey = ValueKey(
@@ -307,6 +308,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
         'zego_live_engine',
         controller.isLiveStreamingSession ? 'live' : 'room',
         controller.isHost.value ? 'host' : 'audience',
+        useAppSignMode ? 'app_sign' : 'token',
         zegoAppId,
         currentUserId,
         liveId,
@@ -327,6 +329,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
               appId: zegoAppId,
               appSign: zegoAppSign,
               token: zegoToken,
+              useAppSignMode: useAppSignMode,
               isHost: controller.isHost.value,
               publishStreamId: publishStreamId,
               playStreamId: playStreamId,
@@ -1483,6 +1486,7 @@ class _StableZegoExpressLiveStreaming extends StatefulWidget {
     required this.appId,
     required this.appSign,
     required this.token,
+    required this.useAppSignMode,
     required this.isHost,
     required this.publishStreamId,
     required this.playStreamId,
@@ -1496,6 +1500,7 @@ class _StableZegoExpressLiveStreaming extends StatefulWidget {
   final int appId;
   final String appSign;
   final String token;
+  final bool useAppSignMode;
   final bool isHost;
   final String publishStreamId;
   final String playStreamId;
@@ -1536,6 +1541,7 @@ class _StableZegoExpressLiveStreamingState
         oldWidget.appId != widget.appId ||
         oldWidget.appSign != widget.appSign ||
         oldWidget.token != widget.token ||
+        oldWidget.useAppSignMode != widget.useAppSignMode ||
         oldWidget.userId != widget.userId ||
         oldWidget.isHost != widget.isHost ||
         oldWidget.publishStreamId != widget.publishStreamId ||
@@ -1589,18 +1595,26 @@ class _StableZegoExpressLiveStreamingState
       _controller.isZegoConnected.value = false;
       _bindExpressCallbacks();
 
+      final token = widget.token.trim();
+      final useTokenMode = !widget.useAppSignMode && token.isNotEmpty;
       final profile = express.ZegoEngineProfile(
         widget.appId,
         express.ZegoScenario.Broadcast,
-        appSign: widget.appSign.trim().isEmpty ? null : widget.appSign.trim(),
+        // Zego Express accepts either AppSign mode or backend Token04 mode.
+        // Respect backend's `appSignMode` flag so we never pass both auth
+        // methods to Zego during live stream room login.
+        appSign: useTokenMode
+            ? ''
+            : widget.appSign.trim().isEmpty
+            ? null
+            : widget.appSign.trim(),
         enablePlatformView: false,
       );
       await express.ZegoExpressEngine.createEngineWithProfile(profile);
 
       final roomConfig = express.ZegoRoomConfig.defaultConfig()
         ..isUserStatusNotify = true;
-      final token = widget.token.trim();
-      if (token.isNotEmpty) {
+      if (useTokenMode) {
         roomConfig.token = token;
       }
 

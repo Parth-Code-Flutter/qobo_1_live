@@ -163,6 +163,14 @@ class UserRealtimeSocketService extends GetxController {
       socket.on('gift_sent', (raw) => _onLiveStreamNamed('gift_sent', raw));
       socket.on('room_emoji', (raw) => _onEmojiNamed('room_emoji', raw));
       socket.on(
+        'room_emoji_sent',
+        (raw) => _onEmojiNamed('room_emoji_sent', raw),
+      );
+      socket.on(
+        'live_emoji_sent',
+        (raw) => _onEmojiNamed('live_emoji_sent', raw),
+      );
+      socket.on(
         'emoji_received',
         (raw) => _onEmojiNamed('emoji_received', raw),
       );
@@ -449,6 +457,8 @@ class UserRealtimeSocketService extends GetxController {
       socket.off('live_stream.gift_sent');
       socket.off('gift_sent');
       socket.off('room_emoji');
+      socket.off('room_emoji_sent');
+      socket.off('live_emoji_sent');
       socket.off('emoji_received');
       socket.off('pk_request');
       socket.off('pk_started');
