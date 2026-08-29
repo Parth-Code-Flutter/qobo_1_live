@@ -4,6 +4,7 @@ import 'package:qobo_one_live/app/user_flow/live_broadcast/controllers/live_broa
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
+import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 
 enum _RoomOptionAction {
   filters,
@@ -42,7 +43,8 @@ class RoomOptionsSheet extends StatelessWidget {
   });
 
   List<_RoomOption> get _options {
-    final pkActive = Get.isRegistered<LiveBroadcastController>() &&
+    final pkActive =
+        Get.isRegistered<LiveBroadcastController>() &&
         Get.find<LiveBroadcastController>().isInRoomPkActive;
 
     if (isHost) {
@@ -227,13 +229,14 @@ class RoomOptionsSheet extends StatelessWidget {
           Get.find<LiveBroadcastController>().toggleFollowHost();
         }
       case _RoomOptionAction.report:
-        Get.snackbar(
-          'Report',
-          'Report flow coming soon.',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.black87,
-          colorText: kColorWhite,
-        );
+        final context = Get.context ?? Get.key.currentContext;
+        if (context != null && context.mounted) {
+          AppToast.showWarning(
+            context,
+            'Report flow coming soon.',
+            title: 'Report',
+          );
+        }
       case _RoomOptionAction.leave:
         if (Get.isRegistered<LiveBroadcastController>()) {
           Get.find<LiveBroadcastController>().leaveRoom();

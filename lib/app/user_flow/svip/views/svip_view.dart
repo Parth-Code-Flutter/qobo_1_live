@@ -230,8 +230,18 @@ class SvipView extends GetView<SvipController> {
         // instead of squeezing them all into one row.
         SizedBox(
           height: 150,
-          child: Obx(
-            () => ListView.separated(
+          child: Obx(() {
+            if (controller.isLoading.value && controller.plans.isEmpty) {
+              return const Center(
+                child: CircularProgressIndicator(color: Color(0xFFD4AF37)),
+              );
+            }
+
+            if (controller.plans.isEmpty) {
+              return _emptyPlansCard();
+            }
+
+            return ListView.separated(
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -241,14 +251,42 @@ class SvipView extends GetView<SvipController> {
                 final plan = controller.plans[index];
                 return Obx(() {
                   final isSelected =
-                      controller.selectedPlan.value == plan['id'];
+                      controller.selectedPlan.value == plan['id'].toString();
                   return _planCard(plan, isSelected);
                 });
               },
-            ),
-          ),
+            );
+          }),
         ),
       ],
+    );
+  }
+
+  Widget _emptyPlansCard() {
+    final message = controller.packageError.value.isEmpty
+        ? 'No active SVIP packages are available.'
+        : controller.packageError.value;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: kColorWhite,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: const Color(0xFFD4AF37).withValues(alpha: 0.2),
+          ),
+        ),
+        child: Center(
+          child: AppText(
+            text: message,
+            fontSize: TextStyles.k12FontSize,
+            color: kColorHint,
+            align: TextAlign.center,
+          ),
+        ),
+      ),
     );
   }
 
@@ -295,7 +333,9 @@ class SvipView extends GetView<SvipController> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                badgeLabel,
+                plan['name']?.toString().isNotEmpty == true
+                    ? plan['name'].toString()
+                    : badgeLabel,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -345,9 +385,17 @@ class SvipView extends GetView<SvipController> {
       child: SafeArea(
         child: Obx(() {
           final isAlreadyActive = controller.isSvipActive.value;
+          final isBusy = controller.isBuying.value;
+          final canBuy = controller.plans.isNotEmpty && !isBusy;
           return appButton(
-            onPressed: isAlreadyActive ? () {} : controller.subscribe,
-            buttonText: isAlreadyActive ? 'Membership Active' : 'Open SVIP Now',
+            onPressed: isAlreadyActive || !canBuy
+                ? () {}
+                : controller.subscribe,
+            buttonText: isAlreadyActive
+                ? 'Membership Active'
+                : isBusy
+                ? 'Opening SVIP...'
+                : 'Open SVIP Now',
             buttonColor: isAlreadyActive
                 ? const Color(0xFFF3F3F3)
                 : const Color(0xFF1E1E1E),

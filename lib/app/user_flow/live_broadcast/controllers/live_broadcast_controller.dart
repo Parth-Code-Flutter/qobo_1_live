@@ -1488,12 +1488,10 @@ class LiveBroadcastController extends GetxController {
   void openEmojiSheet({required String receiverId, String? receiverName}) {
     final targetId = receiverId.trim();
     if (targetId.isEmpty) {
-      Get.snackbar(
+      _showRoomToast(
         'Emoji not available',
         'This user id is missing from the room member data.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFF1E1E2D),
-        colorText: kColorWhite,
+        isError: true,
       );
       return;
     }
@@ -1533,12 +1531,10 @@ class LiveBroadcastController extends GetxController {
         ? liveEmojiStreamId
         : currentRoomId;
     if (emojiId.isEmpty || receiver.isEmpty || targetSessionId.isEmpty) {
-      Get.snackbar(
+      _showRoomToast(
         'Emoji not sent',
         'Emoji, receiver, or room id is missing.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFFD32F2F),
-        colorText: kColorWhite,
+        isError: true,
       );
       return;
     }
@@ -1568,12 +1564,10 @@ class LiveBroadcastController extends GetxController {
             );
 
       if (!isEconomyApiSuccess(response)) {
-        Get.snackbar(
+        _showRoomToast(
           'Emoji not sent',
           response?['message']?.toString() ?? 'Unable to send this emoji.',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: const Color(0xFFD32F2F),
-          colorText: kColorWhite,
+          isError: true,
         );
         return;
       }
@@ -2375,14 +2369,7 @@ class LiveBroadcastController extends GetxController {
     if (Get.isSnackbarOpen) {
       Get.closeAllSnackbars();
     }
-    Get.snackbar(
-      'Live stream',
-      connectionIssue.value,
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.black87,
-      colorText: kColorWhite,
-      duration: const Duration(seconds: 4),
-    );
+    _showRoomToast('Live stream', connectionIssue.value, isError: true);
   }
 
   void onGroupCallRoomConnected({bool bindMessages = true}) {
@@ -2443,14 +2430,7 @@ class LiveBroadcastController extends GetxController {
     if (Get.isSnackbarOpen) {
       Get.closeAllSnackbars();
     }
-    Get.snackbar(
-      'Room call',
-      connectionIssue.value,
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.black87,
-      colorText: kColorWhite,
-      duration: const Duration(seconds: 4),
-    );
+    _showRoomToast('Room call', connectionIssue.value, isError: true);
   }
 
   void _validateStreamingInput() {
@@ -2563,32 +2543,25 @@ class LiveBroadcastController extends GetxController {
               moderatedText,
             );
       if (!sent) {
-        Get.snackbar(
+        _showRoomToast(
           'Message not sent',
           'Unable to send message to the room.',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.black87,
-          colorText: kColorWhite,
+          isError: true,
         );
       }
     } catch (_) {
-      Get.snackbar(
+      _showRoomToast(
         'Message not sent',
         'Chat is not ready yet. Please try again.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.black87,
-        colorText: kColorWhite,
+        isError: true,
       );
     }
 
     if (containsBadWord) {
-      Get.snackbar(
+      _showRoomToast(
         'Moderation Filter',
         'Your comment was automatically filtered to keep the room safe.',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.amber.shade900,
-        colorText: kColorWhite,
-        duration: const Duration(seconds: 3),
+        isWarning: true,
       );
     }
   }
@@ -2667,12 +2640,10 @@ class LiveBroadcastController extends GetxController {
       }
     } catch (_) {}
 
-    Get.snackbar(
+    _showRoomToast(
       'Translation',
       'This message is already in your native language.',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.black26,
-      colorText: kColorWhite,
+      isWarning: true,
     );
   }
 
@@ -2705,12 +2676,10 @@ class LiveBroadcastController extends GetxController {
     final int price = int.tryParse(gift['price'] ?? '0') ?? 0;
     final totalCost = price * count;
     if (coinsBalance.value < totalCost) {
-      Get.snackbar(
+      _showRoomToast(
         'Insufficient Coins',
         'You need ${totalCost - coinsBalance.value} more coins to send this gift.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFFD32F2F),
-        colorText: const Color(0xFFFFFFFF),
+        isError: true,
       );
       return;
     }
@@ -2741,15 +2710,12 @@ class LiveBroadcastController extends GetxController {
     // Share-to-all: sender pays the catalog price once; 80% is split among others.
     if (scope == 'room') {
       if (seatedRecipients.isEmpty) {
-        Get.snackbar(
+        _showRoomToast(
           'No audience',
           isAudioVideoRoom
               ? 'No other seated users can receive this gift. Wait until someone is on a mic seat.'
               : "There's no audience to share gifts. Please wait for someone to join",
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.black87,
-          colorText: const Color(0xFFFFFFFF),
-          duration: const Duration(seconds: 3),
+          isWarning: true,
         );
         return;
       }
@@ -2758,14 +2724,12 @@ class LiveBroadcastController extends GetxController {
     if (giftId.isEmpty ||
         currentRoomId.isEmpty ||
         (scope == 'user' && currentReceiverId.isEmpty)) {
-      Get.snackbar(
+      _showRoomToast(
         'Gift not sent',
         scope == 'room'
             ? 'Gift or room id is missing from live room data.'
             : 'Gift, receiver, or room id is missing from live room data.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFFD32F2F),
-        colorText: const Color(0xFFFFFFFF),
+        isError: true,
       );
       return;
     }
@@ -2806,15 +2770,13 @@ class LiveBroadcastController extends GetxController {
         }
 
         if (!isEconomyApiSuccess(response)) {
-          Get.snackbar(
+          _showRoomToast(
             sent == 0 ? 'Gift not sent' : 'Combo stopped',
             sent == 0
                 ? (response?['message']?.toString() ??
                       'Unable to send this gift.')
                 : 'Sent $sent of $count. ${response?['message'] ?? 'Unable to send the rest.'}',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: const Color(0xFFD32F2F),
-            colorText: const Color(0xFFFFFFFF),
+            isError: true,
           );
           break;
         }
@@ -3008,12 +2970,10 @@ class LiveBroadcastController extends GetxController {
   }) {
     // Hosts cannot gift during an active host-vs-host PK.
     if (isInRoomPkActive && isHost.value) {
-      Get.snackbar(
+      _showRoomToast(
         'PK Battle',
         'Hosts can’t send gifts during PK. Viewers support a side with gifts.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.black87,
-        colorText: kColorWhite,
+        isWarning: true,
       );
       return;
     }
@@ -3100,12 +3060,10 @@ class LiveBroadcastController extends GetxController {
 
   void openRoomBackgroundSheet() {
     if (!canManageAudioRoomMembers || !isAudioVideoRoom) {
-      Get.snackbar(
+      _showRoomToast(
         'Background',
         'Only the host or room admins can change the room background.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.black87,
-        colorText: kColorWhite,
+        isWarning: true,
       );
       return;
     }
@@ -3138,12 +3096,10 @@ class LiveBroadcastController extends GetxController {
     if (!canManageAudioRoomMembers || isChangingRoomBackground.value) return;
     final apiRoomId = audioRoomApiId;
     if (apiRoomId.isEmpty || theme.id.isEmpty) {
-      Get.snackbar(
+      _showRoomToast(
         'Background',
         'Room id is missing for this background change.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFFD32F2F),
-        colorText: kColorWhite,
+        isError: true,
       );
       return;
     }
@@ -3164,13 +3120,7 @@ class LiveBroadcastController extends GetxController {
           roomBackgroundId.value = theme.id;
         }
         if (Get.isBottomSheetOpen == true) Get.back();
-        Get.snackbar(
-          'Background',
-          'Room background updated',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.black87,
-          colorText: kColorWhite,
-        );
+        _showRoomToast('Background', 'Room background updated');
       } else {
         _showRoomApiError(
           'Background',
@@ -3737,12 +3687,10 @@ class LiveBroadcastController extends GetxController {
       ZegoUIKit().setBeautifyValue(liveSmooth.value, BeautyEffectType.smooth);
       ZegoUIKit().setBeautifyValue(liveSharpen.value, BeautyEffectType.sharpen);
     } catch (_) {
-      Get.snackbar(
+      _showRoomToast(
         'Filters',
         'Unable to apply filters on this device right now.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.black87,
-        colorText: kColorWhite,
+        isWarning: true,
       );
     }
   }
@@ -3801,6 +3749,49 @@ class LiveBroadcastController extends GetxController {
     } else {
       AppToast.showSuccess(context, message);
     }
+  }
+
+  void _showRoomToast(
+    String title,
+    String message, {
+    bool isError = false,
+    bool isWarning = false,
+  }) {
+    final context = Get.context ?? Get.key.currentContext;
+    if (context != null && context.mounted) {
+      if (isError) {
+        AppToast.showError(context, message, title: title);
+      } else if (isWarning) {
+        AppToast.showWarning(context, message, title: title);
+      } else {
+        AppToast.showSuccess(context, message, title: title);
+      }
+      return;
+    }
+
+    // Fallback for rare controller-only paths where no BuildContext is mounted.
+    Get.rawSnackbar(
+      titleText: Text(
+        title,
+        style: TextStyles.kSemiBoldPoppins(
+          fontSize: TextStyles.k14FontSize,
+          colors: kColorWhite,
+        ),
+      ),
+      messageText: Text(
+        message,
+        style: TextStyles.kRegularPoppins(
+          fontSize: TextStyles.k12FontSize,
+          colors: kColorWhite.withValues(alpha: 0.82),
+        ),
+      ),
+      snackPosition: SnackPosition.TOP,
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      borderRadius: 20,
+      backgroundColor: const Color(0xFF15101F).withValues(alpha: 0.94),
+      duration: const Duration(seconds: 4),
+    );
   }
 
   bool _isViewerCurrentUser(String targetId) {
@@ -4205,12 +4196,10 @@ class LiveBroadcastController extends GetxController {
     if (apiRoomId.isEmpty) {
       audioInviteCandidates.clear();
       if (showErrors) {
-        Get.snackbar(
+        _showRoomToast(
           'Invite users',
           'Room id is missing, so followers cannot be loaded.',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: const Color(0xFFD32F2F),
-          colorText: kColorWhite,
+          isError: true,
         );
       }
       return;
@@ -4260,12 +4249,9 @@ class LiveBroadcastController extends GetxController {
 
     if (_isApiSuccess(response)) {
       if (Get.isBottomSheetOpen == true) Get.back();
-      Get.snackbar(
+      _showRoomToast(
         'Invite sent',
         '${user.name} has been invited to seat $seatNo.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.black87,
-        colorText: kColorWhite,
       );
       return;
     }
@@ -4295,14 +4281,12 @@ class LiveBroadcastController extends GetxController {
     final seatNo = seat.seatNo;
     final targetId = seat.userId.trim();
     if (seatNo <= 1 || targetId.isEmpty) {
-      Get.snackbar(
+      _showRoomToast(
         'Remove from seat',
         seatNo <= 1
             ? 'The host seat cannot be cleared this way.'
             : 'This seat has no user to remove.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.black87,
-        colorText: kColorWhite,
+        isWarning: true,
       );
       return;
     }
@@ -4319,14 +4303,11 @@ class LiveBroadcastController extends GetxController {
 
     if (_isApiSuccess(response)) {
       await _applyMicActionSeatsResponse(response);
-      Get.snackbar(
+      _showRoomToast(
         'Removed from seat',
         memberName.isNotEmpty
             ? '$memberName was moved back to the floor.'
             : 'User was moved back to the floor.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.black87,
-        colorText: kColorWhite,
       );
       return;
     }
@@ -4346,14 +4327,12 @@ class LiveBroadcastController extends GetxController {
     if (!canManageAudioRoomMembers) return;
     final targetId = user.userId.trim();
     if (targetId.isEmpty || seatNo <= 1) {
-      Get.snackbar(
+      _showRoomToast(
         'Seat',
         seatNo <= 1
             ? 'Pick a guest seat (2+), not the host seat.'
             : 'User id is missing.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.black87,
-        colorText: kColorWhite,
+        isWarning: true,
       );
       return;
     }
@@ -4362,13 +4341,7 @@ class LiveBroadcastController extends GetxController {
       (s) => s.seatNo == seatNo && s.occupied,
     );
     if (occupied) {
-      Get.snackbar(
-        'Seat',
-        'Seat $seatNo is already taken.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.black87,
-        colorText: kColorWhite,
-      );
+      _showRoomToast('Seat', 'Seat $seatNo is already taken.', isWarning: true);
       return;
     }
 
@@ -4384,13 +4357,7 @@ class LiveBroadcastController extends GetxController {
 
     if (_isApiSuccess(response)) {
       await _applyMicActionSeatsResponse(response);
-      Get.snackbar(
-        'Seated',
-        '$displayName joined seat $seatNo.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.black87,
-        colorText: kColorWhite,
-      );
+      _showRoomToast('Seated', '$displayName joined seat $seatNo.');
       return;
     }
 
@@ -4474,12 +4441,10 @@ class LiveBroadcastController extends GetxController {
       }
     }
     if (targetSeat == null) {
-      Get.snackbar(
+      _showRoomToast(
         'Request',
         'No open mic seats are available right now.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.black87,
-        colorText: kColorWhite,
+        isWarning: true,
       );
       return;
     }
@@ -4521,13 +4486,7 @@ class LiveBroadcastController extends GetxController {
         audioRoomSeats.any(
           (s) => s.occupied && _userIdsMatch(s.userId, myId),
         )) {
-      Get.snackbar(
-        'Seat',
-        'You are already on a seat.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.black87,
-        colorText: kColorWhite,
-      );
+      _showRoomToast('Seat', 'You are already on a seat.', isWarning: true);
       return;
     }
 
@@ -4555,12 +4514,9 @@ class LiveBroadcastController extends GetxController {
     if (_isApiSuccess(response) ||
         response?['success'] == true ||
         (response?['request'] is Map)) {
-      Get.snackbar(
+      _showRoomToast(
         'Request sent',
         'Waiting for the host to allow seat $seatNo.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.black87,
-        colorText: kColorWhite,
       );
       await loadAudioRoomSeats();
       return;
@@ -4571,13 +4527,11 @@ class LiveBroadcastController extends GetxController {
         response?['errorCode']?.toString() ??
         '';
     if (code.toUpperCase() == 'FOLLOW_REQUIRED_FOR_SEAT') {
-      Get.snackbar(
+      _showRoomToast(
         'Follow required',
         response?['message']?.toString() ??
             'Follow the host to take a seat, or request one.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFFD32F2F),
-        colorText: kColorWhite,
+        isError: true,
       );
       return;
     }
@@ -4607,14 +4561,11 @@ class LiveBroadcastController extends GetxController {
     pendingSeatRequests.removeWhere((e) => e.requestId == request.requestId);
     _promptedSeatRequestIds.remove(request.requestId);
     await loadAudioRoomSeats();
-    Get.snackbar(
+    _showRoomToast(
       action == 'approve' ? 'Allowed' : 'Rejected',
       action == 'approve'
           ? '${request.name} can join seat ${request.seatNo}.'
           : 'Seat request rejected.',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.black87,
-      colorText: kColorWhite,
     );
   }
 
@@ -4808,23 +4759,15 @@ class LiveBroadcastController extends GetxController {
 
       if (event == 'seat_request_approved') {
         unawaited(loadAudioRoomSeats());
-        Get.snackbar(
-          'Seat approved',
-          'Host allowed you on a seat.',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.black87,
-          colorText: kColorWhite,
-        );
+        _showRoomToast('Seat approved', 'Host allowed you on a seat.');
         return;
       }
 
       if (event == 'seat_request_rejected') {
-        Get.snackbar(
+        _showRoomToast(
           'Seat request rejected',
           'Host declined your seat request.',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.black87,
-          colorText: kColorWhite,
+          isWarning: true,
         );
         return;
       }
@@ -4950,13 +4893,7 @@ class LiveBroadcastController extends GetxController {
       if (showSuccessDialog) {
         _showCommonFeedbackDialog(title: label, message: message);
       } else {
-        Get.snackbar(
-          label,
-          message,
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.black87,
-          colorText: kColorWhite,
-        );
+        _showRoomToast(label, message);
       }
       return;
     }
@@ -5223,12 +5160,10 @@ class LiveBroadcastController extends GetxController {
     Map<String, dynamic>? response,
     String fallback,
   ) {
-    Get.snackbar(
+    _showRoomToast(
       title,
       _seatManageErrorMessage(response, fallback),
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: const Color(0xFFD32F2F),
-      colorText: kColorWhite,
+      isError: true,
     );
   }
 
@@ -5277,12 +5212,10 @@ class LiveBroadcastController extends GetxController {
     if (isHost.value) return;
     final targetId = receiverId.value.trim();
     if (targetId.isEmpty) {
-      Get.snackbar(
+      _showRoomToast(
         'Follow',
         'Host profile is not available for this room.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.black87,
-        colorText: kColorWhite,
+        isError: true,
       );
       return;
     }
@@ -5300,24 +5233,19 @@ class LiveBroadcastController extends GetxController {
           ? data['isFollowing'] == true
           : action == 'follow';
       isFollowingHost.value = following;
-      Get.snackbar(
+      _showRoomToast(
         following ? 'Following' : 'Unfollowed',
         following
             ? 'You are now following ${hostName.value}.'
             : 'You unfollowed ${hostName.value}.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.black87,
-        colorText: kColorWhite,
       );
       return;
     }
 
-    Get.snackbar(
+    _showRoomToast(
       'Follow',
       response?['message']?.toString() ?? 'Unable to update follow status.',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.black87,
-      colorText: kColorWhite,
+      isError: true,
     );
   }
 
@@ -5331,12 +5259,10 @@ class LiveBroadcastController extends GetxController {
   /// Once a battle starts, the arena pops and this live room converts to PK UI.
   void openPkV1Arena() {
     if (isInRoomPkActive) {
-      Get.snackbar(
+      _showRoomToast(
         'PK Battle',
         'A PK battle is already in progress in this room.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.black87,
-        colorText: kColorWhite,
+        isWarning: true,
       );
       return;
     }
@@ -5344,12 +5270,10 @@ class LiveBroadcastController extends GetxController {
         ? audioRoomApiId.trim()
         : roomId.value.trim();
     if (roomApiId.isEmpty) {
-      Get.snackbar(
+      _showRoomToast(
         'PK Battle',
         'Room id is missing. Rejoin the room and try again.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.black87,
-        colorText: kColorWhite,
+        isError: true,
       );
       return;
     }
@@ -5467,12 +5391,9 @@ class LiveBroadcastController extends GetxController {
                 _shareOption(Icons.copy_rounded, 'Copy Link', Colors.blue, () {
                   Clipboard.setData(ClipboardData(text: roomUrl));
                   Get.back();
-                  Get.snackbar(
+                  _showRoomToast(
                     'Link Copied!',
                     'Room URL copied to clipboard: $roomUrl',
-                    snackPosition: SnackPosition.BOTTOM,
-                    backgroundColor: Colors.green,
-                    colorText: kColorWhite,
                   );
                 }),
                 _shareOption(
@@ -5481,10 +5402,9 @@ class LiveBroadcastController extends GetxController {
                   Colors.green,
                   () {
                     Get.back();
-                    Get.snackbar(
+                    _showRoomToast(
                       'Shared',
                       'Room shared successfully to WhatsApp!',
-                      snackPosition: SnackPosition.BOTTOM,
                     );
                   },
                 ),
@@ -5494,10 +5414,9 @@ class LiveBroadcastController extends GetxController {
                   Colors.indigo,
                   () {
                     Get.back();
-                    Get.snackbar(
+                    _showRoomToast(
                       'Shared',
                       'Room shared successfully to Facebook!',
-                      snackPosition: SnackPosition.BOTTOM,
                     );
                   },
                 ),
@@ -5507,10 +5426,9 @@ class LiveBroadcastController extends GetxController {
                   Colors.orange,
                   () {
                     Get.back();
-                    Get.snackbar(
+                    _showRoomToast(
                       'Shared',
                       'Room shared successfully via SMS!',
-                      snackPosition: SnackPosition.BOTTOM,
                     );
                   },
                 ),
@@ -5700,12 +5618,10 @@ class LiveBroadcastController extends GetxController {
     final fallback = liveStreamingId.isEmpty
         ? 'Live stream id was missing, but the stream was closed on this device.'
         : 'Backend could not confirm the end request, but the stream was closed on this device.';
-    Get.snackbar(
+    _showRoomToast(
       'Live stream closed',
       response?['message']?.toString() ?? fallback,
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.black87,
-      colorText: kColorWhite,
+      isWarning: true,
     );
   }
 
@@ -5790,12 +5706,10 @@ class LiveBroadcastController extends GetxController {
     final backendRoomId = audioRoomApiId;
     if (backendRoomId.isEmpty) {
       Get.back();
-      Get.snackbar(
+      _showRoomToast(
         'End room',
         'Room id is missing, so this room cannot be ended.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFFD32F2F),
-        colorText: kColorWhite,
+        isError: true,
       );
       return;
     }
@@ -5828,12 +5742,10 @@ class LiveBroadcastController extends GetxController {
 
     final backendRoomId = audioRoomApiId;
     if (backendRoomId.isEmpty) {
-      Get.snackbar(
+      _showRoomToast(
         'End room',
         'Room id is missing, so this room cannot be ended.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFFD32F2F),
-        colorText: kColorWhite,
+        isError: true,
       );
       return false;
     }
