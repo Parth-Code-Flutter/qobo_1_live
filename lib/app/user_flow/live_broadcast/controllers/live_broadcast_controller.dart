@@ -1742,6 +1742,11 @@ class LiveBroadcastController extends GetxController {
   }
 
   String get liveZegoAppSign {
+    final sign = _liveZegoRawAppSign;
+    return _isValidZegoAppSign(sign) ? sign : ZegoConfig.liveAppSign;
+  }
+
+  String get _liveZegoRawAppSign {
     final zego = liveZegoStreamingData;
     final value =
         zego['appSign'] ??
@@ -1749,8 +1754,7 @@ class LiveBroadcastController extends GetxController {
         zego['appSignature'] ??
         _roomData['appSign'] ??
         _roomData['app_sign'];
-    final sign = value?.toString().trim() ?? '';
-    return _isValidZegoAppSign(sign) ? sign : ZegoConfig.liveAppSign;
+    return value?.toString().trim() ?? '';
   }
 
   bool _isValidZegoAppSign(String value) {
@@ -1762,11 +1766,44 @@ class LiveBroadcastController extends GetxController {
     final raw =
         zego['appSignMode'] ??
         zego['app_sign_mode'] ??
+        zego['useAppSignMode'] ??
+        zego['use_app_sign_mode'] ??
         _roomData['appSignMode'] ??
-        _roomData['app_sign_mode'];
+        _roomData['app_sign_mode'] ??
+        _roomData['useAppSignMode'] ??
+        _roomData['use_app_sign_mode'];
     if (raw is bool) return raw;
     final text = raw?.toString().trim().toLowerCase();
-    return text == 'true' || text == '1' || text == 'yes';
+    if (text == 'true' || text == '1' || text == 'yes') return true;
+    if (text == 'false' || text == '0' || text == 'no') return false;
+
+    // Backend may return both AppSign and Token04 without an explicit mode flag.
+    // In that case prefer AppSign mode; sending Token04 while token auth is off
+    // in ZEGOCLOUD console causes room login failed (1001004).
+    if (_isValidZegoAppSign(_liveZegoRawAppSign)) return true;
+    return liveZegoToken.isEmpty;
+  }
+
+  bool get liveZegoUseTokenMode {
+    final zego = liveZegoStreamingData;
+    final raw =
+        zego['tokenMode'] ??
+        zego['token_mode'] ??
+        zego['useTokenMode'] ??
+        zego['use_token_mode'] ??
+        zego['tokenAuthEnabled'] ??
+        zego['token_auth_enabled'] ??
+        _roomData['tokenMode'] ??
+        _roomData['token_mode'] ??
+        _roomData['useTokenMode'] ??
+        _roomData['use_token_mode'] ??
+        _roomData['tokenAuthEnabled'] ??
+        _roomData['token_auth_enabled'];
+    if (raw is bool) return raw;
+    final text = raw?.toString().trim().toLowerCase();
+    if (text == 'true' || text == '1' || text == 'yes') return true;
+    if (text == 'false' || text == '0' || text == 'no') return false;
+    return !liveZegoUseAppSignMode && liveZegoToken.isNotEmpty;
   }
 
   String get liveZegoUserId {
@@ -1778,7 +1815,10 @@ class LiveBroadcastController extends GetxController {
         zego['zego_user_id'] ??
         _roomData['userId'] ??
         _roomData['user_id'];
-    final userId = ZegoLiveIdUtils.sanitizeUserId(value?.toString() ?? '');
+    final rawUserId = value?.toString().trim() ?? '';
+    if (rawUserId.isNotEmpty && rawUserId != 'null') return rawUserId;
+
+    final userId = ZegoLiveIdUtils.sanitizeUserId(rawUserId);
     if (userId.isNotEmpty) return userId;
     return _currentUserId();
   }

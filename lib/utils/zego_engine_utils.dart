@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/services.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
+import 'package:zego_express_engine/zego_express_engine.dart' as express;
 import 'package:zego_uikit/zego_uikit.dart';
 
 /// Resets the shared Zego Express engine between Zego console projects.
@@ -34,13 +36,26 @@ abstract final class ZegoEngineUtils {
         try {
           await ZegoUIKit().leaveRoom();
         } catch (e) {
-          LoggerUtils.logWarning('ZegoEngineUtils: leaveRoom ($reason) — $e');
+          if (!_isAlreadyDestroyedEngineError(e)) {
+            LoggerUtils.logWarning('ZegoEngineUtils: leaveRoom ($reason) — $e');
+          }
         }
         try {
           await ZegoUIKit().uninit();
           LoggerUtils.logInfo('ZegoEngineUtils: engine reset ($reason)');
         } catch (e) {
-          LoggerUtils.logWarning('ZegoEngineUtils: uninit ($reason) — $e');
+          if (!_isAlreadyDestroyedEngineError(e)) {
+            LoggerUtils.logWarning('ZegoEngineUtils: uninit ($reason) — $e');
+          }
+        }
+        try {
+          await express.ZegoExpressEngine.destroyEngine();
+        } catch (e) {
+          if (!_isAlreadyDestroyedEngineError(e)) {
+            LoggerUtils.logWarning(
+              'ZegoEngineUtils: destroyEngine ($reason) — $e',
+            );
+          }
         }
         // Native teardown can lag uninit(); joining immediately causes a black canvas.
         await Future<void>.delayed(const Duration(milliseconds: 280));
@@ -48,5 +63,16 @@ abstract final class ZegoEngineUtils {
     } on TimeoutException {
       LoggerUtils.logWarning('ZegoEngineUtils: reset timed out ($reason)');
     }
+  }
+
+  static bool _isAlreadyDestroyedEngineError(Object error) {
+    if (error is! PlatformException) return false;
+    final message = [
+      error.code,
+      error.message,
+      error.details,
+    ].whereType<Object>().join(' ').toLowerCase();
+    return message.contains('stopSoundLevelMonitor'.toLowerCase()) &&
+        message.contains('null object reference');
   }
 }

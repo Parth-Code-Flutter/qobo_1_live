@@ -301,6 +301,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
     final zegoAppSign = controller.liveZegoAppSign;
     final zegoToken = controller.liveZegoToken;
     final useAppSignMode = controller.liveZegoUseAppSignMode;
+    final useTokenMode = controller.liveZegoUseTokenMode;
     final publishStreamId = controller.livePublishStreamId;
     final playStreamId = controller.livePlayStreamId;
     final liveSessionKey = ValueKey(
@@ -308,7 +309,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
         'zego_live_engine',
         controller.isLiveStreamingSession ? 'live' : 'room',
         controller.isHost.value ? 'host' : 'audience',
-        useAppSignMode ? 'app_sign' : 'token',
+        useTokenMode ? 'token' : 'app_sign',
         zegoAppId,
         currentUserId,
         liveId,
@@ -330,6 +331,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
               appSign: zegoAppSign,
               token: zegoToken,
               useAppSignMode: useAppSignMode,
+              useTokenMode: useTokenMode,
               isHost: controller.isHost.value,
               publishStreamId: publishStreamId,
               playStreamId: playStreamId,
@@ -1487,6 +1489,7 @@ class _StableZegoExpressLiveStreaming extends StatefulWidget {
     required this.appSign,
     required this.token,
     required this.useAppSignMode,
+    required this.useTokenMode,
     required this.isHost,
     required this.publishStreamId,
     required this.playStreamId,
@@ -1501,6 +1504,7 @@ class _StableZegoExpressLiveStreaming extends StatefulWidget {
   final String appSign;
   final String token;
   final bool useAppSignMode;
+  final bool useTokenMode;
   final bool isHost;
   final String publishStreamId;
   final String playStreamId;
@@ -1542,6 +1546,7 @@ class _StableZegoExpressLiveStreamingState
         oldWidget.appSign != widget.appSign ||
         oldWidget.token != widget.token ||
         oldWidget.useAppSignMode != widget.useAppSignMode ||
+        oldWidget.useTokenMode != widget.useTokenMode ||
         oldWidget.userId != widget.userId ||
         oldWidget.isHost != widget.isHost ||
         oldWidget.publishStreamId != widget.publishStreamId ||
@@ -1595,39 +1600,8 @@ class _StableZegoExpressLiveStreamingState
       _controller.isZegoConnected.value = false;
       _bindExpressCallbacks();
 
-      final token = widget.token.trim();
-      final useTokenMode = !widget.useAppSignMode && token.isNotEmpty;
-      final profile = express.ZegoEngineProfile(
-        widget.appId,
-        express.ZegoScenario.Broadcast,
-        // Zego Express accepts either AppSign mode or backend Token04 mode.
-        // Respect backend's `appSignMode` flag so we never pass both auth
-        // methods to Zego during live stream room login.
-        appSign: useTokenMode
-            ? ''
-            : widget.appSign.trim().isEmpty
-            ? null
-            : widget.appSign.trim(),
-        enablePlatformView: false,
-      );
-      await express.ZegoExpressEngine.createEngineWithProfile(profile);
-
-      final roomConfig = express.ZegoRoomConfig.defaultConfig()
-        ..isUserStatusNotify = true;
-      if (useTokenMode) {
-        roomConfig.token = token;
-      }
-
-      final result = await express.ZegoExpressEngine.instance.loginRoom(
-        roomId,
-        express.ZegoUser(widget.userId, widget.userName),
-        config: roomConfig,
-      );
-      if (result.errorCode != 0) {
-        _fail('Zego room login failed (${result.errorCode}).');
-        return;
-      }
-
+      final loginResult = await _loginRoomWithAuthFallback(roomId);
+      if (loginResult != 0) return;
       _loggedIn = true;
       _controller.onExpressLiveRoomLogined();
 
@@ -1650,6 +1624,107 @@ class _StableZegoExpressLiveStreamingState
     } finally {
       _starting = false;
     }
+  }
+
+  Future<int> _loginRoomWithAuthFallback(String roomId) async {
+    final token = widget.token.trim();
+    final appSign = widget.appSign.trim();
+    final initialTokenMode = widget.useTokenMode && token.isNotEmpty;
+    final canTryToken = token.isNotEmpty;
+    final canTryAppSign = appSign.isNotEmpty;
+
+    final attempts = <bool>[initialTokenMode];
+    if (initialTokenMode && canTryAppSign) {
+      attempts.add(false);
+    } else if (!initialTokenMode && canTryToken) {
+      attempts.add(true);
+    }
+
+    var lastError = 0;
+    final triedModes = <String>[];
+    for (final useTokenMode in attempts) {
+      final mode = useTokenMode ? 'token' : 'appSign';
+      triedModes.add(mode);
+      final result = await _loginRoomOnce(
+        roomId: roomId,
+        useTokenMode: useTokenMode,
+      );
+      if (result == 0) {
+        debugPrint(
+          'Zego live login succeeded: mode=$mode room=$roomId '
+          'user=${widget.userId} stream=${widget.isHost ? widget.publishStreamId : widget.playStreamId}',
+        );
+        return 0;
+      }
+
+      lastError = result;
+      debugPrint(
+        'Zego live login failed: mode=$mode error=$result room=$roomId '
+        'user=${widget.userId} appId=${widget.appId} hasToken=$canTryToken '
+        'hasAppSign=$canTryAppSign',
+      );
+
+      if (result != 1001004) break;
+      await _resetExpressEngineForRetry();
+    }
+
+    _fail(
+      'Zego room login failed ($lastError). Tried ${triedModes.join(' -> ')}.',
+    );
+    return lastError;
+  }
+
+  Future<int> _loginRoomOnce({
+    required String roomId,
+    required bool useTokenMode,
+  }) async {
+    final appSign = widget.appSign.trim();
+    final token = widget.token.trim();
+    try {
+      await express.ZegoExpressEngine.destroyEngine();
+    } catch (_) {}
+
+    final profile = express.ZegoEngineProfile(
+      widget.appId,
+      express.ZegoScenario.Broadcast,
+      // Use only one auth method per Zego login attempt.
+      appSign: useTokenMode
+          ? ''
+          : appSign.isEmpty
+          ? null
+          : appSign,
+      enablePlatformView: false,
+    );
+    await express.ZegoExpressEngine.createEngineWithProfile(profile);
+
+    final roomConfig = express.ZegoRoomConfig.defaultConfig()
+      ..isUserStatusNotify = true;
+    if (useTokenMode && token.isNotEmpty) {
+      roomConfig.token = token;
+    }
+
+    final result = await express.ZegoExpressEngine.instance.loginRoom(
+      roomId,
+      express.ZegoUser(widget.userId, widget.userName),
+      config: roomConfig,
+    );
+    return result.errorCode;
+  }
+
+  Future<void> _resetExpressEngineForRetry() async {
+    try {
+      if (_loggedIn && widget.liveId.trim().isNotEmpty) {
+        await express.ZegoExpressEngine.instance.logoutRoom(
+          widget.liveId.trim(),
+        );
+      }
+    } catch (_) {}
+
+    try {
+      await express.ZegoExpressEngine.destroyEngine();
+    } catch (_) {}
+
+    _loggedIn = false;
   }
 
   Future<void> _startMedia(int viewId) async {

@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:push_notification_service/push_notification_service.dart';
 import 'package:qobo_one_live/repo/call/call_repo.dart';
@@ -134,6 +133,15 @@ class IncomingCallPushHandler {
       return;
     }
 
+    if (payload.roomId.trim().isEmpty || payload.callId.trim().isEmpty) {
+      LoggerUtils.logWarning(
+        'IncomingCallPush: accept missing ids room=${payload.roomId} '
+        'call=${payload.callId}',
+      );
+      _showFeedback('Call details are missing. Please ask them to call again.');
+      return;
+    }
+
     final response = await _callRepo.respondDirectCall(
       callId: payload.callId,
       roomId: payload.roomId,
@@ -141,8 +149,19 @@ class IncomingCallPushHandler {
       isShowLoader: true,
     );
 
+    if (!_isApiSuccess(response)) {
+      LoggerUtils.logWarning(
+        'IncomingCallPush: accept failed call=${payload.callId} '
+        'room=${payload.roomId} response=$response',
+      );
+      _showFeedback(
+        response?['message']?.toString() ?? 'Could not accept this call',
+      );
+      return;
+    }
+
     Map<String, dynamic> data = {};
-    if (_isApiSuccess(response) && response?['data'] is Map) {
+    if (response?['data'] is Map) {
       data = Map<String, dynamic>.from(response!['data'] as Map);
     }
 
@@ -181,12 +200,14 @@ class IncomingCallPushHandler {
     }
 
     await ZegoEngineUtils.resetForCallProject();
+    ChatIncomingCallCoordinator? coordinator;
     if (Get.isRegistered<ChatIncomingCallCoordinator>()) {
-      Get.find<ChatIncomingCallCoordinator>().setOnCallScreen(true);
+      coordinator = Get.find<ChatIncomingCallCoordinator>();
+      coordinator.setOnCallScreen(true);
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Get.toNamed(
+    try {
+      await _openAcceptedCallRoute(
         Routes.CHAT_VOICE_CALL,
         arguments: {
           'roomId': roomId,
@@ -202,7 +223,9 @@ class IncomingCallPushHandler {
           'recordCallHistory': payload.recordCallHistory,
         },
       );
-    });
+    } finally {
+      coordinator?.setOnCallScreen(false);
+    }
   }
 
   Future<void> rejectCall(
@@ -246,6 +269,28 @@ class IncomingCallPushHandler {
     if (response['success'] == true) return true;
     final code = response['statusCode'];
     return code == 1 || code == 200 || code == 201 || code == true;
+  }
+
+  Future<void> _openAcceptedCallRoute(
+    String routeName, {
+    required Map<String, dynamic> arguments,
+  }) async {
+    // Notification action callbacks can arrive while Flutter is still resuming.
+    // Wait briefly for Get's navigator/overlay instead of scheduling a frame
+    // callback that may never run on some Android devices.
+    for (var i = 0; i < 20; i++) {
+      if (IncomingCallPresentation.isAppInForeground &&
+          (Get.context != null || Get.overlayContext != null)) {
+        break;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+    }
+
+    LoggerUtils.logInfo(
+      'IncomingCallPush: opening call route=${arguments['callId']} '
+      'room=${arguments['roomId']} video=${arguments['isVideo']}',
+    );
+    await Get.toNamed(routeName, arguments: arguments);
   }
 
   void _showFeedback(String message, {bool isError = true}) {

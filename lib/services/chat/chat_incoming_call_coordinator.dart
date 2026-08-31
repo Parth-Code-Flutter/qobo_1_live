@@ -308,21 +308,24 @@ class ChatIncomingCallCoordinator extends GetxService {
     await ZegoEngineUtils.resetForCallProject();
     _onCallScreen = true;
 
-    await Get.toNamed(
-      Routes.CHAT_VOICE_CALL,
-      arguments: {
-        'roomId': roomId,
-        'callId': callId,
-        if (historyDocId.isNotEmpty) 'historyDocId': historyDocId,
-        if (callStartedAt.isNotEmpty) 'callStartedAt': callStartedAt,
-        'hostId': callerId,
-        'peerName': callerName,
-        'isCaller': false,
-        'isVideo': isVideo,
-        'recordCallHistory': recordCallHistory,
-      },
-    );
-    _onCallScreen = false;
+    try {
+      await Get.toNamed(
+        Routes.CHAT_VOICE_CALL,
+        arguments: {
+          'roomId': roomId,
+          'callId': callId,
+          if (historyDocId.isNotEmpty) 'historyDocId': historyDocId,
+          if (callStartedAt.isNotEmpty) 'callStartedAt': callStartedAt,
+          'hostId': callerId,
+          'peerName': callerName,
+          'isCaller': false,
+          'isVideo': isVideo,
+          'recordCallHistory': recordCallHistory,
+        },
+      );
+    } finally {
+      _onCallScreen = false;
+    }
   }
 
   String get _myUserId {
