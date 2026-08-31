@@ -99,6 +99,18 @@ class ChatCallService {
     }
   }
 
+  /// Clears only the per-user ringing marker used to show incoming call UI.
+  ///
+  /// This is intentionally narrower than [endCall]; app startup can receive an
+  /// old `userIncomingCalls/{userId}` snapshot after the real call has already
+  /// timed out, and that stale marker should not create call history again.
+  Future<void> clearIncomingCallForUser({
+    required String calleeId,
+    String? roomId,
+  }) {
+    return _clearUserIncomingCall(calleeId: calleeId, roomId: roomId);
+  }
+
   Stream<Map<String, dynamic>> watchActiveCall(String roomId) {
     final ref = _activeRef(roomId);
     if (ref == null) return const Stream.empty();

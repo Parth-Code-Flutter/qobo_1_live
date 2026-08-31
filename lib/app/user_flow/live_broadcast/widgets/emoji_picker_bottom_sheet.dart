@@ -7,9 +7,7 @@ import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/ui_utils/emoji_celebration_overlay.dart';
 
-/// Direct emoji picker for audio/video room members.
-///
-/// Unlike gifts, emojis are intentionally sent to a selected user only.
+/// Room reaction picker. Selected emojis appear over the sender's own seat.
 class EmojiPickerBottomSheet extends GetView<LiveBroadcastController> {
   const EmojiPickerBottomSheet({super.key});
 
@@ -45,53 +43,48 @@ class EmojiPickerBottomSheet extends GetView<LiveBroadcastController> {
             ),
           ),
           Spacing.v16,
-          Obx(() {
-            final name = controller.selectedEmojiReceiverName.value?.trim();
-            return Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                gradient: LinearGradient(
-                  colors: [
-                    _pink.withValues(alpha: 0.18),
-                    _purple.withValues(alpha: 0.16),
-                  ],
-                ),
-                border: Border.all(color: _pink.withValues(alpha: 0.35)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.emoji_emotions_rounded,
-                    color: _gold,
-                    size: 22,
-                  ),
-                  Spacing.h10,
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SemiBoldText(
-                          text: 'Send emoji',
-                          fontSize: TextStyles.k16FontSize,
-                          color: kColorWhite,
-                        ),
-                        Spacing.v2,
-                        AppText(
-                          text: name?.isNotEmpty == true
-                              ? 'Shown only to $name'
-                              : 'Shown only to selected user',
-                          fontSize: TextStyles.k12FontSize,
-                          color: Colors.white70,
-                        ),
-                      ],
-                    ),
-                  ),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              gradient: LinearGradient(
+                colors: [
+                  _pink.withValues(alpha: 0.18),
+                  _purple.withValues(alpha: 0.16),
                 ],
               ),
-            );
-          }),
+              border: Border.all(color: _pink.withValues(alpha: 0.35)),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.emoji_emotions_rounded,
+                  color: _gold,
+                  size: 22,
+                ),
+                Spacing.h10,
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SemiBoldText(
+                        text: 'Send emoji',
+                        fontSize: TextStyles.k16FontSize,
+                        color: kColorWhite,
+                      ),
+                      SizedBox(height: 2),
+                      AppText(
+                        text: 'Your reaction appears on your seat.',
+                        fontSize: TextStyles.k12FontSize,
+                        color: Colors.white70,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
           Spacing.v16,
           Expanded(
             child: Obx(() {

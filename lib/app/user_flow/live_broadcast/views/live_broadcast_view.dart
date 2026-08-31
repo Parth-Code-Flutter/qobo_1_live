@@ -1636,7 +1636,7 @@ class _StableZegoExpressLiveStreamingState
     final attempts = <bool>[initialTokenMode];
     if (initialTokenMode && canTryAppSign) {
       attempts.add(false);
-    } else if (!initialTokenMode && canTryToken) {
+    } else if (!initialTokenMode && widget.useTokenMode && canTryToken) {
       attempts.add(true);
     }
 
@@ -1686,7 +1686,8 @@ class _StableZegoExpressLiveStreamingState
 
     final profile = express.ZegoEngineProfile(
       widget.appId,
-      express.ZegoScenario.Broadcast,
+      // ignore: deprecated_member_use
+      express.ZegoScenario.General,
       // Use only one auth method per Zego login attempt.
       appSign: useTokenMode
           ? ''

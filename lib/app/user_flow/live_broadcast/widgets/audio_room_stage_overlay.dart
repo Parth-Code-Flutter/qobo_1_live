@@ -15,6 +15,7 @@ import 'package:qobo_one_live/utils/app_widgets/session_earnings_badge.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
+import 'package:qobo_one_live/utils/ui_utils/emoji_celebration_overlay.dart';
 import 'package:zego_uikit/zego_uikit.dart';
 
 import 'package:qobo_one_live/utils/ui_utils/vip_entrance_overlay.dart';
@@ -290,6 +291,17 @@ class _AudioRoomBottomControls extends GetView<LiveBroadcastController> {
               ),
             ],
             _SpeakerControl(compact: compact),
+            _ControlButton(
+              icon: Icons.emoji_emotions_rounded,
+              label: 'Emoji',
+              compact: compact,
+              accentGradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFFFFD84D), Color(0xFFFF8F00)],
+              ),
+              onTap: controller.openEmojiSheet,
+            ),
             // Hide Gift for hosts during PK — only viewers support a side.
             Obx(() {
               if (controller.isInRoomPkActive && controller.isHost.value) {
@@ -1297,6 +1309,16 @@ class _VideoOccupiedSeatTile extends GetView<LiveBroadcastController> {
                   top: pad,
                   child: _VideoMicBadge(muted: seat.isMuted, compact: tiny),
                 ),
+                Obx(() {
+                  final emoji = controller.seatEmojiFor(seat.userId);
+                  if (emoji == null) return const SizedBox.shrink();
+                  return Positioned.fill(
+                    child: _SeatEmojiReaction(
+                      emoji: emoji,
+                      size: tiny ? 72 : 104,
+                    ),
+                  );
+                }),
                 Positioned(
                   right: pad,
                   top: pad,
@@ -1673,6 +1695,81 @@ class _VideoMiniFrameThumb extends StatelessWidget {
   }
 }
 
+class _SeatEmojiReaction extends StatefulWidget {
+  const _SeatEmojiReaction({required this.emoji, required this.size});
+
+  final Map<String, String> emoji;
+  final double size;
+
+  @override
+  State<_SeatEmojiReaction> createState() => _SeatEmojiReactionState();
+}
+
+class _SeatEmojiReactionState extends State<_SeatEmojiReaction>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 520),
+    )..forward();
+  }
+
+  @override
+  void didUpdateWidget(covariant _SeatEmojiReaction oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.emoji['id'] != widget.emoji['id'] ||
+        oldWidget.emoji['image'] != widget.emoji['image']) {
+      _controller.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final image = widget.emoji['image']?.trim().isNotEmpty == true
+        ? widget.emoji['image']!.trim()
+        : widget.emoji['code']?.trim() ?? '😊';
+    final size = widget.size.clamp(42.0, 130.0);
+
+    return IgnorePointer(
+      child: Center(
+        child: ScaleTransition(
+          scale: CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.black.withValues(alpha: 0.10),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFFD84D).withValues(alpha: 0.25),
+                  blurRadius: 22,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+            child: EmojiMediaView(
+              image: image,
+              fit: BoxFit.contain,
+              emojiFontSize: size * 0.76,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Soft dashed outline painted inside empty video seats.
 class _VideoEmptySeatDashPainter extends CustomPainter {
   _VideoEmptySeatDashPainter({required this.color, required this.radius});
@@ -1893,6 +1990,14 @@ class _MemberSeat extends GetView<LiveBroadcastController> {
                       bottom: -4,
                       child: _MicBubble(muted: seat.isMuted, small: true),
                     ),
+                    Obx(() {
+                      final emoji = controller.seatEmojiFor(seat.userId);
+                      if (emoji == null) return const SizedBox.shrink();
+                      return _SeatEmojiReaction(
+                        emoji: emoji,
+                        size: metrics.frameSize * 0.96,
+                      );
+                    }),
                     if (seat.hasJoinableFollowerPk)
                       Positioned(
                         right: -8,
@@ -2449,12 +2554,6 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
           onTap: () => _openMessage(context),
         ),
         _SeatActionData(
-          icon: Icons.emoji_emotions_rounded,
-          label: 'Emoji',
-          accent: const Color(0xFFFFD84D),
-          onTap: _openEmoji,
-        ),
-        _SeatActionData(
           icon: kGiftIcon,
           label: 'Gift',
           accent: const Color(0xFFFFB347),
@@ -2469,12 +2568,6 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
         label: 'Message',
         accent: const Color(0xFFFF8FB8),
         onTap: () => _openMessage(context),
-      ),
-      _SeatActionData(
-        icon: Icons.emoji_emotions_rounded,
-        label: 'Emoji',
-        accent: const Color(0xFFFFD84D),
-        onTap: _openEmoji,
       ),
       _SeatActionData(
         icon: kGiftIcon,
@@ -3015,20 +3108,6 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
       receiverName: seat.name,
       roomGift: false,
     );
-  }
-
-  void _openEmoji() {
-    final receiverId = seat.userId.trim();
-    if (receiverId.isEmpty) {
-      Get.back();
-      _showActionToast(
-        'Emoji not available',
-        'This user id is missing from the room member data.',
-        isError: true,
-      );
-      return;
-    }
-    controller.openEmojiSheet(receiverId: receiverId, receiverName: seat.name);
   }
 
   void _showActionToast(String title, String message, {bool isError = false}) {
@@ -4091,15 +4170,6 @@ class FloorAudienceProfileSheet extends GetView<LiveBroadcastController> {
                   Spacing.h8,
                   Expanded(
                     child: _floorActionButton(
-                      icon: Icons.emoji_emotions_rounded,
-                      label: 'Emoji',
-                      colors: const [Color(0xFFFFD84D), Color(0xFFFF8F00)],
-                      onTap: _openEmoji,
-                    ),
-                  ),
-                  Spacing.h8,
-                  Expanded(
-                    child: _floorActionButton(
                       icon: kGiftIcon,
                       label: 'Gift',
                       colors: const [Color(0xFFFFB347), Color(0xFFFF6B35)],
@@ -4228,15 +4298,6 @@ class FloorAudienceProfileSheet extends GetView<LiveBroadcastController> {
       receiverName: user.name,
       roomGift: false,
     );
-  }
-
-  void _openEmoji() {
-    final receiverId = user.userId.trim();
-    if (receiverId.isEmpty) {
-      Get.back<void>();
-      return;
-    }
-    controller.openEmojiSheet(receiverId: receiverId, receiverName: user.name);
   }
 
   void _openSeatPicker() {

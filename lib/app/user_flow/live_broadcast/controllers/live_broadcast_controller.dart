@@ -134,6 +134,7 @@ class LiveBroadcastController extends GetxController {
   final emojiCatalog = <Map<String, String>>[].obs;
   final emojiPackVersion = 1.obs;
   final isLoadingEmojis = false.obs;
+  final activeSeatEmojis = <String, Map<String, String>>{}.obs;
   final selectedEmojiReceiverId = RxnString();
   final selectedEmojiReceiverName = RxnString();
   final audioRoomSeats = <AudioRoomSeatModel>[].obs;
@@ -194,6 +195,7 @@ class LiveBroadcastController extends GetxController {
   var _giftSendInFlight = false;
   var _emojiSendInFlight = false;
   final Set<String> _playedEmojiEventKeys = <String>{};
+  final Map<String, Timer> _seatEmojiTimers = <String, Timer>{};
 
   /// True when PK forced the camera on (e.g. audio room → PK video panes).
   var _pkForcedCameraOn = false;
@@ -1485,21 +1487,21 @@ class LiveBroadcastController extends GetxController {
     return null;
   }
 
-  void openEmojiSheet({required String receiverId, String? receiverName}) {
-    final targetId = receiverId.trim();
-    if (targetId.isEmpty) {
+  void openEmojiSheet({String? receiverId, String? receiverName}) {
+    final senderId = _currentUserId();
+    if (senderId.isEmpty) {
       _showRoomToast(
         'Emoji not available',
-        'This user id is missing from the room member data.',
+        'Your user id is missing from the room member data.',
         isError: true,
       );
       return;
     }
 
-    selectedEmojiReceiverId.value = targetId;
+    selectedEmojiReceiverId.value = receiverId?.trim();
     selectedEmojiReceiverName.value = receiverName?.trim().isNotEmpty == true
         ? receiverName!.trim()
-        : 'this user';
+        : null;
 
     if (emojiCatalog.isEmpty && !isLoadingEmojis.value) {
       unawaited(loadEmojiCatalog());
@@ -1522,7 +1524,7 @@ class LiveBroadcastController extends GetxController {
     if (_emojiSendInFlight) return;
 
     final emojiId = emoji['id']?.trim() ?? '';
-    final receiver = selectedEmojiReceiverId.value?.trim() ?? '';
+    final senderId = _currentUserId();
     final currentRoomId = audioRoomApiId.isNotEmpty
         ? audioRoomApiId
         : roomId.value.trim();
@@ -1530,10 +1532,10 @@ class LiveBroadcastController extends GetxController {
     final targetSessionId = isLiveStreamingSession
         ? liveEmojiStreamId
         : currentRoomId;
-    if (emojiId.isEmpty || receiver.isEmpty || targetSessionId.isEmpty) {
+    if (emojiId.isEmpty || senderId.isEmpty || targetSessionId.isEmpty) {
       _showRoomToast(
         'Emoji not sent',
-        'Emoji, receiver, or room id is missing.',
+        'Emoji, sender, or room id is missing.',
         isError: true,
       );
       return;
@@ -1550,7 +1552,6 @@ class LiveBroadcastController extends GetxController {
           ? await _emojiRepo.sendLiveStreamingEmoji(
               liveStreamingId: liveEmojiStreamId,
               emojiId: emojiId,
-              receiverId: receiver,
               packVersion: packVersion,
               clientEventId: clientReqId,
             )
@@ -1558,7 +1559,6 @@ class LiveBroadcastController extends GetxController {
               roomId: currentRoomId,
               emojiId: emojiId,
               sessionType: sessionType,
-              receiverId: receiver,
               packVersion: packVersion,
               clientEventId: clientReqId,
             );
@@ -1575,8 +1575,8 @@ class LiveBroadcastController extends GetxController {
       if (Get.isBottomSheetOpen == true) Get.back<void>();
       final sentEmoji = _emojiFromResponse(response) ?? Map.of(emoji);
       sentEmoji['packVersion'] = packVersion.toString();
-      _showEmojiCelebration(sentEmoji);
-      unawaited(_broadcastEmojiMarker(sentEmoji, receiver, clientReqId));
+      _showSeatEmojiReaction(senderId: senderId, emoji: sentEmoji);
+      unawaited(_broadcastEmojiMarker(sentEmoji, clientReqId));
     } finally {
       _emojiSendInFlight = false;
     }
@@ -1632,23 +1632,38 @@ class LiveBroadcastController extends GetxController {
     };
   }
 
-  void _showEmojiCelebration(Map<String, String> emoji) {
-    final image = emoji['image']?.trim().isNotEmpty == true
-        ? emoji['image']!.trim()
-        : emoji['code']?.trim() ?? '😊';
-    EmojiCelebrationOverlay.show(image: image, name: emoji['name']);
+  Map<String, String>? seatEmojiFor(String userId) {
+    final key = _seatEmojiKey(userId);
+    if (key.isEmpty) return null;
+    return activeSeatEmojis[key];
+  }
+
+  void _showSeatEmojiReaction({
+    required String senderId,
+    required Map<String, String> emoji,
+  }) {
+    final key = _seatEmojiKey(senderId);
+    if (key.isEmpty) return;
+
+    activeSeatEmojis[key] = Map<String, String>.from(emoji);
+    _seatEmojiTimers.remove(key)?.cancel();
+    _seatEmojiTimers[key] = Timer(const Duration(milliseconds: 2600), () {
+      activeSeatEmojis.remove(key);
+      _seatEmojiTimers.remove(key);
+    });
+  }
+
+  String _seatEmojiKey(String userId) {
+    final raw = userId.trim();
+    if (raw.isEmpty) return '';
+    return ZegoLiveIdUtils.sanitizeUserId(raw);
   }
 
   Future<void> _broadcastEmojiMarker(
     Map<String, String> emoji,
-    String receiver,
     String clientReqId,
   ) async {
-    final label = _buildEmojiMarker(
-      emoji: emoji,
-      receiverId: receiver,
-      clientReqId: clientReqId,
-    );
+    final label = _buildEmojiMarker(emoji: emoji, clientReqId: clientReqId);
     try {
       await ZegoUIKit().sendInRoomMessage(label);
     } catch (_) {
@@ -1658,13 +1673,11 @@ class LiveBroadcastController extends GetxController {
 
   String _buildEmojiMarker({
     required Map<String, String> emoji,
-    required String receiverId,
     required String clientReqId,
   }) {
     final fields = <String, String>{
       'clientReqId': clientReqId,
       'senderId': _currentUserId(),
-      'receiverId': receiverId,
       'roomId': audioRoomApiId.isNotEmpty ? audioRoomApiId : roomId.value,
       'emojiId': emoji['id'] ?? '',
       'code': emoji['code'] ?? '',
@@ -1674,7 +1687,7 @@ class LiveBroadcastController extends GetxController {
     final marker = fields.entries
         .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
         .join(';');
-    return '🫶 ${emoji['name'] ?? 'Emoji'} [emoji_anim:$marker]';
+    return '[emoji_anim:$marker]';
   }
 
   bool _isEmojiMarker(String message) {
@@ -2263,12 +2276,9 @@ class LiveBroadcastController extends GetxController {
       final senderId = marker['senderId'] ?? message.user.id;
       if (_userIdsMatch(senderId, myUserId)) continue;
 
-      final receiver = marker['receiverId'] ?? '';
-      if (receiver.isEmpty || !_userIdsMatch(receiver, myUserId)) continue;
-
       final key =
           marker['clientReqId'] ??
-          '${message.messageID}_${message.timestamp}_${senderId}_$receiver';
+          '${message.messageID}_${message.timestamp}_$senderId';
       if (!_playedEmojiEventKeys.add(key)) continue;
 
       final emoji =
@@ -2282,7 +2292,7 @@ class LiveBroadcastController extends GetxController {
             'code': marker['code'] ?? '',
             'category': 'emoji',
           };
-      _showEmojiCelebration(emoji);
+      _showSeatEmojiReaction(senderId: senderId, emoji: emoji);
     }
   }
 
@@ -3431,26 +3441,7 @@ class LiveBroadcastController extends GetxController {
       return;
     }
 
-    final receiver =
-        readRoomField(payload, const [
-          'receiverId',
-          'receiver_id',
-          'targetUserId',
-          'target_user_id',
-          'toUserId',
-          'to_user_id',
-        ]) ??
-        readRoomField(asMap(payload['receiver']) ?? const {}, const [
-          'id',
-          '_id',
-          'userId',
-          'user_id',
-          'targetUserId',
-          'target_user_id',
-        ]);
     final myId = _currentUserId();
-    if (receiver == null || !_userIdsMatch(receiver, myId)) return;
-
     final sender =
         readRoomField(payload, const ['senderId', 'sender_id']) ??
         readRoomField(asMap(payload['sender']) ?? const {}, const [
@@ -3459,7 +3450,8 @@ class LiveBroadcastController extends GetxController {
           'userId',
           'user_id',
         ]);
-    if (sender != null && _userIdsMatch(sender, myId)) return;
+    if (sender == null || sender.trim().isEmpty) return;
+    if (_userIdsMatch(sender, myId)) return;
 
     final eventKey =
         readRoomField(payload, const ['clientReqId', 'client_req_id', 'id']) ??
@@ -3470,7 +3462,7 @@ class LiveBroadcastController extends GetxController {
         _emojiFromResponse({'data': payload}) ??
         _emojiById(readRoomField(payload, const ['emojiId', 'emoji_id']) ?? '');
     if (emoji == null) return;
-    _showEmojiCelebration(emoji);
+    _showSeatEmojiReaction(senderId: sender, emoji: emoji);
   }
 
   bool _matchesCurrentLiveStreamEvent(Map<String, dynamic> data) {
@@ -5897,6 +5889,11 @@ class LiveBroadcastController extends GetxController {
     _giftCelebrationTracker.reset();
     GiftCelebrationOverlay.dismiss();
     EmojiCelebrationOverlay.dismiss();
+    for (final timer in _seatEmojiTimers.values) {
+      timer.cancel();
+    }
+    _seatEmojiTimers.clear();
+    activeSeatEmojis.clear();
     if (_viewerCountListener != null) {
       try {
         ZegoUIKitPrebuiltLiveStreamingController().user.countNotifier

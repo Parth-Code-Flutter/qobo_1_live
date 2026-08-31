@@ -123,13 +123,19 @@ abstract final class IncomingCallKitService {
       for (final raw in calls) {
         if (raw is! Map) continue;
         final map = Map<String, dynamic>.from(raw);
-        final accepted = map['accepted'] == true ||
+        final accepted =
+            map['accepted'] == true ||
             map['isAccepted'] == true ||
             map['status']?.toString() == 'accepted';
         if (!accepted) continue;
         final extra = _extraMap(map);
         final payload = IncomingCallPushPayload.tryParse(extra);
         if (payload == null) continue;
+        if (payload.isExpired) {
+          IncomingCallPresentation.markHandled(payload.callId);
+          await IncomingCallKitDisplay.endForPayload(payload);
+          continue;
+        }
         await IncomingCallPushHandler().acceptCall(
           payload,
           sourceMessage: PushNotificationMessage(

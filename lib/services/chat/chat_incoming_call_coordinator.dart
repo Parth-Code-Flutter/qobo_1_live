@@ -37,6 +37,8 @@ class ChatIncomingCallCoordinator extends GetxService {
   bool _bootstrapStarted = false;
   String? _lastHandledRingKey;
 
+  static const Duration _ringSnapshotTtl = Duration(seconds: 60);
+
   @override
   void onInit() {
     super.onInit();
@@ -182,6 +184,16 @@ class ChatIncomingCallCoordinator extends GetxService {
     final calleeId = data['calleeId']?.toString() ?? '';
     if (calleeId.isNotEmpty && calleeId != myId) return;
 
+    if (_isStaleRingSnapshot(data)) {
+      _lastHandledRingKey = ringKey;
+      IncomingCallPresentation.markHandled(callId);
+      IncomingCallRingUi.dismissIfShowing();
+      unawaited(
+        _callService.clearIncomingCallForUser(calleeId: myId, roomId: roomId),
+      );
+      return;
+    }
+
     if (_lastHandledRingKey == ringKey) return;
     if (IncomingCallPresentation.isHandled(callId)) {
       _lastHandledRingKey = ringKey;
@@ -275,6 +287,58 @@ class ChatIncomingCallCoordinator extends GetxService {
       IncomingCallPresentation.clearInAppShowing(callId);
       // Keep _lastHandledRingKey while still ringing so resume does not reopen.
     }
+  }
+
+  bool _isStaleRingSnapshot(Map<String, dynamic> data) {
+    final now = DateTime.now().toUtc();
+    final expiresAt = _readSnapshotDate(data, const [
+      'expiresAt',
+      'expires_at',
+      'expiresAtMs',
+      'expires_at_ms',
+    ]);
+    if (expiresAt != null) return now.isAfter(expiresAt.toUtc());
+
+    final startedAt = _readSnapshotDate(data, const [
+      'ringStartedAt',
+      'ring_started_at',
+      'callStartedAt',
+      'call_started_at',
+      'startedAt',
+      'started_at',
+      'createdAt',
+      'created_at',
+      'timestamp',
+      'updatedAt',
+      'updated_at',
+    ]);
+    if (startedAt == null) return false;
+    return now.difference(startedAt.toUtc()) > _ringSnapshotTtl;
+  }
+
+  DateTime? _readSnapshotDate(Map<String, dynamic> data, List<String> keys) {
+    for (final key in keys) {
+      final parsed = _parseSnapshotDate(data[key]);
+      if (parsed != null) return parsed;
+    }
+    return null;
+  }
+
+  DateTime? _parseSnapshotDate(dynamic value) {
+    if (value == null) return null;
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    if (value is num) {
+      final raw = value.toInt();
+      final milliseconds = raw > 1000000000000 ? raw : raw * 1000;
+      return DateTime.fromMillisecondsSinceEpoch(milliseconds, isUtc: true);
+    }
+
+    final text = value.toString().trim();
+    if (text.isEmpty) return null;
+    final numeric = int.tryParse(text);
+    if (numeric != null) return _parseSnapshotDate(numeric);
+    return DateTime.tryParse(text);
   }
 
   Future<void> _acceptCall({
