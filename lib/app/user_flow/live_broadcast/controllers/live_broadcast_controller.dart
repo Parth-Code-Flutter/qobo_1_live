@@ -1750,13 +1750,26 @@ class LiveBroadcastController extends GetxController {
         _roomData['appId'] ??
         _roomData['appID'] ??
         _roomData['app_id'];
-    if (raw is int) return raw;
-    return int.tryParse(raw?.toString() ?? '') ?? ZegoConfig.liveAppId;
+    final backendAppId = raw is int ? raw : int.tryParse(raw?.toString() ?? '');
+    if (backendAppId == ZegoConfig.liveAppId) return backendAppId!;
+    return ZegoConfig.liveAppId;
   }
 
   String get liveZegoAppSign {
     final sign = _liveZegoRawAppSign;
-    return _isValidZegoAppSign(sign) ? sign : ZegoConfig.liveAppSign;
+    final backendAppId =
+        int.tryParse(
+          (liveZegoStreamingData['appId'] ??
+                  liveZegoStreamingData['appID'] ??
+                  liveZegoStreamingData['app_id'] ??
+                  '')
+              .toString(),
+        ) ??
+        ZegoConfig.liveAppId;
+    final backendMatchesMobileProject = backendAppId == ZegoConfig.liveAppId;
+    return backendMatchesMobileProject && _isValidZegoAppSign(sign)
+        ? sign
+        : ZegoConfig.liveAppSign;
   }
 
   String get _liveZegoRawAppSign {
@@ -1798,6 +1811,11 @@ class LiveBroadcastController extends GetxController {
   }
 
   bool get liveZegoUseTokenMode {
+    // New ZEGOCLOUD live-streaming project is configured for AppSign mode.
+    // Backend may still return stale/old Token04 values while it catches up;
+    // using those tokens causes room auth failures like 1002033.
+    if (_isValidZegoAppSign(liveZegoAppSign)) return false;
+
     final zego = liveZegoStreamingData;
     final raw =
         zego['tokenMode'] ??

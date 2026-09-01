@@ -1664,6 +1664,10 @@ class _StableZegoExpressLiveStreamingState
         'hasAppSign=$canTryAppSign',
       );
 
+      if (useTokenMode && canTryAppSign) {
+        await _resetExpressEngineForRetry();
+        continue;
+      }
       if (result != 1001004) break;
       await _resetExpressEngineForRetry();
     }
