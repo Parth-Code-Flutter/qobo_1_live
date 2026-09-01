@@ -103,6 +103,7 @@ class LiveBroadcastController extends GetxController {
   /// Active floating-heart animation tokens (live streaming reactions).
   final heartReactionTokens = <int>[].obs;
   var _heartReactionSeq = 0;
+  Timer? _heartReactionTimer;
 
   final chatMessages = <Map<String, dynamic>>[].obs;
   final chatTextController = TextEditingController();
@@ -280,6 +281,7 @@ class LiveBroadcastController extends GetxController {
     } else {
       // Live stream: still listen for VIP join entrance (gift-style overlay).
       _bindVipEntranceSocketOnly();
+      _startContinuousHeartReactions();
       if (!isHost.value) {
         // Live-stream audience: report the join so backend viewer/heat counts
         // move. Group-call rooms already do this via joinTypedRoom.
@@ -2552,9 +2554,35 @@ class LiveBroadcastController extends GetxController {
   /// WhatsApp-status-style heart burst (live streaming only).
   void triggerHeartReaction() {
     if (!isLiveStreamingSession) return;
+    _emitHeartReactionBurst(count: 10, staggerMs: 35);
+  }
+
+  void _startContinuousHeartReactions() {
+    if (!isLiveStreamingSession || _heartReactionTimer != null) return;
+    Timer(const Duration(milliseconds: 450), () {
+      if (!isClosed && isLiveStreamingSession) {
+        _emitHeartReactionBurst(count: 5, staggerMs: 48);
+      }
+    });
+    _heartReactionTimer = Timer.periodic(const Duration(milliseconds: 1400), (
+      _,
+    ) {
+      if (!isClosed && isLiveStreamingSession) {
+        _emitHeartReactionBurst(count: 5, staggerMs: 48);
+      }
+    });
+  }
+
+  void _stopContinuousHeartReactions() {
+    _heartReactionTimer?.cancel();
+    _heartReactionTimer = null;
+    heartReactionTokens.clear();
+  }
+
+  void _emitHeartReactionBurst({required int count, required int staggerMs}) {
     // Send a richer burst so audience reactions feel lively in the live room.
-    for (var i = 0; i < 10; i++) {
-      Future<void>.delayed(Duration(milliseconds: 35 * i), () {
+    for (var i = 0; i < count; i++) {
+      Future<void>.delayed(Duration(milliseconds: staggerMs * i), () {
         if (!isClosed) {
           _heartReactionSeq++;
           heartReactionTokens.add(_heartReactionSeq);
@@ -5830,6 +5858,7 @@ class LiveBroadcastController extends GetxController {
     _stopSessionEarningsPolling();
     _stopJoinRequestPolling();
     _stopSeatRequestPolling();
+    _stopContinuousHeartReactions();
     _promptedJoinRequestIds.clear();
     _promptedSeatRequestIds.clear();
     _knownFloorAudienceIds.clear();

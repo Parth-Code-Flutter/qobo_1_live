@@ -959,12 +959,6 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
           onTap: controller.toggleMic,
         ),
       ),
-      _bottomActionIcon(
-        Icons.favorite_rounded,
-        color: LiveHeartReactionLayer.liveHeartRed,
-        compact: compact,
-        onTap: controller.triggerHeartReaction,
-      ),
       if (isAudience)
         _bottomActionIcon(
           Icons.ios_share_rounded,
