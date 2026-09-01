@@ -5,6 +5,7 @@ import 'package:qobo_one_live/app/user_flow/agency_owner_dashboard/models/agency
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/repo/agency/agency_api_utils.dart';
+import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/services/agency_session_controller.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
@@ -54,18 +55,13 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
       backgroundColor: Colors.transparent,
       body: Container(
         decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage(kImgBG),
-            fit: BoxFit.cover,
-          ),
+          image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
         ),
         child: SafeArea(
           child: Column(
             children: [
               _header(),
-              Expanded(
-                child: Obx(() => _dashboardBody()),
-              ),
+              Expanded(child: Obx(() => _dashboardBody())),
             ],
           ),
         ),
@@ -160,9 +156,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
 
   Widget _dashboardBody() {
     if (controller.isLoading.value) {
-      return const Center(
-        child: CircularProgressIndicator(color: kColorWhite),
-      );
+      return const Center(child: CircularProgressIndicator(color: kColorWhite));
     }
 
     if (controller.isApplicationPending.value) {
@@ -191,6 +185,8 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
             _featuredEarningsCard(),
             Spacing.v12,
             _secondaryMetricsRow(),
+            Spacing.v12,
+            _hostRecruitmentBonusCard(),
             Spacing.v20,
             _sectionLabel(
               'Revenue breakdown',
@@ -550,6 +546,63 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
     );
   }
 
+  Widget _hostRecruitmentBonusCard() {
+    return AdminColorPanel(
+      colors: const [Color(0xFF00695C), Color(0xFF00A884)],
+      padding: const EdgeInsets.all(16),
+      radius: _DashUi.radiusMd,
+      child: Row(
+        children: [
+          AdminAgencyUi.glowIcon(
+            icon: Icons.person_add_alt_1_rounded,
+            accent: _DashUi.accentGold,
+            accentEnd: const Color(0xFFFFE082),
+            size: 48,
+            iconSize: 24,
+          ),
+          Spacing.h12,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SemiBoldText(
+                  text: 'Host recruitment bonus',
+                  fontSize: TextStyles.k14FontSize,
+                  color: kColorWhite,
+                ),
+                Spacing.v4,
+                AppText(
+                  text:
+                      '${controller.activeHostsCount} active hosts × 10,000 coins',
+                  fontSize: TextStyles.k10FontSize,
+                  color: kColorWhite.withValues(alpha: 0.86),
+                ),
+              ],
+            ),
+          ),
+          Spacing.h10,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              SemiBoldText(
+                text: formatUsd(controller.hostRecruitmentEarningsDollars),
+                fontSize: TextStyles.k18FontSize,
+                color: _DashUi.accentGold,
+              ),
+              Spacing.v2,
+              AppText(
+                text:
+                    '${_formatCoins(controller.hostRecruitmentEarningsCoins)} coins',
+                fontSize: TextStyles.k10FontSize,
+                color: kColorWhite.withValues(alpha: 0.82),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _miniMetric({
     required String label,
     required String value,
@@ -592,7 +645,8 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
   }
 
   Widget _revenueSplitCard() {
-    final total = controller.companyShare +
+    final total =
+        controller.companyShare +
         controller.hostCallShare +
         controller.ownerCommission +
         controller.totalGifts;
@@ -700,7 +754,10 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.red.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(20),
@@ -780,9 +837,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
       height: 44,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: LinearGradient(
-          colors: [color, color.withValues(alpha: 0.5)],
-        ),
+        gradient: LinearGradient(colors: [color, color.withValues(alpha: 0.5)]),
         border: Border.all(color: kColorWhite.withValues(alpha: 0.3), width: 2),
       ),
       alignment: Alignment.center,
@@ -853,8 +908,8 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
   }
 
   Widget _hostSlideCard(AgencyHostRevenueDemo host, int index) {
-    final colors = _DashUi.hostCardGradients[
-        index % _DashUi.hostCardGradients.length];
+    final colors =
+        _DashUi.hostCardGradients[index % _DashUi.hostCardGradients.length];
     return GestureDetector(
       onTap: controller.openHostList,
       child: AdminColorPanel(
@@ -864,62 +919,59 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
         child: SizedBox(
           width: 228,
           child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _callAvatar(host.name, _DashUi.accentViolet),
-                Spacing.h10,
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SemiBoldText(
-                        text: host.name,
-                        fontSize: TextStyles.k16FontSize,
-                        color: kColorWhite,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Spacing.v2,
-                      AppText(
-                        text: '${host.coinsPerSecond} coins/sec',
-                        fontSize: TextStyles.k12FontSize,
-                        color: kColorWhite.withValues(alpha: 0.88),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _callAvatar(host.name, _DashUi.accentViolet),
+                  Spacing.h10,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SemiBoldText(
+                          text: host.name,
+                          fontSize: TextStyles.k16FontSize,
+                          color: kColorWhite,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Spacing.v2,
+                        AppText(
+                          text: '${host.coinsPerSecond} coins/sec',
+                          fontSize: TextStyles.k12FontSize,
+                          color: kColorWhite.withValues(alpha: 0.88),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                Spacing.h6,
-                _hostStatusBadge(host.status),
-              ],
-            ),
-            const Spacer(),
-            Row(
-              children: [
-                _hostMetricChip(
-                  Icons.payments_rounded,
-                  _formatCoins(host.totalEarnings),
-                ),
-                Spacing.h6,
-                _hostMetricChip(
-                  kGiftIcon,
-                  _formatCoins(host.totalGifts),
-                ),
-              ],
-            ),
-            Spacing.v6,
-            AppText(
-              text: _hostCallsLine(host),
-              fontSize: TextStyles.k10FontSize,
-              color: kColorWhite.withValues(alpha: 0.85),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+                  Spacing.h6,
+                  _hostStatusBadge(host.status),
+                ],
+              ),
+              const Spacer(),
+              Row(
+                children: [
+                  _hostMetricChip(
+                    Icons.payments_rounded,
+                    _formatCoins(host.totalEarnings),
+                  ),
+                  Spacing.h6,
+                  _hostMetricChip(kGiftIcon, _formatCoins(host.totalGifts)),
+                ],
+              ),
+              Spacing.v6,
+              AppText(
+                text: _hostCallsLine(host),
+                fontSize: TextStyles.k10FontSize,
+                color: kColorWhite.withValues(alpha: 0.85),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
         ),
       ),
@@ -978,9 +1030,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
         decoration: BoxDecoration(
           color: _DashUi.accentGold.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: _DashUi.accentGold.withValues(alpha: 0.3),
-          ),
+          border: Border.all(color: _DashUi.accentGold.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
@@ -1392,8 +1442,9 @@ class _AgencyAccountMenuSheet extends StatelessWidget {
     VoidCallback? onTap,
     bool destructive = false,
   }) {
-    final tileAccent =
-        destructive ? const Color(0xFFFF6B8A) : _DashUi.accentViolet;
+    final tileAccent = destructive
+        ? const Color(0xFFFF6B8A)
+        : _DashUi.accentViolet;
     return Material(
       color: Colors.transparent,
       child: InkWell(

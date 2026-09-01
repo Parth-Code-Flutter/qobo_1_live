@@ -84,16 +84,25 @@ class SuperAdminRepo {
     String? feedback,
     bool isShowLoader = true,
   }) async {
-    final response = await _apiService.postRequest(
-      endPoint: SuperAdminEndpoints.processAgency,
-      requestModel: <String, dynamic>{
-        'agency_id': agencyId.trim(),
-        'status': status.trim(),
-        if (feedback != null && feedback.trim().isNotEmpty)
-          'feedback': feedback.trim(),
-      },
+    final body = <String, dynamic>{
+      'agencyId': agencyId.trim(),
+      'agency_id': agencyId.trim(),
+      'status': status.trim(),
+      if (feedback != null && feedback.trim().isNotEmpty)
+        'feedback': feedback.trim(),
+    };
+    var response = await _apiService.postRequest(
+      endPoint: SuperAdminEndpoints.processAgencyRequest,
+      requestModel: body,
       isShowLoader: isShowLoader,
     );
+    if (response == null || response.statusCode == 404) {
+      response = await _apiService.postRequest(
+        endPoint: SuperAdminEndpoints.processAgency,
+        requestModel: body,
+        isShowLoader: isShowLoader,
+      );
+    }
     if (response == null) return null;
     return ApiResponseUtils.tryDecodeMap(response.body);
   }

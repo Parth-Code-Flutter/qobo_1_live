@@ -61,7 +61,8 @@ class CoinPackage {
 
     return CoinPackage(
       id: id,
-      name: json['name']?.toString() ??
+      name:
+          json['name']?.toString() ??
           json['title']?.toString() ??
           'Coin Package',
       amount: amountRaw is num
@@ -88,6 +89,8 @@ class WalletController extends GetxController {
 
   final coinBalance = '0'.obs;
   final diamondBalance = '0'.obs;
+  final coinDollarBalance = '\$0.00'.obs;
+
   /// USD equivalent from wallet API (`dollars` / diamonds÷1000).
   final dollarBalance = '\$0.00'.obs;
   final dollarBalanceValue = 0.0.obs;
@@ -135,16 +138,14 @@ class WalletController extends GetxController {
     final data = response?['data'];
     if (isEconomyApiSuccess(response) && data is Map) {
       final coins = parseWalletAmount(
-        data['coins'] ??
-            data['coin'] ??
-            data['balance'] ??
-            data['coinBalance'],
+        data['coins'] ?? data['coin'] ?? data['balance'] ?? data['coinBalance'],
       );
       final diamonds = parseWalletAmount(
         data['diamonds'] ?? data['diamond'] ?? data['diamondBalance'],
       );
       coinBalance.value = _formatAmount(coins);
       diamondBalance.value = _formatAmount(diamonds);
+      coinDollarBalance.value = formatUsd(coinsToUsd(coins));
       final dollars = resolveEarnedDollars(
         data: data,
         diamondsFallback: diamonds,
@@ -206,7 +207,9 @@ class WalletController extends GetxController {
     isLoadingWithdrawConfig.value = true;
     withdrawError.value = '';
     try {
-      final response = await _economyRepo.getWithdrawConfig(isShowLoader: false);
+      final response = await _economyRepo.getWithdrawConfig(
+        isShowLoader: false,
+      );
       final data = response?['data'];
       if (isEconomyApiSuccess(response) && data is Map) {
         final config = WithdrawConfig.fromJson(Map<String, dynamic>.from(data));
@@ -242,8 +245,7 @@ class WalletController extends GetxController {
         final parsed = data
             .whereType<Map>()
             .map(
-              (e) =>
-                  WithdrawHistoryItem.fromJson(Map<String, dynamic>.from(e)),
+              (e) => WithdrawHistoryItem.fromJson(Map<String, dynamic>.from(e)),
             )
             .where((e) => e.transactionId.isNotEmpty)
             .toList();
@@ -356,8 +358,7 @@ class WalletController extends GetxController {
         if (checkout.cancelled) {
           packageError.value = 'Payment cancelled.';
         } else {
-          packageError.value =
-              checkout.errorMessage?.trim().isNotEmpty == true
+          packageError.value = checkout.errorMessage?.trim().isNotEmpty == true
               ? checkout.errorMessage!
               : 'Payment failed.';
         }

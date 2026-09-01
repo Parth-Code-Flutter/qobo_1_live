@@ -4,43 +4,34 @@ import 'package:qobo_one_live/app/super_admin/models/super_admin_models.dart';
 void main() {
   group('extractSuperAdminListMaps', () {
     test('supports legacy array data', () {
-      final maps = extractSuperAdminListMaps(
-        [
-          {'id': 'a1', 'name': 'A'},
-          {'id': 'a2', 'name': 'B'},
-        ],
-        nestedKey: 'agencies',
-      );
+      final maps = extractSuperAdminListMaps([
+        {'id': 'a1', 'name': 'A'},
+        {'id': 'a2', 'name': 'B'},
+      ], nestedKey: 'agencies');
       expect(maps.length, 2);
       expect(maps.first['id'], 'a1');
     });
 
     test('supports paginated agencies envelope', () {
-      final maps = extractSuperAdminListMaps(
-        {
-          'total': 1,
-          'page': 1,
-          'limit': 20,
-          'agencies': [
-            {'id': 'agency-1', 'name': 'Star'},
-          ],
-        },
-        nestedKey: 'agencies',
-      );
+      final maps = extractSuperAdminListMaps({
+        'total': 1,
+        'page': 1,
+        'limit': 20,
+        'agencies': [
+          {'id': 'agency-1', 'name': 'Star'},
+        ],
+      }, nestedKey: 'agencies');
       expect(maps.length, 1);
       expect(maps.first['name'], 'Star');
     });
 
     test('supports paginated hosts envelope', () {
-      final maps = extractSuperAdminListMaps(
-        {
-          'total': 1,
-          'hosts': [
-            {'id': 'host-1', 'name': 'Host'},
-          ],
-        },
-        nestedKey: 'hosts',
-      );
+      final maps = extractSuperAdminListMaps({
+        'total': 1,
+        'hosts': [
+          {'id': 'host-1', 'name': 'Host'},
+        ],
+      }, nestedKey: 'hosts');
       expect(maps.single['id'], 'host-1');
     });
   });
@@ -156,6 +147,8 @@ void main() {
         'pendingAgencies': 2,
         'pendingHosts': 4,
         'liveHostsNow': 3,
+        'agencyRecruitmentEarningsCoins': 40000,
+        'agencyRecruitmentEarningsDollars': 4,
         'totalCommissions': 12500.5,
         'commissionsThisMonth': 2100.25,
         'topAgencies': [
@@ -172,6 +165,15 @@ void main() {
       expect(stats.liveHostsNow, 3);
       expect(stats.topAgencies.single.code, 'TOP1');
       expect(stats.commissionsThisMonth, 2100.25);
+      expect(stats.agencyRecruitmentEarningsCoins, 40000);
+      expect(stats.agencyRecruitmentEarningsDollars, 4);
+    });
+
+    test('falls back agency recruitment earnings from active agencies', () {
+      final stats = SuperAdminStats.fromJson({'activeAgencies': 7});
+
+      expect(stats.agencyRecruitmentEarningsCoins, 70000);
+      expect(stats.agencyRecruitmentEarningsDollars, 7);
     });
   });
 }

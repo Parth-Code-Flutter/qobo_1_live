@@ -19,7 +19,24 @@ double parseWalletAmountDouble(dynamic value) {
   return double.tryParse(value?.toString().replaceAll(',', '') ?? '') ?? 0;
 }
 
-/// Earning rule: **1,000 coins/diamonds = $1.00 USD**.
+/// Recruitment/economy coin conversion: **10,000 coins = $1.00 USD**.
+const double kCoinUsdConversionRate = 10000;
+
+/// Converts platform coins into USD using the recruitment reward standard.
+double coinsToUsd(num coins) => coins.toDouble() / kCoinUsdConversionRate;
+
+/// Converts USD into platform coins using the recruitment reward standard.
+int usdToCoins(num dollars) =>
+    (dollars.toDouble() * kCoinUsdConversionRate).round().clamp(0, 1 << 31);
+
+String formatCoinsWithUsd(num coins) {
+  final roundedCoins = coins.round();
+  return '${formatLedgerAmount(roundedCoins)} Coins (${formatUsd(coinsToUsd(roundedCoins))})';
+}
+
+/// Legacy earning rule used by older diamond withdrawal/session screens.
+///
+/// New recruitment reward screens should use [coinsToUsd] instead.
 const double kCoinsPerDollar = 1000;
 
 /// Converts coins or diamonds into USD using the platform rate.
@@ -45,7 +62,8 @@ double resolveEarnedDollars({
   );
   if (fromApi > 0) return fromApi;
 
-  final diamonds = diamondsFallback ??
+  final diamonds =
+      diamondsFallback ??
       parseWalletAmount(
         data['diamonds'] ??
             data['diamond'] ??
@@ -54,7 +72,8 @@ double resolveEarnedDollars({
       );
   if (diamonds > 0) return coinsToDollars(diamonds);
 
-  final coins = coinsFallback ??
+  final coins =
+      coinsFallback ??
       parseWalletAmount(
         data['coins'] ?? data['coin'] ?? data['balance'] ?? wallet['coins'],
       );

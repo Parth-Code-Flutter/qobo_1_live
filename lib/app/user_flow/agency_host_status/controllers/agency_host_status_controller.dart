@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/repo/agency/agency_api_utils.dart';
 import 'package:qobo_one_live/repo/agency/agency_repo.dart';
+import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 
 enum AgencyStatusLookupType { applicationId, phone }
 
@@ -24,6 +25,7 @@ class AgencyHostStatusController extends GetxController {
   final createdAt = ''.obs;
   final isLoading = false.obs;
   final hasSearched = false.obs;
+  bool _approvedNotified = false;
 
   bool get hasLookupValue => lookupController.text.trim().isNotEmpty;
 
@@ -128,6 +130,7 @@ class AgencyHostStatusController extends GetxController {
   }
 
   void _applyStatusData(Map<String, dynamic> data) {
+    final previousStatus = status.value;
     status.value = data['status']?.toString() ?? 'pending';
     applicationId.value =
         data['applicationId']?.toString() ??
@@ -136,8 +139,10 @@ class AgencyHostStatusController extends GetxController {
         applicationId.value;
     hostId.value = data['hostId']?.toString() ?? '';
     hostName.value = data['hostName']?.toString() ?? '';
-    agencyId.value = data['agencyId']?.toString() ?? '';
-    agencyCode.value = data['agencyCode']?.toString() ?? '';
+    agencyId.value =
+        data['agencyId']?.toString() ?? data['agency_id']?.toString() ?? '';
+    agencyCode.value =
+        data['agencyCode']?.toString() ?? data['agency_code']?.toString() ?? '';
     phone.value = data['phone']?.toString() ?? phone.value;
     hostType.value =
         data['type']?.toString() ?? data['hostType']?.toString() ?? '';
@@ -148,9 +153,26 @@ class AgencyHostStatusController extends GetxController {
         '';
     createdAt.value = data['createdAt']?.toString() ?? '';
     reason.value = data['reason']?.toString() ?? '';
+
+    if (!_approvedNotified &&
+        !_isApproved(previousStatus) &&
+        _isApproved(status.value)) {
+      _approvedNotified = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final context = Get.context;
+        if (context != null) {
+          AppToast.showSuccess(context, 'Host application approved.');
+        }
+      });
+    }
   }
 
   void refreshStatus() {
     fetchStatus();
+  }
+
+  bool _isApproved(String value) {
+    final normalized = value.trim().toLowerCase();
+    return normalized == 'approved' || normalized == 'active';
   }
 }

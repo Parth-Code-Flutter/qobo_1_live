@@ -125,8 +125,7 @@ class AgencyOwnerDashboardController extends GetxController {
 
       dashboard.value = null;
       loadError.value =
-          agencyApiMessage(response) ??
-          'Unable to load agency dashboard.';
+          agencyApiMessage(response) ?? 'Unable to load agency dashboard.';
     } catch (_) {
       if (_session.isApplicationPending) {
         isApplicationPending.value = true;
@@ -185,6 +184,12 @@ class AgencyOwnerDashboardController extends GetxController {
   int get availableForPayout => dashboard.value?.availableForPayout ?? 0;
 
   int get activeHostsCount => dashboard.value?.activeHosts ?? 0;
+
+  int get hostRecruitmentEarningsCoins =>
+      dashboard.value?.hostRecruitmentEarningsCoins ?? 0;
+
+  double get hostRecruitmentEarningsDollars =>
+      dashboard.value?.hostRecruitmentEarningsDollars ?? 0;
 
   void openRecruitLink() {
     Get.toNamed(Routes.AGENCY_RECRUIT_LINK);

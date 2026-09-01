@@ -2,6 +2,8 @@
 /// Spec: `super_admin_mobile_api_handover_v1.md`
 library;
 
+import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
+
 class SuperAdminStats {
   const SuperAdminStats({
     required this.totalAgencies,
@@ -11,6 +13,8 @@ class SuperAdminStats {
     required this.pendingAgencies,
     required this.pendingHosts,
     required this.liveHostsNow,
+    required this.agencyRecruitmentEarningsCoins,
+    required this.agencyRecruitmentEarningsDollars,
     required this.totalCommissions,
     required this.commissionsThisMonth,
     required this.topAgencies,
@@ -24,6 +28,8 @@ class SuperAdminStats {
   final int pendingAgencies;
   final int pendingHosts;
   final int liveHostsNow;
+  final int agencyRecruitmentEarningsCoins;
+  final double agencyRecruitmentEarningsDollars;
   final double totalCommissions;
   final double commissionsThisMonth;
   final List<SuperAdminTopAgency> topAgencies;
@@ -32,14 +38,30 @@ class SuperAdminStats {
   factory SuperAdminStats.fromJson(Map<String, dynamic> json) {
     final top = json['topAgencies'];
     final recent = json['recentPendingAgencies'];
+    final activeAgencies = _asInt(json['activeAgencies']);
+    final agencyRecruitmentCoins = _asInt(
+      json['agencyRecruitmentEarningsCoins'] ??
+          json['agency_recruitment_earnings_coins'],
+    );
+    final resolvedAgencyRecruitmentCoins = agencyRecruitmentCoins > 0
+        ? agencyRecruitmentCoins
+        : usdToCoins(activeAgencies);
+    final agencyRecruitmentDollars = _asDouble(
+      json['agencyRecruitmentEarningsDollars'] ??
+          json['agency_recruitment_earnings_dollars'],
+    );
     return SuperAdminStats(
       totalAgencies: _asInt(json['totalAgencies']),
-      activeAgencies: _asInt(json['activeAgencies']),
+      activeAgencies: activeAgencies,
       suspendedAgencies: _asInt(json['suspendedAgencies']),
       activeHosts: _asInt(json['activeHosts']),
       pendingAgencies: _asInt(json['pendingAgencies']),
       pendingHosts: _asInt(json['pendingHosts']),
       liveHostsNow: _asInt(json['liveHostsNow']),
+      agencyRecruitmentEarningsCoins: resolvedAgencyRecruitmentCoins,
+      agencyRecruitmentEarningsDollars: agencyRecruitmentDollars > 0
+          ? agencyRecruitmentDollars
+          : coinsToUsd(resolvedAgencyRecruitmentCoins),
       totalCommissions: _asDouble(json['totalCommissions']),
       commissionsThisMonth: _asDouble(json['commissionsThisMonth']),
       topAgencies: top is List

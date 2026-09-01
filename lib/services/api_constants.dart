@@ -278,7 +278,11 @@ class SuperAdminEndpoints {
   static String agencyCommission(String agencyId) =>
       '/api/super-admin/agencies/${agencyId.trim()}/commission';
 
-  /// POST /api/super-admin/agency/process
+  /// POST /api/super-admin/agencies/process-request
+  static const String processAgencyRequest =
+      '/api/super-admin/agencies/process-request';
+
+  /// POST /api/super-admin/agency/process — legacy fallback.
   static const String processAgency = '/api/super-admin/agency/process';
 
   /// GET /api/super-admin/hosts/track

@@ -67,7 +67,7 @@ class TransactionHistoryView extends GetView<TransactionHistoryController> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: kColorBlack.withOpacity(0.03),
+            color: kColorBlack.withValues(alpha: 0.03),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -76,12 +76,8 @@ class TransactionHistoryView extends GetView<TransactionHistoryController> {
       child: Obx(() {
         return Row(
           children: [
-            Expanded(
-              child: _tabButton('Coins Ledger', 0),
-            ),
-            Expanded(
-              child: _tabButton('Diamonds Ledger', 1),
-            ),
+            Expanded(child: _tabButton('Coins Ledger', 0)),
+            Expanded(child: _tabButton('Diamonds Ledger', 1)),
           ],
         );
       }),
@@ -108,7 +104,7 @@ class TransactionHistoryView extends GetView<TransactionHistoryController> {
         child: SemiBoldText(
           text: text,
           fontSize: TextStyles.k14FontSize,
-          color: isSelected ? kColorWhite : kColorText.withOpacity(0.7),
+          color: isSelected ? kColorWhite : kColorText.withValues(alpha: 0.7),
         ),
       ),
     );
@@ -122,7 +118,7 @@ class TransactionHistoryView extends GetView<TransactionHistoryController> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: kColorPrimary.withOpacity(0.1),
+              color: kColorPrimary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -162,7 +158,10 @@ class TransactionHistoryView extends GetView<TransactionHistoryController> {
     );
   }
 
-  Widget _buildTransactionList(List<Map<String, dynamic>> list, bool isCoinSelected) {
+  Widget _buildTransactionList(
+    List<Map<String, dynamic>> list,
+    bool isCoinSelected,
+  ) {
     return ListView.separated(
       padding: const EdgeInsets.all(16),
       itemCount: list.length,
@@ -179,7 +178,7 @@ class TransactionHistoryView extends GetView<TransactionHistoryController> {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: kColorBlack.withOpacity(0.03),
+                color: kColorBlack.withValues(alpha: 0.03),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -191,7 +190,9 @@ class TransactionHistoryView extends GetView<TransactionHistoryController> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: isAddition ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                  color: isAddition
+                      ? Colors.green.withValues(alpha: 0.1)
+                      : Colors.red.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: _buildTransactionLeading(
@@ -235,9 +236,21 @@ class TransactionHistoryView extends GetView<TransactionHistoryController> {
                     fontSize: TextStyles.k18FontSize,
                     color: isAddition ? Colors.green : Colors.red,
                   ),
+                  if (isCoinSelected &&
+                      (tx['amountUsd']?.toString().isNotEmpty ?? false)) ...[
+                    Spacing.v2,
+                    AppText(
+                      text: '$sign${tx['amountUsd']}',
+                      fontSize: TextStyles.k10FontSize,
+                      color: isAddition ? Colors.green : Colors.red,
+                    ),
+                  ],
                   Spacing.v4,
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: kColorBackground,
                       borderRadius: BorderRadius.circular(8),
@@ -245,7 +258,7 @@ class TransactionHistoryView extends GetView<TransactionHistoryController> {
                     child: AppText(
                       text: isCoinSelected ? 'Coins' : 'Diamonds',
                       fontSize: 9,
-                      color: kColorText.withOpacity(0.6),
+                      color: kColorText.withValues(alpha: 0.6),
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -259,6 +272,13 @@ class TransactionHistoryView extends GetView<TransactionHistoryController> {
   }
 
   IconData _getTransactionIcon(String type) {
+    switch (type.toUpperCase()) {
+      case 'SUPER_ADMIN_AGENCY_BONUS':
+        return Icons.apartment_rounded;
+      case 'AGENCY_HOST_BONUS':
+        return Icons.person_add_alt_1_rounded;
+    }
+
     switch (type.toLowerCase()) {
       case 'google pay':
         return Icons.credit_card_rounded;

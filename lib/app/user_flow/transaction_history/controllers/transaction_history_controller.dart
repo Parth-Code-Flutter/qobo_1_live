@@ -101,28 +101,39 @@ class TransactionHistoryController extends GetxController {
 
   Map<String, dynamic> _mapTransaction(Map<String, dynamic> raw) {
     final amountValue = _readAmount(raw);
-    final isAddition = raw['isAddition'] == true ||
+    final isAddition =
+        raw['isAddition'] == true ||
         raw['direction']?.toString().toLowerCase() == 'credit' ||
         raw['transactionType']?.toString().toLowerCase() == 'credit' ||
         amountValue > 0;
 
     final absAmount = formatLedgerAmount(amountValue.abs());
-    final type = raw['type']?.toString() ??
+    final type =
+        raw['type']?.toString() ??
         raw['category']?.toString() ??
         raw['transactionType']?.toString() ??
         'Transaction';
+    final isRecruitmentBonus = _isRecruitmentBonus(type);
+    final usdLabel = isRecruitmentBonus
+        ? formatUsd(coinsToUsd(amountValue.abs()))
+        : '';
 
     return {
-      'title': raw['title']?.toString() ??
+      'title':
+          raw['title']?.toString() ??
+          _recruitmentBonusTitle(type) ??
           raw['description']?.toString() ??
           raw['message']?.toString() ??
           type,
-      'subtitle': raw['subtitle']?.toString() ??
+      'subtitle':
+          raw['subtitle']?.toString() ??
           raw['note']?.toString() ??
+          _recruitmentBonusSubtitle(type) ??
           raw['receiverName']?.toString() ??
           raw['hostName']?.toString() ??
           '',
       'amount': absAmount,
+      'amountUsd': usdLabel,
       'isAddition': isAddition,
       'date': _formatDate(
         raw['createdAt'] ??
@@ -134,8 +145,35 @@ class TransactionHistoryController extends GetxController {
     };
   }
 
+  bool _isRecruitmentBonus(String type) {
+    final normalized = type.toUpperCase();
+    return normalized == 'SUPER_ADMIN_AGENCY_BONUS' ||
+        normalized == 'AGENCY_HOST_BONUS';
+  }
+
+  String? _recruitmentBonusTitle(String type) {
+    switch (type.toUpperCase()) {
+      case 'SUPER_ADMIN_AGENCY_BONUS':
+        return 'Agency recruitment bonus';
+      case 'AGENCY_HOST_BONUS':
+        return 'Host recruitment bonus';
+    }
+    return null;
+  }
+
+  String? _recruitmentBonusSubtitle(String type) {
+    switch (type.toUpperCase()) {
+      case 'SUPER_ADMIN_AGENCY_BONUS':
+        return 'Reward for approved agency';
+      case 'AGENCY_HOST_BONUS':
+        return 'Reward for approved host';
+    }
+    return null;
+  }
+
   num _readAmount(Map<String, dynamic> raw) {
-    final value = raw['amount'] ??
+    final value =
+        raw['amount'] ??
         raw['coins'] ??
         raw['diamonds'] ??
         raw['value'] ??

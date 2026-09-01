@@ -77,7 +77,7 @@ class _FloatingHeartBubbleState extends State<_FloatingHeartBubble>
 
     _controller = AnimationController(
       vsync: this,
-      duration: Duration(milliseconds: 2200 + _random.nextInt(600)),
+      duration: Duration(milliseconds: 4300 + _random.nextInt(900)),
     );
 
     Future<void>.delayed(

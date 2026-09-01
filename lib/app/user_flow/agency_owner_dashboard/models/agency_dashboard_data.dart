@@ -1,6 +1,7 @@
 import 'package:qobo_one_live/app/user_flow/agency_owner_dashboard/models/agency_revenue_demo.dart';
 import 'package:qobo_one_live/app/user_flow/agency_owner_status/models/agency_owner_application_state.dart';
 import 'package:qobo_one_live/repo/agency/agency_api_utils.dart';
+import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 
 /// Parsed `GET /api/agency/dashboard` response `data` object.
 class AgencyDashboardData {
@@ -16,6 +17,8 @@ class AgencyDashboardData {
     required this.totalAgencyEarnings,
     required this.availableForPayout,
     required this.activeHosts,
+    required this.hostRecruitmentEarningsCoins,
+    required this.hostRecruitmentEarningsDollars,
     required this.totalTalkMinutes,
     required this.totalCallingGross,
     required this.companyShare,
@@ -43,6 +46,8 @@ class AgencyDashboardData {
   final int totalAgencyEarnings;
   final int availableForPayout;
   final int activeHosts;
+  final int hostRecruitmentEarningsCoins;
+  final double hostRecruitmentEarningsDollars;
   final int totalTalkMinutes;
   final int totalCallingGross;
   final int companyShare;
@@ -70,10 +75,24 @@ class AgencyDashboardData {
     final owner = _asMap(json['owner']);
     final summary = _asMap(json['summary']);
     final latestRaw = json['latestCall'];
-    final agencyStatus = agency['status']?.toString() ??
+    final agencyStatus =
+        agency['status']?.toString() ??
         json['applicationStatus']?.toString() ??
         json['status']?.toString() ??
         'active';
+
+    final activeHosts = _toInt(summary['activeHosts']);
+    final hostRecruitmentCoins = _toInt(
+      summary['hostRecruitmentEarningsCoins'] ??
+          summary['host_recruitment_earnings_coins'],
+    );
+    final resolvedHostRecruitmentCoins = hostRecruitmentCoins > 0
+        ? hostRecruitmentCoins
+        : usdToCoins(activeHosts);
+    final hostRecruitmentDollars = _toDouble(
+      summary['hostRecruitmentEarningsDollars'] ??
+          summary['host_recruitment_earnings_dollars'],
+    );
 
     return AgencyDashboardData(
       agencyId: agency['id']?.toString() ?? '',
@@ -87,7 +106,11 @@ class AgencyDashboardData {
       month: json['month']?.toString() ?? '',
       totalAgencyEarnings: _toInt(summary['totalAgencyEarnings']),
       availableForPayout: _toInt(summary['availableForPayout']),
-      activeHosts: _toInt(summary['activeHosts']),
+      activeHosts: activeHosts,
+      hostRecruitmentEarningsCoins: resolvedHostRecruitmentCoins,
+      hostRecruitmentEarningsDollars: hostRecruitmentDollars > 0
+          ? hostRecruitmentDollars
+          : coinsToUsd(resolvedHostRecruitmentCoins),
       totalTalkMinutes: _toInt(summary['totalTalkMinutes']),
       totalCallingGross: _toInt(summary['totalCallingGross']),
       companyShare: _toInt(summary['companyShare']),
@@ -99,7 +122,9 @@ class AgencyDashboardData {
       recruitLink: json['recruitLink']?.toString() ?? '',
       hosts: _parseHosts(json['hosts']),
       pendingHostApplications: _toInt(summary['pendingHostApplications']),
-      pendingApplications: _parsePendingApplications(json['pendingApplications']),
+      pendingApplications: _parsePendingApplications(
+        json['pendingApplications'],
+      ),
       latestCall: latestRaw is Map
           ? _parseLatestCall(Map<String, dynamic>.from(latestRaw))
           : null,
@@ -161,7 +186,8 @@ AgencyCallSample _parseLatestCall(Map<String, dynamic> json) {
 
 AgencyHostRevenueDemo parseHostFromApi(Map<String, dynamic> json) {
   return AgencyHostRevenueDemo(
-    id: json['id']?.toString() ??
+    id:
+        json['id']?.toString() ??
         json['applicationId']?.toString() ??
         json['hostId']?.toString() ??
         '',
@@ -174,19 +200,20 @@ AgencyHostRevenueDemo parseHostFromApi(Map<String, dynamic> json) {
     callingMinutes: _toInt(json['callingMinutes']),
     lastViewer: json['lastViewer']?.toString() ?? '',
     photoUrl: json['photo']?.toString(),
-    applicationId: json['applicationId']?.toString() ??
+    applicationId:
+        json['applicationId']?.toString() ??
         json['application_id']?.toString() ??
         '',
     phone: json['phone']?.toString() ?? '',
     gmail: json['gmail']?.toString() ?? '',
-    category: json['category']?.toString() ??
+    category:
+        json['category']?.toString() ??
         json['interests']?.toString() ??
         json['interest']?.toString() ??
         '',
     reason: json['reason']?.toString(),
-    createdAt: json['createdAt']?.toString() ??
-        json['created_at']?.toString() ??
-        '',
+    createdAt:
+        json['createdAt']?.toString() ?? json['created_at']?.toString() ?? '',
   );
 }
 
@@ -214,7 +241,8 @@ class AgencyPendingApplicationPreview {
 
   factory AgencyPendingApplicationPreview.fromJson(Map<String, dynamic> json) {
     return AgencyPendingApplicationPreview(
-      applicationId: json['applicationId']?.toString() ??
+      applicationId:
+          json['applicationId']?.toString() ??
           json['application_id']?.toString() ??
           '',
       hostName: json['hostName']?.toString() ?? json['name']?.toString() ?? '',

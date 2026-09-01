@@ -107,6 +107,10 @@ class LiveBroadcastController extends GetxController {
   var _heartReactionSeq = 0;
   Timer? _heartReactionTimer;
   Timer? _liveDurationTimer;
+  int _apiPreviousLiveSeconds = 0;
+  int? _apiCurrentLiveSeconds;
+  int? _apiTotalLiveSeconds;
+  DateTime? _apiLiveStartedAtUtc;
 
   final chatMessages = <Map<String, dynamic>>[].obs;
   final chatTextController = TextEditingController();
@@ -250,6 +254,7 @@ class LiveBroadcastController extends GetxController {
     }
     _hydrateRoomBackground();
     _seedSessionEarningsFromRoom();
+    _ingestLiveTimeLog(_roomData);
     _restoreHostSessionIfNeeded();
     _validateStreamingInput();
     loadWalletBalance();
@@ -505,6 +510,7 @@ class LiveBroadcastController extends GetxController {
     );
 
     SessionEarningsUtils.ingestRoomData(sessionEarnings, map);
+    _ingestLiveTimeLog(map);
     if (sessionEarnings.displayCoins > 0) {
       _rememberHostSessionIfNeeded();
     }
@@ -1079,6 +1085,7 @@ class LiveBroadcastController extends GetxController {
         isShowLoader: false,
       );
       SessionEarningsUtils.ingestApiEnvelope(sessionEarnings, response);
+      _ingestLiveTimeLog(response);
       debugPrint(
         '[session-earnings] room=$roomApiId type=$_sessionEarningsType '
         'display=${sessionEarnings.displayCoins} raw=$response',
@@ -2558,21 +2565,21 @@ class LiveBroadcastController extends GetxController {
   /// WhatsApp-status-style heart burst (live streaming only).
   void triggerHeartReaction() {
     if (!isLiveStreamingSession) return;
-    _emitHeartReactionBurst(count: 10, staggerMs: 35);
+    _emitHeartReactionBurst(count: 10, staggerMs: 110);
   }
 
   void _startContinuousHeartReactions() {
     if (!isLiveStreamingSession || _heartReactionTimer != null) return;
-    Timer(const Duration(milliseconds: 450), () {
+    Timer(const Duration(milliseconds: 900), () {
       if (!isClosed && isLiveStreamingSession) {
-        _emitHeartReactionBurst(count: 5, staggerMs: 48);
+        _emitHeartReactionBurst(count: 5, staggerMs: 115);
       }
     });
-    _heartReactionTimer = Timer.periodic(const Duration(milliseconds: 1400), (
+    _heartReactionTimer = Timer.periodic(const Duration(milliseconds: 2800), (
       _,
     ) {
       if (!isClosed && isLiveStreamingSession) {
-        _emitHeartReactionBurst(count: 5, staggerMs: 48);
+        _emitHeartReactionBurst(count: 5, staggerMs: 115);
       }
     });
   }
@@ -2616,11 +2623,141 @@ class LiveBroadcastController extends GetxController {
 
   void _updateLiveDurationLabels() {
     final startedAt = _resolveLiveStartedAtUtc();
-    final elapsed = DateTime.now().toUtc().difference(startedAt);
-    final label = _formatLiveElapsed(elapsed);
-    liveElapsedLabel.value = label;
-    // Backend timer will bind here when API provides a separate value.
-    apiLiveElapsedLabel.value = label;
+    final localSeconds = DateTime.now()
+        .toUtc()
+        .difference(startedAt)
+        .inSeconds
+        .clamp(0, 1 << 31);
+    final currentSeconds = _apiCurrentLiveSeconds == null
+        ? localSeconds
+        : (_apiCurrentLiveSeconds! > localSeconds
+              ? _apiCurrentLiveSeconds!
+              : localSeconds);
+    liveElapsedLabel.value = _formatLiveElapsed(
+      Duration(seconds: currentSeconds),
+    );
+
+    final apiSeconds =
+        _apiTotalLiveSeconds ?? (_apiPreviousLiveSeconds + currentSeconds);
+    apiLiveElapsedLabel.value = _formatLiveElapsed(
+      Duration(seconds: apiSeconds),
+    );
+  }
+
+  void _ingestLiveTimeLog(dynamic raw) {
+    if (!isLiveStreamingSession) return;
+    final maps = _collectLiveTimeMaps(raw);
+    if (maps.isEmpty) return;
+
+    final startedAt = _readDateTimeFromMaps(maps, const [
+      'startedAt',
+      'started_at',
+      'createdAt',
+      'created_at',
+    ]);
+    if (startedAt != null) {
+      _apiLiveStartedAtUtc = startedAt.toUtc();
+    }
+
+    final previousSeconds = _readSecondsFromMaps(
+      maps,
+      secondsKeys: const ['previousLiveSeconds', 'previous_live_seconds'],
+      hoursKeys: const ['previousLiveHours', 'previous_live_hours'],
+    );
+    if (previousSeconds != null) {
+      _apiPreviousLiveSeconds = previousSeconds;
+    }
+
+    _apiCurrentLiveSeconds = _readSecondsFromMaps(
+      maps,
+      secondsKeys: const [
+        'durationSeconds',
+        'duration_seconds',
+        'sessionDurationSeconds',
+        'session_duration_seconds',
+      ],
+      hoursKeys: const [
+        'durationHours',
+        'duration_hours',
+        'sessionDurationHours',
+        'session_duration_hours',
+      ],
+    );
+
+    _apiTotalLiveSeconds = _readSecondsFromMaps(
+      maps,
+      secondsKeys: const ['totalLiveSeconds', 'total_live_seconds'],
+      hoursKeys: const ['totalLiveHours', 'total_live_hours'],
+    );
+    _updateLiveDurationLabels();
+  }
+
+  List<Map<String, dynamic>> _collectLiveTimeMaps(dynamic raw) {
+    final maps = <Map<String, dynamic>>[];
+    void visit(dynamic value) {
+      if (value is! Map) return;
+      final map = Map<String, dynamic>.from(value);
+      maps.add(map);
+      for (final key in const [
+        'data',
+        'room',
+        'liveStreaming',
+        'live_streaming',
+        'liveStreamDetails',
+        'live_stream_details',
+        'sessionEarnings',
+        'session_earnings',
+        'earnings',
+      ]) {
+        visit(map[key]);
+      }
+    }
+
+    visit(raw);
+    return maps;
+  }
+
+  int? _readSecondsFromMaps(
+    List<Map<String, dynamic>> maps, {
+    required List<String> secondsKeys,
+    required List<String> hoursKeys,
+  }) {
+    final seconds = _readNumberFromMaps(maps, secondsKeys);
+    if (seconds != null) {
+      return seconds.round().clamp(0, 1 << 31);
+    }
+    final hours = _readNumberFromMaps(maps, hoursKeys);
+    if (hours == null) return null;
+    return (hours * 3600).round().clamp(0, 1 << 31);
+  }
+
+  num? _readNumberFromMaps(List<Map<String, dynamic>> maps, List<String> keys) {
+    for (final map in maps) {
+      for (final key in keys) {
+        final value = map[key];
+        if (value is num) return value;
+        if (value is String) {
+          final parsed = num.tryParse(value.trim());
+          if (parsed != null) return parsed;
+        }
+      }
+    }
+    return null;
+  }
+
+  DateTime? _readDateTimeFromMaps(
+    List<Map<String, dynamic>> maps,
+    List<String> keys,
+  ) {
+    for (final map in maps) {
+      for (final key in keys) {
+        final value = map[key]?.toString().trim() ?? '';
+        if (value.isEmpty) continue;
+        final parsed = DateTime.tryParse(value);
+        if (parsed != null) return parsed;
+      }
+    }
+    return null;
   }
 
   String _formatLiveElapsed(Duration duration) {
@@ -5683,6 +5820,8 @@ class LiveBroadcastController extends GetxController {
   }
 
   DateTime _resolveLiveStartedAtUtc() {
+    if (_apiLiveStartedAtUtc != null) return _apiLiveStartedAtUtc!;
+
     Map<String, dynamic>? asMap(dynamic value) {
       if (value is Map) return Map<String, dynamic>.from(value);
       return null;

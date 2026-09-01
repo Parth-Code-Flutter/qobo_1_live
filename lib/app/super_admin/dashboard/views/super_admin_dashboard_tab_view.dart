@@ -6,6 +6,7 @@ import 'package:qobo_one_live/app/super_admin/home/controllers/super_admin_home_
 import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui.dart';
 import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui_kit.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -210,8 +211,8 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
             child: SuperAdminGlassCard(
               glow: SuperAdminUi.sky,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              onTap: () async {
-                await Clipboard.setData(ClipboardData(text: link));
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: link));
                 final ctx = Get.context;
                 if (ctx != null) {
                   AppToast.showSuccess(ctx, 'Link copied.');
@@ -267,6 +268,9 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
       final stats = controller.stats.value;
       final total = stats?.totalCommissions ?? 0;
       final month = stats?.commissionsThisMonth ?? 0;
+      final recruitmentCoins = stats?.agencyRecruitmentEarningsCoins ?? 0;
+      final recruitmentDollars = stats?.agencyRecruitmentEarningsDollars ?? 0;
+      final activeAgencies = stats?.activeAgencies ?? 0;
       return SuperAdminGlassCard(
         glow: SuperAdminUi.gold,
         child: Column(
@@ -359,6 +363,63 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
                 ],
               ),
             ),
+            Spacing.v12,
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                color: const Color(0xFF241442),
+                border: Border.all(color: const Color(0xFFFFB300), width: 1.2),
+              ),
+              child: Row(
+                children: [
+                  AdminAgencyUi.glowIcon(
+                    icon: Icons.apartment_rounded,
+                    accent: const Color(0xFFFFB300),
+                    accentEnd: const Color(0xFFFFE082),
+                    size: 34,
+                    iconSize: 16,
+                  ),
+                  Spacing.h10,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SemiBoldText(
+                          text: 'Agency recruitment earnings',
+                          fontSize: TextStyles.k12FontSize,
+                          color: SuperAdminUi.textPrimary,
+                        ),
+                        Spacing.v2,
+                        AppText(
+                          text:
+                              '$activeAgencies active agencies × 10,000 coins',
+                          fontSize: TextStyles.k10FontSize,
+                          color: SuperAdminUi.textMuted,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      SemiBoldText(
+                        text: formatUsd(recruitmentDollars),
+                        fontSize: TextStyles.k16FontSize,
+                        color: const Color(0xFFFFB300),
+                      ),
+                      Spacing.v2,
+                      AppText(
+                        text: '${formatLedgerAmount(recruitmentCoins)} coins',
+                        fontSize: TextStyles.k10FontSize,
+                        color: SuperAdminUi.textMuted,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       );
@@ -414,8 +475,7 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
               const SuperAdminEmptyState(
                 icon: Icons.apartment_rounded,
                 title: 'No top agencies yet',
-                subtitle:
-                    'Agency rankings will appear once commissions start.',
+                subtitle: 'Agency rankings will appear once commissions start.',
               )
             else
               ...top.asMap().entries.map((entry) {
@@ -426,10 +486,10 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
                 final rankColors = index == 0
                     ? const [Color(0xFFFFB300), Color(0xFFFFE082)]
                     : index == 1
-                        ? const [Color(0xFF2979FF), Color(0xFF82B1FF)]
-                        : index == 2
-                            ? const [Color(0xFFFF5CAB), Color(0xFFFF8AD8)]
-                            : const [Color(0xFF7C4DFF), Color(0xFFB388FF)];
+                    ? const [Color(0xFF2979FF), Color(0xFF82B1FF)]
+                    : index == 2
+                    ? const [Color(0xFFFF5CAB), Color(0xFFFF8AD8)]
+                    : const [Color(0xFF7C4DFF), Color(0xFFB388FF)];
                 return Padding(
                   padding: EdgeInsets.only(bottom: isLast ? 0 : 10),
                   child: Material(
@@ -559,11 +619,7 @@ class _StatTile extends StatelessWidget {
                 iconSize: 22,
               ),
               const Spacer(),
-              Icon(
-                Icons.arrow_outward_rounded,
-                size: 16,
-                color: spec.accent,
-              ),
+              Icon(Icons.arrow_outward_rounded, size: 16, color: spec.accent),
             ],
           ),
           Spacing.v12,

@@ -292,9 +292,7 @@ class _WalletViewState extends State<WalletView> {
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(24),
               ),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.08),
-              ),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
             ),
             child: SafeArea(
               top: false,
@@ -431,9 +429,7 @@ class _WalletViewState extends State<WalletView> {
           color: color.withValues(alpha: 0.15),
           shape: BoxShape.circle,
         ),
-        child: Center(
-          child: logo ?? Icon(logoIcon, color: color, size: 20),
-        ),
+        child: Center(child: logo ?? Icon(logoIcon, color: color, size: 20)),
       ),
       title: SemiBoldText(text: title, fontSize: 13, color: kColorWhite),
       subtitle: subtitle == null
@@ -626,13 +622,13 @@ class _WalletViewState extends State<WalletView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SemiBoldText(
-                  text: 'Earned dollars',
+                  text: 'Coin value',
                   fontSize: TextStyles.k14FontSize,
                   color: kColorWhite,
                 ),
                 Spacing.v2,
                 AppText(
-                  text: '1,000 diamonds = \$1.00 USD',
+                  text: '10,000 coins = \$1.00 USD',
                   fontSize: TextStyles.k10FontSize,
                   color: kColorWhite.withValues(alpha: 0.65),
                 ),
@@ -640,7 +636,7 @@ class _WalletViewState extends State<WalletView> {
             ),
           ),
           SemiBoldText(
-            text: controller.dollarBalance.value,
+            text: controller.coinDollarBalance.value,
             fontSize: TextStyles.k18FontSize,
             color: const Color(0xFFFFC857),
           ),

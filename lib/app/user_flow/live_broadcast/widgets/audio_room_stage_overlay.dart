@@ -358,9 +358,9 @@ class _AudioRoomBottomControls extends GetView<LiveBroadcastController> {
                 ),
                 onTap: controller.shareRoom,
               ),
-              // Hide start-PK while a battle is already converting this room.
+              // Only hosts can start PK. Audience can still watch/support PK once active.
               Obx(() {
-                if (controller.isInRoomPkActive) {
+                if (!controller.isHost.value || controller.isInRoomPkActive) {
                   return const SizedBox.shrink();
                 }
                 return _ControlButton(
