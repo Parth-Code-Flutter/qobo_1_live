@@ -533,89 +533,93 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
           ? controller.likesLabel.value
           : '${controller.likesLabel.value}  •  ${controller.roomType.value}';
 
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(compact ? 20 : 24),
-        child: Container(
-          constraints: BoxConstraints(maxWidth: compact ? 170 : 238),
-          padding: EdgeInsets.all(compact ? 6 : 8),
-          decoration: BoxDecoration(
-            color: _surface,
-            borderRadius: BorderRadius.circular(compact ? 20 : 24),
-            border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  FramedUserAvatar(
-                    name: controller.hostName.value,
-                    imageUrl: controller.hostAvatarUrl.value,
-                    frameUrl: controller.hostAvatarFrameUrl.value,
-                    frameSeed: controller.receiverId.value.isNotEmpty
-                        ? controller.receiverId.value
-                        : controller.hostName.value,
-                    size: compact ? 30 : 38,
-                    fontSize: compact
-                        ? TextStyles.k10FontSize
-                        : TextStyles.k12FontSize,
-                  ),
-                  Positioned(
-                    right: compact ? -1 : -2,
-                    bottom: compact ? -1 : 0,
-                    child: Container(
-                      width: 11,
-                      height: 11,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF35F27A),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: _surface, width: 2),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(width: compact ? 7 : 10),
-              Flexible(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      return GestureDetector(
+        onTap: controller.openHostProfileSheet,
+        behavior: HitTestBehavior.opaque,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(compact ? 20 : 24),
+          child: Container(
+            constraints: BoxConstraints(maxWidth: compact ? 170 : 238),
+            padding: EdgeInsets.all(compact ? 6 : 8),
+            decoration: BoxDecoration(
+              color: _surface,
+              borderRadius: BorderRadius.circular(compact ? 20 : 24),
+              border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Stack(
+                  clipBehavior: Clip.none,
                   children: [
-                    SemiBoldText(
-                      text: controller.hostName.value,
+                    FramedUserAvatar(
+                      name: controller.hostName.value,
+                      imageUrl: controller.hostAvatarUrl.value,
+                      frameUrl: controller.hostAvatarFrameUrl.value,
+                      frameSeed: controller.receiverId.value.isNotEmpty
+                          ? controller.receiverId.value
+                          : controller.hostName.value,
+                      size: compact ? 30 : 38,
                       fontSize: compact
-                          ? TextStyles.k14FontSize
-                          : TextStyles.k16FontSize,
-                      color: kColorWhite,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                          ? TextStyles.k10FontSize
+                          : TextStyles.k12FontSize,
                     ),
-                    Spacing.v2,
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.favorite, color: _accent, size: 14),
-                        Spacing.h4,
-                        Flexible(
-                          child: AppText(
-                            text: subtitle,
-                            fontSize: compact ? 9 : TextStyles.k10FontSize,
-                            color: kColorWhite.withValues(alpha: 0.72),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                    Positioned(
+                      right: compact ? -1 : -2,
+                      bottom: compact ? -1 : 0,
+                      child: Container(
+                        width: 11,
+                        height: 11,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF35F27A),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: _surface, width: 2),
                         ),
-                      ],
+                      ),
                     ),
                   ],
                 ),
-              ),
-              if (!compact && !controller.isHost.value) ...[
-                Spacing.h8,
-                _followButton(),
+                SizedBox(width: compact ? 7 : 10),
+                Flexible(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SemiBoldText(
+                        text: controller.hostName.value,
+                        fontSize: compact
+                            ? TextStyles.k14FontSize
+                            : TextStyles.k16FontSize,
+                        color: kColorWhite,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Spacing.v2,
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.favorite, color: _accent, size: 14),
+                          Spacing.h4,
+                          Flexible(
+                            child: AppText(
+                              text: subtitle,
+                              fontSize: compact ? 9 : TextStyles.k10FontSize,
+                              color: kColorWhite.withValues(alpha: 0.72),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                if (!compact && !controller.isHost.value) ...[
+                  Spacing.h8,
+                  _followButton(),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       );
@@ -940,6 +944,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
     BuildContext context, {
     required bool compact,
   }) {
+    final isAudience = !controller.isHost.value;
     return [
       Obx(
         () => _bottomActionIcon(
@@ -953,10 +958,29 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
       ),
       _bottomActionIcon(
         Icons.favorite_rounded,
-        color: LiveHeartReactionLayer.whatsAppHeartGreen,
+        color: LiveHeartReactionLayer.liveHeartRed,
         compact: compact,
         onTap: controller.triggerHeartReaction,
       ),
+      if (isAudience)
+        _bottomActionIcon(
+          Icons.ios_share_rounded,
+          compact: compact,
+          onTap: controller.shareRoom,
+        ),
+      if (isAudience)
+        Obx(
+          () => _bottomActionIcon(
+            controller.isFollowingHost.value
+                ? Icons.check_rounded
+                : Icons.person_add_alt_1_rounded,
+            color: controller.isFollowingHost.value
+                ? LiveHeartReactionLayer.whatsAppHeartGreen
+                : _accent,
+            compact: compact,
+            onTap: controller.toggleFollowHost,
+          ),
+        ),
       if (controller.isHost.value)
         Obx(
           () => _bottomActionIcon(
@@ -982,19 +1006,20 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
           compact: compact,
           onTap: controller.openGiftsSheet,
         ),
-      _bottomActionIcon(
-        Icons.more_horiz_rounded,
-        compact: compact,
-        onTap: () {
-          Get.bottomSheet(
-            RoomOptionsSheet(
-              isHost: controller.isHost.value,
-              isVideoRoom: controller.isVideoRoom,
-            ),
-            backgroundColor: Colors.transparent,
-          );
-        },
-      ),
+      if (!isAudience)
+        _bottomActionIcon(
+          Icons.more_horiz_rounded,
+          compact: compact,
+          onTap: () {
+            Get.bottomSheet(
+              RoomOptionsSheet(
+                isHost: controller.isHost.value,
+                isVideoRoom: controller.isVideoRoom,
+              ),
+              backgroundColor: Colors.transparent,
+            );
+          },
+        ),
     ];
   }
 

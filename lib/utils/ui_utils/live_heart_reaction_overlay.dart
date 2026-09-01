@@ -10,6 +10,7 @@ class LiveHeartReactionLayer extends StatelessWidget {
   const LiveHeartReactionLayer({super.key});
 
   static const Color whatsAppHeartGreen = Color(0xFF25D366);
+  static const Color liveHeartRed = Color(0xFFFF3B5C);
 
   @override
   Widget build(BuildContext context) {
@@ -68,23 +69,26 @@ class _FloatingHeartBubbleState extends State<_FloatingHeartBubble>
   void initState() {
     super.initState();
     _random = math.Random(widget.token);
-    _startX = widget.screenSize.width * (0.72 + _random.nextDouble() * 0.18);
-    _startBottom = 96 + _random.nextDouble() * 28;
-    _drift = (_random.nextDouble() - 0.5) * 72;
-    _size = 22 + _random.nextDouble() * 16;
-    _delayFactor = _random.nextDouble() * 0.18;
+    _startX = widget.screenSize.width * (0.58 + _random.nextDouble() * 0.34);
+    _startBottom = 88 + _random.nextDouble() * 52;
+    _drift = (_random.nextDouble() - 0.5) * 118;
+    _size = 30 + _random.nextDouble() * 24;
+    _delayFactor = _random.nextDouble() * 0.35;
 
     _controller = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: 2200 + _random.nextInt(600)),
     );
 
-    Future<void>.delayed(Duration(milliseconds: (120 * _delayFactor).round()), () {
-      if (!mounted) return;
-      _controller.forward().whenComplete(() {
-        if (mounted) widget.onFinished(widget.token);
-      });
-    });
+    Future<void>.delayed(
+      Duration(milliseconds: (120 * _delayFactor).round()),
+      () {
+        if (!mounted) return;
+        _controller.forward().whenComplete(() {
+          if (mounted) widget.onFinished(widget.token);
+        });
+      },
+    );
   }
 
   @override
@@ -95,15 +99,20 @@ class _FloatingHeartBubbleState extends State<_FloatingHeartBubble>
 
   @override
   Widget build(BuildContext context) {
-    final travel = widget.screenSize.height * 0.42;
+    final travel = math.max(
+      widget.screenSize.height - 190,
+      widget.screenSize.height * 0.62,
+    );
 
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
         final t = Curves.easeOutCubic.transform(_controller.value);
-        final fade = (1 - Curves.easeIn.transform(
-          ((_controller.value - 0.55) / 0.45).clamp(0.0, 1.0),
-        ));
+        final fade =
+            (1 -
+            Curves.easeIn.transform(
+              ((_controller.value - 0.72) / 0.28).clamp(0.0, 1.0),
+            ));
         final scale = 0.55 + (math.sin(t * math.pi) * 0.45);
 
         return Positioned(
@@ -111,23 +120,16 @@ class _FloatingHeartBubbleState extends State<_FloatingHeartBubble>
           bottom: _startBottom + (travel * t),
           child: Opacity(
             opacity: fade.clamp(0.0, 1.0),
-            child: Transform.scale(
-              scale: scale,
-              child: child,
-            ),
+            child: Transform.scale(scale: scale, child: child),
           ),
         );
       },
       child: Icon(
         Icons.favorite_rounded,
         size: _size,
-        color: LiveHeartReactionLayer.whatsAppHeartGreen,
+        color: LiveHeartReactionLayer.liveHeartRed,
         shadows: const [
-          Shadow(
-            color: Color(0x66000000),
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
+          Shadow(color: Color(0x66000000), blurRadius: 6, offset: Offset(0, 2)),
         ],
       ),
     );

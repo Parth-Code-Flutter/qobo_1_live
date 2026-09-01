@@ -42,6 +42,7 @@ import 'package:qobo_one_live/utils/ui_utils/gift_media_utils.dart';
 import 'package:qobo_one_live/utils/ui_utils/coin_fly_overlay.dart';
 import 'package:qobo_one_live/utils/ui_utils/avatar_fly_overlay.dart';
 import 'package:qobo_one_live/utils/ui_utils/vip_entrance_overlay.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:zego_express_engine/zego_express_engine.dart';
 import 'package:zego_uikit_prebuilt_live_streaming/zego_uikit_prebuilt_live_streaming.dart';
 import 'package:qobo_one_live/utils/zego_engine_utils.dart';
@@ -2551,11 +2552,9 @@ class LiveBroadcastController extends GetxController {
   /// WhatsApp-status-style heart burst (live streaming only).
   void triggerHeartReaction() {
     if (!isLiveStreamingSession) return;
-    _heartReactionSeq++;
-    heartReactionTokens.add(_heartReactionSeq);
-    // Spawn a small cluster per tap, like status reactions.
-    for (var i = 0; i < 2; i++) {
-      Future<void>.delayed(Duration(milliseconds: 90 * (i + 1)), () {
+    // Send a richer burst so audience reactions feel lively in the live room.
+    for (var i = 0; i < 10; i++) {
+      Future<void>.delayed(Duration(milliseconds: 35 * i), () {
         if (!isClosed) {
           _heartReactionSeq++;
           heartReactionTokens.add(_heartReactionSeq);
@@ -3020,6 +3019,26 @@ class LiveBroadcastController extends GetxController {
       const LiveViewersSheet(),
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+    );
+  }
+
+  void openHostProfileSheet() {
+    final targetId = receiverId.value.trim();
+    Get.bottomSheet(
+      LiveHostProfileSheet(
+        viewer: {
+          'id': targetId,
+          'targetId': targetId,
+          'name': hostName.value,
+          'avatarUrl': hostAvatarUrl.value,
+          'avatarFrameUrl': hostAvatarFrameUrl.value,
+          'isHost': true,
+          'isCurrentUser': isHost.value || _isViewerCurrentUser(targetId),
+        },
+      ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.58),
     );
   }
 
@@ -5394,7 +5413,20 @@ class LiveBroadcastController extends GetxController {
   }
 
   Future<void> shareRoom() async {
-    final shareId = audioRoomApiId.isNotEmpty ? audioRoomApiId : 'room';
+    final shareId = isLiveStreamingSession
+        ? (liveStreamingApiId.trim().isNotEmpty
+              ? liveStreamingApiId.trim()
+              : roomId.value.trim())
+        : (audioRoomApiId.isNotEmpty ? audioRoomApiId : roomId.value.trim());
+    if (shareId.isEmpty) {
+      _showRoomToast(
+        'Share unavailable',
+        'Room id is missing. Please try again after reconnecting.',
+        isError: true,
+      );
+      return;
+    }
+
     var roomUrl = 'https://qobo.live/room/$shareId';
     final response = await _roomRepo.getShareLink(
       roomId: shareId,
@@ -5413,109 +5445,15 @@ class LiveBroadcastController extends GetxController {
       }
     }
 
-    Get.bottomSheet(
-      Container(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-        decoration: const BoxDecoration(
-          color: Color(0xFF1E1E2D),
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(24),
-            topRight: Radius.circular(24),
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Center(
-              child: SemiBoldText(
-                text: 'Share Room Link',
-                fontSize: 16,
-                color: kColorWhite,
-              ),
-            ),
-            Spacing.v20,
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _shareOption(Icons.copy_rounded, 'Copy Link', Colors.blue, () {
-                  Clipboard.setData(ClipboardData(text: roomUrl));
-                  Get.back();
-                  _showRoomToast(
-                    'Link Copied!',
-                    'Room URL copied to clipboard: $roomUrl',
-                  );
-                }),
-                _shareOption(
-                  Icons.wechat_rounded,
-                  'WhatsApp',
-                  Colors.green,
-                  () {
-                    Get.back();
-                    _showRoomToast(
-                      'Shared',
-                      'Room shared successfully to WhatsApp!',
-                    );
-                  },
-                ),
-                _shareOption(
-                  Icons.facebook_rounded,
-                  'Facebook',
-                  Colors.indigo,
-                  () {
-                    Get.back();
-                    _showRoomToast(
-                      'Shared',
-                      'Room shared successfully to Facebook!',
-                    );
-                  },
-                ),
-                _shareOption(
-                  Icons.message_rounded,
-                  'Messages',
-                  Colors.orange,
-                  () {
-                    Get.back();
-                    _showRoomToast(
-                      'Shared',
-                      'Room shared successfully via SMS!',
-                    );
-                  },
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-      backgroundColor: Colors.transparent,
-    );
-  }
-
-  Widget _shareOption(
-    IconData icon,
-    String label,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          Spacing.v6,
-          AppText(text: label, fontSize: 10, color: kColorWhite),
-        ],
-      ),
-    );
+    final title = streamTitle.value.trim().isNotEmpty
+        ? streamTitle.value.trim()
+        : hostName.value.trim().isNotEmpty
+        ? "${hostName.value.trim()}'s room"
+        : 'Qobo live room';
+    final text = 'Join $title on Qobo1Live\n$roomUrl';
+    await Clipboard.setData(ClipboardData(text: roomUrl));
+    await SharePlus.instance.share(ShareParams(text: text, subject: title));
+    _showRoomToast('Share', 'Room link is ready to share.');
   }
 
   void toggleMic() {

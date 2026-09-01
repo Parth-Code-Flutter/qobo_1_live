@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/icon_constants.dart';
@@ -313,6 +315,151 @@ class LiveViewerProfileDialog extends GetView<LiveBroadcastController> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class LiveHostProfileSheet extends GetView<LiveBroadcastController> {
+  const LiveHostProfileSheet({super.key, required this.viewer});
+
+  final Map<String, dynamic> viewer;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final name = viewer['name']?.toString().trim().isNotEmpty == true
+        ? viewer['name'].toString().trim()
+        : 'Host';
+    final avatarUrl = viewer['avatarUrl']?.toString();
+    final frameUrl = viewer['avatarFrameUrl']?.toString();
+    final targetId = viewer['targetId']?.toString().trim().isNotEmpty == true
+        ? viewer['targetId'].toString().trim()
+        : viewer['id']?.toString().trim() ?? '';
+    final isCurrentUser = viewer['isCurrentUser'] == true;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(12, 0, 12, bottomInset + 12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(26),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF251245), Color(0xFF111827)],
+          ),
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.34),
+              blurRadius: 26,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 42,
+              height: 4,
+              decoration: BoxDecoration(
+                color: kColorWhite.withValues(alpha: 0.26),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 18),
+            FramedUserAvatar(
+              name: name,
+              imageUrl: avatarUrl,
+              frameUrl: frameUrl,
+              frameSeed: targetId.isNotEmpty ? targetId : name,
+              size: 84,
+              fontSize: TextStyles.k20FontSize,
+            ),
+            Spacing.v12,
+            SemiBoldText(
+              text: isCurrentUser ? '$name (You)' : name,
+              fontSize: TextStyles.k20FontSize,
+              color: kColorWhite,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              align: TextAlign.center,
+            ),
+            Spacing.v8,
+            const _ProfileBadge(
+              icon: Icons.workspace_premium_rounded,
+              label: 'Host',
+              color: Color(0xFFFF79B4),
+            ),
+            if (!isCurrentUser) ...[
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: _ProfileActionButton(
+                      icon: Icons.chat_bubble_outline_rounded,
+                      label: 'Message',
+                      onTap: () => _closeThen(
+                        () => controller.openChatWithViewer(context, viewer),
+                      ),
+                    ),
+                  ),
+                  Spacing.h10,
+                  Expanded(
+                    child: Obx(
+                      () => _ProfileActionButton(
+                        icon: controller.isFollowingHost.value
+                            ? Icons.check_rounded
+                            : Icons.person_add_alt_1_rounded,
+                        label: controller.isFollowingHost.value
+                            ? 'Following'
+                            : 'Follow',
+                        isPrimary: true,
+                        onTap: () => _closeThen(controller.toggleFollowHost),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              Spacing.v10,
+              SizedBox(
+                width: double.infinity,
+                child: _ProfileActionButton(
+                  icon: kGiftIcon,
+                  label: 'Gift',
+                  isPrimary: true,
+                  onTap: () => _closeThen(
+                    () => controller.openGiftsSheet(
+                      receiverId: targetId,
+                      receiverName: name,
+                      roomGift: false,
+                    ),
+                  ),
+                ),
+              ),
+            ] else ...[
+              const SizedBox(height: 14),
+              AppText(
+                text: 'This is your live profile.',
+                fontSize: TextStyles.k12FontSize,
+                color: kColorWhite.withValues(alpha: 0.7),
+                align: TextAlign.center,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _closeThen(FutureOr<void> Function() action) {
+    Get.back<void>();
+    unawaited(
+      Future<void>.delayed(const Duration(milliseconds: 120), () async {
+        await action();
+      }),
     );
   }
 }

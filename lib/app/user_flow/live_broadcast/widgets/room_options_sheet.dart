@@ -4,17 +4,8 @@ import 'package:qobo_one_live/app/user_flow/live_broadcast/controllers/live_broa
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
-import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 
-enum _RoomOptionAction {
-  filters,
-  background,
-  share,
-  pkBattle,
-  report,
-  follow,
-  leave,
-}
+enum _RoomOptionAction { filters, background, share, pkBattle, follow, leave }
 
 class _RoomOption {
   const _RoomOption({
@@ -83,13 +74,6 @@ class RoomOptionsSheet extends StatelessWidget {
     }
 
     return const [
-      _RoomOption(
-        action: _RoomOptionAction.report,
-        icon: Icons.report_problem_rounded,
-        label: 'Report',
-        color: Color(0xFFFF6B7A),
-        gradient: [Color(0xFFFF6B7A), Color(0xFFE53935)],
-      ),
       _RoomOption(
         action: _RoomOptionAction.share,
         icon: Icons.ios_share_rounded,
@@ -209,7 +193,7 @@ class RoomOptionsSheet extends StatelessWidget {
     switch (option.action) {
       case _RoomOptionAction.pkBattle:
         if (Get.isRegistered<LiveBroadcastController>()) {
-          // Host selection → invite (never auto-start).
+          // Host selection opens invite flow and never starts PK automatically.
           Get.find<LiveBroadcastController>().openPkV1Arena();
         }
       case _RoomOptionAction.filters:
@@ -222,20 +206,11 @@ class RoomOptionsSheet extends StatelessWidget {
         );
       case _RoomOptionAction.share:
         if (Get.isRegistered<LiveBroadcastController>()) {
-          Get.find<LiveBroadcastController>().shareRoom();
+          _runAfterClose(() => Get.find<LiveBroadcastController>().shareRoom());
         }
       case _RoomOptionAction.follow:
         if (Get.isRegistered<LiveBroadcastController>()) {
           Get.find<LiveBroadcastController>().toggleFollowHost();
-        }
-      case _RoomOptionAction.report:
-        final context = Get.context ?? Get.key.currentContext;
-        if (context != null && context.mounted) {
-          AppToast.showWarning(
-            context,
-            'Report flow coming soon.',
-            title: 'Report',
-          );
         }
       case _RoomOptionAction.leave:
         if (Get.isRegistered<LiveBroadcastController>()) {
