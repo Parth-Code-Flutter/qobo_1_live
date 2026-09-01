@@ -96,6 +96,8 @@ class LiveBroadcastController extends GetxController {
   final liveViewers = <Map<String, dynamic>>[].obs;
   final isFollowingHost = false.obs;
   final isZegoConnected = false.obs;
+  final liveElapsedLabel = '00:00'.obs;
+  final apiLiveElapsedLabel = '00:00'.obs;
 
   /// Bumps when Zego user/stream list changes so seat cameras remount.
   final zegoMediaUsersTick = 0.obs;
@@ -104,6 +106,7 @@ class LiveBroadcastController extends GetxController {
   final heartReactionTokens = <int>[].obs;
   var _heartReactionSeq = 0;
   Timer? _heartReactionTimer;
+  Timer? _liveDurationTimer;
 
   final chatMessages = <Map<String, dynamic>>[].obs;
   final chatTextController = TextEditingController();
@@ -281,6 +284,7 @@ class LiveBroadcastController extends GetxController {
     } else {
       // Live stream: still listen for VIP join entrance (gift-style overlay).
       _bindVipEntranceSocketOnly();
+      _startLiveDurationTimer();
       _startContinuousHeartReactions();
       if (!isHost.value) {
         // Live-stream audience: report the join so backend viewer/heat counts
@@ -2593,6 +2597,43 @@ class LiveBroadcastController extends GetxController {
 
   void removeHeartReactionToken(int token) {
     heartReactionTokens.remove(token);
+  }
+
+  void _startLiveDurationTimer() {
+    if (!isLiveStreamingSession || _liveDurationTimer != null) return;
+    _updateLiveDurationLabels();
+    _liveDurationTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!isClosed && isLiveStreamingSession) {
+        _updateLiveDurationLabels();
+      }
+    });
+  }
+
+  void _stopLiveDurationTimer() {
+    _liveDurationTimer?.cancel();
+    _liveDurationTimer = null;
+  }
+
+  void _updateLiveDurationLabels() {
+    final startedAt = _resolveLiveStartedAtUtc();
+    final elapsed = DateTime.now().toUtc().difference(startedAt);
+    final label = _formatLiveElapsed(elapsed);
+    liveElapsedLabel.value = label;
+    // Backend timer will bind here when API provides a separate value.
+    apiLiveElapsedLabel.value = label;
+  }
+
+  String _formatLiveElapsed(Duration duration) {
+    final seconds = duration.inSeconds < 0 ? 0 : duration.inSeconds;
+    final hours = seconds ~/ 3600;
+    final minutes = (seconds % 3600) ~/ 60;
+    final remainingSeconds = seconds % 60;
+    final minuteLabel = minutes.toString().padLeft(2, '0');
+    final secondLabel = remainingSeconds.toString().padLeft(2, '0');
+    if (hours > 0) {
+      return '${hours.toString().padLeft(2, '0')}:$minuteLabel:$secondLabel';
+    }
+    return '$minuteLabel:$secondLabel';
   }
 
   Future<void> sendMessage() async {
@@ -5859,6 +5900,7 @@ class LiveBroadcastController extends GetxController {
     _stopJoinRequestPolling();
     _stopSeatRequestPolling();
     _stopContinuousHeartReactions();
+    _stopLiveDurationTimer();
     _promptedJoinRequestIds.clear();
     _promptedSeatRequestIds.clear();
     _knownFloorAudienceIds.clear();

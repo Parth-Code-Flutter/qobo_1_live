@@ -6,10 +6,11 @@ import 'package:qobo_one_live/constants/icon_constants.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/zego_config.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
-import 'package:qobo_one_live/utils/app_widgets/session_earnings_badge.dart';
+import 'package:qobo_one_live/utils/session_earnings_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/ui_utils/live_heart_reaction_overlay.dart';
@@ -511,15 +512,44 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
             52.0,
             isCompact ? 64.0 : 72.0,
           );
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          return Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Expanded(child: _hostSummaryCard(compact: isCompact)),
-              SizedBox(width: isCompact ? 6 : 10),
-              _topActions(
-                compact: isCompact,
-                earningsMaxWidth: earningsMaxWidth,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: _hostSummaryCard(compact: isCompact)),
+                  SizedBox(width: isCompact ? 6 : 10),
+                  _topActions(
+                    compact: isCompact,
+                    earningsMaxWidth: earningsMaxWidth,
+                  ),
+                ],
               ),
+              if (controller.isLiveStreamingSession) ...[
+                const SizedBox(height: 8),
+                Obx(
+                  () => Row(
+                    children: [
+                      _liveTimerChip(
+                        icon: Icons.fiber_manual_record_rounded,
+                        label: 'LIVE',
+                        value: controller.liveElapsedLabel.value,
+                        compact: isCompact,
+                        colors: const [Color(0xFFFF3B5C), Color(0xFFFF7A45)],
+                      ),
+                      const SizedBox(width: 8),
+                      _liveTimerChip(
+                        icon: Icons.timer_outlined,
+                        label: 'API',
+                        value: controller.apiLiveElapsedLabel.value,
+                        compact: isCompact,
+                        colors: const [Color(0xFF7C5CFF), Color(0xFF29C7FF)],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           );
         },
@@ -542,9 +572,26 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
             constraints: BoxConstraints(maxWidth: compact ? 170 : 238),
             padding: EdgeInsets.all(compact ? 6 : 8),
             decoration: BoxDecoration(
-              color: _surface,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFF172334).withValues(alpha: 0.96),
+                  const Color(0xFF111827).withValues(alpha: 0.92),
+                  const Color(0xFF361030).withValues(alpha: 0.78),
+                ],
+              ),
               borderRadius: BorderRadius.circular(compact ? 20 : 24),
-              border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
+              border: Border.all(
+                color: const Color(0xFFFF5CA8).withValues(alpha: 0.24),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFF3F7F).withValues(alpha: 0.18),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -664,26 +711,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
       children: [
         _viewerCountPill(compact: compact),
         SizedBox(width: compact ? 5 : 8),
-        _topIconButton(
-          Icons.ios_share_rounded,
-          compact: compact,
-          onTap: controller.shareRoom,
-        ),
-        Padding(
-          padding: EdgeInsets.only(left: compact ? 5 : 8),
-          child: Obx(
-            () => SessionEarningsBadge(
-              key: controller.sessionEarningsBadgeKey,
-              tracker: controller.sessionEarnings,
-              compact: compact,
-              maxWidth: earningsMaxWidth,
-              iconColor: const Color(0xFFFFA10A),
-              onTap: controller.isHost.value
-                  ? controller.openSessionEarningsDialog
-                  : null,
-            ),
-          ),
-        ),
+        _coinEarningsPill(compact: compact, maxWidth: earningsMaxWidth),
         SizedBox(width: compact ? 5 : 8),
         // Host: end stream (power). Audience on live: close → listing.
         Obx(() {
@@ -693,6 +721,9 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
             return _topIconButton(
               Icons.close_rounded,
               compact: compact,
+              iconColor: kColorWhite,
+              colors: const [Color(0xFF223044), Color(0xFF111827)],
+              borderColor: const Color(0xFF8DA2C5).withValues(alpha: 0.22),
               onTap: controller.leaveRoom,
             );
           }
@@ -700,10 +731,61 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
             Icons.power_settings_new_rounded,
             compact: compact,
             iconColor: const Color(0xFFFF3B5C),
+            colors: const [Color(0xFF251227), Color(0xFF111827)],
+            borderColor: const Color(0xFFFF3B5C).withValues(alpha: 0.34),
+            glowColor: const Color(0xFFFF3B5C).withValues(alpha: 0.22),
             onTap: controller.leaveRoom,
           );
         }),
       ],
+    );
+  }
+
+  Widget _liveTimerChip({
+    required IconData icon,
+    required String label,
+    required String value,
+    required bool compact,
+    required List<Color> colors,
+  }) {
+    return Container(
+      height: compact ? 25 : 28,
+      padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 10),
+      decoration: BoxDecoration(
+        color: const Color(0xD9141B29),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.first.withValues(alpha: 0.38)),
+        boxShadow: [
+          BoxShadow(
+            color: colors.first.withValues(alpha: 0.20),
+            blurRadius: 14,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ShaderMask(
+            shaderCallback: (bounds) => LinearGradient(
+              colors: colors,
+            ).createShader(Rect.fromLTWH(0, 0, bounds.width, bounds.height)),
+            child: Icon(icon, color: kColorWhite, size: compact ? 11 : 13),
+          ),
+          const SizedBox(width: 5),
+          SemiBoldText(
+            text: label,
+            fontSize: compact ? 8 : TextStyles.k10FontSize,
+            color: kColorWhite.withValues(alpha: 0.82),
+          ),
+          const SizedBox(width: 5),
+          SemiBoldText(
+            text: value,
+            fontSize: compact ? TextStyles.k10FontSize : TextStyles.k12FontSize,
+            color: kColorWhite,
+          ),
+        ],
+      ),
     );
   }
 
@@ -713,21 +795,37 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
         onTap: controller.openViewersSheet,
         child: Container(
           height: compact ? 36 : 42,
-          padding: EdgeInsets.symmetric(horizontal: compact ? 9 : 12),
+          padding: EdgeInsets.only(
+            left: compact ? 7 : 8,
+            right: compact ? 11 : 13,
+          ),
           decoration: BoxDecoration(
-            color: const Color(0xCC1A2233),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF304B72), Color(0xFF111827)],
+            ),
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
+            border: Border.all(
+              color: const Color(0xFF8DD7FF).withValues(alpha: 0.36),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF38BDF8).withValues(alpha: 0.22),
+                blurRadius: 18,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.person_rounded,
-                color: kColorWhite,
-                size: compact ? 17 : 20,
+              _topMiniIconBubble(
+                icon: Icons.people_alt_rounded,
+                compact: compact,
+                colors: const [Color(0xFF90E7FF), Color(0xFF6D7CFF)],
               ),
-              SizedBox(width: compact ? 3 : 5),
+              SizedBox(width: compact ? 5 : 6),
               SemiBoldText(
                 text: controller.viewerCount.value.toString(),
                 fontSize: compact
@@ -742,10 +840,131 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
     );
   }
 
+  Widget _coinEarningsPill({bool compact = false, double? maxWidth}) {
+    return Obx(() {
+      final amount = SessionEarningsUtils.formatAmountForPill(
+        controller.sessionEarnings.displayCoins,
+      );
+      final pill = ConstrainedBox(
+        key: controller.sessionEarningsBadgeKey,
+        constraints: BoxConstraints(
+          maxWidth: maxWidth == null
+              ? (compact ? 78 : 88)
+              : (maxWidth + 14).clamp(68.0, 96.0).toDouble(),
+        ),
+        child: Container(
+          height: compact ? 36 : 42,
+          padding: EdgeInsets.only(
+            left: compact ? 7 : 8,
+            right: compact ? 10 : 12,
+          ),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF2A2112), Color(0xFF10141D)],
+            ),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: const Color(0xFFFFC14A).withValues(alpha: 0.42),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFFFA10A).withValues(alpha: 0.22),
+                blurRadius: 18,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _coinMiniBubble(compact: compact),
+              SizedBox(width: compact ? 5 : 6),
+              Flexible(
+                child: SemiBoldText(
+                  text: amount,
+                  fontSize: compact
+                      ? TextStyles.k12FontSize
+                      : TextStyles.k14FontSize,
+                  color: kColorWhite,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      if (!controller.isHost.value) return pill;
+      return GestureDetector(
+        onTap: controller.openSessionEarningsDialog,
+        child: pill,
+      );
+    });
+  }
+
+  Widget _topMiniIconBubble({
+    required IconData icon,
+    required bool compact,
+    required List<Color> colors,
+  }) {
+    final size = compact ? 24.0 : 28.0;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: colors,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: colors.last.withValues(alpha: 0.32),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Icon(icon, color: kColorWhite, size: compact ? 14 : 16),
+    );
+  }
+
+  Widget _coinMiniBubble({required bool compact}) {
+    final size = compact ? 24.0 : 28.0;
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFFFD56A), Color(0xFFFF8A00)],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFFA10A).withValues(alpha: 0.34),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: AppCoinIcon(size: compact ? 13 : 15, color: kColorWhite),
+    );
+  }
+
   Widget _topIconButton(
     IconData icon, {
     bool compact = false,
     Color iconColor = kColorWhite,
+    List<Color> colors = const [Color(0xE6223042), Color(0xD9121720)],
+    Color? borderColor,
+    Color? glowColor,
     VoidCallback? onTap,
   }) {
     return GestureDetector(
@@ -754,9 +973,22 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
         width: compact ? 36 : 42,
         height: compact ? 36 : 42,
         decoration: BoxDecoration(
-          color: _surface,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: colors,
+          ),
           shape: BoxShape.circle,
-          border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
+          border: Border.all(
+            color: borderColor ?? kColorWhite.withValues(alpha: 0.12),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: glowColor ?? Colors.black.withValues(alpha: 0.22),
+              blurRadius: glowColor == null ? 14 : 18,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
         child: Icon(icon, color: iconColor, size: compact ? 19 : 22),
       ),
