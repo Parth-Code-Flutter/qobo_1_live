@@ -897,6 +897,8 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (isLive) ...[
+            _buildLiveAudienceList(context),
+            Spacing.v8,
             _buildChatInputField(),
             Spacing.v8,
             Obx(
@@ -917,7 +919,8 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
               ],
             ),
           Spacing.v10,
-          Row(children: [const Spacer(), _bottomViewerStrip(context)]),
+          if (!isLive)
+            Row(children: [const Spacer(), _bottomViewerStrip(context)]),
         ],
       ),
     );
@@ -1103,6 +1106,33 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
     );
   }
 
+  Widget _buildLiveAudienceList(BuildContext context) {
+    return Obx(() {
+      final viewers = controller.liveViewers
+          .where((viewer) => viewer['isHost'] != true)
+          .take(4)
+          .toList(growable: false);
+      if (viewers.isEmpty) return const SizedBox.shrink();
+
+      return Align(
+        alignment: Alignment.centerRight,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            for (final viewer in viewers) ...[
+              _LiveAudienceAvatarButton(
+                viewer: viewer,
+                onTap: () => controller.openViewerProfile(viewer),
+              ),
+              if (viewer != viewers.last) const SizedBox(height: 8),
+            ],
+          ],
+        ),
+      );
+    });
+  }
+
   Widget _bottomActionIcon(
     IconData icon, {
     Color? color,
@@ -1210,6 +1240,51 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
         ),
       );
     });
+  }
+}
+
+class _LiveAudienceAvatarButton extends StatelessWidget {
+  const _LiveAudienceAvatarButton({required this.viewer, required this.onTap});
+
+  final Map<String, dynamic> viewer;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = viewer['name']?.toString().trim().isNotEmpty == true
+        ? viewer['name'].toString().trim()
+        : 'Viewer';
+    final avatarUrl = viewer['avatarUrl']?.toString();
+    final frameUrl = viewer['avatarFrameUrl']?.toString();
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 48,
+        height: 48,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: const Color(0xD9141B29),
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.22),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: FramedUserAvatar(
+          name: name,
+          imageUrl: avatarUrl,
+          frameUrl: frameUrl,
+          frameSeed: viewer['targetId']?.toString() ?? name,
+          size: 38,
+          fontSize: TextStyles.k10FontSize,
+        ),
+      ),
+    );
   }
 }
 
