@@ -22,19 +22,11 @@ class EmojiRepo {
         'packVersion': packVersion.toString(),
     };
 
-    var response = await _apiService.getRequest(
-      endPoint: EmojiEndpoints.list,
+    final response = await _apiService.getRequest(
+      endPoint: EmojiEndpoints.publicList,
       queryParams: query,
       isShowLoader: isShowLoader,
     );
-
-    if (response?.statusCode == 404) {
-      response = await _apiService.getRequest(
-        endPoint: EmojiEndpoints.publicList,
-        queryParams: query,
-        isShowLoader: isShowLoader,
-      );
-    }
 
     if (response == null) return null;
     return ApiResponseUtils.tryDecodeMap(response.body);

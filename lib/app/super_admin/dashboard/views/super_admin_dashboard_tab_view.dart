@@ -9,6 +9,7 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/earnings_chart_card.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
@@ -61,6 +62,8 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
                       Spacing.v(SuperAdminUi.sectionGap),
                     ],
                     _statsGrid(),
+                    Spacing.v(SuperAdminUi.sectionGap),
+                    _superAdminEarningsChart(),
                     Spacing.v(SuperAdminUi.sectionGap),
                     _inviteCard(),
                     Spacing.v(SuperAdminUi.sectionGap),
@@ -261,6 +264,44 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
         }),
       ],
     );
+  }
+
+  Widget _superAdminEarningsChart() {
+    return Obx(() {
+      final stats = controller.stats.value;
+      final recruitmentCoins = stats?.agencyRecruitmentEarningsCoins ?? 0;
+      final totalCommissionCoins = (stats?.totalCommissions ?? 0).round();
+      final monthCommissionCoins = (stats?.commissionsThisMonth ?? 0).round();
+      final activeAgencyCoins = usdToCoins(stats?.activeAgencies ?? 0);
+      return EarningsChartCard(
+        title: 'Super admin earnings',
+        subtitle: 'Recruitment rewards and commission performance',
+        totalLabel: formatUsd(coinsToUsd(recruitmentCoins)),
+        icon: Icons.auto_graph_rounded,
+        points: [
+          EarningsChartPoint(
+            label: 'Recruit',
+            value: recruitmentCoins,
+            color: SuperAdminUi.gold,
+          ),
+          EarningsChartPoint(
+            label: 'Total',
+            value: totalCommissionCoins,
+            color: SuperAdminUi.pink,
+          ),
+          EarningsChartPoint(
+            label: 'Month',
+            value: monthCommissionCoins,
+            color: SuperAdminUi.sky,
+          ),
+          EarningsChartPoint(
+            label: 'Active',
+            value: activeAgencyCoins,
+            color: SuperAdminUi.mint,
+          ),
+        ],
+      );
+    });
   }
 
   Widget _commissionsCard() {

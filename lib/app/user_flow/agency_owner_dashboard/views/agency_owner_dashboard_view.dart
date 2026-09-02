@@ -11,6 +11,7 @@ import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/earnings_chart_card.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -187,6 +188,8 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
             _secondaryMetricsRow(),
             Spacing.v12,
             _hostRecruitmentBonusCard(),
+            Spacing.v20,
+            _agencyEarningsChart(),
             Spacing.v20,
             _sectionLabel(
               'Revenue breakdown',
@@ -600,6 +603,41 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _agencyEarningsChart() {
+    final total = controller.totalAgencyEarnings;
+    final payout = controller.availableForPayout;
+    final hostBonus = controller.hostRecruitmentEarningsCoins;
+    final ownerCommission = controller.ownerCommission;
+    return EarningsChartCard(
+      title: 'Earnings graph',
+      subtitle: 'Agency coins, payout, bonus, and commission',
+      totalLabel: formatUsd(coinsToUsd(total + hostBonus)),
+      icon: Icons.show_chart_rounded,
+      points: [
+        EarningsChartPoint(
+          label: 'Agency',
+          value: total,
+          color: _DashUi.accentGold,
+        ),
+        EarningsChartPoint(
+          label: 'Payout',
+          value: payout,
+          color: _DashUi.accentPink,
+        ),
+        EarningsChartPoint(
+          label: 'Bonus',
+          value: hostBonus,
+          color: _DashUi.accentCyan,
+        ),
+        EarningsChartPoint(
+          label: 'Commission',
+          value: ownerCommission,
+          color: Colors.greenAccent,
+        ),
+      ],
     );
   }
 

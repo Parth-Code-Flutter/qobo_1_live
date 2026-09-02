@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/super_admin/home/controllers/super_admin_home_controller.dart';
+import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/firebase/fcm_token_sync_service.dart';
@@ -10,6 +11,8 @@ import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_cont
 
 /// Super Admin shell — mirrors user [BottomNavController] patterns.
 class SuperAdminBottomNavController extends GetxController {
+  final AuthRepo _authRepo = AuthRepo();
+
   final UserSessionController _userSession =
       Get.isRegistered<UserSessionController>()
       ? Get.find<UserSessionController>()
@@ -29,21 +32,13 @@ class SuperAdminBottomNavController extends GetxController {
       icon: Icons.dashboard_customize_rounded,
       accent: Color(0xFF7C9CFF),
     ),
-    (
-      label: 'Agency',
-      icon: Icons.apartment_rounded,
-      accent: Color(0xFFFF5CAB),
-    ),
+    (label: 'Agency', icon: Icons.apartment_rounded, accent: Color(0xFFFF5CAB)),
     (
       label: 'Host',
       icon: Icons.mic_external_on_rounded,
       accent: Color(0xFF5CE1B0),
     ),
-    (
-      label: 'Settings',
-      icon: Icons.tune_rounded,
-      accent: Color(0xFFFFD166),
-    ),
+    (label: 'Settings', icon: Icons.tune_rounded, accent: Color(0xFFFFD166)),
   ];
 
   @override
@@ -69,6 +64,7 @@ class SuperAdminBottomNavController extends GetxController {
 
   Future<void> onLogoutPressed() async {
     final storage = LocalStorage.shared;
+    await _authRepo.logout(isShowLoader: false);
     if (Get.isRegistered<ChatSessionService>()) {
       await Get.find<ChatSessionService>().signOut();
     }

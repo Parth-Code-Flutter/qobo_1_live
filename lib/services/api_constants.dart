@@ -44,6 +44,9 @@ class AuthEndpoints {
   /// POST /api/auth/reset-password
   static const String resetPassword = '/api/auth/reset-password';
 
+  /// POST /api/auth/logout
+  static const String logout = '/api/auth/logout';
+
   /// POST /api/auth/verify-otp
   static const String verifyOtp = '/api/auth/verify-otp';
 
@@ -396,13 +399,11 @@ class EconomyEndpoints {
 class EmojiEndpoints {
   EmojiEndpoints._();
 
-  /// GET /api/emojis/list?category=
-  static const String list = '/api/emojis/list';
-
-  /// GET /api/emojis/public-list?category= — public fallback.
+  /// GET /api/emojis/public-list?category=
   static const String publicList = '/api/emojis/public-list';
 
-  // Old emoji catalog endpoints kept for reference:
+  // Old/private emoji catalog endpoints kept for reference:
+  // static const String list = '/api/emojis/list';
   // static const String chatCatalog = '/api/chat/emojis';
   // static const String catalog = '/api/emoji/catalog';
   // static const String oldList = '/api/emoji/list';
@@ -769,6 +770,42 @@ class UserEndpoints {
 /// Central place for family related API endpoints.
 class FamilyEndpoints {
   FamilyEndpoints._();
+
+  /// POST /api/family/groups — create group-chat family.
+  static const String groups = '/api/family/groups';
+
+  /// GET /api/family/groups/my — groups created or joined by me.
+  static const String myGroups = '/api/family/groups/my';
+
+  /// GET /api/family/groups/discover — groups I have not joined.
+  static const String discoverGroups = '/api/family/groups/discover';
+
+  static String groupDetail(String groupId) =>
+      '/api/family/groups/${Uri.encodeComponent(groupId)}';
+
+  static String groupJoin(String groupId) =>
+      '/api/family/groups/${Uri.encodeComponent(groupId)}/join';
+
+  static String groupLeave(String groupId) =>
+      '/api/family/groups/${Uri.encodeComponent(groupId)}/leave';
+
+  static String groupMembers(String groupId) =>
+      '/api/family/groups/${Uri.encodeComponent(groupId)}/members';
+
+  static String groupMember(String groupId, String userId) =>
+      '/api/family/groups/${Uri.encodeComponent(groupId)}/members/${Uri.encodeComponent(userId)}';
+
+  static String groupMessages(String groupId) =>
+      '/api/family/groups/${Uri.encodeComponent(groupId)}/messages';
+
+  static String groupEmojis(String groupId) =>
+      '/api/family/groups/${Uri.encodeComponent(groupId)}/emojis';
+
+  static String groupGifts(String groupId) =>
+      '/api/family/groups/${Uri.encodeComponent(groupId)}/gifts';
+
+  static String groupRead(String groupId) =>
+      '/api/family/groups/${Uri.encodeComponent(groupId)}/read';
 
   /// POST /api/family/create
   static const String create = '/api/family/create';

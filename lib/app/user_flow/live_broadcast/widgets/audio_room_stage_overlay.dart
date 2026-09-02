@@ -1722,7 +1722,8 @@ class _SeatEmojiReactionState extends State<_SeatEmojiReaction>
   void didUpdateWidget(covariant _SeatEmojiReaction oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.emoji['id'] != widget.emoji['id'] ||
-        oldWidget.emoji['image'] != widget.emoji['image']) {
+        oldWidget.emoji['image'] != widget.emoji['image'] ||
+        oldWidget.emoji['playbackNonce'] != widget.emoji['playbackNonce']) {
       _controller.forward(from: 0);
     }
   }
@@ -1738,6 +1739,10 @@ class _SeatEmojiReactionState extends State<_SeatEmojiReaction>
     final image = widget.emoji['image']?.trim().isNotEmpty == true
         ? widget.emoji['image']!.trim()
         : widget.emoji['code']?.trim() ?? '😊';
+    final nonce = widget.emoji['playbackNonce'] ?? '';
+    final displayImage = _withPlaybackNonce(image, nonce);
+    final playbackKey =
+        '${widget.emoji['id'] ?? image}_${widget.emoji['playbackNonce'] ?? ''}';
     final size = widget.size.clamp(42.0, 130.0);
 
     return IgnorePointer(
@@ -1759,7 +1764,8 @@ class _SeatEmojiReactionState extends State<_SeatEmojiReaction>
               ],
             ),
             child: EmojiMediaView(
-              image: image,
+              key: ValueKey(playbackKey),
+              image: displayImage,
               fit: BoxFit.contain,
               emojiFontSize: size * 0.76,
             ),
@@ -1767,6 +1773,19 @@ class _SeatEmojiReactionState extends State<_SeatEmojiReaction>
         ),
       ),
     );
+  }
+
+  String _withPlaybackNonce(String image, String nonce) {
+    if (nonce.isEmpty) return image;
+    final uri = Uri.tryParse(image);
+    if (uri == null || !uri.hasScheme) return image;
+    final path = uri.path.toLowerCase();
+    if (!path.endsWith('.gif')) return image;
+    return uri
+        .replace(
+          queryParameters: {...uri.queryParameters, 'emoji_playback': nonce},
+        )
+        .toString();
   }
 }
 

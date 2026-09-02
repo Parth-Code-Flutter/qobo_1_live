@@ -100,18 +100,26 @@ class LocalStorage extends GetxController {
   }
 
   /// store user data with token
-  Future saveUserData(Map<String, dynamic> userData, String token, String userType) async {
+  Future saveUserData(
+    Map<String, dynamic> userData,
+    String token,
+    String userType,
+  ) async {
     try {
       // Create user data object excluding organization
-      Map<String, dynamic> userDataWithoutOrg = Map<String, dynamic>.from(userData);
-      userDataWithoutOrg.remove('organization'); // Remove organization from user data
-      
+      Map<String, dynamic> userDataWithoutOrg = Map<String, dynamic>.from(
+        userData,
+      );
+      userDataWithoutOrg.remove(
+        'organization',
+      ); // Remove organization from user data
+
       // Store user data (without organization)
       await writeJsonStorage(kStorageUserData, userDataWithoutOrg);
-      
+
       // Store token separately
       await writeStringStorage(kStorageToken, token);
-      
+
       // Store user type specific data (without organization)
       switch (userType.toLowerCase()) {
         case 'admin':
@@ -127,11 +135,13 @@ class LocalStorage extends GetxController {
           await writeBoolStorage(kStorageIsClient, true);
           break;
       }
-      
+
       // Set logged in status
       await writeBoolStorage(kStorageIsLoggedIn, true);
-      
-      LoggerUtils.logger.i('User data saved successfully for $userType (organization excluded)');
+
+      LoggerUtils.logger.i(
+        'User data saved successfully for $userType (organization excluded)',
+      );
     } catch (ex) {
       LoggerUtils.logException('saveUserData', ex);
     }
@@ -238,18 +248,26 @@ class LocalStorage extends GetxController {
   }
 
   /// save login response data (for common login system)
-  Future saveLoginResponseData(Map<String, dynamic> userData, String token, String userType) async {
+  Future saveLoginResponseData(
+    Map<String, dynamic> userData,
+    String token,
+    String userType,
+  ) async {
     try {
       // Create user data object excluding organization
-      Map<String, dynamic> userDataWithoutOrg = Map<String, dynamic>.from(userData);
-      userDataWithoutOrg.remove('organization'); // Remove organization from user data
-      
+      Map<String, dynamic> userDataWithoutOrg = Map<String, dynamic>.from(
+        userData,
+      );
+      userDataWithoutOrg.remove(
+        'organization',
+      ); // Remove organization from user data
+
       // Store user data (without organization)
       await writeJsonStorage(kStorageUserData, userDataWithoutOrg);
-      
+
       // Store token separately
       await writeStringStorage(kStorageToken, token);
-      
+
       // Store user type specific data (without organization)
       switch (userType.toLowerCase()) {
         case 'admin':
@@ -271,11 +289,13 @@ class LocalStorage extends GetxController {
           await writeBoolStorage(kStorageIsEmployee, false);
           break;
       }
-      
+
       // Set logged in status
       await writeBoolStorage(kStorageIsLoggedIn, true);
-      
-      LoggerUtils.logger.i('Login response data saved successfully for $userType (organization excluded)');
+
+      LoggerUtils.logger.i(
+        'Login response data saved successfully for $userType (organization excluded)',
+      );
     } catch (ex) {
       LoggerUtils.logException('saveLoginResponseData', ex);
     }
@@ -330,7 +350,16 @@ class LocalStorage extends GetxController {
   /// clear all locally stored data
   Future clearAllData() async {
     try {
-      _mEncryptedStorage.deleteAll();
+      // Keep only the non-auth installation id so same-device re-login works
+      // with the backend single-device session rule.
+      final deviceId = await _mEncryptedStorage.read(key: kStorageDeviceId);
+      await _mEncryptedStorage.deleteAll();
+      if (deviceId != null && deviceId.trim().isNotEmpty) {
+        await _mEncryptedStorage.write(
+          key: kStorageDeviceId,
+          value: deviceId.trim(),
+        );
+      }
     } catch (ex) {
       LoggerUtils.logException('clearAllData', ex);
     }

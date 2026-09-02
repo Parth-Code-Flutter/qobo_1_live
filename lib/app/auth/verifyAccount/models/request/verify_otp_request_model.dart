@@ -6,6 +6,8 @@ class VerifyOtpRequestModel {
     required this.otp,
     this.fcmToken,
     this.referralCode,
+    this.deviceId,
+    this.platform,
   });
 
   final String phone;
@@ -13,12 +15,19 @@ class VerifyOtpRequestModel {
   final String otp;
   final String? fcmToken;
   final String? referralCode;
+  final String? deviceId;
+  final String? platform;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
     'phone': phone,
     'email': email,
     'otp': otp,
     if (fcmToken?.trim().isNotEmpty == true) 'fcm_token': fcmToken!.trim(),
+    if (deviceId?.trim().isNotEmpty == true) ...{
+      'deviceId': deviceId!.trim(),
+      'device_id': deviceId!.trim(),
+    },
+    if (platform?.trim().isNotEmpty == true) 'platform': platform!.trim(),
     if (referralCode?.trim().isNotEmpty == true)
       'referralCode': referralCode!.trim().toUpperCase(),
   };

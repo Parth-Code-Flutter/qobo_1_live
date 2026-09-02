@@ -4,9 +4,14 @@ const String kStorageIsEmployee = 'is_employee_in';
 const String kStorageIsClient = 'is_client_in';
 
 const String kStorageToken = 'token';
+
+/// Stable non-auth installation id used for single-device login checks.
+const String kStorageDeviceId = 'device_id';
+
 /// Separate JWT for coin-seller portal (`/api/admin/login` → `seller_admin`).
 const String kStorageSellerToken = 'seller_token';
 const String kStorageSellerAdmin = 'seller_admin_data';
+
 /// Local flag: user submitted coins-seller apply and awaits admin approval.
 const String kStorageCoinsSellerApplyPending = 'coins_seller_apply_pending';
 const String kStorageUserData = 'user_data';
@@ -15,7 +20,8 @@ const String kStorageEmployeeUserData = 'employee_user_data';
 const String kStorageClientUserData = 'client_user_data';
 
 /// Cached response from GET organization-user (called once after login; cleared on logout).
-const String kStorageCachedOrganizationUserList = 'cached_organization_user_list';
+const String kStorageCachedOrganizationUserList =
+    'cached_organization_user_list';
 
 /// Pending / last agency owner application (until approved and agency session is set).
 const String kStorageAgencyOwnerApplication = 'agency_owner_application';

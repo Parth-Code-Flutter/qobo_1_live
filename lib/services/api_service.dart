@@ -20,6 +20,20 @@ class ApiService {
       return false;
     }
 
+    final jsonMap = ApiResponseUtils.tryDecodeMap(response.body);
+    final bodyStatusCode = ApiResponseUtils.tryGetBodyStatusCode(jsonMap);
+
+    if (ErrorHandlerUtils.isExpiredSessionEnvelope(
+      httpStatusCode: response.statusCode,
+      responseData: jsonMap,
+    )) {
+      LoggerUtils.logWarning(
+        '401 Unauthorized with statusCode=0 - clearing local session',
+      );
+      ErrorHandlerUtils.handleUnauthorizedError();
+      return true;
+    }
+
     // Check HTTP statusCode
     if (response.statusCode == StatusCodeConstants.unauthorized) {
       LoggerUtils.logWarning('401 Unauthorized (HTTP) - Session expired');
@@ -28,9 +42,6 @@ class ApiService {
     }
 
     // Check body statusCode
-    final jsonMap = ApiResponseUtils.tryDecodeMap(response.body);
-    final bodyStatusCode = ApiResponseUtils.tryGetBodyStatusCode(jsonMap);
-    
     if (bodyStatusCode == StatusCodeConstants.unauthorized) {
       LoggerUtils.logWarning('401 Unauthorized (Body) - Session expired');
       ErrorHandlerUtils.handleUnauthorizedError();
@@ -49,7 +60,7 @@ class ApiService {
     final isOk = jsonMap == null
         ? (response.statusCode >= 200 && response.statusCode < 300)
         : (StatusCodeConstants.isHttpSuccess(response.statusCode) &&
-            StatusCodeConstants.isApiSuccess(bodyStatusCode));
+              StatusCodeConstants.isApiSuccess(bodyStatusCode));
 
     if (isOk) {
       LoggerUtils.logApiSuccess(label, response.statusCode);
@@ -58,7 +69,11 @@ class ApiService {
         if (bodyStatusCode != null) 'bodyStatusCode=$bodyStatusCode',
         if (message != null && message.isNotEmpty) 'message=$message',
       ].join(' | ');
-      LoggerUtils.logApiFailure(label, response.statusCode, extra.isEmpty ? null : extra);
+      LoggerUtils.logApiFailure(
+        label,
+        response.statusCode,
+        extra.isEmpty ? null : extra,
+      );
     }
   }
 
@@ -67,8 +82,10 @@ class ApiService {
     dynamic requestModel,
     bool isShowLoader = true,
     bool isLoginCall = false,
+
     /// When set, used as `Authorization: Bearer …` instead of the user token.
     String? bearerToken,
+
     /// When true, 401 does not log out the main app session (e.g. seller portal).
     bool skipUnauthorizedHandling = false,
     // Map<String, String>? headers,
@@ -83,7 +100,7 @@ class ApiService {
       }
       return null;
     }
-    
+
     // if (await checkUserConnection()) {
     LoggerUtils.logInfo('POST Request: $endPoint');
 
@@ -124,9 +141,9 @@ class ApiService {
       } else {
         body = json.encode(requestModel);
       }
-      
+
       var response = await http.post(url, body: body, headers: headers);
-      
+
       // Check for 401 error globally (both HTTP and body statusCode)
       if (_checkAndHandle401(
         response,
@@ -134,9 +151,9 @@ class ApiService {
       )) {
         return null;
       }
-      
+
       _logApiResult('POST $endPoint', response);
-      
+
       return response;
     } catch (e) {
       LoggerUtils.logApiError('POST $endPoint', e);
@@ -205,7 +222,7 @@ class ApiService {
       }
       return null;
     }
-    
+
     // if (await checkUserConnection()) {
     LoggerUtils.logInfo('GET Request: $endPoint');
 
@@ -236,17 +253,14 @@ class ApiService {
 
     try {
       var response = await http.get(uri, headers: headers);
-      
+
       // Check for 401 error globally (both HTTP and body statusCode)
-      if (_checkAndHandle401(
-        response,
-        isLoginCall: skipUnauthorizedHandling,
-      )) {
+      if (_checkAndHandle401(response, isLoginCall: skipUnauthorizedHandling)) {
         return null;
       }
-      
+
       _logApiResult('GET $endPoint', response);
-      
+
       return response;
     } catch (e) {
       LoggerUtils.logApiError('GET $endPoint', e);
@@ -278,7 +292,7 @@ class ApiService {
       }
       return null;
     }
-    
+
     // if (await checkUserConnection()) {
     debugPrint("REQUEST MODEL :: $requestModel");
 
@@ -294,17 +308,20 @@ class ApiService {
 
     debugPrint('deleteRequest : $url');
     try {
-      var response =
-          await http.delete(url, headers: headers, body: requestModel);
+      var response = await http.delete(
+        url,
+        headers: headers,
+        body: requestModel,
+      );
       debugPrint('response :  ${response.body}');
-      
+
       // Check for 401 error globally (both HTTP and body statusCode)
       if (_checkAndHandle401(response)) {
         return null;
       }
-      
+
       _logApiResult('DELETE $endPoint', response);
-      
+
       return response;
     } catch (e) {
       LoggerUtils.logException('deleteRequest', e);
@@ -334,7 +351,7 @@ class ApiService {
       }
       return null;
     }
-    
+
     debugPrint("PUT REQUEST MODEL :: $requestModel");
 
     Map<String, String> headers = {'Content-Type': 'application/json'};
@@ -361,17 +378,17 @@ class ApiService {
       } else {
         body = json.encode(requestModel);
       }
-      
+
       var response = await http.put(url, body: body, headers: headers);
       debugPrint('PUT response :  ${response.body}');
-      
+
       // Check for 401 error globally (both HTTP and body statusCode)
       if (_checkAndHandle401(response, isLoginCall: isLoginCall)) {
         return null;
       }
-      
+
       _logApiResult('PUT $endPoint', response);
-      
+
       return response;
     } catch (e) {
       LoggerUtils.logException('putRequest', e);
@@ -410,7 +427,7 @@ class ApiService {
     try {
       // Get authentication headers
       var authHeaders = await HeaderData().headers();
-      
+
       // Build URL
       var domainUrl = ApiConstants.baseUrl;
       String finalEndpoint = endPoint;
@@ -421,15 +438,14 @@ class ApiService {
       }
       var url = Uri.parse(finalEndpoint);
 
-
       // Create multipart request
       var request = http.MultipartRequest('POST', url);
-      
+
       // Add authentication headers
       request.headers.addAll(authHeaders);
       // Let MultipartRequest set boundary/content-type automatically.
       request.headers.remove('Content-Type');
-      
+
       // Add file to request
       final fileStream = http.ByteStream(file.openRead());
       final fileLength = await file.length();
@@ -440,7 +456,7 @@ class ApiService {
         filename: fileName ?? file.path.split('/').last,
       );
       request.files.add(multipartFile);
-      
+
       // Add additional fields if provided
       if (additionalFields != null) {
         request.fields.addAll(additionalFields);
@@ -454,9 +470,9 @@ class ApiService {
       if (_checkAndHandle401(response)) {
         return null;
       }
-      
+
       _logApiResult('File Upload $endPoint', response);
-      
+
       return response;
     } catch (e) {
       LoggerUtils.logApiError('File Upload $endPoint', e);
@@ -481,7 +497,9 @@ class ApiService {
   }) async {
     // Check if session is expired
     if (!ErrorHandlerUtils.shouldMakeApiCall()) {
-      LoggerUtils.logWarning('Multipart form request blocked - session expired');
+      LoggerUtils.logWarning(
+        'Multipart form request blocked - session expired',
+      );
       if (isShowLoader) {
         Get.find<AlertMessageUtils>().hideProgressDialog();
       }
@@ -497,7 +515,7 @@ class ApiService {
     try {
       // Get authentication headers
       var authHeaders = await HeaderData().headers();
-      
+
       // Build URL
       var domainUrl = ApiConstants.baseUrl;
       String finalEndpoint = endPoint;
@@ -508,16 +526,15 @@ class ApiService {
       }
       var url = Uri.parse(finalEndpoint);
 
-
       // Create multipart request with configurable HTTP method.
       var request = http.MultipartRequest(method, url);
-      
+
       // Add authentication headers
       request.headers.addAll(authHeaders);
-      
+
       // Add form fields
       request.fields.addAll(fields);
-      
+
       // Add files if provided (named map takes precedence over list + field name).
       if (namedFiles != null && namedFiles.isNotEmpty) {
         for (final entry in namedFiles.entries) {
@@ -555,9 +572,9 @@ class ApiService {
       if (_checkAndHandle401(response)) {
         return null;
       }
-      
+
       _logApiResult('$method Multipart Form $endPoint', response);
-      
+
       return response;
     } catch (e) {
       LoggerUtils.logApiError('Multipart Form $endPoint', e);
@@ -586,7 +603,7 @@ class ApiService {
       }
       return null;
     }
-    
+
     LoggerUtils.logInfo('PATCH Request: $endPoint');
 
     Map<String, String> headers = {'Content-Type': 'application/json'};
@@ -622,16 +639,16 @@ class ApiService {
       } else {
         body = json.encode(requestModel);
       }
-      
+
       var response = await http.patch(url, body: body, headers: headers);
-      
+
       // Check for 401 error globally (both HTTP and body statusCode)
       if (_checkAndHandle401(response, isLoginCall: isLoginCall)) {
         return null;
       }
-      
+
       _logApiResult('PATCH $endPoint', response);
-      
+
       return response;
     } catch (e) {
       LoggerUtils.logApiError('PATCH $endPoint', e);

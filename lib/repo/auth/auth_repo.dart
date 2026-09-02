@@ -12,17 +12,23 @@ import 'package:qobo_one_live/app/user_flow/update_profile/models/request/update
 import 'package:qobo_one_live/app/user_flow/update_profile/models/response/update_profile_response_model.dart';
 import 'package:qobo_one_live/services/api_service.dart';
 import 'package:qobo_one_live/services/api_constants.dart';
+import 'package:qobo_one_live/services/device_id_service.dart';
 import 'package:qobo_one_live/services/firebase/fcm_token_service.dart';
 import 'package:qobo_one_live/utils/api_response_utils.dart';
 
 /// Auth repository contains API calls for authentication flows.
 class AuthRepo {
-  AuthRepo({ApiService? apiService, FcmTokenService? fcmTokenService})
-    : _apiService = apiService ?? ApiService(),
-      _fcmTokenService = fcmTokenService ?? FcmTokenService();
+  AuthRepo({
+    ApiService? apiService,
+    FcmTokenService? fcmTokenService,
+    DeviceIdService? deviceIdService,
+  }) : _apiService = apiService ?? ApiService(),
+       _fcmTokenService = fcmTokenService ?? FcmTokenService(),
+       _deviceIdService = deviceIdService ?? DeviceIdService();
 
   final ApiService _apiService;
   final FcmTokenService _fcmTokenService;
+  final DeviceIdService _deviceIdService;
 
   String? get _mobilePlatform {
     if (Platform.isAndroid) return 'android';
@@ -40,6 +46,7 @@ class AuthRepo {
   }) async {
     final fcmToken = await _fcmTokenService.getToken();
     final platform = _mobilePlatform;
+    final deviceId = await _deviceIdService.getOrCreateDeviceId();
     final response = await _apiService.postRequest(
       endPoint: AuthEndpoints.login,
       requestModel: <String, dynamic>{
@@ -47,6 +54,8 @@ class AuthRepo {
         'password': password,
         if (fcmToken != null) 'fcm_token': fcmToken,
         if (platform != null) 'platform': platform,
+        'deviceId': deviceId,
+        'device_id': deviceId,
       },
       isShowLoader: isShowLoader,
       isLoginCall: true,
@@ -67,6 +76,9 @@ class AuthRepo {
     String? referralCode,
     bool isShowLoader = true,
   }) async {
+    final fcmToken = await _fcmTokenService.getToken();
+    final platform = _mobilePlatform;
+    final deviceId = await _deviceIdService.getOrCreateDeviceId();
     final response = await _apiService.postRequest(
       endPoint: AuthEndpoints.register,
       requestModel: <String, dynamic>{
@@ -75,6 +87,10 @@ class AuthRepo {
         if (email != null && email.trim().isNotEmpty) 'email': email.trim(),
         if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
         'password': password,
+        if (fcmToken != null) 'fcm_token': fcmToken,
+        if (platform != null) 'platform': platform,
+        'deviceId': deviceId,
+        'device_id': deviceId,
         if (gender != null && gender.trim().isNotEmpty) 'gender': gender.trim(),
         if (referralCode != null && referralCode.trim().isNotEmpty)
           'referralCode': referralCode.trim().toUpperCase(),
@@ -129,10 +145,40 @@ class AuthRepo {
   }) async {
     final requestJson = request.toJson();
     final fcmToken = await _fcmTokenService.getToken();
+    final platform = _mobilePlatform;
+    final deviceId = await _deviceIdService.getOrCreateDeviceId();
     if (fcmToken != null) requestJson['fcm_token'] = fcmToken;
+    if (platform != null) requestJson['platform'] = platform;
+    requestJson['deviceId'] = deviceId;
+    requestJson['device_id'] = deviceId;
 
     final response = await _apiService.postRequest(
       endPoint: AuthEndpoints.socialLogin,
+      requestModel: requestJson,
+      isShowLoader: isShowLoader,
+      isLoginCall: true,
+    );
+
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// Calls `POST /api/auth/firebase-login` with single-device metadata.
+  Future<Map<String, dynamic>?> firebaseLogin({
+    required Map<String, dynamic> request,
+    bool isShowLoader = false,
+  }) async {
+    final requestJson = Map<String, dynamic>.from(request);
+    final fcmToken = await _fcmTokenService.getToken();
+    final platform = _mobilePlatform;
+    final deviceId = await _deviceIdService.getOrCreateDeviceId();
+    if (fcmToken != null) requestJson['fcm_token'] = fcmToken;
+    if (platform != null) requestJson['platform'] = platform;
+    requestJson['deviceId'] = deviceId;
+    requestJson['device_id'] = deviceId;
+
+    final response = await _apiService.postRequest(
+      endPoint: AuthEndpoints.firebaseLogin,
       requestModel: requestJson,
       isShowLoader: isShowLoader,
       isLoginCall: true,
@@ -172,11 +218,15 @@ class AuthRepo {
     bool isShowLoader = true,
   }) async {
     final fcmToken = await _fcmTokenService.getToken();
+    final platform = _mobilePlatform;
+    final deviceId = await _deviceIdService.getOrCreateDeviceId();
     final request = LoginWithOtpRequestModel(
       phone: phone,
       countryCode: countryCode,
       email: email,
       fcmToken: fcmToken,
+      deviceId: deviceId,
+      platform: platform,
     );
 
     final response = await _apiService.postRequest(
@@ -257,12 +307,16 @@ class AuthRepo {
     bool isShowLoader = false,
   }) async {
     final fcmToken = await _fcmTokenService.getToken();
+    final platform = _mobilePlatform;
+    final deviceId = await _deviceIdService.getOrCreateDeviceId();
     final request = VerifyOtpRequestModel(
       phone: phone,
       email: email,
       otp: otp,
       fcmToken: fcmToken,
       referralCode: referralCode,
+      deviceId: deviceId,
+      platform: platform,
     );
 
     final response = await _apiService.postRequest(
@@ -278,6 +332,21 @@ class AuthRepo {
     if (jsonMap == null) return null;
 
     return VerifyOtpResponseModel.fromJson(jsonMap);
+  }
+
+  /// Calls `POST /api/auth/logout` so backend releases this device session.
+  Future<Map<String, dynamic>?> logout({bool isShowLoader = false}) async {
+    final fcmToken = await _fcmTokenService.getToken();
+    final response = await _apiService.postRequest(
+      endPoint: AuthEndpoints.logout,
+      requestModel: <String, dynamic>{
+        if (fcmToken?.trim().isNotEmpty == true) 'fcm_token': fcmToken!.trim(),
+      },
+      isShowLoader: isShowLoader,
+      skipUnauthorizedHandling: true,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
   /// Calls `PUT /api/user/update` to update profile details.

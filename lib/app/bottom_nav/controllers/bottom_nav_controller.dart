@@ -183,6 +183,7 @@ class BottomNavController extends GetxController {
 
   Future<void> onLogoutPressed() async {
     final storage = LocalStorage.shared;
+    await _authRepo.logout(isShowLoader: false);
     if (Get.isRegistered<ChatSessionService>()) {
       await Get.find<ChatSessionService>().signOut();
     }

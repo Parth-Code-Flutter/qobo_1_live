@@ -3,6 +3,7 @@ import 'package:qobo_one_live/app/user_flow/agency_owner_dashboard/models/agency
 import 'package:qobo_one_live/app/user_flow/agency_owner_dashboard/models/agency_revenue_demo.dart';
 import 'package:qobo_one_live/repo/agency/agency_api_utils.dart';
 import 'package:qobo_one_live/repo/agency/agency_repo.dart';
+import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/agency_session_controller.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
@@ -14,6 +15,7 @@ import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_cont
 
 class AgencyOwnerDashboardController extends GetxController {
   final AgencyRepo _agencyRepo = AgencyRepo();
+  final AuthRepo _authRepo = AuthRepo();
 
   AgencySessionController get _session => Get.find<AgencySessionController>();
 
@@ -234,6 +236,7 @@ class AgencyOwnerDashboardController extends GetxController {
     isLoggingOut.value = true;
     try {
       final storage = LocalStorage.shared;
+      await _authRepo.logout(isShowLoader: false);
       if (Get.isRegistered<ChatSessionService>()) {
         await Get.find<ChatSessionService>().signOut();
       }

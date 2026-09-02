@@ -1,6 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/services/chat/chat_session_service.dart';
+import 'package:qobo_one_live/services/firebase/fcm_token_sync_service.dart';
+import 'package:qobo_one_live/services/realtime/user_realtime_socket_service.dart';
+import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 import 'package:qobo_one_live/utils/alert_message_utils/alert_message_utils.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
@@ -13,23 +19,22 @@ class ErrorHandlerUtils {
   ErrorHandlerUtils._internal();
 
   // Static flag to prevent multiple logout attempts
-  static bool _isLoggingOut = false;
   static bool _hasShownLogoutMessage = false;
 
   // Global session state management
   static bool _isSessionExpired = false;
   static bool _isNavigatingToLogin = false;
   static DateTime? _lastSessionExpiryTime;
-  
+
   /// Check if session is currently expired
   static bool get isSessionExpired => _isSessionExpired;
-  
+
   /// Check if currently navigating to login
   static bool get isNavigatingToLogin => _isNavigatingToLogin;
-  
+
   /// Get the last session expiry time
   static DateTime? get lastSessionExpiryTime => _lastSessionExpiryTime;
-  
+
   /// Reset session state (call this after successful login)
   static void resetSessionState() {
     _isSessionExpired = false;
@@ -37,20 +42,24 @@ class ErrorHandlerUtils {
     _lastSessionExpiryTime = null;
     LoggerUtils.logger.i('🔄 Session state reset');
   }
-  
+
   /// Check if we should handle session expiry (prevents multiple calls)
   /// Returns true if we should proceed, false if already handled recently
   static bool _shouldHandleSessionExpiry() {
     // If we recently handled session expiry (within 2 seconds), don't handle again
     // This prevents multiple simultaneous 401s from causing multiple navigations
     if (_lastSessionExpiryTime != null) {
-      final timeSinceLastExpiry = DateTime.now().difference(_lastSessionExpiryTime!);
+      final timeSinceLastExpiry = DateTime.now().difference(
+        _lastSessionExpiryTime!,
+      );
       if (timeSinceLastExpiry.inSeconds < 2) {
-        LoggerUtils.logger.w('⚠️ Session expiry handled recently (${timeSinceLastExpiry.inSeconds}s ago), skipping duplicate');
+        LoggerUtils.logger.w(
+          '⚠️ Session expiry handled recently (${timeSinceLastExpiry.inSeconds}s ago), skipping duplicate',
+        );
         return false;
       }
     }
-    
+
     return true;
   }
 
@@ -61,22 +70,39 @@ class ErrorHandlerUtils {
     if (!_shouldHandleSessionExpiry()) {
       return;
     }
-    
+
     // Set flags immediately to prevent duplicate calls
     _isSessionExpired = true;
     _isNavigatingToLogin = true;
     _lastSessionExpiryTime = DateTime.now();
-    
-    LoggerUtils.logger.w('🔄 Handling 401 Unauthorized Error - Logging out user and navigating to login');
-    
+    _hasShownLogoutMessage = false;
+
+    LoggerUtils.logger.w(
+      '🔄 Handling 401 Unauthorized Error - Logging out user and navigating to login',
+    );
+
+    unawaited(_clearSessionAndNavigate());
+  }
+
+  /// Clears every local/session resource before routing to login.
+  static Future<void> _clearSessionAndNavigate() async {
     try {
-      // Clear all local storage first
-      LocalStorage().clearAllData();
+      if (Get.isRegistered<ChatSessionService>()) {
+        await Get.find<ChatSessionService>().signOut();
+      }
+      await UserRealtimeSocketService.ensureDisconnected();
+      if (Get.isRegistered<FcmTokenSyncService>()) {
+        Get.find<FcmTokenSyncService>().clearCachedToken();
+      }
+      if (Get.isRegistered<UserSessionController>()) {
+        await Get.find<UserSessionController>().clearSession();
+      }
+      await LocalStorage.shared.clearAllData();
       LoggerUtils.logger.i('✅ Local storage cleared');
     } catch (e) {
       LoggerUtils.logException('Error clearing local storage', e);
     }
-    
+
     // Perform navigation immediately
     // Use WidgetsBinding to ensure we're on the UI thread
     if (Get.context != null) {
@@ -96,52 +122,72 @@ class ErrorHandlerUtils {
     try {
       LoggerUtils.logger.i('🚀 Attempting navigation to login screen...');
       LoggerUtils.logger.i('Current route: ${Get.currentRoute}');
-      
-      // Use Get.offAll with direct widget - most reliable method
-      // This clears all previous routes and navigates to login
+
       try {
-        // Get.offAll(() => const LoginOptionsView());
-        LoggerUtils.logger.i('✅ Successfully navigated to login screen using Get.offAll');
-        
+        Get.offAllNamed(Routes.AUTH_LOGIN);
+        LoggerUtils.logger.i(
+          '✅ Successfully navigated to login screen using Get.offAll',
+        );
+
         // Show snackbar after navigation completes
         Future.delayed(const Duration(milliseconds: 1000), () {
           try {
-            if (Get.context != null) {
-              Get.find<AlertMessageUtils>().showSuccessSnackBar("Session expired. Please login again.");
+            if (!_hasShownLogoutMessage && Get.context != null) {
+              _hasShownLogoutMessage = true;
+              Get.find<AlertMessageUtils>().showSuccessSnackBar(
+                'Session expired. Please login again.',
+              );
             }
           } catch (e) {
-            LoggerUtils.logger.w('Could not show snackbar after navigation: $e');
+            LoggerUtils.logger.w(
+              'Could not show snackbar after navigation: $e',
+            );
           }
         });
       } catch (navError) {
         LoggerUtils.logException('Navigation error with Get.offAll', navError);
-        
+
         // Fallback: Try Get.offAllNamed
         try {
-          LoggerUtils.logger.w('⚠️ Trying fallback navigation: Get.offAllNamed');
-          // Get.offAllNamed(Routes.LOGIN_OPTIONS);
-          LoggerUtils.logger.i('✅ Fallback navigation successful (Get.offAllNamed)');
-          
+          LoggerUtils.logger.w(
+            '⚠️ Trying fallback navigation: Get.offAllNamed',
+          );
+          Get.offAllNamed(Routes.AUTH_LOGIN);
+          LoggerUtils.logger.i(
+            '✅ Fallback navigation successful (Get.offAllNamed)',
+          );
+
           Future.delayed(const Duration(milliseconds: 1000), () {
             try {
-              if (Get.context != null) {
-                Get.find<AlertMessageUtils>().showSuccessSnackBar("Session expired. Please login again.");
+              if (!_hasShownLogoutMessage && Get.context != null) {
+                _hasShownLogoutMessage = true;
+                Get.find<AlertMessageUtils>().showSuccessSnackBar(
+                  'Session expired. Please login again.',
+                );
               }
             } catch (e) {
-              LoggerUtils.logger.w('Could not show snackbar after fallback navigation: $e');
+              LoggerUtils.logger.w(
+                'Could not show snackbar after fallback navigation: $e',
+              );
             }
           });
         } catch (e2) {
           LoggerUtils.logException('Fallback navigation also failed', e2);
-          
+
           // Last resort: Try Get.offNamed
           try {
-            LoggerUtils.logger.w('⚠️ Trying last resort navigation: Get.offNamed');
-            // Get.offNamed(Routes.LOGIN_OPTIONS);
-            LoggerUtils.logger.i('✅ Last resort navigation successful (Get.offNamed)');
+            LoggerUtils.logger.w(
+              '⚠️ Trying last resort navigation: Get.offNamed',
+            );
+            Get.offNamed(Routes.AUTH_LOGIN);
+            LoggerUtils.logger.i(
+              '✅ Last resort navigation successful (Get.offNamed)',
+            );
           } catch (e3) {
             LoggerUtils.logException('All navigation methods failed', e3);
-            LoggerUtils.logger.e('❌ CRITICAL: Unable to navigate to login screen');
+            LoggerUtils.logger.e(
+              '❌ CRITICAL: Unable to navigate to login screen',
+            );
           }
         }
       }
@@ -165,32 +211,58 @@ class ErrorHandlerUtils {
   /// Returns true if statusCode in response data is 401
   static bool isUnauthorizedErrorFromData(Map<String, dynamic>? responseData) {
     if (responseData == null) return false;
-    
-    int? statusCode = responseData['statusCode'];
+
+    final raw = responseData['statusCode'];
+    final statusCode = raw is int ? raw : int.tryParse(raw?.toString() ?? '');
     return statusCode == 401;
+  }
+
+  /// Backend expiry envelope used by protected APIs:
+  /// HTTP 401 with body `{ "statusCode": 0, ... }`.
+  static bool isExpiredSessionEnvelope({
+    required int? httpStatusCode,
+    required Map<String, dynamic>? responseData,
+  }) {
+    if (httpStatusCode != 401 || responseData == null) return false;
+    final raw = responseData['statusCode'];
+    final bodyStatusCode = raw is int
+        ? raw
+        : int.tryParse(raw?.toString() ?? '');
+    return bodyStatusCode == 0;
   }
 
   /// Check if API calls should be made (prevents multiple calls when session expired)
   /// Returns false if currently logging out
   static bool shouldMakeApiCall() {
-    return !_isLoggingOut;
+    return !_isSessionExpired;
   }
 
   /// Handle API response and check for 401 errors
   /// Returns true if 401 error was handled, false otherwise
-  static bool handleApiResponse(int? statusCode, Map<String, dynamic>? responseData) {
+  static bool handleApiResponse(
+    int? statusCode,
+    Map<String, dynamic>? responseData,
+  ) {
+    if (isExpiredSessionEnvelope(
+      httpStatusCode: statusCode,
+      responseData: responseData,
+    )) {
+      handleUnauthorizedError();
+      return true;
+    }
+
     // Check for 401 in status code
     if (isUnauthorizedError(statusCode)) {
       handleUnauthorizedError();
       return true;
     }
-    
+
     // Check for 401 in response data
     if (isUnauthorizedErrorFromData(responseData)) {
       handleUnauthorizedError();
       return true;
     }
-    
+
     return false;
   }
 
@@ -198,28 +270,11 @@ class ErrorHandlerUtils {
   static void logoutUser() {
     try {
       LoggerUtils.logger.i('🔄 Manual logout initiated by user');
-      
-      // Clear all local storage
-      LocalStorage().clearAllData();
-      
-      // Check if context is still valid before showing snackbar
-      if (Get.context != null && Get.overlayContext != null) {
-        try {
-          // Show logout message
-          Get.find<AlertMessageUtils>().showSuccessSnackBar("Logged out successfully");
-        } catch (e) {
-          LoggerUtils.logger.w('Could not show snackbar: $e');
-        }
-      }
-      
-      // Navigate to login options screen
-      // Get.offAllNamed(Routes.LOGIN_OPTIONS);
-      
+      handleUnauthorizedError();
       LoggerUtils.logger.i('✅ User logged out successfully');
     } catch (e) {
       LoggerUtils.logException('logoutUser', e);
-      // Fallback navigation
-      // Get.offAllNamed(Routes.LOGIN_OPTIONS);
+      Get.offAllNamed(Routes.AUTH_LOGIN);
     }
   }
 }

@@ -1433,17 +1433,7 @@ class LiveBroadcastController extends GetxController {
         .map((item) => Map<String, dynamic>.from(item))
         .map((item) {
           final id = _readEmojiField(item, const ['id', '_id', 'emojiId']);
-          final image = _readEmojiField(item, const [
-            'image',
-            'emojiImage',
-            'gifUrl',
-            'gif_url',
-            'previewUrl',
-            'preview_url',
-            'url',
-            'icon',
-            'svg',
-          ]);
+          final image = _readEmojiMediaField(item);
           final code = _readEmojiField(item, const [
             'code',
             'unicode',
@@ -1455,6 +1445,7 @@ class LiveBroadcastController extends GetxController {
                 _readEmojiField(item, const ['name', 'title', 'label']) ??
                 'Emoji',
             'image': image ?? code ?? '😊',
+            'animationUrl': image ?? code ?? '😊',
             'code': code ?? '',
             'packVersion':
                 _readEmojiField(item, const ['packVersion', 'pack_version']) ??
@@ -1587,7 +1578,11 @@ class LiveBroadcastController extends GetxController {
       }
 
       if (Get.isBottomSheetOpen == true) Get.back<void>();
-      final sentEmoji = _emojiFromResponse(response) ?? Map.of(emoji);
+      final selectedEmoji = _emojiById(emojiId) ?? Map.of(emoji);
+      final sentEmoji = _mergeEmojiForPlayback(
+        selectedEmoji,
+        _emojiFromResponse(response),
+      );
       sentEmoji['packVersion'] = packVersion.toString();
       _showSeatEmojiReaction(senderId: senderId, emoji: sentEmoji);
       unawaited(_broadcastEmojiMarker(sentEmoji, clientReqId));
@@ -1610,21 +1605,11 @@ class LiveBroadcastController extends GetxController {
     final source = emoji ?? data;
 
     final id = _readEmojiField(source, const ['id', '_id', 'emojiId']) ?? '';
-    final image =
-        _readEmojiField(source, const [
-          'image',
-          'emojiImage',
-          'emoji_image',
-          'gifUrl',
-          'gif_url',
-          'previewUrl',
-          'preview_url',
-          'url',
-          'icon',
-          'svg',
-        ]) ??
-        _readEmojiField(source, const ['code', 'unicode', 'emoji']) ??
-        '😊';
+    final image = _readEmojiMediaField(source);
+    final code = _readEmojiField(source, const ['code', 'unicode', 'emoji']);
+    if ((image == null || image.isEmpty) && (code == null || code.isEmpty)) {
+      return null;
+    }
     return {
       'id': id,
       'name':
@@ -1636,8 +1621,9 @@ class LiveBroadcastController extends GetxController {
             'label',
           ]) ??
           'Emoji',
-      'image': image,
-      'code': _readEmojiField(source, const ['code', 'unicode', 'emoji']) ?? '',
+      'image': image ?? code ?? '😊',
+      'animationUrl': image ?? code ?? '😊',
+      'code': code ?? '',
       'packVersion':
           _readEmojiField(source, const ['packVersion', 'pack_version']) ??
           emojiPackVersion.value.toString(),
@@ -1652,6 +1638,82 @@ class LiveBroadcastController extends GetxController {
     return activeSeatEmojis[key];
   }
 
+  String? _readEmojiMediaField(Map<String, dynamic> map) {
+    // Prefer animated media over static thumbnails so seat reactions play GIFs.
+    final directAnimated = _readEmojiField(map, const [
+      'gifUrl',
+      'gif_url',
+      'animationUrl',
+      'animation_url',
+      'emojiAnimation',
+      'emoji_animation',
+      'animatedImage',
+      'animated_image',
+      'mediaUrl',
+      'media_url',
+    ]);
+    if (directAnimated != null) return directAnimated;
+
+    final animationRaw = map['animation'];
+    if (animationRaw is Map) {
+      final animation = Map<String, dynamic>.from(animationRaw);
+      final nestedAnimated = _readEmojiField(animation, const [
+        'animationUrl',
+        'animation_url',
+        'gifUrl',
+        'gif_url',
+        'mediaUrl',
+        'media_url',
+        'url',
+      ]);
+      if (nestedAnimated != null) return nestedAnimated;
+    }
+
+    return _readEmojiField(map, const [
+      'image',
+      'emojiImage',
+      'emoji_image',
+      'previewUrl',
+      'preview_url',
+      'thumbnail',
+      'thumb',
+      'url',
+      'icon',
+      'svg',
+    ]);
+  }
+
+  Map<String, String> _mergeEmojiForPlayback(
+    Map<String, String> preferred,
+    Map<String, String>? fallback,
+  ) {
+    final merged = <String, String>{...?fallback, ...preferred};
+    final animated =
+        _firstUsableEmojiMedia(preferred) ?? _firstUsableEmojiMedia(fallback);
+    if (animated != null) {
+      merged['image'] = animated;
+      merged['animationUrl'] = animated;
+    }
+    merged['id'] = (merged['id'] ?? fallback?['id'] ?? preferred['id'] ?? '')
+        .trim();
+    merged['name'] =
+        (merged['name'] ?? fallback?['name'] ?? preferred['name'] ?? 'Emoji')
+            .trim();
+    merged['code'] = (merged['code'] ?? fallback?['code'] ?? '').trim();
+    return merged;
+  }
+
+  String? _firstUsableEmojiMedia(Map<String, String>? emoji) {
+    if (emoji == null) return null;
+    for (final key in const ['animationUrl', 'image', 'gifUrl', 'mediaUrl']) {
+      final value = emoji[key]?.trim();
+      if (value != null && value.isNotEmpty && value.toLowerCase() != 'null') {
+        return value;
+      }
+    }
+    return null;
+  }
+
   void _showSeatEmojiReaction({
     required String senderId,
     required Map<String, String> emoji,
@@ -1659,7 +1721,10 @@ class LiveBroadcastController extends GetxController {
     final key = _seatEmojiKey(senderId);
     if (key.isEmpty) return;
 
-    activeSeatEmojis[key] = Map<String, String>.from(emoji);
+    activeSeatEmojis[key] = {
+      ...Map<String, String>.from(emoji),
+      'playbackNonce': DateTime.now().microsecondsSinceEpoch.toString(),
+    };
     _seatEmojiTimers.remove(key)?.cancel();
     _seatEmojiTimers[key] = Timer(const Duration(milliseconds: 2600), () {
       activeSeatEmojis.remove(key);
@@ -1695,6 +1760,8 @@ class LiveBroadcastController extends GetxController {
       'roomId': audioRoomApiId.isNotEmpty ? audioRoomApiId : roomId.value,
       'emojiId': emoji['id'] ?? '',
       'code': emoji['code'] ?? '',
+      'image': emoji['image'] ?? '',
+      'animationUrl': emoji['animationUrl'] ?? emoji['image'] ?? '',
       'packVersion': emoji['packVersion'] ?? emojiPackVersion.value.toString(),
       'name': emoji['name'] ?? 'Emoji',
     };
@@ -2313,17 +2380,18 @@ class LiveBroadcastController extends GetxController {
           '${message.messageID}_${message.timestamp}_$senderId';
       if (!_playedEmojiEventKeys.add(key)) continue;
 
-      final emoji =
-          _emojiById(marker['emojiId'] ?? '') ??
-          {
-            'id': marker['emojiId'] ?? '',
-            'name': marker['name'] ?? 'Emoji',
-            'image': marker['code']?.isNotEmpty == true
-                ? marker['code']!
-                : '😊',
-            'code': marker['code'] ?? '',
-            'category': 'emoji',
-          };
+      final markerEmoji = {
+        'id': marker['emojiId'] ?? '',
+        'name': marker['name'] ?? 'Emoji',
+        'image': marker['animationUrl'] ?? marker['image'] ?? '',
+        'animationUrl': marker['animationUrl'] ?? marker['image'] ?? '',
+        'code': marker['code'] ?? '',
+        'category': 'emoji',
+      };
+      final emoji = _mergeEmojiForPlayback(
+        _emojiById(marker['emojiId'] ?? '') ?? markerEmoji,
+        markerEmoji,
+      );
       _showSeatEmojiReaction(senderId: senderId, emoji: emoji);
     }
   }
@@ -3701,9 +3769,15 @@ class LiveBroadcastController extends GetxController {
         '$event:${payload.hashCode}';
     if (!_playedEmojiEventKeys.add(eventKey)) return;
 
-    final emoji =
-        _emojiFromResponse({'data': payload}) ??
-        _emojiById(readRoomField(payload, const ['emojiId', 'emoji_id']) ?? '');
+    final payloadEmoji = _emojiFromResponse({'data': payload});
+    final catalogEmoji = _emojiById(
+      readRoomField(payload, const ['emojiId', 'emoji_id']) ??
+          payloadEmoji?['id'] ??
+          '',
+    );
+    final emoji = catalogEmoji != null
+        ? _mergeEmojiForPlayback(catalogEmoji, payloadEmoji)
+        : payloadEmoji;
     if (emoji == null) return;
     _showSeatEmojiReaction(senderId: sender, emoji: emoji);
   }
