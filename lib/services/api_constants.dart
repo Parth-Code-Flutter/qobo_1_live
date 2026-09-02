@@ -396,17 +396,17 @@ class EconomyEndpoints {
 class EmojiEndpoints {
   EmojiEndpoints._();
 
-  /// GET /api/chat/emojis?packVersion=
-  static const String chatCatalog = '/api/chat/emojis';
+  /// GET /api/emojis/list?category=
+  static const String list = '/api/emojis/list';
 
-  /// GET /api/emoji/catalog?packVersion=
-  static const String catalog = '/api/emoji/catalog';
+  /// GET /api/emojis/public-list?category= — public fallback.
+  static const String publicList = '/api/emojis/public-list';
 
-  /// GET /api/emoji/list?category=
-  static const String list = '/api/emoji/list';
-
-  /// GET /api/v1/emoji/list?category= — v1 alias fallback.
-  static const String listV1 = '/api/v1/emoji/list';
+  // Old emoji catalog endpoints kept for reference:
+  // static const String chatCatalog = '/api/chat/emojis';
+  // static const String catalog = '/api/emoji/catalog';
+  // static const String oldList = '/api/emoji/list';
+  // static const String listV1 = '/api/v1/emoji/list';
 
   /// POST /api/emoji/send
   static const String send = '/api/emoji/send';

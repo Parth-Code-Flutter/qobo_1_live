@@ -23,30 +23,14 @@ class EmojiRepo {
     };
 
     var response = await _apiService.getRequest(
-      endPoint: EmojiEndpoints.chatCatalog,
+      endPoint: EmojiEndpoints.list,
       queryParams: query,
       isShowLoader: isShowLoader,
     );
 
     if (response?.statusCode == 404) {
       response = await _apiService.getRequest(
-        endPoint: EmojiEndpoints.catalog,
-        queryParams: query,
-        isShowLoader: isShowLoader,
-      );
-    }
-
-    if (response?.statusCode == 404) {
-      response = await _apiService.getRequest(
-        endPoint: EmojiEndpoints.list,
-        queryParams: query,
-        isShowLoader: isShowLoader,
-      );
-    }
-
-    if (response?.statusCode == 404) {
-      response = await _apiService.getRequest(
-        endPoint: EmojiEndpoints.listV1,
+        endPoint: EmojiEndpoints.publicList,
         queryParams: query,
         isShowLoader: isShowLoader,
       );
