@@ -11,6 +11,7 @@ import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/firebase/firebase_bootstrap.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_response_utils.dart';
+import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_media_utils.dart';
 
@@ -35,14 +36,19 @@ class FamilyController extends GetxController {
   final isLoadingPickerUsers = false.obs;
   final isLoadingEmojis = false.obs;
   final isLoadingGifts = false.obs;
+  final isCreatingFamily = false.obs;
 
   final myGroups = <Map<String, dynamic>>[].obs;
   final discoverGroups = <Map<String, dynamic>>[].obs;
   final familyMembers = <Map<String, dynamic>>[].obs;
   final pickerUsers = <Map<String, dynamic>>[].obs;
   final selectedInitialMembers = <String>{}.obs;
+  final pickerSearchQuery = ''.obs;
+  final pickerFollowersOnly = true.obs;
   final emojiCatalog = <Map<String, String>>[].obs;
   final giftCatalog = <Map<String, String>>[].obs;
+
+  Timer? _pickerSearchDebounce;
 
   bool get hasGroups => myGroups.isNotEmpty;
 
@@ -104,31 +110,64 @@ class FamilyController extends GetxController {
     required String description,
     required int joiningCoins,
   }) async {
+    if (isCreatingFamily.value) return;
     final cleanName = name.trim();
     if (cleanName.isEmpty) {
       _showError('Family name is required.');
       return;
     }
 
-    final response = await _familyRepo.createFamily(
-      name: cleanName,
-      description: description.trim().isEmpty
-          ? 'Welcome to $cleanName.'
-          : description,
-      joiningCoins: joiningCoins,
-      initialMemberIds: selectedInitialMembers.toList(),
-      isShowLoader: true,
-    );
+    isCreatingFamily.value = true;
+    Map<String, dynamic>? response;
+    try {
+      response = await _familyRepo.createFamily(
+        name: cleanName,
+        description: description.trim().isEmpty
+            ? 'Welcome to $cleanName.'
+            : description,
+        joiningCoins: joiningCoins,
+        initialMemberIds: selectedInitialMembers.toList(),
+        isShowLoader: false,
+      );
+    } finally {
+      isCreatingFamily.value = false;
+    }
+
     if (!_isSuccess(response)) {
-      _showError(_message(response, 'Could not create this family group.'));
+      await _showCreateResultDialog(
+        title: 'Unable to create group',
+        message: _message(response, 'Could not create this family group.'),
+        success: false,
+      );
       return;
     }
 
     selectedInitialMembers.clear();
     await loadFamilyHub();
     selectedTab.value = 0;
-    Get.back<void>();
-    _showSuccess(_message(response, 'Family group created successfully.'));
+    await _showCreateResultDialog(
+      title: 'Family group created',
+      message: _message(response, 'Family group created successfully.'),
+      success: true,
+    );
+    if (Get.key.currentState?.canPop() == true) {
+      Get.back<void>();
+    }
+  }
+
+  Future<void> _showCreateResultDialog({
+    required String title,
+    required String message,
+    required bool success,
+  }) {
+    return CommonAppDialog.showGet<void>(
+      title: title,
+      message: message,
+      icon: success ? Icons.check_circle_rounded : Icons.error_rounded,
+      iconAccent: success ? const Color(0xFF25D98F) : const Color(0xFFFF5C8A),
+      barrierDismissible: false,
+      actions: const [CommonAppDialogAction(label: 'OK', isPrimary: true)],
+    );
   }
 
   Future<void> joinFamily(Map<String, dynamic> family) async {
@@ -208,6 +247,8 @@ class FamilyController extends GetxController {
     String query = '',
     bool followersOnly = true,
   }) async {
+    pickerSearchQuery.value = query;
+    pickerFollowersOnly.value = followersOnly;
     isLoadingPickerUsers.value = true;
     try {
       final response = await _familyRepo.searchUsers(
@@ -215,10 +256,31 @@ class FamilyController extends GetxController {
         followersOnly: followersOnly,
         isShowLoader: false,
       );
-      pickerUsers.assignAll(_extractItems(response).map(_mapUser));
+      pickerUsers.assignAll(
+        _extractPickerUsers(
+          response,
+          followersOnly: followersOnly,
+        ).map(_mapUser),
+      );
     } finally {
       isLoadingPickerUsers.value = false;
     }
+  }
+
+  void searchPickerUsers(String query, {bool? followersOnly}) {
+    final mode = followersOnly ?? pickerFollowersOnly.value;
+    pickerSearchQuery.value = query;
+    pickerFollowersOnly.value = mode;
+    _pickerSearchDebounce?.cancel();
+    _pickerSearchDebounce = Timer(const Duration(milliseconds: 350), () {
+      unawaited(loadPickerUsers(query: query, followersOnly: mode));
+    });
+  }
+
+  void setPickerSearchMode(bool followersOnly) {
+    if (pickerFollowersOnly.value == followersOnly) return;
+    pickerFollowersOnly.value = followersOnly;
+    searchPickerUsers(pickerSearchQuery.value, followersOnly: followersOnly);
   }
 
   void toggleInitialMember(String userId) {
@@ -230,6 +292,27 @@ class FamilyController extends GetxController {
       selectedInitialMembers.add(id);
     }
     selectedInitialMembers.refresh();
+  }
+
+  String pickerUserId(Map<String, dynamic> user) {
+    return (user['userId'] ??
+            user['id'] ??
+            user['_id'] ??
+            user['user_id'] ??
+            '')
+        .toString()
+        .trim();
+  }
+
+  bool isInitialMemberSelected(Map<String, dynamic> user) {
+    final id = pickerUserId(user);
+    return id.isNotEmpty && selectedInitialMembers.contains(id);
+  }
+
+  @override
+  void onClose() {
+    _pickerSearchDebounce?.cancel();
+    super.onClose();
   }
 
   Stream<List<Map<String, dynamic>>> watchMessages(String familyId) {
@@ -389,6 +472,25 @@ class FamilyController extends GetxController {
     return const [];
   }
 
+  List<Map<String, dynamic>> _extractPickerUsers(
+    Map<String, dynamic>? response, {
+    required bool followersOnly,
+  }) {
+    final data = response?['data'];
+    if (data is Map) {
+      final preferredKeys = followersOnly
+          ? const ['followers', 'users', 'items', 'data']
+          : const ['users', 'items', 'followers', 'following', 'data'];
+      for (final key in preferredKeys) {
+        final nested = data[key];
+        if (nested is List) {
+          return nested.whereType<Map>().map(_copyMap).toList();
+        }
+      }
+    }
+    return _extractItems(response);
+  }
+
   Map<String, dynamic> _mapFamily(Map<String, dynamic> raw) {
     final id = _pickText(raw, const ['groupId', 'id', 'familyId', 'family_id']);
     final name = _pickText(raw, const ['name', 'familyName', 'title']);
@@ -445,23 +547,59 @@ class FamilyController extends GetxController {
   }
 
   Map<String, dynamic> _mapUser(Map<String, dynamic> raw) {
-    final id = _pickText(raw, const ['userId', 'id', 'user_id']);
-    final name = _pickText(raw, const ['name', 'fullName', 'username']);
-    final frame = raw['avatarFrame'] is Map
-        ? _pickText(_copyMap(raw['avatarFrame'] as Map), const ['image'])
-        : _pickText(raw, const ['avatarFrameUrl', 'avatar_frame_url']);
+    final user = _nestedUserFrom(raw);
+    final id = _pickText(user, const [
+      'userId',
+      'id',
+      '_id',
+      'user_id',
+      'followingId',
+      'followerId',
+    ]);
+    final name = _pickText(user, const [
+      'name',
+      'fullName',
+      'full_name',
+      'username',
+      'userName',
+    ]);
+    final frame = user['avatarFrame'] is Map
+        ? _pickText(_copyMap(user['avatarFrame'] as Map), const ['image'])
+        : _pickText(user, const ['avatarFrameUrl', 'avatar_frame_url']);
     return <String, dynamic>{
       'userId': id,
       'name': name.isEmpty ? 'User' : name,
-      'displayPicture': _pickText(raw, const [
+      'displayPicture': _pickText(user, const [
         'displayPicture',
         'display_picture',
         'avatar',
+        'avatarUrl',
+        'profileImageUrl',
         'profileImage',
+        'profile_image',
+        'image',
       ]),
       'avatarFrameUrl': frame,
-      'isFollowing': raw['isFollowing'] == true,
+      'isFollowing': raw['isFollowing'] == true || user['isFollowing'] == true,
     };
+  }
+
+  Map<String, dynamic> _nestedUserFrom(Map<String, dynamic> raw) {
+    for (final key in const [
+      'user',
+      'follower',
+      'following',
+      'followerUser',
+      'followingUser',
+      'followedUser',
+      'profile',
+    ]) {
+      final nested = raw[key];
+      if (nested is Map) {
+        return {...raw, ..._copyMap(nested)};
+      }
+    }
+    return raw;
   }
 
   Map<String, String> _mapEmoji(Map<String, dynamic> raw) {

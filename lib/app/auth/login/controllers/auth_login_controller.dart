@@ -222,7 +222,9 @@ class AuthLoginController extends GetxController {
       isAppleLoginLoading.value = true;
       Get.dialog(
         Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           backgroundColor: const Color(0xFF1E1E2D),
           child: Padding(
             padding: const EdgeInsets.all(24.0),
@@ -233,7 +235,11 @@ class AuthLoginController extends GetxController {
                 const SizedBox(height: 16),
                 const Text(
                   'Sign In with Apple',
-                  style: TextStyle(color: kColorWhite, fontWeight: FontWeight.bold, fontSize: 16),
+                  style: TextStyle(
+                    color: kColorWhite,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 const Text(
@@ -361,6 +367,7 @@ class AuthLoginController extends GetxController {
             );
             Future.delayed(const Duration(seconds: 2), () {
               Get.back();
+              if (!context.mounted) return;
               AppToast.showSuccess(
                 context,
                 'Firebase authentication successful!',
