@@ -10,6 +10,7 @@ import 'package:qobo_one_live/services/realtime/user_realtime_socket_service.dar
 import 'package:qobo_one_live/services/pk/pk_v1_coordinator.dart';
 import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
 import 'package:qobo_one_live/utils/auth/role_home_route.dart';
+import 'package:qobo_one_live/utils/error_handler_utils.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 import 'package:qobo_one_live/utils/profile/stored_profile_map.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
@@ -135,6 +136,10 @@ abstract final class AuthSessionHelper {
         homeRoute = await RoleHomeRoute.resolve();
       }
       await storage.writeBoolStorage(kStorageIsLoggedIn, true);
+
+      // Clear the in-memory "session expired" gate so API calls work again.
+      // Without this, login succeeds but GETs stay blocked until process kill.
+      ErrorHandlerUtils.resetSessionState();
 
       if (!Get.isRegistered<ChatSessionService>()) {
         Get.put(ChatSessionService(), permanent: true);

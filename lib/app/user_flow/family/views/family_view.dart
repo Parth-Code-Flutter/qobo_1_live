@@ -1630,8 +1630,10 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
                   errorHint: controller.chatListenError.value,
                 );
               }
+              // reverse:true keeps the latest message pinned at the bottom
+              // (WhatsApp-style), while the list stays chronological.
               return ListView.builder(
-                reverse: false,
+                reverse: true,
                 physics: const AlwaysScrollableScrollPhysics(
                   parent: BouncingScrollPhysics(),
                 ),
@@ -1640,7 +1642,10 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
                   vertical: 20,
                 ),
                 itemCount: messages.length,
-                itemBuilder: (_, index) => _messageBubble(messages[index]),
+                itemBuilder: (_, index) {
+                  final message = messages[messages.length - 1 - index];
+                  return _messageBubble(message);
+                },
               );
             }),
           ),
@@ -1665,33 +1670,39 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
           icon: SvgPicture.asset(kIconArrowBack),
         ),
       ),
-      title: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyles.kBoldPoppins(
-              fontSize: TextStyles.k18FontSize,
-              colors: kColorText,
-            ),
+      title: GestureDetector(
+        onTap: _openGroupInfo,
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyles.kBoldPoppins(
+                  fontSize: TextStyles.k18FontSize,
+                  colors: kColorText,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Obx(() {
+                final count = controller.familyMembers.isNotEmpty
+                    ? controller.familyMembers.length
+                    : (widget.group['memberCount'] ?? 0);
+                return AppText(
+                  text: '$count members',
+                  fontSize: TextStyles.k12FontSize,
+                  color: kColorHint,
+                );
+              }),
+            ],
           ),
-          const SizedBox(height: 2),
-          AppText(
-            text: '${widget.group['memberCount'] ?? 0} members',
-            fontSize: TextStyles.k12FontSize,
-            color: kColorHint,
-          ),
-        ],
-      ),
-      actions: [
-        IconButton(
-          onPressed: _showMembersSheet,
-          icon: const Icon(Icons.settings_rounded, color: kColorText),
         ),
-        const SizedBox(width: 8),
-      ],
+      ),
+      actions: const [SizedBox(width: 48)],
     );
   }
 
@@ -2012,110 +2023,229 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
     );
   }
 
-  void _showMembersSheet() {
+  void _openGroupInfo() {
     controller.loadMembers(familyId);
-    Get.bottomSheet<void>(
-      _MembersSheet(group: widget.group),
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-    );
+    Get.to(() => FamilyGroupInfoPage(group: widget.group));
   }
 }
 
-class _MembersSheet extends GetView<FamilyController> {
-  const _MembersSheet({required this.group});
+/// Full-screen group info + members (opened from chat app bar title).
+class FamilyGroupInfoPage extends StatelessWidget {
+  const FamilyGroupInfoPage({super.key, required this.group});
 
   final Map<String, dynamic> group;
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<FamilyController>();
     final familyId = controller.familyIdOf(group);
+    final name = group['name']?.toString() ?? 'Family Group';
     final admin = controller.isAdmin(group);
-    return Container(
-      height: MediaQuery.sizeOf(context).height * 0.68,
-      decoration: const BoxDecoration(
-        color: _FamilyUi.panel,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+    final description = group['description']?.toString().trim() ?? '';
+    final joiningCoins = group['joiningCoins'] ?? 0;
+
+    return Scaffold(
+      backgroundColor: kColorWhite,
+      appBar: AppBar(
+        backgroundColor: kColorWhite,
+        surfaceTintColor: kColorWhite,
+        elevation: 0,
+        centerTitle: true,
+        automaticallyImplyLeading: false,
+        leadingWidth: 60,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 10),
+          child: IconButton(
+            onPressed: Get.back,
+            icon: SvgPicture.asset(kIconArrowBack),
+          ),
+        ),
+        title: Text(
+          'Group info',
+          style: TextStyles.kBoldPoppins(
+            fontSize: TextStyles.k18FontSize,
+            colors: kColorText,
+          ),
+        ),
       ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          children: [
-            const _SheetHandle(),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 4, 18, 12),
-              child: Row(
-                children: [
-                  const Expanded(
-                    child: SemiBoldText(
-                      text: 'Group Settings',
-                      fontSize: TextStyles.k18FontSize,
-                      color: kColorWhite,
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+            child: Column(
+              children: [
+                _Avatar(
+                  imageUrl: group['logo']?.toString() ?? '',
+                  name: name,
+                  size: 88,
+                ),
+                Spacing.v12,
+                SemiBoldText(
+                  text: name,
+                  fontSize: TextStyles.k20FontSize,
+                  color: kColorText,
+                  align: TextAlign.center,
+                ),
+                Spacing.v4,
+                Obx(() {
+                  final count = controller.familyMembers.isNotEmpty
+                      ? controller.familyMembers.length
+                      : (group['memberCount'] ?? 0);
+                  return AppText(
+                    text: 'Group · $count members',
+                    fontSize: TextStyles.k12FontSize,
+                    color: kColorHint,
+                    align: TextAlign.center,
+                  );
+                }),
+                if (description.isNotEmpty) ...[
+                  Spacing.v10,
+                  AppText(
+                    text: description,
+                    fontSize: TextStyles.k12FontSize,
+                    color: kColorTextGrey,
+                    align: TextAlign.center,
+                  ),
+                ],
+                Spacing.v12,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _FamilyChatUi.incomingBubble,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const AppCoinIcon(size: 16, color: kColorPrimary),
+                      Spacing.h6,
+                      AppText(
+                        text: 'Join coins: $joiningCoins',
+                        fontSize: TextStyles.k12FontSize,
+                        color: kColorText,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: Color(0xFFE8E8EE)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: SemiBoldText(
+                    text: 'Members',
+                    fontSize: TextStyles.k14FontSize,
+                    color: kColorText,
+                  ),
+                ),
+                if (!admin)
+                  TextButton(
+                    onPressed: () => controller.leaveFamily(group),
+                    child: const AppText(
+                      text: 'Leave group',
+                      fontSize: 13,
+                      color: kColorRed,
                     ),
                   ),
-                  if (!admin)
-                    TextButton(
-                      onPressed: () => controller.leaveFamily(group),
-                      child: const AppText(
-                        text: 'Leave',
-                        fontSize: 13,
-                        color: _FamilyUi.pink,
-                      ),
-                    ),
-                ],
-              ),
+              ],
             ),
-            Expanded(
-              child: Obx(() {
-                if (controller.isLoadingMembers.value) {
-                  return const Center(
-                    child: CircularProgressIndicator(color: _FamilyUi.pink),
-                  );
-                }
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
-                  itemCount: controller.familyMembers.length,
-                  itemBuilder: (_, index) {
-                    final member = controller.familyMembers[index];
-                    final userId = member['userId']?.toString() ?? '';
-                    final self = userId == controller.currentUserId;
-                    return ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: _Avatar(
-                        imageUrl: member['displayPicture']?.toString() ?? '',
-                        frameUrl: member['avatarFrameUrl']?.toString() ?? '',
-                        name: member['name']?.toString() ?? 'M',
-                        size: 44,
-                      ),
-                      title: SemiBoldText(
-                        text: member['name']?.toString() ?? 'Member',
-                        fontSize: 13,
-                        color: kColorWhite,
-                      ),
-                      subtitle: AppText(
-                        text: member['role']?.toString() ?? 'member',
-                        fontSize: 11,
-                        color: kColorWhite.withValues(alpha: 0.55),
-                      ),
-                      trailing: admin && !self
-                          ? IconButton(
-                              onPressed: () => controller.removeMember(
-                                familyId: familyId,
-                                userId: userId,
-                              ),
-                              icon: const Icon(
-                                Icons.person_remove_rounded,
-                                color: _FamilyUi.pink,
-                              ),
-                            )
-                          : null,
-                    );
-                  },
+          ),
+          Expanded(
+            child: Obx(() {
+              if (controller.isLoadingMembers.value &&
+                  controller.familyMembers.isEmpty) {
+                return const Center(
+                  child: CircularProgressIndicator(color: kColorPrimary),
                 );
-              }),
-            ),
-          ],
-        ),
+              }
+              if (controller.familyMembers.isEmpty) {
+                return const Center(
+                  child: AppText(
+                    text: 'No members found.',
+                    fontSize: 13,
+                    color: kColorHint,
+                  ),
+                );
+              }
+              return ListView.separated(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
+                itemCount: controller.familyMembers.length,
+                separatorBuilder: (_, __) => const Divider(
+                  height: 1,
+                  color: Color(0xFFF0F0F4),
+                ),
+                itemBuilder: (_, index) {
+                  final member = controller.familyMembers[index];
+                  final userId = member['userId']?.toString() ?? '';
+                  final self = userId == controller.currentUserId;
+                  final role = (member['role']?.toString() ?? 'member')
+                      .toLowerCase();
+                  return ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    leading: _Avatar(
+                      imageUrl: member['displayPicture']?.toString() ?? '',
+                      frameUrl: member['avatarFrameUrl']?.toString() ?? '',
+                      name: member['name']?.toString() ?? 'M',
+                      size: 46,
+                    ),
+                    title: SemiBoldText(
+                      text: member['name']?.toString() ?? 'Member',
+                      fontSize: 14,
+                      color: kColorText,
+                    ),
+                    subtitle: AppText(
+                      text: self
+                          ? '$role · You'
+                          : role,
+                      fontSize: 12,
+                      color: kColorHint,
+                    ),
+                    trailing: admin && !self
+                        ? IconButton(
+                            onPressed: () => controller.removeMember(
+                              familyId: familyId,
+                              userId: userId,
+                            ),
+                            icon: const Icon(
+                              Icons.person_remove_rounded,
+                              color: kColorRed,
+                            ),
+                          )
+                        : (role == 'admin' ||
+                                role == 'owner' ||
+                                role == 'creator')
+                            ? Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _FamilyChatUi.outgoingBubble,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const AppText(
+                                  text: 'Admin',
+                                  fontSize: 11,
+                                  color: kColorPrimary,
+                                ),
+                              )
+                            : null,
+                  );
+                },
+              );
+            }),
+          ),
+        ],
       ),
     );
   }
