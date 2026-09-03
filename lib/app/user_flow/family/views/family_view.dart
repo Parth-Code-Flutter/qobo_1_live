@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
@@ -1593,10 +1595,12 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
     super.initState();
     controller.loadMembers(familyId);
     controller.markRead(familyId: familyId);
+    unawaited(controller.startChatListen(familyId));
   }
 
   @override
   void dispose() {
+    unawaited(controller.stopChatListen());
     _textController.dispose();
     super.dispose();
   }
@@ -1613,27 +1617,32 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
       body: Column(
         children: [
           Expanded(
-            child: StreamBuilder<List<Map<String, dynamic>>>(
-              stream: controller.watchMessages(familyId),
-              builder: (_, snapshot) {
-                final messages = snapshot.data ?? const [];
-                if (messages.isEmpty) {
-                  return _chatEmpty();
-                }
-                return ListView.builder(
-                  reverse: false,
-                  physics: const AlwaysScrollableScrollPhysics(
-                    parent: BouncingScrollPhysics(),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 20,
-                  ),
-                  itemCount: messages.length,
-                  itemBuilder: (_, index) => _messageBubble(messages[index]),
+            child: Obx(() {
+              if (controller.isLoadingChatMessages.value &&
+                  controller.activeChatMessages.isEmpty) {
+                return const Center(
+                  child: CircularProgressIndicator(color: kColorPrimary),
                 );
-              },
-            ),
+              }
+              final messages = controller.activeChatMessages;
+              if (messages.isEmpty) {
+                return _chatEmpty(
+                  errorHint: controller.chatListenError.value,
+                );
+              }
+              return ListView.builder(
+                reverse: false,
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 20,
+                ),
+                itemCount: messages.length,
+                itemBuilder: (_, index) => _messageBubble(messages[index]),
+              );
+            }),
           ),
           _composer(),
         ],
@@ -1686,27 +1695,36 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
     );
   }
 
-  Widget _chatEmpty() {
-    return const Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.chat_bubble_outline_rounded, color: kColorHint, size: 56),
-          SizedBox(height: 12),
-          SemiBoldText(
-            text: 'Start the family chat',
-            fontSize: TextStyles.k16FontSize,
-            color: kColorText,
-            align: TextAlign.center,
-          ),
-          SizedBox(height: 6),
-          AppText(
-            text: 'Messages will appear here when available.',
-            fontSize: TextStyles.k12FontSize,
-            color: kColorHint,
-            align: TextAlign.center,
-          ),
-        ],
+  Widget _chatEmpty({String errorHint = ''}) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.chat_bubble_outline_rounded,
+              color: kColorHint,
+              size: 56,
+            ),
+            const SizedBox(height: 12),
+            const SemiBoldText(
+              text: 'Start the family chat',
+              fontSize: TextStyles.k16FontSize,
+              color: kColorText,
+              align: TextAlign.center,
+            ),
+            const SizedBox(height: 6),
+            AppText(
+              text: errorHint.isNotEmpty
+                  ? errorHint
+                  : 'Messages will appear here when available.',
+              fontSize: TextStyles.k12FontSize,
+              color: kColorHint,
+              align: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }

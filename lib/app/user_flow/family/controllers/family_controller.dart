@@ -48,6 +48,13 @@ class FamilyController extends GetxController {
   final emojiCatalog = <Map<String, String>>[].obs;
   final giftCatalog = <Map<String, String>>[].obs;
 
+  /// Active family group chat thread (Firestore + optimistic + REST fallback).
+  final activeChatMessages = <Map<String, dynamic>>[].obs;
+  final isLoadingChatMessages = false.obs;
+  final chatListenError = ''.obs;
+  String _activeChatFamilyId = '';
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _chatSub;
+
   Timer? _pickerSearchDebounce;
 
   bool get hasGroups => myGroups.isNotEmpty;
@@ -64,11 +71,11 @@ class FamilyController extends GetxController {
     loadFamilyHub();
   }
 
-  Future<void> _ensureFirebaseChatSession() async {
+  Future<bool> _ensureFirebaseChatSession() async {
     if (!Get.isRegistered<ChatSessionService>()) {
       Get.put(ChatSessionService(), permanent: true);
     }
-    await Get.find<ChatSessionService>().ensureSignedIn(isShowLoader: false);
+    return Get.find<ChatSessionService>().ensureSignedIn(isShowLoader: false);
   }
 
   Future<void> loadFamilyHub() async {
@@ -312,25 +319,176 @@ class FamilyController extends GetxController {
   @override
   void onClose() {
     _pickerSearchDebounce?.cancel();
+    unawaited(stopChatListen());
     super.onClose();
   }
 
+  /// Opens realtime listen for a group chat. Always signs into Firebase first —
+  /// otherwise the first snapshot can fail with permission-denied and the UI
+  /// stays empty even after auth completes.
+  Future<void> startChatListen(String familyId) async {
+    final id = familyId.trim();
+    if (id.isEmpty) return;
+    if (_activeChatFamilyId == id && _chatSub != null) return;
+
+    await stopChatListen();
+    _activeChatFamilyId = id;
+    chatListenError.value = '';
+    isLoadingChatMessages.value = true;
+
+    final signedIn = await _ensureFirebaseChatSession();
+    if (_activeChatFamilyId != id) return;
+
+    if (!signedIn || !FirebaseBootstrap.isAvailable) {
+      chatListenError.value =
+          'Could not connect to chat. Pull to refresh or try again.';
+      await _loadMessagesFromApi(id);
+      isLoadingChatMessages.value = false;
+      return;
+    }
+
+    try {
+      _chatSub = FirebaseFirestore.instance
+          .collection('familyGroups')
+          .doc(id)
+          .collection('messages')
+          .snapshots()
+          .listen(
+            (snapshot) {
+              if (_activeChatFamilyId != id) return;
+              final messages = snapshot.docs
+                  .map((doc) => <String, dynamic>{...doc.data(), 'id': doc.id})
+                  .toList();
+              messages.sort(
+                (a, b) => _messageTime(a).compareTo(_messageTime(b)),
+              );
+              activeChatMessages.assignAll(messages);
+              chatListenError.value = '';
+              isLoadingChatMessages.value = false;
+            },
+            onError: (Object error, StackTrace stack) {
+              LoggerUtils.logWarning(
+                'FamilyController: Firestore messages listen failed — $error',
+              );
+              final denied = error is FirebaseException &&
+                  error.code == 'permission-denied';
+              chatListenError.value = denied
+                  ? 'Chat sync blocked by Firestore rules. Showing sent messages only.'
+                  : 'Live chat sync failed. Showing available messages.';
+              unawaited(_loadMessagesFromApi(id));
+              isLoadingChatMessages.value = false;
+            },
+          );
+    } catch (e) {
+      LoggerUtils.logWarning('FamilyController: startChatListen failed — $e');
+      chatListenError.value = 'Could not open live chat.';
+      await _loadMessagesFromApi(id);
+      isLoadingChatMessages.value = false;
+    }
+
+    // REST history fills the thread if Firestore is empty/slow on first open.
+    unawaited(_loadMessagesFromApi(id, onlyIfEmpty: true));
+  }
+
+  Future<void> stopChatListen() async {
+    await _chatSub?.cancel();
+    _chatSub = null;
+    _activeChatFamilyId = '';
+    chatListenError.value = '';
+    activeChatMessages.clear();
+    isLoadingChatMessages.value = false;
+  }
+
+  Future<void> _loadMessagesFromApi(
+    String familyId, {
+    bool onlyIfEmpty = false,
+  }) async {
+    if (onlyIfEmpty && activeChatMessages.isNotEmpty) return;
+    final response = await _familyRepo.listMessages(
+      familyId: familyId,
+      isShowLoader: false,
+    );
+    if (!_isSuccess(response)) return;
+    final items = _extractItems(response);
+    if (items.isEmpty) return;
+    final mapped = items.map((raw) {
+      final id = _pickText(raw, const ['messageId', 'id', '_id']);
+      return <String, dynamic>{
+        ...raw,
+        if (id.isNotEmpty) 'id': id,
+        'type': (raw['type'] ?? 'text').toString(),
+      };
+    }).toList();
+    mapped.sort((a, b) => _messageTime(a).compareTo(_messageTime(b)));
+    _mergeChatMessages(mapped);
+  }
+
+  void _mergeChatMessages(List<Map<String, dynamic>> incoming) {
+    if (incoming.isEmpty) return;
+    final byKey = <String, Map<String, dynamic>>{};
+    for (final existing in activeChatMessages) {
+      final key = _messageKey(existing);
+      if (key.isNotEmpty) byKey[key] = existing;
+    }
+    for (final item in incoming) {
+      final key = _messageKey(item);
+      if (key.isEmpty) continue;
+      byKey[key] = item;
+    }
+    final merged = byKey.values.toList()
+      ..sort((a, b) => _messageTime(a).compareTo(_messageTime(b)));
+    activeChatMessages.assignAll(merged);
+  }
+
+  void _upsertChatMessage(Map<String, dynamic> message) {
+    final key = _messageKey(message);
+    if (key.isEmpty) {
+      activeChatMessages.add(message);
+      return;
+    }
+    final index = activeChatMessages.indexWhere((m) => _messageKey(m) == key);
+    if (index >= 0) {
+      activeChatMessages[index] = message;
+      activeChatMessages.refresh();
+    } else {
+      activeChatMessages.add(message);
+      activeChatMessages.sort(
+        (a, b) => _messageTime(a).compareTo(_messageTime(b)),
+      );
+      activeChatMessages.refresh();
+    }
+  }
+
+  String _messageKey(Map<String, dynamic> message) {
+    final id = _pickText(message, const ['id', 'messageId', '_id']);
+    if (id.isNotEmpty) return 'id:$id';
+    final client = _pickText(message, const ['clientMessageId']);
+    if (client.isNotEmpty) return 'client:$client';
+    return '';
+  }
+
+  @Deprecated('Use startChatListen + activeChatMessages')
   Stream<List<Map<String, dynamic>>> watchMessages(String familyId) {
     if (familyId.trim().isEmpty || !FirebaseBootstrap.isAvailable) {
       return const Stream.empty();
     }
-    return FirebaseFirestore.instance
-        .collection('familyGroups')
-        .doc(familyId.trim())
-        .collection('messages')
-        .snapshots()
-        .map((snapshot) {
-          final messages = snapshot.docs
-              .map((doc) => <String, dynamic>{...doc.data(), 'id': doc.id})
-              .toList();
-          messages.sort((a, b) => _messageTime(a).compareTo(_messageTime(b)));
-          return messages;
-        });
+    return Stream.fromFuture(_ensureFirebaseChatSession()).asyncExpand((ok) {
+      if (!ok) return Stream.value(const <Map<String, dynamic>>[]);
+      return FirebaseFirestore.instance
+          .collection('familyGroups')
+          .doc(familyId.trim())
+          .collection('messages')
+          .snapshots()
+          .map((snapshot) {
+            final messages = snapshot.docs
+                .map((doc) => <String, dynamic>{...doc.data(), 'id': doc.id})
+                .toList();
+            messages.sort(
+              (a, b) => _messageTime(a).compareTo(_messageTime(b)),
+            );
+            return messages;
+          });
+    });
   }
 
   Future<void> sendTextMessage({
@@ -341,10 +499,13 @@ class FamilyController extends GetxController {
     if (text.isEmpty || isSendingMessage.value) return;
 
     isSendingMessage.value = true;
+    final clientMessageId =
+        'msg_${DateTime.now().microsecondsSinceEpoch}_$currentUserId';
     try {
       final response = await _familyRepo.sendTextMessage(
         familyId: familyId,
         text: text,
+        clientMessageId: clientMessageId,
         isShowLoader: false,
       );
       if (!_isSuccess(response)) {
@@ -352,6 +513,26 @@ class FamilyController extends GetxController {
         return;
       }
       textController.clear();
+      final data = response?['data'];
+      final payload = data is Map
+          ? Map<String, dynamic>.from(data)
+          : <String, dynamic>{};
+      _upsertChatMessage(<String, dynamic>{
+        'id': _pickText(payload, const ['messageId', 'id']),
+        'messageId': _pickText(payload, const ['messageId', 'id']),
+        'clientMessageId': clientMessageId,
+        'type': 'text',
+        'text': _pickText(payload, const ['text']).isNotEmpty
+            ? _pickText(payload, const ['text'])
+            : text,
+        'senderId': _pickText(payload, const ['senderId']).isNotEmpty
+            ? _pickText(payload, const ['senderId'])
+            : currentUserId,
+        'senderName': 'You',
+        'createdAt': _pickText(payload, const ['createdAt']).isNotEmpty
+            ? _pickText(payload, const ['createdAt'])
+            : DateTime.now().toUtc().toIso8601String(),
+      });
     } finally {
       isSendingMessage.value = false;
     }
@@ -390,7 +571,25 @@ class FamilyController extends GetxController {
     );
     if (!_isSuccess(response)) {
       _showError(_message(response, 'Emoji was not sent.'));
+      return;
     }
+    final data = response?['data'];
+    final payload = data is Map
+        ? Map<String, dynamic>.from(data)
+        : <String, dynamic>{};
+    _upsertChatMessage(<String, dynamic>{
+      'id': _pickText(payload, const ['messageId', 'id']),
+      'messageId': _pickText(payload, const ['messageId', 'id']),
+      'type': 'emoji',
+      'emojiId': emojiId,
+      'emojiName': emoji['name'] ?? 'Emoji',
+      'emojiUrl': emoji['image'],
+      'emojiAnimationUrl': emoji['image'],
+      'senderId': currentUserId,
+      'senderName': 'You',
+      'text': emoji['name'] ?? 'sent emoji',
+      'createdAt': DateTime.now().toUtc().toIso8601String(),
+    });
   }
 
   Future<void> loadGiftCatalog() async {

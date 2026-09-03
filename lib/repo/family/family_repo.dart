@@ -259,6 +259,26 @@ class FamilyRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
+  /// `GET /api/family/groups/:id/messages` — history fallback when Firestore
+  /// listen is blocked or empty.
+  Future<Map<String, dynamic>?> listMessages({
+    required String familyId,
+    int page = 1,
+    int limit = 50,
+    bool isShowLoader = false,
+  }) async {
+    final id = familyId.trim();
+    if (id.isEmpty) return null;
+    final path =
+        '${FamilyEndpoints.groupMessages(id)}?page=$page&limit=$limit';
+    final response = await _apiService.getRequest(
+      endPoint: path,
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
   Future<Map<String, dynamic>?> sendEmojiMessage({
     required String familyId,
     required String emojiId,
