@@ -52,8 +52,26 @@ class FamilyController extends GetxController {
   final activeChatMessages = <Map<String, dynamic>>[].obs;
   final isLoadingChatMessages = false.obs;
   final chatListenError = ''.obs;
+
+  /// Other members currently typing (WhatsApp-style group indicator).
+  final typingPeerNames = <String>[].obs;
+  String get typingStatusLabel {
+    final names = typingPeerNames;
+    if (names.isEmpty) return '';
+    if (names.length == 1) return '${names.first} is typing...';
+    if (names.length == 2) {
+      return '${names[0]} and ${names[1]} are typing...';
+    }
+    return '${names.first} and ${names.length - 1} others are typing...';
+  }
+
+  bool get isAnyoneTyping => typingPeerNames.isNotEmpty;
+
   String _activeChatFamilyId = '';
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _chatSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _typingSub;
+  Timer? _typingDebounce;
+  Timer? _typingClearTimer;
 
   Timer? _pickerSearchDebounce;
 
@@ -162,18 +180,33 @@ class FamilyController extends GetxController {
     }
   }
 
+  Future<void> _showResultDialog({
+    required String title,
+    required String message,
+    required bool success,
+    IconData? icon,
+  }) {
+    return CommonAppDialog.showGet<void>(
+      title: title,
+      message: message,
+      icon: icon ??
+          (success ? Icons.check_circle_rounded : Icons.error_rounded),
+      iconAccent: success ? const Color(0xFF25D98F) : const Color(0xFFFF5C8A),
+      barrierDismissible: false,
+      actions: const [CommonAppDialogAction(label: 'OK', isPrimary: true)],
+    );
+  }
+
+  /// Kept for create-family call sites; same presentation as [_showResultDialog].
   Future<void> _showCreateResultDialog({
     required String title,
     required String message,
     required bool success,
   }) {
-    return CommonAppDialog.showGet<void>(
+    return _showResultDialog(
       title: title,
       message: message,
-      icon: success ? Icons.check_circle_rounded : Icons.error_rounded,
-      iconAccent: success ? const Color(0xFF25D98F) : const Color(0xFFFF5C8A),
-      barrierDismissible: false,
-      actions: const [CommonAppDialogAction(label: 'OK', isPrimary: true)],
+      success: success,
     );
   }
 
@@ -181,17 +214,69 @@ class FamilyController extends GetxController {
     final familyId = _familyId(family);
     if (familyId.isEmpty) return;
 
+    final expectedCoins = _toInt(
+      family['joiningCoins'] ?? family['joining_coins'],
+    );
     final response = await _familyRepo.joinFamily(
       familyId: familyId,
       isShowLoader: true,
     );
     if (!_isSuccess(response)) {
-      _showError(_message(response, 'Could not join this family.'));
+      await _showResultDialog(
+        title: 'Could not join',
+        message: _joinFailureMessage(response, expectedCoins),
+        success: false,
+        icon: Icons.lock_outline_rounded,
+      );
       return;
     }
     await loadFamilyHub();
     selectedTab.value = 0;
-    _showSuccess(_message(response, 'Joined family group successfully.'));
+    await _showResultDialog(
+      title: 'Joined group',
+      message: _joinSuccessMessage(response, expectedCoins),
+      success: true,
+      icon: Icons.groups_rounded,
+    );
+  }
+
+  String _joinFailureMessage(Map<String, dynamic>? response, int expectedCoins) {
+    final message = _message(response, '');
+    final upper = message.toUpperCase();
+    if (upper.contains('INSUFFICIENT_COINS') ||
+        upper.contains('INSUFFICIENT COINS') ||
+        upper.contains('INSUFFICIENT')) {
+      if (expectedCoins > 0) {
+        return 'Not enough coins. You need $expectedCoins coins to join this group.';
+      }
+      return 'Not enough coins to join this group.';
+    }
+    if (upper.contains('ALREADY_JOINED')) {
+      return 'You have already joined this group.';
+    }
+    if (upper.contains('USER_BLOCKED_FROM_GROUP') ||
+        upper.contains('BLOCKED')) {
+      return 'You are blocked from joining this group.';
+    }
+    return message.isNotEmpty
+        ? message
+        : 'Could not join this family.';
+  }
+
+  String _joinSuccessMessage(
+    Map<String, dynamic>? response,
+    int expectedCoins,
+  ) {
+    final data = response?['data'];
+    final paid = data is Map
+        ? _toInt(data['joiningCoinsPaid'] ?? data['joining_coins_paid'])
+        : 0;
+    final coinsPaid = paid > 0 ? paid : expectedCoins;
+    final base = _message(response, 'Joined family group successfully.');
+    if (coinsPaid > 0) {
+      return '$base Paid $coinsPaid joining coins.';
+    }
+    return base;
   }
 
   Future<void> leaveFamily(Map<String, dynamic> family) async {
@@ -203,12 +288,21 @@ class FamilyController extends GetxController {
       isShowLoader: true,
     );
     if (!_isSuccess(response)) {
-      _showError(_message(response, 'Could not leave this family.'));
+      await _showResultDialog(
+        title: 'Could not leave',
+        message: _message(response, 'Could not leave this family.'),
+        success: false,
+      );
       return;
     }
     await loadFamilyHub();
     Get.back<void>();
-    _showSuccess(_message(response, 'You have left the family.'));
+    await _showResultDialog(
+      title: 'Left group',
+      message: _message(response, 'You have left the family.'),
+      success: true,
+      icon: Icons.logout_rounded,
+    );
   }
 
   Future<void> loadMembers(
@@ -233,8 +327,26 @@ class FamilyController extends GetxController {
   Future<void> removeMember({
     required String familyId,
     required String userId,
+    String memberName = '',
   }) async {
     if (familyId.isEmpty || userId.isEmpty) return;
+
+    final context = Get.context;
+    if (context != null && context.mounted) {
+      final label = memberName.trim().isEmpty ? 'this member' : memberName.trim();
+      final confirmed = await CommonAppDialog.confirm(
+        context: context,
+        title: 'Remove member',
+        message:
+            'Remove $label from this group? They will lose chat access immediately.',
+        icon: Icons.person_remove_rounded,
+        iconAccent: const Color(0xFFFF5C8A),
+        cancelLabel: 'Cancel',
+        confirmLabel: 'Remove',
+        barrierDismissible: false,
+      );
+      if (confirmed != true) return;
+    }
 
     final response = await _familyRepo.removeMember(
       familyId: familyId,
@@ -242,12 +354,26 @@ class FamilyController extends GetxController {
       isShowLoader: true,
     );
     if (!_isSuccess(response)) {
-      _showError(_message(response, 'Could not remove this member.'));
+      await _showResultDialog(
+        title: 'Could not remove',
+        message: _message(response, 'Could not remove this member.'),
+        success: false,
+        icon: Icons.person_remove_rounded,
+      );
       return;
     }
+    familyMembers.removeWhere(
+      (m) => (m['userId'] ?? m['id'] ?? '').toString().trim() == userId,
+    );
+    familyMembers.refresh();
     await loadMembers(familyId);
     await loadMyGroups();
-    _showSuccess(_message(response, 'Member removed from group.'));
+    await _showResultDialog(
+      title: 'Member removed',
+      message: _message(response, 'Member removed from group successfully.'),
+      success: true,
+      icon: Icons.person_off_rounded,
+    );
   }
 
   Future<void> loadPickerUsers({
@@ -379,6 +505,7 @@ class FamilyController extends GetxController {
               isLoadingChatMessages.value = false;
             },
           );
+      _startTypingListen(id);
     } catch (e) {
       LoggerUtils.logWarning('FamilyController: startChatListen failed — $e');
       chatListenError.value = 'Could not open live chat.';
@@ -391,12 +518,145 @@ class FamilyController extends GetxController {
   }
 
   Future<void> stopChatListen() async {
+    _typingDebounce?.cancel();
+    _typingClearTimer?.cancel();
+    final leavingId = _activeChatFamilyId;
+    if (leavingId.isNotEmpty && currentUserId.isNotEmpty) {
+      unawaited(_setTyping(familyId: leavingId, isTyping: false));
+    }
+    await _typingSub?.cancel();
+    _typingSub = null;
+    typingPeerNames.clear();
     await _chatSub?.cancel();
     _chatSub = null;
     _activeChatFamilyId = '';
     chatListenError.value = '';
     activeChatMessages.clear();
     isLoadingChatMessages.value = false;
+  }
+
+  void onComposerTextChanged(String text) {
+    final familyId = _activeChatFamilyId;
+    if (familyId.isEmpty || currentUserId.isEmpty) return;
+    if (!FirebaseBootstrap.isAvailable) return;
+
+    final hasText = text.trim().isNotEmpty;
+    _typingDebounce?.cancel();
+    _typingDebounce = Timer(const Duration(milliseconds: 300), () {
+      unawaited(_setTyping(familyId: familyId, isTyping: hasText));
+      _typingClearTimer?.cancel();
+      if (hasText) {
+        _typingClearTimer = Timer(const Duration(seconds: 4), () {
+          unawaited(_setTyping(familyId: familyId, isTyping: false));
+        });
+      }
+    });
+  }
+
+  void _startTypingListen(String familyId) {
+    unawaited(_typingSub?.cancel());
+    _typingSub = FirebaseFirestore.instance
+        .collection('familyGroups')
+        .doc(familyId)
+        .collection('typing')
+        .snapshots()
+        .listen(
+          (snapshot) {
+            if (_activeChatFamilyId != familyId) return;
+            final myId = currentUserId;
+            final now = DateTime.now();
+            final names = <String>[];
+            for (final doc in snapshot.docs) {
+              if (doc.id == myId) continue;
+              final data = doc.data();
+              if (data['isTyping'] != true) continue;
+              final updatedAt = _firestoreDate(data['updatedAt']);
+              if (updatedAt != null &&
+                  now.difference(updatedAt).inSeconds > 5) {
+                continue;
+              }
+              final name = _resolveTypingDisplayName(
+                userId: doc.id,
+                data: data,
+              );
+              if (name.isNotEmpty) names.add(name);
+            }
+            typingPeerNames.assignAll(names);
+          },
+          onError: (Object error) {
+            LoggerUtils.logWarning(
+              'FamilyController: typing listen failed — $error',
+            );
+            typingPeerNames.clear();
+          },
+        );
+  }
+
+  String _resolveTypingDisplayName({
+    required String userId,
+    required Map<String, dynamic> data,
+  }) {
+    final fromDoc = _pickText(data, const [
+      'displayName',
+      'name',
+      'userName',
+      'senderName',
+    ]);
+    if (fromDoc.isNotEmpty) return fromDoc;
+    for (final member in familyMembers) {
+      final id = _pickText(member, const [
+        'userId',
+        'id',
+        '_id',
+        'user_id',
+      ]);
+      if (id != userId) continue;
+      final name = _pickText(member, const ['name', 'userName', 'displayName']);
+      if (name.isNotEmpty) return name;
+    }
+    return 'Someone';
+  }
+
+  Future<void> _setTyping({
+    required String familyId,
+    required bool isTyping,
+  }) async {
+    final userId = currentUserId;
+    if (familyId.isEmpty || userId.isEmpty || !FirebaseBootstrap.isAvailable) {
+      return;
+    }
+    final ref = FirebaseFirestore.instance
+        .collection('familyGroups')
+        .doc(familyId)
+        .collection('typing')
+        .doc(userId);
+    try {
+      if (!isTyping) {
+        await ref.delete();
+        return;
+      }
+      var displayName = '';
+      if (Get.isRegistered<UserSessionController>()) {
+        displayName = Get.find<UserSessionController>().displayName.trim();
+      }
+      await ref.set({
+        'userId': userId,
+        'isTyping': true,
+        if (displayName.isNotEmpty) 'displayName': displayName,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied') return;
+      LoggerUtils.logWarning('FamilyController: setTyping failed — $e');
+    } catch (e) {
+      LoggerUtils.logWarning('FamilyController: setTyping failed — $e');
+    }
+  }
+
+  DateTime? _firestoreDate(dynamic value) {
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    return DateTime.tryParse(value?.toString() ?? '');
   }
 
   Future<void> _loadMessagesFromApi(
@@ -499,6 +759,9 @@ class FamilyController extends GetxController {
     if (text.isEmpty || isSendingMessage.value) return;
 
     isSendingMessage.value = true;
+    _typingDebounce?.cancel();
+    _typingClearTimer?.cancel();
+    unawaited(_setTyping(familyId: familyId, isTyping: false));
     final clientMessageId =
         'msg_${DateTime.now().microsecondsSinceEpoch}_$currentUserId';
     try {
@@ -637,10 +900,29 @@ class FamilyController extends GetxController {
   }
 
   bool isAdmin(Map<String, dynamic> family) {
+    if (family['canManageMembers'] == true) return true;
     final role =
         family['myRole']?.toString().toLowerCase() ??
         family['role']?.toString().toLowerCase() ??
         '';
+    if (role == 'admin' || role == 'creator' || role == 'owner') return true;
+
+    // Fallback once members roster is loaded (chat args may omit myRole).
+    final myId = currentUserId;
+    if (myId.isEmpty) return false;
+    for (final member in familyMembers) {
+      final id = (member['userId'] ?? member['id'] ?? '').toString().trim();
+      if (id != myId) continue;
+      final memberRole = (member['role']?.toString() ?? '').toLowerCase();
+      return memberRole == 'admin' ||
+          memberRole == 'creator' ||
+          memberRole == 'owner';
+    }
+    return false;
+  }
+
+  bool isMemberAdmin(Map<String, dynamic> member) {
+    final role = (member['role']?.toString() ?? '').toLowerCase();
     return role == 'admin' || role == 'creator' || role == 'owner';
   }
 
@@ -712,6 +994,8 @@ class FamilyController extends GetxController {
       'totalGiftCoins': _toInt(raw['totalGiftCoins']),
       'isJoined': raw['isJoined'] == true,
       'myRole': _pickText(raw, const ['myRole', 'role']),
+      'canManageMembers': raw['canManageMembers'] == true ||
+          raw['can_manage_members'] == true,
       'status': _pickText(raw, const ['status']),
       'lastMessage': _pickText(raw, const ['lastMessage']),
       'lastMessageAt': _pickText(raw, const ['lastMessageAt']),
@@ -853,10 +1137,6 @@ class FamilyController extends GetxController {
   String _message(Map<String, dynamic>? response, String fallback) {
     final message = response?['message']?.toString().trim();
     return message == null || message.isEmpty ? fallback : message;
-  }
-
-  void _showSuccess(String message) {
-    Get.snackbar('Family', message, snackPosition: SnackPosition.BOTTOM);
   }
 
   void _showError(String message) {

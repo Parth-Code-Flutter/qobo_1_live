@@ -367,7 +367,14 @@ class FamilyView extends GetView<FamilyController> {
                               Icons.people_alt_rounded,
                               '${group['memberCount'] ?? 0} members',
                             ),
-                            _coinChip('$joiningCoins join'),
+                            if (!isMine)
+                              _coinChip(
+                                joiningCoins <= 0
+                                    ? 'Free to join'
+                                    : '$joiningCoins coins to join',
+                              ),
+                            if (isMine && joiningCoins > 0)
+                              _coinChip('$joiningCoins join fee'),
                             if ((group['myRole']?.toString() ?? '').isNotEmpty)
                               _metaChip(
                                 Icons.shield_rounded,
@@ -494,16 +501,12 @@ class FamilyView extends GetView<FamilyController> {
   }
 
   void _confirmJoin(Map<String, dynamic> group) {
-    final coins = group['joiningCoins'] ?? 0;
+    final coins = _toJoinCoins(group['joiningCoins']);
     Get.bottomSheet<void>(
-      _ActionSheet(
-        title: 'Join ${group['name']}',
-        subtitle: coins == 0
-            ? 'This group is free to join.'
-            : 'Joining will debit $coins coins from your wallet.',
-        icon: Icons.groups_rounded,
-        actionLabel: 'Join Group',
-        onAction: () {
+      _JoinFamilyConfirmSheet(
+        group: group,
+        joiningCoins: coins,
+        onConfirm: () {
           Get.back<void>();
           controller.joinFamily(group);
         },
@@ -511,6 +514,12 @@ class FamilyView extends GetView<FamilyController> {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
     );
+  }
+
+  int _toJoinCoins(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 
   void showCreateSheet(BuildContext context) {
@@ -1649,8 +1658,24 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
               );
             }),
           ),
+          Obx(() => _buildTypingBanner()),
           _composer(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTypingBanner() {
+    if (!controller.isAnyoneTyping) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: AppText(
+          text: controller.typingStatusLabel,
+          fontSize: TextStyles.k12FontSize,
+          color: kColorPrimary,
+        ),
       ),
     );
   }
@@ -1689,6 +1714,14 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
               ),
               const SizedBox(height: 2),
               Obx(() {
+                if (controller.isAnyoneTyping) {
+                  return AppText(
+                    text: controller.typingStatusLabel,
+                    fontSize: TextStyles.k12FontSize,
+                    color: kColorPrimary,
+                    maxLines: 1,
+                  );
+                }
                 final count = controller.familyMembers.isNotEmpty
                     ? controller.familyMembers.length
                     : (widget.group['memberCount'] ?? 0);
@@ -1941,6 +1974,7 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
                   vertical: 12,
                 ),
               ),
+              onChanged: controller.onComposerTextChanged,
               onSubmitted: (_) => controller.sendTextMessage(
                 familyId: familyId,
                 textController: _textController,
@@ -2040,211 +2074,372 @@ class FamilyGroupInfoPage extends StatelessWidget {
     final controller = Get.find<FamilyController>();
     final familyId = controller.familyIdOf(group);
     final name = group['name']?.toString() ?? 'Family Group';
-    final admin = controller.isAdmin(group);
     final description = group['description']?.toString().trim() ?? '';
     final joiningCoins = group['joiningCoins'] ?? 0;
 
     return Scaffold(
-      backgroundColor: kColorWhite,
-      appBar: AppBar(
-        backgroundColor: kColorWhite,
-        surfaceTintColor: kColorWhite,
-        elevation: 0,
-        centerTitle: true,
-        automaticallyImplyLeading: false,
-        leadingWidth: 60,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 10),
-          child: IconButton(
-            onPressed: Get.back,
-            icon: SvgPicture.asset(kIconArrowBack),
+      backgroundColor: _FamilyUi.bg,
+      body: Container(
+        decoration: BoxDecoration(
+          image: const DecorationImage(
+            image: AssetImage(kImgBG),
+            fit: BoxFit.cover,
+            opacity: 0.55,
+          ),
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              _FamilyUi.violet.withValues(alpha: 0.28),
+              _FamilyUi.bg,
+              _FamilyUi.ink,
+            ],
           ),
         ),
-        title: Text(
-          'Group info',
-          style: TextStyles.kBoldPoppins(
-            fontSize: TextStyles.k18FontSize,
-            colors: kColorText,
+        child: SafeArea(
+          child: Column(
+            children: [
+              _infoHeader(),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+                  children: [
+                    _heroCard(
+                      controller: controller,
+                      name: name,
+                      description: description,
+                      joiningCoins: joiningCoins,
+                    ),
+                    Spacing.v16,
+                    _membersSection(
+                      controller: controller,
+                      familyId: familyId,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
-      body: Column(
+    );
+  }
+
+  Widget _infoHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: Row(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-            child: Column(
+          AdminAgencyUi.glassIconButton(
+            icon: Icons.arrow_back_ios_new_rounded,
+            onTap: Get.back,
+            accent: _FamilyUi.violet,
+            size: 44,
+            iconSize: 18,
+          ),
+          Spacing.h12,
+          const Expanded(
+            child: SemiBoldText(
+              text: 'Group info',
+              fontSize: TextStyles.k20FontSize,
+              color: kColorWhite,
+            ),
+          ),
+          AdminAgencyUi.glowIcon(
+            icon: Icons.info_outline_rounded,
+            accent: _FamilyUi.cyan,
+            accentEnd: _FamilyUi.violet,
+            size: 42,
+            iconSize: 20,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _heroCard({
+    required FamilyController controller,
+    required String name,
+    required String description,
+    required dynamic joiningCoins,
+  }) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 22, 18, 18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            _FamilyUi.panel2.withValues(alpha: 0.98),
+            _FamilyUi.ink.withValues(alpha: 0.96),
+          ],
+        ),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.28),
+            blurRadius: 22,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _Avatar(
+            imageUrl: group['logo']?.toString() ?? '',
+            name: name,
+            size: 92,
+          ),
+          Spacing.v12,
+          SemiBoldText(
+            text: name,
+            fontSize: TextStyles.k20FontSize,
+            color: kColorWhite,
+            align: TextAlign.center,
+          ),
+          Spacing.v6,
+          Obx(() {
+            final count = controller.familyMembers.isNotEmpty
+                ? controller.familyMembers.length
+                : (group['memberCount'] ?? 0);
+            return AppText(
+              text: 'Group · $count members',
+              fontSize: TextStyles.k12FontSize,
+              color: kColorWhite.withValues(alpha: 0.68),
+              align: TextAlign.center,
+            );
+          }),
+          if (description.isNotEmpty) ...[
+            Spacing.v10,
+            AppText(
+              text: description,
+              fontSize: TextStyles.k12FontSize,
+              color: kColorWhite.withValues(alpha: 0.72),
+              align: TextAlign.center,
+            ),
+          ],
+          Spacing.v12,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(999),
+              gradient: LinearGradient(
+                colors: [
+                  _FamilyUi.gold.withValues(alpha: 0.22),
+                  _FamilyUi.pink.withValues(alpha: 0.14),
+                ],
+              ),
+              border: Border.all(color: _FamilyUi.gold.withValues(alpha: 0.35)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                _Avatar(
-                  imageUrl: group['logo']?.toString() ?? '',
-                  name: name,
-                  size: 88,
+                const AppCoinIcon(size: 16, color: _FamilyUi.gold),
+                Spacing.h6,
+                AppText(
+                  text: 'Join coins: $joiningCoins',
+                  fontSize: TextStyles.k12FontSize,
+                  color: _FamilyUi.gold,
                 ),
-                Spacing.v12,
-                SemiBoldText(
-                  text: name,
-                  fontSize: TextStyles.k20FontSize,
-                  color: kColorText,
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _membersSection({
+    required FamilyController controller,
+    required String familyId,
+  }) {
+    return Obx(() {
+      final admin = controller.isAdmin(group);
+      final members = controller.familyMembers;
+      return Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          color: _FamilyUi.panel.withValues(alpha: 0.92),
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 10, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SemiBoldText(
+                      text: 'Members${members.isEmpty ? '' : ' (${members.length})'}',
+                      fontSize: TextStyles.k14FontSize,
+                      color: kColorWhite,
+                    ),
+                  ),
+                  if (!admin)
+                    TextButton(
+                      onPressed: () => controller.leaveFamily(group),
+                      child: const AppText(
+                        text: 'Leave group',
+                        fontSize: 13,
+                        color: Color(0xFFFF6B8A),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            if (controller.isLoadingMembers.value && members.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 36),
+                child: Center(
+                  child: CircularProgressIndicator(color: _FamilyUi.pink),
+                ),
+              )
+            else if (members.isEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                child: AppText(
+                  text: 'No members found.',
+                  fontSize: 13,
+                  color: kColorWhite.withValues(alpha: 0.55),
                   align: TextAlign.center,
                 ),
-                Spacing.v4,
-                Obx(() {
-                  final count = controller.familyMembers.isNotEmpty
-                      ? controller.familyMembers.length
-                      : (group['memberCount'] ?? 0);
-                  return AppText(
-                    text: 'Group · $count members',
-                    fontSize: TextStyles.k12FontSize,
-                    color: kColorHint,
-                    align: TextAlign.center,
+              )
+            else
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(10, 0, 10, 12),
+                itemCount: members.length,
+                separatorBuilder: (_, __) => Divider(
+                  height: 1,
+                  color: kColorWhite.withValues(alpha: 0.06),
+                ),
+                itemBuilder: (_, index) {
+                  final member = members[index];
+                  return _memberTile(
+                    controller: controller,
+                    familyId: familyId,
+                    member: member,
+                    canManage: admin,
                   );
-                }),
-                if (description.isNotEmpty) ...[
-                  Spacing.v10,
-                  AppText(
-                    text: description,
-                    fontSize: TextStyles.k12FontSize,
-                    color: kColorTextGrey,
-                    align: TextAlign.center,
-                  ),
-                ],
-                Spacing.v12,
-                Container(
+                },
+              ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _memberTile({
+    required FamilyController controller,
+    required String familyId,
+    required Map<String, dynamic> member,
+    required bool canManage,
+  }) {
+    final userId = member['userId']?.toString() ?? '';
+    final self = userId == controller.currentUserId;
+    final role = (member['role']?.toString() ?? 'member').toLowerCase();
+    final name = member['name']?.toString() ?? 'Member';
+    final memberIsAdmin = controller.isMemberAdmin(member);
+    final canRemove = canManage && !self && !memberIsAdmin;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+      child: Row(
+        children: [
+          _Avatar(
+            imageUrl: member['displayPicture']?.toString() ?? '',
+            frameUrl: member['avatarFrameUrl']?.toString() ?? '',
+            name: name,
+            size: 48,
+          ),
+          Spacing.h12,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SemiBoldText(
+                  text: name,
+                  fontSize: 14,
+                  color: kColorWhite,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Spacing.v2,
+                AppText(
+                  text: self ? '$role · You' : role,
+                  fontSize: 12,
+                  color: kColorWhite.withValues(alpha: 0.55),
+                ),
+              ],
+            ),
+          ),
+          if (memberIsAdmin) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
+                gradient: LinearGradient(
+                  colors: [
+                    _FamilyUi.violet.withValues(alpha: 0.45),
+                    _FamilyUi.pink.withValues(alpha: 0.35),
+                  ],
+                ),
+                border: Border.all(
+                  color: kColorWhite.withValues(alpha: 0.14),
+                ),
+              ),
+              child: const AppText(
+                text: 'Admin',
+                fontSize: 11,
+                color: kColorWhite,
+              ),
+            ),
+            if (canRemove) Spacing.h8,
+          ],
+          if (canRemove)
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => controller.removeMember(
+                  familyId: familyId,
+                  userId: userId,
+                  memberName: name,
+                ),
+                borderRadius: BorderRadius.circular(14),
+                child: Ink(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
+                    horizontal: 12,
+                    vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: _FamilyChatUi.incomingBubble,
                     borderRadius: BorderRadius.circular(14),
+                    color: const Color(0xFFFF5C8A).withValues(alpha: 0.14),
+                    border: Border.all(
+                      color: const Color(0xFFFF5C8A).withValues(alpha: 0.35),
+                    ),
                   ),
-                  child: Row(
+                  child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const AppCoinIcon(size: 16, color: kColorPrimary),
-                      Spacing.h6,
+                      Icon(
+                        Icons.person_remove_rounded,
+                        size: 16,
+                        color: Color(0xFFFF6B8A),
+                      ),
+                      SizedBox(width: 6),
                       AppText(
-                        text: 'Join coins: $joiningCoins',
-                        fontSize: TextStyles.k12FontSize,
-                        color: kColorText,
+                        text: 'Remove',
+                        fontSize: 12,
+                        color: Color(0xFFFF6B8A),
                       ),
                     ],
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
-          const Divider(height: 1, color: Color(0xFFE8E8EE)),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
-            child: Row(
-              children: [
-                const Expanded(
-                  child: SemiBoldText(
-                    text: 'Members',
-                    fontSize: TextStyles.k14FontSize,
-                    color: kColorText,
-                  ),
-                ),
-                if (!admin)
-                  TextButton(
-                    onPressed: () => controller.leaveFamily(group),
-                    child: const AppText(
-                      text: 'Leave group',
-                      fontSize: 13,
-                      color: kColorRed,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: Obx(() {
-              if (controller.isLoadingMembers.value &&
-                  controller.familyMembers.isEmpty) {
-                return const Center(
-                  child: CircularProgressIndicator(color: kColorPrimary),
-                );
-              }
-              if (controller.familyMembers.isEmpty) {
-                return const Center(
-                  child: AppText(
-                    text: 'No members found.',
-                    fontSize: 13,
-                    color: kColorHint,
-                  ),
-                );
-              }
-              return ListView.separated(
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
-                itemCount: controller.familyMembers.length,
-                separatorBuilder: (_, __) => const Divider(
-                  height: 1,
-                  color: Color(0xFFF0F0F4),
-                ),
-                itemBuilder: (_, index) {
-                  final member = controller.familyMembers[index];
-                  final userId = member['userId']?.toString() ?? '';
-                  final self = userId == controller.currentUserId;
-                  final role = (member['role']?.toString() ?? 'member')
-                      .toLowerCase();
-                  return ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    leading: _Avatar(
-                      imageUrl: member['displayPicture']?.toString() ?? '',
-                      frameUrl: member['avatarFrameUrl']?.toString() ?? '',
-                      name: member['name']?.toString() ?? 'M',
-                      size: 46,
-                    ),
-                    title: SemiBoldText(
-                      text: member['name']?.toString() ?? 'Member',
-                      fontSize: 14,
-                      color: kColorText,
-                    ),
-                    subtitle: AppText(
-                      text: self
-                          ? '$role · You'
-                          : role,
-                      fontSize: 12,
-                      color: kColorHint,
-                    ),
-                    trailing: admin && !self
-                        ? IconButton(
-                            onPressed: () => controller.removeMember(
-                              familyId: familyId,
-                              userId: userId,
-                            ),
-                            icon: const Icon(
-                              Icons.person_remove_rounded,
-                              color: kColorRed,
-                            ),
-                          )
-                        : (role == 'admin' ||
-                                role == 'owner' ||
-                                role == 'creator')
-                            ? Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: _FamilyChatUi.outgoingBubble,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const AppText(
-                                  text: 'Admin',
-                                  fontSize: 11,
-                                  color: kColorPrimary,
-                                ),
-                              )
-                            : null,
-                  );
-                },
-              );
-            }),
-          ),
         ],
       ),
     );
@@ -2358,28 +2553,33 @@ class _CatalogSheet extends StatelessWidget {
   }
 }
 
-class _ActionSheet extends StatelessWidget {
-  const _ActionSheet({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.actionLabel,
-    required this.onAction,
+class _JoinFamilyConfirmSheet extends StatelessWidget {
+  const _JoinFamilyConfirmSheet({
+    required this.group,
+    required this.joiningCoins,
+    required this.onConfirm,
   });
 
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final String actionLabel;
-  final VoidCallback onAction;
+  final Map<String, dynamic> group;
+  final int joiningCoins;
+  final VoidCallback onConfirm;
 
   @override
   Widget build(BuildContext context) {
+    final name = group['name']?.toString() ?? 'Family Group';
+    final isPaid = joiningCoins > 0;
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
-      decoration: const BoxDecoration(
-        color: _FamilyUi.panel,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF241833), _FamilyUi.bg],
+        ),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        border: Border(
+          top: BorderSide(color: kColorWhite.withValues(alpha: 0.10)),
+        ),
       ),
       child: SafeArea(
         top: false,
@@ -2388,7 +2588,7 @@ class _ActionSheet extends StatelessWidget {
           children: [
             const _SheetHandle(),
             AdminAgencyUi.glowIcon(
-              icon: icon,
+              icon: Icons.groups_rounded,
               accent: _FamilyUi.gold,
               accentEnd: _FamilyUi.pink,
               size: 60,
@@ -2396,36 +2596,124 @@ class _ActionSheet extends StatelessWidget {
             ),
             Spacing.v12,
             SemiBoldText(
-              text: title,
+              text: 'Join $name',
               fontSize: TextStyles.k18FontSize,
               color: kColorWhite,
               align: TextAlign.center,
             ),
-            Spacing.v6,
+            Spacing.v8,
             AppText(
-              text: subtitle,
+              text: isPaid
+                  ? 'This group requires joining coins. Your wallet will be debited and the admin receives the fee.'
+                  : 'This group is free to join. No coins will be charged.',
               fontSize: 13,
               color: kColorWhite.withValues(alpha: 0.72),
               align: TextAlign.center,
             ),
             Spacing.v16,
-            SizedBox(
+            Container(
               width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: onAction,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _FamilyUi.pink,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                gradient: LinearGradient(
+                  colors: [
+                    _FamilyUi.gold.withValues(alpha: 0.18),
+                    _FamilyUi.pink.withValues(alpha: 0.12),
+                  ],
                 ),
-                child: SemiBoldText(
-                  text: actionLabel,
-                  fontSize: TextStyles.k14FontSize,
-                  color: kColorWhite,
+                border: Border.all(
+                  color: _FamilyUi.gold.withValues(alpha: 0.35),
                 ),
               ),
+              child: Row(
+                children: [
+                  const AppCoinIcon(size: 28, color: _FamilyUi.gold),
+                  Spacing.h12,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        AppText(
+                          text: isPaid ? 'Joining coins' : 'Join fee',
+                          fontSize: TextStyles.k12FontSize,
+                          color: kColorWhite.withValues(alpha: 0.7),
+                        ),
+                        Spacing.v2,
+                        SemiBoldText(
+                          text: isPaid ? '$joiningCoins coins' : 'Free',
+                          fontSize: TextStyles.k18FontSize,
+                          color: _FamilyUi.gold,
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (isPaid)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _FamilyUi.gold.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: const AppText(
+                        text: 'Required',
+                        fontSize: 11,
+                        color: _FamilyUi.gold,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Spacing.v16,
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 50,
+                    child: OutlinedButton(
+                      onPressed: Get.back,
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                          color: kColorWhite.withValues(alpha: 0.22),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: SemiBoldText(
+                        text: 'Cancel',
+                        fontSize: TextStyles.k14FontSize,
+                        color: kColorWhite.withValues(alpha: 0.85),
+                      ),
+                    ),
+                  ),
+                ),
+                Spacing.h10,
+                Expanded(
+                  child: SizedBox(
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: onConfirm,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _FamilyUi.pink,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: SemiBoldText(
+                        text: isPaid
+                            ? 'Pay $joiningCoins & Join'
+                            : 'Join Group',
+                        fontSize: TextStyles.k14FontSize,
+                        color: kColorWhite,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
