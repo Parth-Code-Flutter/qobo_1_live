@@ -130,7 +130,8 @@ class AuthSignUpController extends GetxController {
 
   String? get verifiedReferralCodeForSignup {
     if (!isReferralVerified.value) return null;
-    return _verifiedReferralCode ?? referralCodeController.text.trim().toUpperCase();
+    return _verifiedReferralCode ??
+        referralCodeController.text.trim().toUpperCase();
   }
 
   Future<void> onSignUpPressed(BuildContext context) async {
@@ -166,13 +167,28 @@ class AuthSignUpController extends GetxController {
   Future<void> _completeRegistration(BuildContext context) async {
     try {
       isSignUpLoading.value = true;
-      final response = await _authRepo.register(
+      var response = await _authRepo.register(
         username: usernameController.text.trim(),
         password: passwordController.text.trim(),
         referralCode: verifiedReferralCodeForSignup,
         isShowLoader: false,
       );
       if (!context.mounted) return;
+      if (AuthSessionHelper.requiresLoginTakeover(response)) {
+        response = await AuthSessionHelper.confirmAndForceLogin(
+          context,
+          response,
+          onForceLogin: () => _authRepo.register(
+            username: usernameController.text.trim(),
+            password: passwordController.text.trim(),
+            referralCode: verifiedReferralCodeForSignup,
+            isShowLoader: false,
+            forceLogin: true,
+          ),
+        );
+        if (!context.mounted) return;
+        if (AuthSessionHelper.requiresLoginTakeover(response)) return;
+      }
       if (_isSuccessResponse(response)) {
         AppToast.showSuccess(context, 'Registration successful!');
         Get.toNamed(
@@ -264,10 +280,7 @@ class AuthSignUpController extends GetxController {
     return ApiResponseUtils.isBodySuccess(response);
   }
 
-  String _responseMessage(
-    Map<String, dynamic>? response,
-    String fallback,
-  ) {
+  String _responseMessage(Map<String, dynamic>? response, String fallback) {
     return ApiResponseUtils.tryGetMessage(response) ?? fallback;
   }
 
@@ -333,7 +346,18 @@ class AuthSignUpController extends GetxController {
         isShowLoader: false,
       );
       if (!context.mounted) return;
-      await AuthSessionHelper.handleAuthApiResponse(context, response);
+      await AuthSessionHelper.handleAuthApiResponse(
+        context,
+        response,
+        onForceLogin: () => _authRepo.socialLogin(
+          request: SocialLoginRequestModel.fromSocialUser(
+            socialUser,
+            referralCode: verifiedReferralCodeForSignup,
+          ),
+          isShowLoader: false,
+          forceLogin: true,
+        ),
+      );
     } catch (e) {
       if (context.mounted) {
         AppToast.showError(context, _friendlyGoogleError(e));
@@ -369,7 +393,18 @@ class AuthSignUpController extends GetxController {
         isShowLoader: false,
       );
       if (!context.mounted) return;
-      await AuthSessionHelper.handleAuthApiResponse(context, response);
+      await AuthSessionHelper.handleAuthApiResponse(
+        context,
+        response,
+        onForceLogin: () => _authRepo.socialLogin(
+          request: SocialLoginRequestModel.fromSocialUser(
+            socialUser,
+            referralCode: verifiedReferralCodeForSignup,
+          ),
+          isShowLoader: false,
+          forceLogin: true,
+        ),
+      );
     } catch (e) {
       if (context.mounted) {
         AppToast.showError(context, e.toString());

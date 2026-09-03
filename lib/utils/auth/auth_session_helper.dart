@@ -8,6 +8,7 @@ import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/firebase/fcm_token_sync_service.dart';
 import 'package:qobo_one_live/services/realtime/user_realtime_socket_service.dart';
 import 'package:qobo_one_live/services/pk/pk_v1_coordinator.dart';
+import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
 import 'package:qobo_one_live/utils/auth/role_home_route.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 import 'package:qobo_one_live/utils/profile/stored_profile_map.dart';
@@ -30,12 +31,52 @@ abstract final class AuthSessionHelper {
     return '';
   }
 
+  static bool requiresLoginTakeover(Map<String, dynamic>? response) {
+    if (response == null) return false;
+    final data = response['data'];
+    final bodyStatusCode = (response['statusCode'] as num?)?.toInt();
+    return bodyStatusCode == 2 ||
+        response['isAlreadyLoggedIn'] == true ||
+        response['requireConfirmation'] == true ||
+        (data is Map &&
+            (data['isAlreadyLoggedIn'] == true ||
+                data['requireConfirmation'] == true));
+  }
+
+  static Future<Map<String, dynamic>?> confirmAndForceLogin(
+    BuildContext context,
+    Map<String, dynamic>? response, {
+    required Future<Map<String, dynamic>?> Function() onForceLogin,
+  }) async {
+    if (!context.mounted || !requiresLoginTakeover(response)) return response;
+
+    final message = (response?['message'] as String?)?.trim();
+    final confirmed = await CommonAppDialog.confirm(
+      context: context,
+      title: 'Already Logged In',
+      message: message?.isNotEmpty == true
+          ? message!
+          : 'You are already logged in on another device. Do you want to log out from the other device and log in on this device?',
+      icon: Icons.phonelink_lock_rounded,
+      iconAccent: const Color(0xFFFFA53D),
+      cancelLabel: 'Cancel',
+      confirmLabel: 'Log In Here',
+      barrierDismissible: false,
+    );
+
+    if (confirmed != true || !context.mounted) {
+      return response;
+    }
+    return onForceLogin();
+  }
+
   /// Handles API envelope `statusCode` / `message` / `data` used across auth flows.
   static Future<void> handleAuthApiResponse(
     BuildContext context,
     Map<String, dynamic>? response, {
     String successFallbackMessage = 'Login successful',
     String failureFallbackMessage = 'Login failed',
+    Future<Map<String, dynamic>?> Function()? onForceLogin,
   }) async {
     if (!context.mounted) return;
     if (response == null) {
@@ -46,6 +87,33 @@ abstract final class AuthSessionHelper {
     final statusCode = (response['statusCode'] as num?)?.toInt() ?? 0;
     final message = (response['message'] as String?)?.trim();
     final data = response['data'];
+
+    if (requiresLoginTakeover(response)) {
+      if (onForceLogin == null) {
+        AppToast.showError(
+          context,
+          message?.isNotEmpty == true ? message! : failureFallbackMessage,
+        );
+        return;
+      }
+      final forcedResponse = await confirmAndForceLogin(
+        context,
+        response,
+        onForceLogin: onForceLogin,
+      );
+      if (!context.mounted ||
+          forcedResponse == null ||
+          identical(forcedResponse, response)) {
+        return;
+      }
+      await handleAuthApiResponse(
+        context,
+        forcedResponse,
+        successFallbackMessage: successFallbackMessage,
+        failureFallbackMessage: failureFallbackMessage,
+      );
+      return;
+    }
 
     if (statusCode == 1) {
       final storage = LocalStorage.shared;

@@ -64,6 +64,19 @@ class AuthLoginController extends GetxController {
     super.onClose();
   }
 
+  void prepareForLoginScreen() {
+    FocusManager.instance.primaryFocus?.unfocus();
+    emailController.clear();
+    passwordController.clear();
+    isPasswordHidden.value = true;
+    isLoginLoading.value = false;
+    isGoogleLoginLoading.value = false;
+    isFacebookLoginLoading.value = false;
+    isAppleLoginLoading.value = false;
+    isFirebaseLoginLoading.value = false;
+    isPhoneInput.value = false;
+  }
+
   void togglePasswordVisibility() {
     isPasswordHidden.value = !isPasswordHidden.value;
   }
@@ -119,7 +132,16 @@ class AuthLoginController extends GetxController {
         isShowLoader: false,
       );
       if (!context.mounted) return;
-      await AuthSessionHelper.handleAuthApiResponse(context, response);
+      await AuthSessionHelper.handleAuthApiResponse(
+        context,
+        response,
+        onForceLogin: () => _authRepo.login(
+          username: resolvedLoginUsername,
+          password: passwordController.text.trim(),
+          isShowLoader: false,
+          forceLogin: true,
+        ),
+      );
     } catch (e) {
       if (context.mounted) {
         AppToast.showError(context, e.toString());
@@ -167,7 +189,15 @@ class AuthLoginController extends GetxController {
         isShowLoader: false,
       );
       if (!context.mounted) return;
-      await AuthSessionHelper.handleAuthApiResponse(context, response);
+      await AuthSessionHelper.handleAuthApiResponse(
+        context,
+        response,
+        onForceLogin: () => _authRepo.socialLogin(
+          request: SocialLoginRequestModel.fromSocialUser(socialUser),
+          isShowLoader: false,
+          forceLogin: true,
+        ),
+      );
     } catch (e) {
       if (context.mounted) {
         AppToast.showError(context, _friendlyGoogleError(e));
@@ -204,7 +234,15 @@ class AuthLoginController extends GetxController {
         isShowLoader: false,
       );
       if (!context.mounted) return;
-      await AuthSessionHelper.handleAuthApiResponse(context, response);
+      await AuthSessionHelper.handleAuthApiResponse(
+        context,
+        response,
+        onForceLogin: () => _authRepo.socialLogin(
+          request: SocialLoginRequestModel.fromSocialUser(socialUser),
+          isShowLoader: false,
+          forceLogin: true,
+        ),
+      );
     } catch (e) {
       if (context.mounted) {
         AppToast.showError(context, e.toString());

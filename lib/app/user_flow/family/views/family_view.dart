@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
@@ -8,6 +9,8 @@ import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
+import 'package:qobo_one_live/utils/text_utils/phone_mask_utils.dart';
+import 'package:qobo_one_live/utils/text_utils/profanity_mask_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 import '../controllers/family_controller.dart';
@@ -22,6 +25,14 @@ abstract final class _FamilyUi {
   static const gold = Color(0xFFFFCF5D);
   static const green = Color(0xFF25D98F);
   static const ink = Color(0xFF10091D);
+}
+
+/// Light chat tokens — match 1:1 [ChatDetailView] look for family group chat only.
+abstract final class _FamilyChatUi {
+  static const scaffold = kColorWhite;
+  static const incomingBubble = Color(0xFFF3F4F8);
+  static const outgoingBubble = Color(0xFFF5E6F1);
+  static const composerField = Color(0xFFF5F5F5);
 }
 
 class FamilyView extends GetView<FamilyController> {
@@ -1594,123 +1605,108 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
   Widget build(BuildContext context) {
     final name = widget.group['name']?.toString() ?? 'Family Group';
     return Scaffold(
-      backgroundColor: _FamilyUi.bg,
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _chatHeader(name),
-              Expanded(
-                child: StreamBuilder<List<Map<String, dynamic>>>(
-                  stream: controller.watchMessages(familyId),
-                  builder: (_, snapshot) {
-                    final messages = snapshot.data ?? const [];
-                    if (messages.isEmpty) {
-                      return _chatEmpty();
-                    }
-                    return ListView.builder(
-                      reverse: false,
-                      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                      itemCount: messages.length,
-                      itemBuilder: (_, index) =>
-                          _messageBubble(messages[index]),
-                    );
-                  },
-                ),
-              ),
-              _composer(),
-            ],
-          ),
-        ),
+      backgroundColor: _FamilyChatUi.scaffold,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: _chatHeader(name),
       ),
-    );
-  }
-
-  Widget _chatHeader(String name) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 8, 12, 6),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: _FamilyUi.panel.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.1)),
-      ),
-      child: Row(
+      body: Column(
         children: [
-          IconButton(
-            onPressed: Get.back,
-            icon: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              color: kColorWhite,
-            ),
-          ),
-          _Avatar(
-            imageUrl: widget.group['logo']?.toString() ?? '',
-            name: name,
-            size: 44,
-          ),
-          Spacing.h10,
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SemiBoldText(
-                  text: name,
-                  fontSize: 15,
-                  color: kColorWhite,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                AppText(
-                  text: '${widget.group['memberCount'] ?? 0} members',
-                  fontSize: 11,
-                  color: kColorWhite.withValues(alpha: 0.65),
-                ),
-              ],
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: controller.watchMessages(familyId),
+              builder: (_, snapshot) {
+                final messages = snapshot.data ?? const [];
+                if (messages.isEmpty) {
+                  return _chatEmpty();
+                }
+                return ListView.builder(
+                  reverse: false,
+                  physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics(),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 20,
+                  ),
+                  itemCount: messages.length,
+                  itemBuilder: (_, index) => _messageBubble(messages[index]),
+                );
+              },
             ),
           ),
-          IconButton(
-            onPressed: _showMembersSheet,
-            icon: const Icon(Icons.settings_rounded, color: _FamilyUi.cyan),
-          ),
+          _composer(),
         ],
       ),
     );
   }
 
-  Widget _chatEmpty() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AdminAgencyUi.glowIcon(
-              icon: Icons.forum_rounded,
-              accent: _FamilyUi.cyan,
-              accentEnd: _FamilyUi.violet,
-              size: 72,
-              iconSize: 34,
-            ),
-            Spacing.v12,
-            const SemiBoldText(
-              text: 'Start the family chat',
-              fontSize: TextStyles.k18FontSize,
-              color: kColorWhite,
-              align: TextAlign.center,
-            ),
-            Spacing.v6,
-            AppText(
-              text: 'Messages, emojis, and gifts will appear here in realtime.',
-              fontSize: 13,
-              color: kColorWhite.withValues(alpha: 0.68),
-              align: TextAlign.center,
-            ),
-          ],
+  Widget _chatHeader(String name) {
+    return AppBar(
+      backgroundColor: kColorWhite,
+      surfaceTintColor: kColorWhite,
+      elevation: 0,
+      centerTitle: true,
+      automaticallyImplyLeading: false,
+      leadingWidth: 60,
+      leading: Padding(
+        padding: const EdgeInsets.only(left: 10),
+        child: IconButton(
+          onPressed: Get.back,
+          icon: SvgPicture.asset(kIconArrowBack),
         ),
+      ),
+      title: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyles.kBoldPoppins(
+              fontSize: TextStyles.k18FontSize,
+              colors: kColorText,
+            ),
+          ),
+          const SizedBox(height: 2),
+          AppText(
+            text: '${widget.group['memberCount'] ?? 0} members',
+            fontSize: TextStyles.k12FontSize,
+            color: kColorHint,
+          ),
+        ],
+      ),
+      actions: [
+        IconButton(
+          onPressed: _showMembersSheet,
+          icon: const Icon(Icons.settings_rounded, color: kColorText),
+        ),
+        const SizedBox(width: 8),
+      ],
+    );
+  }
+
+  Widget _chatEmpty() {
+    return const Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.chat_bubble_outline_rounded, color: kColorHint, size: 56),
+          SizedBox(height: 12),
+          SemiBoldText(
+            text: 'Start the family chat',
+            fontSize: TextStyles.k16FontSize,
+            color: kColorText,
+            align: TextAlign.center,
+          ),
+          SizedBox(height: 6),
+          AppText(
+            text: 'Messages will appear here when available.',
+            fontSize: TextStyles.k12FontSize,
+            color: kColorHint,
+            align: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
@@ -1721,6 +1717,7 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
     final mine = message['senderId']?.toString() == controller.currentUserId;
     final text = _messageText(message, type);
     final media = _messageMedia(message, type);
+    final time = _messageTimeLabel(message);
 
     if (type == 'system') {
       return Padding(
@@ -1729,13 +1726,13 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
             decoration: BoxDecoration(
-              color: kColorWhite.withValues(alpha: 0.08),
+              color: _FamilyChatUi.incomingBubble,
               borderRadius: BorderRadius.circular(16),
             ),
             child: AppText(
               text: text,
               fontSize: 11,
-              color: kColorWhite.withValues(alpha: 0.75),
+              color: kColorHint,
             ),
           ),
         ),
@@ -1744,50 +1741,83 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
 
     return Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.sizeOf(context).width * 0.76,
-        ),
-        margin: const EdgeInsets.symmetric(vertical: 6),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: mine
-              ? _FamilyUi.pink
-              : _FamilyUi.panel.withValues(alpha: 0.92),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (!mine)
-              AppText(
-                text: sender,
-                fontSize: TextStyles.k10FontSize,
-                color: _FamilyUi.gold,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+      child: Column(
+        crossAxisAlignment: mine
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
+        children: [
+          Container(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.sizeOf(context).width * 0.74,
+            ),
+            margin: const EdgeInsets.only(top: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: mine
+                  ? _FamilyChatUi.outgoingBubble
+                  : _FamilyChatUi.incomingBubble,
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(16),
+                topRight: const Radius.circular(16),
+                bottomLeft: Radius.circular(mine ? 16 : 4),
+                bottomRight: Radius.circular(mine ? 4 : 16),
               ),
-            if (media.isNotEmpty) ...[
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: _FamilyNetworkImage(
-                  url: media,
-                  width: type == 'emoji' ? 92 : 120,
-                  height: type == 'emoji' ? 92 : 120,
-                  fit: BoxFit.cover,
-                  fallback: _FamilyImagePlaceholder(
-                    icon: type == 'emoji'
-                        ? Icons.emoji_emotions_rounded
-                        : Icons.card_giftcard_rounded,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (!mine)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: AppText(
+                      text: sender,
+                      fontSize: TextStyles.k10FontSize,
+                      color: kColorPrimary,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
+                if (media.isNotEmpty) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: _FamilyNetworkImage(
+                      url: media,
+                      width: type == 'emoji' ? 92 : 120,
+                      height: type == 'emoji' ? 92 : 120,
+                      fit: BoxFit.cover,
+                      fallback: _FamilyImagePlaceholder(
+                        icon: type == 'emoji'
+                            ? Icons.emoji_emotions_rounded
+                            : Icons.card_giftcard_rounded,
+                      ),
+                    ),
+                  ),
+                  Spacing.v6,
+                ],
+                AppText(
+                  text: ProfanityMaskUtils.mask(PhoneMaskUtils.mask(text)),
+                  fontSize: TextStyles.k14FontSize,
+                  color: kColorText,
                 ),
-              ),
-              Spacing.v6,
+              ],
+            ),
+          ),
+          Spacing.v4,
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppText(text: time, fontSize: 10, color: kColorHint),
+              if (mine) ...[
+                const SizedBox(width: 4),
+                const Icon(
+                  Icons.done_all_rounded,
+                  size: 14,
+                  color: kColorHint,
+                ),
+              ],
             ],
-            AppText(text: text, fontSize: 13, color: kColorWhite),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1818,46 +1848,63 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
     return '';
   }
 
+  String _messageTimeLabel(Map<String, dynamic> message) {
+    final time = controller.messageDate(message);
+    final hour = time.hour % 12 == 0 ? 12 : time.hour % 12;
+    final minute = time.minute.toString().padLeft(2, '0');
+    final suffix = time.hour >= 12 ? 'PM' : 'AM';
+    return '$hour:$minute $suffix';
+  }
+
   Widget _composer() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        12,
+        16,
+        MediaQuery.paddingOf(context).bottom + 12,
+      ),
       decoration: BoxDecoration(
-        color: _FamilyUi.bg.withValues(alpha: 0.92),
-        border: Border(
-          top: BorderSide(color: kColorWhite.withValues(alpha: 0.08)),
-        ),
+        color: kColorWhite,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            offset: const Offset(0, -4),
+            blurRadius: 10,
+          ),
+        ],
       ),
       child: Row(
         children: [
-          _roundAction(
-            Icons.emoji_emotions_rounded,
-            _FamilyUi.gold,
+          _composerIcon(
+            Icons.emoji_emotions_outlined,
+            kColorHint,
             _showEmojiSheet,
           ),
           Spacing.h8,
-          _roundAction(
+          _composerIcon(
             Icons.card_giftcard_rounded,
-            _FamilyUi.pink,
+            kColorHint,
             _showGiftSheet,
           ),
-          Spacing.h8,
+          Spacing.h12,
           Expanded(
             child: TextField(
               controller: _textController,
               style: TextStyles.kRegularPoppins(
                 fontSize: TextStyles.k14FontSize,
-                colors: kColorWhite,
+                colors: kColorText,
               ),
               decoration: InputDecoration(
-                hintText: 'Message the family...',
+                hintText: 'Type a message...',
                 hintStyle: TextStyles.kRegularPoppins(
                   fontSize: 13,
-                  colors: kColorWhite.withValues(alpha: 0.45),
+                  colors: kColorHint,
                 ),
                 filled: true,
-                fillColor: _FamilyUi.panel,
+                fillColor: _FamilyChatUi.composerField,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(22),
+                  borderRadius: BorderRadius.circular(20),
                   borderSide: BorderSide.none,
                 ),
                 contentPadding: const EdgeInsets.symmetric(
@@ -1871,37 +1918,45 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
               ),
             ),
           ),
-          Spacing.h8,
-          Obx(
-            () => _roundAction(
-              controller.isSendingMessage.value
-                  ? Icons.more_horiz_rounded
-                  : Icons.send_rounded,
-              _FamilyUi.cyan,
-              () => controller.sendTextMessage(
-                familyId: familyId,
-                textController: _textController,
+          Spacing.h12,
+          Obx(() {
+            final sending = controller.isSendingMessage.value;
+            return GestureDetector(
+              onTap: sending
+                  ? null
+                  : () => controller.sendTextMessage(
+                      familyId: familyId,
+                      textController: _textController,
+                    ),
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: const BoxDecoration(
+                  color: kColorPrimary,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  sending ? Icons.more_horiz_rounded : Icons.send_rounded,
+                  color: kColorWhite,
+                  size: 20,
+                ),
               ),
-            ),
-          ),
+            );
+          }),
         ],
       ),
     );
   }
 
-  Widget _roundAction(IconData icon, Color color, VoidCallback onTap) {
-    return InkWell(
+  Widget _composerIcon(IconData icon, Color color, VoidCallback onTap) {
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
       child: Container(
-        width: 42,
-        height: 42,
-        decoration: BoxDecoration(
-          color: _FamilyUi.panel,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withValues(alpha: 0.35)),
+        padding: const EdgeInsets.all(8),
+        decoration: const BoxDecoration(
+          color: _FamilyChatUi.composerField,
+          shape: BoxShape.circle,
         ),
-        child: Icon(icon, color: color, size: 21),
+        child: Icon(icon, color: color, size: 22),
       ),
     );
   }

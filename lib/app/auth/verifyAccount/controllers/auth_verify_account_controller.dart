@@ -294,7 +294,7 @@ class AuthVerifyAccountController extends GetxController {
         return;
       }
 
-      final message = res.message.trim().isNotEmpty
+      var message = res.message.trim().isNotEmpty
           ? res.message.trim()
           : 'Something went wrong.';
 
@@ -363,7 +363,7 @@ class AuthVerifyAccountController extends GetxController {
         return;
       }
 
-      final message = res.message.trim().isNotEmpty
+      var message = res.message.trim().isNotEmpty
           ? res.message.trim()
           : 'Something went wrong.';
 
@@ -422,7 +422,7 @@ class AuthVerifyAccountController extends GetxController {
 
     try {
       setContinueLoading(true);
-      final res = await _authRepo.verifyOtp(
+      var res = await _authRepo.verifyOtp(
         phone: _otpPhone,
         email: _otpEmail,
         otp: otpDigits,
@@ -436,9 +436,39 @@ class AuthVerifyAccountController extends GetxController {
         return;
       }
 
-      final message = res.message.trim().isNotEmpty
+      var message = res.message.trim().isNotEmpty
           ? res.message.trim()
           : 'Something went wrong.';
+
+      if (!isComeFromForgotPassword && res.statusCode == 2) {
+        final confirmed = await CommonAppDialog.confirm(
+          context: context,
+          title: 'Already Logged In',
+          message: message,
+          icon: Icons.phonelink_lock_rounded,
+          iconAccent: const Color(0xFFFFA53D),
+          cancelLabel: 'Cancel',
+          confirmLabel: 'Log In Here',
+          barrierDismissible: false,
+        );
+        if (!context.mounted || confirmed != true) return;
+        res = await _authRepo.verifyOtp(
+          phone: _otpPhone,
+          email: _otpEmail,
+          otp: otpDigits,
+          referralCode: _referralCode,
+          isShowLoader: false,
+          forceLogin: true,
+        );
+        if (!context.mounted) return;
+        if (res == null) {
+          AppToast.showError(context, 'Request failed. Please try again.');
+          return;
+        }
+        message = res.message.trim().isNotEmpty
+            ? res.message.trim()
+            : 'Something went wrong.';
+      }
 
       if (res.statusCode == 1) {
         final data = res.data;

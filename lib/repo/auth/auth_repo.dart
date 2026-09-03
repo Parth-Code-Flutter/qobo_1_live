@@ -43,6 +43,7 @@ class AuthRepo {
     required String username,
     required String password,
     bool isShowLoader = false,
+    bool forceLogin = false,
   }) async {
     final fcmToken = await _fcmTokenService.getToken();
     final platform = _mobilePlatform;
@@ -56,6 +57,7 @@ class AuthRepo {
         if (platform != null) 'platform': platform,
         'deviceId': deviceId,
         'device_id': deviceId,
+        if (forceLogin) 'forceLogin': true,
       },
       isShowLoader: isShowLoader,
       isLoginCall: true,
@@ -75,6 +77,7 @@ class AuthRepo {
     String? gender,
     String? referralCode,
     bool isShowLoader = true,
+    bool forceLogin = false,
   }) async {
     final fcmToken = await _fcmTokenService.getToken();
     final platform = _mobilePlatform;
@@ -94,6 +97,7 @@ class AuthRepo {
         if (gender != null && gender.trim().isNotEmpty) 'gender': gender.trim(),
         if (referralCode != null && referralCode.trim().isNotEmpty)
           'referralCode': referralCode.trim().toUpperCase(),
+        if (forceLogin) 'forceLogin': true,
       },
       isShowLoader: isShowLoader,
       isLoginCall: true,
@@ -142,6 +146,7 @@ class AuthRepo {
   Future<Map<String, dynamic>?> socialLogin({
     required SocialLoginRequestModel request,
     bool isShowLoader = false,
+    bool forceLogin = false,
   }) async {
     final requestJson = request.toJson();
     final fcmToken = await _fcmTokenService.getToken();
@@ -151,6 +156,7 @@ class AuthRepo {
     if (platform != null) requestJson['platform'] = platform;
     requestJson['deviceId'] = deviceId;
     requestJson['device_id'] = deviceId;
+    if (forceLogin) requestJson['forceLogin'] = true;
 
     final response = await _apiService.postRequest(
       endPoint: AuthEndpoints.socialLogin,
@@ -167,6 +173,7 @@ class AuthRepo {
   Future<Map<String, dynamic>?> firebaseLogin({
     required Map<String, dynamic> request,
     bool isShowLoader = false,
+    bool forceLogin = false,
   }) async {
     final requestJson = Map<String, dynamic>.from(request);
     final fcmToken = await _fcmTokenService.getToken();
@@ -176,6 +183,7 @@ class AuthRepo {
     if (platform != null) requestJson['platform'] = platform;
     requestJson['deviceId'] = deviceId;
     requestJson['device_id'] = deviceId;
+    if (forceLogin) requestJson['forceLogin'] = true;
 
     final response = await _apiService.postRequest(
       endPoint: AuthEndpoints.firebaseLogin,
@@ -305,6 +313,7 @@ class AuthRepo {
     required String otp,
     String? referralCode,
     bool isShowLoader = false,
+    bool forceLogin = false,
   }) async {
     final fcmToken = await _fcmTokenService.getToken();
     final platform = _mobilePlatform;
@@ -317,6 +326,7 @@ class AuthRepo {
       referralCode: referralCode,
       deviceId: deviceId,
       platform: platform,
+      forceLogin: forceLogin,
     );
 
     final response = await _apiService.postRequest(

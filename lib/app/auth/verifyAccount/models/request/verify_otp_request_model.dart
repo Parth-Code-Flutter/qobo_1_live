@@ -8,6 +8,7 @@ class VerifyOtpRequestModel {
     this.referralCode,
     this.deviceId,
     this.platform,
+    this.forceLogin = false,
   });
 
   final String phone;
@@ -17,6 +18,7 @@ class VerifyOtpRequestModel {
   final String? referralCode;
   final String? deviceId;
   final String? platform;
+  final bool forceLogin;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
     'phone': phone,
@@ -30,5 +32,6 @@ class VerifyOtpRequestModel {
     if (platform?.trim().isNotEmpty == true) 'platform': platform!.trim(),
     if (referralCode?.trim().isNotEmpty == true)
       'referralCode': referralCode!.trim().toUpperCase(),
+    if (forceLogin) 'forceLogin': true,
   };
 }

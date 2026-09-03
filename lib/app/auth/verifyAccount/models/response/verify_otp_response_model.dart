@@ -11,22 +11,20 @@ class VerifyOtpResponseModel {
   final VerifyOtpData? data;
 
   factory VerifyOtpResponseModel.fromJson(Map<String, dynamic> json) {
+    final rawData = json['data'];
+    final hasSessionData =
+        rawData is Map<String, dynamic> && rawData['user'] is Map;
     return VerifyOtpResponseModel(
       statusCode: (json['statusCode'] as num?)?.toInt() ?? 0,
       message: (json['message'] as String?) ?? '',
-      data: json['data'] == null
-          ? null
-          : VerifyOtpData.fromJson(json['data'] as Map<String, dynamic>),
+      data: hasSessionData ? VerifyOtpData.fromJson(rawData) : null,
     );
   }
 }
 
 /// Successful payload: authenticated user + JWT.
 class VerifyOtpData {
-  const VerifyOtpData({
-    required this.user,
-    required this.token,
-  });
+  const VerifyOtpData({required this.user, required this.token});
 
   final VerifyOtpUser user;
   final String token;
@@ -94,19 +92,19 @@ class VerifyOtpUser {
 
   /// Shape aligned with API JSON for local persistence.
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'name': name,
-        'phone': phone,
-        'email': email,
-        'displayPicture': displayPicture,
-        'level': level,
-        'vipLevel': vipLevel,
-        'role': role,
-        'isOnline': isOnline,
-        'country': country,
-        'bio': bio,
-        'gender': gender,
-        'dob': dob,
-        'createdAt': createdAt,
-      };
+    'id': id,
+    'name': name,
+    'phone': phone,
+    'email': email,
+    'displayPicture': displayPicture,
+    'level': level,
+    'vipLevel': vipLevel,
+    'role': role,
+    'isOnline': isOnline,
+    'country': country,
+    'bio': bio,
+    'gender': gender,
+    'dob': dob,
+    'createdAt': createdAt,
+  };
 }
