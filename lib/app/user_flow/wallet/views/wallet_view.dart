@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
-import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -56,152 +54,35 @@ class _WalletViewState extends State<WalletView> {
           image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
         ),
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 6, 14, 14),
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _walletHeader(),
-                Spacing.v20,
-                Expanded(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Obx(
-                                () => _balanceCard(
-                                  title: 'Diamonds',
-                                  amount: controller.coinBalance.value,
-                                  icon: kIconCoin2,
-                                ),
-                              ),
-                            ),
-                            // Spacing.h12,
-                            // Expanded(
-                            //   child: Obx(
-                            //     () => _balanceCard(
-                            //       title: 'Diamonds',
-                            //       amount: controller.diamondBalance.value,
-                            //       iconData: Icons.diamond_rounded,
-                            //       subtitle: controller.dollarBalance.value,
-                            //     ),
-                            //   ),
-                            // ),
-                          ],
-                        ),
-                        Spacing.v12,
-                        Obx(() => _earnedDollarsCard()),
-                        Spacing.v12,
-                        Obx(() => _withdrawalLimitCard()),
-                        Spacing.v12,
-                        Obx(() => _withdrawActionCard()),
-                        Spacing.v12,
-                        GestureDetector(
-                          onTap: () => Get.toNamed(Routes.VIP_STORE),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF8E2DE2), Color(0xFF4A00E0)],
-                                begin: Alignment.centerLeft,
-                                end: Alignment.centerRight,
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.15),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.storefront_rounded,
-                                  color: kColorWhite,
-                                  size: 24,
-                                ),
-                                Spacing.h12,
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const SemiBoldText(
-                                        text: 'VIP Decoration Store',
-                                        fontSize: TextStyles.k14FontSize,
-                                        color: kColorWhite,
-                                      ),
-                                      Spacing.v2,
-                                      AppText(
-                                        text:
-                                            'Get elite entrances, avatars, & chat bubbles!',
-                                        fontSize: 11,
-                                        color: kColorWhite.withValues(
-                                          alpha: 0.8,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const Icon(
-                                  Icons.chevron_right_rounded,
-                                  color: kColorWhite,
-                                  size: 22,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        Spacing.v16,
-                        const Align(
-                          alignment: Alignment.centerLeft,
-                          child: SemiBoldText(
-                            text: 'Buy Coin',
-                            fontSize: TextStyles.k20FontSize,
-                            color: kColorWhite,
-                          ),
-                        ),
-                        Spacing.v12,
-                        _coinPackagesPanel(),
-                      ],
-                    ),
-                  ),
+                Spacing.v16,
+                _balanceOverviewCard(),
+                const SizedBox(height: 14),
+                _vipTopUpBanner(),
+                const SizedBox(height: 18),
+                _sectionTitle(
+                  icon: Icons.layers_rounded,
+                  title: 'Choose Top Up Package',
                 ),
-                Spacing.v20,
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: Obx(() {
-                    final buying = controller.isBuying.value;
-                    return appButton(
-                      onPressed: () {
-                        if (buying) return;
-                        final plan = controller.selectedPackage;
-                        if (plan == null) {
-                          Get.snackbar(
-                            'Wallet',
-                            controller.packageError.value.isNotEmpty
-                                ? controller.packageError.value
-                                : 'No coin package available right now.',
-                            snackPosition: SnackPosition.BOTTOM,
-                            backgroundColor: Colors.black87,
-                            colorText: kColorWhite,
-                          );
-                          return;
-                        }
-                        _openCheckoutBottomSheet(plan);
-                      },
-                      buttonText: buying ? 'Processing…' : 'Buy Now',
-                      isGradient: false,
-                      buttonColor: kColorPrimary,
-                      borderRadius: 12,
-                    );
-                  }),
+                Spacing.v12,
+                _coinPackagesPanel(),
+                Spacing.v16,
+                _sectionTitle(
+                  icon: Icons.payment_rounded,
+                  title: 'Select Payment Method',
                 ),
+                Spacing.v10,
+                _paymentMethodsStrip(),
+                const SizedBox(height: 14),
+                _walletUtilityPanel(),
+                const SizedBox(height: 14),
+                _trustFooter(),
               ],
             ),
           ),
@@ -211,63 +92,527 @@ class _WalletViewState extends State<WalletView> {
   }
 
   Widget _coinPackagesPanel() {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: kColorWalletCardBorder.withValues(alpha: 0.6),
-          width: 1,
-        ),
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [kColorWalletCardBgTop, kColorWalletCardBgBottom],
-        ),
-      ),
-      child: Obx(() {
-        if (controller.isLoadingPackages.value) {
-          return const SizedBox(
-            height: 140,
-            child: Center(
-              child: CircularProgressIndicator(color: kColorPrimary),
-            ),
-          );
-        }
-        if (controller.packages.isEmpty) {
-          return Padding(
-            padding: const EdgeInsets.all(20),
-            child: Text(
-              controller.packageError.value.isNotEmpty
+    return Obx(() {
+      if (controller.isLoadingPackages.value) {
+        return _walletGlassPanel(
+          height: 180,
+          child: const Center(
+            child: CircularProgressIndicator(color: kColorWalletAmount),
+          ),
+        );
+      }
+      if (controller.packages.isEmpty) {
+        return _walletGlassPanel(
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: AppText(
+              text: controller.packageError.value.isNotEmpty
                   ? controller.packageError.value
                   : 'No coin packages found.',
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 13, color: kColorHint),
+              fontSize: 13,
+              color: kColorWhite.withValues(alpha: 0.72),
+              align: TextAlign.center,
             ),
-          );
-        }
-        return ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          itemCount: controller.packages.length,
-          separatorBuilder: (_, __) =>
-              Divider(color: kColorWhite.withValues(alpha: 0.12), height: 10),
-          itemBuilder: (_, index) {
-            final plan = controller.packages[index];
-            return GestureDetector(
-              onTap: () => controller.selectedPlanIndex.value = index,
-              child: Obx(
-                () => _coinPlanRow(
-                  coins: plan.coinsLabel,
-                  price: plan.priceLabel,
-                  hasExtra: false,
-                  isSelected: controller.selectedPlanIndex.value == index,
-                ),
+          ),
+        );
+      }
+      final displayIndexes =
+          List<int>.generate(controller.packages.length, (index) => index)
+            ..sort(
+              (a, b) => controller.packages[b].amount.compareTo(
+                controller.packages[a].amount,
               ),
             );
-          },
-        );
-      }),
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: displayIndexes.length,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          childAspectRatio: 0.90,
+        ),
+        itemBuilder: (_, index) {
+          final planIndex = displayIndexes[index];
+          final plan = controller.packages[planIndex];
+          return Obx(() {
+            final isSelected = controller.selectedPlanIndex.value == planIndex;
+            return _coinPlanCard(
+              plan: plan,
+              index: planIndex,
+              isSelected: isSelected,
+            );
+          });
+        },
+      );
+    });
+  }
+
+  Widget _balanceOverviewCard() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: const Color(0xFF130C36).withValues(alpha: 0.72),
+        border: Border.all(
+          color: const Color(0xFF8F36FF).withValues(alpha: 0.7),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF7F28FF).withValues(alpha: 0.18),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Obx(
+        () => Row(
+          children: [
+            Expanded(
+              child: _topBalanceItem(
+                title: 'My Coins',
+                value: controller.coinBalance.value,
+                accent: kColorWalletAmount,
+                icon: AppCoinIcon(size: 34, color: kColorWalletAmount),
+              ),
+            ),
+            Container(
+              width: 1,
+              height: 64,
+              color: kColorWhite.withValues(alpha: 0.14),
+            ),
+            Expanded(
+              child: _topBalanceItem(
+                title: 'My Diamonds',
+                value: controller.diamondBalance.value,
+                accent: const Color(0xFF31C8FF),
+                icon: const Icon(
+                  Icons.diamond_rounded,
+                  color: Color(0xFF31C8FF),
+                  size: 36,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _topBalanceItem({
+    required String title,
+    required String value,
+    required Color accent,
+    required Widget icon,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 58,
+            height: 58,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: accent.withValues(alpha: 0.12),
+              border: Border.all(color: accent.withValues(alpha: 0.42)),
+              boxShadow: [
+                BoxShadow(
+                  color: accent.withValues(alpha: 0.28),
+                  blurRadius: 18,
+                ),
+              ],
+            ),
+            child: Center(child: icon),
+          ),
+          Spacing.h10,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppText(
+                  text: title,
+                  fontSize: TextStyles.k12FontSize,
+                  color: kColorWhite.withValues(alpha: 0.68),
+                ),
+                Spacing.v4,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: SemiBoldText(
+                    text: value,
+                    fontSize: TextStyles.k20FontSize,
+                    color: accent,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _vipTopUpBanner() {
+    return GestureDetector(
+      onTap: () => Get.toNamed(Routes.VIP_STORE),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF331258), Color(0xFF5B1678), Color(0xFF31104C)],
+          ),
+          border: Border.all(
+            color: const Color(0xFFFF5EA7).withValues(alpha: 0.55),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFFF43C6).withValues(alpha: 0.16),
+              blurRadius: 24,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            _vipBadge(size: 74),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SemiBoldText(
+                    text: 'Become VIP & Get More!',
+                    fontSize: TextStyles.k16FontSize,
+                    color: kColorWalletAmount,
+                  ),
+                  Spacing.v6,
+                  _vipBenefit('10% Extra on every top up'),
+                  _vipBenefit('Exclusive gifts & badges'),
+                  _vipBenefit('VIP support & priority'),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFFD84E), Color(0xFFFF9C2A)],
+                ),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SemiBoldText(
+                    text: 'View',
+                    fontSize: 11,
+                    color: kColorBlack,
+                  ),
+                  Spacing.h4,
+                  const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    color: kColorBlack,
+                    size: 10,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _vipBenefit(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 3),
+      child: Row(
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: const BoxDecoration(
+              color: Color(0xFF9B5CFF),
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 7),
+          Expanded(
+            child: AppText(
+              text: text,
+              fontSize: 11,
+              color: kColorWhite.withValues(alpha: 0.84),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionTitle({required IconData icon, required String title}) {
+    return Row(
+      children: [
+        Icon(icon, color: const Color(0xFFB175FF), size: 20),
+        Spacing.h8,
+        SemiBoldText(
+          text: title,
+          fontSize: TextStyles.k14FontSize,
+          color: kColorWhite,
+        ),
+      ],
+    );
+  }
+
+  Widget _coinPlanCard({
+    required CoinPackage plan,
+    required int index,
+    required bool isSelected,
+  }) {
+    final bestValue = plan.amount >= 1000;
+    return GestureDetector(
+      onTap: () => controller.selectedPlanIndex.value = index,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF21115B), Color(0xFF17083E)],
+          ),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFFFF4DE3)
+                : kColorWhite.withValues(alpha: 0.12),
+            width: isSelected ? 1.4 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFFFF4DE3).withValues(alpha: 0.32),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ]
+              : null,
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            if (bestValue)
+              Positioned(
+                left: -12,
+                top: -12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFF2D8A),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      bottomRight: Radius.circular(14),
+                    ),
+                  ),
+                  child: const SemiBoldText(
+                    text: 'BEST VALUE',
+                    fontSize: 9,
+                    color: kColorWhite,
+                  ),
+                ),
+              ),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _coinStackGraphic(index),
+                Column(
+                  children: [
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: SemiBoldText(
+                        text: _formatPlanAmount(plan.amount),
+                        fontSize: TextStyles.k20FontSize,
+                        color: kColorWalletAmount,
+                      ),
+                    ),
+                    const AppText(
+                      text: 'Coins',
+                      fontSize: TextStyles.k12FontSize,
+                      color: kColorWhite,
+                    ),
+                    Spacing.v6,
+                    if (plan.amount >= 500)
+                      _extraBadge(_extraLabel(plan.amount))
+                    else
+                      const SizedBox(height: 22),
+                  ],
+                ),
+                SizedBox(
+                  width: double.infinity,
+                  height: 34,
+                  child: TextButton(
+                    onPressed: controller.isBuying.value
+                        ? null
+                        : () {
+                            controller.selectedPlanIndex.value = index;
+                            _openCheckoutBottomSheet(plan);
+                          },
+                    style: TextButton.styleFrom(
+                      backgroundColor: isSelected
+                          ? kColorWalletAmount
+                          : const Color(0xFF7424EA),
+                      foregroundColor: isSelected ? kColorBlack : kColorWhite,
+                      disabledBackgroundColor: kColorWhite.withValues(
+                        alpha: 0.10,
+                      ),
+                      padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: SemiBoldText(
+                      text: controller.isBuying.value ? '...' : plan.priceLabel,
+                      fontSize: TextStyles.k14FontSize,
+                      color: isSelected ? kColorBlack : kColorWhite,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _coinStackGraphic(int index) {
+    final selected = index == controller.selectedPlanIndex.value;
+    return Center(
+      child: SizedBox(
+        width: 126,
+        height: 58,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            Container(
+              width: 112,
+              height: 42,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFF8A3EF1).withValues(alpha: 0.24),
+                    const Color(0xFF2A115A).withValues(alpha: 0.18),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: kColorWalletAmount.withValues(alpha: 0.15),
+                    blurRadius: 18,
+                  ),
+                ],
+              ),
+            ),
+            Positioned(left: 12, bottom: 10, child: _coinDisc(30)),
+            Positioned(left: 36, bottom: 12, child: _coinDisc(34)),
+            Positioned(left: 63, bottom: 10, child: _coinDisc(30)),
+            Positioned(left: 87, bottom: 12, child: _coinDisc(26)),
+            Positioned(
+              left: 48,
+              top: 2,
+              child: Transform.rotate(angle: -0.16, child: _coinDisc(28)),
+            ),
+            if (selected)
+              Positioned(
+                right: 16,
+                top: 0,
+                child: Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF2D8A),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: kColorWhite, width: 1.4),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFFF2D8A).withValues(alpha: 0.35),
+                        blurRadius: 8,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.check_rounded,
+                    color: kColorWhite,
+                    size: 14,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _coinDisc(double size) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFFFF07A), Color(0xFFFFB21F)],
+        ),
+        border: Border.all(color: const Color(0xFFFFD84E), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: kColorWalletAmount.withValues(alpha: 0.30),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Icon(
+          Icons.star_rounded,
+          color: const Color(0xFFB96A00).withValues(alpha: 0.82),
+          size: size * 0.52,
+        ),
+      ),
+    );
+  }
+
+  Widget _extraBadge(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: const Color(0xFF9F19D8),
+        borderRadius: BorderRadius.circular(7),
+      ),
+      child: SemiBoldText(text: text, fontSize: 10, color: kColorWhite),
+    );
+  }
+
+  String _extraLabel(int amount) {
+    if (amount >= 10000) return '+1,500 Extra';
+    if (amount >= 5000) return '+500 Extra';
+    if (amount >= 2500) return '+200 Extra';
+    if (amount >= 1000) return '+50 Extra';
+    if (amount >= 500) return '+20 Extra';
+    return '+0 Extra';
+  }
+
+  String _formatPlanAmount(int amount) {
+    return amount.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (m) => '${m[1]},',
     );
   }
 
@@ -534,33 +879,61 @@ class _WalletViewState extends State<WalletView> {
   }
 
   Widget _walletHeader() {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _headerBackButton(onTap: Get.back),
-        const Expanded(
-          child: Center(
-            child: SemiBoldText(
-              text: 'Wallet',
-              fontSize: TextStyles.k20FontSize,
-              color: kColorWhite,
+        Row(
+          children: [
+            _headerBackButton(onTap: Get.back),
+            Spacing.h12,
+            const Expanded(
+              child: SemiBoldText(
+                text: 'Top Up',
+                fontSize: TextStyles.k24FontSize,
+                color: kColorWhite,
+              ),
             ),
-          ),
+            GestureDetector(
+              onTap: () => Get.toNamed(Routes.TRANSACTION_HISTORY),
+              child: Container(
+                height: 36,
+                padding: const EdgeInsets.symmetric(horizontal: 11),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF16103A).withValues(alpha: 0.82),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: kColorWhite.withValues(alpha: 0.12),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.history_rounded,
+                      size: 17,
+                      color: kColorWhite,
+                    ),
+                    const SizedBox(width: 5),
+                    const SemiBoldText(
+                      text: 'History',
+                      fontSize: 11,
+                      color: kColorWhite,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Spacing.h8,
+            _vipBadge(size: 44),
+          ],
         ),
-        GestureDetector(
-          onTap: () => Get.toNamed(Routes.TRANSACTION_HISTORY),
-          child: Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: kColorWalletCardBgTop.withValues(alpha: 0.9),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            alignment: Alignment.center,
-            child: const Icon(
-              Icons.receipt_long_rounded,
-              size: 16,
-              color: kColorWhite,
-            ),
+        Padding(
+          padding: const EdgeInsets.only(left: 50, top: 2, right: 8),
+          child: AppText(
+            text: 'Top up coins and enjoy premium features',
+            fontSize: 12,
+            color: kColorWhite.withValues(alpha: 0.72),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],
@@ -571,19 +944,272 @@ class _WalletViewState extends State<WalletView> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 34,
-        height: 34,
+        width: 38,
+        height: 38,
         decoration: BoxDecoration(
-          color: kColorWalletCardBgTop.withValues(alpha: 0.9),
-          borderRadius: BorderRadius.circular(8),
+          color: const Color(0xFF16103A).withValues(alpha: 0.8),
+          shape: BoxShape.circle,
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
         ),
         alignment: Alignment.center,
         child: const Icon(
           Icons.arrow_back_ios_new_rounded,
-          size: 14,
+          size: 18,
           color: kColorWhite,
         ),
       ),
+    );
+  }
+
+  Widget _vipBadge({required double size}) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFFFD84E), Color(0xFF7B2BDB)],
+        ),
+        shape: BoxShape.circle,
+        border: Border.all(color: kColorWalletAmount.withValues(alpha: 0.8)),
+        boxShadow: [
+          BoxShadow(
+            color: kColorWalletAmount.withValues(alpha: 0.26),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      alignment: Alignment.center,
+      child: SemiBoldText(
+        text: 'VIP',
+        fontSize: size > 60 ? TextStyles.k22FontSize : TextStyles.k14FontSize,
+        color: kColorWhite,
+      ),
+    );
+  }
+
+  Widget _paymentMethodsStrip() {
+    return Row(
+      children: [
+        Expanded(
+          child: _paymentChip(
+            label: 'Razorpay',
+            subtitle: 'UPI',
+            icon: Icons.verified_rounded,
+            selected: true,
+            onTap: () {
+              final plan = controller.selectedPackage;
+              if (plan != null) _openCheckoutBottomSheet(plan);
+            },
+          ),
+        ),
+        Spacing.h8,
+        Expanded(
+          child: _paymentChip(
+            label: 'G Pay',
+            subtitle: 'Soon',
+            icon: Icons.g_mobiledata_rounded,
+          ),
+        ),
+        Spacing.h8,
+        Expanded(
+          child: _paymentChip(
+            label: 'Paytm',
+            subtitle: 'Soon',
+            icon: Icons.account_balance_wallet_rounded,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _paymentChip({
+    required String label,
+    required String subtitle,
+    required IconData icon,
+    bool selected = false,
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 58,
+        padding: const EdgeInsets.symmetric(horizontal: 9),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          color: const Color(0xFF150C39).withValues(alpha: 0.78),
+          border: Border.all(
+            color: selected
+                ? const Color(0xFFFF4DE3)
+                : kColorWhite.withValues(alpha: 0.10),
+          ),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFFFF4DE3).withValues(alpha: 0.26),
+                    blurRadius: 16,
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: selected ? kColorWalletAmount : kColorWhite,
+              size: 21,
+            ),
+            Spacing.h8,
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SemiBoldText(
+                    text: label,
+                    fontSize: 11,
+                    color: kColorWhite,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Spacing.v2,
+                  AppText(
+                    text: subtitle,
+                    fontSize: 9,
+                    color: kColorWhite.withValues(alpha: 0.62),
+                    maxLines: 1,
+                  ),
+                ],
+              ),
+            ),
+            if (selected)
+              Container(
+                width: 18,
+                height: 18,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF9B5CFF),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.check_rounded,
+                  size: 13,
+                  color: kColorWhite,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _walletUtilityPanel() {
+    return _walletGlassPanel(
+      child: Column(
+        children: [
+          Obx(() => _earnedDollarsCard()),
+          Spacing.v10,
+          Obx(() => _withdrawalLimitCard()),
+          Spacing.v10,
+          Obx(() => _withdrawActionCard()),
+        ],
+      ),
+    );
+  }
+
+  Widget _trustFooter() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: const Color(0xFF150C39).withValues(alpha: 0.72),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _trustItem(
+              icon: Icons.shield_outlined,
+              title: '100% Secure',
+              subtitle: 'Safe payment',
+            ),
+          ),
+          _footerDivider(),
+          Expanded(
+            child: _trustItem(
+              icon: Icons.flash_on_rounded,
+              title: 'Instant Credit',
+              subtitle: 'Fast coins',
+            ),
+          ),
+          _footerDivider(),
+          Expanded(
+            child: _trustItem(
+              icon: Icons.headset_mic_rounded,
+              title: '24/7 Support',
+              subtitle: 'We can help',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _trustItem({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, color: const Color(0xFFFF75FF), size: 20),
+        const SizedBox(width: 7),
+        Flexible(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SemiBoldText(
+                text: title,
+                fontSize: TextStyles.k10FontSize,
+                color: kColorWhite,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              AppText(
+                text: subtitle,
+                fontSize: 8,
+                color: kColorWhite.withValues(alpha: 0.62),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _footerDivider() {
+    return Container(
+      width: 1,
+      height: 34,
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+      color: kColorWhite.withValues(alpha: 0.10),
+    );
+  }
+
+  Widget _walletGlassPanel({required Widget child, double? height}) {
+    return Container(
+      width: double.infinity,
+      height: height,
+      decoration: BoxDecoration(
+        color: const Color(0xFF130C36).withValues(alpha: 0.58),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
+      ),
+      child: child,
     );
   }
 
@@ -1383,128 +2009,6 @@ class _WalletViewState extends State<WalletView> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _balanceCard({
-    required String title,
-    required String amount,
-    String? icon,
-    IconData? iconData,
-    String? subtitle,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: kColorWalletCardBorder.withValues(alpha: 0.6),
-          width: 1,
-        ),
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [kColorWalletCardBgTop, kColorWalletCardBgBottom],
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              if (icon != null)
-                SvgPicture.asset(icon, width: 16, height: 16)
-              else
-                Icon(iconData, size: 16, color: kColorWalletAmount),
-              Spacing.h8,
-              SemiBoldText(
-                text: title,
-                fontSize: TextStyles.k14FontSize,
-                color: kColorWhite,
-              ),
-            ],
-          ),
-          Spacing.v6,
-          Row(
-            children: [
-              if (icon != null)
-                SvgPicture.asset(kIconCoin3, width: 14, height: 14)
-              else
-                const Icon(
-                  Icons.diamond_rounded,
-                  size: 14,
-                  color: kColorWalletAmount,
-                ),
-              Spacing.h8,
-              SemiBoldText(
-                text: amount,
-                fontSize: TextStyles.k20FontSize,
-                color: kColorWalletAmount,
-              ),
-            ],
-          ),
-          if (subtitle != null && subtitle.trim().isNotEmpty) ...[
-            Spacing.v4,
-            AppText(
-              text: subtitle,
-              fontSize: TextStyles.k10FontSize,
-              color: kColorWhite.withValues(alpha: 0.7),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _coinPlanRow({
-    required String coins,
-    required String price,
-    required bool hasExtra,
-    required bool isSelected,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: isSelected
-            ? kColorPrimary.withValues(alpha: 0.15)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-        border: isSelected
-            ? Border.all(color: kColorPrimary, width: 1.5)
-            : Border.all(color: Colors.transparent),
-      ),
-      child: Row(
-        children: [
-          SvgPicture.asset(kIconCoin4, width: 22, height: 22),
-          Spacing.h10,
-          AppText(
-            text: coins,
-            fontSize: TextStyles.k16FontSize,
-            color: kColorWhite,
-          ),
-          const Spacer(),
-          SemiBoldText(
-            text: price,
-            fontSize: TextStyles.k16FontSize,
-            color: kColorWhite,
-          ),
-          if (hasExtra) ...[
-            Spacing.h8,
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-              decoration: BoxDecoration(
-                color: kColorWalletExtraBadge,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: const SemiBoldText(
-                text: '10 extra',
-                fontSize: TextStyles.k10FontSize,
-                color: kColorWhite,
-              ),
-            ),
-          ],
-        ],
       ),
     );
   }
