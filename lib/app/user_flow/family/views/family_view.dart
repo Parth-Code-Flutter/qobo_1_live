@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
@@ -32,10 +31,12 @@ abstract final class _FamilyUi {
 
 /// Light chat tokens — match 1:1 [ChatDetailView] look for family group chat only.
 abstract final class _FamilyChatUi {
-  static const scaffold = kColorWhite;
-  static const incomingBubble = Color(0xFFF3F4F8);
-  static const outgoingBubble = Color(0xFFF5E6F1);
-  static const composerField = Color(0xFFF5F5F5);
+  static const scaffold = Color(0xFFFFF6FB);
+  static const incomingBubble = kColorWhite;
+  static const composerField = Color(0xFFFFF5FA);
+  static const rose = Color(0xFFFF2E83);
+  static const plum = Color(0xFF7A1B76);
+  static const lilac = Color(0xFF8B5CFF);
 }
 
 class FamilyView extends GetView<FamilyController> {
@@ -2636,42 +2637,50 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
         preferredSize: const Size.fromHeight(kToolbarHeight),
         child: _chatHeader(name),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: Obx(() {
-              if (controller.isLoadingChatMessages.value &&
-                  controller.activeChatMessages.isEmpty) {
-                return const Center(
-                  child: CircularProgressIndicator(color: kColorPrimary),
-                );
-              }
-              final messages = controller.activeChatMessages;
-              if (messages.isEmpty) {
-                return _chatEmpty(errorHint: controller.chatListenError.value);
-              }
-              // reverse:true keeps the latest message pinned at the bottom
-              // (WhatsApp-style), while the list stays chronological.
-              return ListView.builder(
-                reverse: true,
-                physics: const AlwaysScrollableScrollPhysics(
-                  parent: BouncingScrollPhysics(),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 20,
-                ),
-                itemCount: messages.length,
-                itemBuilder: (_, index) {
-                  final message = messages[messages.length - 1 - index];
-                  return _messageBubble(message);
-                },
-              );
-            }),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFFFFF8FC), Color(0xFFFFF1F8), Color(0xFFF7F2FF)],
           ),
-          Obx(() => _buildTypingBanner()),
-          _composer(),
-        ],
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: Obx(() {
+                if (controller.isLoadingChatMessages.value &&
+                    controller.activeChatMessages.isEmpty) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: kColorPrimary),
+                  );
+                }
+                final messages = controller.activeChatMessages;
+                if (messages.isEmpty) {
+                  return _chatEmpty(
+                    errorHint: controller.chatListenError.value,
+                  );
+                }
+                // reverse:true keeps the latest message pinned at the bottom
+                // (WhatsApp-style), while the list stays chronological.
+                return ListView.builder(
+                  reverse: true,
+                  physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics(),
+                  ),
+                  padding: const EdgeInsets.fromLTRB(16, 22, 16, 24),
+                  itemCount: messages.length,
+                  itemBuilder: (_, index) {
+                    final message = messages[messages.length - 1 - index];
+                    return _messageBubble(message);
+                  },
+                );
+              }),
+            ),
+            Obx(() => _buildTypingBanner()),
+            _composer(),
+          ],
+        ),
       ),
     );
   }
@@ -2682,10 +2691,18 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       child: Align(
         alignment: Alignment.centerLeft,
-        child: AppText(
-          text: controller.typingStatusLabel,
-          fontSize: TextStyles.k12FontSize,
-          color: kColorPrimary,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: kColorWhite.withValues(alpha: 0.78),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: const Color(0xFFFFD4E8)),
+          ),
+          child: AppText(
+            text: controller.typingStatusLabel,
+            fontSize: TextStyles.k12FontSize,
+            color: _FamilyChatUi.plum,
+          ),
         ),
       ),
     );
@@ -2693,17 +2710,44 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
 
   Widget _chatHeader(String name) {
     return AppBar(
-      backgroundColor: kColorWhite,
-      surfaceTintColor: kColorWhite,
+      backgroundColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
       elevation: 0,
       centerTitle: true,
       automaticallyImplyLeading: false,
+      flexibleSpace: Container(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [
+              _FamilyChatUi.plum,
+              _FamilyChatUi.lilac,
+              _FamilyChatUi.rose,
+            ],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: _FamilyChatUi.rose.withValues(alpha: 0.20),
+              blurRadius: 22,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+      ),
       leadingWidth: 60,
       leading: Padding(
         padding: const EdgeInsets.only(left: 10),
-        child: IconButton(
+        child: IconButton.filled(
           onPressed: Get.back,
-          icon: SvgPicture.asset(kIconArrowBack),
+          style: IconButton.styleFrom(
+            backgroundColor: kColorWhite.withValues(alpha: 0.16),
+          ),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: kColorWhite,
+            size: 18,
+          ),
         ),
       ),
       title: GestureDetector(
@@ -2720,7 +2764,7 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyles.kBoldPoppins(
                   fontSize: TextStyles.k18FontSize,
-                  colors: kColorText,
+                  colors: kColorWhite,
                 ),
               ),
               const SizedBox(height: 2),
@@ -2729,7 +2773,7 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
                   return AppText(
                     text: controller.typingStatusLabel,
                     fontSize: TextStyles.k12FontSize,
-                    color: kColorPrimary,
+                    color: kColorWhite.withValues(alpha: 0.88),
                     maxLines: 1,
                   );
                 }
@@ -2739,7 +2783,7 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
                 return AppText(
                   text: '$count members',
                   fontSize: TextStyles.k12FontSize,
-                  color: kColorHint,
+                  color: kColorWhite.withValues(alpha: 0.78),
                 );
               }),
             ],
@@ -2757,14 +2801,31 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.chat_bubble_outline_rounded,
-              color: kColorHint,
-              size: 56,
+            Container(
+              width: 82,
+              height: 82,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [_FamilyChatUi.lilac, _FamilyChatUi.rose],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: _FamilyChatUi.rose.withValues(alpha: 0.24),
+                    blurRadius: 28,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.chat_bubble_rounded,
+                color: kColorWhite,
+                size: 38,
+              ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             const SemiBoldText(
-              text: 'Start the family chat',
+              text: 'Start the family conversation',
               fontSize: TextStyles.k16FontSize,
               color: kColorText,
               align: TextAlign.center,
@@ -2791,6 +2852,7 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
     final text = _messageText(message, type);
     final media = _messageMedia(message, type);
     final time = _messageTimeLabel(message);
+    final bubbleTextColor = mine ? kColorWhite : kColorText;
 
     if (type == 'system') {
       return Padding(
@@ -2819,18 +2881,37 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
             constraints: BoxConstraints(
               maxWidth: MediaQuery.sizeOf(context).width * 0.74,
             ),
-            margin: const EdgeInsets.only(top: 6),
+            margin: const EdgeInsets.only(top: 8),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: mine
-                  ? _FamilyChatUi.outgoingBubble
-                  : _FamilyChatUi.incomingBubble,
+              color: mine ? null : _FamilyChatUi.incomingBubble,
+              gradient: mine
+                  ? const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [_FamilyChatUi.rose, _FamilyChatUi.plum],
+                    )
+                  : null,
               borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(16),
-                topRight: const Radius.circular(16),
-                bottomLeft: Radius.circular(mine ? 16 : 4),
-                bottomRight: Radius.circular(mine ? 4 : 16),
+                topLeft: const Radius.circular(22),
+                topRight: const Radius.circular(22),
+                bottomLeft: Radius.circular(mine ? 22 : 6),
+                bottomRight: Radius.circular(mine ? 6 : 22),
               ),
+              border: Border.all(
+                color: mine
+                    ? kColorWhite.withValues(alpha: 0.10)
+                    : const Color(0xFFFFD4E8),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: (mine ? _FamilyChatUi.rose : kColorBlack).withValues(
+                    alpha: mine ? 0.16 : 0.06,
+                  ),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -2841,7 +2922,7 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
                     child: AppText(
                       text: sender,
                       fontSize: TextStyles.k10FontSize,
-                      color: kColorPrimary,
+                      color: _FamilyChatUi.plum,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -2871,7 +2952,7 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
                 AppText(
                   text: ProfanityMaskUtils.mask(PhoneMaskUtils.mask(text)),
                   fontSize: TextStyles.k14FontSize,
-                  color: kColorText,
+                  color: bubbleTextColor,
                 ),
               ],
             ),
@@ -2880,10 +2961,14 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              AppText(text: time, fontSize: 10, color: kColorHint),
+              AppText(text: time, fontSize: 10, color: const Color(0xFF77849D)),
               if (mine) ...[
                 const SizedBox(width: 4),
-                const Icon(Icons.done_all_rounded, size: 14, color: kColorHint),
+                const Icon(
+                  Icons.done_all_rounded,
+                  size: 14,
+                  color: _FamilyChatUi.plum,
+                ),
               ],
             ],
           ),
@@ -2955,33 +3040,27 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
     return Container(
       padding: EdgeInsets.fromLTRB(
         16,
-        12,
+        14,
         16,
-        MediaQuery.paddingOf(context).bottom + 12,
+        MediaQuery.paddingOf(context).bottom + 14,
       ),
       decoration: BoxDecoration(
-        color: kColorWhite,
+        color: kColorWhite.withValues(alpha: 0.94),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
+        border: const Border(top: BorderSide(color: Color(0xFFFFE0EF))),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            offset: const Offset(0, -4),
-            blurRadius: 10,
+            color: _FamilyChatUi.rose.withValues(alpha: 0.10),
+            offset: const Offset(0, -8),
+            blurRadius: 24,
           ),
         ],
       ),
       child: Row(
         children: [
-          _composerIcon(
-            Icons.emoji_emotions_outlined,
-            kColorHint,
-            _showEmojiSheet,
-          ),
+          _composerIcon(Icons.emoji_emotions_outlined, _showEmojiSheet),
           Spacing.h8,
-          _composerIcon(
-            Icons.card_giftcard_rounded,
-            kColorHint,
-            _showGiftSheet,
-          ),
+          _composerIcon(Icons.card_giftcard_rounded, _showGiftSheet),
           Spacing.h12,
           Expanded(
             child: TextField(
@@ -2994,13 +3073,21 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
                 hintText: 'Type a message...',
                 hintStyle: TextStyles.kRegularPoppins(
                   fontSize: 13,
-                  colors: kColorHint,
+                  colors: const Color(0xFF8A7895),
                 ),
                 filled: true,
                 fillColor: _FamilyChatUi.composerField,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: const BorderSide(color: Color(0xFFFFD8EA)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: const BorderSide(color: _FamilyChatUi.rose),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -3025,10 +3112,19 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
                       textController: _textController,
                     ),
               child: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: const BoxDecoration(
-                  color: kColorPrimary,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    colors: [_FamilyChatUi.rose, _FamilyChatUi.plum],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _FamilyChatUi.rose.withValues(alpha: 0.24),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
                 child: Icon(
                   sending ? Icons.more_horiz_rounded : Icons.send_rounded,
@@ -3043,16 +3139,18 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
     );
   }
 
-  Widget _composerIcon(IconData icon, Color color, VoidCallback onTap) {
+  Widget _composerIcon(IconData icon, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: const BoxDecoration(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
           color: _FamilyChatUi.composerField,
           shape: BoxShape.circle,
+          border: Border.all(color: const Color(0xFFFFD8EA)),
         ),
-        child: Icon(icon, color: color, size: 22),
+        child: Icon(icon, color: _FamilyChatUi.plum, size: 22),
       ),
     );
   }
