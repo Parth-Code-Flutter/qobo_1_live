@@ -55,8 +55,7 @@ class _ProfileTabViewState extends State<ProfileTabView> {
       init: userSession,
       builder: (session) {
         final backgroundUrl =
-            ApiImageUtils.normalize(session.profileBackgroundUrl)?.trim() ??
-            '';
+            ApiImageUtils.normalize(session.profileBackgroundUrl)?.trim() ?? '';
         final backgroundPreviewUrl =
             ApiImageUtils.normalize(
               session.profileBackgroundPreviewUrl,
@@ -107,7 +106,10 @@ class _ProfileTabViewState extends State<ProfileTabView> {
               ),
             SafeArea(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
@@ -180,110 +182,110 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                   Spacing.h12,
                   Expanded(
                     child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        BoldText(
+                          text: session.displayName,
+                          fontSize: isCompact
+                              ? TextStyles.k18FontSize
+                              : TextStyles.k20FontSize,
+                          color: kColorWhite,
+                        ),
+                        Spacing.v2,
+                        AppText(
+                          text:
+                              'Id : ${session.userId.isNotEmpty ? session.userId : '25656363'}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          fontSize: TextStyles.k14FontSize,
+                          color: kColorWhite,
+                          style: TextStyles.kRegularPoppins(
+                            fontSize: TextStyles.k14FontSize,
+                            colors: kColorWhite,
+                          ),
+                        ),
+                        Spacing.v10,
+                        // Wrap prevents chip row overflow on narrow devices.
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
                           children: [
-                            BoldText(
-                              text: session.displayName,
-                              fontSize: isCompact
-                                  ? TextStyles.k18FontSize
-                                  : TextStyles.k20FontSize,
-                              color: kColorWhite,
+                            _smallChip(
+                              text: session.levelBadge,
+                              start: kColorProfileChipPinkStart,
+                              end: kColorProfileChipPinkEnd,
                             ),
-                            Spacing.v2,
-                            AppText(
-                              text:
-                                  'Id : ${session.userId.isNotEmpty ? session.userId : '25656363'}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              fontSize: TextStyles.k14FontSize,
-                              color: kColorWhite,
-                              style: TextStyles.kRegularPoppins(
-                                fontSize: TextStyles.k14FontSize,
-                                colors: kColorWhite,
-                              ),
+                            _smallChip(
+                              text: _pattiChipLabel(session.pattiStyle),
+                              start: kColorProfileChipOrangeStart,
+                              end: kColorProfileChipOrangeEnd,
                             ),
-                            Spacing.v10,
-                            // Wrap prevents chip row overflow on narrow devices.
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                _smallChip(
-                                  text: session.levelBadge,
-                                  start: kColorProfileChipPinkStart,
-                                  end: kColorProfileChipPinkEnd,
-                                ),
-                                _smallChip(
-                                  text: _pattiChipLabel(session.pattiStyle),
-                                  start: kColorProfileChipOrangeStart,
-                                  end: kColorProfileChipOrangeEnd,
-                                ),
-                                _smallChip(
-                                  text: '00',
-                                  start: kColorProfileChipPurpleStart,
-                                  end: kColorProfileChipPurpleEnd,
-                                ),
-                              ],
+                            _smallChip(
+                              text: '00',
+                              start: kColorProfileChipPurpleStart,
+                              end: kColorProfileChipPurpleEnd,
                             ),
                           ],
                         ),
-                      ),
-                      GestureDetector(
-                        onTap: () => _openBasicProfileAndRefresh(),
-                        child: const Padding(
-                          padding: EdgeInsets.only(right: 4),
-                          child: Icon(
-                            Icons.chevron_right_rounded,
-                            color: kColorWhite,
-                            size: 34,
-                          ),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                  Spacing.v16,
-                  // Counts come from GET /api/user/profile (formatted* / *Count).
-                  Row(
-                    children: [
-                      _statBlock(
-                        session.formattedVisitors,
-                        'Visitors',
-                        onTap: () => Get.toNamed(Routes.VISITORS),
+                  GestureDetector(
+                    onTap: () => _openBasicProfileAndRefresh(),
+                    child: const Padding(
+                      padding: EdgeInsets.only(right: 4),
+                      child: Icon(
+                        Icons.chevron_right_rounded,
+                        color: kColorWhite,
+                        size: 34,
                       ),
-                      _statDivider(),
-                      _statBlock(
-                        session.formattedFriends,
-                        'Friends',
-                        onTap: () => Get.toNamed(
-                          Routes.FOLLOW_LIST,
-                          arguments: const {'initialTab': 0},
-                        ),
-                      ),
-                      _statDivider(),
-                      _statBlock(
-                        session.formattedFollowing,
-                        'Following',
-                        onTap: () => Get.toNamed(
-                          Routes.FOLLOW_LIST,
-                          arguments: const {'initialTab': 1},
-                        ),
-                      ),
-                      _statDivider(),
-                      _statBlock(
-                        session.formattedFollowers,
-                        'Followers',
-                        onTap: () => Get.toNamed(
-                          Routes.FOLLOW_LIST,
-                          arguments: const {'initialTab': 2},
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ],
               ),
-            );
-          },
+              Spacing.v16,
+              // Counts come from GET /api/user/profile (formatted* / *Count).
+              Row(
+                children: [
+                  _statBlock(
+                    session.formattedVisitors,
+                    'Visitors',
+                    onTap: () => Get.toNamed(Routes.VISITORS),
+                  ),
+                  _statDivider(),
+                  _statBlock(
+                    session.formattedFriends,
+                    'Friends',
+                    onTap: () => Get.toNamed(
+                      Routes.FOLLOW_LIST,
+                      arguments: const {'initialTab': 0},
+                    ),
+                  ),
+                  _statDivider(),
+                  _statBlock(
+                    session.formattedFollowing,
+                    'Following',
+                    onTap: () => Get.toNamed(
+                      Routes.FOLLOW_LIST,
+                      arguments: const {'initialTab': 1},
+                    ),
+                  ),
+                  _statDivider(),
+                  _statBlock(
+                    session.formattedFollowers,
+                    'Followers',
+                    onTap: () => Get.toNamed(
+                      Routes.FOLLOW_LIST,
+                      arguments: const {'initialTab': 2},
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         );
+      },
+    );
   }
 
   Widget _smallChip({
@@ -410,10 +412,10 @@ class _ProfileTabViewState extends State<ProfileTabView> {
         Color(0xFFE5009E),
         Color(0xFFFF54C8),
       ], onTapRoute: Routes.MALL),
-      // _ProfileFeatureItem('Point Center', kIconPointerCenter, const [
-      //   Color(0xFF00A8B8),
-      //   Color(0xFF08D6C7),
-      // ], onTapRoute: Routes.POINT_CENTER),
+      _ProfileFeatureItem('Tasks', kIconPointerCenter, const [
+        Color(0xFF00A8B8),
+        Color(0xFF08D6C7),
+      ], onTapRoute: Routes.POINT_CENTER),
       _ProfileFeatureItem('Award', kIconAward, const [
         Color(0xFFFF145C),
         Color(0xFFFFD83D),
@@ -433,12 +435,10 @@ class _ProfileTabViewState extends State<ProfileTabView> {
         const [Color(0xFFFFC51D), Color(0xFFFFFF35)],
         onTapRoute: Routes.CUSTOMER_SERVICE,
       ),
-      _ProfileFeatureItem(
-        'Transactions',
-        kIconCoin3,
-        const [Color(0xFFFFB020), Color(0xFFFF6B57)],
-        onTapRoute: Routes.GIFT_TRANSACTIONS,
-      ),
+      _ProfileFeatureItem('Transactions', kIconCoin3, const [
+        Color(0xFFFFB020),
+        Color(0xFFFF6B57),
+      ], onTapRoute: Routes.GIFT_TRANSACTIONS),
     ];
 
     return Container(
@@ -613,7 +613,8 @@ class _ProfileTabViewState extends State<ProfileTabView> {
             'application_id': agencySession.applicationId.value,
           if (agencySession.appliedPhone.value.isNotEmpty)
             'phone': agencySession.appliedPhone.value,
-          'autoFetch': agencySession.applicationId.value.isNotEmpty ||
+          'autoFetch':
+              agencySession.applicationId.value.isNotEmpty ||
               agencySession.appliedPhone.value.isNotEmpty,
         },
       );
@@ -1001,10 +1002,14 @@ class _SuperAdminRegistrationSheetState
                         ],
                       ),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: kColorWhite.withValues(alpha: 0.16)),
+                      border: Border.all(
+                        color: kColorWhite.withValues(alpha: 0.16),
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: kColorProfileActionPinkStart.withValues(alpha: 0.22),
+                          color: kColorProfileActionPinkStart.withValues(
+                            alpha: 0.22,
+                          ),
                           blurRadius: 18,
                           offset: const Offset(0, 8),
                         ),

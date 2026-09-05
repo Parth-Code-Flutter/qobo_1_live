@@ -273,6 +273,8 @@ class TransactionHistoryView extends GetView<TransactionHistoryController> {
 
   IconData _getTransactionIcon(String type) {
     switch (type.toUpperCase()) {
+      case 'TASK_BONUS':
+        return Icons.emoji_events_rounded;
       case 'SUPER_ADMIN_AGENCY_BONUS':
         return Icons.apartment_rounded;
       case 'AGENCY_HOST_BONUS':

@@ -255,11 +255,7 @@ class UserRepo {
   }) async {
     final response = await _apiService.postRequest(
       endPoint: UserEndpoints.claimTask,
-      requestModel: <String, dynamic>{
-        'id': taskId,
-        'taskId': taskId,
-        'task_id': taskId,
-      },
+      requestModel: <String, dynamic>{'task_id': taskId},
       isShowLoader: isShowLoader,
     );
     if (response == null) return null;
@@ -371,10 +367,7 @@ class UserRepo {
     if (id.isEmpty) return null;
     final response = await _apiService.postRequest(
       endPoint: UserEndpoints.recordVisit,
-      requestModel: <String, dynamic>{
-        'target_id': id,
-        'targetId': id,
-      },
+      requestModel: <String, dynamic>{'target_id': id, 'targetId': id},
       isShowLoader: isShowLoader,
     );
     if (response == null) return null;
@@ -388,10 +381,7 @@ class UserRepo {
     required bool isShowLoader,
   }) async {
     final query = Uri(
-      queryParameters: <String, String>{
-        'page': '$page',
-        'limit': '$limit',
-      },
+      queryParameters: <String, String>{'page': '$page', 'limit': '$limit'},
     ).query;
     final response = await _apiService.getRequest(
       endPoint: '$endPoint?$query',

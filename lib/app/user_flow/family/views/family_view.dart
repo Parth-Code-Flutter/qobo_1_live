@@ -6,6 +6,7 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
 import 'package:qobo_one_live/app/user_flow/live_broadcast/widgets/gift_icon_widget.dart';
+import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
 import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
@@ -1637,7 +1638,7 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
         Icons.assignment_turned_in_rounded,
         'Tasks',
         const Color(0xFF42A5F5),
-        () {},
+        () => Get.toNamed(Routes.POINT_CENTER),
       ),
       (Icons.bar_chart_rounded, 'Rankings', const Color(0xFF33D35E), () {}),
     ];
@@ -5251,7 +5252,7 @@ class _FamilyNetworkImage extends StatelessWidget {
                 color: loaderColor,
                 value: progress.expectedTotalBytes != null
                     ? progress.cumulativeBytesLoaded /
-                        progress.expectedTotalBytes!
+                          progress.expectedTotalBytes!
                     : null,
               ),
             ),

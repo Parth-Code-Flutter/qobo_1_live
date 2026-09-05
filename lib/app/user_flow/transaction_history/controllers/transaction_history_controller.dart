@@ -113,14 +113,21 @@ class TransactionHistoryController extends GetxController {
         raw['category']?.toString() ??
         raw['transactionType']?.toString() ??
         'Transaction';
+    final metadata = raw['metadata'];
+    final metadataMap = metadata is Map
+        ? Map<String, dynamic>.from(metadata)
+        : null;
     final isRecruitmentBonus = _isRecruitmentBonus(type);
+    final isTaskBonus = type.toUpperCase() == 'TASK_BONUS';
     final usdLabel = isRecruitmentBonus
         ? formatUsd(coinsToUsd(amountValue.abs()))
         : '';
 
     return {
       'title':
+          (isTaskBonus ? _metadataText(metadataMap, 'taskTitle') : null) ??
           raw['title']?.toString() ??
+          _taskBonusTitle(type) ??
           _recruitmentBonusTitle(type) ??
           raw['description']?.toString() ??
           raw['message']?.toString() ??
@@ -128,6 +135,7 @@ class TransactionHistoryController extends GetxController {
       'subtitle':
           raw['subtitle']?.toString() ??
           raw['note']?.toString() ??
+          _taskBonusSubtitle(type, metadataMap) ??
           _recruitmentBonusSubtitle(type) ??
           raw['receiverName']?.toString() ??
           raw['hostName']?.toString() ??
@@ -169,6 +177,41 @@ class TransactionHistoryController extends GetxController {
         return 'Reward for approved host';
     }
     return null;
+  }
+
+  String? _taskBonusTitle(String type) {
+    if (type.toUpperCase() == 'TASK_BONUS') {
+      return 'Task Bonus Reward';
+    }
+    return null;
+  }
+
+  String? _metadataText(Map<String, dynamic>? metadata, String key) {
+    final value = metadata?[key]?.toString();
+    if (value == null || value.isEmpty) return null;
+    return value;
+  }
+
+  String? _taskBonusSubtitle(String type, Map<String, dynamic>? metadata) {
+    if (type.toUpperCase() != 'TASK_BONUS') return null;
+    final frequency = metadata?['frequency']?.toString();
+    final category = metadata?['targetCategory']?.toString();
+    final parts = [
+      if (frequency != null && frequency.isNotEmpty) _ledgerLabel(frequency),
+      if (category != null && category.isNotEmpty) _ledgerLabel(category),
+    ];
+    if (parts.isEmpty) return 'Bonus earned from completed task';
+    return '${parts.join(' • ')} target bonus';
+  }
+
+  String _ledgerLabel(String value) {
+    return value
+        .replaceAll('_', ' ')
+        .toLowerCase()
+        .split(' ')
+        .where((part) => part.isNotEmpty)
+        .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+        .join(' ');
   }
 
   num _readAmount(Map<String, dynamic> raw) {

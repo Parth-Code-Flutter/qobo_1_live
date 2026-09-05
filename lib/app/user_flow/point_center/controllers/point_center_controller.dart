@@ -8,34 +8,10 @@ class PointCenterController extends GetxController {
 
   final UserRepo _userRepo;
   final isLoading = false.obs;
-  final pointsBalance = 2450.obs;
+  final pointsBalance = 0.obs;
+  final coinsBalance = 0.0.obs;
 
-  final tasks = <Map<String, dynamic>>[
-    {
-      'title': 'Daily Check-in',
-      'reward': 100,
-      'isCompleted': true,
-      'isClaimed': true,
-    },
-    {
-      'title': 'Watch Live Stream for 15 mins',
-      'reward': 200,
-      'isCompleted': true,
-      'isClaimed': false,
-    },
-    {
-      'title': 'Send a virtual gift to any host',
-      'reward': 300,
-      'isCompleted': false,
-      'isClaimed': false,
-    },
-    {
-      'title': 'Broadcaster for 30 mins',
-      'reward': 500,
-      'isCompleted': false,
-      'isClaimed': false,
-    },
-  ].obs;
+  final tasks = <Map<String, dynamic>>[].obs;
 
   final storeItems = <Map<String, dynamic>>[
     {
@@ -72,6 +48,7 @@ class PointCenterController extends GetxController {
       if (data is! Map) return;
 
       pointsBalance.value = _toInt(data['pointsBalance']);
+      coinsBalance.value = _toDouble(data['coinsBalance']);
       final apiTasks = data['tasks'];
       if (apiTasks is List) {
         tasks.assignAll(
@@ -82,11 +59,46 @@ class PointCenterController extends GetxController {
                   'id': task['id']?.toString() ?? '',
                   'title': task['title']?.toString() ?? '',
                   'description': task['description']?.toString() ?? '',
+                  'targetCategory':
+                      task['targetCategory']?.toString() ??
+                      task['target_category']?.toString() ??
+                      'ALL',
+                  'frequency':
+                      task['frequency']?.toString() ??
+                      task['cycle']?.toString() ??
+                      'DAILY',
+                  'roomType':
+                      task['roomType']?.toString() ??
+                      task['room_type']?.toString() ??
+                      'ANY',
+                  'targetMetric':
+                      task['targetMetric']?.toString() ??
+                      task['target_metric']?.toString() ??
+                      '',
+                  'targetValue': _toDouble(
+                    task['targetValue'] ??
+                        task['target_value'] ??
+                        task['target'],
+                  ),
+                  'progressValue': _toDouble(
+                    task['progressValue'] ??
+                        task['progress_value'] ??
+                        task['progress'],
+                  ),
+                  'progressRatio': _progressRatio(task),
                   'reward': _toInt(task['reward']),
+                  'rewardType':
+                      task['rewardType']?.toString() ??
+                      task['reward_type']?.toString() ??
+                      'coins',
                   'isCompleted': task['isCompleted'] == true,
                   'isClaimed': task['isClaimed'] == true,
-                  'progress': _toInt(task['progress']),
-                  'target': _toInt(task['target']),
+                  'status': task['status']?.toString() ?? 'pending',
+                  'cycleKey':
+                      task['cycleKey']?.toString() ??
+                      task['cycle_key']?.toString() ??
+                      '',
+                  'completedAt': task['completedAt']?.toString() ?? '',
                 };
               })
               .where((task) => task['title'].toString().isNotEmpty),
@@ -129,14 +141,29 @@ class PointCenterController extends GetxController {
         return;
       }
       task['isClaimed'] = true;
-      pointsBalance.value += task['reward'] as int;
+      task['status'] = 'claimed';
+      if ((task['rewardType']?.toString().toLowerCase() ?? '') == 'coins') {
+        coinsBalance.value += _toDouble(task['reward']);
+      } else {
+        pointsBalance.value += _toInt(task['reward']);
+      }
       tasks[index] = Map<String, dynamic>.from(task);
       Get.snackbar(
-        'Points Claimed',
-        'Successfully claimed ${task['reward']} points!',
+        'Task Bonus Claimed',
+        'Successfully claimed ${task['reward']} ${task['rewardType']}!',
         snackPosition: SnackPosition.BOTTOM,
       );
     }
+  }
+
+  List<Map<String, dynamic>> tasksForFrequency(String frequency) {
+    final expected = frequency.toUpperCase();
+    return tasks
+        .where(
+          (task) =>
+              (task['frequency']?.toString().toUpperCase() ?? '') == expected,
+        )
+        .toList();
   }
 
   Future<void> redeemItem(Map<String, dynamic> item) async {
@@ -173,6 +200,27 @@ class PointCenterController extends GetxController {
     if (value is int) return value;
     if (value is num) return value.toInt();
     return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  double _toDouble(dynamic value) {
+    if (value is double) return value;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  double _progressRatio(Map task) {
+    final direct = _toDouble(
+      task['progressRatio'] ?? task['progress_ratio'] ?? task['ratio'],
+    );
+    if (direct > 0) return direct.clamp(0, 1);
+    final target = _toDouble(
+      task['targetValue'] ?? task['target_value'] ?? task['target'],
+    );
+    final progress = _toDouble(
+      task['progressValue'] ?? task['progress_value'] ?? task['progress'],
+    );
+    if (target <= 0) return 0;
+    return (progress / target).clamp(0, 1);
   }
 
   String _iconForType(String? type) {
