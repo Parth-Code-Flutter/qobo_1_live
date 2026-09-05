@@ -2616,6 +2616,7 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
     super.initState();
     controller.loadMembers(familyId);
     controller.markRead(familyId: familyId);
+    controller.loadGiftCatalog();
     unawaited(controller.startChatListen(familyId));
   }
 
@@ -2845,21 +2846,26 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                if (media.isNotEmpty) ...[
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: _FamilyNetworkImage(
-                      url: media,
-                      width: type == 'emoji' ? 92 : 120,
-                      height: type == 'emoji' ? 92 : 120,
-                      fit: BoxFit.cover,
-                      fallback: _FamilyImagePlaceholder(
-                        icon: type == 'emoji'
-                            ? Icons.emoji_emotions_rounded
-                            : Icons.card_giftcard_rounded,
+                if (media.isNotEmpty || type == 'gift') ...[
+                  if (type == 'gift')
+                    _InlineGiftMessageMedia(
+                      media: media,
+                      size: 132,
+                      fallbackName: text,
+                    )
+                  else
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: _FamilyNetworkImage(
+                        url: media,
+                        width: 92,
+                        height: 92,
+                        fit: BoxFit.cover,
+                        fallback: const _FamilyImagePlaceholder(
+                          icon: Icons.emoji_emotions_rounded,
+                        ),
                       ),
                     ),
-                  ),
                   Spacing.v6,
                 ],
                 AppText(
@@ -2903,11 +2909,36 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
           .toString();
     }
     if (type == 'gift') {
-      return (message['giftAnimationUrl'] ??
-              message['giftThumbnailUrl'] ??
-              message['giftImage'] ??
-              '')
-          .toString();
+      final direct =
+          (message['giftAnimationUrl'] ??
+                  message['giftThumbnailUrl'] ??
+                  message['giftImage'] ??
+                  message['giftIcon'] ??
+                  message['image'] ??
+                  '')
+              .toString()
+              .trim();
+      if (direct.isNotEmpty) return direct;
+
+      final giftId = (message['giftId'] ?? message['gift_id'] ?? '')
+          .toString()
+          .trim();
+      final giftName = (message['giftName'] ?? message['gift_name'] ?? '')
+          .toString()
+          .trim()
+          .toLowerCase();
+      for (final gift in controller.giftCatalog) {
+        final id = (gift['id'] ?? '').trim();
+        final name = (gift['name'] ?? '').trim().toLowerCase();
+        if ((giftId.isNotEmpty && id == giftId) ||
+            (giftName.isNotEmpty && name == giftName)) {
+          return (gift['animationUrl']?.trim().isNotEmpty == true
+                  ? gift['animationUrl']
+                  : gift['icon']) ??
+              '';
+        }
+      }
+      return '';
     }
     return '';
   }
@@ -3062,6 +3093,114 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
   void _openGroupInfo() {
     controller.loadMembers(familyId);
     Get.to(() => FamilyGroupInfoPage(group: widget.group));
+  }
+}
+
+class _InlineGiftMessageMedia extends StatefulWidget {
+  const _InlineGiftMessageMedia({
+    required this.media,
+    required this.size,
+    required this.fallbackName,
+  });
+
+  final String media;
+  final double size;
+  final String fallbackName;
+
+  @override
+  State<_InlineGiftMessageMedia> createState() =>
+      _InlineGiftMessageMediaState();
+}
+
+class _InlineGiftMessageMediaState extends State<_InlineGiftMessageMedia> {
+  int _playNonce = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final media = widget.media.trim();
+    return SizedBox(
+      width: widget.size,
+      height: widget.size,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                color: const Color(0xFF251B3A),
+                alignment: Alignment.center,
+                child: _giftMedia(media),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 7,
+            bottom: 7,
+            child: GestureDetector(
+              onTap: _replay,
+              child: Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: kColorBlack.withValues(alpha: 0.54),
+                  border: Border.all(
+                    color: kColorWhite.withValues(alpha: 0.22),
+                  ),
+                ),
+                child: const Icon(
+                  Icons.replay_rounded,
+                  color: kColorWhite,
+                  size: 19,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _giftMedia(String media) {
+    if (media.isEmpty) {
+      return const GiftIconWidget(icon: '🎁', size: 74, emojiSize: 54);
+    }
+    if (_looksLikeNetworkImage(media)) {
+      return _FamilyNetworkImage(
+        key: ValueKey('family-gift-image-$media-$_playNonce'),
+        url: media,
+        width: widget.size,
+        height: widget.size,
+        fit: BoxFit.contain,
+        fallback: const GiftIconWidget(icon: '🎁', size: 74, emojiSize: 54),
+      );
+    }
+    return GiftIconWidget(
+      key: ValueKey('family-gift-icon-$media-$_playNonce'),
+      icon: media,
+      size: 82,
+      emojiSize: 54,
+    );
+  }
+
+  void _replay() {
+    setState(() => _playNonce++);
+  }
+
+  bool _looksLikeNetworkImage(String value) {
+    final text = value.trim().toLowerCase();
+    final network = text.startsWith('http://') || text.startsWith('https://');
+    if (!network) return false;
+    return text.endsWith('.png') ||
+        text.endsWith('.jpg') ||
+        text.endsWith('.jpeg') ||
+        text.endsWith('.webp') ||
+        text.endsWith('.gif') ||
+        text.contains('.png?') ||
+        text.contains('.jpg?') ||
+        text.contains('.jpeg?') ||
+        text.contains('.webp?') ||
+        text.contains('.gif?');
   }
 }
 
@@ -4665,6 +4804,7 @@ class _JoinFamilyConfirmSheet extends StatelessWidget {
 
 class _FamilyNetworkImage extends StatelessWidget {
   const _FamilyNetworkImage({
+    super.key,
     required this.url,
     required this.fallback,
     this.width,
