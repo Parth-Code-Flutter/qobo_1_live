@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
+import 'package:qobo_one_live/app/user_flow/live_broadcast/widgets/gift_icon_widget.dart';
 import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
@@ -1518,12 +1519,17 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
         const Color(0xFF7B5CFF),
         _isJoined ? _openChat : _confirmJoinFromDetail,
       ),
-      (Icons.groups_rounded, 'Members', const Color(0xFFFF3F78), () {}),
+      (
+        Icons.groups_rounded,
+        'Members',
+        const Color(0xFFFF3F78),
+        _isJoined ? _openMembers : _confirmJoinFromDetail,
+      ),
       (
         Icons.card_giftcard_rounded,
         'Family Gifts',
         const Color(0xFFFFA000),
-        () {},
+        _openGifts,
       ),
       (
         Icons.assignment_turned_in_rounded,
@@ -1874,6 +1880,19 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
 
   void _openChat() {
     Get.to(() => FamilyGroupChatPage(group: _group));
+  }
+
+  void _openMembers() {
+    final familyId = controller.familyIdOf(_group);
+    if (familyId.isNotEmpty) {
+      controller.loadMembers(familyId, isShowLoader: false);
+    }
+    Get.to(() => FamilyGroupInfoPage(group: _group));
+  }
+
+  void _openGifts() {
+    controller.loadGiftCatalog();
+    Get.to(() => FamilyGiftsPage(group: _group));
   }
 
   void _confirmJoinFromDetail() {
@@ -3026,7 +3045,7 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
   }
 
   void _showGiftSheet() {
-    controller.loadGiftCatalog();
+    controller.loadGiftCatalog(force: true);
     Get.bottomSheet<void>(
       _CatalogSheet(
         title: 'Gift to group admin',
@@ -3043,6 +3062,471 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
   void _openGroupInfo() {
     controller.loadMembers(familyId);
     Get.to(() => FamilyGroupInfoPage(group: widget.group));
+  }
+}
+
+/// Full-screen gift catalog for family details.
+class FamilyGiftsPage extends StatefulWidget {
+  const FamilyGiftsPage({super.key, required this.group});
+
+  final Map<String, dynamic> group;
+
+  @override
+  State<FamilyGiftsPage> createState() => _FamilyGiftsPageState();
+}
+
+class _FamilyGiftsPageState extends State<FamilyGiftsPage> {
+  int _selectedTabIndex = 0;
+  int _selectedGiftIndex = -1;
+
+  FamilyController get controller => Get.find<FamilyController>();
+
+  @override
+  void initState() {
+    super.initState();
+    controller.loadGiftCatalog();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final name = widget.group['name']?.toString() ?? 'Family Group';
+    return Scaffold(
+      backgroundColor: _FamilyUi.bg,
+      body: Container(
+        decoration: BoxDecoration(
+          image: const DecorationImage(
+            image: AssetImage(kImgBG),
+            fit: BoxFit.cover,
+          ),
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              _FamilyUi.pink.withValues(alpha: 0.22),
+              _FamilyUi.bg,
+              _FamilyUi.ink,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              _header(name),
+              Expanded(
+                child: Obx(() {
+                  if (controller.isLoadingGifts.value) {
+                    return const Center(
+                      child: CircularProgressIndicator(color: _FamilyUi.pink),
+                    );
+                  }
+                  if (controller.giftCatalog.isEmpty) {
+                    return _emptyState();
+                  }
+                  return Column(
+                    children: [
+                      _giftScope(),
+                      Spacing.v10,
+                      _tabBar(),
+                      Spacing.v8,
+                      Expanded(child: _giftGrid()),
+                      _giftDetailsBar(),
+                    ],
+                  );
+                }),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _header(String familyName) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+      child: Row(
+        children: [
+          _circleButton(Icons.arrow_back_ios_new_rounded, Get.back),
+          Spacing.h12,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SemiBoldText(
+                  text: 'Family Gifts',
+                  fontSize: TextStyles.k20FontSize,
+                  color: kColorWhite,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Spacing.v2,
+                AppText(
+                  text: familyName,
+                  fontSize: TextStyles.k12FontSize,
+                  color: kColorWhite.withValues(alpha: 0.72),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          AdminAgencyUi.glowIcon(
+            icon: Icons.card_giftcard_rounded,
+            accent: _FamilyUi.pink,
+            accentEnd: _FamilyUi.gold,
+            size: 46,
+            iconSize: 23,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _giftScope() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.admin_panel_settings_rounded,
+            color: Colors.pinkAccent,
+            size: 18,
+          ),
+          Spacing.h8,
+          Expanded(
+            child: AppText(
+              text: 'Family gifts are credited to the group admin.',
+              fontSize: TextStyles.k12FontSize,
+              color: kColorWhite,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _tabBar() {
+    final tabs = _tabs();
+    if (_selectedTabIndex >= tabs.length) {
+      _selectedTabIndex = 0;
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: List.generate(tabs.length, (index) {
+          final selected = _selectedTabIndex == index;
+          return GestureDetector(
+            onTap: () => setState(() {
+              _selectedTabIndex = index;
+              _selectedGiftIndex = -1;
+            }),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              margin: const EdgeInsets.only(right: 8),
+              decoration: BoxDecoration(
+                color: selected
+                    ? Colors.pinkAccent.withValues(alpha: 0.15)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: selected ? Colors.pinkAccent : Colors.transparent,
+                ),
+              ),
+              child: SemiBoldText(
+                text: tabs[index],
+                fontSize: TextStyles.k14FontSize,
+                color: selected ? kColorWhite : kColorHint,
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _giftGrid() {
+    final gifts = _visibleGifts();
+    if (gifts.isEmpty) {
+      return Center(
+        child: AppText(
+          text: 'No gifts in this category.',
+          fontSize: TextStyles.k14FontSize,
+          color: kColorHint,
+          align: TextAlign.center,
+        ),
+      );
+    }
+    return RefreshIndicator(
+      color: _FamilyUi.pink,
+      onRefresh: _refreshGifts,
+      child: GridView.builder(
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 4,
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          childAspectRatio: 0.72,
+        ),
+        itemCount: gifts.length,
+        itemBuilder: (context, index) {
+          final gift = gifts[index];
+          final selected = _selectedGiftIndex == index;
+          final price = gift['price'] ?? '0';
+
+          return GestureDetector(
+            onTap: () => setState(() => _selectedGiftIndex = index),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+              decoration: BoxDecoration(
+                color: selected
+                    ? Colors.pinkAccent.withValues(alpha: 0.10)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: selected ? Colors.pinkAccent : Colors.transparent,
+                  width: 1.5,
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  GiftIconWidget(icon: gift['icon']),
+                  const SizedBox(height: 4),
+                  AppText(
+                    text: gift['name'] ?? 'Gift',
+                    fontSize: TextStyles.k10FontSize,
+                    color: kColorWhite,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    align: TextAlign.center,
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.diamond_outlined,
+                        color: Colors.orange,
+                        size: 10,
+                      ),
+                      Spacing.h2,
+                      Flexible(
+                        child: AppText(
+                          text: price,
+                          fontSize: 10,
+                          color: kColorHint,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _giftDetailsBar() {
+    final gifts = _visibleGifts();
+    final selected =
+        _selectedGiftIndex >= 0 && _selectedGiftIndex < gifts.length
+        ? gifts[_selectedGiftIndex]
+        : null;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      decoration: const BoxDecoration(
+        color: Color(0xFF1E1E2D),
+        border: Border(top: BorderSide(color: Colors.white12)),
+      ),
+      child: Row(
+        children: [
+          GiftIconWidget(icon: selected?['icon'], size: 42, emojiSize: 32),
+          Spacing.h10,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SemiBoldText(
+                  text: selected?['name'] ?? 'Select a gift',
+                  fontSize: TextStyles.k14FontSize,
+                  color: kColorWhite,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 3),
+                AppText(
+                  text: selected == null
+                      ? 'Gift details will appear here.'
+                      : _giftDetailText(selected),
+                  fontSize: 11,
+                  color: kColorHint,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          if (selected != null) ...[
+            Spacing.h8,
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.pinkAccent.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.pinkAccent),
+              ),
+              child: SemiBoldText(
+                text: '${selected['price'] ?? '0'} coins',
+                fontSize: TextStyles.k12FontSize,
+                color: kColorWhite,
+              ),
+            ),
+            // TODO: Re-enable full-screen gift preview once backend media URLs
+            // consistently provide playable animation/image assets.
+            // Spacing.h8,
+            // SizedBox(
+            //   height: 36,
+            //   child: ElevatedButton.icon(
+            //     onPressed: () => _viewGift(selected),
+            //     style: ElevatedButton.styleFrom(
+            //       backgroundColor: Colors.pinkAccent,
+            //       foregroundColor: kColorWhite,
+            //       padding: const EdgeInsets.symmetric(horizontal: 14),
+            //       shape: RoundedRectangleBorder(
+            //         borderRadius: BorderRadius.circular(18),
+            //       ),
+            //     ),
+            //     icon: const Icon(Icons.play_arrow_rounded, size: 18),
+            //     label: const SemiBoldText(
+            //       text: 'View',
+            //       fontSize: TextStyles.k12FontSize,
+            //       color: kColorWhite,
+            //     ),
+            //   ),
+            // ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _circleButton(IconData icon, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 46,
+        height: 46,
+        decoration: BoxDecoration(
+          color: LiveRoomUiColors.cardSurface.withValues(alpha: 0.82),
+          shape: BoxShape.circle,
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
+        ),
+        child: Icon(icon, color: kColorWhite, size: 20),
+      ),
+    );
+  }
+
+  Widget _emptyState() {
+    return RefreshIndicator(
+      color: _FamilyUi.pink,
+      onRefresh: () async {
+        controller.giftCatalog.clear();
+        await controller.loadGiftCatalog();
+      },
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 120, 24, 24),
+        children: [
+          AdminAgencyUi.glowIcon(
+            icon: Icons.card_giftcard_rounded,
+            accent: _FamilyUi.pink,
+            accentEnd: _FamilyUi.gold,
+            size: 72,
+            iconSize: 34,
+          ),
+          Spacing.v16,
+          const SemiBoldText(
+            text: 'No gifts available',
+            fontSize: TextStyles.k18FontSize,
+            color: kColorWhite,
+            align: TextAlign.center,
+          ),
+          Spacing.v6,
+          AppText(
+            text: 'Family gifts will appear here once the catalog is loaded.',
+            fontSize: TextStyles.k12FontSize,
+            color: kColorWhite.withValues(alpha: 0.68),
+            align: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _refreshGifts() async {
+    controller.giftCatalog.clear();
+    await controller.loadGiftCatalog();
+    if (!mounted) return;
+    setState(() {
+      _selectedTabIndex = 0;
+      _selectedGiftIndex = -1;
+    });
+  }
+
+  List<String> _tabs() {
+    final categories = <String>[];
+    for (final gift in controller.giftCatalog) {
+      final category = gift['category']?.trim();
+      if (category != null &&
+          category.isNotEmpty &&
+          !categories.contains(category)) {
+        categories.add(category);
+      }
+    }
+    return categories.isEmpty ? const ['Gifts'] : categories;
+  }
+
+  List<Map<String, String>> _visibleGifts() {
+    final tabs = _tabs();
+    if (tabs.isEmpty) return const [];
+    final tab = tabs[_selectedTabIndex.clamp(0, tabs.length - 1)];
+    final filtered = controller.giftCatalog
+        .where((gift) => (gift['category'] ?? 'Gifts') == tab)
+        .toList();
+    return filtered.isEmpty ? controller.giftCatalog.toList() : filtered;
+  }
+
+  String _giftDetailText(Map<String, String> gift) {
+    final category = gift['category']?.trim();
+    final hasGif = gift['animationUrl']?.trim().isNotEmpty == true;
+    final hasSound = gift['soundUrl']?.trim().isNotEmpty == true;
+    final parts = <String>[
+      if (category != null && category.isNotEmpty) category,
+      if (hasGif) 'GIF',
+      if (hasSound) 'Sound',
+    ];
+    return parts.isEmpty ? 'Family gift' : parts.join(' · ');
   }
 }
 
@@ -3864,6 +4348,8 @@ class _CatalogSheet extends StatelessWidget {
   final Color accent;
   final ValueChanged<Map<String, String>> onTap;
 
+  bool get _isGiftSheet => title.toLowerCase().contains('gift');
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -3909,6 +4395,7 @@ class _CatalogSheet extends StatelessWidget {
                   itemCount: items.length,
                   itemBuilder: (_, index) {
                     final item = items[index];
+                    final price = item['price']?.trim() ?? '';
                     return InkWell(
                       onTap: () => onTap(item),
                       borderRadius: BorderRadius.circular(14),
@@ -3924,13 +4411,10 @@ class _CatalogSheet extends StatelessWidget {
                         child: Column(
                           children: [
                             Expanded(
-                              child: _FamilyNetworkImage(
-                                url: item['image']?.toString() ?? '',
-                                fit: BoxFit.contain,
-                                fallback: _FamilyImagePlaceholder(
-                                  icon: Icons.image_not_supported_rounded,
-                                  iconColor: accent,
-                                ),
+                              child: _CatalogMedia(
+                                item: item,
+                                accent: accent,
+                                isGift: _isGiftSheet,
                               ),
                             ),
                             Spacing.v6,
@@ -3941,6 +4425,29 @@ class _CatalogSheet extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
+                            if (_isGiftSheet && price.isNotEmpty) ...[
+                              Spacing.v2,
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.diamond_outlined,
+                                    color: Colors.orange,
+                                    size: 10,
+                                  ),
+                                  Spacing.h2,
+                                  Flexible(
+                                    child: AppText(
+                                      text: price,
+                                      fontSize: 10,
+                                      color: kColorHint,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -3951,6 +4458,37 @@ class _CatalogSheet extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _CatalogMedia extends StatelessWidget {
+  const _CatalogMedia({
+    required this.item,
+    required this.accent,
+    required this.isGift,
+  });
+
+  final Map<String, String> item;
+  final Color accent;
+  final bool isGift;
+
+  @override
+  Widget build(BuildContext context) {
+    if (isGift) {
+      return GiftIconWidget(
+        icon: item['icon']?.trim().isNotEmpty == true
+            ? item['icon']
+            : item['image'],
+      );
+    }
+    return _FamilyNetworkImage(
+      url: item['image']?.toString() ?? '',
+      fit: BoxFit.contain,
+      fallback: _FamilyImagePlaceholder(
+        icon: Icons.image_not_supported_rounded,
+        iconColor: accent,
       ),
     );
   }

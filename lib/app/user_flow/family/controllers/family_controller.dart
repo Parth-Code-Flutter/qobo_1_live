@@ -911,8 +911,8 @@ class FamilyController extends GetxController {
     });
   }
 
-  Future<void> loadGiftCatalog() async {
-    if (giftCatalog.isNotEmpty || isLoadingGifts.value) return;
+  Future<void> loadGiftCatalog({bool force = false}) async {
+    if ((!force && giftCatalog.isNotEmpty) || isLoadingGifts.value) return;
     isLoadingGifts.value = true;
     try {
       final response = await _economyRepo.getGiftList(isShowLoader: false);
@@ -997,6 +997,12 @@ class FamilyController extends GetxController {
         'groups',
         'families',
         'users',
+        'gifts',
+        'giftList',
+        'gift_list',
+        'list',
+        'results',
+        'docs',
         'data',
       ]) {
         final nested = data[key];

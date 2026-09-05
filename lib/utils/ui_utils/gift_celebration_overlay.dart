@@ -67,6 +67,7 @@ class GiftCelebrationOverlay {
   static void show({
     String? giftName,
     String? svgaUrl,
+    String? imageUrl,
     String? soundUrl,
     String? svgaAsset,
     String? gifAsset,
@@ -77,6 +78,7 @@ class GiftCelebrationOverlay {
         _QueuedGiftCelebration(
           giftName: giftName,
           svgaUrl: svgaUrl,
+          imageUrl: imageUrl,
           soundUrl: soundUrl,
           svgaAsset: svgaAsset,
           gifAsset: gifAsset,
@@ -97,6 +99,7 @@ class GiftCelebrationOverlay {
       return _GiftCelebrationView(
         giftName: name,
         svgaUrl: svgaUrl?.trim(),
+        imageUrl: imageUrl?.trim(),
         soundUrl: soundUrl?.trim(),
         // Local SVGA asset path kept for optional fallback; prefer svgaUrl.
         svgaAsset: svgaAsset?.trim(),
@@ -200,6 +203,7 @@ class GiftCelebrationOverlay {
     show(
       giftName: next.giftName,
       svgaUrl: next.svgaUrl,
+      imageUrl: next.imageUrl,
       soundUrl: next.soundUrl,
       svgaAsset: next.svgaAsset,
       gifAsset: next.gifAsset,
@@ -212,6 +216,7 @@ class _QueuedGiftCelebration {
   const _QueuedGiftCelebration({
     this.giftName,
     this.svgaUrl,
+    this.imageUrl,
     this.soundUrl,
     this.svgaAsset,
     this.gifAsset,
@@ -219,6 +224,7 @@ class _QueuedGiftCelebration {
 
   final String? giftName;
   final String? svgaUrl;
+  final String? imageUrl;
   final String? soundUrl;
   final String? svgaAsset;
   final String? gifAsset;
@@ -228,6 +234,7 @@ class _GiftCelebrationView extends StatefulWidget {
   const _GiftCelebrationView({
     required this.giftName,
     this.svgaUrl,
+    this.imageUrl,
     this.soundUrl,
     this.svgaAsset,
     this.gifAsset,
@@ -236,6 +243,7 @@ class _GiftCelebrationView extends StatefulWidget {
 
   final String giftName;
   final String? svgaUrl;
+  final String? imageUrl;
   final String? soundUrl;
   final String? svgaAsset;
   final String? gifAsset;
@@ -268,6 +276,11 @@ class _GiftCelebrationViewState extends State<_GiftCelebrationView>
     return url.startsWith('http://') || url.startsWith('https://');
   }
 
+  bool get _hasNetworkImage {
+    final url = widget.imageUrl?.trim() ?? '';
+    return url.startsWith('http://') || url.startsWith('https://');
+  }
+
   bool get _hasLocalSvga =>
       widget.svgaAsset != null && widget.svgaAsset!.trim().isNotEmpty;
 
@@ -283,6 +296,9 @@ class _GiftCelebrationViewState extends State<_GiftCelebrationView>
     if (_shouldLoadSvga) {
       _isLoadingSvga = true;
       _loadSvgaAnimation();
+    } else if (_hasNetworkImage) {
+      unawaited(_playGiftSound());
+      _scheduleDismiss();
     } else if (_hasGifAsset) {
       unawaited(_playGiftSound());
       _scheduleDismiss();
@@ -318,7 +334,9 @@ class _GiftCelebrationViewState extends State<_GiftCelebrationView>
     try {
       final videoItem = _hasNetworkSvga
           // Gift-list API `animationUrl` (Cloudinary / CDN SVGA bytes).
-          ? await SVGAParser.shared.decodeFromURL(widget.svgaUrl!)
+          ? await SVGAParser.shared
+                .decodeFromURL(widget.svgaUrl!)
+                .timeout(const Duration(seconds: 5))
           // Local asset fallback (optional; callers may pass svgaAsset).
           : await SVGAParser.shared.decodeFromAssets(widget.svgaAsset!);
 
@@ -403,12 +421,22 @@ class _GiftCelebrationViewState extends State<_GiftCelebrationView>
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(
-                          alpha: _hasGifAsset || _hasNetworkSvga ? 0.45 : 0.22,
+                          alpha:
+                              _hasGifAsset ||
+                                  _hasNetworkSvga ||
+                                  _hasNetworkImage
+                              ? 0.45
+                              : 0.22,
                         ),
                       ),
                     ),
                   ),
                   if (_hasGifAsset) _buildFullScreenGif(size: size),
+                  if (!_hasGifAsset && _hasNetworkImage && !_isSvgaReady)
+                    _buildFullScreenNetworkImage(
+                      size: size,
+                      url: widget.imageUrl!.trim(),
+                    ),
                   if (!_hasGifAsset && _isSvgaReady && _svgaController != null)
                     Positioned.fill(
                       child: FittedBox(
@@ -423,6 +451,16 @@ class _GiftCelebrationViewState extends State<_GiftCelebrationView>
                           ),
                         ),
                       ),
+                    ),
+                  if (!_hasGifAsset &&
+                      _hasNetworkSvga &&
+                      _svgaFailed &&
+                      !_isLoadingSvga)
+                    _buildFullScreenNetworkImage(
+                      size: size,
+                      url: widget.imageUrl?.trim().isNotEmpty == true
+                          ? widget.imageUrl!.trim()
+                          : widget.svgaUrl!.trim(),
                     ),
                   if (_isLoadingSvga && !_isSvgaReady)
                     const Center(
@@ -443,7 +481,9 @@ class _GiftCelebrationViewState extends State<_GiftCelebrationView>
                   // Fallback badge when SVGA cannot be loaded.
                   if (!_hasGifAsset &&
                       (!_isSvgaReady || _svgaFailed) &&
-                      !_isLoadingSvga)
+                      !_isLoadingSvga &&
+                      !(_hasNetworkSvga && _svgaFailed) &&
+                      !_hasNetworkImage)
                     Positioned(
                       top: top - (10 * value),
                       left: 18,
@@ -467,6 +507,24 @@ class _GiftCelebrationViewState extends State<_GiftCelebrationView>
       child: Center(
         child: Image.asset(
           widget.gifAsset!,
+          width: size.width,
+          height: size.height,
+          fit: BoxFit.contain,
+          gaplessPlayback: true,
+          errorBuilder: (_, __, ___) => const _GiftCelebrationCard(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFullScreenNetworkImage({
+    required Size size,
+    required String url,
+  }) {
+    return Positioned.fill(
+      child: Center(
+        child: Image.network(
+          url,
           width: size.width,
           height: size.height,
           fit: BoxFit.contain,
@@ -502,11 +560,7 @@ class _GiftCelebrationCard extends StatelessWidget {
             ),
           ],
         ),
-        child: const Icon(
-          kGiftIcon,
-          color: kColorWhite,
-          size: 42,
-        ),
+        child: const Icon(kGiftIcon, color: kColorWhite, size: 42),
       ),
     );
   }

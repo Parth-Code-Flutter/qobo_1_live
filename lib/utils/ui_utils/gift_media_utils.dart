@@ -126,14 +126,16 @@ abstract final class GiftMediaUtils {
         ? giftName!.trim()
         : 'Gift';
     final iconPart = isNetworkGiftIcon(giftIcon) ? '' : (giftIcon ?? '');
-    final normalizedScope =
-        scope.trim().toLowerCase() == 'room' ? 'room' : 'user';
+    final normalizedScope = scope.trim().toLowerCase() == 'room'
+        ? 'room'
+        : 'user';
     final toId = receiverId?.trim() ?? '';
     final isRoomGift = normalizedScope == 'room' || toId.isEmpty;
-    final base = (isRoomGift
-            ? '🎁 sent $name to the Room $iconPart'
-            : '🎁 sent $name $iconPart')
-        .trim();
+    final base =
+        (isRoomGift
+                ? '🎁 sent $name to the Room $iconPart'
+                : '🎁 sent $name $iconPart')
+            .trim();
     final fromId = senderId?.trim() ?? '';
     final credited = (creditedUserIds ?? const <String>[])
         .map((e) => e.trim())
@@ -173,9 +175,7 @@ abstract final class GiftMediaUtils {
     if (visible.startsWith('sent ')) {
       visible = visible.substring(5).trim();
     }
-    visible = visible
-        .replaceFirst(RegExp(r'\s+to the [Rr]oom\s*$'), '')
-        .trim();
+    visible = visible.replaceFirst(RegExp(r'\s+to the [Rr]oom\s*$'), '').trim();
     if (visible.isEmpty) return 'Gift';
     final parts = visible.split(RegExp(r'\s+'));
     if (parts.length >= 2 && parts.last.runes.length <= 2) {
@@ -185,21 +185,23 @@ abstract final class GiftMediaUtils {
   }
 
   /// True when the chat text is a gift celebration payload.
-  static bool isGiftChatMessage(String text) =>
-      text.trim().startsWith('🎁 ');
+  static bool isGiftChatMessage(String text) => text.trim().startsWith('🎁 ');
 
   /// Shows the shared full-screen SVGA / sound celebration overlay.
   static void showCelebration({
     String? giftName,
     String? animationUrl,
+    String? imageUrl,
     String? soundUrl,
     bool enqueueIfBusy = false,
   }) {
     final anim = animationUrl?.trim() ?? '';
+    final image = imageUrl?.trim() ?? '';
     final sound = soundUrl?.trim() ?? '';
     GiftCelebrationOverlay.show(
       giftName: giftName,
       svgaUrl: anim.isNotEmpty ? anim : null,
+      imageUrl: image.isNotEmpty ? image : null,
       soundUrl: sound.isNotEmpty ? sound : null,
       enqueueIfBusy: enqueueIfBusy,
     );
@@ -240,8 +242,7 @@ abstract final class GiftMediaUtils {
   }) {
     var animationUrl = parseGiftAnimUrl(message)?.trim() ?? '';
     var soundUrl = parseGiftSoundUrl(message)?.trim() ?? '';
-    if ((animationUrl.isEmpty || soundUrl.isEmpty) &&
-        giftCatalog.isNotEmpty) {
+    if ((animationUrl.isEmpty || soundUrl.isEmpty) && giftCatalog.isNotEmpty) {
       final fromCatalog = catalogMediaForChat(message, giftCatalog);
       if (animationUrl.isEmpty) animationUrl = fromCatalog.$1;
       if (soundUrl.isEmpty) soundUrl = fromCatalog.$2;
