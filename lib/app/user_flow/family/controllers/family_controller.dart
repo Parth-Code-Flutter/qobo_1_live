@@ -130,6 +130,22 @@ class FamilyController extends GetxController {
     await loadDiscoverGroups(isShowLoader: false);
   }
 
+  Future<Map<String, dynamic>> loadFamilyDetailMap(
+    Map<String, dynamic> family, {
+    bool isShowLoader = false,
+  }) async {
+    final familyId = _familyId(family);
+    if (familyId.isEmpty) return family;
+    final response = await _familyRepo.getFamilyDetail(
+      familyId: familyId,
+      isShowLoader: isShowLoader,
+    );
+    if (!_isSuccess(response)) return family;
+    final detail = _extractDetailMap(response);
+    if (detail.isEmpty) return family;
+    return _mapFamily(<String, dynamic>{...family, ...detail});
+  }
+
   Future<void> createFamilyGroup({
     required String name,
     required String description,
@@ -189,8 +205,8 @@ class FamilyController extends GetxController {
     return CommonAppDialog.showGet<void>(
       title: title,
       message: message,
-      icon: icon ??
-          (success ? Icons.check_circle_rounded : Icons.error_rounded),
+      icon:
+          icon ?? (success ? Icons.check_circle_rounded : Icons.error_rounded),
       iconAccent: success ? const Color(0xFF25D98F) : const Color(0xFFFF5C8A),
       barrierDismissible: false,
       actions: const [CommonAppDialogAction(label: 'OK', isPrimary: true)],
@@ -203,11 +219,7 @@ class FamilyController extends GetxController {
     required String message,
     required bool success,
   }) {
-    return _showResultDialog(
-      title: title,
-      message: message,
-      success: success,
-    );
+    return _showResultDialog(title: title, message: message, success: success);
   }
 
   Future<void> joinFamily(Map<String, dynamic> family) async {
@@ -240,7 +252,10 @@ class FamilyController extends GetxController {
     );
   }
 
-  String _joinFailureMessage(Map<String, dynamic>? response, int expectedCoins) {
+  String _joinFailureMessage(
+    Map<String, dynamic>? response,
+    int expectedCoins,
+  ) {
     final message = _message(response, '');
     final upper = message.toUpperCase();
     if (upper.contains('INSUFFICIENT_COINS') ||
@@ -258,9 +273,7 @@ class FamilyController extends GetxController {
         upper.contains('BLOCKED')) {
       return 'You are blocked from joining this group.';
     }
-    return message.isNotEmpty
-        ? message
-        : 'Could not join this family.';
+    return message.isNotEmpty ? message : 'Could not join this family.';
   }
 
   String _joinSuccessMessage(
@@ -333,7 +346,9 @@ class FamilyController extends GetxController {
 
     final context = Get.context;
     if (context != null && context.mounted) {
-      final label = memberName.trim().isEmpty ? 'this member' : memberName.trim();
+      final label = memberName.trim().isEmpty
+          ? 'this member'
+          : memberName.trim();
       final confirmed = await CommonAppDialog.confirm(
         context: context,
         title: 'Remove member',
@@ -496,7 +511,8 @@ class FamilyController extends GetxController {
               LoggerUtils.logWarning(
                 'FamilyController: Firestore messages listen failed — $error',
               );
-              final denied = error is FirebaseException &&
+              final denied =
+                  error is FirebaseException &&
                   error.code == 'permission-denied';
               chatListenError.value = denied
                   ? 'Chat sync blocked by Firestore rules. Showing sent messages only.'
@@ -604,12 +620,7 @@ class FamilyController extends GetxController {
     ]);
     if (fromDoc.isNotEmpty) return fromDoc;
     for (final member in familyMembers) {
-      final id = _pickText(member, const [
-        'userId',
-        'id',
-        '_id',
-        'user_id',
-      ]);
+      final id = _pickText(member, const ['userId', 'id', '_id', 'user_id']);
       if (id != userId) continue;
       final name = _pickText(member, const ['name', 'userName', 'displayName']);
       if (name.isNotEmpty) return name;
@@ -743,9 +754,7 @@ class FamilyController extends GetxController {
             final messages = snapshot.docs
                 .map((doc) => <String, dynamic>{...doc.data(), 'id': doc.id})
                 .toList();
-            messages.sort(
-              (a, b) => _messageTime(a).compareTo(_messageTime(b)),
-            );
+            messages.sort((a, b) => _messageTime(a).compareTo(_messageTime(b)));
             return messages;
           });
     });
@@ -972,6 +981,18 @@ class FamilyController extends GetxController {
     return _extractItems(response);
   }
 
+  Map<String, dynamic> _extractDetailMap(Map<String, dynamic>? response) {
+    final data = response?['data'];
+    if (data is Map) {
+      for (final key in const ['group', 'family', 'detail', 'data']) {
+        final nested = data[key];
+        if (nested is Map) return _copyMap(nested);
+      }
+      return _copyMap(data);
+    }
+    return const {};
+  }
+
   Map<String, dynamic> _mapFamily(Map<String, dynamic> raw) {
     final id = _pickText(raw, const ['groupId', 'id', 'familyId', 'family_id']);
     final name = _pickText(raw, const ['name', 'familyName', 'title']);
@@ -989,13 +1010,41 @@ class FamilyController extends GetxController {
       'adminName': _pickText(raw, const ['adminName', 'creatorName', 'leader']),
       'adminAvatar': _pickText(raw, const ['adminAvatar', 'creatorAvatar']),
       'memberCount': memberCount,
+      'memberLimit': _toInt(raw['memberLimit'] ?? raw['member_limit'] ?? 50),
       'members': memberCount,
+      'level': _toInt(
+        raw['level'] ?? raw['familyLevel'] ?? raw['family_level'],
+      ),
+      'familyCoins': _toInt(
+        raw['familyCoins'] ??
+            raw['family_coins'] ??
+            raw['coins'] ??
+            raw['totalCoins'],
+      ),
+      'familyPoints': _toInt(
+        raw['familyPoints'] ??
+            raw['family_points'] ??
+            raw['points'] ??
+            raw['totalPoints'],
+      ),
+      'familyRank': _toInt(
+        raw['familyRank'] ?? raw['family_rank'] ?? raw['rank'],
+      ),
+      'announcement': _pickText(raw, const [
+        'announcement',
+        'notice',
+        'message',
+        'announcementText',
+      ]),
+      'topMembers': raw['topMembers'] ?? raw['top_members'],
+      'activities':
+          raw['activities'] ?? raw['activity'] ?? raw['recentActivity'],
       'totalJoinCoins': _toInt(raw['totalJoinCoins']),
       'totalGiftCoins': _toInt(raw['totalGiftCoins']),
       'isJoined': raw['isJoined'] == true,
       'myRole': _pickText(raw, const ['myRole', 'role']),
-      'canManageMembers': raw['canManageMembers'] == true ||
-          raw['can_manage_members'] == true,
+      'canManageMembers':
+          raw['canManageMembers'] == true || raw['can_manage_members'] == true,
       'status': _pickText(raw, const ['status']),
       'lastMessage': _pickText(raw, const ['lastMessage']),
       'lastMessageAt': _pickText(raw, const ['lastMessageAt']),
