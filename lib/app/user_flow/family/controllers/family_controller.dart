@@ -222,9 +222,9 @@ class FamilyController extends GetxController {
     return _showResultDialog(title: title, message: message, success: success);
   }
 
-  Future<void> joinFamily(Map<String, dynamic> family) async {
+  Future<bool> joinFamily(Map<String, dynamic> family) async {
     final familyId = _familyId(family);
-    if (familyId.isEmpty) return;
+    if (familyId.isEmpty) return false;
 
     final expectedCoins = _toInt(
       family['joiningCoins'] ?? family['joining_coins'],
@@ -240,7 +240,7 @@ class FamilyController extends GetxController {
         success: false,
         icon: Icons.lock_outline_rounded,
       );
-      return;
+      return false;
     }
     await loadFamilyHub();
     selectedTab.value = 0;
@@ -250,6 +250,7 @@ class FamilyController extends GetxController {
       success: true,
       icon: Icons.groups_rounded,
     );
+    return true;
   }
 
   String _joinFailureMessage(
@@ -389,6 +390,52 @@ class FamilyController extends GetxController {
       success: true,
       icon: Icons.person_off_rounded,
     );
+  }
+
+  Future<bool> addMembersToFamily({
+    required String familyId,
+    required List<String> userIds,
+  }) async {
+    final id = familyId.trim();
+    final users = userIds
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toSet();
+    if (id.isEmpty || users.isEmpty) {
+      await _showResultDialog(
+        title: 'Select members',
+        message: 'Please select at least one user to add.',
+        success: false,
+        icon: Icons.group_add_rounded,
+      );
+      return false;
+    }
+
+    final response = await _familyRepo.addMembers(
+      familyId: id,
+      userIds: users.toList(),
+      isShowLoader: true,
+    );
+    if (!_isSuccess(response)) {
+      await _showResultDialog(
+        title: 'Could not add members',
+        message: _message(response, 'Could not add selected members.'),
+        success: false,
+        icon: Icons.group_add_rounded,
+      );
+      return false;
+    }
+
+    selectedInitialMembers.clear();
+    await loadMembers(id);
+    await loadMyGroups();
+    await _showResultDialog(
+      title: 'Members added',
+      message: _message(response, 'Selected members added successfully.'),
+      success: true,
+      icon: Icons.groups_rounded,
+    );
+    return true;
   }
 
   Future<void> loadPickerUsers({
