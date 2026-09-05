@@ -438,6 +438,68 @@ class FamilyController extends GetxController {
     return true;
   }
 
+  /// Admin updates group name (and optional description).
+  Future<Map<String, dynamic>?> updateFamilyProfile({
+    required String familyId,
+    required String name,
+    String? description,
+  }) async {
+    final id = familyId.trim();
+    final cleanName = name.trim();
+    if (id.isEmpty) return null;
+    if (cleanName.isEmpty) {
+      await _showResultDialog(
+        title: 'Name required',
+        message: 'Please enter a group name.',
+        success: false,
+        icon: Icons.edit_rounded,
+      );
+      return null;
+    }
+
+    final response = await _familyRepo.updateFamily(
+      familyId: id,
+      name: cleanName,
+      description: description,
+      isShowLoader: true,
+    );
+    if (!_isSuccess(response)) {
+      await _showResultDialog(
+        title: 'Could not update',
+        message: _message(response, 'Could not update this family group.'),
+        success: false,
+        icon: Icons.edit_rounded,
+      );
+      return null;
+    }
+
+    final detail = _extractDetailMap(response);
+    final mapped = <String, dynamic>{
+      'name': cleanName,
+      if (description != null) 'description': description.trim(),
+    };
+    if (detail.isNotEmpty) {
+      final fromApi = _mapFamily(detail);
+      final apiName = fromApi['name']?.toString().trim() ?? '';
+      final apiDesc = fromApi['description']?.toString().trim() ?? '';
+      if (apiName.isNotEmpty) mapped['name'] = apiName;
+      if (apiDesc.isNotEmpty) mapped['description'] = apiDesc;
+    }
+    // Keep local lists in sync.
+    final index = myGroups.indexWhere((g) => _familyId(g) == id);
+    if (index >= 0) {
+      myGroups[index] = {...myGroups[index], ...mapped};
+      myGroups.refresh();
+    }
+    await _showResultDialog(
+      title: 'Group updated',
+      message: _message(response, 'Family group updated successfully.'),
+      success: true,
+      icon: Icons.check_circle_rounded,
+    );
+    return mapped;
+  }
+
   Future<void> loadPickerUsers({
     String query = '',
     bool followersOnly = true,

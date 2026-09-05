@@ -227,6 +227,46 @@ class FamilyRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
+  /// Admin update group profile (name / description).
+  /// Tries `PATCH /api/family/groups/:id`, then legacy `/api/family/update`.
+  Future<Map<String, dynamic>?> updateFamily({
+    required String familyId,
+    String? name,
+    String? description,
+    bool isShowLoader = true,
+  }) async {
+    final id = familyId.trim();
+    if (id.isEmpty) return null;
+    final body = <String, dynamic>{
+      'groupId': id,
+      'familyId': id,
+      'family_id': id,
+      if (name != null) 'name': name.trim(),
+      if (description != null) 'description': description.trim(),
+    };
+    var response = await _apiService.patchRequest(
+      endPoint: FamilyEndpoints.groupUpdate(id),
+      requestModel: body,
+      isShowLoader: isShowLoader,
+    );
+    if (response?.statusCode == 404) {
+      response = await _apiService.patchRequest(
+        endPoint: FamilyEndpoints.update,
+        requestModel: body,
+        isShowLoader: isShowLoader,
+      );
+    }
+    if (response?.statusCode == 404) {
+      response = await _apiService.putRequest(
+        endPoint: FamilyEndpoints.groupUpdate(id),
+        requestModel: body,
+        isShowLoader: isShowLoader,
+      );
+    }
+    if (response == null) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
   Future<Map<String, dynamic>?> removeMember({
     required String familyId,
     required String userId,

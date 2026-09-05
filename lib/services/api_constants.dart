@@ -807,6 +807,12 @@ class FamilyEndpoints {
   static String groupRead(String groupId) =>
       '/api/family/groups/${Uri.encodeComponent(groupId)}/read';
 
+  /// PATCH /api/family/groups/:groupId — update name/description (admin).
+  static String groupUpdate(String groupId) => groupDetail(groupId);
+
+  /// PATCH /api/family/update — legacy/alternate update path.
+  static const String update = '/api/family/update';
+
   /// POST /api/family/create
   static const String create = '/api/family/create';
 

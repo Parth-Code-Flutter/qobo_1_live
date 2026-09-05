@@ -6,6 +6,7 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
 import 'package:qobo_one_live/app/user_flow/live_broadcast/widgets/gift_icon_widget.dart';
+import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
 import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
@@ -1101,30 +1102,120 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
           ),
           _headerAction(Icons.workspace_premium_rounded),
           Spacing.h8,
-          _headerAction(Icons.group_add_rounded),
-          Spacing.h4,
-          _headerAction(Icons.more_vert_rounded, transparent: true),
+          _headerAction(
+            Icons.group_add_rounded,
+            onTap: _openAddMembersFromHeader,
+          ),
+          // Overflow menu temporarily hidden.
+          // Spacing.h4,
+          // _headerAction(Icons.more_vert_rounded, transparent: true),
         ],
       ),
     );
   }
 
-  Widget _headerAction(IconData icon, {bool transparent = false}) {
-    return Container(
-      width: 38,
-      height: 38,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: transparent ? kColorWhite.withValues(alpha: 0.08) : null,
-        gradient: transparent
-            ? null
-            : const LinearGradient(
-                colors: [Color(0xFFFFC239), Color(0xFFFF9D1D)],
-              ),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.14)),
+  Widget _headerAction(
+    IconData icon, {
+    bool transparent = false,
+    VoidCallback? onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: Ink(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: transparent ? kColorWhite.withValues(alpha: 0.08) : null,
+            gradient: transparent
+                ? null
+                : const LinearGradient(
+                    colors: [Color(0xFFFFC239), Color(0xFFFF9D1D)],
+                  ),
+            border: Border.all(color: kColorWhite.withValues(alpha: 0.14)),
+          ),
+          child: Icon(icon, color: kColorWhite, size: 24),
+        ),
       ),
-      child: Icon(icon, color: kColorWhite, size: 24),
     );
+  }
+
+  void _openAddMembersFromHeader() {
+    if (!controller.isAdmin(_group)) {
+      unawaited(
+        CommonAppDialog.showGet<void>(
+          title: 'Admin only',
+          message: 'Only the group admin can add members.',
+          icon: Icons.group_add_rounded,
+          iconAccent: const Color(0xFFFF5C8A),
+          barrierDismissible: true,
+          actions: const [CommonAppDialogAction(label: 'OK', isPrimary: true)],
+        ),
+      );
+      return;
+    }
+    final familyId = controller.familyIdOf(_group);
+    if (familyId.isEmpty) return;
+    final searchController = TextEditingController();
+    controller.selectedInitialMembers.clear();
+    unawaited(controller.loadMembers(familyId, isShowLoader: false));
+    controller.loadPickerUsers(followersOnly: true);
+    Get.bottomSheet<void>(
+      _FamilyAddMembersSheet(
+        familyId: familyId,
+        searchController: searchController,
+        existingMemberIds: controller.familyMembers
+            .map((m) => (m['userId'] ?? m['id'] ?? '').toString().trim())
+            .where((id) => id.isNotEmpty)
+            .toSet(),
+      ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+    ).whenComplete(() {
+      searchController.dispose();
+      controller.selectedInitialMembers.clear();
+      unawaited(_load());
+    });
+  }
+
+  Future<void> _openEditGroupName() async {
+    if (!controller.isAdmin(_group)) {
+      await CommonAppDialog.showGet<void>(
+        title: 'Admin only',
+        message: 'Only the group admin can edit the group name.',
+        icon: Icons.edit_rounded,
+        iconAccent: const Color(0xFFFF5C8A),
+        barrierDismissible: true,
+        actions: const [CommonAppDialogAction(label: 'OK', isPrimary: true)],
+      );
+      return;
+    }
+    final familyId = controller.familyIdOf(_group);
+    if (familyId.isEmpty) return;
+
+    final result = await Get.bottomSheet<Map<String, String>>(
+      _EditFamilyNameSheet(
+        initialName: _text(_group['name'], ''),
+        initialDescription: _text(_group['description'], ''),
+      ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+    );
+    if (result == null || !mounted) return;
+
+    final updated = await controller.updateFamilyProfile(
+      familyId: familyId,
+      name: result['name'] ?? '',
+      description: result['description'] ?? '',
+    );
+    if (updated == null || !mounted) return;
+    setState(() {
+      _group = {..._group, ...updated};
+    });
+    unawaited(_load());
   }
 
   Widget _heroSummary(String name) {
@@ -1178,10 +1269,20 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const Icon(
-                            Icons.edit_rounded,
-                            color: Color(0xFF7B5CFF),
-                            size: 19,
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: _openEditGroupName,
+                              borderRadius: BorderRadius.circular(8),
+                              child: const Padding(
+                                padding: EdgeInsets.all(4),
+                                child: Icon(
+                                  Icons.edit_rounded,
+                                  color: Color(0xFF7B5CFF),
+                                  size: 19,
+                                ),
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -4187,6 +4288,212 @@ class FamilyGroupInfoPage extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _EditFamilyNameSheet extends StatefulWidget {
+  const _EditFamilyNameSheet({
+    required this.initialName,
+    required this.initialDescription,
+  });
+
+  final String initialName;
+  final String initialDescription;
+
+  @override
+  State<_EditFamilyNameSheet> createState() => _EditFamilyNameSheetState();
+}
+
+class _EditFamilyNameSheetState extends State<_EditFamilyNameSheet> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _descriptionController;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.initialName);
+    _descriptionController = TextEditingController(
+      text: widget.initialDescription,
+    );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    FocusManager.instance.primaryFocus?.unfocus();
+    Get.back<Map<String, String>>(
+      result: {
+        'name': _nameController.text.trim(),
+        'description': _descriptionController.text.trim(),
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    return AnimatedPadding(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.78,
+        ),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF241833), _FamilyUi.bg],
+          ),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          border: Border(
+            top: BorderSide(color: kColorWhite.withValues(alpha: 0.10)),
+          ),
+        ),
+        child: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const _SheetHandle(),
+                Row(
+                  children: [
+                    AdminAgencyUi.glowIcon(
+                      icon: Icons.edit_rounded,
+                      accent: _FamilyUi.violet,
+                      accentEnd: _FamilyUi.pink,
+                      size: 46,
+                      iconSize: 22,
+                    ),
+                    Spacing.h12,
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SemiBoldText(
+                            text: 'Edit group',
+                            fontSize: TextStyles.k18FontSize,
+                            color: kColorWhite,
+                          ),
+                          AppText(
+                            text: 'Update name and description',
+                            fontSize: 11,
+                            color: Color(0xB3FFFFFF),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                Spacing.v16,
+                TextField(
+                  controller: _nameController,
+                  textInputAction: TextInputAction.next,
+                  style: TextStyles.kRegularPoppins(
+                    fontSize: 14,
+                    colors: kColorWhite,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Group name',
+                    hintStyle: TextStyles.kRegularPoppins(
+                      fontSize: 13,
+                      colors: kColorWhite.withValues(alpha: 0.45),
+                    ),
+                    filled: true,
+                    fillColor: kColorWhite.withValues(alpha: 0.07),
+                    prefixIcon: const Icon(
+                      Icons.badge_rounded,
+                      color: _FamilyUi.violet,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                Spacing.v12,
+                TextField(
+                  controller: _descriptionController,
+                  maxLines: 3,
+                  style: TextStyles.kRegularPoppins(
+                    fontSize: 14,
+                    colors: kColorWhite,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Description (optional)',
+                    hintStyle: TextStyles.kRegularPoppins(
+                      fontSize: 13,
+                      colors: kColorWhite.withValues(alpha: 0.45),
+                    ),
+                    filled: true,
+                    fillColor: kColorWhite.withValues(alpha: 0.07),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                Spacing.v16,
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 50,
+                        child: OutlinedButton(
+                          onPressed: Get.back,
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(
+                              color: kColorWhite.withValues(alpha: 0.22),
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: SemiBoldText(
+                            text: 'Cancel',
+                            fontSize: TextStyles.k14FontSize,
+                            color: kColorWhite.withValues(alpha: 0.85),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Spacing.h10,
+                    Expanded(
+                      child: SizedBox(
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: _submit,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _FamilyUi.pink,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: const SemiBoldText(
+                            text: 'Save',
+                            fontSize: TextStyles.k14FontSize,
+                            color: kColorWhite,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
