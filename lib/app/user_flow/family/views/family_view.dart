@@ -4723,6 +4723,7 @@ class _CatalogMedia extends StatelessWidget {
     return _FamilyNetworkImage(
       url: item['image']?.toString() ?? '',
       fit: BoxFit.contain,
+      loaderColor: accent,
       fallback: _FamilyImagePlaceholder(
         icon: Icons.image_not_supported_rounded,
         iconColor: accent,
@@ -4908,6 +4909,7 @@ class _FamilyNetworkImage extends StatelessWidget {
     this.width,
     this.height,
     this.fit = BoxFit.cover,
+    this.loaderColor = _FamilyUi.pink,
   });
 
   final String url;
@@ -4915,6 +4917,7 @@ class _FamilyNetworkImage extends StatelessWidget {
   final double? width;
   final double? height;
   final BoxFit fit;
+  final Color loaderColor;
 
   @override
   Widget build(BuildContext context) {
@@ -4929,7 +4932,24 @@ class _FamilyNetworkImage extends StatelessWidget {
       fit: fit,
       loadingBuilder: (context, child, progress) {
         if (progress == null) return child;
-        return SizedBox(width: width, height: height, child: fallback);
+        return SizedBox(
+          width: width,
+          height: height,
+          child: Center(
+            child: SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.2,
+                color: loaderColor,
+                value: progress.expectedTotalBytes != null
+                    ? progress.cumulativeBytesLoaded /
+                        progress.expectedTotalBytes!
+                    : null,
+              ),
+            ),
+          ),
+        );
       },
       errorBuilder: (_, __, ___) {
         return SizedBox(width: width, height: height, child: fallback);
