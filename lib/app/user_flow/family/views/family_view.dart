@@ -18,6 +18,7 @@ import 'package:qobo_one_live/utils/text_utils/profanity_mask_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 import '../controllers/family_controller.dart';
+import '../widgets/family_member_tree.dart';
 
 abstract final class _FamilyUi {
   static const bg = Color(0xFF090516);
@@ -1640,7 +1641,12 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
         const Color(0xFF42A5F5),
         () => Get.toNamed(Routes.POINT_CENTER),
       ),
-      (Icons.bar_chart_rounded, 'Rankings', const Color(0xFF33D35E), () {}),
+      (
+        Icons.bar_chart_rounded,
+        'Rankings',
+        const Color(0xFF33D35E),
+        _openRankings,
+      ),
     ];
     return _whiteCard(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
@@ -2016,6 +2022,14 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
     Get.to(() => FamilyGiftsPage(group: _group));
   }
 
+  void _openRankings() {
+    final familyId = controller.familyIdOf(_group);
+    if (familyId.isNotEmpty) {
+      unawaited(controller.loadMembers(familyId, isShowLoader: false));
+    }
+    Get.to(() => FamilyRankingsPage(group: _group));
+  }
+
   void _confirmJoinFromDetail() {
     Get.bottomSheet<void>(
       _JoinFamilyConfirmSheet(
@@ -2044,6 +2058,327 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
 
   int _int(dynamic value) {
     if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  String _compact(int value) {
+    if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}M';
+    if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)}K';
+    return '$value';
+  }
+}
+
+class FamilyRankingsPage extends StatefulWidget {
+  const FamilyRankingsPage({super.key, required this.group});
+
+  final Map<String, dynamic> group;
+
+  @override
+  State<FamilyRankingsPage> createState() => _FamilyRankingsPageState();
+}
+
+class _FamilyRankingsPageState extends State<FamilyRankingsPage> {
+  FamilyController get controller => Get.find<FamilyController>();
+
+  String get familyId => controller.familyIdOf(widget.group);
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(controller.loadMembers(familyId, isShowLoader: false));
+  }
+
+  Future<void> _refresh() =>
+      controller.loadMembers(familyId, isShowLoader: false);
+
+  @override
+  Widget build(BuildContext context) {
+    final familyName = _value(widget.group['name'], 'Family');
+    return Scaffold(
+      backgroundColor: _FamilyUi.bg,
+      body: Container(
+        decoration: BoxDecoration(
+          image: const DecorationImage(
+            image: AssetImage(kImgBG),
+            fit: BoxFit.cover,
+            opacity: 0.55,
+          ),
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              _FamilyUi.violet.withValues(alpha: 0.28),
+              _FamilyUi.bg,
+              _FamilyUi.ink,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              _header(familyName),
+              Expanded(
+                child: Obx(() {
+                  final members =
+                      controller.familyMembers
+                          .map(Map<String, dynamic>.from)
+                          .toList()
+                        ..sort(
+                          (a, b) => _number(
+                            b['contribution'],
+                          ).compareTo(_number(a['contribution'])),
+                        );
+                  if (controller.isLoadingMembers.value && members.isEmpty) {
+                    return const Center(
+                      child: CircularProgressIndicator(color: _FamilyUi.pink),
+                    );
+                  }
+                  final topMembers = members.take(7).toList();
+                  final remainingMembers = members.skip(7).toList();
+                  return RefreshIndicator(
+                    color: _FamilyUi.pink,
+                    onRefresh: _refresh,
+                    child: members.isEmpty
+                        ? _emptyState()
+                        : ListView(
+                            physics: const AlwaysScrollableScrollPhysics(
+                              parent: BouncingScrollPhysics(),
+                            ),
+                            padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
+                            children: [
+                              FamilyMemberTree.ranking(
+                                rankingMembers: topMembers,
+                                onMemberTap: (_) {},
+                              ),
+                              if (remainingMembers.isNotEmpty) ...[
+                                Spacing.v20,
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.format_list_numbered_rounded,
+                                      color: _FamilyUi.cyan,
+                                      size: 20,
+                                    ),
+                                    Spacing.h8,
+                                    const SemiBoldText(
+                                      text: 'Other Members',
+                                      fontSize: TextStyles.k16FontSize,
+                                      color: kColorWhite,
+                                    ),
+                                    const Spacer(),
+                                    AppText(
+                                      text: '${remainingMembers.length}',
+                                      fontSize: TextStyles.k12FontSize,
+                                      color: kColorWhite.withValues(
+                                        alpha: 0.58,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Spacing.v12,
+                                for (
+                                  var index = 0;
+                                  index < remainingMembers.length;
+                                  index++
+                                ) ...[
+                                  _rankingTile(
+                                    remainingMembers[index],
+                                    index + 8,
+                                  ),
+                                  if (index < remainingMembers.length - 1)
+                                    Spacing.v10,
+                                ],
+                              ],
+                            ],
+                          ),
+                  );
+                }),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _header(String familyName) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      child: Row(
+        children: [
+          AdminAgencyUi.glassIconButton(
+            icon: Icons.arrow_back_ios_new_rounded,
+            onTap: Get.back,
+            accent: _FamilyUi.violet,
+            size: 44,
+            iconSize: 18,
+          ),
+          Spacing.h12,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SemiBoldText(
+                  text: 'Family Rankings',
+                  fontSize: TextStyles.k20FontSize,
+                  color: kColorWhite,
+                ),
+                AppText(
+                  text: familyName,
+                  fontSize: TextStyles.k12FontSize,
+                  color: kColorWhite.withValues(alpha: 0.62),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          AdminAgencyUi.glowIcon(
+            icon: Icons.emoji_events_rounded,
+            accent: _FamilyUi.gold,
+            accentEnd: _FamilyUi.pink,
+            size: 44,
+            iconSize: 22,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _rankingTile(Map<String, dynamic> member, int rank) {
+    final name = _value(member['name'], 'Member');
+    final contribution = _number(member['contribution']);
+    final role = _value(member['role'], 'member');
+    final rankColor = switch (rank) {
+      1 => const Color(0xFFFFC107),
+      2 => const Color(0xFFB4BED0),
+      3 => const Color(0xFFFF7043),
+      _ => _FamilyUi.violet,
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: LiveRoomUiColors.cardSurface.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: rank <= 3
+              ? rankColor.withValues(alpha: 0.55)
+              : kColorWhite.withValues(alpha: 0.08),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: rankColor.withValues(alpha: 0.18),
+              shape: BoxShape.circle,
+              border: Border.all(color: rankColor.withValues(alpha: 0.65)),
+            ),
+            child: SemiBoldText(
+              text: '$rank',
+              fontSize: TextStyles.k12FontSize,
+              color: rankColor,
+            ),
+          ),
+          Spacing.h10,
+          _Avatar(
+            imageUrl: _value(member['displayPicture'], ''),
+            frameUrl: _value(member['avatarFrameUrl'], ''),
+            name: name,
+            size: 50,
+          ),
+          Spacing.h10,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SemiBoldText(
+                  text: name,
+                  fontSize: TextStyles.k14FontSize,
+                  color: kColorWhite,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 3),
+                AppText(
+                  text: role.toLowerCase() == 'admin'
+                      ? 'Family admin'
+                      : 'Family member',
+                  fontSize: 11,
+                  color: kColorWhite.withValues(alpha: 0.55),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const AppCoinIcon(size: 14, color: _FamilyUi.gold),
+                  Spacing.h4,
+                  SemiBoldText(
+                    text: _compact(contribution),
+                    fontSize: TextStyles.k14FontSize,
+                    color: _FamilyUi.gold,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 3),
+              AppText(
+                text: 'Contribution',
+                fontSize: TextStyles.k10FontSize,
+                color: kColorWhite.withValues(alpha: 0.48),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _emptyState() {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      children: [
+        SizedBox(height: MediaQuery.sizeOf(context).height * 0.25),
+        const Icon(
+          Icons.emoji_events_outlined,
+          color: _FamilyUi.gold,
+          size: 62,
+        ),
+        Spacing.v16,
+        const SemiBoldText(
+          text: 'No rankings yet',
+          fontSize: TextStyles.k18FontSize,
+          color: kColorWhite,
+          align: TextAlign.center,
+        ),
+        Spacing.v8,
+        AppText(
+          text:
+              'Member rankings will appear when contribution data is available.',
+          fontSize: TextStyles.k12FontSize,
+          color: kColorWhite.withValues(alpha: 0.58),
+          align: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  String _value(dynamic value, String fallback) {
+    final text = value?.toString().trim() ?? '';
+    if (text.isEmpty || text.toLowerCase() == 'null') return fallback;
+    return text;
+  }
+
+  int _number(dynamic value) {
     if (value is num) return value.toInt();
     return int.tryParse(value?.toString() ?? '') ?? 0;
   }

@@ -14,24 +14,38 @@ class FamilyMemberTree extends StatelessWidget {
     required this.officers,
     required this.members,
     required this.onMemberTap,
-  })  : mode = FamilyTreeMode.role,
-        sponsorRoots = const [],
-        childrenOf = null;
+  }) : mode = FamilyTreeMode.role,
+       rankingMembers = const [],
+       sponsorRoots = const [],
+       childrenOf = null;
 
   const FamilyMemberTree.sponsor({
     super.key,
     required this.sponsorRoots,
     required this.childrenOf,
     required this.onMemberTap,
-  })  : mode = FamilyTreeMode.sponsor,
-        leaders = const [],
-        officers = const [],
-        members = const [];
+  }) : mode = FamilyTreeMode.sponsor,
+       rankingMembers = const [],
+       leaders = const [],
+       officers = const [],
+       members = const [];
+
+  const FamilyMemberTree.ranking({
+    super.key,
+    required this.rankingMembers,
+    required this.onMemberTap,
+  }) : mode = FamilyTreeMode.ranking,
+       leaders = const [],
+       officers = const [],
+       members = const [],
+       sponsorRoots = const [],
+       childrenOf = null;
 
   final FamilyTreeMode mode;
   final List<Map<String, dynamic>> leaders;
   final List<Map<String, dynamic>> officers;
   final List<Map<String, dynamic>> members;
+  final List<Map<String, dynamic>> rankingMembers;
   final List<Map<String, dynamic>> sponsorRoots;
   final List<Map<String, dynamic>> Function(String userId)? childrenOf;
   final ValueChanged<Map<String, dynamic>> onMemberTap;
@@ -63,8 +77,90 @@ class FamilyMemberTree extends StatelessWidget {
           ),
         ],
       ),
-      child: mode == FamilyTreeMode.role ? _buildRole() : _buildSponsor(),
+      child: switch (mode) {
+        FamilyTreeMode.role => _buildRole(),
+        FamilyTreeMode.sponsor => _buildSponsor(),
+        FamilyTreeMode.ranking => _buildRanking(),
+      },
     );
+  }
+
+  Widget _buildRanking() {
+    if (rankingMembers.isEmpty) {
+      return _empty('No ranking data available yet.');
+    }
+    final first = rankingMembers.take(1).toList();
+    final secondTier = rankingMembers.skip(1).take(2).toList();
+    final thirdTier = rankingMembers.skip(3).take(4).toList();
+
+    return Column(
+      children: [
+        _tierLabel('TOP CONTRIBUTOR', _gold),
+        Spacing.v10,
+        _rankingTierRow(first, startRank: 1, accent: _gold, nodeSize: 72),
+        if (secondTier.isNotEmpty) ...[
+          Spacing.v6,
+          const _TreeConnector(height: 28),
+          _rankingTierRow(
+            secondTier,
+            startRank: 2,
+            accent: _cyan,
+            nodeSize: 58,
+          ),
+        ],
+        if (thirdTier.isNotEmpty) ...[
+          Spacing.v6,
+          const _TreeConnector(height: 28),
+          _rankingTierRow(thirdTier, startRank: 4, accent: _pink, nodeSize: 50),
+        ],
+        Spacing.v10,
+        AppText(
+          text: 'Top 7 members by contribution',
+          fontSize: TextStyles.k10FontSize,
+          color: kColorWhite.withValues(alpha: 0.55),
+          align: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  Widget _rankingTierRow(
+    List<Map<String, dynamic>> people, {
+    required int startRank,
+    required Color accent,
+    required double nodeSize,
+  }) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          for (var i = 0; i < people.length; i++) ...[
+            if (i > 0) Spacing.h8,
+            _MemberNode(
+              member: {
+                ...people[i],
+                'role':
+                    '#${startRank + i} · ${_compactContribution(people[i]['contribution'])}',
+              },
+              accent: accent,
+              size: nodeSize,
+              onTap: () => onMemberTap(people[i]),
+              showPresence: false,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _compactContribution(dynamic raw) {
+    final value = raw is num
+        ? raw.toInt()
+        : int.tryParse(raw?.toString() ?? '') ?? 0;
+    if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}M';
+    if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)}K';
+    return '$value';
   }
 
   Widget _buildRole() {
@@ -157,11 +253,7 @@ class FamilyMemberTree extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: accent.withValues(alpha: 0.4)),
       ),
-      child: SemiBoldText(
-        text: text,
-        fontSize: 10,
-        color: accent,
-      ),
+      child: SemiBoldText(text: text, fontSize: 10, color: accent),
     );
   }
 
@@ -211,7 +303,7 @@ class FamilyMemberTree extends StatelessWidget {
   }
 }
 
-enum FamilyTreeMode { role, sponsor }
+enum FamilyTreeMode { role, sponsor, ranking }
 
 class _SponsorBranch extends StatelessWidget {
   const _SponsorBranch({
@@ -229,7 +321,9 @@ class _SponsorBranch extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final userId = member['userId']?.toString() ?? '';
-    final kids = depth >= 6 ? const <Map<String, dynamic>>[] : childrenOf(userId);
+    final kids = depth >= 6
+        ? const <Map<String, dynamic>>[]
+        : childrenOf(userId);
     final accent = depth == 0
         ? AdminAgencyUi.gold
         : depth == 1
@@ -324,12 +418,14 @@ class _MemberNode extends StatelessWidget {
     required this.accent,
     required this.size,
     required this.onTap,
+    this.showPresence = true,
   });
 
   final Map<String, dynamic> member;
   final Color accent;
   final double size;
   final VoidCallback onTap;
+  final bool showPresence;
 
   @override
   Widget build(BuildContext context) {
@@ -361,19 +457,20 @@ class _MemberNode extends StatelessWidget {
                     frameSeed: userId,
                     size: size,
                   ),
-                  Positioned(
-                    right: 6,
-                    bottom: 6,
-                    child: Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: online ? Colors.greenAccent : Colors.grey,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: kColorWhite, width: 1.5),
+                  if (showPresence)
+                    Positioned(
+                      right: 6,
+                      bottom: 6,
+                      child: Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: online ? Colors.greenAccent : Colors.grey,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: kColorWhite, width: 1.5),
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
               Spacing.v6,
