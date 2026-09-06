@@ -1,23 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui.dart';
-import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
-/// Shared header for Super Admin tabs — icon badge + clear type hierarchy.
+/// Shared header for Super Admin tabs.
 class SuperAdminTabHeader extends StatelessWidget {
   const SuperAdminTabHeader({
     super.key,
-    required this.icon,
     required this.title,
     required this.subtitle,
     this.trailing,
     this.accent = SuperAdminUi.violet,
   });
 
-  final IconData icon;
   final String title;
   final String subtitle;
   final Widget? trailing;
@@ -26,30 +23,22 @@ class SuperAdminTabHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final canPop = Navigator.of(context).canPop();
-    return Padding(
+    return Container(
       padding: const EdgeInsets.fromLTRB(
         SuperAdminUi.pagePad,
-        12,
+        14,
         SuperAdminUi.pagePad,
-        10,
+        14,
+      ),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: accent.withValues(alpha: 0.18)),
+        ),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          if (canPop) ...[
-            AdminAgencyUi.glassIconButton(
-              icon: Icons.arrow_back_ios_new_rounded,
-              onTap: Get.back,
-              accent: SuperAdminUi.sky,
-            ),
-            Spacing.h10,
-          ],
-          SuperAdminUi.glowIcon(
-            icon: icon,
-            accent: accent,
-            size: 46,
-            iconSize: 22,
-          ),
-          Spacing.h12,
+          if (canPop) ...[_SuperAdminBackButton(accent: accent), Spacing.h12],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -64,12 +53,56 @@ class SuperAdminTabHeader extends StatelessWidget {
                   text: subtitle,
                   fontSize: TextStyles.k12FontSize,
                   color: SuperAdminUi.textMuted,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Spacing.v8,
+                Container(
+                  width: 34,
+                  height: 3,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(2),
+                    gradient: LinearGradient(
+                      colors: [accent, SuperAdminUi.pink],
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
-          if (trailing != null) trailing!,
+          if (trailing != null) ...[Spacing.h12, trailing!],
         ],
+      ),
+    );
+  }
+}
+
+class _SuperAdminBackButton extends StatelessWidget {
+  const _SuperAdminBackButton({required this.accent});
+
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: Get.back,
+        borderRadius: BorderRadius.circular(14),
+        child: Ink(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: SuperAdminUi.panel.withValues(alpha: 0.72),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: accent.withValues(alpha: 0.42)),
+          ),
+          child: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            size: 18,
+            color: SuperAdminUi.textPrimary,
+          ),
+        ),
       ),
     );
   }

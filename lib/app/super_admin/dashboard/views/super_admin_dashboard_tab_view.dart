@@ -27,7 +27,6 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SuperAdminTabHeader(
-            icon: Icons.dashboard_customize_rounded,
             title: 'Dashboard',
             subtitle: 'Agencies, hosts, and commissions at a glance',
             accent: SuperAdminUi.sky,

@@ -26,7 +26,6 @@ class SuperAdminSettingsTabView extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SuperAdminTabHeader(
-            icon: Icons.settings_rounded,
             title: 'Settings',
             subtitle: 'Account and session controls',
             accent: SuperAdminUi.gold,
@@ -63,8 +62,9 @@ class SuperAdminSettingsTabView extends StatelessWidget {
                                     gradient: SuperAdminUi.goldButtonGradient,
                                     boxShadow: [
                                       BoxShadow(
-                                        color: SuperAdminUi.gold
-                                            .withValues(alpha: 0.35),
+                                        color: SuperAdminUi.gold.withValues(
+                                          alpha: 0.35,
+                                        ),
                                         blurRadius: 8,
                                       ),
                                     ],
@@ -104,11 +104,13 @@ class SuperAdminSettingsTabView extends StatelessWidget {
                                   ),
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(20),
-                                    color:
-                                        SuperAdminUi.gold.withValues(alpha: 0.14),
+                                    color: SuperAdminUi.gold.withValues(
+                                      alpha: 0.14,
+                                    ),
                                     border: Border.all(
-                                      color: SuperAdminUi.gold
-                                          .withValues(alpha: 0.38),
+                                      color: SuperAdminUi.gold.withValues(
+                                        alpha: 0.38,
+                                      ),
                                     ),
                                   ),
                                   child: Row(
@@ -148,8 +150,9 @@ class SuperAdminSettingsTabView extends StatelessWidget {
                     if (!Get.isRegistered<SuperAdminHomeController>()) {
                       return;
                     }
-                    Get.find<SuperAdminHomeController>()
-                        .loadDashboardStats(showLoader: true);
+                    Get.find<SuperAdminHomeController>().loadDashboardStats(
+                      showLoader: true,
+                    );
                   },
                 ),
                 Spacing.v12,
@@ -161,8 +164,8 @@ class SuperAdminSettingsTabView extends StatelessWidget {
                   onTap: () {
                     Get.find<SuperAdminBottomNavController>()
                         .onNavBarTabSelected(
-                      SuperAdminBottomNavController.agencyTabIndex,
-                    );
+                          SuperAdminBottomNavController.agencyTabIndex,
+                        );
                   },
                 ),
                 Spacing.v12,
@@ -174,8 +177,8 @@ class SuperAdminSettingsTabView extends StatelessWidget {
                   onTap: () {
                     Get.find<SuperAdminBottomNavController>()
                         .onNavBarTabSelected(
-                      SuperAdminBottomNavController.hostTabIndex,
-                    );
+                          SuperAdminBottomNavController.hostTabIndex,
+                        );
                   },
                 ),
                 Spacing.v24,

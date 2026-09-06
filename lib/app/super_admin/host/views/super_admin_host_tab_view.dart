@@ -34,7 +34,6 @@ class SuperAdminHostTabView extends GetView<SuperAdminHomeController> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SuperAdminTabHeader(
-            icon: Icons.mic_rounded,
             title: 'Host',
             subtitle: 'Track host activity across all agencies',
             accent: SuperAdminUi.teal,
@@ -69,8 +68,7 @@ class SuperAdminHostTabView extends GetView<SuperAdminHomeController> {
               }
               return RefreshIndicator(
                 color: kColorPrimary,
-                onRefresh: () =>
-                    controller.loadTrackedHosts(showLoader: false),
+                onRefresh: () => controller.loadTrackedHosts(showLoader: false),
                 child: ListView.separated(
                   physics: const AlwaysScrollableScrollPhysics(
                     parent: BouncingScrollPhysics(),
@@ -239,7 +237,9 @@ class SuperAdminHostTabView extends GetView<SuperAdminHomeController> {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: SuperAdminUi.textPrimary.withValues(alpha: 0.10),
-            border: Border.all(color: SuperAdminUi.textPrimary.withValues(alpha: 0.16)),
+            border: Border.all(
+              color: SuperAdminUi.textPrimary.withValues(alpha: 0.16),
+            ),
           ),
           child: processing
               ? const Padding(
@@ -346,7 +346,9 @@ class SuperAdminHostTabView extends GetView<SuperAdminHomeController> {
           decoration: BoxDecoration(
             color: SuperAdminUi.sheet.withValues(alpha: 0.96),
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: SuperAdminUi.textPrimary.withValues(alpha: 0.14)),
+            border: Border.all(
+              color: SuperAdminUi.textPrimary.withValues(alpha: 0.14),
+            ),
             boxShadow: [
               BoxShadow(
                 color: SuperAdminUi.violet.withValues(alpha: 0.22),
@@ -399,12 +401,13 @@ class SuperAdminHostTabView extends GetView<SuperAdminHomeController> {
                     child: SizedBox(
                       height: 46,
                       child: OutlinedButton(
-                        onPressed: () =>
-                            Navigator.of(dialogContext).pop(false),
+                        onPressed: () => Navigator.of(dialogContext).pop(false),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: SuperAdminUi.textSecondary,
                           side: BorderSide(
-                            color: SuperAdminUi.textPrimary.withValues(alpha: 0.22),
+                            color: SuperAdminUi.textPrimary.withValues(
+                              alpha: 0.22,
+                            ),
                           ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
@@ -423,8 +426,7 @@ class SuperAdminHostTabView extends GetView<SuperAdminHomeController> {
                     child: SizedBox(
                       height: 46,
                       child: ElevatedButton(
-                        onPressed: () =>
-                            Navigator.of(dialogContext).pop(true),
+                        onPressed: () => Navigator.of(dialogContext).pop(true),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: SuperAdminUi.danger,
                           foregroundColor: kColorWhite,

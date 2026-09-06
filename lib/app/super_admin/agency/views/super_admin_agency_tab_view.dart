@@ -31,7 +31,6 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SuperAdminTabHeader(
-            icon: Icons.business_rounded,
             title: 'Agency',
             subtitle: 'Review and process agency applications',
             accent: SuperAdminUi.pink,
@@ -57,8 +56,7 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
                       SuperAdminEmptyState(
                         icon: Icons.storefront_outlined,
                         title: 'No agencies found',
-                        subtitle:
-                            'Pull down to refresh or try another filter',
+                        subtitle: 'Pull down to refresh or try another filter',
                       ),
                     ],
                   ),
@@ -124,8 +122,8 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
     final glow = agency.isPending
         ? SuperAdminUi.gold
         : agency.isSuspended
-            ? SuperAdminUi.warning
-            : SuperAdminUi.pink;
+        ? SuperAdminUi.warning
+        : SuperAdminUi.pink;
 
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.96, end: 1),
@@ -256,7 +254,9 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: SuperAdminUi.textPrimary.withValues(alpha: 0.10),
-          border: Border.all(color: SuperAdminUi.textPrimary.withValues(alpha: 0.16)),
+          border: Border.all(
+            color: SuperAdminUi.textPrimary.withValues(alpha: 0.16),
+          ),
         ),
         child: const Icon(
           Icons.more_vert_rounded,
@@ -507,7 +507,9 @@ class _SuperAdminGlassDialog extends StatelessWidget {
         decoration: BoxDecoration(
           color: SuperAdminUi.sheet.withValues(alpha: 0.96),
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: SuperAdminUi.textPrimary.withValues(alpha: 0.14)),
+          border: Border.all(
+            color: SuperAdminUi.textPrimary.withValues(alpha: 0.14),
+          ),
           boxShadow: [
             BoxShadow(
               color: SuperAdminUi.violet.withValues(alpha: 0.22),
@@ -546,7 +548,9 @@ class _SuperAdminGlassDialog extends StatelessWidget {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: SuperAdminUi.textSecondary,
                         side: BorderSide(
-                          color: SuperAdminUi.textPrimary.withValues(alpha: 0.22),
+                          color: SuperAdminUi.textPrimary.withValues(
+                            alpha: 0.22,
+                          ),
                         ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
