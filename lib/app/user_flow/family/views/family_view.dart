@@ -1703,15 +1703,33 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
                     color: kColorWhite,
                   ),
                 ),
-                AppText(
-                  text: 'View All',
-                  fontSize: TextStyles.k12FontSize,
-                  color: kColorWhite.withValues(alpha: 0.65),
-                ),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  size: 20,
-                  color: kColorWhite.withValues(alpha: 0.65),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _isJoined ? _openMembers : _confirmJoinFromDetail,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 3,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          AppText(
+                            text: 'View All',
+                            fontSize: TextStyles.k12FontSize,
+                            color: kColorWhite.withValues(alpha: 0.65),
+                          ),
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            size: 20,
+                            color: kColorWhite.withValues(alpha: 0.65),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
