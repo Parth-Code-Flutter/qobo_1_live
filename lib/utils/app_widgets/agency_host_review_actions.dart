@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
 import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
-import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -85,8 +84,7 @@ class AgencyHostReviewActions extends StatelessWidget {
     }
 
     final height = compact ? 40.0 : 44.0;
-    final fontSize =
-        compact ? TextStyles.k12FontSize : TextStyles.k14FontSize;
+    final fontSize = compact ? TextStyles.k12FontSize : TextStyles.k14FontSize;
 
     return Row(
       children: [
@@ -96,9 +94,9 @@ class AgencyHostReviewActions extends StatelessWidget {
             child: OutlinedButton(
               onPressed: onReject,
               style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.orangeAccent,
+                foregroundColor: AdminAgencyUi.rose,
                 side: BorderSide(
-                  color: Colors.orangeAccent.withValues(alpha: 0.7),
+                  color: AdminAgencyUi.rose.withValues(alpha: 0.72),
                 ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -107,7 +105,7 @@ class AgencyHostReviewActions extends StatelessWidget {
               child: SemiBoldText(
                 text: 'Reject',
                 fontSize: fontSize,
-                color: Colors.orangeAccent,
+                color: AdminAgencyUi.rose,
               ),
             ),
           ),
@@ -116,15 +114,12 @@ class AgencyHostReviewActions extends StatelessWidget {
         Expanded(
           child: SizedBox(
             height: height,
-            child: appButton(
-              onPressed: onApprove,
-              buttonText: 'Accept',
-              buttonHeight: height,
-              isGradient: true,
-              textStyle: TextStyles.kSemiBoldPoppins(
-                fontSize: fontSize,
-                colors: kColorWhite,
-              ),
+            child: AdminGoldCtaButton(
+              onTap: onApprove,
+              label: 'Accept',
+              icon: Icons.check_rounded,
+              expanded: true,
+              height: height,
             ),
           ),
         ),

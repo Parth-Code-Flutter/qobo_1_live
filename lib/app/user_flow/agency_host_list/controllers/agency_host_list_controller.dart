@@ -5,6 +5,7 @@ import 'package:qobo_one_live/app/user_flow/live_action/models/live_map_host.dar
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/repo/agency/agency_api_utils.dart';
 import 'package:qobo_one_live/repo/agency/agency_repo.dart';
+import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/agency_session_controller.dart';
 
 import '../../agency_owner_dashboard/models/agency_dashboard_data.dart';
@@ -260,9 +261,7 @@ class AgencyHostListController extends GetxController {
   /// - Highest-level host uses tree slot 0 (top center).
   /// - Blank placeholder slots pad the tree when host count < [minTreeVisualSlots].
   void _buildMapHosts() {
-    final sorted = List<AgencyHostModel>.from(
-      hostList.where((h) => h.isActive),
-    )
+    final sorted = List<AgencyHostModel>.from(hostList.where((h) => h.isActive))
       ..sort((a, b) {
         final byLevel = b.coinsPerSecond.compareTo(a.coinsPerSecond);
         if (byLevel != 0) return byLevel;
@@ -302,8 +301,11 @@ class AgencyHostListController extends GetxController {
       name: host.name,
       levelBadge: 'LV.${host.coinsPerSecond}',
       imageAsset: _suggestionPool[rankIndex % _suggestionPool.length],
-      alignment: _treeAlignmentsByRank[
-          rankIndex.clamp(0, _treeAlignmentsByRank.length - 1)],
+      alignment:
+          _treeAlignmentsByRank[rankIndex.clamp(
+            0,
+            _treeAlignmentsByRank.length - 1,
+          )],
       isAgencyHost: true,
       avatarUrl: host.avatarUrl.isNotEmpty ? host.avatarUrl : null,
       hostId: host.id.isNotEmpty ? host.id : host.reviewApplicationId,
@@ -317,14 +319,37 @@ class AgencyHostListController extends GetxController {
       name: '',
       levelBadge: '',
       imageAsset: _suggestionPool[slotIndex % _suggestionPool.length],
-      alignment: _treeAlignmentsByRank[
-          slotIndex.clamp(0, _treeAlignmentsByRank.length - 1)],
+      alignment:
+          _treeAlignmentsByRank[slotIndex.clamp(
+            0,
+            _treeAlignmentsByRank.length - 1,
+          )],
       isPlaceholder: true,
     );
   }
 
   void refreshList({bool showLoading = true}) {
     _fetchHosts(showLoading: showLoading);
+  }
+
+  Future<void> openAddHost() async {
+    await _session?.ensureHydratedFromDashboard();
+    if (isClosed) return;
+
+    final agencyCode = _session?.agencyCode.value.trim() ?? '';
+    // GetPage routes are registered as dynamic; a typed result here makes
+    // Navigator cast GetPageRoute<dynamic> to Route<bool?> and crashes.
+    final added = await Get.toNamed(
+      Routes.AGENCY_HOST_ONBOARDING,
+      arguments: {
+        'fromAgencyOwner': true,
+        if (agencyCode.isNotEmpty) 'agencyCode': agencyCode,
+        if (agencyCode.isNotEmpty) 'lockAgencyCode': true,
+      },
+    );
+    if (added == true && !isClosed) {
+      await _fetchHosts();
+    }
   }
 
   void onBackPressed() {

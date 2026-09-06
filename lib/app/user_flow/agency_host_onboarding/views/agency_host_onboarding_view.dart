@@ -99,23 +99,27 @@ class AgencyHostOnboardingView extends GetView<AgencyHostOnboardingController> {
                                     Obx(
                                       () => appButton(
                                         onPressed: () {
-                                          if (!controller.isSubmitLoading.value) {
+                                          if (!controller
+                                              .isSubmitLoading
+                                              .value) {
                                             controller.onSubmitPressed(context);
                                           }
                                         },
-                                        buttonText: controller.isSubmitLoading.value
+                                        buttonText:
+                                            controller.isSubmitLoading.value
                                             ? ''
                                             : 'Submit',
-                                        buttonIcon: controller.isSubmitLoading.value
+                                        buttonIcon:
+                                            controller.isSubmitLoading.value
                                             ? const SizedBox(
                                                 width: 20,
                                                 height: 20,
                                                 child: CircularProgressIndicator(
                                                   strokeWidth: 2,
                                                   valueColor:
-                                                      AlwaysStoppedAnimation<Color>(
-                                                    kColorWhite,
-                                                  ),
+                                                      AlwaysStoppedAnimation<
+                                                        Color
+                                                      >(kColorWhite),
                                                 ),
                                               )
                                             : null,
@@ -162,11 +166,15 @@ class AgencyHostOnboardingView extends GetView<AgencyHostOnboardingController> {
               ),
             ),
           ),
-          const SemiBoldText(
-            text: 'Agency Host',
-            fontSize: TextStyles.k18FontSize,
-            color: kColorWhite,
-            align: TextAlign.center,
+          Obx(
+            () => SemiBoldText(
+              text: controller.isFromAgencyOwner.value
+                  ? 'Add Host'
+                  : 'Agency Host',
+              fontSize: TextStyles.k18FontSize,
+              color: kColorWhite,
+              align: TextAlign.center,
+            ),
           ),
         ],
       ),
@@ -428,7 +436,8 @@ class AgencyHostOnboardingView extends GetView<AgencyHostOnboardingController> {
               borderColor: kColorHint,
               textInputAction: TextInputAction.done,
               textCapitalization: TextCapitalization.characters,
-              readOnly: controller.isAgencyCodeLocked.value ||
+              readOnly:
+                  controller.isAgencyCodeLocked.value ||
                   controller.isAgencyCodePrefilling.value,
               prefix: _fieldIcon(Icons.vpn_key_outlined),
             ),
@@ -561,9 +570,7 @@ class AgencyHostOnboardingView extends GetView<AgencyHostOnboardingController> {
                 decoration: BoxDecoration(
                   color: kColorAvatarFallbackBg.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: kColorHint.withValues(alpha: 0.35),
-                  ),
+                  border: Border.all(color: kColorHint.withValues(alpha: 0.35)),
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(13),

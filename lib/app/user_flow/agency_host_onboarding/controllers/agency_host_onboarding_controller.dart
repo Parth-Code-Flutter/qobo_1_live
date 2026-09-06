@@ -49,6 +49,9 @@ class AgencyHostOnboardingController extends GetxController
   /// success should return to the super admin shell, not the status screen.
   final isFromSuperAdmin = false.obs;
 
+  /// Agency owners return to their host list after submitting a new host.
+  final isFromAgencyOwner = false.obs;
+
   final ImagePicker _imagePicker = ImagePicker();
 
   @override
@@ -56,6 +59,7 @@ class AgencyHostOnboardingController extends GetxController
     super.onInit();
     final args = Get.arguments;
     isFromSuperAdmin.value = args is Map && args['fromSuperAdmin'] == true;
+    isFromAgencyOwner.value = args is Map && args['fromAgencyOwner'] == true;
     _prefillAgencyCode();
   }
 
@@ -176,11 +180,7 @@ class AgencyHostOnboardingController extends GetxController
   }
 
   String? validateHostName(BuildContext context, String? value) {
-    return Validate.nameValidation(
-      context,
-      value ?? '',
-      label: 'Host name',
-    );
+    return Validate.nameValidation(context, value ?? '', label: 'Host name');
   }
 
   String? validateBirthday(String? value) {
@@ -300,8 +300,10 @@ class AgencyHostOnboardingController extends GetxController
     }
 
     isSubmitLoading.value = true;
-    final whatsapp =
-        whatsAppController.text.trim().replaceAll(RegExp(r'\D'), '');
+    final whatsapp = whatsAppController.text.trim().replaceAll(
+      RegExp(r'\D'),
+      '',
+    );
     whatsAppController.text = whatsapp;
     final country = selectedCountry.value!;
     final state = selectedState.value!;
@@ -344,21 +346,26 @@ class AgencyHostOnboardingController extends GetxController
         return;
       }
       final fromSuperAdmin = isFromSuperAdmin.value;
+      final fromAgencyOwner = isFromAgencyOwner.value;
       await CommonGiffyDialog.showSuccess(
         context,
         title: 'Application Submitted',
-        subtitle: fromSuperAdmin
+        subtitle: fromSuperAdmin || fromAgencyOwner
             ? (agencyApiMessage(response) ??
-                  'Host application submitted. It appears in the Host tab once the agency approves it.')
+                  'Host application submitted and is ready for agency review.')
             : (agencyApiMessage(response) ??
                   'Your host application has been submitted successfully!'),
-        buttonText: fromSuperAdmin ? 'Done' : 'Check Status',
+        buttonText: fromSuperAdmin || fromAgencyOwner ? 'Done' : 'Check Status',
         gifAssetPath: kGifCongratulation,
         onPressed: () {
           Get.back<void>();
           if (fromSuperAdmin) {
             // Back to the super admin shell; the Host tab refreshes there.
             Get.back<void>();
+            return;
+          }
+          if (fromAgencyOwner) {
+            Get.back(result: true);
             return;
           }
           Get.offNamed(
