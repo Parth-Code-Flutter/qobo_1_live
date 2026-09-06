@@ -46,25 +46,25 @@ class ChatCallMessageTheme {
     if (message.isMissedCall) {
       subtitle = 'Missed call';
       accentColor = kColorRed;
-      titleColor = kColorText;
+      titleColor = kColorWhite;
       subtitleColor = kColorRed;
     } else if (message.isUnansweredCall) {
       subtitle = 'No answer';
       accentColor = isVideo ? kColorPrimary : const Color(0xFFE65100);
-      titleColor = kColorText;
-      subtitleColor = kColorHint;
+      titleColor = kColorWhite;
+      subtitleColor = kColorWhite.withValues(alpha: 0.58);
     } else {
       subtitle = ChatInboxPreviewType.callDurationLabel(
         message.callDurationSeconds,
       );
       accentColor = message.isMe ? kColorPrimary : kColorPrimary;
-      titleColor = message.isMe ? kColorPrimary : kColorText;
-      subtitleColor = kColorHint;
+      titleColor = kColorWhite;
+      subtitleColor = kColorWhite.withValues(alpha: 0.58);
     }
 
     final bubbleColor = message.isMe
-        ? kColorPrimary.withValues(alpha: 0.14)
-        : const Color(0xFFF3F4F8);
+        ? kColorPrimary.withValues(alpha: 0.72)
+        : const Color(0xFF2B1946);
 
     return ChatCallMessageTheme(
       title: title,
@@ -81,9 +81,7 @@ class ChatCallMessageTheme {
     if (isVideo) {
       if (message.isMissedCall) return Icons.missed_video_call_rounded;
       if (message.isUnansweredCall) return Icons.videocam_rounded;
-      return message.isMe
-          ? Icons.videocam_rounded
-          : Icons.videocam_rounded;
+      return message.isMe ? Icons.videocam_rounded : Icons.videocam_rounded;
     }
 
     if (message.isMissedCall) return Icons.phone_missed_rounded;

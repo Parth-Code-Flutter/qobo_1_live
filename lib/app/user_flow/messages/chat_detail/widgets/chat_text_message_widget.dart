@@ -27,25 +27,41 @@ class ChatTextMessageWidget extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             constraints: const BoxConstraints(maxWidth: 280),
             decoration: BoxDecoration(
-              color: message.isMe ? kColorPrimary : kColorBackground,
+              color: message.isMe ? null : const Color(0xFF2B1946),
+              gradient: message.isMe
+                  ? const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [kColorProfileChipPinkStart, kColorPrimary],
+                    )
+                  : null,
+              border: Border.all(
+                color: message.isMe
+                    ? kColorProfileChipPinkStart.withValues(alpha: 0.32)
+                    : kColorWhite.withValues(alpha: 0.11),
+              ),
               borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(16),
-                topRight: const Radius.circular(16),
-                bottomLeft: Radius.circular(message.isMe ? 16 : 0),
-                bottomRight: Radius.circular(message.isMe ? 0 : 16),
+                topLeft: const Radius.circular(18),
+                topRight: const Radius.circular(18),
+                bottomLeft: Radius.circular(message.isMe ? 18 : 5),
+                bottomRight: Radius.circular(message.isMe ? 5 : 18),
               ),
             ),
             child: AppText(
               text: ProfanityMaskUtils.mask(PhoneMaskUtils.mask(message.text)),
               fontSize: TextStyles.k14FontSize,
-              color: message.isMe ? kColorWhite : kColorText,
+              color: kColorWhite,
             ),
           ),
           Spacing.v4,
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              AppText(text: message.time, fontSize: 10, color: kColorHint),
+              AppText(
+                text: message.time,
+                fontSize: 10,
+                color: kColorWhite.withValues(alpha: 0.48),
+              ),
               if (message.isMe) ...[
                 const SizedBox(width: 4),
                 _DeliveryStatusIcon(status: message.deliveryStatus),
@@ -72,10 +88,10 @@ class _DeliveryStatusIcon extends StatelessWidget {
         color = Colors.lightBlueAccent;
         icon = Icons.done_all_rounded;
       case ChatDeliveryStatus.delivered:
-        color = kColorHint;
+        color = kColorWhite.withValues(alpha: 0.55);
         icon = Icons.done_all_rounded;
       case ChatDeliveryStatus.sent:
-        color = kColorHint;
+        color = kColorWhite.withValues(alpha: 0.55);
         icon = Icons.done_rounded;
     }
     return Icon(icon, size: 14, color: color);

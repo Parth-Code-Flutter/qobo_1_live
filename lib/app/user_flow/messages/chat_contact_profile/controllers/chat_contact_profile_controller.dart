@@ -17,9 +17,9 @@ class ChatContactProfileController extends GetxController {
     ChatRepo? chatRepo,
     ChatLocalStore? localStore,
     UserRepo? userRepo,
-  })  : _chatRepo = chatRepo ?? ChatRepo(),
-        _localStore = localStore ?? ChatLocalStore(),
-        _userRepo = userRepo ?? UserRepo();
+  }) : _chatRepo = chatRepo ?? ChatRepo(),
+       _localStore = localStore ?? ChatLocalStore(),
+       _userRepo = userRepo ?? UserRepo();
 
   final ChatRepo _chatRepo;
   final ChatLocalStore _localStore;
@@ -33,7 +33,16 @@ class ChatContactProfileController extends GetxController {
   final presenceColor = kColorHint.obs;
   final bio = ''.obs;
   final country = ''.obs;
+  final gender = ''.obs;
   final level = 0.obs;
+  final followersCount = 0.obs;
+  final followingCount = 0.obs;
+  final coins = 0.0.obs;
+  final avatarFrameUrl = RxnString();
+  final isVip = false.obs;
+  final isFollowing = false.obs;
+  final isFollower = false.obs;
+  final isMutual = false.obs;
   final isLoadingProfile = false.obs;
   final isActionInFlight = false.obs;
 
@@ -43,7 +52,9 @@ class ChatContactProfileController extends GetxController {
     final args = Get.arguments;
     if (args is Map) {
       if (args['name'] != null) name.value = args['name'].toString();
-      if (args['targetId'] != null) targetId.value = args['targetId'].toString();
+      if (args['targetId'] != null) {
+        targetId.value = args['targetId'].toString();
+      }
       if (args['roomId'] != null) roomId.value = args['roomId'].toString();
       if (args['imageUrl'] != null) {
         imageUrl.value = ApiImageUtils.normalize(args['imageUrl']?.toString());
@@ -71,12 +82,22 @@ class ChatContactProfileController extends GetxController {
       final data = Map<String, dynamic>.from(response!['data'] as Map);
       final profile = SocialUserCard.fromJson(data);
       if (profile.name.isNotEmpty) name.value = profile.name;
-      if (profile.displayPicture != null && profile.displayPicture!.isNotEmpty) {
+      if (profile.displayPicture != null &&
+          profile.displayPicture!.isNotEmpty) {
         imageUrl.value = profile.displayPicture;
       }
       if (profile.bio.isNotEmpty) bio.value = profile.bio;
       if (profile.country.isNotEmpty) country.value = profile.country;
+      if (profile.gender.isNotEmpty) gender.value = profile.gender;
       if (profile.level > 0) level.value = profile.level;
+      followersCount.value = profile.followersCount;
+      followingCount.value = profile.followingCount;
+      coins.value = profile.coins;
+      avatarFrameUrl.value = profile.avatarFrameUrl;
+      isVip.value = profile.isVip;
+      isFollowing.value = profile.isFollowing;
+      isFollower.value = profile.isFollower;
+      isMutual.value = profile.isMutual;
     } catch (_) {
     } finally {
       isLoadingProfile.value = false;
@@ -105,8 +126,9 @@ class ChatContactProfileController extends GetxController {
       if (isSocialApiSuccess(response)) {
         await _localStore.removeInboxThread(targetId.value);
         await _localStore.clearMessagesForTarget(targetId.value);
-        _popToMessagesTab();
+        if (!context.mounted) return;
         AppToast.showSuccess(context, 'Chat deleted');
+        _popToMessagesTab();
         return;
       }
 
@@ -145,8 +167,9 @@ class ChatContactProfileController extends GetxController {
       if (isSocialApiSuccess(response)) {
         await _localStore.removeInboxThread(targetId.value);
         await _localStore.clearMessagesForTarget(targetId.value);
-        _popToMessagesTab();
+        if (!context.mounted) return;
         AppToast.showSuccess(context, '${name.value} blocked');
+        _popToMessagesTab();
         return;
       }
 

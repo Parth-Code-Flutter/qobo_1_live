@@ -17,13 +17,14 @@ class ChatDateHeaderWidget extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: kColorAppBackground,
-            borderRadius: BorderRadius.circular(8),
+            color: kColorWhite.withValues(alpha: 0.09),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
           ),
           child: AppText(
             text: label,
             fontSize: TextStyles.k12FontSize,
-            color: kColorHint,
+            color: kColorWhite.withValues(alpha: 0.62),
           ),
         ),
       ),

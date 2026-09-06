@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_shell_background.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
-import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -16,105 +15,136 @@ class ChatDetailView extends GetView<ChatDetailController> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: kColorWhite,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(kToolbarHeight),
-        child: Obx(() => _buildChatAppBar(context)),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: Obx(
-              () {
+    return AppShellBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(76),
+          child: Obx(() => _buildChatAppBar(context)),
+        ),
+        body: Column(
+          children: [
+            Expanded(
+              child: Obx(() {
                 if (controller.isLoading.value) {
-                  return const Center(
-                    child: CircularProgressIndicator(color: kColorPrimary),
-                  );
+                  return const _ChatLoadingState();
                 }
                 if (controller.timelineEntries.isEmpty &&
                     controller.messages.isEmpty) {
-                  return const _ChatEmptyState();
+                  return _ChatEmptyState(name: controller.chatName.value);
                 }
                 final entries = controller.timelineEntries;
                 return ListView.builder(
                   controller: controller.scrollController,
                   reverse: true,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
                   physics: const AlwaysScrollableScrollPhysics(
                     parent: BouncingScrollPhysics(),
                   ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 20,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
                   itemCount: entries.length,
                   itemBuilder: (context, index) {
                     final entry = entries[entries.length - 1 - index];
                     return ChatTimelineMessageWidget(entry: entry);
                   },
                 );
-              },
+              }),
             ),
-          ),
-          Obx(() => _buildTypingBanner()),
-          _buildMessageInput(context),
-        ],
+            Obx(_buildTypingBanner),
+            _buildMessageInput(context),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildChatAppBar(BuildContext context) {
     return AppBar(
-      backgroundColor: kColorWhite,
-      surfaceTintColor: kColorWhite,
+      backgroundColor: const Color(0xFF24113D).withValues(alpha: 0.96),
+      surfaceTintColor: Colors.transparent,
       elevation: 0,
-      centerTitle: true,
       automaticallyImplyLeading: false,
-      leadingWidth: 60,
+      toolbarHeight: 76,
+      titleSpacing: 0,
+      leadingWidth: 54,
       leading: Padding(
         padding: const EdgeInsets.only(left: 10),
-        child: IconButton(
-          onPressed: () => Get.back(),
-          icon: SvgPicture.asset(kIconArrowBack),
+        child: _HeaderIconButton(
+          icon: Icons.arrow_back_ios_new_rounded,
+          onTap: Get.back,
         ),
       ),
-      title: GestureDetector(
+      title: InkWell(
         onTap: controller.openContactProfile,
-        behavior: HitTestBehavior.opaque,
+        borderRadius: BorderRadius.circular(14),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+          child: Row(
             children: [
-              Text(
-                controller.chatName.value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyles.kBoldPoppins(
-                  fontSize: TextStyles.k18FontSize,
-                  colors: kColorText,
+              AppUserAvatar(
+                name: controller.chatName.value,
+                imageUrl: controller.chatImageUrl.value,
+                size: 43,
+                border: Border.all(
+                  color: kColorProfileChipPinkStart.withValues(alpha: 0.8),
+                  width: 1.5,
                 ),
               ),
-              const SizedBox(height: 2),
-              AppText(
-                text: controller.presenceStatusLabel,
-                fontSize: TextStyles.k12FontSize,
-                color: controller.presenceStatusColor,
+              Spacing.h10,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SemiBoldText(
+                      text: controller.chatName.value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      fontSize: TextStyles.k16FontSize,
+                      color: kColorWhite,
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: controller.presenceStatusColor,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Flexible(
+                          child: AppText(
+                            text: controller.presenceStatusLabel,
+                            fontSize: TextStyles.k10FontSize,
+                            color: kColorWhite.withValues(alpha: 0.65),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
         ),
       ),
       actions: [
-        IconButton(
-          onPressed: () => controller.startVoiceCall(context),
-          icon: const Icon(Icons.call_rounded, color: kColorText),
+        _HeaderIconButton(
+          icon: Icons.call_rounded,
+          onTap: () => controller.startVoiceCall(context),
         ),
-        IconButton(
-          onPressed: () => controller.startVideoCall(context),
-          icon: const Icon(Icons.videocam_rounded, color: kColorText),
+        const SizedBox(width: 6),
+        _HeaderIconButton(
+          icon: Icons.videocam_rounded,
+          onTap: () => controller.startVideoCall(context),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 12),
       ],
     );
   }
@@ -122,13 +152,20 @@ class ChatDetailView extends GetView<ChatDetailController> {
   Widget _buildTypingBanner() {
     if (!controller.peerIsTyping.value) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
       child: Align(
         alignment: Alignment.centerLeft,
-        child: AppText(
-          text: '${controller.chatName.value} is typing...',
-          fontSize: TextStyles.k12FontSize,
-          color: kColorPrimary,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+          decoration: BoxDecoration(
+            color: kColorWhite.withValues(alpha: 0.09),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: AppText(
+            text: '${controller.chatName.value} is typing...',
+            fontSize: TextStyles.k10FontSize,
+            color: kColorProfileChipPinkStart,
+          ),
         ),
       ),
     );
@@ -137,55 +174,61 @@ class ChatDetailView extends GetView<ChatDetailController> {
   Widget _buildMessageInput(BuildContext context) {
     return Container(
       padding: EdgeInsets.fromLTRB(
-        16,
         12,
-        16,
-        MediaQuery.paddingOf(context).bottom + 12,
+        10,
+        12,
+        MediaQuery.paddingOf(context).bottom + 10,
       ),
       decoration: BoxDecoration(
-        color: kColorWhite,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            offset: const Offset(0, -4),
-            blurRadius: 10,
-          ),
-        ],
+        color: const Color(0xFF13091F).withValues(alpha: 0.98),
+        border: Border(
+          top: BorderSide(color: kColorWhite.withValues(alpha: 0.08)),
+        ),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: const BoxDecoration(
-              color: kColorBackground,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.add_rounded, color: kColorHint),
-          ),
-          Spacing.h12,
+          _ComposerButton(icon: Icons.add_rounded, onTap: () {}),
+          Spacing.h8,
           Expanded(
-            child: AppTextField(
-              controller: controller.messageController,
-              hintText: 'Type a message...',
-              fillColor: kColorBackground,
-              inputBorderRadius: BorderRadius.circular(20),
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 46),
+              decoration: BoxDecoration(
+                color: kColorWhite.withValues(alpha: 0.09),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: kColorWhite.withValues(alpha: 0.11)),
+              ),
+              child: TextField(
+                controller: controller.messageController,
+                minLines: 1,
+                maxLines: 4,
+                textCapitalization: TextCapitalization.sentences,
+                textInputAction: TextInputAction.newline,
+                style: TextStyles.kRegularPoppins(
+                  fontSize: TextStyles.k12FontSize,
+                  colors: kColorWhite,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Write a message...',
+                  hintStyle: TextStyles.kRegularPoppins(
+                    fontSize: TextStyles.k12FontSize,
+                    colors: kColorWhite.withValues(alpha: 0.42),
+                  ),
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 13,
+                  ),
+                ),
+              ),
             ),
           ),
-          Spacing.h12,
-          GestureDetector(
+          Spacing.h8,
+          _ComposerButton(
+            icon: Icons.send_rounded,
             onTap: controller.sendMessage,
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: const BoxDecoration(
-                color: kColorPrimary,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.send_rounded,
-                color: kColorWhite,
-                size: 20,
-              ),
-            ),
+            emphasized: true,
           ),
         ],
       ),
@@ -193,31 +236,143 @@ class ChatDetailView extends GetView<ChatDetailController> {
   }
 }
 
-class _ChatEmptyState extends StatelessWidget {
-  const _ChatEmptyState();
+class _HeaderIconButton extends StatelessWidget {
+  const _HeaderIconButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.chat_bubble_outline_rounded, color: kColorHint, size: 56),
-          SizedBox(height: 12),
-          SemiBoldText(
-            text: 'No data found',
-            fontSize: TextStyles.k16FontSize,
-            color: kColorText,
-            align: TextAlign.center,
+    return Material(
+      color: kColorWhite.withValues(alpha: 0.09),
+      shape: const CircleBorder(),
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: SizedBox(
+          width: 40,
+          height: 40,
+          child: Icon(icon, color: kColorWhite, size: 19),
+        ),
+      ),
+    );
+  }
+}
+
+class _ComposerButton extends StatelessWidget {
+  const _ComposerButton({
+    required this.icon,
+    required this.onTap,
+    this.emphasized = false,
+  });
+
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool emphasized;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: Ink(
+          width: 46,
+          height: 46,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: emphasized ? null : kColorWhite.withValues(alpha: 0.08),
+            gradient: emphasized
+                ? const LinearGradient(
+                    colors: [
+                      kColorProfileChipPinkStart,
+                      kColorProfileChipPurpleStart,
+                    ],
+                  )
+                : null,
           ),
-          SizedBox(height: 6),
-          AppText(
-            text: 'Messages will appear here when available.',
-            fontSize: TextStyles.k12FontSize,
-            color: kColorHint,
-            align: TextAlign.center,
+          child: Icon(icon, color: kColorWhite, size: 21),
+        ),
+      ),
+    );
+  }
+}
+
+class _ChatLoadingState extends StatelessWidget {
+  const _ChatLoadingState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: const Color(0xFF2A1748),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
+        ),
+        child: const SizedBox(
+          width: 25,
+          height: 25,
+          child: CircularProgressIndicator(
+            color: kColorProfileChipPinkStart,
+            strokeWidth: 2.5,
           ),
-        ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ChatEmptyState extends StatelessWidget {
+  const _ChatEmptyState({required this.name});
+
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 42),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 70,
+              height: 70,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [
+                    kColorProfileChipPinkStart,
+                    kColorProfileChipPurpleStart,
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: const Icon(
+                Icons.favorite_rounded,
+                color: kColorWhite,
+                size: 30,
+              ),
+            ),
+            Spacing.v16,
+            SemiBoldText(
+              text: 'Start something meaningful',
+              fontSize: TextStyles.k18FontSize,
+              color: kColorWhite,
+              align: TextAlign.center,
+            ),
+            Spacing.v6,
+            AppText(
+              text: 'Say hello to $name and begin your conversation.',
+              fontSize: TextStyles.k12FontSize,
+              color: kColorWhite.withValues(alpha: 0.58),
+              align: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }

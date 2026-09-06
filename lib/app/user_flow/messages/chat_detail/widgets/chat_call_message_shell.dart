@@ -35,6 +35,7 @@ class ChatCallMessageShell extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: theme.bubbleColor,
+              border: Border.all(color: kColorWhite.withValues(alpha: 0.11)),
               borderRadius: BorderRadius.only(
                 topLeft: const Radius.circular(16),
                 topRight: const Radius.circular(16),
@@ -87,7 +88,7 @@ class ChatCallMessageShell extends StatelessWidget {
           AppText(
             text: message.time,
             fontSize: 10,
-            color: kColorHint,
+            color: kColorWhite.withValues(alpha: 0.48),
           ),
         ],
       ),
@@ -132,11 +133,9 @@ class _CallIconBadge extends StatelessWidget {
                 width: 14,
                 height: 14,
                 decoration: BoxDecoration(
-                  color: kColorWhite,
+                  color: const Color(0xFF2B1946),
                   shape: BoxShape.circle,
-                  border: Border.all(
-                    color: accentColor.withValues(alpha: 0.2),
-                  ),
+                  border: Border.all(color: accentColor.withValues(alpha: 0.2)),
                 ),
                 alignment: Alignment.center,
                 child: Icon(
