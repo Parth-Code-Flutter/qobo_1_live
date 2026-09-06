@@ -66,60 +66,70 @@ class MessageMatchAvatarItem extends StatelessWidget {
     const avatarSize = 48.0;
     const frameExtent = avatarSize * 1.34;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: SizedBox(
-        width: 78,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: frameExtent,
-              height: frameExtent,
-              child: Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.center,
-                children: [
-                  FramedUserAvatar(
-                    name: user.name,
-                    imageUrl: user.displayPicture,
-                    frameUrl: user.avatarFrameUrl,
-                    frameSeed: user.id,
-                    size: avatarSize,
-                    fontSize: TextStyles.k12FontSize,
-                  ),
-                  if (user.isFollowing)
-                    Positioned(
-                      right: 1,
-                      bottom: 1,
-                      child: Container(
-                        width: 16,
-                        height: 16,
-                        decoration: BoxDecoration(
-                          color: Colors.greenAccent.shade400,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFF1A1230)),
-                        ),
-                        child: const Icon(
-                          Icons.check_rounded,
-                          size: 10,
-                          color: Colors.black87,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Ink(
+          width: 86,
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 7),
+          decoration: BoxDecoration(
+            color: kColorWhite.withValues(alpha: 0.07),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: frameExtent,
+                height: frameExtent,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.center,
+                  children: [
+                    FramedUserAvatar(
+                      name: user.name,
+                      imageUrl: user.displayPicture,
+                      frameUrl: user.avatarFrameUrl,
+                      frameSeed: user.id,
+                      size: avatarSize,
+                      fontSize: TextStyles.k12FontSize,
+                    ),
+                    if (user.isFollowing)
+                      Positioned(
+                        right: 1,
+                        bottom: 1,
+                        child: Container(
+                          width: 16,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: Colors.greenAccent.shade400,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: const Color(0xFF1A1230)),
+                          ),
+                          child: const Icon(
+                            Icons.check_rounded,
+                            size: 10,
+                            color: Colors.black87,
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            Spacing.v6,
-            AppText(
-              text: user.name,
-              color: kColorWhite,
-              fontSize: TextStyles.k12FontSize,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              align: TextAlign.center,
-            ),
-          ],
+              Spacing.v4,
+              SemiBoldText(
+                text: user.name,
+                color: kColorWhite,
+                fontSize: TextStyles.k10FontSize,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                align: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -22,12 +22,23 @@ class MessagesTabView extends GetView<MessagesTabController> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
+      decoration: BoxDecoration(
+        image: const DecorationImage(
+          image: AssetImage(kImgBG),
+          fit: BoxFit.cover,
+        ),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            const Color(0xFF6D197E).withValues(alpha: 0.18),
+            const Color(0xFF09071B).withValues(alpha: 0.22),
+          ],
+        ),
       ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -47,20 +58,22 @@ class MessagesTabView extends GetView<MessagesTabController> {
                         parent: BouncingScrollPhysics(),
                       ),
                       children: [
-                        const SemiBoldText(
-                          text: 'New Match',
-                          fontSize: TextStyles.k18FontSize,
-                          color: kColorWhite,
+                        _sectionHeader(
+                          icon: Icons.auto_awesome_rounded,
+                          title: 'New Matches',
+                          count: controller.newMatches.length,
+                          accent: kColorProfileChipPinkStart,
                         ),
                         Spacing.v12,
                         _newMatchRow(context),
-                        Spacing.v20,
-                        const SemiBoldText(
-                          text: 'Message',
-                          fontSize: TextStyles.k18FontSize,
-                          color: kColorWhite,
+                        Spacing.v24,
+                        _sectionHeader(
+                          icon: Icons.forum_rounded,
+                          title: 'Conversations',
+                          count: controller.inboxThreads.length,
+                          accent: const Color(0xFF54D8FF),
                         ),
-                        Spacing.v8,
+                        Spacing.v12,
                         _inboxSection(context),
                         const SizedBox(height: 16),
                       ],
@@ -79,31 +92,84 @@ class MessagesTabView extends GetView<MessagesTabController> {
     return GetBuilder<UserSessionController>(
       builder: (session) {
         final avatarUrl = session.displayPictureUrl;
-        return Row(
+        return Column(
           children: [
-            if (showBackButton) ...[
-              IconButton(
-                onPressed: Get.back,
-                icon: const Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  color: kColorWhite,
-                  size: 20,
+            Row(
+              children: [
+                if (showBackButton) ...[
+                  IconButton(
+                    onPressed: Get.back,
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      color: kColorWhite,
+                      size: 20,
+                    ),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 36,
+                      minHeight: 40,
+                    ),
+                  ),
+                  Spacing.h6,
+                ],
+                FramedUserAvatar(
+                  name: session.displayName,
+                  imageUrl: avatarUrl,
+                  frameUrl: session.profileFrameUrl,
+                  frameSeed: session.userId,
+                  size: 42,
+                  fontSize: TextStyles.k12FontSize,
                 ),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-              ),
-              Spacing.h4,
-            ],
-            FramedUserAvatar(
-              name: session.displayName,
-              imageUrl: avatarUrl,
-              frameUrl: session.profileFrameUrl,
-              frameSeed: session.userId,
-              size: 28,
-              fontSize: TextStyles.k10FontSize,
+                Spacing.h10,
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SemiBoldText(
+                        text: 'Messages',
+                        fontSize: TextStyles.k20FontSize,
+                        color: kColorWhite,
+                      ),
+                      AppText(
+                        text: 'Your matches and conversations',
+                        fontSize: TextStyles.k10FontSize,
+                        color: Color(0xBFFFFFFF),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 42,
+                  height: 42,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [
+                        kColorProfileChipPinkStart,
+                        kColorProfileChipPurpleStart,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: kColorProfileChipPinkStart.withValues(
+                          alpha: 0.28,
+                        ),
+                        blurRadius: 14,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.chat_bubble_rounded,
+                    size: 20,
+                    color: kColorWhite,
+                  ),
+                ),
+              ],
             ),
-            Spacing.h10,
-            Expanded(child: _searchBar()),
+            const SizedBox(height: 14),
+            _searchBar(),
           ],
         );
       },
@@ -111,42 +177,101 @@ class MessagesTabView extends GetView<MessagesTabController> {
   }
 
   Widget _searchBar() {
-    return Container(
-      height: 38,
-      decoration: BoxDecoration(
-        color: kColorDiscoverSearchBg,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: TextField(
-        controller: controller.searchController,
-        textInputAction: TextInputAction.search,
-        style: TextStyles.kRegularPoppins(
-          fontSize: TextStyles.k12FontSize,
-          colors: kColorText,
+    return Obx(
+      () => Container(
+        height: 48,
+        decoration: BoxDecoration(
+          color: kColorWhite.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.13)),
         ),
-        decoration: InputDecoration(
-          isDense: true,
-          border: InputBorder.none,
-          hintText: 'Search users',
-          hintStyle: TextStyles.kRegularPoppins(
+        child: TextField(
+          controller: controller.searchController,
+          textInputAction: TextInputAction.search,
+          style: TextStyles.kRegularPoppins(
             fontSize: TextStyles.k12FontSize,
-            colors: kColorHint,
+            colors: kColorWhite,
           ),
-          prefixIcon: const Padding(
-            padding: EdgeInsets.only(top: 10),
-            child: Icon(Icons.search_rounded, size: 16, color: kColorHint),
+          decoration: InputDecoration(
+            isDense: true,
+            border: InputBorder.none,
+            hintText: 'Search users',
+            hintStyle: TextStyles.kRegularPoppins(
+              fontSize: TextStyles.k12FontSize,
+              colors: kColorWhite.withValues(alpha: 0.50),
+            ),
+            prefixIcon: Icon(
+              Icons.search_rounded,
+              size: 20,
+              color: kColorWhite.withValues(alpha: 0.68),
+            ),
+            prefixIconConstraints: const BoxConstraints(minWidth: 44),
+            suffixIcon: controller.searchQuery.value.isEmpty
+                ? null
+                : IconButton(
+                    onPressed: controller.searchController.clear,
+                    icon: Icon(
+                      Icons.close_rounded,
+                      size: 18,
+                      color: kColorWhite.withValues(alpha: 0.68),
+                    ),
+                  ),
+            contentPadding: const EdgeInsets.symmetric(vertical: 14),
           ),
-          prefixIconConstraints: const BoxConstraints(minWidth: 34),
-          contentPadding: const EdgeInsets.only(top: 10, right: 10),
         ),
       ),
+    );
+  }
+
+  Widget _sectionHeader({
+    required IconData icon,
+    required String title,
+    required int count,
+    required Color accent,
+  }) {
+    return Row(
+      children: [
+        Container(
+          width: 30,
+          height: 30,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: accent.withValues(alpha: 0.18),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 16, color: accent),
+        ),
+        Spacing.h8,
+        Expanded(
+          child: SemiBoldText(
+            text: title,
+            fontSize: TextStyles.k16FontSize,
+            color: kColorWhite,
+          ),
+        ),
+        if (count > 0)
+          Container(
+            constraints: const BoxConstraints(minWidth: 26),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: kColorWhite.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: AppText(
+              text: '$count',
+              fontSize: TextStyles.k10FontSize,
+              color: kColorWhite.withValues(alpha: 0.72),
+              align: TextAlign.center,
+            ),
+          ),
+      ],
     );
   }
 
   Widget _newMatchRow(BuildContext context) {
     if (controller.isNewMatchesLoading.value) {
       return const SizedBox(
-        height: 104,
+        height: 112,
         child: Center(
           child: CircularProgressIndicator(color: kColorWhite, strokeWidth: 2),
         ),
@@ -156,7 +281,7 @@ class MessagesTabView extends GetView<MessagesTabController> {
     final matches = controller.newMatches;
     if (matches.isEmpty) {
       return const SizedBox(
-        height: 104,
+        height: 112,
         child: _InlineEmptyState(
           icon: Icons.favorite_border_rounded,
           text: 'New matches will appear here',
@@ -165,7 +290,7 @@ class MessagesTabView extends GetView<MessagesTabController> {
     }
 
     return SizedBox(
-      height: 104,
+      height: 112,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),

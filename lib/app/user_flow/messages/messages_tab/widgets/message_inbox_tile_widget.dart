@@ -10,10 +10,7 @@ import 'messages_common_widgets.dart';
 
 /// Call preview line for an inbox row (icon + title + subtitle).
 class MessageInboxCallPreviewWidget extends StatelessWidget {
-  const MessageInboxCallPreviewWidget({
-    super.key,
-    required this.theme,
-  });
+  const MessageInboxCallPreviewWidget({super.key, required this.theme});
 
   final MessageInboxPreviewTheme theme;
 
@@ -64,10 +61,7 @@ class MessageInboxCallPreviewWidget extends StatelessWidget {
 
 /// Text preview line for an inbox row.
 class MessageInboxTextPreviewWidget extends StatelessWidget {
-  const MessageInboxTextPreviewWidget({
-    super.key,
-    required this.theme,
-  });
+  const MessageInboxTextPreviewWidget({super.key, required this.theme});
 
   final MessageInboxPreviewTheme theme;
 
@@ -103,19 +97,35 @@ class MessageInboxTileWidget extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         splashColor: kColorWhite.withValues(alpha: 0.08),
         highlightColor: kColorWhite.withValues(alpha: 0.04),
         child: Ink(
           decoration: BoxDecoration(
-            color: kColorWhite.withValues(alpha: hasUnread ? 0.12 : 0.08),
-            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                kColorWhite.withValues(alpha: hasUnread ? 0.15 : 0.10),
+                const Color(
+                  0xFF351A52,
+                ).withValues(alpha: hasUnread ? 0.68 : 0.50),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: kColorWhite.withValues(alpha: hasUnread ? 0.18 : 0.1),
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 12,
+                offset: const Offset(0, 5),
+              ),
+            ],
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -156,6 +166,13 @@ class MessageInboxTileWidget extends StatelessWidget {
                 if (hasUnread) ...[
                   Spacing.h8,
                   _UnreadBadge(count: item.unreadCount),
+                ] else ...[
+                  Spacing.h6,
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: kColorWhite.withValues(alpha: 0.38),
+                    size: 20,
+                  ),
                 ],
               ],
             ),
@@ -203,7 +220,10 @@ class _InboxAvatar extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: kColorBottomNavHeart,
                   shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFF1A1230), width: 1.5),
+                  border: Border.all(
+                    color: const Color(0xFF1A1230),
+                    width: 1.5,
+                  ),
                 ),
               ),
             ),

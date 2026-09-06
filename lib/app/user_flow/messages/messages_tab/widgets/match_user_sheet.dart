@@ -34,9 +34,19 @@ Future<void> showMatchUserSheet(
   MatchUserSheetActions actions,
   SocialUserCard user,
 ) async {
+  final overlay = Overlay.of(context, rootOverlay: true);
+  final loadingEntry = OverlayEntry(
+    builder: (_) => const _ProfileLoadingOverlay(),
+  );
+  overlay.insert(loadingEntry);
+
   SocialUserCard profile = user;
-  final refreshed = await actions.fetchPublicProfile(user.id);
-  if (refreshed != null) profile = refreshed;
+  try {
+    final refreshed = await actions.fetchPublicProfile(user.id);
+    if (refreshed != null) profile = refreshed;
+  } finally {
+    loadingEntry.remove();
+  }
 
   if (!context.mounted) return;
 
@@ -47,16 +57,26 @@ Future<void> showMatchUserSheet(
     barrierColor: Colors.black.withValues(alpha: 0.55),
     builder: (ctx) {
       return Obx(() {
-        final live = actions.userById(profile.id) ?? profile;
+        final cached = actions.userById(profile.id);
+        final live = cached == null
+            ? profile
+            : profile.copyWith(
+                isFollowing: cached.isFollowing,
+                isFollower: cached.isFollower,
+                isMutual: cached.isMutual,
+                canMessage: cached.canMessage,
+                followersCount: cached.followersCount > 0
+                    ? cached.followersCount
+                    : profile.followersCount,
+                followingCount: cached.followingCount > 0
+                    ? cached.followingCount
+                    : profile.followingCount,
+              );
         final isProcessing = actions.processingFollowId.value == live.id;
 
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 12,
-            right: 12,
-            bottom: MediaQuery.paddingOf(ctx).bottom + 12,
-          ),
-          child: _MatchUserSheetBody(
+        return _sheetPadding(
+          ctx,
+          _MatchUserSheetBody(
             user: live,
             isProcessing: isProcessing,
             onFollowTap: () => actions.toggleFollow(ctx, live),
@@ -70,6 +90,75 @@ Future<void> showMatchUserSheet(
         );
       });
     },
+  );
+}
+
+class _ProfileLoadingOverlay extends StatelessWidget {
+  const _ProfileLoadingOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        const ModalBarrier(dismissible: false, color: Color(0x73000000)),
+        Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              width: 126,
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF2A1248), Color(0xFF17102B)],
+                ),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: kColorWhite.withValues(alpha: 0.14)),
+                boxShadow: [
+                  BoxShadow(
+                    color: kColorPrimary.withValues(alpha: 0.24),
+                    blurRadius: 24,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(
+                    width: 26,
+                    height: 26,
+                    child: CircularProgressIndicator(
+                      color: kColorProfileChipPinkStart,
+                      strokeWidth: 2.5,
+                    ),
+                  ),
+                  Spacing.v10,
+                  AppText(
+                    text: 'Loading profile',
+                    fontSize: TextStyles.k10FontSize,
+                    color: kColorWhite.withValues(alpha: 0.78),
+                    align: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+Widget _sheetPadding(BuildContext context, Widget child) {
+  return Padding(
+    padding: EdgeInsets.only(
+      left: 12,
+      right: 12,
+      bottom: MediaQuery.paddingOf(context).bottom + 12,
+    ),
+    child: child,
   );
 }
 
@@ -110,83 +199,95 @@ class _MatchUserSheetBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: kColorPrimary.withValues(alpha: 0.35),
-            blurRadius: 32,
-            offset: const Offset(0, 12),
-          ),
-        ],
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.86,
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(28),
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      const Color(0xFF2A1248),
-                      const Color(0xFF1A0E32),
-                      const Color(0xFF120822),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              top: -40,
-              right: -20,
-              child: Container(
-                width: 140,
-                height: 140,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      kColorProfileChipPinkStart.withValues(alpha: 0.22),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(22, 10, 22, 22),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _dragHandle(),
-                  Spacing.v16,
-                  _avatarSection(),
-                  Spacing.v12,
-                  SemiBoldText(
-                    text: user.name,
-                    fontSize: TextStyles.k20FontSize,
-                    color: kColorWhite,
-                    align: TextAlign.center,
-                  ),
-                  Spacing.v8,
-                  _statusRow(),
-                  if (user.bio.isNotEmpty) ...[Spacing.v12, _bioCard()],
-                  if (user.followersCount > 0 || user.followingCount > 0) ...[
-                    Spacing.v12,
-                    _statsRow(),
-                  ],
-                  Spacing.v20,
-                  _actionRow(),
-                  Spacing.v12,
-                  _connectionHint(),
-                ],
-              ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: kColorPrimary.withValues(alpha: 0.35),
+              blurRadius: 32,
+              offset: const Offset(0, 12),
             ),
           ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        const Color(0xFF2A1248),
+                        const Color(0xFF1A0E32),
+                        const Color(0xFF120822),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: -40,
+                right: -20,
+                child: Container(
+                  width: 140,
+                  height: 140,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        kColorProfileChipPinkStart.withValues(alpha: 0.22),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(22, 10, 22, 22),
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _dragHandle(),
+                      Spacing.v16,
+                      _avatarSection(),
+                      Spacing.v12,
+                      SemiBoldText(
+                        text: user.name,
+                        fontSize: TextStyles.k20FontSize,
+                        color: kColorWhite,
+                        align: TextAlign.center,
+                      ),
+                      Spacing.v8,
+                      _statusRow(),
+                      if (user.bio.isNotEmpty) ...[Spacing.v12, _bioCard()],
+                      Spacing.v12,
+                      _statsRow(),
+                      Spacing.v12,
+                      _profileDetails(),
+                      if (user.activeSession != null) ...[
+                        Spacing.v12,
+                        _liveSessionCard(),
+                      ],
+                      Spacing.v20,
+                      _actionRow(),
+                      Spacing.v12,
+                      _connectionHint(),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -329,8 +430,151 @@ class _MatchUserSheetBody extends StatelessWidget {
           color: kColorWhite.withValues(alpha: 0.12),
         ),
         Expanded(child: _statTile('Following', '${user.followingCount}')),
+        Container(
+          width: 1,
+          height: 34,
+          color: kColorWhite.withValues(alpha: 0.12),
+        ),
+        Expanded(child: _statTile('Coins', _compactNumber(user.coins))),
       ],
     );
+  }
+
+  Widget _profileDetails() {
+    final details = <(IconData, String, String)>[
+      (Icons.badge_outlined, 'User ID', user.id),
+      if (user.country.trim().isNotEmpty)
+        (Icons.public_rounded, 'Country', user.country.trim()),
+      if (user.gender.trim().isNotEmpty)
+        (Icons.person_outline_rounded, 'Gender', user.gender.trim()),
+      if (user.coinsPerSecond > 0)
+        (
+          Icons.timer_outlined,
+          'Call rate',
+          '${_compactNumber(user.coinsPerSecond)} coins/sec',
+        ),
+    ];
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: kColorWhite.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.09)),
+      ),
+      child: Column(
+        children: [
+          for (var index = 0; index < details.length; index++) ...[
+            _detailRow(details[index].$1, details[index].$2, details[index].$3),
+            if (index < details.length - 1)
+              Divider(height: 1, color: kColorWhite.withValues(alpha: 0.08)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _detailRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 9),
+      child: Row(
+        children: [
+          Icon(icon, color: kColorProfileChipPinkStart, size: 17),
+          Spacing.h8,
+          AppText(
+            text: label,
+            fontSize: TextStyles.k10FontSize,
+            color: kColorWhite.withValues(alpha: 0.52),
+          ),
+          Spacing.h10,
+          Expanded(
+            child: SemiBoldText(
+              text: value,
+              fontSize: 11,
+              color: kColorWhite.withValues(alpha: 0.88),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              align: TextAlign.end,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _liveSessionCard() {
+    final session = user.activeSession!;
+    final isLive = session.isLive;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            kColorProfileChipPinkStart.withValues(alpha: 0.20),
+            kColorProfileChipPurpleStart.withValues(alpha: 0.16),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: kColorProfileChipPinkStart.withValues(alpha: 0.28),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: kColorProfileChipPinkStart.withValues(alpha: 0.22),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              session.normalizedRoomType == 'AUDIO'
+                  ? Icons.graphic_eq_rounded
+                  : Icons.videocam_rounded,
+              color: kColorWhite,
+              size: 20,
+            ),
+          ),
+          Spacing.h10,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SemiBoldText(
+                  text: isLive ? session.liveBadgeLabel : 'Last session',
+                  fontSize: TextStyles.k12FontSize,
+                  color: isLive ? kColorProfileChipPinkStart : kColorWhite,
+                ),
+                if ((session.title ?? '').trim().isNotEmpty)
+                  AppText(
+                    text: session.title!.trim(),
+                    fontSize: TextStyles.k10FontSize,
+                    color: kColorWhite.withValues(alpha: 0.65),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            ),
+          ),
+          if (session.viewerCount > 0)
+            AppText(
+              text: '${session.viewerCount} watching',
+              fontSize: TextStyles.k10FontSize,
+              color: kColorWhite.withValues(alpha: 0.62),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _compactNumber(num value) {
+    if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}M';
+    if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)}K';
+    if (value == value.roundToDouble()) return value.toInt().toString();
+    return value.toStringAsFixed(1);
   }
 
   Widget _statTile(String label, String value) {
