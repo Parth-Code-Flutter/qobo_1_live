@@ -93,6 +93,42 @@ Future<void> showMatchUserSheet(
   );
 }
 
+/// Shows the signed-in user's information with the same presentation used for
+/// message-list profiles, without actions that do not apply to oneself.
+Future<void> showOwnUserSheet(
+  BuildContext context, {
+  required Future<SocialUserCard?> Function() loadProfile,
+}) async {
+  final overlay = Overlay.of(context, rootOverlay: true);
+  final loadingEntry = OverlayEntry(
+    builder: (_) => const _ProfileLoadingOverlay(),
+  );
+  overlay.insert(loadingEntry);
+
+  SocialUserCard? profile;
+  try {
+    profile = await loadProfile();
+  } finally {
+    loadingEntry.remove();
+  }
+
+  if (!context.mounted || profile == null) return;
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    barrierColor: Colors.black.withValues(alpha: 0.55),
+    builder: (ctx) => _sheetPadding(
+      ctx,
+      _MatchUserSheetBody(
+        user: profile!,
+        isProcessing: false,
+        isOwnProfile: true,
+      ),
+    ),
+  );
+}
+
 class _ProfileLoadingOverlay extends StatelessWidget {
   const _ProfileLoadingOverlay();
 
@@ -188,14 +224,16 @@ class _MatchUserSheetBody extends StatelessWidget {
   const _MatchUserSheetBody({
     required this.user,
     required this.isProcessing,
-    required this.onFollowTap,
-    required this.onMessageTap,
+    this.onFollowTap,
+    this.onMessageTap,
+    this.isOwnProfile = false,
   });
 
   final SocialUserCard user;
   final bool isProcessing;
-  final VoidCallback onFollowTap;
-  final VoidCallback onMessageTap;
+  final VoidCallback? onFollowTap;
+  final VoidCallback? onMessageTap;
+  final bool isOwnProfile;
 
   @override
   Widget build(BuildContext context) {
@@ -278,10 +316,12 @@ class _MatchUserSheetBody extends StatelessWidget {
                         Spacing.v12,
                         _liveSessionCard(),
                       ],
-                      Spacing.v20,
-                      _actionRow(),
-                      Spacing.v12,
-                      _connectionHint(),
+                      if (!isOwnProfile) ...[
+                        Spacing.v20,
+                        _actionRow(),
+                        Spacing.v12,
+                        _connectionHint(),
+                      ],
                     ],
                   ),
                 ),
@@ -353,7 +393,9 @@ class _MatchUserSheetBody extends StatelessWidget {
       children: [
         if (user.level > 0)
           _chip('LV.${user.level}', Icons.military_tech_rounded),
-        if (user.isMutual)
+        if (isOwnProfile)
+          _chip('My profile', Icons.verified_user_rounded, accent: true)
+        else if (user.isMutual)
           _chip('Mutual', Icons.favorite_rounded, accent: true)
         else if (user.isFollowing)
           _chip('Following', Icons.person_add_alt_1_rounded)
@@ -602,12 +644,12 @@ class _MatchUserSheetBody extends StatelessWidget {
           child: _FollowButton(
             isFollowing: user.isFollowing,
             isProcessing: isProcessing,
-            onTap: onFollowTap,
+            onTap: onFollowTap!,
           ),
         ),
         Spacing.h12,
         Expanded(
-          child: _MessageButton(enabled: user.canMessage, onTap: onMessageTap),
+          child: _MessageButton(enabled: user.canMessage, onTap: onMessageTap!),
         ),
       ],
     );

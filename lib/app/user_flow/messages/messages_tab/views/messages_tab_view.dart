@@ -43,7 +43,7 @@ class MessagesTabView extends GetView<MessagesTabController> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _topHeader(),
+              _topHeader(context),
               Spacing.v16,
               Obx(() {
                 if (controller.isSearchMode.value) {
@@ -89,7 +89,7 @@ class MessagesTabView extends GetView<MessagesTabController> {
     );
   }
 
-  Widget _topHeader() {
+  Widget _topHeader(BuildContext context) {
     return GetBuilder<UserSessionController>(
       builder: (session) {
         final avatarUrl = session.displayPictureUrl;
@@ -116,7 +116,9 @@ class MessagesTabView extends GetView<MessagesTabController> {
                 GestureDetector(
                   onTap: () {
                     if (!Get.isRegistered<BottomNavController>()) return;
-                    Get.find<BottomNavController>().openOwnProfileEditor();
+                    Get.find<BottomNavController>().openOwnProfileSheet(
+                      context,
+                    );
                   },
                   behavior: HitTestBehavior.opaque,
                   child: FramedUserAvatar(

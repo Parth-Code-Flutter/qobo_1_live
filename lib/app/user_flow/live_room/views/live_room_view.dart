@@ -591,7 +591,7 @@ class LiveRoomView extends StatelessWidget {
               GestureDetector(
                 onTap: () {
                   if (!Get.isRegistered<BottomNavController>()) return;
-                  Get.find<BottomNavController>().openOwnProfileEditor();
+                  Get.find<BottomNavController>().openOwnProfileSheet(context);
                 },
                 behavior: HitTestBehavior.opaque,
                 child: FramedUserAvatar(

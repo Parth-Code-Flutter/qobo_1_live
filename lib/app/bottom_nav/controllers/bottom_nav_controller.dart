@@ -1,9 +1,12 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/discover/discover_tab/controllers/discover_tab_controller.dart';
 import 'package:qobo_one_live/app/user_flow/live_room/controllers/live_room_controller.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/controllers/messages_tab_controller.dart';
+import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
+import 'package:qobo_one_live/app/user_flow/messages/messages_tab/widgets/match_user_sheet.dart';
 import 'package:qobo_one_live/constants/status_code_constants.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
@@ -31,7 +34,7 @@ class BottomNavController extends GetxController {
   final permissionBlocked = false.obs;
   final showOpenSettings = false.obs;
   Map<String, dynamic>? profileData;
-  bool _isOpeningOwnProfileEditor = false;
+  bool _isOpeningOwnProfileSheet = false;
 
   static const int roomsTabIndex = 1;
   static const int goLiveTabIndex = 2;
@@ -134,18 +137,35 @@ class BottomNavController extends GetxController {
     _applyTabSelection(index);
   }
 
-  /// Opens the current user's editor from an app-bar profile control.
-  Future<void> openOwnProfileEditor() async {
-    if (_isOpeningOwnProfileEditor) return;
-    _isOpeningOwnProfileEditor = true;
+  /// Opens the current user's information from an app-bar profile control.
+  Future<void> openOwnProfileSheet(BuildContext context) async {
+    if (_isOpeningOwnProfileSheet) return;
+    _isOpeningOwnProfileSheet = true;
     try {
-      await Get.toNamed(Routes.USER_BASIC_PROFILE);
-      await _userSession.refreshProfileFromApi(isShowLoader: false);
-      if (_userSession.profileBackgroundUrl.trim().isEmpty) {
-        await _userSession.syncEquippedProfileBackgroundFromBackpack();
-      }
+      await showOwnUserSheet(
+        context,
+        loadProfile: () async {
+          await _userSession.refreshProfileFromApi(isShowLoader: false);
+          final raw = _userSession.profileData;
+          if (raw == null) return null;
+
+          final profile = Map<String, dynamic>.from(raw);
+          final stats = profile['stats'];
+          if (stats is Map) {
+            profile.putIfAbsent(
+              'followersCount',
+              () => stats['followers'] ?? stats['followersCount'] ?? 0,
+            );
+            profile.putIfAbsent(
+              'followingCount',
+              () => stats['following'] ?? stats['followingCount'] ?? 0,
+            );
+          }
+          return SocialUserCard.fromJson(profile);
+        },
+      );
     } finally {
-      _isOpeningOwnProfileEditor = false;
+      _isOpeningOwnProfileSheet = false;
     }
   }
 
