@@ -14,7 +14,7 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 /// Premium host dialog for session earnings + withdraw entry.
 ///
 /// Matches shared glass dialogs / AdminAgencyUi: dark gradient shell,
-/// glow icon, gold hero amount, equal-height CTAs.
+/// colorful glow accents, a cool-toned hero amount, and equal-height CTAs.
 class SessionEarningsDialog extends StatefulWidget {
   const SessionEarningsDialog({
     super.key,
@@ -115,17 +115,17 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Color(0xF02A1638),
-                    Color(0xF0140C22),
-                    Color(0xF00C0814),
+                    Color(0xFA251442),
+                    Color(0xFA160D2D),
+                    Color(0xFA09091D),
                   ],
                 ),
                 border: Border.all(
-                  color: AdminAgencyUi.gold.withValues(alpha: 0.38),
+                  color: AdminAgencyUi.pink.withValues(alpha: 0.62),
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: AdminAgencyUi.goldDeep.withValues(alpha: 0.22),
+                    color: AdminAgencyUi.pink.withValues(alpha: 0.2),
                     blurRadius: 28,
                     offset: const Offset(0, 12),
                   ),
@@ -147,7 +147,7 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
                               shape: BoxShape.circle,
                               gradient: RadialGradient(
                                 colors: [
-                                  AdminAgencyUi.gold.withValues(
+                                  AdminAgencyUi.violet.withValues(
                                     alpha: 0.14 + _pulse.value * 0.08,
                                   ),
                                   Colors.transparent,
@@ -184,8 +184,8 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         AdminAgencyUi.glowCoinIcon(
-                          accent: AdminAgencyUi.goldDeep,
-                          accentEnd: AdminAgencyUi.gold,
+                          accent: AdminAgencyUi.cyan,
+                          accentEnd: AdminAgencyUi.violet,
                           size: 56,
                           iconSize: 28,
                         ),
@@ -200,7 +200,7 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
                         AppText(
                           text: widget.subtitle,
                           fontSize: TextStyles.k12FontSize,
-                          color: AdminAgencyUi.textSecondary,
+                          color: kColorWhite.withValues(alpha: 0.88),
                           align: TextAlign.center,
                         ),
                         Spacing.v16,
@@ -242,18 +242,17 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  AdminAgencyUi.gold.withValues(alpha: 0.28),
-                  AdminAgencyUi.goldDeep.withValues(alpha: 0.12),
-                  AdminAgencyUi.pink.withValues(alpha: 0.08),
-                  const Color(0xFF1A0B2E),
+                  const Color(0xFF17385A),
+                  const Color(0xFF31245F),
+                  const Color(0xFF551D58),
                 ],
               ),
               border: Border.all(
-                color: AdminAgencyUi.gold.withValues(alpha: 0.45),
+                color: AdminAgencyUi.cyan.withValues(alpha: 0.82),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: AdminAgencyUi.gold.withValues(alpha: glow),
+                  color: AdminAgencyUi.violet.withValues(alpha: glow),
                   blurRadius: 20,
                   spreadRadius: 0,
                 ),
@@ -270,7 +269,7 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
                     borderRadius: BorderRadius.circular(20),
                     color: Colors.black.withValues(alpha: 0.28),
                     border: Border.all(
-                      color: AdminAgencyUi.gold.withValues(alpha: 0.35),
+                      color: AdminAgencyUi.mint.withValues(alpha: 0.4),
                     ),
                   ),
                   child: Row(
@@ -292,7 +291,9 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
                             ? 'LIVE SESSION'
                             : 'WAITING FOR GIFTS',
                         fontSize: 10,
-                        color: AdminAgencyUi.gold,
+                        color: hasEarnings
+                            ? AdminAgencyUi.mint
+                            : AdminAgencyUi.textSecondary,
                       ),
                     ],
                   ),
@@ -301,15 +302,15 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
                 AppText(
                   text: 'EARNED THIS SESSION',
                   fontSize: TextStyles.k10FontSize,
-                  color: AdminAgencyUi.textMuted,
+                  color: kColorWhite.withValues(alpha: 0.78),
                 ),
                 Spacing.v6,
                 ShaderMask(
                   shaderCallback: (bounds) => const LinearGradient(
                     colors: [
-                      Color(0xFFFFF8E1),
-                      Color(0xFFFFD166),
-                      Color(0xFFFFB020),
+                      Color(0xFFFFFFFF),
+                      Color(0xFF55F2FF),
+                      Color(0xFFD18AFF),
                     ],
                   ).createShader(bounds),
                   child: SemiBoldText(
@@ -322,19 +323,49 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
                 AppText(
                   text: widget.unitLabel,
                   fontSize: TextStyles.k12FontSize,
-                  color: AdminAgencyUi.textSecondary,
+                  color: kColorWhite.withValues(alpha: 0.9),
                 ),
                 Spacing.v6,
                 AppText(
                   text: usdLabel,
                   fontSize: TextStyles.k14FontSize,
-                  color: AdminAgencyUi.gold,
+                  color: AdminAgencyUi.mint,
                 ),
-                Spacing.v2,
-                AppText(
-                  text: '≈ USD (10,000 coins = \$1)',
-                  fontSize: TextStyles.k10FontSize,
-                  color: AdminAgencyUi.textMuted,
+                Spacing.v8,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    color: const Color(0xFF0D1830).withValues(alpha: 0.82),
+                    border: Border.all(
+                      color: AdminAgencyUi.cyan.withValues(alpha: 0.72),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AdminAgencyUi.cyan.withValues(alpha: 0.16),
+                        blurRadius: 10,
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.currency_exchange_rounded,
+                        size: 14,
+                        color: AdminAgencyUi.cyan,
+                      ),
+                      Spacing.h6,
+                      SemiBoldText(
+                        text: '10,000 coins = \$1',
+                        fontSize: TextStyles.k10FontSize,
+                        color: kColorWhite,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -352,15 +383,19 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
-          gradient: LinearGradient(
-            colors: [
-              AdminAgencyUi.violet.withValues(alpha: 0.22),
-              AdminAgencyUi.pink.withValues(alpha: 0.1),
-            ],
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xF02A1638), Color(0xF0140C22), Color(0xF00C0814)],
           ),
-          border: Border.all(
-            color: AdminAgencyUi.violet.withValues(alpha: 0.35),
-          ),
+          border: Border.all(color: AdminAgencyUi.pink.withValues(alpha: 0.48)),
+          boxShadow: [
+            BoxShadow(
+              color: AdminAgencyUi.pink.withValues(alpha: 0.12),
+              blurRadius: 12,
+              offset: const Offset(0, 5),
+            ),
+          ],
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -369,10 +404,8 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
               icon: hasEarnings
                   ? Icons.account_balance_wallet_rounded
                   : Icons.card_giftcard_rounded,
-              accent: hasEarnings ? AdminAgencyUi.goldDeep : AdminAgencyUi.pink,
-              accentEnd: hasEarnings
-                  ? AdminAgencyUi.gold
-                  : AdminAgencyUi.violet,
+              accent: hasEarnings ? AdminAgencyUi.rose : AdminAgencyUi.pink,
+              accentEnd: AdminAgencyUi.pink,
               size: 34,
               iconSize: 16,
             ),
@@ -381,7 +414,7 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
               child: AppText(
                 text: hasEarnings ? widget.noteWithBalance : widget.noteEmpty,
                 fontSize: TextStyles.k12FontSize,
-                color: AdminAgencyUi.textSecondary,
+                color: kColorWhite.withValues(alpha: 0.9),
               ),
             ),
           ],
@@ -458,11 +491,11 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
           height: 48,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            gradient: AdminAgencyUi.goldButtonGradient,
+            gradient: AdminAgencyUi.primaryButtonGradient,
             boxShadow: [
               BoxShadow(
-                color: AdminAgencyUi.goldDeep.withValues(alpha: 0.4),
-                blurRadius: 12,
+                color: AdminAgencyUi.pink.withValues(alpha: 0.48),
+                blurRadius: 16,
                 offset: const Offset(0, 4),
               ),
             ],
@@ -470,12 +503,12 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: AdminAgencyUi.ctaInk, size: 18),
+              Icon(icon, color: kColorWhite, size: 18),
               Spacing.h6,
               SemiBoldText(
                 text: label,
                 fontSize: TextStyles.k14FontSize,
-                color: AdminAgencyUi.ctaInk,
+                color: kColorWhite,
               ),
             ],
           ),
