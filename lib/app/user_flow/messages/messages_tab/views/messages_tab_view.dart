@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/app/bottom_nav/controllers/bottom_nav_controller.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
@@ -112,13 +113,20 @@ class MessagesTabView extends GetView<MessagesTabController> {
                   ),
                   Spacing.h6,
                 ],
-                FramedUserAvatar(
-                  name: session.displayName,
-                  imageUrl: avatarUrl,
-                  frameUrl: session.profileFrameUrl,
-                  frameSeed: session.userId,
-                  size: 42,
-                  fontSize: TextStyles.k12FontSize,
+                GestureDetector(
+                  onTap: () {
+                    if (!Get.isRegistered<BottomNavController>()) return;
+                    Get.find<BottomNavController>().openOwnProfileEditor();
+                  },
+                  behavior: HitTestBehavior.opaque,
+                  child: FramedUserAvatar(
+                    name: session.displayName,
+                    imageUrl: avatarUrl,
+                    frameUrl: session.profileFrameUrl,
+                    frameSeed: session.userId,
+                    size: 42,
+                    fontSize: TextStyles.k12FontSize,
+                  ),
                 ),
                 Spacing.h10,
                 const Expanded(

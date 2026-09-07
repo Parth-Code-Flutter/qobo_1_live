@@ -31,6 +31,7 @@ class BottomNavController extends GetxController {
   final permissionBlocked = false.obs;
   final showOpenSettings = false.obs;
   Map<String, dynamic>? profileData;
+  bool _isOpeningOwnProfileEditor = false;
 
   static const int roomsTabIndex = 1;
   static const int goLiveTabIndex = 2;
@@ -131,6 +132,21 @@ class BottomNavController extends GetxController {
 
   void onTabSelected(int index) {
     _applyTabSelection(index);
+  }
+
+  /// Opens the current user's editor from an app-bar profile control.
+  Future<void> openOwnProfileEditor() async {
+    if (_isOpeningOwnProfileEditor) return;
+    _isOpeningOwnProfileEditor = true;
+    try {
+      await Get.toNamed(Routes.USER_BASIC_PROFILE);
+      await _userSession.refreshProfileFromApi(isShowLoader: false);
+      if (_userSession.profileBackgroundUrl.trim().isEmpty) {
+        await _userSession.syncEquippedProfileBackgroundFromBackpack();
+      }
+    } finally {
+      _isOpeningOwnProfileEditor = false;
+    }
   }
 
   void onGoLivePressed() {

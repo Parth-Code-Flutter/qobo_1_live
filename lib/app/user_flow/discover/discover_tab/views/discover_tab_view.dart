@@ -82,9 +82,7 @@ class DiscoverTabView extends StatelessWidget {
                   child: GestureDetector(
                     onTap: () {
                       if (!Get.isRegistered<BottomNavController>()) return;
-                      Get.find<BottomNavController>().onNavBarTabSelected(
-                        BottomNavController.profileTabIndex,
-                      );
+                      Get.find<BottomNavController>().openOwnProfileEditor();
                     },
                     behavior: HitTestBehavior.opaque,
                     child: FramedUserAvatar(
@@ -236,9 +234,7 @@ class DiscoverTabView extends StatelessWidget {
           child: Icon(
             icon,
             size: 18,
-            color: selected
-                ? kColorWhite
-                : kColorWhite.withValues(alpha: 0.72),
+            color: selected ? kColorWhite : kColorWhite.withValues(alpha: 0.72),
           ),
         ),
       ),

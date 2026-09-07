@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/app/bottom_nav/controllers/bottom_nav_controller.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
@@ -587,13 +588,20 @@ class LiveRoomView extends StatelessWidget {
           final avatarUrl = session.displayPictureUrl;
           return Row(
             children: [
-              FramedUserAvatar(
-                name: session.displayName,
-                imageUrl: avatarUrl,
-                frameUrl: session.profileFrameUrl,
-                frameSeed: session.userId,
-                size: 36,
-                fontSize: TextStyles.k10FontSize,
+              GestureDetector(
+                onTap: () {
+                  if (!Get.isRegistered<BottomNavController>()) return;
+                  Get.find<BottomNavController>().openOwnProfileEditor();
+                },
+                behavior: HitTestBehavior.opaque,
+                child: FramedUserAvatar(
+                  name: session.displayName,
+                  imageUrl: avatarUrl,
+                  frameUrl: session.profileFrameUrl,
+                  frameSeed: session.userId,
+                  size: 36,
+                  fontSize: TextStyles.k10FontSize,
+                ),
               ),
               Spacing.h8,
               Expanded(
