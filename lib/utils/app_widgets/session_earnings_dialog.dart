@@ -288,7 +288,9 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
                       ),
                       Spacing.h6,
                       SemiBoldText(
-                        text: hasEarnings ? 'LIVE SESSION' : 'WAITING FOR GIFTS',
+                        text: hasEarnings
+                            ? 'LIVE SESSION'
+                            : 'WAITING FOR GIFTS',
                         fontSize: 10,
                         color: AdminAgencyUi.gold,
                       ),
@@ -330,7 +332,7 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
                 ),
                 Spacing.v2,
                 AppText(
-                  text: '≈ USD (1,000 coins = \$1)',
+                  text: '≈ USD (10,000 coins = \$1)',
                   fontSize: TextStyles.k10FontSize,
                   color: AdminAgencyUi.textMuted,
                 ),
@@ -368,16 +370,16 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
                   ? Icons.account_balance_wallet_rounded
                   : Icons.card_giftcard_rounded,
               accent: hasEarnings ? AdminAgencyUi.goldDeep : AdminAgencyUi.pink,
-              accentEnd: hasEarnings ? AdminAgencyUi.gold : AdminAgencyUi.violet,
+              accentEnd: hasEarnings
+                  ? AdminAgencyUi.gold
+                  : AdminAgencyUi.violet,
               size: 34,
               iconSize: 16,
             ),
             Spacing.h10,
             Expanded(
               child: AppText(
-                text: hasEarnings
-                    ? widget.noteWithBalance
-                    : widget.noteEmpty,
+                text: hasEarnings ? widget.noteWithBalance : widget.noteEmpty,
                 fontSize: TextStyles.k12FontSize,
                 color: AdminAgencyUi.textSecondary,
               ),
@@ -394,10 +396,7 @@ class _SessionEarningsDialogState extends State<SessionEarningsDialog>
       return Row(
         children: [
           Expanded(
-            child: _secondaryButton(
-              label: 'Close',
-              onTap: () => Get.back(),
-            ),
+            child: _secondaryButton(label: 'Close', onTap: () => Get.back()),
           ),
           if (hasEarnings && widget.showWithdraw) ...[
             Spacing.h10,

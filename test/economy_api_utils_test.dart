@@ -18,5 +18,13 @@ void main() {
       expect(formatCoinsWithUsd(10000), r'10,000 Coins ($1.00)');
       expect(formatCoinsWithUsd(100000), r'100,000 Coins ($10.00)');
     });
+
+    test('uses the same rate for session earnings', () {
+      expect(kCoinsPerDollar, kCoinUsdConversionRate);
+      expect(coinsToDollars(10000), 1);
+      expect(formatWholeUsdFromCoins(9999), r'$0');
+      expect(formatWholeUsdFromCoins(12800), r'$1');
+      expect(formatWholeUsdFromCoins(100000), r'$10');
+    });
   });
 }

@@ -34,10 +34,9 @@ String formatCoinsWithUsd(num coins) {
   return '${formatLedgerAmount(roundedCoins)} Coins (${formatUsd(coinsToUsd(roundedCoins))})';
 }
 
-/// Legacy earning rule used by older diamond withdrawal/session screens.
-///
-/// New recruitment reward screens should use [coinsToUsd] instead.
-const double kCoinsPerDollar = 1000;
+/// Shared alias retained for existing session/withdrawal callers.
+/// All economy surfaces use the same 10,000 coins = $1.00 USD rule.
+const double kCoinsPerDollar = kCoinUsdConversionRate;
 
 /// Converts coins or diamonds into USD using the platform rate.
 double coinsToDollars(num coinsOrDiamonds) =>
@@ -88,7 +87,7 @@ String formatUsd(num dollars) {
   return '\$$fixed';
 }
 
-/// Whole-dollar label from coins/diamonds; `$0` below 1,000 (= $1).
+/// Whole-dollar label from coins/diamonds; `$0` below 10,000 (= $1).
 ///
 /// Session UIs should use this instead of [formatUsd] + [coinsToDollars] so
 /// partial amounts (e.g. 9 coins) never show as `$0.01`.

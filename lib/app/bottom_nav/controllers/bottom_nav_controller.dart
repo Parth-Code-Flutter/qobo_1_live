@@ -150,6 +150,10 @@ class BottomNavController extends GetxController {
           if (raw == null) return null;
 
           final profile = Map<String, dynamic>.from(raw);
+          final nestedUser = profile['user'];
+          if (nestedUser is Map) {
+            profile.addAll(Map<String, dynamic>.from(nestedUser));
+          }
           final stats = profile['stats'];
           if (stats is Map) {
             profile.putIfAbsent(
@@ -161,12 +165,136 @@ class BottomNavController extends GetxController {
               () => stats['following'] ?? stats['followingCount'] ?? 0,
             );
           }
-          return SocialUserCard.fromJson(profile);
+          profile['profileFrameUrl'] = _userSession.profileFrameUrl;
+          profile['profileBackgroundUrl'] = _userSession.profileBackgroundUrl;
+
+          final location = <String>[
+            _profileValue(profile, const ['city', 'cityName']),
+            _profileValue(profile, const ['state', 'stateName']),
+            _profileValue(profile, const ['country', 'countryName']),
+          ].where((value) => value.isNotEmpty).toSet().join(', ');
+          final gender = _profileValue(profile, const ['gender', 'sex']);
+          final birthday = _profileValue(profile, const [
+            'dob',
+            'dateOfBirth',
+            'birthDate',
+            'birthday',
+          ]);
+          final age = _profileValue(profile, const ['age']);
+          final coins = _profileValue(profile, const [
+            'formattedCoins',
+            'coins',
+            'coinBalance',
+            'wallet.coins',
+            'balances.coins',
+          ]);
+          final diamonds = _profileValue(profile, const [
+            'formattedDiamonds',
+            'diamonds',
+            'diamondBalance',
+            'wallet.diamonds',
+            'balances.diamonds',
+          ]);
+          final callRate = _profileValue(profile, const [
+            'coinsPerSecond',
+            'coinPerSecond',
+            'callRate',
+          ]);
+          final status = _profileValue(profile, const [
+            'status',
+            'accountStatus',
+          ]);
+          final details = <String, String>{
+            if (_userSession.userId.isNotEmpty) 'User ID': _userSession.userId,
+            if (_userSession.email.isNotEmpty) 'Email': _userSession.email,
+            if (_userSession.phone.isNotEmpty) 'Phone': _userSession.phone,
+            if (gender.isNotEmpty) 'Gender': _titleCase(gender),
+            if (birthday.isNotEmpty) 'Birthday': _formatProfileDate(birthday),
+            if (age.isNotEmpty) 'Age': age,
+            if (location.isNotEmpty) 'Location': location,
+            if (coins.isNotEmpty) 'Coins': _formatProfileNumber(coins),
+            if (diamonds.isNotEmpty) 'Diamonds': _formatProfileNumber(diamonds),
+            if (_userSession.agencyCode.isNotEmpty)
+              'Agency code': _userSession.agencyCode,
+            if (callRate.isNotEmpty) 'Call rate': '$callRate coins/sec',
+            if (status.isNotEmpty) 'Status': _titleCase(status),
+          };
+          return OwnUserSheetData(
+            user: SocialUserCard.fromJson(profile),
+            levelLabel: _userSession.levelBadge,
+            roleLabel: _titleCase(_userSession.role),
+            visitors: _userSession.formattedVisitors,
+            friends: _userSession.formattedFriends,
+            following: _userSession.formattedFollowing,
+            followers: _userSession.formattedFollowers,
+            details: details,
+          );
         },
       );
     } finally {
       _isOpeningOwnProfileSheet = false;
     }
+  }
+
+  static String _profileValue(Map<String, dynamic> profile, List<String> keys) {
+    for (final key in keys) {
+      dynamic raw = profile;
+      for (final part in key.split('.')) {
+        if (raw is! Map) {
+          raw = null;
+          break;
+        }
+        raw = raw[part];
+      }
+      final value = raw?.toString().trim() ?? '';
+      if (value.isNotEmpty && value.toLowerCase() != 'null') return value;
+    }
+    return '';
+  }
+
+  static String _titleCase(String value) {
+    return value
+        .trim()
+        .replaceAll('_', ' ')
+        .split(RegExp(r'\s+'))
+        .where((word) => word.isNotEmpty)
+        .map(
+          (word) =>
+              '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}',
+        )
+        .join(' ');
+  }
+
+  static String _formatProfileDate(String value) {
+    final date = DateTime.tryParse(value);
+    if (date == null) return value;
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${date.day.toString().padLeft(2, '0')} ${months[date.month - 1]} ${date.year}';
+  }
+
+  static String _formatProfileNumber(String value) {
+    final number = int.tryParse(value);
+    if (number == null) return value;
+    final digits = number.abs().toString();
+    final buffer = StringBuffer();
+    for (var index = 0; index < digits.length; index++) {
+      if (index > 0 && (digits.length - index) % 3 == 0) buffer.write(',');
+      buffer.write(digits[index]);
+    }
+    return '${number.isNegative ? '-' : ''}$buffer';
   }
 
   void onGoLivePressed() {
