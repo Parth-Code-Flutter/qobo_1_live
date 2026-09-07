@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_shell_background.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/direct_gift_bottom_sheet.dart';
+import 'package:qobo_one_live/utils/app_widgets/emoji_catalog_bottom_sheet.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -188,8 +192,20 @@ class ChatDetailView extends GetView<ChatDetailController> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          _ComposerButton(icon: Icons.add_rounded, onTap: () {}),
-          Spacing.h8,
+          _ComposerButton(
+            icon: Icons.emoji_emotions_outlined,
+            tooltip: 'Send emoji',
+            onTap: _showEmojiSheet,
+            compact: true,
+          ),
+          const SizedBox(width: 6),
+          _ComposerButton(
+            icon: Icons.card_giftcard_rounded,
+            tooltip: 'Send gift',
+            onTap: _showGiftSheet,
+            compact: true,
+          ),
+          const SizedBox(width: 8),
           Expanded(
             child: Container(
               constraints: const BoxConstraints(minHeight: 46),
@@ -227,11 +243,57 @@ class ChatDetailView extends GetView<ChatDetailController> {
           Spacing.h8,
           _ComposerButton(
             icon: Icons.send_rounded,
+            tooltip: 'Send message',
             onTap: controller.sendMessage,
             emphasized: true,
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _showEmojiSheet() async {
+    if (!await controller.prepareRichMessage()) {
+      Get.snackbar(
+        'Emoji not available',
+        'The chat is still being prepared. Please try again.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+    if (controller.emojiCatalog.isEmpty) {
+      unawaited(controller.loadEmojiCatalog());
+    }
+    await Get.bottomSheet<void>(
+      Obx(
+        () => EmojiCatalogBottomSheet(
+          items: controller.emojiCatalog.toList(),
+          isLoading: controller.isLoadingEmojis.value,
+          subtitle: 'Pick a reaction to share in this chat',
+          onTap: controller.sendEmoji,
+        ),
+      ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.58),
+    );
+  }
+
+  Future<void> _showGiftSheet() async {
+    if (!await controller.prepareRichMessage()) {
+      Get.snackbar(
+        'Gift not available',
+        'The chat is still being prepared. Please try again.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+    await DirectGiftBottomSheet.show(
+      receiverId: controller.targetId.value,
+      receiverName: controller.chatName.value,
+      roomId: controller.activeRoomId,
+      sessionType: 'chat',
+      onSent: controller.recordSentGift,
     );
   }
 }
@@ -265,35 +327,43 @@ class _ComposerButton extends StatelessWidget {
     required this.icon,
     required this.onTap,
     this.emphasized = false,
+    this.compact = false,
+    required this.tooltip,
   });
 
   final IconData icon;
   final VoidCallback onTap;
   final bool emphasized;
+  final bool compact;
+  final String tooltip;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: Ink(
-          width: 46,
-          height: 46,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: emphasized ? null : kColorWhite.withValues(alpha: 0.08),
-            gradient: emphasized
-                ? const LinearGradient(
-                    colors: [
-                      kColorProfileChipPinkStart,
-                      kColorProfileChipPurpleStart,
-                    ],
-                  )
-                : null,
+    final size = compact ? 40.0 : 46.0;
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: Ink(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: emphasized ? null : kColorWhite.withValues(alpha: 0.08),
+              gradient: emphasized
+                  ? const LinearGradient(
+                      colors: [
+                        kColorProfileChipPinkStart,
+                        kColorProfileChipPurpleStart,
+                      ],
+                    )
+                  : null,
+            ),
+            child: Icon(icon, color: kColorWhite, size: compact ? 19 : 21),
           ),
-          child: Icon(icon, color: kColorWhite, size: 21),
         ),
       ),
     );

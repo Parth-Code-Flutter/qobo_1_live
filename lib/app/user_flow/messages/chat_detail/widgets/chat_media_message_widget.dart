@@ -1,21 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:qobo_one_live/app/user_flow/live_broadcast/widgets/gift_icon_widget.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
-import 'package:qobo_one_live/utils/text_utils/phone_mask_utils.dart';
-import 'package:qobo_one_live/utils/text_utils/profanity_mask_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/utils/ui_utils/emoji_celebration_overlay.dart';
 
 import '../controllers/chat_detail_controller.dart';
+import 'chat_text_message_widget.dart';
 
-/// Plain text bubble in the chat message list.
-class ChatTextMessageWidget extends StatelessWidget {
-  const ChatTextMessageWidget({super.key, required this.message});
+/// Inline emoji and gift message using the app's shared media renderers.
+class ChatMediaMessageWidget extends StatelessWidget {
+  const ChatMediaMessageWidget({super.key, required this.message});
 
   final ChatMessageModel message;
 
   @override
   Widget build(BuildContext context) {
+    final media = message.animationUrl ?? message.mediaUrl ?? '';
     return Align(
       alignment: message.isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Column(
@@ -24,8 +26,8 @@ class ChatTextMessageWidget extends StatelessWidget {
             : CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            constraints: const BoxConstraints(maxWidth: 280),
+            width: message.isGift ? 180 : 116,
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: message.isMe ? null : const Color(0xFF2B1946),
               gradient: message.isMe
@@ -37,7 +39,7 @@ class ChatTextMessageWidget extends StatelessWidget {
                   : null,
               border: Border.all(
                 color: message.isMe
-                    ? kColorProfileChipPinkStart.withValues(alpha: 0.32)
+                    ? kColorProfileChipPinkStart.withValues(alpha: 0.34)
                     : kColorWhite.withValues(alpha: 0.11),
               ),
               borderRadius: BorderRadius.only(
@@ -47,10 +49,37 @@ class ChatTextMessageWidget extends StatelessWidget {
                 bottomRight: Radius.circular(message.isMe ? 5 : 18),
               ),
             ),
-            child: AppText(
-              text: ProfanityMaskUtils.mask(PhoneMaskUtils.mask(message.text)),
-              fontSize: TextStyles.k14FontSize,
-              color: kColorWhite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  height: message.isGift ? 132 : 78,
+                  child: Center(
+                    child: message.isGift
+                        ? GiftIconWidget(
+                            icon: media.isNotEmpty ? media : message.mediaUrl,
+                            size: 124,
+                            emojiSize: 62,
+                          )
+                        : EmojiMediaView(
+                            image: media.isNotEmpty ? media : '😊',
+                            emojiFontSize: 58,
+                            fit: BoxFit.contain,
+                          ),
+                  ),
+                ),
+                if (message.text.isNotEmpty) ...[
+                  Spacing.v6,
+                  AppText(
+                    text: message.text,
+                    fontSize: TextStyles.k12FontSize,
+                    color: kColorWhite,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    align: TextAlign.center,
+                  ),
+                ],
+              ],
             ),
           ),
           Spacing.v4,
@@ -71,29 +100,5 @@ class ChatTextMessageWidget extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-class ChatDeliveryStatusIcon extends StatelessWidget {
-  const ChatDeliveryStatusIcon({super.key, required this.status});
-
-  final ChatDeliveryStatus status;
-
-  @override
-  Widget build(BuildContext context) {
-    final Color color;
-    final IconData icon;
-    switch (status) {
-      case ChatDeliveryStatus.read:
-        color = Colors.lightBlueAccent;
-        icon = Icons.done_all_rounded;
-      case ChatDeliveryStatus.delivered:
-        color = kColorWhite.withValues(alpha: 0.55);
-        icon = Icons.done_all_rounded;
-      case ChatDeliveryStatus.sent:
-        color = kColorWhite.withValues(alpha: 0.55);
-        icon = Icons.done_rounded;
-    }
-    return Icon(icon, size: 14, color: color);
   }
 }

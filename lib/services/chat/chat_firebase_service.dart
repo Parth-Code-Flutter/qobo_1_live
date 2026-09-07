@@ -12,7 +12,7 @@ import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 /// Safe when Firebase was not initialized (e.g. iOS without GoogleService-Info.plist).
 class ChatFirebaseService {
   ChatFirebaseService({FirebaseFirestore? firestore})
-      : _firestoreOverride = firestore;
+    : _firestoreOverride = firestore;
 
   final FirebaseFirestore? _firestoreOverride;
 
@@ -116,8 +116,7 @@ class ChatFirebaseService {
             final data = doc.data();
             if (data['isTyping'] != true) continue;
             final updatedAt = _toDateTime(data['updatedAt']);
-            if (updatedAt != null &&
-                now.difference(updatedAt).inSeconds > 5) {
+            if (updatedAt != null && now.difference(updatedAt).inSeconds > 5) {
               continue;
             }
             return true;
@@ -159,10 +158,10 @@ class ChatFirebaseService {
           .collection('presence')
           .doc('main')
           .set({
-        'isOnline': isOnline,
-        'lastSeenAt': FieldValue.serverTimestamp(),
-        'platform': platform,
-      }, SetOptions(merge: true));
+            'isOnline': isOnline,
+            'lastSeenAt': FieldValue.serverTimestamp(),
+            'platform': platform,
+          }, SetOptions(merge: true));
     } on FirebaseException catch (e) {
       if (e.code == 'permission-denied') return;
       LoggerUtils.logWarning('ChatFirebaseService: setMyPresence failed — $e');
@@ -180,8 +179,7 @@ class ChatFirebaseService {
     final firestore = _firestore;
     if (roomId.isEmpty || myUserId.isEmpty || firestore == null) return;
 
-    final ackUserId =
-        FirebaseAuth.instance.currentUser?.uid ?? myUserId;
+    final ackUserId = FirebaseAuth.instance.currentUser?.uid ?? myUserId;
     final pendingUpdates = <String, Map<String, dynamic>>{};
 
     for (final raw in rawMessages) {
@@ -253,32 +251,26 @@ class ChatFirebaseService {
       try {
         await ref.update(updates);
         _ackedMessageKeys.add(key);
-        ChatLogger.firestore(
-          'read receipt',
-          {
-            'roomId': roomId,
-            'messageId': messageId,
-            'userId': ackUserId,
-            'markRead': markRead,
-          },
-        );
+        ChatLogger.firestore('read receipt', {
+          'roomId': roomId,
+          'messageId': messageId,
+          'userId': ackUserId,
+          'markRead': markRead,
+        });
       } on FirebaseException catch (e) {
-        ChatLogger.firestoreWarn(
-          'read receipt failed',
-          {
-            'code': e.code,
-            'messageId': messageId,
-            'roomId': roomId,
-          },
-        );
+        ChatLogger.firestoreWarn('read receipt failed', {
+          'code': e.code,
+          'messageId': messageId,
+          'roomId': roomId,
+        });
         LoggerUtils.logWarning(
           'ChatFirebaseService: read receipt $messageId skipped — ${e.code}',
         );
       } catch (e) {
-        ChatLogger.firestoreWarn(
-          'read receipt failed',
-          {'messageId': messageId, 'error': e.toString()},
-        );
+        ChatLogger.firestoreWarn('read receipt failed', {
+          'messageId': messageId,
+          'error': e.toString(),
+        });
         LoggerUtils.logWarning(
           'ChatFirebaseService: read receipt $messageId skipped — $e',
         );
@@ -333,10 +325,7 @@ class ChatFirebaseService {
           .get();
       final list = snapshot.docs
           .map(
-            (doc) => {
-              ...Map<String, dynamic>.from(doc.data()),
-              'id': doc.id,
-            },
+            (doc) => {...Map<String, dynamic>.from(doc.data()), 'id': doc.id},
           )
           .toList();
       list.sort((a, b) {
@@ -481,13 +470,16 @@ class ChatFirebaseService {
       final roomData = Map<String, dynamic>.from(roomDoc.data());
       if (roomData['isActive'] == false) continue;
 
-      final memberIds = (roomData['memberIds'] as List?)
+      final memberIds =
+          (roomData['memberIds'] as List?)
               ?.map((e) => e.toString())
               .where((id) => id.isNotEmpty)
               .toList() ??
           <String>[];
-      final peerId =
-          memberIds.firstWhere((id) => id != userId, orElse: () => '');
+      final peerId = memberIds.firstWhere(
+        (id) => id != userId,
+        orElse: () => '',
+      );
       if (peerId.isEmpty) continue;
 
       final messages = await fetchMessagesOnce(roomDoc.id);
@@ -505,8 +497,8 @@ class ChatFirebaseService {
           : null;
       final callAt = _toDateTime(latestCall?['endedAt']);
 
-      final useCall = callAt != null &&
-          (messageAt == null || callAt.isAfter(messageAt));
+      final useCall =
+          callAt != null && (messageAt == null || callAt.isAfter(messageAt));
 
       if (useCall && latestCall != null) {
         final isVideo = latestCall['type']?.toString() == 'video';
@@ -614,10 +606,7 @@ class ChatFirebaseService {
           .get();
       return snap.docs
           .map(
-            (doc) => {
-              ...Map<String, dynamic>.from(doc.data()),
-              'id': doc.id,
-            },
+            (doc) => {...Map<String, dynamic>.from(doc.data()), 'id': doc.id},
           )
           .toList();
     } catch (e) {
@@ -703,6 +692,26 @@ class ChatFirebaseService {
     required String text,
     String? clientMessageId,
     String? recipientId,
+  }) {
+    return sendMessage(
+      roomId: roomId,
+      senderId: senderId,
+      text: text,
+      clientMessageId: clientMessageId,
+      recipientId: recipientId,
+    );
+  }
+
+  /// Writes text or rich direct-chat content using the same message contract.
+  Future<String> sendMessage({
+    required String roomId,
+    required String senderId,
+    required String text,
+    String type = 'text',
+    Map<String, dynamic> metadata = const {},
+    String? clientMessageId,
+    String? recipientId,
+    String? inboxPreview,
   }) async {
     if (roomId.isEmpty || senderId.isEmpty) {
       throw ArgumentError('roomId and senderId are required');
@@ -716,9 +725,7 @@ class ChatFirebaseService {
     // Rules check request.auth.uid == senderId — always use Firebase Auth uid.
     final authUid = FirebaseAuth.instance.currentUser?.uid ?? senderId;
 
-    unawaited(
-      setTyping(roomId: roomId, userId: authUid, isTyping: false),
-    );
+    unawaited(setTyping(roomId: roomId, userId: authUid, isTyping: false));
 
     final docRef = firestore
         .collection('chatRooms')
@@ -740,8 +747,8 @@ class ChatFirebaseService {
         'messageId': messageId,
         'roomId': roomId,
         'senderId': authUid,
-        'type': 'text',
-        'content': {'text': text},
+        'type': type,
+        'content': {'text': text, ...metadata},
         'deliveryState': 'sent',
         'status': initialStatus,
         'createdAt': clientNow,
@@ -751,20 +758,18 @@ class ChatFirebaseService {
       LoggerUtils.logInfo(
         'ChatFirebaseService: message written chatRooms/$roomId/messages/$messageId',
       );
-      ChatLogger.firestore(
-        'message written',
-        {
-          'roomId': roomId,
-          'messageId': messageId,
-          'clientMessageId': dedupeId,
-          'senderId': authUid,
-        },
-      );
+      ChatLogger.firestore('message written', {
+        'roomId': roomId,
+        'messageId': messageId,
+        'clientMessageId': dedupeId,
+        'senderId': authUid,
+      });
     } on FirebaseException catch (e) {
-      ChatLogger.firestoreWarn(
-        'message write failed',
-        {'code': e.code, 'message': e.message, 'roomId': roomId},
-      );
+      ChatLogger.firestoreWarn('message write failed', {
+        'code': e.code,
+        'message': e.message,
+        'roomId': roomId,
+      });
       LoggerUtils.logWarning(
         'ChatFirebaseService: message write failed — ${e.code}: ${e.message}',
       );
@@ -776,9 +781,10 @@ class ChatFirebaseService {
         firestore: firestore,
         userId: authUid,
         roomId: roomId,
-        preview: text,
+        preview: inboxPreview ?? text,
         senderId: authUid,
         peerId: recipientId,
+        messageType: type,
       ),
     );
 
@@ -809,11 +815,11 @@ class ChatFirebaseService {
     final docId = historyDocId?.trim().isNotEmpty == true
         ? historyDocId!.trim()
         : firestore
-            .collection('chatRooms')
-            .doc(roomId)
-            .collection('messages')
-            .doc()
-            .id;
+              .collection('chatRooms')
+              .doc(roomId)
+              .collection('messages')
+              .doc()
+              .id;
 
     final ref = firestore
         .collection('chatRooms')
@@ -830,8 +836,9 @@ class ChatFirebaseService {
         return docId;
       }
 
-      final durationMinutes =
-          ChatInboxPreviewType.durationMinutesFromSeconds(durationSeconds);
+      final durationMinutes = ChatInboxPreviewType.durationMinutesFromSeconds(
+        durationSeconds,
+      );
       final messageType = isVideo ? 'video_call' : 'voice_call';
       final initialStatus = <String, dynamic>{};
       if (calleeId.isNotEmpty) {
@@ -851,7 +858,8 @@ class ChatFirebaseService {
           'callerId': callerId,
           'calleeId': calleeId,
           'status': outcome,
-          if (zegoCallId != null && zegoCallId.isNotEmpty) 'zegoCallId': zegoCallId,
+          if (zegoCallId != null && zegoCallId.isNotEmpty)
+            'zegoCallId': zegoCallId,
           if (callStartedAt != null && callStartedAt.isNotEmpty)
             'callStartedAt': callStartedAt,
           if (durationSeconds != null && durationSeconds > 0)
@@ -888,6 +896,7 @@ class ChatFirebaseService {
     required String preview,
     required String senderId,
     String? peerId,
+    String messageType = ChatInboxPreviewType.text,
   }) async {
     try {
       await firestore
@@ -896,14 +905,14 @@ class ChatFirebaseService {
           .collection('rooms')
           .doc(roomId)
           .set({
-        'lastMessagePreview': preview,
-        'lastMessageAt': FieldValue.serverTimestamp(),
-        'lastMessageSenderId': senderId,
-        'lastMessageType': ChatInboxPreviewType.text,
-        'updatedAt': FieldValue.serverTimestamp(),
-        'roomId': roomId,
-        if (peerId != null && peerId.isNotEmpty) 'peerId': peerId,
-      }, SetOptions(merge: true));
+            'lastMessagePreview': preview,
+            'lastMessageAt': FieldValue.serverTimestamp(),
+            'lastMessageSenderId': senderId,
+            'lastMessageType': messageType,
+            'updatedAt': FieldValue.serverTimestamp(),
+            'roomId': roomId,
+            if (peerId != null && peerId.isNotEmpty) 'peerId': peerId,
+          }, SetOptions(merge: true));
     } catch (e) {
       LoggerUtils.logWarning(
         'ChatFirebaseService: inbox preview update skipped — $e',

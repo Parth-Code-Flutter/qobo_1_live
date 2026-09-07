@@ -9,6 +9,7 @@ import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_
 import 'package:qobo_one_live/repo/chat/chat_local_store.dart';
 import 'package:qobo_one_live/repo/chat/chat_repo.dart';
 import 'package:qobo_one_live/repo/chat/models/chat_room_model.dart';
+import 'package:qobo_one_live/repo/emoji/emoji_repo.dart';
 import 'package:qobo_one_live/services/chat/chat_firebase_service.dart';
 import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
 import 'package:qobo_one_live/services/chat/chat_call_launcher.dart';
@@ -20,6 +21,7 @@ import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/phone_mask_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/profanity_mask_utils.dart';
+import 'package:qobo_one_live/utils/ui_utils/gift_media_utils.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:intl/intl.dart';
 
@@ -52,6 +54,12 @@ class ChatMessageModel {
     this.isMissedCall = false,
     this.isUnansweredCall = false,
     this.callDurationSeconds,
+    this.type = 'text',
+    this.mediaUrl,
+    this.animationUrl,
+    this.soundUrl,
+    this.mediaId,
+    this.price,
   });
 
   final String text;
@@ -66,6 +74,15 @@ class ChatMessageModel {
   final bool isMissedCall;
   final bool isUnansweredCall;
   final int? callDurationSeconds;
+  final String type;
+  final String? mediaUrl;
+  final String? animationUrl;
+  final String? soundUrl;
+  final String? mediaId;
+  final int? price;
+
+  bool get isEmoji => type == 'emoji';
+  bool get isGift => type == 'gift';
 }
 
 class ChatDetailController extends GetxController {
@@ -73,13 +90,16 @@ class ChatDetailController extends GetxController {
     ChatRepo? chatRepo,
     ChatLocalStore? localStore,
     ChatFirebaseService? firebaseService,
+    EmojiRepo? emojiRepo,
   }) : _chatRepo = chatRepo ?? ChatRepo(),
        _localStore = localStore ?? ChatLocalStore(),
-       _firebaseService = firebaseService ?? ChatFirebaseService();
+       _firebaseService = firebaseService ?? ChatFirebaseService(),
+       _emojiRepo = emojiRepo ?? EmojiRepo();
 
   final ChatRepo _chatRepo;
   final ChatLocalStore _localStore;
   final ChatFirebaseService _firebaseService;
+  final EmojiRepo _emojiRepo;
 
   final chatName = 'Chat'.obs;
   final chatImageUrl = RxnString();
@@ -95,6 +115,8 @@ class ChatDetailController extends GetxController {
   final peerIsOnline = false.obs;
   final peerLastSeenAt = Rxn<DateTime>();
   final messageController = TextEditingController();
+  final emojiCatalog = <Map<String, String>>[].obs;
+  final isLoadingEmojis = false.obs;
 
   StreamSubscription<List<Map<String, dynamic>>>? _firebaseSub;
   StreamSubscription<List<Map<String, dynamic>>>? _callHistorySub;
@@ -104,6 +126,8 @@ class ChatDetailController extends GetxController {
   Timer? _typingClearTimer;
   Timer? _ackDebounce;
   bool _sendInFlight = false;
+  bool _emojiSendInFlight = false;
+  bool _richMessageInFlight = false;
   bool _isOnVoiceCallScreen = false;
   bool _pendingScrollToBottom = true;
   List<ChatMessageModel> _restBootstrap = [];
@@ -120,6 +144,13 @@ class ChatDetailController extends GetxController {
     if (path.isEmpty) return '';
     final parts = path.split('/').where((p) => p.isNotEmpty).toList();
     return parts.isNotEmpty ? parts.last : '';
+  }
+
+  String get activeRoomId => _effectiveRoomId;
+
+  Future<bool> prepareRichMessage() async {
+    if (targetId.value.isEmpty) return false;
+    return _ensureRoomReady();
   }
 
   /// Status line under chat name in the app bar.
@@ -159,14 +190,11 @@ class ChatDetailController extends GetxController {
     }
     messageController.addListener(_onMessageTextChanged);
     if (targetId.value.isNotEmpty) {
-      ChatLogger.bootstrap(
-        'open chat',
-        {
-          'targetId': targetId.value,
-          'roomId': roomId.value,
-          'name': chatName.value,
-        },
-      );
+      ChatLogger.bootstrap('open chat', {
+        'targetId': targetId.value,
+        'roomId': roomId.value,
+        'name': chatName.value,
+      });
       _localStore.saveThreadMeta(
         targetId: targetId.value,
         name: chatName.value,
@@ -180,23 +208,17 @@ class ChatDetailController extends GetxController {
     ChatLogger.bootstrap('starting');
     final roomReady = await _ensureRoomReady();
     final signedIn = await _ensureFirebaseSession();
-    ChatLogger.bootstrap(
-      'pre-load',
-      {
-        'roomReady': roomReady,
-        'firebaseSignedIn': signedIn,
-        'roomId': _effectiveRoomId,
-      },
-    );
+    ChatLogger.bootstrap('pre-load', {
+      'roomReady': roomReady,
+      'firebaseSignedIn': signedIn,
+      'roomId': _effectiveRoomId,
+    });
     await loadHistory();
     await _startFirebaseIfReady();
-    ChatLogger.bootstrap(
-      'ready',
-      {
-        'firebaseLive': isFirebaseLive.value,
-        'messageCount': messages.where((m) => !m.isCallEntry).length,
-      },
-    );
+    ChatLogger.bootstrap('ready', {
+      'firebaseLive': isFirebaseLive.value,
+      'messageCount': messages.where((m) => !m.isCallEntry).length,
+    });
   }
 
   Future<bool> _ensureFirebaseSession() async {
@@ -225,11 +247,9 @@ class ChatDetailController extends GetxController {
       isShowLoader: false,
     );
     if (!isSocialApiSuccess(response)) {
-      ChatLogger.apiWarn(
-        'POST /api/chat/room',
-        'failed',
-        {'message': response?['message']?.toString() ?? 'unknown'},
-      );
+      ChatLogger.apiWarn('POST /api/chat/room', 'failed', {
+        'message': response?['message']?.toString() ?? 'unknown',
+      });
       return false;
     }
 
@@ -241,14 +261,11 @@ class ChatDetailController extends GetxController {
       firestorePath.value = room.firestorePath;
     }
     final ready = roomId.value.isNotEmpty || firestorePath.value.isNotEmpty;
-    ChatLogger.room(
-      ready ? 'created' : 'missing roomId in response',
-      {
-        'roomId': roomId.value,
-        'firestorePath': firestorePath.value,
-        'isNew': room.isNew,
-      },
-    );
+    ChatLogger.room(ready ? 'created' : 'missing roomId in response', {
+      'roomId': roomId.value,
+      'firestorePath': firestorePath.value,
+      'isNew': room.isNew,
+    });
     return ready;
   }
 
@@ -276,16 +293,13 @@ class ChatDetailController extends GetxController {
           );
         }
       } else {
-        ChatLogger.apiWarn(
-          'GET /api/chat/detail',
-          'failed',
-          {'message': response?['message']?.toString() ?? 'unknown'},
-        );
+        ChatLogger.apiWarn('GET /api/chat/detail', 'failed', {
+          'message': response?['message']?.toString() ?? 'unknown',
+        });
       }
 
       final cached = await _localStore.readMessages(targetId.value);
-      final cachedModels =
-          cached.map((raw) => _mapMessage(raw, myId)).toList();
+      final cachedModels = cached.map((raw) => _mapMessage(raw, myId)).toList();
       final merged = _mergeMessages(apiMessages, cachedModels);
       _restBootstrap = merged;
 
@@ -299,8 +313,9 @@ class ChatDetailController extends GetxController {
           );
           firestoreCount = firestoreRaw.length;
           if (firestoreRaw.isNotEmpty) {
-            final fromFirestore =
-                firestoreRaw.map((raw) => _mapMessage(raw, myId)).toList();
+            final fromFirestore = firestoreRaw
+                .map((raw) => _mapMessage(raw, myId))
+                .toList();
             _restBootstrap = _mergeMessages(_restBootstrap, fromFirestore);
           }
         } else {
@@ -319,16 +334,13 @@ class ChatDetailController extends GetxController {
         );
       }
 
-      ChatLogger.load(
-        'merged',
-        {
-          'api': apiMessages.length,
-          'cache': cachedModels.length,
-          'firestoreOnce': firestoreCount,
-          'totalText': messages.where((m) => !m.isCallEntry).length,
-          'totalCalls': messages.where((m) => m.isCallEntry).length,
-        },
-      );
+      ChatLogger.load('merged', {
+        'api': apiMessages.length,
+        'cache': cachedModels.length,
+        'firestoreOnce': firestoreCount,
+        'totalText': messages.where((m) => !m.isCallEntry).length,
+        'totalCalls': messages.where((m) => m.isCallEntry).length,
+      });
 
       if (apiMessages.isNotEmpty) {
         await _localStore.markChatSendInit(targetId.value);
@@ -358,13 +370,10 @@ class ChatDetailController extends GetxController {
   Future<void> _startFirebaseIfReady() async {
     final effectiveRoomId = _effectiveRoomId;
     if (!_firebaseService.isAvailable || effectiveRoomId.isEmpty) {
-      ChatLogger.liveWarn(
-        'listener skipped',
-        {
-          'firebaseAvailable': _firebaseService.isAvailable,
-          'roomId': effectiveRoomId,
-        },
-      );
+      ChatLogger.liveWarn('listener skipped', {
+        'firebaseAvailable': _firebaseService.isAvailable,
+        'roomId': effectiveRoomId,
+      });
       return;
     }
 
@@ -402,13 +411,10 @@ class ChatDetailController extends GetxController {
         .watchMessages(effectiveRoomId)
         .listen(
           (rawMessages) {
-            ChatLogger.live(
-              'snapshot',
-              {
-                'roomId': effectiveRoomId,
-                'count': rawMessages.length,
-              },
-            );
+            ChatLogger.live('snapshot', {
+              'roomId': effectiveRoomId,
+              'count': rawMessages.length,
+            });
             _applyFirestoreMessages(rawMessages, myId);
             _scrollToBottom();
             _scheduleAck(effectiveRoomId, myId, rawMessages);
@@ -437,19 +443,18 @@ class ChatDetailController extends GetxController {
     final combined = <String, Map<String, dynamic>>{};
 
     for (final raw in await _localStore.readCallHistory(effectiveRoomId)) {
-      final id =
-          raw['callId']?.toString() ?? raw['id']?.toString() ?? '';
+      final id = raw['callId']?.toString() ?? raw['id']?.toString() ?? '';
       if (id.isNotEmpty) combined[id] = raw;
     }
 
     if (_firebaseService.isAvailable) {
       final signedIn = await _ensureFirebaseSession();
       if (signedIn) {
-        final remote =
-            await _firebaseService.fetchCallHistoryOnce(effectiveRoomId);
+        final remote = await _firebaseService.fetchCallHistoryOnce(
+          effectiveRoomId,
+        );
         for (final raw in remote) {
-          final id =
-              raw['callId']?.toString() ?? raw['id']?.toString() ?? '';
+          final id = raw['callId']?.toString() ?? raw['id']?.toString() ?? '';
           if (id.isNotEmpty) combined[id] = raw;
         }
       }
@@ -484,8 +489,7 @@ class ChatDetailController extends GetxController {
     bool merge = true,
   }) {
     if (rawCalls.isEmpty) return;
-    final incoming =
-        rawCalls.map((raw) => _mapCallEntry(raw, myId)).toList();
+    final incoming = rawCalls.map((raw) => _mapCallEntry(raw, myId)).toList();
     _callBootstrap = merge
         ? _mergeMessages(_callBootstrap, incoming)
         : incoming;
@@ -569,8 +573,7 @@ class ChatDetailController extends GetxController {
     List<Map<String, dynamic>> rawMessages,
     String myId,
   ) {
-    final live =
-        rawMessages.map((raw) => _mapMessage(raw, myId)).toList();
+    final live = rawMessages.map((raw) => _mapMessage(raw, myId)).toList();
     final liveTexts = live.where((m) => !m.isCallEntry).toList();
     final liveCalls = live.where((m) => m.isCallEntry).toList();
     final textMerged = _mergeMessages(
@@ -592,7 +595,9 @@ class ChatDetailController extends GetxController {
       final dayKey = _messageDayKey(msg);
       if (lastDayKey == null || dayKey != lastDayKey) {
         entries.add(
-          ChatTimelineEntry.dateHeader(_formatDateGroupLabel(_dayFromKey(dayKey))),
+          ChatTimelineEntry.dateHeader(
+            _formatDateGroupLabel(_dayFromKey(dayKey)),
+          ),
         );
         lastDayKey = dayKey;
       }
@@ -668,6 +673,247 @@ class ChatDetailController extends GetxController {
     });
   }
 
+  Future<void> loadEmojiCatalog() async {
+    if (isLoadingEmojis.value) return;
+    isLoadingEmojis.value = true;
+    try {
+      final response = await _emojiRepo.getEmojiCatalog(isShowLoader: false);
+      final raw = response?['data'];
+      final list = raw is List
+          ? raw
+          : raw is Map
+          ? raw['emojis'] ?? raw['items'] ?? raw['list']
+          : null;
+      final parsed = list is List
+          ? list
+                .whereType<Map>()
+                .map((item) {
+                  final data = Map<String, dynamic>.from(item);
+                  final id = _firstValue(data, const ['id', '_id', 'emojiId']);
+                  final image = _firstValue(data, const [
+                    'animationUrl',
+                    'imageUrl',
+                    'image',
+                    'url',
+                    'code',
+                    'emoji',
+                  ]);
+                  return <String, String>{
+                    'id': id,
+                    'name': _firstValue(data, const [
+                      'name',
+                      'title',
+                      'label',
+                    ], 'Emoji'),
+                    'image': image.isNotEmpty ? image : '😊',
+                    'animationUrl': image,
+                    'code': _firstValue(data, const [
+                      'code',
+                      'unicode',
+                      'emoji',
+                    ]),
+                    'packVersion': _firstValue(
+                      data,
+                      const ['packVersion', 'pack_version'],
+                      raw is Map ? raw['packVersion']?.toString() ?? '1' : '1',
+                    ),
+                  };
+                })
+                .where((item) => item['id']!.isNotEmpty)
+                .toList()
+          : <Map<String, String>>[];
+      emojiCatalog.assignAll(parsed);
+    } catch (_) {
+      emojiCatalog.clear();
+    } finally {
+      isLoadingEmojis.value = false;
+    }
+  }
+
+  Future<void> sendEmoji(Map<String, String> emoji) async {
+    if (_emojiSendInFlight) return;
+    final emojiId = emoji['id']?.trim() ?? '';
+    if (emojiId.isEmpty || !await prepareRichMessage()) {
+      _showRichMessageError(
+        'Emoji not sent',
+        'Chat details are not ready yet.',
+      );
+      return;
+    }
+
+    _emojiSendInFlight = true;
+    try {
+      final response = await _chatRepo.sendMessage(
+        targetId: targetId.value,
+        content: emojiId,
+        type: 'emoji',
+        roomId: _effectiveRoomId,
+        metadata: <String, dynamic>{
+          'emojiId': emojiId,
+          'emoji_id': emojiId,
+          'packVersion': int.tryParse(emoji['packVersion'] ?? '') ?? 1,
+        },
+        isShowLoader: false,
+      );
+      if (!isSocialApiSuccess(response)) {
+        _showRichMessageError(
+          'Emoji not sent',
+          response?['message']?.toString() ?? 'Could not send this emoji.',
+        );
+        return;
+      }
+      if (Get.isBottomSheetOpen == true) Get.back<void>();
+      final image = emoji['image'] ?? emoji['code'] ?? '';
+      await _sendRichMessage(
+        type: 'emoji',
+        text: emoji['name'] ?? 'Emoji',
+        mediaUrl: image,
+        animationUrl: emoji['animationUrl'] ?? image,
+        mediaId: emojiId,
+        inboxPreview: 'Sent an emoji',
+      );
+    } finally {
+      _emojiSendInFlight = false;
+    }
+  }
+
+  Future<void> recordSentGift(
+    Map<String, String> gift,
+    Map<String, dynamic>? response,
+  ) async {
+    final animationUrl = GiftMediaUtils.animationUrlFromResponse(
+      response,
+      gift,
+    );
+    await _sendRichMessage(
+      type: 'gift',
+      text: gift['name'] ?? 'Gift',
+      mediaUrl: gift['icon'],
+      animationUrl: animationUrl,
+      soundUrl: GiftMediaUtils.soundUrlFromResponse(response, gift),
+      mediaId: gift['id'],
+      price: int.tryParse(gift['price'] ?? ''),
+      inboxPreview: 'Sent a gift',
+    );
+  }
+
+  Future<void> _sendRichMessage({
+    required String type,
+    required String text,
+    required String inboxPreview,
+    String? mediaUrl,
+    String? animationUrl,
+    String? soundUrl,
+    String? mediaId,
+    int? price,
+  }) async {
+    if (_richMessageInFlight || targetId.value.isEmpty) return;
+    _richMessageInFlight = true;
+    final myId = _myUserId ?? '';
+    final clientMessageId =
+        '${type}_${DateTime.now().microsecondsSinceEpoch}_$myId';
+    final now = DateTime.now();
+    final metadata = <String, dynamic>{
+      '${type}Name': text,
+      if (mediaUrl?.isNotEmpty == true) '${type}Url': mediaUrl,
+      if (mediaUrl?.isNotEmpty == true) 'imageUrl': mediaUrl,
+      if (animationUrl?.isNotEmpty == true) 'animationUrl': animationUrl,
+      if (soundUrl?.isNotEmpty == true) 'soundUrl': soundUrl,
+      if (mediaId?.isNotEmpty == true) '${type}Id': mediaId,
+      if (price != null) 'price': price,
+    };
+    final optimistic = ChatMessageModel(
+      text: text,
+      isMe: true,
+      time: _formatTime(now),
+      createdAt: now,
+      clientMessageId: clientMessageId,
+      type: type,
+      mediaUrl: mediaUrl,
+      animationUrl: animationUrl,
+      soundUrl: soundUrl,
+      mediaId: mediaId,
+      price: price,
+    );
+    messages.add(optimistic);
+    _scrollToBottom();
+
+    try {
+      final ready = await prepareRichMessage();
+      final signedIn = ready && await _ensureFirebaseSession();
+      if (signedIn && myId.isNotEmpty) {
+        final senderId = FirebaseAuth.instance.currentUser?.uid ?? myId;
+        await _firebaseService.sendMessage(
+          roomId: _effectiveRoomId,
+          senderId: senderId,
+          text: text,
+          type: type,
+          metadata: metadata,
+          clientMessageId: clientMessageId,
+          recipientId: targetId.value,
+          inboxPreview: inboxPreview,
+        );
+        await _localStore.saveThreadMeta(
+          targetId: targetId.value,
+          name: chatName.value,
+          imageUrl: chatImageUrl.value,
+        );
+        if (!isFirebaseLive.value) await _startFirebaseIfReady();
+      } else {
+        await _persistRichLocal(
+          message: optimistic,
+          metadata: metadata,
+          senderId: myId,
+          inboxPreview: inboxPreview,
+        );
+      }
+    } catch (error) {
+      ChatLogger.sendWarn('$type chat record failed', {'error': error});
+      await _persistRichLocal(
+        message: optimistic,
+        metadata: metadata,
+        senderId: myId,
+        inboxPreview: inboxPreview,
+      );
+    } finally {
+      _richMessageInFlight = false;
+    }
+  }
+
+  Future<void> _persistRichLocal({
+    required ChatMessageModel message,
+    required Map<String, dynamic> metadata,
+    required String senderId,
+    required String inboxPreview,
+  }) async {
+    await _localStore.appendMessage(
+      targetId: targetId.value,
+      text: message.text,
+      senderId: senderId,
+      clientMessageId: message.clientMessageId,
+      type: message.type,
+      metadata: metadata,
+      inboxPreview: inboxPreview,
+    );
+    _restBootstrap = _mergeMessages(_restBootstrap, [message]);
+  }
+
+  static String _firstValue(
+    Map<String, dynamic> data,
+    List<String> keys, [
+    String fallback = '',
+  ]) {
+    for (final key in keys) {
+      final value = data[key]?.toString().trim() ?? '';
+      if (value.isNotEmpty && value.toLowerCase() != 'null') return value;
+    }
+    return fallback;
+  }
+
+  void _showRichMessageError(String title, String message) {
+    Get.snackbar(title, message, snackPosition: SnackPosition.BOTTOM);
+  }
+
   Future<void> sendMessage() async {
     // Mask mobile numbers and abusive words before persisting/sending so they
     // never leave the device or reach the recipient in clear text.
@@ -682,15 +928,12 @@ class ChatDetailController extends GetxController {
     _sendInFlight = true;
     messageController.clear();
 
-    ChatLogger.send(
-      'tap',
-      {
-        'targetId': targetId.value,
-        'roomId': _effectiveRoomId,
-        'clientMessageId': clientMessageId,
-        'text': text,
-      },
-    );
+    ChatLogger.send('tap', {
+      'targetId': targetId.value,
+      'roomId': _effectiveRoomId,
+      'clientMessageId': clientMessageId,
+      'text': text,
+    });
 
     final now = DateTime.now();
     messages.add(
@@ -706,7 +949,9 @@ class ChatDetailController extends GetxController {
     _scrollToBottom();
 
     // Fire-and-forget — UI stays responsive; no spinner blocking send button.
-    unawaited(_dispatchSend(text: text, myId: myId, clientMessageId: clientMessageId));
+    unawaited(
+      _dispatchSend(text: text, myId: myId, clientMessageId: clientMessageId),
+    );
   }
 
   Future<void> _dispatchSend({
@@ -772,10 +1017,10 @@ class ChatDetailController extends GetxController {
       if (signedIn) {
         final authUid = FirebaseAuth.instance.currentUser?.uid ?? myId;
         if (authUid != myId) {
-          ChatLogger.sendWarn(
-            'auth uid mismatch',
-            {'authUid': authUid, 'appUserId': myId},
-          );
+          ChatLogger.sendWarn('auth uid mismatch', {
+            'authUid': authUid,
+            'appUserId': myId,
+          });
         }
         try {
           await _firebaseService.sendTextMessage(
@@ -793,23 +1038,20 @@ class ChatDetailController extends GetxController {
           sentViaFirestore = true;
           ChatLogger.send('firestore ok', {'roomId': effectiveRoomId});
         } on FirebaseException catch (e) {
-          ChatLogger.sendWarn(
-            'firestore failed',
-            {'code': e.code, 'message': e.message},
-          );
+          ChatLogger.sendWarn('firestore failed', {
+            'code': e.code,
+            'message': e.message,
+          });
         }
       } else {
         ChatLogger.sendWarn('firebase sign-in failed before send');
       }
     } else {
-      ChatLogger.sendWarn(
-        'firestore skipped',
-        {
-          'firebaseAvailable': _firebaseService.isAvailable,
-          'roomId': effectiveRoomId,
-          'myIdEmpty': myId.isEmpty,
-        },
-      );
+      ChatLogger.sendWarn('firestore skipped', {
+        'firebaseAvailable': _firebaseService.isAvailable,
+        'roomId': effectiveRoomId,
+        'myIdEmpty': myId.isEmpty,
+      });
     }
 
     if (!await _localStore.hasChatSendInit(targetId.value)) {
@@ -866,11 +1108,9 @@ class ChatDetailController extends GetxController {
         roomId: effectiveRoomId.isNotEmpty ? effectiveRoomId : null,
       );
       if (!isSocialApiSuccess(response)) {
-        ChatLogger.apiWarn(
-          'POST /api/chat/send',
-          'failed',
-          {'message': response?['message']?.toString() ?? 'unknown'},
-        );
+        ChatLogger.apiWarn('POST /api/chat/send', 'failed', {
+          'message': response?['message']?.toString() ?? 'unknown',
+        });
         return false;
       }
 
@@ -996,7 +1236,8 @@ class ChatDetailController extends GetxController {
     );
 
     return ChatMessageModel(
-      id: contentMap['callId']?.toString() ??
+      id:
+          contentMap['callId']?.toString() ??
           json['id']?.toString() ??
           json['messageId']?.toString(),
       text: ChatInboxPreviewType.chatLabelForUser(
@@ -1038,7 +1279,11 @@ class ChatDetailController extends GetxController {
     final json = Map<String, dynamic>.from(raw);
     final type = json['type']?.toString() ?? 'text';
     if (type == 'voice_call' || type == 'video_call') {
-      return _mapCallMessageFromFirestore(json, myId, isVideo: type == 'video_call');
+      return _mapCallMessageFromFirestore(
+        json,
+        myId,
+        isVideo: type == 'video_call',
+      );
     }
 
     final senderId = json['senderId']?.toString() ?? '';
@@ -1049,12 +1294,37 @@ class ChatDetailController extends GetxController {
       createdAt = _parseTimestamp(fallback);
     }
     final authUid = FirebaseAuth.instance.currentUser?.uid ?? '';
-    final isMe = myId.isNotEmpty &&
+    final isMe =
+        myId.isNotEmpty &&
         (senderId == myId || (authUid.isNotEmpty && senderId == authUid));
+
+    final rawContent = json['content'];
+    final content = rawContent is Map
+        ? Map<String, dynamic>.from(rawContent)
+        : <String, dynamic>{};
+    final mediaPrefix = type == 'gift' ? 'gift' : 'emoji';
+    final mediaUrl = _firstValue(content, [
+      '${mediaPrefix}Url',
+      'imageUrl',
+      'image',
+      'icon',
+      'url',
+    ]);
+    final mediaName = _firstValue(
+      content,
+      ['${mediaPrefix}Name', 'name', 'text', 'message'],
+      type == 'gift'
+          ? 'Gift'
+          : type == 'emoji'
+          ? 'Emoji'
+          : '',
+    );
 
     return ChatMessageModel(
       id: json['id']?.toString() ?? json['messageId']?.toString(),
-      text: _extractContent(json['content']),
+      text: type == 'gift' || type == 'emoji'
+          ? _sanitize(mediaName)
+          : _extractContent(rawContent),
       isMe: isMe,
       time: _formatTime(createdAt),
       createdAt: createdAt,
@@ -1067,6 +1337,15 @@ class ChatDetailController extends GetxController {
               authUid: authUid,
             )
           : ChatDeliveryStatus.sent,
+      type: type,
+      mediaUrl: mediaUrl.isEmpty ? null : mediaUrl,
+      animationUrl: _nullableValue(content, const [
+        'animationUrl',
+        'animation',
+      ]),
+      soundUrl: _nullableValue(content, const ['soundUrl', 'sound']),
+      mediaId: _nullableValue(content, ['${mediaPrefix}Id', 'mediaId', 'id']),
+      price: int.tryParse(content['price']?.toString() ?? ''),
     );
   }
 
@@ -1177,7 +1456,18 @@ class ChatDetailController extends GetxController {
       isUnansweredCall: primary.isUnansweredCall,
       callDurationSeconds:
           primary.callDurationSeconds ?? secondary.callDurationSeconds,
+      type: primary.type,
+      mediaUrl: primary.mediaUrl ?? secondary.mediaUrl,
+      animationUrl: primary.animationUrl ?? secondary.animationUrl,
+      soundUrl: primary.soundUrl ?? secondary.soundUrl,
+      mediaId: primary.mediaId ?? secondary.mediaId,
+      price: primary.price ?? secondary.price,
     );
+  }
+
+  static String? _nullableValue(Map<String, dynamic> data, List<String> keys) {
+    final value = _firstValue(data, keys);
+    return value.isEmpty ? null : value;
   }
 
   static ChatDeliveryStatus _bestDeliveryStatus(

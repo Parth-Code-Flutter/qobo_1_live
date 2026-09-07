@@ -40,10 +40,7 @@ class ChatRepo {
   }) async {
     final response = await _apiService.postRequest(
       endPoint: ChatEndpoints.createRoom,
-      requestModel: <String, dynamic>{
-        'type': 'direct',
-        'target_id': targetId,
-      },
+      requestModel: <String, dynamic>{'type': 'direct', 'target_id': targetId},
       isShowLoader: isShowLoader,
     );
     if (response == null) return null;
@@ -89,6 +86,7 @@ class ChatRepo {
     required String content,
     String type = 'text',
     String? roomId,
+    Map<String, dynamic> metadata = const {},
     bool isShowLoader = false,
   }) async {
     final response = await _apiService.postRequest(
@@ -97,6 +95,7 @@ class ChatRepo {
         'target_id': targetId,
         'content': content,
         'type': type,
+        ...metadata,
         if (roomId != null && roomId.isNotEmpty) 'room_id': roomId,
       },
       isShowLoader: isShowLoader,
@@ -113,10 +112,7 @@ class ChatRepo {
   }) async {
     final response = await _apiService.postRequest(
       endPoint: UserEndpoints.fcmToken,
-      requestModel: <String, dynamic>{
-        'token': token,
-        'platform': platform,
-      },
+      requestModel: <String, dynamic>{'token': token, 'platform': platform},
       isShowLoader: isShowLoader,
     );
     if (response == null) return null;
@@ -187,10 +183,7 @@ class ChatRepo {
   }) async {
     final response = await _apiService.postRequest(
       endPoint: ChatEndpoints.mute,
-      requestModel: <String, dynamic>{
-        'room_id': roomId,
-        'muted': muted,
-      },
+      requestModel: <String, dynamic>{'room_id': roomId, 'muted': muted},
       isShowLoader: isShowLoader,
     );
     if (response == null) return null;

@@ -20,18 +20,29 @@ class DirectGiftBottomSheet extends StatefulWidget {
     required this.receiverName,
     required this.roomId,
     this.sessionType = 'family',
+    this.onSent,
   });
 
   final String receiverId;
   final String receiverName;
   final String roomId;
   final String sessionType;
+  final Future<void> Function(
+    Map<String, String> gift,
+    Map<String, dynamic>? response,
+  )?
+  onSent;
 
   static Future<bool?> show({
     required String receiverId,
     required String receiverName,
     required String roomId,
     String sessionType = 'family',
+    Future<void> Function(
+      Map<String, String> gift,
+      Map<String, dynamic>? response,
+    )?
+    onSent,
   }) {
     return Get.bottomSheet<bool>(
       DirectGiftBottomSheet(
@@ -39,6 +50,7 @@ class DirectGiftBottomSheet extends StatefulWidget {
         receiverName: receiverName,
         roomId: roomId,
         sessionType: sessionType,
+        onSent: onSent,
       ),
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -85,8 +97,9 @@ class _DirectGiftBottomSheetState extends State<DirectGiftBottomSheet> {
           data
               .whereType<Map>()
               .map(
-                (raw) =>
-                    GiftMediaUtils.mapGiftFromApi(Map<String, dynamic>.from(raw)),
+                (raw) => GiftMediaUtils.mapGiftFromApi(
+                  Map<String, dynamic>.from(raw),
+                ),
               )
               .where((gift) => (gift['id'] ?? '').isNotEmpty)
               .toList(),
@@ -101,12 +114,10 @@ class _DirectGiftBottomSheetState extends State<DirectGiftBottomSheet> {
     if (_selectedIndex < 0 || _selectedIndex >= _gifts.length) return;
     final gift = _gifts[_selectedIndex];
     final giftId = gift['id']?.trim() ?? '';
-    if (giftId.isEmpty ||
-        widget.receiverId.isEmpty ||
-        widget.roomId.isEmpty) {
+    if (giftId.isEmpty || widget.receiverId.isEmpty || widget.roomId.isEmpty) {
       Get.snackbar(
         'Gift not sent',
-        'Gift, receiver, or family room context is missing.',
+        'Gift, receiver, or chat context is missing.',
         snackPosition: SnackPosition.BOTTOM,
       );
       return;
@@ -154,6 +165,8 @@ class _DirectGiftBottomSheetState extends State<DirectGiftBottomSheet> {
         gift,
       );
       final soundUrl = GiftMediaUtils.soundUrlFromResponse(response, gift);
+
+      await widget.onSent?.call(gift, response);
 
       // Same flow as live rooms / 1:1 calls: close sheet, then SVGA celebration.
       await GiftMediaUtils.dismissSheetThenCelebrate(
@@ -302,15 +315,17 @@ class _DirectGiftBottomSheetState extends State<DirectGiftBottomSheet> {
                       height: 38,
                       width: 104,
                       child: TextButton(
-                        onPressed: !_sending.value &&
+                        onPressed:
+                            !_sending.value &&
                                 _selectedIndex >= 0 &&
                                 _selectedIndex < _gifts.length
                             ? _send
                             : null,
                         style: TextButton.styleFrom(
                           backgroundColor: kColorPrimary,
-                          disabledBackgroundColor:
-                              kColorWhite.withValues(alpha: 0.10),
+                          disabledBackgroundColor: kColorWhite.withValues(
+                            alpha: 0.10,
+                          ),
                           foregroundColor: kColorWhite,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(18),

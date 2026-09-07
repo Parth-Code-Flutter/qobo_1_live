@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../controllers/chat_detail_controller.dart';
 import 'chat_date_header_widget.dart';
+import 'chat_media_message_widget.dart';
 import 'chat_text_message_widget.dart';
 import 'chat_video_call_message_widget.dart';
 import 'chat_voice_call_message_widget.dart';
@@ -31,6 +32,9 @@ class ChatTimelineMessageWidget extends StatelessWidget {
         return ChatVideoCallMessageWidget(message: message);
       }
       return ChatVoiceCallMessageWidget(message: message);
+    }
+    if (message.isEmoji || message.isGift) {
+      return ChatMediaMessageWidget(message: message);
     }
     return ChatTextMessageWidget(message: message);
   }

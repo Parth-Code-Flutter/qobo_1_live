@@ -5,7 +5,8 @@ import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_cont
 
 /// Offline cache for chat until `POST /api/chat/send` is live on backend.
 class ChatLocalStore {
-  ChatLocalStore({LocalStorage? storage}) : _storage = storage ?? LocalStorage.shared;
+  ChatLocalStore({LocalStorage? storage})
+    : _storage = storage ?? LocalStorage.shared;
 
   final LocalStorage _storage;
 
@@ -15,7 +16,10 @@ class ChatLocalStore {
     if (map == null) return [];
     final list = map[targetId];
     if (list is! List) return [];
-    return list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+    return list
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
   }
 
   Future<void> appendMessage({
@@ -23,6 +27,9 @@ class ChatLocalStore {
     required String text,
     required String senderId,
     String? clientMessageId,
+    String type = 'text',
+    Map<String, dynamic> metadata = const {},
+    String? inboxPreview,
   }) async {
     if (targetId.isEmpty || text.isEmpty) return;
     final all = await _readAll();
@@ -32,13 +39,14 @@ class ChatLocalStore {
           ) ??
           [],
     );
-    final id = clientMessageId ?? DateTime.now().microsecondsSinceEpoch.toString();
+    final id =
+        clientMessageId ?? DateTime.now().microsecondsSinceEpoch.toString();
     thread.add({
       'id': id,
       'clientMessageId': id,
       'senderId': senderId,
-      'content': text,
-      'type': 'text',
+      'content': type == 'text' ? text : {'text': text, ...metadata},
+      'type': type,
       'createdAt': DateTime.now().toUtc().toIso8601String(),
       'localOnly': true,
     });
@@ -51,8 +59,9 @@ class ChatLocalStore {
     });
     await _upsertThreadPreview(
       targetId: targetId,
-      lastMessage: text,
+      lastMessage: inboxPreview ?? text,
       lastMessageAt: DateTime.now().toUtc().toIso8601String(),
+      lastMessageType: type,
     );
   }
 
@@ -61,7 +70,10 @@ class ChatLocalStore {
     if (map == null) return [];
     final list = map['threads'];
     if (list is! List) return [];
-    return list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+    return list
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
   }
 
   Future<void> _upsertThreadPreview({
@@ -70,9 +82,12 @@ class ChatLocalStore {
     required String lastMessageAt,
     String? name,
     String? imageUrl,
+    String lastMessageType = 'text',
   }) async {
     final map = await _storage.getJsonFromStorage(kStorageChatInboxThreads);
-    final data = map != null ? Map<String, dynamic>.from(map) : <String, dynamic>{};
+    final data = map != null
+        ? Map<String, dynamic>.from(map)
+        : <String, dynamic>{};
     final threads = List<Map<String, dynamic>>.from(
       (data['threads'] as List?)?.whereType<Map>().map(
             (e) => Map<String, dynamic>.from(e),
@@ -89,13 +104,12 @@ class ChatLocalStore {
       'id': targetId,
       'lastMessage': lastMessage,
       'lastMessageTime': lastMessageAt,
-      'lastMessageType': 'text',
+      'lastMessageType': lastMessageType,
       'unreadCount': 0,
       'recipient': {
         'id': targetId,
         'name': name ?? existingRecipient['name'] ?? 'User',
-        'displayPicture':
-            imageUrl ?? existingRecipient['displayPicture'],
+        'displayPicture': imageUrl ?? existingRecipient['displayPicture'],
         // Keep equipped frame from API cache when local previews refresh.
         if (existingRecipient['avatarFrame'] != null)
           'avatarFrame': existingRecipient['avatarFrame'],
@@ -133,7 +147,9 @@ class ChatLocalStore {
     final now = DateTime.now().toUtc().toIso8601String();
 
     final map = await _storage.getJsonFromStorage(kStorageChatInboxThreads);
-    final data = map != null ? Map<String, dynamic>.from(map) : <String, dynamic>{};
+    final data = map != null
+        ? Map<String, dynamic>.from(map)
+        : <String, dynamic>{};
     final threads = List<Map<String, dynamic>>.from(
       (data['threads'] as List?)?.whereType<Map>().map(
             (e) => Map<String, dynamic>.from(e),
@@ -148,7 +164,9 @@ class ChatLocalStore {
         : <String, dynamic>{};
     final updated = {
       'id': targetId,
-      'roomId': roomId.isNotEmpty ? roomId : existing['roomId']?.toString() ?? '',
+      'roomId': roomId.isNotEmpty
+          ? roomId
+          : existing['roomId']?.toString() ?? '',
       'lastMessage': preview,
       'lastMessageTime': now,
       'lastMessageType': inboxType,
@@ -157,8 +175,7 @@ class ChatLocalStore {
       'recipient': {
         'id': targetId,
         'name': name ?? existingRecipient['name'] ?? 'User',
-        'displayPicture':
-            imageUrl ?? existingRecipient['displayPicture'],
+        'displayPicture': imageUrl ?? existingRecipient['displayPicture'],
         if (existingRecipient['avatarFrame'] != null)
           'avatarFrame': existingRecipient['avatarFrame'],
         if (existingRecipient['avatarFrameUrl'] != null)
@@ -181,7 +198,9 @@ class ChatLocalStore {
   }) async {
     if (roomId.isEmpty) return;
     final map = await _storage.getJsonFromStorage(kStorageChatCallHistory);
-    final all = map != null ? Map<String, dynamic>.from(map) : <String, dynamic>{};
+    final all = map != null
+        ? Map<String, dynamic>.from(map)
+        : <String, dynamic>{};
     final list = List<Map<String, dynamic>>.from(
       (all[roomId] as List?)?.whereType<Map>().map(
             (e) => Map<String, dynamic>.from(e),
@@ -197,9 +216,11 @@ class ChatLocalStore {
     }
     list.add(entry);
     list.sort((a, b) {
-      final ad = DateTime.tryParse(a['clientEndedAt']?.toString() ?? '') ??
+      final ad =
+          DateTime.tryParse(a['clientEndedAt']?.toString() ?? '') ??
           DateTime.tryParse(a['endedAt']?.toString() ?? '');
-      final bd = DateTime.tryParse(b['clientEndedAt']?.toString() ?? '') ??
+      final bd =
+          DateTime.tryParse(b['clientEndedAt']?.toString() ?? '') ??
           DateTime.tryParse(b['endedAt']?.toString() ?? '');
       if (ad == null && bd == null) return 0;
       if (ad == null) return -1;
@@ -216,7 +237,10 @@ class ChatLocalStore {
     if (map == null) return [];
     final list = map[roomId];
     if (list is! List) return [];
-    return list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+    return list
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
   }
 
   Future<void> saveThreadMeta({
@@ -248,9 +272,7 @@ class ChatLocalStore {
     threads.removeWhere((t) {
       final topId = t['id']?.toString() ?? '';
       final recipient = t['recipient'];
-      final peerId = recipient is Map
-          ? recipient['id']?.toString() ?? ''
-          : '';
+      final peerId = recipient is Map ? recipient['id']?.toString() ?? '' : '';
       return topId == targetId || peerId == targetId;
     });
     data['threads'] = threads;
@@ -283,10 +305,9 @@ class ChatLocalStore {
     final set = await _readChatSendInitSet();
     if (set.contains(targetId)) return;
     set.add(targetId);
-    await _storage.writeJsonStorage(
-      kStorageChatSendInit,
-      {'targets': set.toList()},
-    );
+    await _storage.writeJsonStorage(kStorageChatSendInit, {
+      'targets': set.toList(),
+    });
     ChatLogger.cache('markChatSendInit', {'targetId': targetId});
   }
 
