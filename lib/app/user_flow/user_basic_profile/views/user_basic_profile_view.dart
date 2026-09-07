@@ -29,6 +29,11 @@ class UserBasicProfileView extends StatefulWidget {
 }
 
 class _UserBasicProfileViewState extends State<UserBasicProfileView> {
+  static const _pageColor = Color(0xFFF8F4FB);
+  static const _fieldColor = Color(0xFFF7F3FA);
+  static const _softBorder = Color(0xFFE9DFF0);
+  static const _violet = Color(0xFF7657F6);
+
   UserBasicProfileController get controller =>
       Get.find<UserBasicProfileController>();
 
@@ -63,10 +68,10 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
                 Expanded(
                   child: ClipRRect(
                     borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(28),
+                      top: Radius.circular(24),
                     ),
                     child: ColoredBox(
-                      color: kColorWhite,
+                      color: _pageColor,
                       child: Form(
                         key: controller.formKey,
                         autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -87,30 +92,47 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
                                   minHeight: constraints.maxHeight - 40,
                                 ),
                                 child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  _profileCoverHeader(context),
-                                  Padding(
-                                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Spacing.v16,
-                                        _userNameField(context),
-                                        Spacing.v10,
-                                        _ageField(context),
-                                        Spacing.v10,
-                                        _coinsPerSecondField(),
-                                        Spacing.v10,
-                                        _genderField(),
-                                        Spacing.v24,
-                                        _profileExtrasCard(context),
-                                        Spacing.v16,
-                                      ],
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    Spacing.v16,
+                                    _profileCoverHeader(context),
+                                    Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                        18,
+                                        20,
+                                        18,
+                                        0,
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          _sectionHeading(
+                                            icon: Icons.person_rounded,
+                                            title: 'Profile details',
+                                            subtitle:
+                                                'The basics people see first',
+                                            accent: _violet,
+                                          ),
+                                          Spacing.v12,
+                                          _detailsCard(context),
+                                          Spacing.v(22),
+                                          _sectionHeading(
+                                            icon: Icons.auto_awesome_rounded,
+                                            title: 'About you',
+                                            subtitle:
+                                                'Help people get to know you',
+                                            accent: kColorProfileChipPinkStart,
+                                          ),
+                                          Spacing.v12,
+                                          _profileExtrasCard(context),
+                                          Spacing.v16,
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ),
+                                  ],
+                                ),
                               ),
                             );
                           },
@@ -133,18 +155,29 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
       final dirty = controller.isProfileDirty.value;
       final loading = controller.isSubmitLoading.value;
 
-      return IgnorePointer(
-        ignoring: loading,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
+      return Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: kColorWhite,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: kColorPrimary.withValues(alpha: 0.18),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: IgnorePointer(
+          ignoring: loading,
           child: appButton(
             onPressed: () => controller.onSavePressed(context),
-            buttonText: 'Save',
-            buttonHeight: 48,
+            buttonText: dirty ? 'Save changes' : 'Profile is up to date',
+            buttonHeight: 50,
             buttonWidth: MediaQuery.sizeOf(context).width - 48,
             isGradient: dirty,
-            buttonColor: dirty ? kColorPrimary : kColorHint,
-            buttonBorderColor: dirty ? kColorPrimary : kColorHint,
+            buttonColor: dirty ? kColorPrimary : const Color(0xFFB8AEC1),
+            buttonBorderColor: dirty ? kColorPrimary : const Color(0xFFB8AEC1),
             textStyle: TextStyles.kSemiBoldPoppins(
               fontSize: TextStyles.k14FontSize,
               colors: kColorWhite,
@@ -158,15 +191,87 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
                       color: kColorWhite.withValues(alpha: 0.9),
                     ),
                   )
-                : null,
+                : Icon(
+                    dirty ? Icons.check_rounded : Icons.verified_rounded,
+                    size: 18,
+                    color: kColorWhite,
+                  ),
           ),
         ),
       );
     });
   }
 
-  /// Extras: [CommonRadioChoiceDialog] per row; purple text when saved value exists;
-  /// primary row background for whichever row was opened last.
+  Widget _sectionHeading({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color accent,
+  }) {
+    return Row(
+      children: [
+        Container(
+          width: 38,
+          height: 38,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: accent.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, size: 19, color: accent),
+        ),
+        Spacing.h10,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SemiBoldText(
+                text: title,
+                fontSize: TextStyles.k16FontSize,
+                color: kColorText,
+              ),
+              AppText(
+                text: subtitle,
+                fontSize: TextStyles.k10FontSize,
+                color: kColorHint,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _detailsCard(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: kColorWhite,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _softBorder),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF503160).withValues(alpha: 0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _userNameField(context),
+          Spacing.v(14),
+          _ageField(context),
+          Spacing.v(14),
+          _coinsPerSecondField(),
+          Spacing.v(18),
+          _genderField(),
+        ],
+      ),
+    );
+  }
+
+  /// Extras keep their existing dialogs while presenting saved values clearly.
   Widget _profileExtrasCard(BuildContext context) {
     const rows = <({String label, IconData icon})>[
       (label: 'Relationship status', icon: Icons.favorite_border_rounded),
@@ -202,37 +307,59 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
       }
     }
 
-    Widget rowContent(int i, List<bool> highlights, {required bool selected}) {
+    Widget rowContent(
+      int i,
+      List<bool> highlights,
+      String value, {
+      required bool selected,
+    }) {
       final filled = highlights[i];
-      final iconColor = selected
-          ? kColorWhite
-          : (filled ? kColorPrimary : kColorText);
-      final textStyle = selected
-          ? TextStyles.kSemiBoldPoppins(
-              fontSize: TextStyles.k14FontSize,
-              colors: kColorWhite,
-            )
-          : filled
-          ? TextStyles.kSemiBoldPoppins(
-              fontSize: TextStyles.k14FontSize,
-              colors: kColorPrimary,
-            )
-          : TextStyles.kRegularPoppins(
-              fontSize: TextStyles.k14FontSize,
-              colors: kColorText,
-            );
+      final accent = selected || filled ? kColorPrimary : kColorHint;
       return AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOutCubic,
         width: double.infinity,
-        color: selected ? kColorPrimary : Colors.transparent,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        color: selected
+            ? kColorPrimary.withValues(alpha: 0.07)
+            : Colors.transparent,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         child: Row(
           children: [
-            Icon(rows[i].icon, size: 22, color: iconColor),
-            const SizedBox(width: 14),
+            Container(
+              width: 38,
+              height: 38,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(rows[i].icon, size: 19, color: accent),
+            ),
+            Spacing.h12,
             Expanded(
-              child: AppText(text: rows[i].label, style: textStyle),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SemiBoldText(
+                    text: rows[i].label,
+                    fontSize: TextStyles.k12FontSize,
+                    color: kColorText,
+                  ),
+                  Spacing.v2,
+                  AppText(
+                    text: value.trim().isEmpty ? 'Add details' : value,
+                    fontSize: TextStyles.k10FontSize,
+                    color: filled ? kColorPrimary : kColorHint,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 20,
+              color: accent.withValues(alpha: 0.72),
             ),
           ],
         ),
@@ -242,15 +369,24 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
     return Obx(() {
       final highlights = controller.profileExtrasRowHighlighted;
       final lastIx = controller.lastSelectedProfileExtraIndex.value;
+      final values = <String>[
+        controller.relationshipStatus.value,
+        controller.languagesLine.value,
+        controller.currentLocationsLine.value,
+        controller.interestsLine.value,
+        controller.voiceShowLine.value,
+        controller.linkAccountsLine.value,
+      ];
       return Container(
         decoration: BoxDecoration(
-          color: kColorProfileExtrasCardBg,
-          borderRadius: BorderRadius.circular(14),
+          color: kColorWhite,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: _softBorder),
           boxShadow: [
             BoxShadow(
-              color: kColorBlack.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: const Color(0xFF503160).withValues(alpha: 0.08),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
@@ -272,6 +408,7 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
                   child: rowContent(
                     i,
                     highlights,
+                    values[i],
                     selected: lastIx == i,
                   ),
                 ),
@@ -285,25 +422,68 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
 
   Widget _topBar(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 4, 14, 12),
-      child: Stack(
-        alignment: Alignment.center,
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+      child: Row(
         children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: IconButton(
-              onPressed: () => Get.back(),
-              icon: const Icon(
-                Icons.arrow_back_ios_new,
-                color: kColorWhite,
-                size: 18,
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: Get.back,
+              borderRadius: BorderRadius.circular(14),
+              child: Ink(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: kColorWhite.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: kColorWhite.withValues(alpha: 0.20),
+                  ),
+                ),
+                child: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: kColorWhite,
+                  size: 18,
+                ),
               ),
             ),
           ),
-          const BoldText(
-            text: 'Basic profile',
-            fontSize: TextStyles.k20FontSize,
-            color: kColorWhite,
+          Spacing.h12,
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                BoldText(
+                  text: 'Edit profile',
+                  fontSize: TextStyles.k20FontSize,
+                  color: kColorWhite,
+                ),
+                AppText(
+                  text: 'Make your profile feel like you',
+                  fontSize: TextStyles.k10FontSize,
+                  color: Color(0xBFFFFFFF),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: 38,
+            height: 38,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [
+                  kColorProfileChipPinkStart,
+                  kColorProfileChipPurpleStart,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.auto_awesome_rounded,
+              size: 19,
+              color: kColorWhite,
+            ),
           ),
         ],
       ),
@@ -321,72 +501,83 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
       final String netPoster = controller.posterUrl.value;
       final String posterPreview = controller.posterPreviewUrl.value;
       final bool isUploading = controller.isPosterUploading.value;
-      final bool hasPoster =
-          localPoster != null || netPoster.trim().isNotEmpty;
+      final bool hasPoster = localPoster != null || netPoster.trim().isNotEmpty;
 
-      return SizedBox(
-        height: bannerHeight + avatarOverhang,
-        width: double.infinity,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            GestureDetector(
-              onTap: isUploading
-                  ? null
-                  : () => controller.openCoverBackgroundSheet(context),
-              child: SizedBox(
-                height: bannerHeight,
-                width: double.infinity,
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(16),
-                  ),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      if (localPoster != null)
-                        Image.file(localPoster, fit: BoxFit.cover)
-                      else if (netPoster.isNotEmpty)
-                        ProfileBackgroundMedia(
-                          url: netPoster,
-                          showLoadingIndicator: true,
-                          previewImageUrl: posterPreview,
-                        )
-                      else
-                        _emptyCoverPlaceholder(),
-                      if (!hasPoster)
-                        Container(
-                          color: kColorBlack.withValues(alpha: 0.04),
-                        ),
-                      Positioned(
-                        right: 14,
-                        bottom: 14,
-                        child: _coverEditButton(),
-                      ),
-                      if (isUploading)
-                        ColoredBox(
-                          color: kColorBlack.withValues(alpha: 0.35),
-                          child: const Center(
-                            child: CircularProgressIndicator(
-                              valueColor:
-                                  AlwaysStoppedAnimation(kColorPrimary),
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18),
+        child: SizedBox(
+          height: bannerHeight + avatarOverhang,
+          width: double.infinity,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              GestureDetector(
+                onTap: isUploading
+                    ? null
+                    : () => controller.openCoverBackgroundSheet(context),
+                child: SizedBox(
+                  height: bannerHeight,
+                  width: double.infinity,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(18),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        if (localPoster != null)
+                          Image.file(localPoster, fit: BoxFit.cover)
+                        else if (netPoster.isNotEmpty)
+                          ProfileBackgroundMedia(
+                            url: netPoster,
+                            showLoadingIndicator: true,
+                            previewImageUrl: posterPreview,
+                          )
+                        else
+                          _emptyCoverPlaceholder(),
+                        if (!hasPoster)
+                          Container(color: kColorBlack.withValues(alpha: 0.04)),
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                kColorBlack.withValues(alpha: 0.22),
+                              ],
                             ),
                           ),
                         ),
-                    ],
+                        Positioned(
+                          right: 14,
+                          bottom: 14,
+                          child: _coverEditButton(),
+                        ),
+                        if (isUploading)
+                          ColoredBox(
+                            color: kColorBlack.withValues(alpha: 0.35),
+                            child: const Center(
+                              child: CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation(
+                                  kColorPrimary,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-            Positioned(
-              top: bannerHeight - avatarOverhang,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: _profileAvatarPicker(context, size: avatarSize),
+              Positioned(
+                top: bannerHeight - avatarOverhang,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: _profileAvatarPicker(context, size: avatarSize),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
     });
@@ -549,8 +740,15 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
     return AppTextField(
       controller: controller.userNameController,
       validator: (value) => controller.validateUserName(context, value),
+      labelText: 'Display name',
       hintText: LocaleKeys.nickNameHint.tr,
-      borderColor: kColorHint,
+      fillColor: _fieldColor,
+      borderColor: _softBorder,
+      inputBorderRadius: BorderRadius.circular(14),
+      labelStyle: TextStyles.kSemiBoldPoppins(
+        fontSize: TextStyles.k12FontSize,
+        colors: kColorText,
+      ),
       hintStyle: TextStyles.kRegularPoppins(
         fontSize: TextStyles.k14FontSize,
         colors: kColorHint,
@@ -561,7 +759,7 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
         padding: const EdgeInsets.only(left: 14, right: 12),
         child: SvgPicture.asset(
           kIconUser,
-          colorFilter: const ColorFilter.mode(kColorHint, BlendMode.srcIn),
+          colorFilter: const ColorFilter.mode(_violet, BlendMode.srcIn),
         ),
       ),
     );
@@ -571,10 +769,17 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
     return AppTextField(
       controller: controller.birthdateController,
       validator: controller.validateBirthdate,
+      labelText: 'Age',
       hintText: LocaleKeys.ageHint.tr,
       readOnly: true,
       onTap: () => controller.pickAge(context),
-      borderColor: kColorHint,
+      fillColor: _fieldColor,
+      borderColor: _softBorder,
+      inputBorderRadius: BorderRadius.circular(14),
+      labelStyle: TextStyles.kSemiBoldPoppins(
+        fontSize: TextStyles.k12FontSize,
+        colors: kColorText,
+      ),
       hintStyle: TextStyles.kRegularPoppins(
         fontSize: TextStyles.k14FontSize,
         colors: kColorHint,
@@ -583,7 +788,13 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
       textCapitalization: TextCapitalization.none,
       prefix: Padding(
         padding: const EdgeInsets.only(left: 14, right: 12),
-        child: SvgPicture.asset(kIconCalendar),
+        child: SvgPicture.asset(
+          kIconCalendar,
+          colorFilter: const ColorFilter.mode(
+            kColorProfileChipPinkStart,
+            BlendMode.srcIn,
+          ),
+        ),
       ),
     );
   }
@@ -592,8 +803,15 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
     return AppTextField(
       controller: controller.coinsPerSecondController,
       validator: controller.validateCoinsPerSecond,
+      labelText: 'Call rate',
       hintText: 'Coins per second',
-      borderColor: kColorHint,
+      fillColor: _fieldColor,
+      borderColor: _softBorder,
+      inputBorderRadius: BorderRadius.circular(14),
+      labelStyle: TextStyles.kSemiBoldPoppins(
+        fontSize: TextStyles.k12FontSize,
+        colors: kColorText,
+      ),
       hintStyle: TextStyles.kRegularPoppins(
         fontSize: TextStyles.k14FontSize,
         colors: kColorHint,
@@ -605,7 +823,7 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
       ],
       prefix: Padding(
         padding: EdgeInsets.only(left: 14, right: 12),
-        child: AppCoinIcon(size: 20, color: kColorHint),
+        child: AppCoinIcon(size: 20, color: kColorProfileChipOrangeStart),
       ),
       suffix: Padding(
         padding: const EdgeInsets.only(right: 10),
@@ -627,15 +845,13 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const AppText(
-          text: 'Select Gender',
-          fontSize: TextStyles.k14FontSize,
+          text: 'Gender',
+          fontSize: TextStyles.k12FontSize,
           color: kColorText,
         ),
-        Spacing.v12,
+        Spacing.v10,
         Obx(
           () => Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _genderCircleOption(
                 label: 'Male',
@@ -643,7 +859,7 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
                 iconAsset: kIconMale,
                 isSelected: controller.selectedGender.value == 'Male',
               ),
-              const SizedBox(width: 16),
+              Spacing.h10,
               _genderCircleOption(
                 label: 'Female',
                 value: 'Female',
@@ -663,48 +879,56 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
     required String iconAsset,
     required bool isSelected,
   }) {
-    const double kGenderCircleSize = 90;
-
-    return GestureDetector(
-      onTap: () => controller.selectedGender.value = value,
-      child: SizedBox(
-        width: kGenderCircleSize,
-        height: kGenderCircleSize,
-        child: DecoratedBox(
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => controller.selectedGender.value = value,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          height: 56,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
-            color: isSelected ? kColorPrimary : kColorWhite,
-            shape: BoxShape.circle,
+            gradient: isSelected
+                ? const LinearGradient(
+                    colors: [
+                      kColorProfileChipPurpleStart,
+                      kColorProfileChipPinkStart,
+                    ],
+                  )
+                : null,
+            color: isSelected ? null : _fieldColor,
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: isSelected ? kColorPrimary : kColorTextFieldBorder,
-              width: 0.5,
+              color: isSelected ? Colors.transparent : _softBorder,
             ),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: Row(
             children: [
               SvgPicture.asset(
                 iconAsset,
-                height: 32,
-                width: 32,
+                height: 22,
+                width: 22,
                 fit: BoxFit.contain,
                 colorFilter: ColorFilter.mode(
-                  isSelected ? kColorWhite : kColorHint,
+                  isSelected ? kColorWhite : _violet,
                   BlendMode.srcIn,
                 ),
               ),
-              Spacing.v2,
-              if (isSelected)
-                SemiBoldText(
+              Spacing.h8,
+              Expanded(
+                child: SemiBoldText(
                   text: label,
-                  fontSize: TextStyles.k14FontSize,
-                  color: kColorWhite,
-                )
-              else
-                AppText(
-                  text: label,
-                  fontSize: TextStyles.k14FontSize,
-                  color: kColorHint,
+                  fontSize: TextStyles.k12FontSize,
+                  color: isSelected ? kColorWhite : kColorText,
                 ),
+              ),
+              Icon(
+                isSelected
+                    ? Icons.check_circle_rounded
+                    : Icons.radio_button_unchecked_rounded,
+                size: 18,
+                color: isSelected ? kColorWhite : kColorHint,
+              ),
             ],
           ),
         ),
