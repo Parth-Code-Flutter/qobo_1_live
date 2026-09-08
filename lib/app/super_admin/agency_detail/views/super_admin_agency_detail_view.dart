@@ -194,10 +194,11 @@ class SuperAdminAgencyDetailView
   }
 
   Widget _ownerCard(SuperAdminAgencyDetail detail) {
-    final phone = SuperAdminDetailFormat.phone(
-      detail.owner.countryCode,
-      detail.owner.phone,
-    );
+    // Phone display temporarily hidden.
+    // final phone = SuperAdminDetailFormat.phone(
+    //   detail.owner.countryCode,
+    //   detail.owner.phone,
+    // );
     final hasFeedback = detail.feedback.trim().isNotEmpty;
     final hasInvited = detail.invitedBy.name.trim().isNotEmpty;
     return SuperAdminGlassCard(
@@ -225,12 +226,12 @@ class SuperAdminAgencyDetailView
             value: detail.owner.email,
             accent: SuperAdminUi.pink,
           ),
-          SuperAdminCleanInfoRow(
-            icon: Icons.phone_rounded,
-            label: 'Phone',
-            value: phone,
-            accent: SuperAdminUi.mint,
-          ),
+          // SuperAdminCleanInfoRow(
+          //   icon: Icons.phone_rounded,
+          //   label: 'Phone',
+          //   value: phone,
+          //   accent: SuperAdminUi.mint,
+          // ),
           SuperAdminCleanInfoRow(
             icon: Icons.location_on_rounded,
             label: 'Address',

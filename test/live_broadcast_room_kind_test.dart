@@ -57,6 +57,26 @@ void main() {
     expect(controller.isVideoRoom, isTrue);
   });
 
+  test('live stream host camera control toggles renderer state', () {
+    final controller = _controllerWithArgs({
+      'isHost': true,
+      'roomType': 'LIVE_STREAM',
+      'roomData': {
+        'type': 'live_stream',
+        'id': 'live-camera-toggle',
+        'room_id': 'live-camera-toggle',
+        'zegoLiveId': 'live-camera-toggle',
+      },
+    });
+    controller.onInit();
+
+    expect(controller.isCameraOff.value, isFalse);
+    controller.toggleCamera();
+    expect(controller.isCameraOff.value, isTrue);
+    controller.toggleCamera();
+    expect(controller.isCameraOff.value, isFalse);
+  });
+
   test('legacy VIDEO nav + live_stream type still opens live UI', () {
     final controller = _controllerWithArgs({
       'isHost': false,

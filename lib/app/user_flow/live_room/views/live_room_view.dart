@@ -496,79 +496,78 @@ class LiveRoomView extends StatelessWidget {
 
   /// Promo banner shown above the live-room listing.
   Widget _topBanner(LiveRoomController controller) {
-    return Container(
-      padding: const EdgeInsets.all(1.4),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(19),
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFFFF4B91).withValues(alpha: 0.72),
-            const Color(0xFF8B5CFF).withValues(alpha: 0.64),
-            const Color(0xFF52D8FF).withValues(alpha: 0.46),
-          ],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFFF2E83).withValues(alpha: 0.16),
-            blurRadius: 22,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(17.5),
-        child: AspectRatio(
-          aspectRatio: 3.2,
-          child: Obx(() {
-            final banners = controller.promoBanners.toList(growable: false);
-            if (banners.isEmpty) return _staticBannerFallback();
-            final selectedIndex = controller.currentPromoBannerIndex.value
-                .clamp(0, banners.length - 1);
-
-            return Stack(
-              fit: StackFit.expand,
-              children: [
-                PageView.builder(
-                  controller: controller.promoBannerPageController,
-                  itemCount: banners.length,
-                  onPageChanged: controller.onPromoBannerPageChanged,
-                  itemBuilder: (_, index) => _networkBanner(banners[index]),
-                ),
-                IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.transparent,
-                          kColorBlack.withValues(alpha: 0.16),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                if (banners.length > 1)
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 8,
-                    child: IgnorePointer(
-                      child: Center(
-                        child: _bannerPageIndicator(
-                          count: banners.length,
-                          selected: selectedIndex,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
+    return Obx(() {
+      final banners = controller.promoBanners.toList(growable: false);
+      final selectedIndex = banners.isEmpty
+          ? 0
+          : controller.currentPromoBannerIndex.value.clamp(
+              0,
+              banners.length - 1,
             );
-          }),
-        ),
-      ),
-    );
+
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AspectRatio(
+            aspectRatio: 3.05,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(19),
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFFFF4B91).withValues(alpha: 0.72),
+                    const Color(0xFF8B5CFF).withValues(alpha: 0.64),
+                    const Color(0xFF52D8FF).withValues(alpha: 0.46),
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFFF2E83).withValues(alpha: 0.18),
+                    blurRadius: 24,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(1.4),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(17.5),
+                  child: banners.isEmpty
+                      ? _staticBannerFallback()
+                      : PageView.builder(
+                          controller: controller.promoBannerPageController,
+                          clipBehavior: Clip.none,
+                          itemCount: banners.length,
+                          onPageChanged: controller.onPromoBannerPageChanged,
+                          itemBuilder: (_, index) => AnimatedPadding(
+                            duration: const Duration(milliseconds: 260),
+                            curve: Curves.easeOutCubic,
+                            padding: EdgeInsets.fromLTRB(
+                              4,
+                              index == selectedIndex ? 3 : 8,
+                              4,
+                              index == selectedIndex ? 3 : 8,
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(14),
+                              child: _networkBanner(banners[index]),
+                            ),
+                          ),
+                        ),
+                ),
+              ),
+            ),
+          ),
+          if (banners.length > 1) ...[
+            Spacing.v8,
+            _bannerPageIndicator(
+              count: banners.length,
+              selected: selectedIndex,
+            ),
+          ],
+        ],
+      );
+    });
   }
 
   Widget _networkBanner(PromoBanner banner) {
@@ -593,31 +592,37 @@ class LiveRoomView extends StatelessWidget {
             ),
           ),
           ColoredBox(color: const Color(0xFF100A24).withValues(alpha: 0.30)),
-          Image.network(
-            banner.imageUrl,
-            fit: BoxFit.contain,
-            alignment: Alignment.center,
-            filterQuality: FilterQuality.high,
-            loadingBuilder: (_, child, progress) {
-              if (progress == null) return child;
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  _bannerFallback(),
-                  const Center(
-                    child: SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: kColorWhite,
+          Padding(
+            padding: const EdgeInsets.all(3),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.network(
+                banner.imageUrl,
+                fit: BoxFit.contain,
+                alignment: Alignment.center,
+                filterQuality: FilterQuality.high,
+                loadingBuilder: (_, child, progress) {
+                  if (progress == null) return child;
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      _bannerFallback(),
+                      const Center(
+                        child: SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: kColorWhite,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                ],
-              );
-            },
-            errorBuilder: (_, __, ___) => _bannerFallback(),
+                    ],
+                  );
+                },
+                errorBuilder: (_, __, ___) => _bannerFallback(),
+              ),
+            ),
           ),
         ],
       ),

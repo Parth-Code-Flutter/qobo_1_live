@@ -249,14 +249,15 @@ class _PendingHostCard extends StatelessWidget {
                       fontSize: TextStyles.k16FontSize,
                       color: kColorWhite,
                     ),
-                    if (host.phone.isNotEmpty) ...[
-                      Spacing.v2,
-                      AppText(
-                        text: host.phone,
-                        fontSize: TextStyles.k12FontSize,
-                        color: kColorWhite.withValues(alpha: 0.65),
-                      ),
-                    ],
+                    // Phone display temporarily hidden.
+                    // if (host.phone.isNotEmpty) ...[
+                    //   Spacing.v2,
+                    //   AppText(
+                    //     text: host.phone,
+                    //     fontSize: TextStyles.k12FontSize,
+                    //     color: kColorWhite.withValues(alpha: 0.65),
+                    //   ),
+                    // ],
                     if (host.category.isNotEmpty) ...[
                       Spacing.v2,
                       AppText(

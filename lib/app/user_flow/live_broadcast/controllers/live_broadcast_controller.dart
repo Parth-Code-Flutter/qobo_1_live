@@ -5758,11 +5758,7 @@ class LiveBroadcastController extends GetxController {
   void toggleCamera() {
     if (!isVideoRoom) return;
     if (isLiveStreamingSession) {
-      final nextOff = !isCameraOff.value;
-      isCameraOff.value = nextOff;
-      try {
-        unawaited(ZegoExpressEngine.instance.enableCamera(!nextOff));
-      } catch (_) {}
+      isCameraOff.toggle();
       return;
     }
     try {

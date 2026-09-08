@@ -149,10 +149,11 @@ class SuperAdminHostDetailView extends GetView<SuperAdminHostDetailController> {
       detail.state,
       detail.country,
     ]);
-    final phone = SuperAdminDetailFormat.phone(
-      detail.countryCode,
-      detail.phone,
-    );
+    // Phone display temporarily hidden.
+    // final phone = SuperAdminDetailFormat.phone(
+    //   detail.countryCode,
+    //   detail.phone,
+    // );
     final dob = detail.dob.trim();
     final joined = detail.joinedAt.trim();
     final lastLive = detail.recentActivity.lastLiveAt.trim();
@@ -175,12 +176,12 @@ class SuperAdminHostDetailView extends GetView<SuperAdminHostDetailController> {
             value: detail.email,
             accent: SuperAdminUi.pink,
           ),
-          SuperAdminCleanInfoRow(
-            icon: Icons.phone_rounded,
-            label: 'Phone',
-            value: phone,
-            accent: SuperAdminUi.mint,
-          ),
+          // SuperAdminCleanInfoRow(
+          //   icon: Icons.phone_rounded,
+          //   label: 'Phone',
+          //   value: phone,
+          //   accent: SuperAdminUi.mint,
+          // ),
           SuperAdminCleanInfoRow(
             icon: Icons.wc_rounded,
             label: 'Gender',

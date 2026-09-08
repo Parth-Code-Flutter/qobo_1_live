@@ -50,6 +50,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
         children: [
           Obx(() {
             final pkActive = controller.isInRoomPkActive;
+            final cameraEnabled = !controller.isCameraOff.value;
             return Stack(
               fit: StackFit.expand,
               children: [
@@ -59,7 +60,9 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                     ignoring: pkActive,
                     child: Opacity(
                       opacity: pkActive ? 0 : 1,
-                      child: _buildMainVideoBackground(),
+                      child: _buildMainVideoBackground(
+                        cameraEnabled: cameraEnabled,
+                      ),
                     ),
                   ),
                 ),
@@ -286,7 +289,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
     return const SizedBox.shrink();
   }
 
-  Widget _buildMainVideoBackground() {
+  Widget _buildMainVideoBackground({required bool cameraEnabled}) {
     final userSession = Get.find<UserSessionController>();
     final fallbackUserId = userSession.userId.isNotEmpty
         ? userSession.userId
@@ -334,6 +337,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
               useAppSignMode: useAppSignMode,
               useTokenMode: useTokenMode,
               isHost: controller.isHost.value,
+              cameraEnabled: cameraEnabled,
               publishStreamId: publishStreamId,
               playStreamId: playStreamId,
               hostName: controller.hostName.value,
@@ -353,6 +357,15 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
               isLiveStreamingSession: controller.isLiveStreamingSession,
               hostName: controller.hostName.value,
               hostAvatarUrl: controller.hostAvatarUrl.value,
+            ),
+          if (controller.isLiveStreamingSession &&
+              controller.isHost.value &&
+              !cameraEnabled)
+            Positioned.fill(
+              child: _LiveCameraOffCover(
+                name: controller.hostName.value,
+                avatarUrl: controller.hostAvatarUrl.value,
+              ),
             ),
           // Live stream video is rendered inside Zego's containerBuilder.
           // Do not overlay LiveHostVideoFill — that hid the real stream (black).
@@ -1817,6 +1830,7 @@ class _StableZegoExpressLiveStreaming extends StatefulWidget {
     required this.useAppSignMode,
     required this.useTokenMode,
     required this.isHost,
+    required this.cameraEnabled,
     required this.publishStreamId,
     required this.playStreamId,
     required this.hostName,
@@ -1832,6 +1846,7 @@ class _StableZegoExpressLiveStreaming extends StatefulWidget {
   final bool useAppSignMode;
   final bool useTokenMode;
   final bool isHost;
+  final bool cameraEnabled;
   final String publishStreamId;
   final String playStreamId;
   final String hostName;
@@ -1879,6 +1894,12 @@ class _StableZegoExpressLiveStreamingState
         oldWidget.playStreamId != widget.playStreamId;
     if (changed) {
       unawaited(_restart());
+      return;
+    }
+    if (widget.isHost &&
+        oldWidget.cameraEnabled != widget.cameraEnabled &&
+        _loggedIn) {
+      unawaited(_applyCameraState(widget.cameraEnabled));
     }
   }
 
@@ -2065,7 +2086,9 @@ class _StableZegoExpressLiveStreamingState
         ..viewMode = express.ZegoViewMode.AspectFill;
 
       if (widget.isHost) {
-        await express.ZegoExpressEngine.instance.enableCamera(true);
+        await express.ZegoExpressEngine.instance.enableCamera(
+          widget.cameraEnabled,
+        );
         await express.ZegoExpressEngine.instance.muteMicrophone(false);
         await express.ZegoExpressEngine.instance.useFrontCamera(true);
         await express.ZegoExpressEngine.instance.startPreview(canvas: canvas);
@@ -2082,6 +2105,15 @@ class _StableZegoExpressLiveStreamingState
       }
     } catch (error) {
       _fail('Unable to attach live video: $error');
+    }
+  }
+
+  Future<void> _applyCameraState(bool enabled) async {
+    try {
+      await express.ZegoExpressEngine.instance.enableCamera(enabled);
+    } catch (_) {
+      if (!mounted) return;
+      _controller.isCameraOff.value = enabled;
     }
   }
 
@@ -2505,6 +2537,68 @@ class _LiveConnectingCoverState extends State<_LiveConnectingCover> {
               const CircularProgressIndicator(
                 color: Color(0xFFFF3F7F),
                 strokeWidth: 2.4,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LiveCameraOffCover extends StatelessWidget {
+  const _LiveCameraOffCover({required this.name, this.avatarUrl});
+
+  final String name;
+  final String? avatarUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: ColoredBox(
+        color: const Color(0xFF0B0714),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  AppUserAvatar(name: name, imageUrl: avatarUrl, size: 104),
+                  Positioned(
+                    right: -4,
+                    bottom: -4,
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF3F7F),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFF0B0714),
+                          width: 3,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.videocam_off_rounded,
+                        color: kColorWhite,
+                        size: 19,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              Spacing.v16,
+              const SemiBoldText(
+                text: 'Camera is off',
+                fontSize: TextStyles.k16FontSize,
+                color: kColorWhite,
+              ),
+              Spacing.v4,
+              AppText(
+                text: 'Your live audio is still active',
+                fontSize: TextStyles.k12FontSize,
+                color: kColorWhite.withValues(alpha: 0.68),
               ),
             ],
           ),

@@ -48,7 +48,7 @@ class LiveRoomController extends GetxController {
 
   final searchController = TextEditingController();
   final searchFocusNode = FocusNode();
-  final promoBannerPageController = PageController();
+  final promoBannerPageController = PageController(viewportFraction: 0.94);
   Timer? _promoBannerTimer;
 
   bool get hasActiveFilters => filters.hasActiveFilters;

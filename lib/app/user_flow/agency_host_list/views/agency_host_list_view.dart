@@ -780,8 +780,9 @@ class _HostSheetCard extends StatelessWidget {
             Spacing.v12,
             Divider(height: 1, color: kColorWhite.withValues(alpha: 0.10)),
             Spacing.v8,
-            if (host.phone.isNotEmpty)
-              _detailRow(Icons.phone_outlined, 'Phone', host.phone),
+            // Phone display temporarily hidden.
+            // if (host.phone.isNotEmpty)
+            //   _detailRow(Icons.phone_outlined, 'Phone', host.phone),
             if (host.gmail.isNotEmpty)
               _detailRow(Icons.email_outlined, 'Email', host.gmail),
             if (host.id.isNotEmpty)

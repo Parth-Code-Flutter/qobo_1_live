@@ -260,7 +260,8 @@ class AgencyHostStatusView extends GetView<AgencyHostStatusController> {
           _metaRow('Category', controller.hostInterest.value),
           _metaRow('Application ID', controller.applicationId.value),
           _metaRow('Host ID', controller.hostId.value),
-          _metaRow('Phone', controller.phone.value),
+          // Phone display temporarily hidden.
+          // _metaRow('Phone', controller.phone.value),
           _metaRow('Submitted', controller.createdAt.value),
         ],
       ),
