@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
@@ -94,8 +96,9 @@ class LiveRoomView extends StatelessWidget {
                                       width: 1.5,
                                     ),
                                   ),
-                                  child: ColoredBox(
-                                    color: Colors.transparent,
+                                  child: RefreshIndicator(
+                                    color: kColorPrimary,
+                                    onRefresh: controller.refreshLiveRoom,
                                     child: GridView.builder(
                                       padding: const EdgeInsets.fromLTRB(
                                         0,
@@ -103,7 +106,10 @@ class LiveRoomView extends StatelessWidget {
                                         0,
                                         116,
                                       ),
-                                      physics: const BouncingScrollPhysics(),
+                                      physics:
+                                          const AlwaysScrollableScrollPhysics(
+                                            parent: BouncingScrollPhysics(),
+                                          ),
                                       itemCount: controller.rooms.length,
                                       gridDelegate:
                                           const SliverGridDelegateWithFixedCrossAxisCount(
@@ -393,7 +399,8 @@ class LiveRoomView extends StatelessWidget {
   }
 
   Widget _searchEmptyState(LiveRoomController controller) {
-    return Center(
+    return _refreshableEmptyState(
+      controller: controller,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -411,7 +418,8 @@ class LiveRoomView extends StatelessWidget {
   }
 
   Widget _emptyState(LiveRoomController controller) {
-    return Center(
+    return _refreshableEmptyState(
+      controller: controller,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -457,31 +465,60 @@ class LiveRoomView extends StatelessWidget {
     );
   }
 
+  Widget _refreshableEmptyState({
+    required LiveRoomController controller,
+    required Widget child,
+  }) {
+    return LayoutBuilder(
+      builder: (_, constraints) {
+        final contentHeight = constraints.maxHeight > 120
+            ? constraints.maxHeight - 120
+            : constraints.maxHeight;
+        return RefreshIndicator(
+          color: kColorPrimary,
+          onRefresh: controller.refreshLiveRoom,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
+            padding: const EdgeInsets.only(bottom: 110),
+            children: [
+              SizedBox(
+                height: contentHeight,
+                child: Center(child: child),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   /// Promo banner shown above the live-room listing.
   Widget _topBanner(LiveRoomController controller) {
     return Container(
-      padding: const EdgeInsets.all(1.2),
+      padding: const EdgeInsets.all(1.4),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(17),
+        borderRadius: BorderRadius.circular(19),
         gradient: LinearGradient(
           colors: [
-            kColorWhite.withValues(alpha: 0.24),
-            LiveRoomUiColors.joinLiveBorder.withValues(alpha: 0.28),
-            kColorWhite.withValues(alpha: 0.06),
+            const Color(0xFFFF4B91).withValues(alpha: 0.72),
+            const Color(0xFF8B5CFF).withValues(alpha: 0.64),
+            const Color(0xFF52D8FF).withValues(alpha: 0.46),
           ],
         ),
         boxShadow: [
           BoxShadow(
-            color: kColorBlack.withValues(alpha: 0.18),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
+            color: const Color(0xFFFF2E83).withValues(alpha: 0.16),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(17.5),
         child: AspectRatio(
-          aspectRatio: 3.35,
+          aspectRatio: 3.2,
           child: Obx(() {
             final banners = controller.promoBanners.toList(growable: false);
             if (banners.isEmpty) return _staticBannerFallback();
@@ -501,38 +538,28 @@ class LiveRoomView extends StatelessWidget {
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
                         colors: [
-                          kColorBlack.withValues(alpha: 0.22),
                           Colors.transparent,
-                          LiveRoomUiColors.goLiveGradientStart.withValues(
-                            alpha: 0.14,
-                          ),
+                          Colors.transparent,
+                          kColorBlack.withValues(alpha: 0.16),
                         ],
                       ),
                     ),
                   ),
                 ),
-                Positioned(
-                  left: 12,
-                  right: banners.length > 1 ? 62 : 12,
-                  bottom: 10,
-                  child: IgnorePointer(
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: _bannerLabel(banners[selectedIndex].title),
-                    ),
-                  ),
-                ),
                 if (banners.length > 1)
                   Positioned(
-                    right: 12,
-                    bottom: 15,
+                    left: 0,
+                    right: 0,
+                    bottom: 8,
                     child: IgnorePointer(
-                      child: _bannerPageIndicator(
-                        count: banners.length,
-                        selected: selectedIndex,
+                      child: Center(
+                        child: _bannerPageIndicator(
+                          count: banners.length,
+                          selected: selectedIndex,
+                        ),
                       ),
                     ),
                   ),
@@ -546,29 +573,54 @@ class LiveRoomView extends StatelessWidget {
 
   Widget _networkBanner(PromoBanner banner) {
     // Banner click-through stays disabled until product enables target URLs.
-    return Image.network(
-      banner.imageUrl,
-      fit: BoxFit.cover,
-      loadingBuilder: (_, child, progress) {
-        if (progress == null) return child;
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            _bannerFallback(),
-            const Center(
-              child: SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: kColorWhite,
-                ),
+    return Semantics(
+      image: true,
+      label: banner.title.isEmpty ? 'Promotional banner' : banner.title,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          ImageFiltered(
+            imageFilter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+            child: Transform.scale(
+              scale: 1.08,
+              child: Image.network(
+                banner.imageUrl,
+                fit: BoxFit.cover,
+                excludeFromSemantics: true,
+                filterQuality: FilterQuality.low,
+                errorBuilder: (_, __, ___) => _bannerFallback(),
               ),
             ),
-          ],
-        );
-      },
-      errorBuilder: (_, __, ___) => _bannerFallback(),
+          ),
+          ColoredBox(color: const Color(0xFF100A24).withValues(alpha: 0.30)),
+          Image.network(
+            banner.imageUrl,
+            fit: BoxFit.contain,
+            alignment: Alignment.center,
+            filterQuality: FilterQuality.high,
+            loadingBuilder: (_, child, progress) {
+              if (progress == null) return child;
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  _bannerFallback(),
+                  const Center(
+                    child: SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: kColorWhite,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+            errorBuilder: (_, __, ___) => _bannerFallback(),
+          ),
+        ],
+      ),
     );
   }
 

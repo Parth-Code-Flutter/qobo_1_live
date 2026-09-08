@@ -127,6 +127,7 @@ class LiveRoomController extends GetxController {
 
   Future<void> fetchPromoBanner() async {
     final response = await _bannerRepo.getActiveBanners(type: 'live');
+    if (response == null) return;
     final banners = PromoBanner.listFromResponse(response, type: 'live');
     currentPromoBannerIndex.value = 0;
     promoBanners.assignAll(banners);
@@ -134,6 +135,13 @@ class LiveRoomController extends GetxController {
       promoBannerPageController.jumpToPage(0);
     }
     _restartPromoBannerTimer();
+  }
+
+  Future<void> refreshLiveRoom() async {
+    await Future.wait<void>([
+      fetchActiveRooms(showLoader: false),
+      fetchPromoBanner(),
+    ]);
   }
 
   void onPromoBannerPageChanged(int index) {
@@ -187,9 +195,9 @@ class LiveRoomController extends GetxController {
     });
   }
 
-  Future<void> fetchActiveRooms() async {
+  Future<void> fetchActiveRooms({bool showLoader = true}) async {
     try {
-      isLoading.value = true;
+      if (showLoader) isLoading.value = true;
       String? country;
       String? category;
       String? type;
@@ -274,7 +282,7 @@ class LiveRoomController extends GetxController {
     } catch (_) {
       // ignore
     } finally {
-      isLoading.value = false;
+      if (showLoader) isLoading.value = false;
     }
   }
 
