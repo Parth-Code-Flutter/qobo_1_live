@@ -6,8 +6,12 @@ class AuthLoginBinding extends Bindings {
   @override
   void dependencies() {
     if (Get.isRegistered<AuthLoginController>()) {
-      Get.find<AuthLoginController>().prepareForLoginScreen();
-      return;
+      final controller = Get.find<AuthLoginController>();
+      if (controller.canReuseForLogin) {
+        controller.prepareForLoginScreen();
+        return;
+      }
+      Get.delete<AuthLoginController>(force: true);
     }
     Get.put<AuthLoginController>(AuthLoginController());
   }

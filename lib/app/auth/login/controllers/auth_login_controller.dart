@@ -38,6 +38,9 @@ class AuthLoginController extends GetxController {
   final isAppleLoginLoading = false.obs;
   final isFirebaseLoginLoading = false.obs;
   final isPhoneInput = false.obs;
+  bool _textControllersDisposed = false;
+
+  bool get canReuseForLogin => !_textControllersDisposed;
 
   String _friendlyGoogleError(Object error) {
     final text = error.toString();
@@ -59,8 +62,11 @@ class AuthLoginController extends GetxController {
 
   @override
   void onClose() {
-    emailController.dispose();
-    passwordController.dispose();
+    if (!_textControllersDisposed) {
+      _textControllersDisposed = true;
+      emailController.dispose();
+      passwordController.dispose();
+    }
     super.onClose();
   }
 
