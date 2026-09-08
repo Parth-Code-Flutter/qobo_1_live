@@ -6,6 +6,7 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
+import 'package:qobo_one_live/repo/banner/models/promo_banner.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
@@ -481,75 +482,179 @@ class LiveRoomView extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         child: AspectRatio(
           aspectRatio: 3.35,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Obx(() {
-                final bannerUrl = controller.promoBannerImageUrl.value;
-                if (bannerUrl != null && bannerUrl.isNotEmpty) {
-                  return Image.network(
-                    bannerUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _bannerFallback(),
-                  );
-                }
-                return Image.asset(
-                  kImgTemp1,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _bannerFallback(),
-                );
-              }),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    colors: [
-                      kColorBlack.withValues(alpha: 0.12),
-                      Colors.transparent,
-                      LiveRoomUiColors.goLiveGradientStart.withValues(
-                        alpha: 0.16,
-                      ),
-                    ],
-                  ),
+          child: Obx(() {
+            final banners = controller.promoBanners.toList(growable: false);
+            if (banners.isEmpty) return _staticBannerFallback();
+            final selectedIndex = controller.currentPromoBannerIndex.value
+                .clamp(0, banners.length - 1);
+
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                PageView.builder(
+                  controller: controller.promoBannerPageController,
+                  itemCount: banners.length,
+                  onPageChanged: controller.onPromoBannerPageChanged,
+                  itemBuilder: (_, index) => _networkBanner(banners[index]),
                 ),
-              ),
-              Positioned(
-                left: 12,
-                bottom: 10,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: kColorBlack.withValues(alpha: 0.34),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: kColorWhite.withValues(alpha: 0.12),
+                IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                        colors: [
+                          kColorBlack.withValues(alpha: 0.22),
+                          Colors.transparent,
+                          LiveRoomUiColors.goLiveGradientStart.withValues(
+                            alpha: 0.14,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.auto_awesome_rounded,
-                        color: kColorWalletAmount,
-                        size: 14,
-                      ),
-                      Spacing.h6,
-                      SemiBoldText(
-                        text: 'Featured rooms',
-                        fontSize: TextStyles.k10FontSize,
-                        color: kColorWhite.withValues(alpha: 0.92),
-                      ),
-                    ],
+                ),
+                Positioned(
+                  left: 12,
+                  right: banners.length > 1 ? 62 : 12,
+                  bottom: 10,
+                  child: IgnorePointer(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: _bannerLabel(banners[selectedIndex].title),
+                    ),
                   ),
                 ),
+                if (banners.length > 1)
+                  Positioned(
+                    right: 12,
+                    bottom: 15,
+                    child: IgnorePointer(
+                      child: _bannerPageIndicator(
+                        count: banners.length,
+                        selected: selectedIndex,
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          }),
+        ),
+      ),
+    );
+  }
+
+  Widget _networkBanner(PromoBanner banner) {
+    // Banner click-through stays disabled until product enables target URLs.
+    return Image.network(
+      banner.imageUrl,
+      fit: BoxFit.cover,
+      loadingBuilder: (_, child, progress) {
+        if (progress == null) return child;
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            _bannerFallback(),
+            const Center(
+              child: SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: kColorWhite,
+                ),
               ),
-            ],
+            ),
+          ],
+        );
+      },
+      errorBuilder: (_, __, ___) => _bannerFallback(),
+    );
+  }
+
+  Widget _staticBannerFallback() {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Image.asset(
+          kImgTemp1,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _bannerFallback(),
+        ),
+        IgnorePointer(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [
+                  kColorBlack.withValues(alpha: 0.12),
+                  Colors.transparent,
+                  LiveRoomUiColors.goLiveGradientStart.withValues(alpha: 0.16),
+                ],
+              ),
+            ),
           ),
         ),
+        Positioned(left: 12, bottom: 10, child: _bannerLabel('Featured rooms')),
+      ],
+    );
+  }
+
+  Widget _bannerLabel(String title) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 330),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: kColorBlack.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.14)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.auto_awesome_rounded,
+            color: kColorWalletAmount,
+            size: 14,
+          ),
+          Spacing.h6,
+          Flexible(
+            child: SemiBoldText(
+              text: title.isEmpty ? 'Featured rooms' : title,
+              fontSize: TextStyles.k10FontSize,
+              color: kColorWhite.withValues(alpha: 0.96),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _bannerPageIndicator({required int count, required int selected}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+      decoration: BoxDecoration(
+        color: kColorBlack.withValues(alpha: 0.46),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: List.generate(count, (index) {
+          final active = index == selected;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            width: active ? 12 : 5,
+            height: 5,
+            margin: const EdgeInsets.symmetric(horizontal: 2),
+            decoration: BoxDecoration(
+              color: active ? kColorWhite : kColorWhite.withValues(alpha: 0.46),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          );
+        }),
       ),
     );
   }

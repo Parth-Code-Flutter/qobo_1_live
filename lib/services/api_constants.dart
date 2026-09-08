@@ -95,6 +95,14 @@ class AdsEndpoints {
   static const String adAction = '/api/admin/ad-action';
 }
 
+/// Public promotional banners used across mobile placements.
+class BannerEndpoints {
+  BannerEndpoints._();
+
+  /// GET /api/banners?type=home|agency|live|promo|vip
+  static const String active = '/api/banners';
+}
+
 /// Central place for room related API endpoints.
 class RoomEndpoints {
   RoomEndpoints._();

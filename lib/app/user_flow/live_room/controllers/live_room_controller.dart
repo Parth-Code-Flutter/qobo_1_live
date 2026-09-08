@@ -8,7 +8,8 @@ import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/app/user_flow/wallet/bindings/wallet_binding.dart';
 import 'package:qobo_one_live/app/user_flow/wallet/views/wallet_view.dart';
 import 'package:qobo_one_live/models/live_streaming/live_stream_access_result.dart';
-import 'package:qobo_one_live/repo/activity/activity_repo.dart';
+import 'package:qobo_one_live/repo/banner/banner_repo.dart';
+import 'package:qobo_one_live/repo/banner/models/promo_banner.dart';
 import 'package:qobo_one_live/repo/room/room_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
@@ -18,20 +19,22 @@ import 'package:qobo_one_live/utils/app_dialogs/live_stream_access_denied_dialog
 import 'package:qobo_one_live/utils/live_streaming_permissions.dart';
 import 'package:qobo_one_live/utils/session_earnings_utils.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
+import 'package:qobo_one_live/utils/files_utils/file_utils.dart';
 import 'package:qobo_one_live/utils/zego_engine_utils.dart';
 import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 
 /// Controller for live room flow.
 class LiveRoomController extends GetxController {
   final RoomRepo _roomRepo = RoomRepo();
-  final ActivityRepo _activityRepo = ActivityRepo();
+  final BannerRepo _bannerRepo = BannerRepo();
 
   int selectedCategoryIndex = 0;
   LiveRoomFilterState filters = const LiveRoomFilterState();
   final isLoading = false.obs;
   final allRooms = <Map<String, dynamic>>[].obs;
   final rooms = <Map<String, dynamic>>[].obs;
-  final promoBannerImageUrl = RxnString();
+  final promoBanners = <PromoBanner>[].obs;
+  final currentPromoBannerIndex = 0.obs;
   final highlightJoinGrid = false.obs;
   final isSearchExpanded = false.obs;
   final searchQuery = ''.obs;
@@ -45,6 +48,8 @@ class LiveRoomController extends GetxController {
 
   final searchController = TextEditingController();
   final searchFocusNode = FocusNode();
+  final promoBannerPageController = PageController();
+  Timer? _promoBannerTimer;
 
   bool get hasActiveFilters => filters.hasActiveFilters;
 
@@ -121,29 +126,65 @@ class LiveRoomController extends GetxController {
   }
 
   Future<void> fetchPromoBanner() async {
-    final response = await _activityRepo.getActivities(isShowLoader: false);
-    if (response == null || response['statusCode'] != 1) return;
-    final data = response['data'];
-    if (data is! List) return;
+    final response = await _bannerRepo.getActiveBanners(type: 'live');
+    final banners = PromoBanner.listFromResponse(response, type: 'live');
+    currentPromoBannerIndex.value = 0;
+    promoBanners.assignAll(banners);
+    if (promoBannerPageController.hasClients) {
+      promoBannerPageController.jumpToPage(0);
+    }
+    _restartPromoBannerTimer();
+  }
 
-    final events = data.whereType<Map>().toList()
-      ..sort((a, b) {
-        final aPriority = int.tryParse('${a['priority'] ?? 999}') ?? 999;
-        final bPriority = int.tryParse('${b['priority'] ?? 999}') ?? 999;
-        return aPriority.compareTo(bPriority);
-      });
+  void onPromoBannerPageChanged(int index) {
+    currentPromoBannerIndex.value = index;
+  }
 
-    for (final event in events) {
-      final placement = event['placement']?.toString().toLowerCase();
-      final status = event['status']?.toString().toLowerCase();
-      final image = ApiImageUtils.normalize(event['imageUrl']?.toString());
-      final isLiveRoomsPlacement =
-          placement == null || placement.isEmpty || placement == 'live_rooms';
-      if (isLiveRoomsPlacement && status == 'active' && image != null) {
-        promoBannerImageUrl.value = image;
+  Future<void> openPromoBanner(PromoBanner banner) async {
+    final target = banner.targetUrl?.trim();
+    if (target == null || target.isEmpty) return;
+
+    final uri = Uri.tryParse(target);
+    if (uri == null) return;
+    if (uri.scheme == 'http' || uri.scheme == 'https') {
+      await FileUtils.openFileOrLink(target);
+      return;
+    }
+    if (uri.scheme.toLowerCase() != 'qobo') return;
+
+    final destination = uri.host.isNotEmpty
+        ? uri.host.toLowerCase()
+        : uri.pathSegments.isNotEmpty
+        ? uri.pathSegments.first.toLowerCase()
+        : null;
+    switch (destination) {
+      case 'agency':
+        await Get.toNamed(Routes.AGENCY_ACCESS);
+        return;
+      case 'vip':
+        await Get.toNamed(Routes.VIP_STORE);
+        return;
+      case 'pk-battle':
+      case 'pk':
+        await Get.toNamed(Routes.PK_BATTLE);
+        return;
+    }
+  }
+
+  void _restartPromoBannerTimer() {
+    _promoBannerTimer?.cancel();
+    if (promoBanners.length < 2) return;
+    _promoBannerTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!promoBannerPageController.hasClients || promoBanners.length < 2) {
         return;
       }
-    }
+      final next = (currentPromoBannerIndex.value + 1) % promoBanners.length;
+      promoBannerPageController.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 420),
+        curve: Curves.easeOutCubic,
+      );
+    });
   }
 
   Future<void> fetchActiveRooms() async {
@@ -930,6 +971,8 @@ class LiveRoomController extends GetxController {
 
   @override
   void onClose() {
+    _promoBannerTimer?.cancel();
+    promoBannerPageController.dispose();
     searchController.removeListener(_onSearchChanged);
     searchController.dispose();
     searchFocusNode.dispose();
