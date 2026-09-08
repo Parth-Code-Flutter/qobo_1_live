@@ -242,8 +242,8 @@ class PointCenterView extends GetView<PointCenterController> {
         ),
         labelColor: kColorWhite,
         unselectedLabelColor: kColorWhite.withValues(alpha: 0.58),
-        labelStyle: TextStyles.kSemiBoldPoppins(fontSize: 11),
-        unselectedLabelStyle: TextStyles.kSemiBoldPoppins(fontSize: 11),
+        labelStyle: TextStyles.kSemiBoldPoppins(fontSize: 10),
+        unselectedLabelStyle: TextStyles.kSemiBoldPoppins(fontSize: 10),
         tabs: _frequencies.map((item) => Tab(text: item.$2)).toList(),
       ),
     );

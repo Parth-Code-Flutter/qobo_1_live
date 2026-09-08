@@ -913,7 +913,6 @@ class FamilyDetailDashboardPage extends StatefulWidget {
 
 class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
   late Map<String, dynamic> _group = widget.group;
-  bool _loadingDetail = true;
 
   FamilyController get controller => Get.find<FamilyController>();
 
@@ -940,7 +939,6 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
     if (!mounted) return;
     setState(() {
       _group = detail;
-      _loadingDetail = false;
     });
   }
 
@@ -989,8 +987,7 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
                       _heroSummary(name),
                       if (!_isJoined) ...[Spacing.v12, _joinAccessCard()],
                       Spacing.v12,
-                      _announcementCard(),
-                      Spacing.v12,
+                      // Announcement is temporarily hidden.
                       _quickActions(),
                       Spacing.v12,
                       _topMembersCard(),
@@ -1102,8 +1099,9 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
               ],
             ),
           ),
-          _headerAction(Icons.workspace_premium_rounded),
-          Spacing.h8,
+          // Family badge action temporarily hidden.
+          // _headerAction(Icons.workspace_premium_rounded),
+          // Spacing.h8,
           _headerAction(
             Icons.group_add_rounded,
             onTap: _openAddMembersFromHeader,
@@ -1482,48 +1480,6 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
       width: 1,
       height: 36,
       color: kColorWhite.withValues(alpha: 0.08),
-    );
-  }
-
-  Widget _announcementCard() {
-    final text = _text(
-      _group['announcement'],
-      _loadingDetail
-          ? 'Loading latest announcement...'
-          : 'No announcement shared yet.',
-    );
-    return _whiteCard(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.campaign_rounded,
-            color: Color(0xFF7B5CFF),
-            size: 25,
-          ),
-          Spacing.h10,
-          const SemiBoldText(
-            text: 'Announcement',
-            fontSize: 13,
-            color: Color(0xFF7B5CFF),
-          ),
-          Spacing.h10,
-          Expanded(
-            child: AppText(
-              text: text,
-              fontSize: TextStyles.k12FontSize,
-              color: kColorWhite.withValues(alpha: 0.72),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const Icon(
-            Icons.chevron_right_rounded,
-            color: Color(0xFF7B5CFF),
-            size: 24,
-          ),
-        ],
-      ),
     );
   }
 
