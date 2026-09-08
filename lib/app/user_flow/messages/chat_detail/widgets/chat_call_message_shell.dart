@@ -6,6 +6,7 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 import '../controllers/chat_detail_controller.dart';
 import 'chat_call_message_theme.dart';
+import 'chat_detail_theme.dart';
 
 /// Shared WhatsApp-style shell for voice and video call log bubbles.
 class ChatCallMessageShell extends StatelessWidget {
@@ -34,14 +35,27 @@ class ChatCallMessageShell extends StatelessWidget {
             constraints: const BoxConstraints(maxWidth: 240, minWidth: 168),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: theme.bubbleColor,
-              border: Border.all(color: kColorWhite.withValues(alpha: 0.11)),
+              color: message.isMe ? null : theme.bubbleColor,
+              gradient: message.isMe ? ChatDetailTheme.outgoingGradient : null,
+              border: Border.all(
+                color: message.isMe
+                    ? kColorWhite.withValues(alpha: 0.1)
+                    : ChatDetailTheme.paleBorder,
+              ),
               borderRadius: BorderRadius.only(
                 topLeft: const Radius.circular(16),
                 topRight: const Radius.circular(16),
                 bottomLeft: Radius.circular(message.isMe ? 16 : 4),
                 bottomRight: Radius.circular(message.isMe ? 4 : 16),
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: (message.isMe ? ChatDetailTheme.rose : kColorBlack)
+                      .withValues(alpha: message.isMe ? 0.16 : 0.06),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,

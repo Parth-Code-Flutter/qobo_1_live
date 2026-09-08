@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/utils/app_widgets/app_shell_background.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/app_widgets/direct_gift_bottom_sheet.dart';
@@ -12,6 +11,7 @@ import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 import '../controllers/chat_detail_controller.dart';
+import '../widgets/chat_detail_theme.dart';
 import '../widgets/chat_timeline_message_widget.dart';
 
 class ChatDetailView extends GetView<ChatDetailController> {
@@ -19,14 +19,15 @@ class ChatDetailView extends GetView<ChatDetailController> {
 
   @override
   Widget build(BuildContext context) {
-    return AppShellBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: PreferredSize(
-          preferredSize: const Size.fromHeight(76),
-          child: Obx(() => _buildChatAppBar(context)),
-        ),
-        body: Column(
+    return Scaffold(
+      backgroundColor: ChatDetailTheme.scaffold,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(76),
+        child: Obx(() => _buildChatAppBar(context)),
+      ),
+      body: Container(
+        decoration: const BoxDecoration(gradient: ChatDetailTheme.bodyGradient),
+        child: Column(
           children: [
             Expanded(
               child: Obx(() {
@@ -46,7 +47,7 @@ class ChatDetailView extends GetView<ChatDetailController> {
                   physics: const AlwaysScrollableScrollPhysics(
                     parent: BouncingScrollPhysics(),
                   ),
-                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 18),
                   itemCount: entries.length,
                   itemBuilder: (context, index) {
                     final entry = entries[entries.length - 1 - index];
@@ -65,12 +66,24 @@ class ChatDetailView extends GetView<ChatDetailController> {
 
   Widget _buildChatAppBar(BuildContext context) {
     return AppBar(
-      backgroundColor: const Color(0xFF24113D).withValues(alpha: 0.96),
+      backgroundColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       automaticallyImplyLeading: false,
       toolbarHeight: 76,
       titleSpacing: 0,
+      flexibleSpace: Container(
+        decoration: BoxDecoration(
+          gradient: ChatDetailTheme.headerGradient,
+          boxShadow: [
+            BoxShadow(
+              color: ChatDetailTheme.rose.withValues(alpha: 0.2),
+              blurRadius: 22,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+      ),
       leadingWidth: 54,
       leading: Padding(
         padding: const EdgeInsets.only(left: 10),
@@ -91,7 +104,7 @@ class ChatDetailView extends GetView<ChatDetailController> {
                 imageUrl: controller.chatImageUrl.value,
                 size: 43,
                 border: Border.all(
-                  color: kColorProfileChipPinkStart.withValues(alpha: 0.8),
+                  color: kColorWhite.withValues(alpha: 0.82),
                   width: 1.5,
                 ),
               ),
@@ -162,13 +175,14 @@ class ChatDetailView extends GetView<ChatDetailController> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
           decoration: BoxDecoration(
-            color: kColorWhite.withValues(alpha: 0.09),
-            borderRadius: BorderRadius.circular(14),
+            color: kColorWhite.withValues(alpha: 0.82),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: ChatDetailTheme.paleBorder),
           ),
           child: AppText(
             text: '${controller.chatName.value} is typing...',
             fontSize: TextStyles.k10FontSize,
-            color: kColorProfileChipPinkStart,
+            color: ChatDetailTheme.plum,
           ),
         ),
       ),
@@ -184,10 +198,16 @@ class ChatDetailView extends GetView<ChatDetailController> {
         MediaQuery.paddingOf(context).bottom + 10,
       ),
       decoration: BoxDecoration(
-        color: const Color(0xFF13091F).withValues(alpha: 0.98),
-        border: Border(
-          top: BorderSide(color: kColorWhite.withValues(alpha: 0.08)),
-        ),
+        color: kColorWhite.withValues(alpha: 0.94),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
+        border: const Border(top: BorderSide(color: Color(0xFFFFE0EF))),
+        boxShadow: [
+          BoxShadow(
+            color: ChatDetailTheme.rose.withValues(alpha: 0.1),
+            offset: const Offset(0, -8),
+            blurRadius: 24,
+          ),
+        ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -210,9 +230,9 @@ class ChatDetailView extends GetView<ChatDetailController> {
             child: Container(
               constraints: const BoxConstraints(minHeight: 46),
               decoration: BoxDecoration(
-                color: kColorWhite.withValues(alpha: 0.09),
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: kColorWhite.withValues(alpha: 0.11)),
+                color: ChatDetailTheme.composerField,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: const Color(0xFFFFD8EA)),
               ),
               child: TextField(
                 controller: controller.messageController,
@@ -222,13 +242,13 @@ class ChatDetailView extends GetView<ChatDetailController> {
                 textInputAction: TextInputAction.newline,
                 style: TextStyles.kRegularPoppins(
                   fontSize: TextStyles.k12FontSize,
-                  colors: kColorWhite,
+                  colors: kColorText,
                 ),
                 decoration: InputDecoration(
-                  hintText: 'Write a message...',
+                  hintText: 'Type a message...',
                   hintStyle: TextStyles.kRegularPoppins(
                     fontSize: TextStyles.k12FontSize,
-                    colors: kColorWhite.withValues(alpha: 0.42),
+                    colors: const Color(0xFF8A7895),
                   ),
                   border: InputBorder.none,
                   isDense: true,
@@ -307,7 +327,7 @@ class _HeaderIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: kColorWhite.withValues(alpha: 0.09),
+      color: kColorWhite.withValues(alpha: 0.16),
       shape: const CircleBorder(),
       child: InkWell(
         onTap: onTap,
@@ -352,17 +372,26 @@ class _ComposerButton extends StatelessWidget {
             height: size,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: emphasized ? null : kColorWhite.withValues(alpha: 0.08),
-              gradient: emphasized
-                  ? const LinearGradient(
-                      colors: [
-                        kColorProfileChipPinkStart,
-                        kColorProfileChipPurpleStart,
-                      ],
-                    )
+              color: emphasized ? null : ChatDetailTheme.composerField,
+              gradient: emphasized ? ChatDetailTheme.outgoingGradient : null,
+              border: emphasized
+                  ? null
+                  : Border.all(color: const Color(0xFFFFD8EA)),
+              boxShadow: emphasized
+                  ? [
+                      BoxShadow(
+                        color: ChatDetailTheme.rose.withValues(alpha: 0.24),
+                        blurRadius: 18,
+                        offset: const Offset(0, 8),
+                      ),
+                    ]
                   : null,
             ),
-            child: Icon(icon, color: kColorWhite, size: compact ? 19 : 21),
+            child: Icon(
+              icon,
+              color: emphasized ? kColorWhite : ChatDetailTheme.plum,
+              size: compact ? 19 : 21,
+            ),
           ),
         ),
       ),
@@ -376,20 +405,12 @@ class _ChatLoadingState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: const Color(0xFF2A1748),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
-        ),
-        child: const SizedBox(
-          width: 25,
-          height: 25,
-          child: CircularProgressIndicator(
-            color: kColorProfileChipPinkStart,
-            strokeWidth: 2.5,
-          ),
+      child: const SizedBox(
+        width: 28,
+        height: 28,
+        child: CircularProgressIndicator(
+          color: ChatDetailTheme.rose,
+          strokeWidth: 2.5,
         ),
       ),
     );
@@ -414,31 +435,35 @@ class _ChatEmptyState extends StatelessWidget {
               height: 70,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [
-                    kColorProfileChipPinkStart,
-                    kColorProfileChipPurpleStart,
-                  ],
+                  colors: [ChatDetailTheme.lilac, ChatDetailTheme.rose],
                 ),
-                borderRadius: BorderRadius.circular(22),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: ChatDetailTheme.rose.withValues(alpha: 0.24),
+                    blurRadius: 28,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
               ),
               child: const Icon(
-                Icons.favorite_rounded,
+                Icons.chat_bubble_rounded,
                 color: kColorWhite,
-                size: 30,
+                size: 32,
               ),
             ),
             Spacing.v16,
             SemiBoldText(
-              text: 'Start something meaningful',
+              text: 'Start the conversation',
               fontSize: TextStyles.k18FontSize,
-              color: kColorWhite,
+              color: kColorText,
               align: TextAlign.center,
             ),
             Spacing.v6,
             AppText(
-              text: 'Say hello to $name and begin your conversation.',
+              text: 'Say hello to $name. Messages will appear here.',
               fontSize: TextStyles.k12FontSize,
-              color: kColorWhite.withValues(alpha: 0.58),
+              color: kColorHint,
               align: TextAlign.center,
             ),
           ],

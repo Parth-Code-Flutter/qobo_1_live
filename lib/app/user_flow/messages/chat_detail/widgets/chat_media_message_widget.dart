@@ -7,6 +7,7 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/ui_utils/emoji_celebration_overlay.dart';
 
 import '../controllers/chat_detail_controller.dart';
+import 'chat_detail_theme.dart';
 import 'chat_text_message_widget.dart';
 
 /// Inline emoji and gift message using the app's shared media renderers.
@@ -29,18 +30,12 @@ class ChatMediaMessageWidget extends StatelessWidget {
             width: message.isGift ? 180 : 116,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: message.isMe ? null : const Color(0xFF2B1946),
-              gradient: message.isMe
-                  ? const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [kColorProfileChipPinkStart, kColorPrimary],
-                    )
-                  : null,
+              color: message.isMe ? null : ChatDetailTheme.incomingBubble,
+              gradient: message.isMe ? ChatDetailTheme.outgoingGradient : null,
               border: Border.all(
                 color: message.isMe
-                    ? kColorProfileChipPinkStart.withValues(alpha: 0.34)
-                    : kColorWhite.withValues(alpha: 0.11),
+                    ? kColorWhite.withValues(alpha: 0.1)
+                    : ChatDetailTheme.paleBorder,
               ),
               borderRadius: BorderRadius.only(
                 topLeft: const Radius.circular(18),
@@ -48,6 +43,14 @@ class ChatMediaMessageWidget extends StatelessWidget {
                 bottomLeft: Radius.circular(message.isMe ? 18 : 5),
                 bottomRight: Radius.circular(message.isMe ? 5 : 18),
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: (message.isMe ? ChatDetailTheme.rose : kColorBlack)
+                      .withValues(alpha: message.isMe ? 0.16 : 0.06),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -73,7 +76,7 @@ class ChatMediaMessageWidget extends StatelessWidget {
                   AppText(
                     text: message.text,
                     fontSize: TextStyles.k12FontSize,
-                    color: kColorWhite,
+                    color: message.isMe ? kColorWhite : kColorText,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     align: TextAlign.center,
@@ -89,7 +92,7 @@ class ChatMediaMessageWidget extends StatelessWidget {
               AppText(
                 text: message.time,
                 fontSize: 10,
-                color: kColorWhite.withValues(alpha: 0.48),
+                color: ChatDetailTheme.textMuted,
               ),
               if (message.isMe) ...[
                 const SizedBox(width: 4),

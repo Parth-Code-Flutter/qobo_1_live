@@ -7,6 +7,7 @@ import 'package:qobo_one_live/utils/text_utils/profanity_mask_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 import '../controllers/chat_detail_controller.dart';
+import 'chat_detail_theme.dart';
 
 /// Plain text bubble in the chat message list.
 class ChatTextMessageWidget extends StatelessWidget {
@@ -27,18 +28,12 @@ class ChatTextMessageWidget extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             constraints: const BoxConstraints(maxWidth: 280),
             decoration: BoxDecoration(
-              color: message.isMe ? null : const Color(0xFF2B1946),
-              gradient: message.isMe
-                  ? const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [kColorProfileChipPinkStart, kColorPrimary],
-                    )
-                  : null,
+              color: message.isMe ? null : ChatDetailTheme.incomingBubble,
+              gradient: message.isMe ? ChatDetailTheme.outgoingGradient : null,
               border: Border.all(
                 color: message.isMe
-                    ? kColorProfileChipPinkStart.withValues(alpha: 0.32)
-                    : kColorWhite.withValues(alpha: 0.11),
+                    ? kColorWhite.withValues(alpha: 0.1)
+                    : ChatDetailTheme.paleBorder,
               ),
               borderRadius: BorderRadius.only(
                 topLeft: const Radius.circular(18),
@@ -46,11 +41,19 @@ class ChatTextMessageWidget extends StatelessWidget {
                 bottomLeft: Radius.circular(message.isMe ? 18 : 5),
                 bottomRight: Radius.circular(message.isMe ? 5 : 18),
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: (message.isMe ? ChatDetailTheme.rose : kColorBlack)
+                      .withValues(alpha: message.isMe ? 0.16 : 0.06),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
             child: AppText(
               text: ProfanityMaskUtils.mask(PhoneMaskUtils.mask(message.text)),
               fontSize: TextStyles.k14FontSize,
-              color: kColorWhite,
+              color: message.isMe ? kColorWhite : kColorText,
             ),
           ),
           Spacing.v4,
@@ -60,7 +63,7 @@ class ChatTextMessageWidget extends StatelessWidget {
               AppText(
                 text: message.time,
                 fontSize: 10,
-                color: kColorWhite.withValues(alpha: 0.48),
+                color: ChatDetailTheme.textMuted,
               ),
               if (message.isMe) ...[
                 const SizedBox(width: 4),
@@ -85,13 +88,13 @@ class ChatDeliveryStatusIcon extends StatelessWidget {
     final IconData icon;
     switch (status) {
       case ChatDeliveryStatus.read:
-        color = Colors.lightBlueAccent;
+        color = ChatDetailTheme.plum;
         icon = Icons.done_all_rounded;
       case ChatDeliveryStatus.delivered:
-        color = kColorWhite.withValues(alpha: 0.55);
+        color = ChatDetailTheme.textMuted;
         icon = Icons.done_all_rounded;
       case ChatDeliveryStatus.sent:
-        color = kColorWhite.withValues(alpha: 0.55);
+        color = ChatDetailTheme.textMuted;
         icon = Icons.done_rounded;
     }
     return Icon(icon, size: 14, color: color);

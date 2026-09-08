@@ -3,6 +3,7 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/services/chat/chat_inbox_preview.dart';
 
 import '../controllers/chat_detail_controller.dart';
+import 'chat_detail_theme.dart';
 
 /// Shared visual tokens for voice / video call log rows in the chat thread.
 class ChatCallMessageTheme {
@@ -46,25 +47,29 @@ class ChatCallMessageTheme {
     if (message.isMissedCall) {
       subtitle = 'Missed call';
       accentColor = kColorRed;
-      titleColor = kColorWhite;
+      titleColor = message.isMe ? kColorWhite : kColorText;
       subtitleColor = kColorRed;
     } else if (message.isUnansweredCall) {
       subtitle = 'No answer';
       accentColor = isVideo ? kColorPrimary : const Color(0xFFE65100);
-      titleColor = kColorWhite;
-      subtitleColor = kColorWhite.withValues(alpha: 0.58);
+      titleColor = message.isMe ? kColorWhite : kColorText;
+      subtitleColor = message.isMe
+          ? kColorWhite.withValues(alpha: 0.78)
+          : ChatDetailTheme.textMuted;
     } else {
       subtitle = ChatInboxPreviewType.callDurationLabel(
         message.callDurationSeconds,
       );
       accentColor = message.isMe ? kColorPrimary : kColorPrimary;
-      titleColor = kColorWhite;
-      subtitleColor = kColorWhite.withValues(alpha: 0.58);
+      titleColor = message.isMe ? kColorWhite : kColorText;
+      subtitleColor = message.isMe
+          ? kColorWhite.withValues(alpha: 0.78)
+          : ChatDetailTheme.textMuted;
     }
 
     final bubbleColor = message.isMe
-        ? kColorPrimary.withValues(alpha: 0.72)
-        : const Color(0xFF2B1946);
+        ? ChatDetailTheme.rose
+        : ChatDetailTheme.incomingBubble;
 
     return ChatCallMessageTheme(
       title: title,
