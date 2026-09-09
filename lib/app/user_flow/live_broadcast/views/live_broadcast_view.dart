@@ -554,7 +554,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                       const SizedBox(width: 8),
                       _liveTimerChip(
                         icon: Icons.timer_outlined,
-                        label: 'API',
+                        label: 'time spend',
                         value: controller.apiLiveElapsedLabel.value,
                         compact: isCompact,
                         colors: const [Color(0xFF7C5CFF), Color(0xFF29C7FF)],
