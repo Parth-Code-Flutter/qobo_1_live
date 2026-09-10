@@ -85,16 +85,28 @@ class AgencyHostModel {
   factory AgencyHostModel.fromApplicationJson(Map<String, dynamic> json) {
     final demo = parseHostFromApi({
       ...json,
-      'id': json['hostId']?.toString() ?? json['applicationId']?.toString(),
+      'id':
+          json['hostId']?.toString() ??
+          json['applicationId']?.toString() ??
+          json['id']?.toString(),
       'name': json['hostName']?.toString() ?? json['name']?.toString(),
-      'applicationId': json['applicationId']?.toString(),
+      'applicationId':
+          json['applicationId']?.toString() ??
+          json['application_id']?.toString() ??
+          json['id']?.toString(),
+      'status': json['status'] ?? 'pending',
+      'photo':
+          json['photo'] ?? json['host_real_photo'] ?? json['hostRealPhoto'],
     });
     return AgencyHostModel.fromDemo(demo);
   }
 }
 
 class AgencyHostListController extends GetxController {
-  AgencyHostListController({this.embeddedInBottomNav = false});
+  AgencyHostListController({
+    this.embeddedInBottomNav = false,
+    AgencyRepo? agencyRepo,
+  }) : _agencyRepo = agencyRepo ?? AgencyRepo();
 
   final bool embeddedInBottomNav;
 
@@ -107,7 +119,22 @@ class AgencyHostListController extends GetxController {
   /// Tree UI still renders active/approved hosts only.
   static const String hostListStatus = 'all';
 
-  final AgencyRepo _agencyRepo = AgencyRepo();
+  final AgencyRepo _agencyRepo;
+  final searchQuery = ''.obs;
+
+  List<AgencyHostModel> hostsForTab({required bool pending}) {
+    final query = searchQuery.value.trim().toLowerCase();
+    return hostList
+        .where(
+          (host) =>
+              (pending ? host.isPending : host.isActive || host.isRejected) &&
+              (query.isEmpty ||
+                  host.name.toLowerCase().contains(query) ||
+                  host.id.toLowerCase().contains(query) ||
+                  host.reviewApplicationId.toLowerCase().contains(query)),
+        )
+        .toList();
+  }
 
   final isLoading = true.obs;
   final loadError = ''.obs;
@@ -191,34 +218,103 @@ class AgencyHostListController extends GetxController {
     final agencyId = _session?.agencyId.value.trim() ?? '';
     _fetchedWithAgencyContext = agencyId.isNotEmpty;
 
-    var loadedFromApi = false;
     try {
-      final response = await _agencyRepo.getAgencyHostsList(
-        agencyId: agencyId.isNotEmpty ? agencyId : null,
-        status: hostListStatus,
+      final results = await Future.wait([
+        _agencyRepo.getAgencyHostsList(
+          agencyId: agencyId.isNotEmpty ? agencyId : null,
+          status: hostListStatus,
+          isShowLoader: false,
+        ),
+        _loadApplications('pending'),
+        _loadApplications('rejected'),
+      ]);
+      if (seq != _fetchSeq || isClosed) return;
+      final registered = _hostsFromResponse(results[0]);
+      final merged = <AgencyHostModel>[];
+      final errors = <String>[];
+      if (isAgencyApiSuccess(results[0]) && registered != null) {
+        merged.addAll(registered);
+      } else {
+        merged.addAll(hostList.isNotEmpty ? hostList : _hostsWithoutAgencyId());
+        errors.add('Could not refresh registered hosts.');
+      }
+      for (var i = 1; i < results.length; i++) {
+        final response = results[i];
+        final data = response?['data'];
+        if (isAgencyApiSuccess(response) && data is List) {
+          final applications = data.whereType<Map>().map(
+            (row) => AgencyHostModel.fromApplicationJson(
+              Map<String, dynamic>.from(row),
+            ),
+          );
+          for (final application in applications) {
+            merged.removeWhere(
+              (host) =>
+                  host.reviewApplicationId == application.reviewApplicationId ||
+                  (application.id.isNotEmpty &&
+                      host.id == application.id &&
+                      host.status == application.status),
+            );
+            merged.add(application);
+          }
+        } else {
+          errors.add(
+            i == 1
+                ? 'Could not refresh pending applications.'
+                : 'Could not refresh rejected applications.',
+          );
+        }
+      }
+      _applyHosts(merged);
+      loadError.value = errors.join(' ');
+    } catch (_) {
+      if (seq != _fetchSeq || isClosed) return;
+      loadError.value = 'Unable to refresh hosts. Pull down to try again.';
+    } finally {
+      if (seq == _fetchSeq && !isClosed) isLoading.value = false;
+    }
+  }
+
+  /// Applications are separate from the approved host registry and may be paged.
+  Future<Map<String, dynamic>?> _loadApplications(String status) async {
+    final rows = <Map<String, dynamic>>[];
+    final seenPages = <String>{};
+    for (var page = 1; ; page++) {
+      final response = await _agencyRepo.getHostApplications(
+        status: status,
+        page: page,
+        limit: 100,
         isShowLoader: false,
       );
-      final hosts = _hostsFromResponse(response);
-      if (isAgencyApiSuccess(response) && hosts != null) {
-        loadedFromApi = true;
-        _applyHosts(hosts);
-        if (seq == _fetchSeq) {
-          isLoading.value = false;
-        }
-        return;
+      if (!isAgencyApiSuccess(response)) return response;
+      final data = response?['data'];
+      final raw = data is List
+          ? data
+          : data is Map
+          ? data['applications'] ?? data['items'] ?? data['list']
+          : null;
+      if (raw is! List) return null;
+      if (raw.isNotEmpty && !seenPages.add(raw.toString())) return null;
+      rows.addAll(
+        raw.whereType<Map>().map((row) => Map<String, dynamic>.from(row)),
+      );
+      final pagination = data is Map && data['pagination'] is Map
+          ? data['pagination'] as Map
+          : data;
+      final totalPages = pagination is Map
+          ? int.tryParse('${pagination['totalPages']}')
+          : null;
+      final total = pagination is Map
+          ? int.tryParse('${pagination['total']}')
+          : null;
+      if (raw.isEmpty ||
+          (totalPages != null && page >= totalPages) ||
+          (total != null && rows.length >= total) ||
+          (totalPages == null && total == null && raw.length < 100)) {
+        break;
       }
-      loadError.value = agencyApiMessage(response) ?? 'Could not load hosts.';
-    } catch (_) {
-      loadError.value = 'Network error.';
     }
-
-    if (seq != _fetchSeq) return;
-
-    // Only fall back when the API call failed — not when it returned [].
-    if (!loadedFromApi) {
-      _applyHosts(_hostsWithoutAgencyId());
-    }
-    isLoading.value = false;
+    return {'statusCode': 1, 'data': rows};
   }
 
   /// Session cache used when agency id is missing or host-list request fails.
@@ -328,9 +424,8 @@ class AgencyHostListController extends GetxController {
     );
   }
 
-  void refreshList({bool showLoading = true}) {
-    _fetchHosts(showLoading: showLoading);
-  }
+  Future<void> refreshList({bool showLoading = true}) =>
+      _fetchHosts(showLoading: showLoading);
 
   Future<void> openAddHost() async {
     await _session?.ensureHydratedFromDashboard();
@@ -377,7 +472,9 @@ class AgencyHostListController extends GetxController {
 
   Future<bool> approveHostApplication(AgencyHostModel host) async {
     final id = host.reviewApplicationId;
-    if (id.isEmpty) return false;
+    if (id.isEmpty || !host.isPending || processingReviewId.value.isNotEmpty) {
+      return false;
+    }
 
     processingReviewId.value = id;
     try {
@@ -387,8 +484,7 @@ class AgencyHostListController extends GetxController {
         note: 'Approved by Agency Owner',
       );
       if (isAgencyApiSuccess(response)) {
-        hostList.removeWhere((h) => h.reviewApplicationId == id);
-        _buildMapHosts();
+        await _fetchHosts(showLoading: false);
         Get.snackbar(
           'Approved',
           agencyApiMessage(response) ?? '${host.name} is now active.',
@@ -420,7 +516,9 @@ class AgencyHostListController extends GetxController {
     String reason,
   ) async {
     final id = host.reviewApplicationId;
-    if (id.isEmpty) return false;
+    if (id.isEmpty || !host.isPending || processingReviewId.value.isNotEmpty) {
+      return false;
+    }
 
     processingReviewId.value = id;
     try {
@@ -429,8 +527,7 @@ class AgencyHostListController extends GetxController {
         reason: reason,
       );
       if (isAgencyApiSuccess(response)) {
-        hostList.removeWhere((h) => h.reviewApplicationId == id);
-        _buildMapHosts();
+        await _fetchHosts(showLoading: false);
         Get.snackbar(
           'Rejected',
           agencyApiMessage(response) ?? '${host.name} was rejected.',

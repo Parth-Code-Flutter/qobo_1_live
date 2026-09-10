@@ -12,6 +12,26 @@ class AgencyRepo {
 
   final ApiService _apiService;
 
+  Future<Map<String, dynamic>?> verifySuperAdminCode(String code) =>
+      _verifyCode(AgencyEndpoints.verifySuperAdminCode, code);
+
+  Future<Map<String, dynamic>?> verifyAgencyCode(String code) =>
+      _verifyCode(AgencyEndpoints.verifyAgencyCode, code);
+
+  Future<Map<String, dynamic>?> _verifyCode(
+    String endpoint,
+    String code,
+  ) async {
+    final response = await _apiService.postRequest(
+      endPoint: endpoint,
+      requestModel: {'code': code.trim()},
+      isShowLoader: false,
+    );
+    return response == null
+        ? null
+        : ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
   /// Calls `POST /api/agency/host-onboarding` to submit a host application.
   ///
   /// Uses multipart/form-data.
@@ -38,6 +58,7 @@ class AgencyRepo {
     final fields = <String, String>{
       'agency_code': agencyCode.trim(),
       'name': hostName.trim(),
+      'host_name': hostName.trim(),
       'phone': whatsapp.trim(),
       'gmail': gmail.trim(),
       'type': type.trim(),

@@ -185,7 +185,7 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
                     ),
                     Spacing.v4,
                     const AppText(
-                      text: 'Create a link and share anywhere',
+                      text: 'Share your Super Admin code',
                       fontSize: TextStyles.k12FontSize,
                       color: SuperAdminUi.textMuted,
                     ),
@@ -194,19 +194,19 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
               ),
               Spacing.h8,
               Obx(() {
-                final busy = controller.isGeneratingAgencyLink.value;
+                final busy = controller.isSharingSuperAdminCode.value;
                 return AdminGoldCtaButton(
-                  label: 'Generate',
+                  label: 'Share code',
                   icon: Icons.ios_share_rounded,
                   busy: busy,
-                  onTap: controller.generateAgencyLink,
+                  onTap: controller.shareSuperAdminCode,
                 );
               }),
             ],
           ),
         ),
         Obx(() {
-          final link = controller.generatedAgencyLink.value;
+          final link = controller.superAdminCode.value;
           if (link.isEmpty) return const SizedBox.shrink();
           return Padding(
             padding: const EdgeInsets.only(top: 12),
@@ -217,7 +217,7 @@ class SuperAdminDashboardTabView extends GetView<SuperAdminHomeController> {
                 Clipboard.setData(ClipboardData(text: link));
                 final ctx = Get.context;
                 if (ctx != null) {
-                  AppToast.showSuccess(ctx, 'Link copied.');
+                  AppToast.showSuccess(ctx, 'Code copied.');
                 }
               },
               child: Row(

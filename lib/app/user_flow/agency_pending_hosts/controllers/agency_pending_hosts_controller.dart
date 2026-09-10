@@ -1,3 +1,5 @@
+import 'package:qobo_one_live/services/user_session_controller.dart';
+import 'package:qobo_one_live/app/user_flow/agency_owner_dashboard/controllers/agency_owner_dashboard_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/agency_host_list/controllers/agency_host_list_controller.dart';
@@ -57,7 +59,7 @@ class AgencyPendingHostsController extends GetxController {
 
   Future<void> approveHost(AgencyHostModel host) async {
     final id = host.reviewApplicationId;
-    if (id.isEmpty) return;
+    if (id.isEmpty || processingId.value.isNotEmpty) return;
 
     processingId.value = id;
     try {
@@ -75,6 +77,14 @@ class AgencyPendingHostsController extends GetxController {
           colorText: Colors.white,
         );
         applications.removeWhere((h) => h.reviewApplicationId == id);
+        if (Get.isRegistered<AgencyOwnerDashboardController>()) {
+          await Get.find<AgencyOwnerDashboardController>().loadDashboard(
+            showLoader: false,
+          );
+        }
+        if (Get.isRegistered<UserSessionController>()) {
+          await Get.find<UserSessionController>().refreshProfileFromApi();
+        }
         return;
       }
       Get.snackbar(
@@ -95,7 +105,7 @@ class AgencyPendingHostsController extends GetxController {
 
   Future<void> rejectHost(AgencyHostModel host, String reason) async {
     final id = host.reviewApplicationId;
-    if (id.isEmpty) return;
+    if (id.isEmpty || processingId.value.isNotEmpty) return;
 
     processingId.value = id;
     try {
@@ -110,6 +120,14 @@ class AgencyPendingHostsController extends GetxController {
           snackPosition: SnackPosition.BOTTOM,
         );
         applications.removeWhere((h) => h.reviewApplicationId == id);
+        if (Get.isRegistered<AgencyOwnerDashboardController>()) {
+          await Get.find<AgencyOwnerDashboardController>().loadDashboard(
+            showLoader: false,
+          );
+        }
+        if (Get.isRegistered<UserSessionController>()) {
+          await Get.find<UserSessionController>().refreshProfileFromApi();
+        }
         return;
       }
       Get.snackbar(

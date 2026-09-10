@@ -13,11 +13,9 @@ import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_cont
 /// Keeps profile data in memory for fast access and syncs it with local storage
 /// so any screen can read user info without repeating storage/API parsing logic.
 class UserSessionController extends GetxController {
-  UserSessionController({
-    AuthRepo? authRepo,
-    BackgroundRepo? backgroundRepo,
-  }) : _authRepo = authRepo ?? AuthRepo(),
-       _backgroundRepo = backgroundRepo ?? BackgroundRepo();
+  UserSessionController({AuthRepo? authRepo, BackgroundRepo? backgroundRepo})
+    : _authRepo = authRepo ?? AuthRepo(),
+      _backgroundRepo = backgroundRepo ?? BackgroundRepo();
 
   final AuthRepo _authRepo;
   final BackgroundRepo _backgroundRepo;
@@ -72,43 +70,73 @@ class UserSessionController extends GetxController {
     return value.isNotEmpty ? value : 'classic';
   }
 
-  bool get isSuperAdmin => role.toLowerCase() == 'super_admin';
-  bool get isAgency {
-    final normalized = role.toLowerCase().replaceAll(' ', '_');
-    return normalized == 'agency' ||
-        normalized == 'agency_owner' ||
-        normalized == 'agencyowner';
-  }
-  bool get isHost => role.toLowerCase() == 'host';
-
-  /// Approved P2P coins seller (role and/or profile flags from getProfile).
-  bool get isCoinSeller {
-    final normalized = role.toLowerCase().replaceAll(' ', '_');
-    if (normalized == 'coin_seller' ||
-        normalized == 'coins_seller' ||
-        normalized == 'seller' ||
-        normalized == 'seller_admin') {
-      return true;
+  /// An explicit privileged role takes precedence over stale compatibility flags.
+  String get effectiveRole {
+    final normalized = role.trim().toLowerCase().replaceAll(' ', '_');
+    if (normalized == 'super_admin') return 'super_admin';
+    if (['agency', 'agency_owner', 'agencyowner'].contains(normalized)) {
+      return 'agency';
     }
-    if (_boolValueFromProfile(const [
-      'isCoinsSeller',
-      'isCoinSeller',
-      'is_coins_seller',
-      'is_coin_seller',
-      'coinsSeller',
+    if (normalized == 'host') return 'host';
+    if ([
+      'coin_seller',
       'coins_seller',
-    ])) {
-      return true;
+      'seller',
+      'seller_admin',
+    ].contains(normalized)) {
+      return 'coins_seller';
     }
-    final status = _stringValueFromProfile(const [
+    for (final entry in const {
+      'super_admin': ['roleFlags.isSuperAdmin'],
+      'agency': ['roleFlags.isAgency'],
+      'host': ['roleFlags.isHost'],
+      'coins_seller': [
+        'roleFlags.isCoinsSeller',
+        'isCoinsSeller',
+        'isCoinSeller',
+        'is_coins_seller',
+        'is_coin_seller',
+        'coinsSeller',
+        'coins_seller',
+      ],
+    }.entries) {
+      if (_boolValueFromProfile(entry.value)) return entry.key;
+    }
+    final sellerStatus = _stringValueFromProfile(const [
       'coinsSellerStatus',
       'coinSellerStatus',
       'coins_seller_status',
       'sellerStatus',
       'seller_status',
     ]).toLowerCase();
-    return status == 'approved' || status == 'active';
+    if (sellerStatus == 'approved' || sellerStatus == 'active') {
+      return 'coins_seller';
+    }
+    return 'user';
   }
+
+  bool get isSuperAdmin => effectiveRole == 'super_admin';
+  bool get isAgency => effectiveRole == 'agency';
+  bool get isHost => effectiveRole == 'host';
+  bool get isCoinSeller => effectiveRole == 'coins_seller';
+
+  /// Server visibility flags control application shortcuts; an approved role
+  /// always has exactly its own dashboard shortcut even with stale icon flags.
+  bool _showRoleIcon(String icon, String targetRole) {
+    if (effectiveRole != 'user') return effectiveRole == targetRole;
+    final nested = _profileData?['user'];
+    final raw =
+        _readProfileValue(_profileData, 'roleIcons.$icon') ??
+        (nested is Map ? _readProfileValue(nested, 'roleIcons.$icon') : null);
+    if (raw == null) return true;
+    return raw == true || raw == 1 || raw.toString().toLowerCase() == 'true';
+  }
+
+  bool get showSuperAdminIcon => _showRoleIcon('showSuperAdmin', 'super_admin');
+  bool get showAgencyIcon => _showRoleIcon('showAgency', 'agency');
+  bool get showHostIcon => _showRoleIcon('showHost', 'host');
+  bool get showCoinsSellerIcon =>
+      _showRoleIcon('showCoinsSeller', 'coins_seller');
 
   /// Profile header counters — prefer backend `formatted*` strings (e.g. "2K").
   String get formattedVisitors => _formattedSocialStat(
@@ -355,7 +383,6 @@ class UserSessionController extends GetxController {
     for (final key in keys) {
       final raw = _readProfileValue(_profileData, key);
       if (raw == true || raw == 1) return true;
-      if (raw == false || raw == 0 || raw == null) continue;
       final text = raw.toString().trim().toLowerCase();
       if (text == 'true' || text == '1' || text == 'yes') return true;
       final nested = _profileData?['user'];

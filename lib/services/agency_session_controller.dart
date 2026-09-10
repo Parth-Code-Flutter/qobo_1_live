@@ -54,11 +54,15 @@ class AgencySessionController extends GetxController {
   LocalStorage get _storage => LocalStorage.shared;
 
   Future<void> loadFromStorage() async {
-    final json = await _storage.getJsonFromStorage(kStorageAgencyOwnerApplication);
+    final json = await _storage.getJsonFromStorage(
+      kStorageAgencyOwnerApplication,
+    );
     if (json != null && json.isNotEmpty) {
       _applyApplicationJson(json, persist: false);
     }
-    final agencyJson = await _storage.getJsonFromStorage(kStorageApprovedAgency);
+    final agencyJson = await _storage.getJsonFromStorage(
+      kStorageApprovedAgency,
+    );
     if (agencyJson != null && agencyJson.isNotEmpty) {
       _applyApprovedAgencyJson(agencyJson);
     }
@@ -159,13 +163,14 @@ class AgencySessionController extends GetxController {
 
   /// `POST /api/agency/register` — active agency or pending application.
   Future<void> applyRegisterResponse(Map<String, dynamic> data) async {
-    final agencyStatus = data['status']?.toString() ?? 'active';
+    final agencyStatus = data['status']?.toString() ?? 'pending';
     if (isAgencyStatusPending(agencyStatus)) {
       await applyPendingAgency(
         agencyName: data['name']?.toString() ?? appliedAgencyName.value,
         ownerName: appliedOwnerName.value,
         phone: appliedPhone.value,
-        applicationId: data['id']?.toString() ?? data['application_id']?.toString(),
+        applicationId:
+            data['id']?.toString() ?? data['application_id']?.toString(),
         reason: data['reason']?.toString(),
       );
       return;
@@ -183,6 +188,17 @@ class AgencySessionController extends GetxController {
 
   /// `GET /api/agency/dashboard` — full dashboard only when agency is approved.
   Future<void> applyDashboardResponse(AgencyDashboardData data) async {
+    if (data.applicationState == AgencyOwnerApplicationState.rejected) {
+      await applyPendingAgency(
+        agencyName: data.agencyName,
+        ownerName: data.ownerName,
+      );
+      applicationState.value = AgencyOwnerApplicationState.rejected;
+      status.value = data.agencyStatus;
+      await _persistApplication();
+      update();
+      return;
+    }
     if (data.isPending) {
       await applyPendingAgency(
         agencyName: data.agencyName,
@@ -309,9 +325,15 @@ class AgencySessionController extends GetxController {
         );
       } else {
         setAgency(
-          id: data['agency_id']?.toString() ?? data['agencyId']?.toString() ?? '',
+          id:
+              data['agency_id']?.toString() ??
+              data['agencyId']?.toString() ??
+              '',
           name: appliedAgencyName.value,
-          code: data['agency_code']?.toString() ?? data['agencyCode']?.toString() ?? '',
+          code:
+              data['agency_code']?.toString() ??
+              data['agencyCode']?.toString() ??
+              '',
           commission: _parseCommission(data['commissionRate']),
         );
       }
@@ -383,7 +405,10 @@ class AgencySessionController extends GetxController {
     });
   }
 
-  void _applyApplicationJson(Map<String, dynamic> json, {required bool persist}) {
+  void _applyApplicationJson(
+    Map<String, dynamic> json, {
+    required bool persist,
+  }) {
     applicationState.value = AgencyOwnerApplicationState.fromApi(
       json['status']?.toString(),
     );

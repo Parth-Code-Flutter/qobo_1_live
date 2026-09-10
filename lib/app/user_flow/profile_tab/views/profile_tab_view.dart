@@ -21,7 +21,7 @@ import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
 import 'package:qobo_one_live/utils/files_utils/file_utils.dart';
-import 'package:qobo_one_live/utils/app_widgets/super_admin_agency_picker_sheet.dart';
+import 'package:qobo_one_live/app/user_flow/host_dashboard/host_dashboard_view.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -357,9 +357,9 @@ class _ProfileTabViewState extends State<ProfileTabView> {
 
   Widget _profileFeatureGrid() {
     final session = _resolveUserSession();
-    final showSuperAdmin = !session.isCoinSeller && !session.isAgency;
-    final showAgency = !session.isCoinSeller;
-    final showCoinSeller = !session.isAgency && !session.isSuperAdmin;
+    final showSuperAdmin = session.showSuperAdminIcon;
+    final showAgency = session.showAgencyIcon;
+    final showCoinSeller = session.showCoinsSellerIcon;
 
     final features = <_ProfileFeatureItem>[
       _ProfileFeatureItem('Top Up', kIconRechargeCoins, const [
@@ -376,6 +376,11 @@ class _ProfileTabViewState extends State<ProfileTabView> {
           Color(0xFF6E4BFF),
           Color(0xFF00BCD4),
         ], onTap: _openAgencyFlow),
+      if (session.showHostIcon)
+        _ProfileFeatureItem('Host', kIconBadge, const [
+          Color(0xFF00897B),
+          Color(0xFF26C6DA),
+        ], onTap: _openHostFlow),
       _ProfileFeatureItem('Visitors', kIconVisitor, const [
         Color(0xFF1F74F2),
         Color(0xFF22B8F2),
@@ -479,7 +484,8 @@ class _ProfileTabViewState extends State<ProfileTabView> {
               isShowLoader: false,
             );
           }
-          if (item.onTapRoute == Routes.AGENCY_OWNER ||
+          if (item.onTapRoute == Routes.COIN_SELLER ||
+              item.onTapRoute == Routes.AGENCY_OWNER ||
               item.onTapRoute == Routes.SUPER_ADMIN_BOTTOM_NAV) {
             await _resolveUserSession().refreshProfileFromApi(
               isShowLoader: false,
@@ -575,21 +581,6 @@ class _ProfileTabViewState extends State<ProfileTabView> {
       );
     }
 
-    // Super Admin: backend requires agency_id on /api/agency/dashboard.
-    if (session.isSuperAdmin) {
-      final selected = await SuperAdminAgencyPickerSheet.show();
-      if (selected == null || selected.id.trim().isEmpty) return;
-      await Get.toNamed(
-        Routes.AGENCY_OWNER,
-        arguments: {
-          'agencyId': selected.id.trim(),
-          'agency_id': selected.id.trim(),
-          'agencyName': selected.name,
-        },
-      );
-      return;
-    }
-
     if (session.isAgency) {
       await Get.toNamed(Routes.AGENCY_OWNER);
       return;
@@ -601,8 +592,11 @@ class _ProfileTabViewState extends State<ProfileTabView> {
     await agencySession.ensureHydratedFromDashboard(forceRefresh: true);
 
     if (agencySession.hasApprovedAgency) {
-      await Get.toNamed(Routes.AGENCY_OWNER);
-      return;
+      await session.refreshProfileFromApi();
+      if (session.isAgency) {
+        await Get.toNamed(Routes.AGENCY_OWNER);
+        return;
+      }
     }
     if (agencySession.isApplicationPending ||
         agencySession.isApplicationRejected) {
@@ -622,6 +616,16 @@ class _ProfileTabViewState extends State<ProfileTabView> {
     }
 
     await Get.toNamed(Routes.AGENCY_OWNER_REGISTER);
+  }
+
+  Future<void> _openHostFlow() async {
+    final session = _resolveUserSession();
+    if (session.isHost) {
+      await Get.to(() => const HostDashboardView());
+    } else {
+      await Get.toNamed(Routes.AGENCY_HOST_ONBOARDING);
+    }
+    await session.refreshProfileFromApi();
   }
 
   UserSessionController _resolveUserSession() {

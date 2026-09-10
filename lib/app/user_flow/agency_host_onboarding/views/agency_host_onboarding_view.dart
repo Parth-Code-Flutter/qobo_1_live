@@ -1,3 +1,4 @@
+import 'package:qobo_one_live/routes/app_pages.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -78,8 +79,9 @@ class AgencyHostOnboardingView extends GetView<AgencyHostOnboardingController> {
                                     Spacing.v10,
                                     _whatsAppField(context),
                                     Spacing.v10,
-                                    _gmailField(context),
-                                    Spacing.v10,
+                                    // Email input temporarily hidden.
+                                    // _gmailField(context),
+                                    // Spacing.v10,
                                     _countryField(context),
                                     Spacing.v10,
                                     _stateField(context),
@@ -310,27 +312,27 @@ class AgencyHostOnboardingView extends GetView<AgencyHostOnboardingController> {
     );
   }
 
-  Widget _gmailField(BuildContext context) {
-    return _labeledField(
-      label: 'Gmail ID',
-      child: AppTextField(
-        controller: controller.gmailController,
-        validator: (v) => controller.validateGmail(context, v),
-        hintText: 'name@gmail.com',
-        borderColor: kColorHint,
-        textInputType: TextInputType.emailAddress,
-        textInputAction: TextInputAction.next,
-        textCapitalization: TextCapitalization.none,
-        prefix: Padding(
-          padding: const EdgeInsets.only(left: 14, right: 12),
-          child: SvgPicture.asset(
-            kIconMail,
-            colorFilter: const ColorFilter.mode(kColorHint, BlendMode.srcIn),
-          ),
-        ),
-      ),
-    );
-  }
+  // Widget _gmailField(BuildContext context) {
+  //   return _labeledField(
+  //     label: 'Gmail ID',
+  //     child: AppTextField(
+  //       controller: controller.gmailController,
+  //       validator: (v) => controller.validateGmail(context, v),
+  //       hintText: 'name@gmail.com',
+  //       borderColor: kColorHint,
+  //       textInputType: TextInputType.emailAddress,
+  //       textInputAction: TextInputAction.next,
+  //       textCapitalization: TextCapitalization.none,
+  //       prefix: Padding(
+  //         padding: const EdgeInsets.only(left: 14, right: 12),
+  //         child: SvgPicture.asset(
+  //           kIconMail,
+  //           colorFilter: const ColorFilter.mode(kColorHint, BlendMode.srcIn),
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget _countryField(BuildContext context) {
     return Obx(
@@ -442,6 +444,29 @@ class AgencyHostOnboardingView extends GetView<AgencyHostOnboardingController> {
               prefix: _fieldIcon(Icons.vpn_key_outlined),
             ),
           ),
+          TextButton.icon(
+            onPressed: controller.codeVerification.isChecking.value
+                ? null
+                : controller.codeVerification.verify,
+            icon: Icon(
+              controller.codeVerification.isVerified.value
+                  ? Icons.verified
+                  : Icons.check_circle_outline,
+            ),
+            label: Text(
+              controller.codeVerification.isChecking.value
+                  ? 'Verifying…'
+                  : 'Verify agency code',
+            ),
+          ),
+          if (controller.codeVerification.message.value.isNotEmpty)
+            Text(controller.codeVerification.message.value),
+          if (!controller.isFromAgencyOwner.value &&
+              !controller.isFromSuperAdmin.value)
+            TextButton(
+              onPressed: () => Get.toNamed(Routes.AGENCY_HOST_STATUS),
+              child: const Text('Already applied? Check application status'),
+            ),
           if (controller.isAgencyCodeLocked.value) ...[
             Spacing.v6,
             AppText(

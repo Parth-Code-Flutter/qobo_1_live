@@ -10,6 +10,53 @@ class SuperAdminRepo {
 
   final ApiService _apiService;
 
+  Future<Map<String, dynamic>?> getMyCode() async {
+    final response = await _apiService.getRequest(
+      endPoint: SuperAdminEndpoints.myCode,
+      isShowLoader: false,
+    );
+    if (response?.statusCode == 404) {
+      return {'statusCode': 0, 'codeNotFound': true};
+    }
+    return response == null
+        ? null
+        : ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  Future<Map<String, dynamic>?> generateCode() async {
+    final response = await _apiService.postRequest(
+      endPoint: SuperAdminEndpoints.generateCode,
+      requestModel: <String, dynamic>{},
+      isShowLoader: false,
+    );
+    return response == null
+        ? null
+        : ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  Future<Map<String, dynamic>?> addAgencyManual({
+    required String name,
+    required String ownerName,
+    required String email,
+    required String phone,
+    required double commissionRate,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: SuperAdminEndpoints.addAgencyManual,
+      requestModel: {
+        'name': name.trim(),
+        'ownerName': ownerName.trim(),
+        'email': email.trim(),
+        'phone': phone.trim(),
+        'commissionRate': commissionRate,
+      },
+      isShowLoader: false,
+    );
+    return response == null
+        ? null
+        : ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
   Future<Map<String, dynamic>?> getDashboard({bool isShowLoader = true}) async {
     final response = await _apiService.getRequest(
       endPoint: SuperAdminEndpoints.dashboard,
@@ -92,13 +139,13 @@ class SuperAdminRepo {
         'feedback': feedback.trim(),
     };
     var response = await _apiService.postRequest(
-      endPoint: SuperAdminEndpoints.processAgencyRequest,
+      endPoint: SuperAdminEndpoints.processAgency,
       requestModel: body,
       isShowLoader: isShowLoader,
     );
-    if (response == null || response.statusCode == 404) {
+    if (response?.statusCode == 404) {
       response = await _apiService.postRequest(
-        endPoint: SuperAdminEndpoints.processAgency,
+        endPoint: SuperAdminEndpoints.processAgencyRequest,
         requestModel: body,
         isShowLoader: isShowLoader,
       );

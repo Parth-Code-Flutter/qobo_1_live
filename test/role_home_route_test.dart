@@ -9,16 +9,19 @@ void main() {
 
   tearDown(Get.reset);
 
-  test('super_admin role resolves to Super Admin bottom nav', () async {
-    Get.put(UserSessionController(), permanent: true);
-    final route = await RoleHomeRoute.resolveAfterLogin(<String, dynamic>{
-      'id': 'u1',
-      'name': 'Admin',
-      'role': 'super_admin',
-    });
-    expect(route, Routes.SUPER_ADMIN_BOTTOM_NAV);
-    expect(Get.find<UserSessionController>().isSuperAdmin, isTrue);
-  });
+  test(
+    'super_admin keeps standard home with profile dashboard access',
+    () async {
+      Get.put(UserSessionController(), permanent: true);
+      final route = await RoleHomeRoute.resolveAfterLogin(<String, dynamic>{
+        'id': 'u1',
+        'name': 'Admin',
+        'role': 'super_admin',
+      });
+      expect(route, Routes.BOTTOM_NAV);
+      expect(Get.find<UserSessionController>().isSuperAdmin, isTrue);
+    },
+  );
 
   test('user role resolves to standard bottom nav', () async {
     Get.put(UserSessionController(), permanent: true);
@@ -31,14 +34,14 @@ void main() {
     expect(Get.find<UserSessionController>().isSuperAdmin, isFalse);
   });
 
-  test('agency role resolves to agency owner shell', () async {
+  test('agency keeps standard home with profile dashboard access', () async {
     Get.put(UserSessionController(), permanent: true);
     final route = await RoleHomeRoute.resolveAfterLogin(<String, dynamic>{
       'id': 'u3',
       'name': 'Agency Owner',
       'role': 'agency',
     });
-    expect(route, Routes.AGENCY_OWNER);
+    expect(route, Routes.BOTTOM_NAV);
     expect(Get.find<UserSessionController>().isAgency, isTrue);
   });
 }

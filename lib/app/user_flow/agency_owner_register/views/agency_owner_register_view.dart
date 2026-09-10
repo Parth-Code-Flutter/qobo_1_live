@@ -1,3 +1,4 @@
+import 'package:qobo_one_live/utils/roles/recruitment_code_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -58,7 +59,13 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
                                   children: [
                                     _formHeader(),
                                     Spacing.v20,
-                                    Center(child: _agencyLogoPicker(context)),
+                                    Obx(
+                                      () => controller.isFromSuperAdmin.value
+                                          ? const SizedBox.shrink()
+                                          : Center(
+                                              child: _agencyLogoPicker(context),
+                                            ),
+                                    ),
                                     Spacing.v24,
                                     _fieldLabel('Agency Name'),
                                     Spacing.v6,
@@ -118,11 +125,7 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
                                         Icons.phone_android_outlined,
                                       ),
                                     ),
-                                    Obx(
-                                      () => controller.isPublicInvite.value
-                                          ? _publicInviteFields(context)
-                                          : const SizedBox.shrink(),
-                                    ),
+                                    Obx(() => _publicInviteFields(context)),
                                     Spacing.v32,
                                     Obx(
                                       () => appButton(
@@ -136,6 +139,8 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
                                         buttonText:
                                             controller.isSubmitLoading.value
                                             ? ''
+                                            : controller.isFromSuperAdmin.value
+                                            ? 'Add Agency'
                                             : 'Submit Application',
                                         buttonIcon:
                                             controller.isSubmitLoading.value
@@ -205,9 +210,7 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           BoldText(
-            text: isPublic
-                ? 'Agency Invite Registration'
-                : 'Become an Agency Owner',
+            text: isPublic ? 'Apply for Agency' : 'Become an Agency Owner',
             fontSize: TextStyles.k22FontSize,
             color: kColorText,
           ),
@@ -215,7 +218,7 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
           AppText(
             text: isPublic
                 ? 'Complete your agency profile and documents. A super admin will approve your agency before the dashboard opens.'
-                : 'Submit your agency details for super admin review. You can open the owner dashboard only after approval.',
+                : 'Add an approved agency under your Super Admin account.',
             fontSize: TextStyles.k12FontSize,
             color: kColorHint,
           ),
@@ -278,19 +281,27 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Spacing.v16,
-        _fieldLabel('Email'),
-        Spacing.v6,
-        AppTextField(
-          controller: controller.emailController,
-          validator: (v) => controller.validateEmail(context, v),
-          hintText: 'Enter owner email',
-          borderColor: kColorHint,
-          textInputType: TextInputType.emailAddress,
-          textInputAction: TextInputAction.next,
-          textCapitalization: TextCapitalization.none,
-          prefix: _fieldIcon(Icons.email_outlined),
-        ),
-        Spacing.v16,
+        if (!controller.isFromSuperAdmin.value) ...[
+          RecruitmentCodeField(
+            verification: controller.codeVerification,
+            label: 'Super Admin code',
+          ),
+          Spacing.v16,
+        ],
+        // Email input temporarily hidden, including its form validator.
+        // _fieldLabel('Email'),
+        // Spacing.v6,
+        // AppTextField(
+        //   controller: controller.emailController,
+        //   validator: (v) => controller.validateEmail(context, v),
+        //   hintText: 'Enter owner email',
+        //   borderColor: kColorHint,
+        //   textInputType: TextInputType.emailAddress,
+        //   textInputAction: TextInputAction.next,
+        //   textCapitalization: TextCapitalization.none,
+        //   prefix: _fieldIcon(Icons.email_outlined),
+        // ),
+        // Spacing.v16,
         _fieldLabel('Country Code'),
         Spacing.v6,
         AppTextField(
@@ -309,86 +320,101 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
           prefix: _fieldIcon(Icons.public_rounded),
         ),
         Spacing.v16,
-        _fieldLabel('Password'),
-        Spacing.v6,
-        AppTextField(
-          controller: controller.passwordController,
-          validator: (v) => controller.validatePassword(context, v),
-          hintText: 'Min. 6 characters',
-          borderColor: kColorHint,
-          obscureText: true,
-          textInputAction: TextInputAction.next,
-          maxLength: 32,
-          showCounter: false,
-          prefix: _fieldIcon(Icons.lock_outline_rounded),
-        ),
-        Spacing.v16,
-        Obx(
-          () => Column(
-            children: [
-              CountryStatePickerField(
-                label: 'Country',
-                value: controller.selectedCountry.value?.name,
-                hint: 'Select country',
-                isLoading: controller.isCountriesLoading.value,
-                onTap: () => _pickCountry(context),
-              ),
-              Spacing.v10,
-              CountryStatePickerField(
-                label: 'State',
-                value: controller.selectedState.value?.name,
-                hint: controller.selectedCountry.value == null
-                    ? 'Select country first'
-                    : 'Select state',
-                isLoading: controller.isStatesLoading.value,
-                onTap: controller.selectedCountry.value == null
-                    ? () {
-                        AppToast.showError(
-                          context,
-                          'Please select country first',
-                        );
-                      }
-                    : () => _pickState(context),
-              ),
-            ],
+        if (controller.isFromSuperAdmin.value) ...[
+          _fieldLabel('Commission (%)'),
+          AppTextField(
+            controller: controller.commissionController,
+            textInputType: const TextInputType.numberWithOptions(decimal: true),
+            validator: (value) {
+              final rate = double.tryParse(value?.trim() ?? '');
+              return rate == null || !rate.isFinite || rate < 0 || rate > 100
+                  ? 'Enter a commission from 0 to 100'
+                  : null;
+            },
           ),
-        ),
-        Spacing.v16,
-        _fieldLabel('City'),
-        Spacing.v6,
-        AppTextField(
-          controller: controller.cityController,
-          validator: (v) => controller.validateRequired('City', v),
-          hintText: 'Enter city',
-          borderColor: kColorHint,
-          prefix: _fieldIcon(Icons.location_city_outlined),
-        ),
-        Spacing.v16,
-        _fieldLabel('Address'),
-        Spacing.v6,
-        AppTextField(
-          controller: controller.addressController,
-          validator: (v) => controller.validateRequired('Address', v),
-          hintText: 'Enter full address',
-          borderColor: kColorHint,
-          maxLines: 3,
-          textInputAction: TextInputAction.newline,
-          prefix: _fieldIcon(Icons.home_outlined),
-        ),
-        Spacing.v16,
-        _documentPicker(
-          label: 'Document Front',
-          icon: Icons.badge_outlined,
-          fileName: controller.docPhotoFront.value?.path.split('/').last,
-          onTap: () => controller.pickDocumentFront(context),
-        ),
-        Spacing.v12,
-        _documentPicker(
-          label: 'Document Back',
-          icon: Icons.badge_rounded,
-          fileName: controller.docPhotoBack.value?.path.split('/').last,
-          onTap: () => controller.pickDocumentBack(context),
-        ),
+        ],
+        if (!controller.isFromSuperAdmin.value) ...[
+          _fieldLabel('Password'),
+          Spacing.v6,
+          AppTextField(
+            controller: controller.passwordController,
+            validator: (v) => controller.validatePassword(context, v),
+            hintText: 'Min. 6 characters',
+            borderColor: kColorHint,
+            obscureText: true,
+            textInputAction: TextInputAction.next,
+            maxLength: 32,
+            showCounter: false,
+            prefix: _fieldIcon(Icons.lock_outline_rounded),
+          ),
+          Spacing.v16,
+          Obx(
+            () => Column(
+              children: [
+                CountryStatePickerField(
+                  label: 'Country',
+                  value: controller.selectedCountry.value?.name,
+                  hint: 'Select country',
+                  isLoading: controller.isCountriesLoading.value,
+                  onTap: () => _pickCountry(context),
+                ),
+                Spacing.v10,
+                CountryStatePickerField(
+                  label: 'State',
+                  value: controller.selectedState.value?.name,
+                  hint: controller.selectedCountry.value == null
+                      ? 'Select country first'
+                      : 'Select state',
+                  isLoading: controller.isStatesLoading.value,
+                  onTap: controller.selectedCountry.value == null
+                      ? () {
+                          AppToast.showError(
+                            context,
+                            'Please select country first',
+                          );
+                        }
+                      : () => _pickState(context),
+                ),
+              ],
+            ),
+          ),
+          Spacing.v16,
+          _fieldLabel('City'),
+          Spacing.v6,
+          AppTextField(
+            controller: controller.cityController,
+            validator: (v) => controller.validateRequired('City', v),
+            hintText: 'Enter city',
+            borderColor: kColorHint,
+            prefix: _fieldIcon(Icons.location_city_outlined),
+          ),
+          Spacing.v16,
+          _fieldLabel('Address'),
+          Spacing.v6,
+          AppTextField(
+            controller: controller.addressController,
+            validator: (v) => controller.validateRequired('Address', v),
+            hintText: 'Enter full address',
+            borderColor: kColorHint,
+            maxLines: 3,
+            textInputAction: TextInputAction.newline,
+            prefix: _fieldIcon(Icons.home_outlined),
+          ),
+          Spacing.v16,
+          _documentPicker(
+            label: 'Document Front',
+            icon: Icons.badge_outlined,
+            fileName: controller.docPhotoFront.value?.path.split('/').last,
+            onTap: () => controller.pickDocumentFront(context),
+          ),
+          Spacing.v12,
+          _documentPicker(
+            label: 'Document Back',
+            icon: Icons.badge_rounded,
+            fileName: controller.docPhotoBack.value?.path.split('/').last,
+            onTap: () => controller.pickDocumentBack(context),
+          ),
+        ],
       ],
     );
   }

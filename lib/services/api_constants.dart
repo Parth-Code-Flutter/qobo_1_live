@@ -233,6 +233,8 @@ class RoomEndpoints {
 /// Central place for agency related API endpoints.
 class AgencyEndpoints {
   AgencyEndpoints._();
+  static const verifySuperAdminCode = '/api/agency/verify-super-admin-code';
+  static const verifyAgencyCode = '/api/agency/verify-agency-code';
 
   /// POST /api/agency/host-onboarding
   static const String hostOnboarding = '/api/agency/host-onboarding';
@@ -270,6 +272,9 @@ class AgencyEndpoints {
 /// Spec: `super_admin_mobile_api_handover_v1.md`
 class SuperAdminEndpoints {
   SuperAdminEndpoints._();
+  static const myCode = '/api/super-admin/my-code';
+  static const generateCode = '/api/super-admin/generate-code';
+  static const addAgencyManual = '/api/super-admin/add-agency-manual';
 
   /// GET /api/super-admin/dashboard
   static const String dashboard = '/api/super-admin/dashboard';

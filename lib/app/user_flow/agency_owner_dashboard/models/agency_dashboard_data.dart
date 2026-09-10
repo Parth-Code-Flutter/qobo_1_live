@@ -86,9 +86,7 @@ class AgencyDashboardData {
       summary['hostRecruitmentEarningsCoins'] ??
           summary['host_recruitment_earnings_coins'],
     );
-    final resolvedHostRecruitmentCoins = hostRecruitmentCoins > 0
-        ? hostRecruitmentCoins
-        : usdToCoins(activeHosts);
+    final resolvedHostRecruitmentCoins = hostRecruitmentCoins;
     final hostRecruitmentDollars = _toDouble(
       summary['hostRecruitmentEarningsDollars'] ??
           summary['host_recruitment_earnings_dollars'],

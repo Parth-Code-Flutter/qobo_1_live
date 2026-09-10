@@ -1,3 +1,4 @@
+import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
@@ -56,6 +57,18 @@ class AgencyOwnerStatusView extends GetView<AgencyOwnerStatusController> {
                               ),
                       ),
                       Spacing.v10,
+                      Obx(
+                        () =>
+                            controller.status.value.toLowerCase() == 'rejected'
+                            ? TextButton(
+                                onPressed: () =>
+                                    Get.offNamed(Routes.AGENCY_OWNER_REGISTER),
+                                child: const Text(
+                                  'Edit details and apply again',
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
                       Obx(() {
                         final note = controller.apiNote.value;
                         if (note.isEmpty) return const SizedBox.shrink();
@@ -98,8 +111,11 @@ class AgencyOwnerStatusView extends GetView<AgencyOwnerStatusController> {
         children: [
           IconButton(
             onPressed: Get.back,
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                color: kColorWhite, size: 18),
+            icon: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: kColorWhite,
+              size: 18,
+            ),
           ),
           const Expanded(
             child: SemiBoldText(
@@ -139,7 +155,7 @@ class AgencyOwnerStatusView extends GetView<AgencyOwnerStatusController> {
         Spacing.v8,
         const AppText(
           text:
-              'Checks your logged-in account via GET /api/agency/dashboard. Register with POST /api/agency/register when you have no agency yet.',
+              'Your application is reviewed by the Super Admin whose code you entered. Sign in again after approval to access your dashboard.',
           fontSize: TextStyles.k14FontSize,
           color: Color(0x99FFFFFF),
           align: TextAlign.center,
@@ -217,9 +233,7 @@ class AgencyOwnerStatusView extends GetView<AgencyOwnerStatusController> {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: selected
-              ? kColorPrimary
-              : kColorWhite.withValues(alpha: 0.08),
+          color: selected ? kColorPrimary : kColorWhite.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: selected

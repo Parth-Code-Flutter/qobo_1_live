@@ -169,11 +169,11 @@ void main() {
       expect(stats.agencyRecruitmentEarningsDollars, 4);
     });
 
-    test('falls back agency recruitment earnings from active agencies', () {
+    test('does not invent wallet rewards from active agencies', () {
       final stats = SuperAdminStats.fromJson({'activeAgencies': 7});
 
-      expect(stats.agencyRecruitmentEarningsCoins, 70000);
-      expect(stats.agencyRecruitmentEarningsDollars, 7);
+      expect(stats.agencyRecruitmentEarningsCoins, 0);
+      expect(stats.agencyRecruitmentEarningsDollars, 0);
     });
   });
 }

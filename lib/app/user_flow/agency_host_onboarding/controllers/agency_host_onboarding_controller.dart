@@ -1,3 +1,4 @@
+import 'package:qobo_one_live/utils/roles/recruitment_code_verification.dart';
 import 'dart:async';
 
 import 'dart:io';
@@ -24,7 +25,9 @@ import '../widgets/agency_host_category_picker.dart';
 class AgencyHostOnboardingController extends GetxController
     with CountryStateSelectionMixin {
   final formKey = GlobalKey<FormState>();
-  final AgencyRepo _agencyRepo = AgencyRepo();
+  AgencyHostOnboardingController({AgencyRepo? agencyRepo})
+    : _agencyRepo = agencyRepo ?? AgencyRepo();
+  final AgencyRepo _agencyRepo;
 
   final hostNameController = TextEditingController();
   final birthdayController = TextEditingController();
@@ -34,6 +37,11 @@ class AgencyHostOnboardingController extends GetxController
   final cityController = TextEditingController();
   final addressController = TextEditingController();
   final agencyCodeController = TextEditingController();
+
+  late final codeVerification = RecruitmentCodeVerification(
+    agencyCodeController,
+    _agencyRepo.verifyAgencyCode,
+  );
 
   final selectedBirthday = Rxn<DateTime>();
   final selectedType = Rxn<AgencyHostType>();
@@ -76,6 +84,9 @@ class AgencyHostOnboardingController extends GetxController
       }
     }
 
+    // A normal applicant must enter their sponsor's code, never inherit an
+    // agency left in the device cache by an earlier account.
+    if (!isFromAgencyOwner.value) return;
     isAgencyCodePrefilling.value = true;
     try {
       if (!Get.isRegistered<AgencySessionController>()) {
@@ -95,6 +106,7 @@ class AgencyHostOnboardingController extends GetxController
 
   @override
   void onClose() {
+    codeVerification.dispose();
     hostNameController.dispose();
     birthdayController.dispose();
     hostIdController.dispose();
@@ -261,6 +273,7 @@ class AgencyHostOnboardingController extends GetxController
   }
 
   Future<void> onSubmitPressed(BuildContext context) async {
+    if (isSubmitLoading.value) return;
     FocusScope.of(context).unfocus();
     final isFormValid = formKey.currentState?.validate() ?? false;
     final typeError = validateType();
@@ -300,85 +313,107 @@ class AgencyHostOnboardingController extends GetxController
     }
 
     isSubmitLoading.value = true;
-    final whatsapp = whatsAppController.text.trim().replaceAll(
-      RegExp(r'\D'),
-      '',
-    );
-    whatsAppController.text = whatsapp;
-    final country = selectedCountry.value!;
-    final state = selectedState.value!;
-    final response = await _agencyRepo.hostOnboarding(
-      agencyCode: agencyCodeController.text.trim(),
-      hostName: hostNameController.text.trim(),
-      gmail: gmailController.text.trim(),
-      whatsapp: whatsapp,
-      type: selectedType.value!.apiValue,
-      category: selectedInterest.value!.apiValue,
-      countryRegion: country.name,
-      state: state.name,
-      countryId: country.id,
-      stateId: state.id,
-      city: cityController.text.trim(),
-      address: addressController.text.trim(),
-      hostRealPhoto: hostPhoto.value!,
-      docPhotoFront: docPhotoFront.value!,
-      docPhotoBack: docPhotoBack.value!,
-      dob: formatAgencyHostDob(birthday),
-      idNo: hostIdController.text.trim(),
-      isShowLoader: false,
-    );
-    isSubmitLoading.value = false;
-
-    if (!context.mounted) return;
-
-    if (isAgencyApiSuccess(response)) {
-      final appData = response?['data'];
-      final appId = appData is Map<String, dynamic>
-          ? parseHostApplicationId(appData)
-          : appData is Map
-          ? parseHostApplicationId(Map<String, dynamic>.from(appData))
-          : null;
-      if (appId == null) {
-        AppToast.showError(
-          context,
-          'Application submitted but no application ID was returned.',
-        );
+    try {
+      if (!await codeVerification.verify()) {
+        if (context.mounted) {
+          AppToast.showError(context, codeVerification.message.value);
+        }
         return;
       }
-      final fromSuperAdmin = isFromSuperAdmin.value;
-      final fromAgencyOwner = isFromAgencyOwner.value;
-      await CommonGiffyDialog.showSuccess(
-        context,
-        title: 'Application Submitted',
-        subtitle: fromSuperAdmin || fromAgencyOwner
-            ? (agencyApiMessage(response) ??
-                  'Host application submitted and is ready for agency review.')
-            : (agencyApiMessage(response) ??
-                  'Your host application has been submitted successfully!'),
-        buttonText: fromSuperAdmin || fromAgencyOwner ? 'Done' : 'Check Status',
-        gifAssetPath: kGifCongratulation,
-        onPressed: () {
-          Get.back<void>();
-          if (fromSuperAdmin) {
-            // Back to the super admin shell; the Host tab refreshes there.
-            Get.back<void>();
-            return;
-          }
-          if (fromAgencyOwner) {
-            Get.back(result: true);
-            return;
-          }
-          Get.offNamed(
-            Routes.AGENCY_HOST_STATUS,
-            arguments: {'application_id': appId, 'phone': whatsapp},
-          );
-        },
+      if (!context.mounted) return;
+      final verifiedAgencyCode = codeVerification.verifiedCode;
+      if (verifiedAgencyCode.isEmpty) return;
+      final whatsapp = whatsAppController.text.trim().replaceAll(
+        RegExp(r'\D'),
+        '',
       );
-    } else {
-      final msg =
-          agencyApiMessage(response) ??
-          'Failed to submit host onboarding application';
-      AppToast.showError(context, msg);
+      whatsAppController.text = whatsapp;
+      final country = selectedCountry.value!;
+      final state = selectedState.value!;
+      final response = await _agencyRepo.hostOnboarding(
+        agencyCode: verifiedAgencyCode,
+        hostName: hostNameController.text.trim(),
+        gmail: gmailController.text.trim(),
+        whatsapp: whatsapp,
+        type: selectedType.value!.apiValue,
+        category: selectedInterest.value!.apiValue,
+        countryRegion: country.name,
+        state: state.name,
+        countryId: country.id,
+        stateId: state.id,
+        city: cityController.text.trim(),
+        address: addressController.text.trim(),
+        hostRealPhoto: hostPhoto.value!,
+        docPhotoFront: docPhotoFront.value!,
+        docPhotoBack: docPhotoBack.value!,
+        dob: formatAgencyHostDob(birthday),
+        idNo: hostIdController.text.trim(),
+        isShowLoader: false,
+      );
+      isSubmitLoading.value = false;
+
+      if (!context.mounted) return;
+
+      if (isAgencyApiSuccess(response)) {
+        final appData = response?['data'];
+        final appId = appData is Map<String, dynamic>
+            ? parseHostApplicationId(appData)
+            : appData is Map
+            ? parseHostApplicationId(Map<String, dynamic>.from(appData))
+            : null;
+        if (appId == null) {
+          AppToast.showError(
+            context,
+            'Application submitted but no application ID was returned.',
+          );
+          return;
+        }
+        final fromSuperAdmin = isFromSuperAdmin.value;
+        final fromAgencyOwner = isFromAgencyOwner.value;
+        await CommonGiffyDialog.showSuccess(
+          context,
+          title: 'Application Submitted',
+          subtitle: fromSuperAdmin || fromAgencyOwner
+              ? (agencyApiMessage(response) ??
+                    'Host application submitted and is ready for agency review.')
+              : (agencyApiMessage(response) ??
+                    'Your host application has been submitted successfully!'),
+          buttonText: fromSuperAdmin || fromAgencyOwner
+              ? 'Done'
+              : 'Check Status',
+          gifAssetPath: kGifCongratulation,
+          onPressed: () {
+            Get.back<void>();
+            if (fromSuperAdmin) {
+              // Back to the super admin shell; the Host tab refreshes there.
+              Get.back<void>();
+              return;
+            }
+            if (fromAgencyOwner) {
+              Get.back(result: true);
+              return;
+            }
+            Get.offNamed(
+              Routes.AGENCY_HOST_STATUS,
+              arguments: {'application_id': appId, 'phone': whatsapp},
+            );
+          },
+        );
+      } else {
+        final msg =
+            agencyApiMessage(response) ??
+            'Failed to submit host onboarding application';
+        AppToast.showError(context, msg);
+      }
+    } catch (_) {
+      if (context.mounted) {
+        AppToast.showError(
+          context,
+          'Unable to submit application. Please try again.',
+        );
+      }
+    } finally {
+      isSubmitLoading.value = false;
     }
   }
 }

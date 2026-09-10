@@ -106,7 +106,7 @@ class AgencyOwnerStatusController extends GetxController {
     try {
       isLoading.value = true;
       hasSearched.value = true;
-      apiNote.value = 'Checked via GET /api/agency/dashboard';
+      apiNote.value = 'Latest application status';
 
       final response = await _agencyRepo.getAgencyDashboard(
         isShowLoader: false,
@@ -120,6 +120,14 @@ class AgencyOwnerStatusController extends GetxController {
         await _session.applyDashboardResponse(parsed);
         if (parsed.isApproved) {
           _applyApprovedFromSession(parsed);
+          return;
+        }
+        if (parsed.applicationState == AgencyOwnerApplicationState.rejected) {
+          status.value = 'rejected';
+          agencyName.value = parsed.agencyName;
+          reason.value =
+              agencyApiMessage(response) ??
+              'Your agency application was rejected.';
           return;
         }
         if (parsed.isPending) {
@@ -161,7 +169,8 @@ class AgencyOwnerStatusController extends GetxController {
   }
 
   void _applyPendingOrNotFound(String message) {
-    if (_session.applicationState.value == AgencyOwnerApplicationState.pending) {
+    if (_session.applicationState.value ==
+        AgencyOwnerApplicationState.pending) {
       status.value = 'pending';
       applicationId.value = _session.applicationId.value;
       agencyName.value = _session.appliedAgencyName.value;

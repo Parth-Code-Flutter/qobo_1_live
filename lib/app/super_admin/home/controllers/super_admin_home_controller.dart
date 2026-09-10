@@ -29,8 +29,8 @@ class SuperAdminHomeController extends GetxController {
   final processingHostId = ''.obs;
   final agencyStatusFilter = 'pending'.obs;
   final hostStatusFilter = ''.obs;
-  final generatedAgencyLink = ''.obs;
-  final isGeneratingAgencyLink = false.obs;
+  final superAdminCode = ''.obs;
+  final isSharingSuperAdminCode = false.obs;
 
   @override
   void onInit() {
@@ -123,10 +123,7 @@ class SuperAdminHomeController extends GetxController {
   /// Opens agency detail by id (dashboard top-agency rows, deep links).
   void openAgencyById(String id) {
     if (id.isEmpty) return;
-    Get.toNamed(
-      Routes.SUPER_ADMIN_AGENCY_DETAIL,
-      arguments: {'agencyId': id},
-    );
+    Get.toNamed(Routes.SUPER_ADMIN_AGENCY_DETAIL, arguments: {'agencyId': id});
   }
 
   /// Opens host detail screen (`GET /hosts/:id`).
@@ -172,7 +169,7 @@ class SuperAdminHomeController extends GetxController {
     SuperAdminAgencyItem agency,
     double rate,
   ) async {
-    if (agency.id.isEmpty) return;
+    if (agency.id.isEmpty || processingAgencyId.value.isNotEmpty) return;
     final context = Get.context;
     processingAgencyId.value = agency.id;
     try {
@@ -181,7 +178,7 @@ class SuperAdminHomeController extends GetxController {
         commissionRate: rate,
       );
       if (isAgencyApiSuccess(response)) {
-        if (context != null) {
+        if (context != null && context.mounted) {
           AppToast.showSuccess(
             context,
             agencyApiMessage(response) ?? 'Commission updated.',
@@ -190,7 +187,7 @@ class SuperAdminHomeController extends GetxController {
         await loadAgencies(showLoader: false);
         return;
       }
-      if (context != null) {
+      if (context != null && context.mounted) {
         AppToast.showError(
           context,
           agencyApiMessage(response) ?? 'Could not update commission.',
@@ -218,7 +215,7 @@ class SuperAdminHomeController extends GetxController {
         reason: reason,
       );
       if (isAgencyApiSuccess(response)) {
-        if (context != null) {
+        if (context != null && context.mounted) {
           AppToast.showSuccess(
             context,
             agencyApiMessage(response) ?? 'Host marked $status.',
@@ -228,7 +225,7 @@ class SuperAdminHomeController extends GetxController {
         await loadDashboardStats(showLoader: false);
         return;
       }
-      if (context != null) {
+      if (context != null && context.mounted) {
         AppToast.showError(
           context,
           agencyApiMessage(response) ?? 'Could not update host.',
@@ -239,23 +236,11 @@ class SuperAdminHomeController extends GetxController {
     }
   }
 
-  /// FAB → agency creation form (`POST /api/agency/register-public`), with
-  /// invitedBy prefilled from the super admin account. Refreshes on return.
+  /// Manual creation uses the authenticated super admin endpoint.
   Future<void> openCreateAgency() async {
-    var invitedBy = '';
-    if (Get.isRegistered<UserSessionController>()) {
-      final session = Get.find<UserSessionController>();
-      await session.loadFromStorage();
-      invitedBy = session.email.trim().isNotEmpty
-          ? session.email.trim()
-          : session.userId.trim();
-    }
     await Get.toNamed(
       Routes.AGENCY_OWNER_REGISTER,
-      arguments: {
-        'invitedBy': invitedBy.isEmpty ? 'super_admin' : invitedBy,
-        'fromSuperAdmin': true,
-      },
+      arguments: {'fromSuperAdmin': true},
     );
     await loadAgencies(showLoader: false);
     await loadDashboardStats(showLoader: false);
@@ -274,49 +259,58 @@ class SuperAdminHomeController extends GetxController {
   //   await loadDashboardStats(showLoader: false);
   // }
 
-  Future<void> generateAgencyLink() async {
-    if (isGeneratingAgencyLink.value) return;
-    isGeneratingAgencyLink.value = true;
+  Future<void> shareSuperAdminCode() async {
+    if (isSharingSuperAdminCode.value) return;
+    isSharingSuperAdminCode.value = true;
     try {
-      final response = await _repo.generateAgencyLink();
+      var response = await _repo.getMyCode();
+      final codeData = response?['data'];
+      if (response?['codeNotFound'] == true ||
+          (isAgencyApiSuccess(response) &&
+              (codeData is! Map ||
+                  (codeData['code']?.toString().trim() ?? '').isEmpty))) {
+        response = await _repo.generateCode();
+      }
       final data = response?['data'];
       if (!isAgencyApiSuccess(response) || data is! Map) {
         final ctx = Get.context;
-        if (ctx != null) {
+        if (ctx != null && ctx.mounted) {
           AppToast.showError(
             ctx,
-            agencyApiMessage(response) ?? 'Could not generate link.',
+            agencyApiMessage(response) ??
+                'Could not retrieve Super Admin code.',
           );
         }
         return;
       }
 
-      final link = data['link']?.toString().trim() ?? '';
-      final text = (data['whatsappText']?.toString().trim().isNotEmpty == true)
-          ? data['whatsappText'].toString().trim()
-          : (link.isNotEmpty
-                ? 'Join as an agency on Qobo One Live: $link'
-                : '');
-      if (text.isEmpty) {
+      final code = data['code']?.toString().trim() ?? '';
+      if (code.isEmpty) {
         final ctx = Get.context;
-        if (ctx != null) {
-          AppToast.showError(ctx, 'Invite link is empty.');
+        if (ctx != null && ctx.mounted) {
+          AppToast.showError(ctx, 'Super Admin code is empty. Try again.');
         }
         return;
       }
-
-      generatedAgencyLink.value = link;
+      final text =
+          'Apply for an agency in Qobo1live using my Super Admin code: $code';
+      superAdminCode.value = code;
       await Clipboard.setData(ClipboardData(text: text));
       // Native share sheet (WhatsApp, Messages, Mail, etc.).
       await SharePlus.instance.share(
-        ShareParams(text: text, subject: 'Agency invite'),
+        ShareParams(text: text, subject: 'Super Admin code'),
       );
       final ctx = Get.context;
-      if (ctx != null) {
-        AppToast.showSuccess(ctx, 'Invite ready to share.');
+      if (ctx != null && ctx.mounted) {
+        AppToast.showSuccess(ctx, 'Code ready to share.');
+      }
+    } catch (_) {
+      final ctx = Get.context;
+      if (ctx != null && ctx.mounted) {
+        AppToast.showError(ctx, 'Could not share code. Please try again.');
       }
     } finally {
-      isGeneratingAgencyLink.value = false;
+      isSharingSuperAdminCode.value = false;
     }
   }
 
@@ -325,7 +319,7 @@ class SuperAdminHomeController extends GetxController {
     String status, {
     String? feedback,
   }) async {
-    if (agency.id.isEmpty) return;
+    if (agency.id.isEmpty || processingAgencyId.value.isNotEmpty) return;
     final context = Get.context;
     processingAgencyId.value = agency.id;
     try {
@@ -335,7 +329,7 @@ class SuperAdminHomeController extends GetxController {
         feedback: feedback,
       );
       if (isAgencyApiSuccess(response)) {
-        if (context != null) {
+        if (context != null && context.mounted) {
           AppToast.showSuccess(
             context,
             agencyApiMessage(response) ?? 'Agency $status.',
@@ -343,9 +337,12 @@ class SuperAdminHomeController extends GetxController {
         }
         await loadAgencies(showLoader: false);
         await loadDashboardStats(showLoader: false);
+        if (Get.isRegistered<UserSessionController>()) {
+          await Get.find<UserSessionController>().refreshProfileFromApi();
+        }
         return;
       }
-      if (context != null) {
+      if (context != null && context.mounted) {
         AppToast.showError(
           context,
           agencyApiMessage(response) ?? 'Could not update agency.',

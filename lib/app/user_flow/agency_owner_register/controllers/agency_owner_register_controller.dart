@@ -1,4 +1,7 @@
 import 'dart:io';
+import 'package:qobo_one_live/repo/super_admin/super_admin_repo.dart';
+import 'package:qobo_one_live/services/user_session_controller.dart';
+import 'package:qobo_one_live/utils/roles/recruitment_code_verification.dart';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -20,7 +23,19 @@ import 'package:qobo_one_live/utils/validations/text_field_validations.dart';
 class AgencyOwnerRegisterController extends GetxController
     with CountryStateSelectionMixin {
   final formKey = GlobalKey<FormState>();
-  final AgencyRepo _agencyRepo = AgencyRepo();
+  AgencyOwnerRegisterController({
+    AgencyRepo? agencyRepo,
+    SuperAdminRepo? superAdminRepo,
+  }) : _agencyRepo = agencyRepo ?? AgencyRepo(),
+       _superAdminRepo = superAdminRepo ?? SuperAdminRepo();
+  final AgencyRepo _agencyRepo;
+  final SuperAdminRepo _superAdminRepo;
+  final superAdminCodeController = TextEditingController();
+  final commissionController = TextEditingController(text: '10');
+  late final codeVerification = RecruitmentCodeVerification(
+    superAdminCodeController,
+    _agencyRepo.verifySuperAdminCode,
+  );
 
   final agencyNameController = TextEditingController();
   final ownerNameController = TextEditingController();
@@ -53,12 +68,24 @@ class AgencyOwnerRegisterController extends GetxController
         Get.parameters['invitedBy'] ?? Get.parameters['invited_by'];
     final value = (argInvitedBy ?? paramInvitedBy ?? '').trim();
     invitedBy.value = value;
-    isPublicInvite.value = value.isNotEmpty;
+    superAdminCodeController.text = value;
+    isPublicInvite.value = true;
     isFromSuperAdmin.value = args is Map && args['fromSuperAdmin'] == true;
+    isPublicInvite.value = !isFromSuperAdmin.value;
+    if (!isFromSuperAdmin.value && Get.isRegistered<UserSessionController>()) {
+      final user = Get.find<UserSessionController>();
+      ownerNameController.text = user.userName;
+      emailController.text = user.email;
+      final digits = user.phone.replaceAll(RegExp(r'\D'), '');
+      if (digits.length == 10) whatsappController.text = digits;
+    }
   }
 
   @override
   void onClose() {
+    codeVerification.dispose();
+    superAdminCodeController.dispose();
+    commissionController.dispose();
     agencyNameController.dispose();
     ownerNameController.dispose();
     whatsappController.dispose();
@@ -100,11 +127,7 @@ class AgencyOwnerRegisterController extends GetxController
   }
 
   String? validateOwnerName(BuildContext context, String? value) {
-    return Validate.nameValidation(
-      context,
-      value ?? '',
-      label: 'Owner name',
-    );
+    return Validate.nameValidation(context, value ?? '', label: 'Owner name');
   }
 
   String? validateWhatsApp(BuildContext context, String? value) {
@@ -129,12 +152,22 @@ class AgencyOwnerRegisterController extends GetxController
   }
 
   Future<void> onSubmitPressed(BuildContext context) async {
+    if (isSubmitLoading.value) return;
     FocusScope.of(context).unfocus();
 
     final isFormValid = formKey.currentState?.validate() ?? false;
     if (!isFormValid) return;
 
     if (isPublicInvite.value) {
+      if (agencyLogo.value == null ||
+          docPhotoFront.value == null ||
+          docPhotoBack.value == null) {
+        AppToast.showError(
+          context,
+          'Please upload the agency logo and both document photos.',
+        );
+        return;
+      }
       final countryError = validateCountrySelection();
       if (countryError != null) {
         AppToast.showError(context, countryError);
@@ -161,19 +194,36 @@ class AgencyOwnerRegisterController extends GetxController
     final session = Get.find<AgencySessionController>();
 
     try {
-      final response = isPublicInvite.value
-          ? await _submitPublicAgencyRegistration(context)
-          : await _agencyRepo.registerAgency(
-              agencyName: agencyName,
+      if (!isFromSuperAdmin.value) {
+        if (!await codeVerification.verify()) {
+          if (context.mounted) {
+            AppToast.showError(context, codeVerification.message.value);
+          }
+          return;
+        }
+        if (!context.mounted) return;
+        invitedBy.value = codeVerification.verifiedCode;
+        if (invitedBy.value.isEmpty) return;
+      }
+      final response = isFromSuperAdmin.value
+          ? await _superAdminRepo.addAgencyManual(
+              name: agencyName,
               ownerName: ownerName,
-              ownerWhatsapp: phone,
-              isShowLoader: false,
-            );
+              email: emailController.text,
+              phone: '${countryCodeController.text.trim()}$phone',
+              commissionRate:
+                  double.parse(commissionController.text.trim()) / 100,
+            )
+          : await _submitPublicAgencyRegistration(context);
 
       final data = response?['data'];
       if (isAgencyApiSuccess(response) && data is Map) {
         final map = Map<String, dynamic>.from(data);
         final fromSuperAdmin = isFromSuperAdmin.value;
+
+        if (fromSuperAdmin && Get.isRegistered<UserSessionController>()) {
+          await Get.find<UserSessionController>().refreshProfileFromApi();
+        }
 
         // Super admin creates agencies for others — do not overwrite their session.
         if (!fromSuperAdmin) {
@@ -197,7 +247,7 @@ class AgencyOwnerRegisterController extends GetxController
               : 'Agency Registered',
           subtitle: fromSuperAdmin
               ? (response?['message']?.toString() ??
-                    'Agency "$agencyName" was created and is pending in the Agency tab. Approve it to activate the owner account.')
+                    'Agency "$agencyName" was added successfully.')
               : publicInvite
               ? (response?['message']?.toString() ??
                     'Your agency application is pending super admin approval. Please login after approval.')
@@ -209,7 +259,7 @@ class AgencyOwnerRegisterController extends GetxController
           buttonText: fromSuperAdmin
               ? 'Back to Agencies'
               : publicInvite
-              ? 'Back to Login'
+              ? 'Check Status'
               : 'Open Dashboard',
           gifAssetPath: kGifCongratulation,
           onPressed: () {
@@ -219,7 +269,14 @@ class AgencyOwnerRegisterController extends GetxController
               return;
             }
             Get.offNamed(
-              publicInvite ? Routes.AUTH_LOGIN : Routes.AGENCY_OWNER,
+              publicInvite ? Routes.AGENCY_OWNER_STATUS : Routes.AGENCY_OWNER,
+              arguments: publicInvite
+                  ? {
+                      'application_id': session.applicationId.value,
+                      'phone': session.appliedPhone.value,
+                      'autoFetch': true,
+                    }
+                  : null,
             );
           },
         );
@@ -238,6 +295,8 @@ class AgencyOwnerRegisterController extends GetxController
       if (context.mounted) {
         AppToast.showError(context, 'Failed to register agency. Try again.');
       }
+    } finally {
+      isSubmitLoading.value = false;
     }
   }
 
@@ -287,7 +346,9 @@ class AgencyOwnerRegisterController extends GetxController
     }
     if (Get.isRegistered<SuperAdminHomeController>()) {
       Get.find<SuperAdminHomeController>().loadAgencies(showLoader: false);
-      Get.find<SuperAdminHomeController>().loadDashboardStats(showLoader: false);
+      Get.find<SuperAdminHomeController>().loadDashboardStats(
+        showLoader: false,
+      );
     }
   }
 }

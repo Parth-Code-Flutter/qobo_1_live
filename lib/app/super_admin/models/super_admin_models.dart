@@ -43,9 +43,7 @@ class SuperAdminStats {
       json['agencyRecruitmentEarningsCoins'] ??
           json['agency_recruitment_earnings_coins'],
     );
-    final resolvedAgencyRecruitmentCoins = agencyRecruitmentCoins > 0
-        ? agencyRecruitmentCoins
-        : usdToCoins(activeAgencies);
+    final resolvedAgencyRecruitmentCoins = agencyRecruitmentCoins;
     final agencyRecruitmentDollars = _asDouble(
       json['agencyRecruitmentEarningsDollars'] ??
           json['agency_recruitment_earnings_dollars'],
