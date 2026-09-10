@@ -2,7 +2,7 @@ import 'package:qobo_one_live/routes/app_pages.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+// import 'package:flutter/services.dart'; // Used by the hidden mobile field.
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
@@ -77,8 +77,9 @@ class AgencyHostOnboardingView extends GetView<AgencyHostOnboardingController> {
                                     Spacing.v10,
                                     _hostIdField(context),
                                     Spacing.v10,
-                                    _whatsAppField(context),
-                                    Spacing.v10,
+                                    // Mobile input temporarily hidden.
+                                    // _whatsAppField(context),
+                                    // Spacing.v10,
                                     // Email input temporarily hidden.
                                     // _gmailField(context),
                                     // Spacing.v10,
@@ -291,26 +292,26 @@ class AgencyHostOnboardingView extends GetView<AgencyHostOnboardingController> {
     );
   }
 
-  Widget _whatsAppField(BuildContext context) {
-    return _labeledField(
-      label: 'WhatsApp number',
-      child: AppTextField(
-        controller: controller.whatsAppController,
-        validator: (v) => controller.validateWhatsApp(context, v),
-        hintText: '10-digit mobile number',
-        borderColor: kColorHint,
-        textInputType: TextInputType.number,
-        textInputAction: TextInputAction.next,
-        maxLength: 10,
-        showCounter: false,
-        inputFormatters: [
-          FilteringTextInputFormatter.digitsOnly,
-          LengthLimitingTextInputFormatter(10),
-        ],
-        prefix: _fieldIcon(Icons.phone_android_outlined),
-      ),
-    );
-  }
+//   Widget _whatsAppField(BuildContext context) {
+//     return _labeledField(
+//       label: 'WhatsApp number',
+//       child: AppTextField(
+//         controller: controller.whatsAppController,
+//         validator: (v) => controller.validateWhatsApp(context, v),
+//         hintText: '10-digit mobile number',
+//         borderColor: kColorHint,
+//         textInputType: TextInputType.number,
+//         textInputAction: TextInputAction.next,
+//         maxLength: 10,
+//         showCounter: false,
+//         inputFormatters: [
+//           FilteringTextInputFormatter.digitsOnly,
+//           LengthLimitingTextInputFormatter(10),
+//         ],
+//         prefix: _fieldIcon(Icons.phone_android_outlined),
+//       ),
+//     );
+//   }
 
   // Widget _gmailField(BuildContext context) {
   //   return _labeledField(

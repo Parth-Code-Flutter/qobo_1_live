@@ -115,11 +115,19 @@ void main() {
       expect(find.text('Pending Host'), findsOneWidget);
       expect(find.text('Accept'), findsOneWidget);
       expect(find.text('Reject'), findsOneWidget);
-      await tester.tap(find.text('Approved / Rejected'));
+      await tester.tap(find.text('Reviewed'));
       await tester.pumpAndSettle();
       expect(find.text('Approved Host'), findsOneWidget);
       expect(find.text('Rejected Host'), findsOneWidget);
       expect(find.text('Accept'), findsNothing);
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Approved'));
+      await tester.pumpAndSettle();
+      expect(find.text('Approved Host'), findsOneWidget);
+      expect(find.text('Rejected Host'), findsNothing);
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Rejected'));
+      await tester.pumpAndSettle();
+      expect(find.text('Approved Host'), findsNothing);
+      expect(find.text('Rejected Host'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

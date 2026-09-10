@@ -52,34 +52,22 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
         child: SafeArea(
           bottom: !embeddedInBottomNav,
           child: Obx(() {
-            if (controller.isLoading.value) {
-              return const Center(
-                child: CircularProgressIndicator(color: kColorPrimary),
-              );
-            }
             final bottomPad = embeddedInBottomNav
                 ? MediaQuery.paddingOf(context).bottom + _bottomNavClearance
                 : MediaQuery.paddingOf(context).bottom + 16;
             return Column(
               children: [
                 _topBar(),
+                if (controller.isLoading.value)
+                  const LinearProgressIndicator(
+                    minHeight: 2,
+                    color: AdminAgencyUi.gold,
+                    backgroundColor: Colors.transparent,
+                  ),
                 // Tree layout temporarily hidden.
                 // Expanded(child: _mapStage(context)),
                 // if (controller.hasOverflowHosts) _overflowHostStrip(context),
-                const TabBar(
-                  labelStyle: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  labelPadding: EdgeInsets.symmetric(horizontal: 6),
-                  labelColor: AdminAgencyUi.gold,
-                  unselectedLabelColor: AdminAgencyUi.textMuted,
-                  indicatorColor: AdminAgencyUi.gold,
-                  tabs: [
-                    Tab(text: 'Pending Approval'),
-                    Tab(text: 'Approved / Rejected'),
-                  ],
-                ),
+                _hostTabs(),
                 Expanded(
                   child: TabBarView(
                     children: [
@@ -108,6 +96,64 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
       ),
     );
   }
+
+  Widget _hostTabs() {
+    final pending = controller.hostList.where((host) => host.isPending).length;
+    final reviewed = controller.hostList
+        .where((host) => host.isActive || host.isRejected)
+        .length;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+      child: Container(
+        padding: const EdgeInsets.all(5),
+        decoration: BoxDecoration(
+          color: const Color(0xFF160D29),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        ),
+        child: TabBar(
+          dividerColor: Colors.transparent,
+          indicatorSize: TabBarIndicatorSize.tab,
+          indicator: BoxDecoration(
+            gradient: AdminAgencyUi.goldButtonGradient,
+            borderRadius: BorderRadius.circular(13),
+          ),
+          labelColor: AdminAgencyUi.ctaInk,
+          unselectedLabelColor: const Color(0xFFCCC3DC),
+          labelStyle: const TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 13,
+          ),
+          labelPadding: const EdgeInsets.symmetric(horizontal: 6),
+          tabs: [_hostTab('Pending', pending), _hostTab('Reviewed', reviewed)],
+        ),
+      ),
+    );
+  }
+
+  Widget _hostTab(String label, int count) => Tab(
+    height: 44,
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Flexible(
+          child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.20),
+            borderRadius: BorderRadius.circular(7),
+          ),
+          child: Text(
+            count > 999 ? '999+' : '$count',
+            style: const TextStyle(fontSize: 11),
+          ),
+        ),
+      ],
+    ),
+  );
 
   Widget _topBar() {
     return Padding(
@@ -142,8 +188,9 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
                   ],
                 ),
               ),
-              Spacing.h8,
-              _addHostButton(),
+              // Manual host creation temporarily hidden.
+              // Spacing.h8,
+              // _addHostButton(),
             ],
           ),
           Spacing.v12,
@@ -172,6 +219,7 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
                 Spacing.h10,
                 Expanded(
                   child: TextField(
+                    controller: controller.searchController,
                     onChanged: (value) => controller.searchQuery.value = value,
                     textInputAction: TextInputAction.search,
                     style: TextStyles.kRegularPoppins(
@@ -179,7 +227,7 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
                       colors: kColorWhite,
                     ),
                     decoration: InputDecoration(
-                      hintText: 'Search hosts',
+                      hintText: 'Search by host name or ID',
                       isDense: true,
                       border: InputBorder.none,
                       hintStyle: TextStyles.kRegularPoppins(
@@ -197,46 +245,46 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
     );
   }
 
-  Widget _addHostButton() {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: controller.openAddHost,
-        borderRadius: BorderRadius.circular(14),
-        child: Ink(
-          height: 40,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            gradient: AdminAgencyUi.goldButtonGradient,
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(
-                color: AdminAgencyUi.gold.withValues(alpha: 0.34),
-                blurRadius: 10,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.person_add_alt_1_rounded,
-                color: AdminAgencyUi.ctaInk,
-                size: 17,
-              ),
-              SizedBox(width: 6),
-              SemiBoldText(
-                text: 'Add Host',
-                fontSize: TextStyles.k10FontSize,
-                color: AdminAgencyUi.ctaInk,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  //   Widget _addHostButton() {
+  //     return Material(
+  //       color: Colors.transparent,
+  //       child: InkWell(
+  //         onTap: controller.openAddHost,
+  //         borderRadius: BorderRadius.circular(14),
+  //         child: Ink(
+  //           height: 40,
+  //           padding: const EdgeInsets.symmetric(horizontal: 12),
+  //           decoration: BoxDecoration(
+  //             gradient: AdminAgencyUi.goldButtonGradient,
+  //             borderRadius: BorderRadius.circular(14),
+  //             boxShadow: [
+  //               BoxShadow(
+  //                 color: AdminAgencyUi.gold.withValues(alpha: 0.34),
+  //                 blurRadius: 10,
+  //                 offset: const Offset(0, 5),
+  //               ),
+  //             ],
+  //           ),
+  //           child: const Row(
+  //             mainAxisSize: MainAxisSize.min,
+  //             children: [
+  //               Icon(
+  //                 Icons.person_add_alt_1_rounded,
+  //                 color: AdminAgencyUi.ctaInk,
+  //                 size: 17,
+  //               ),
+  //               SizedBox(width: 6),
+  //               SemiBoldText(
+  //                 text: 'Add Host',
+  //                 fontSize: TextStyles.k10FontSize,
+  //                 color: AdminAgencyUi.ctaInk,
+  //               ),
+  //             ],
+  //           ),
+  //         ),
+  //       ),
+  //     );
+  //   }
 
   Widget _squareButton({
     required IconData icon,
@@ -376,6 +424,81 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
   //     );
   //   }
 
+  Widget _emptyHosts(AgencyHostListController ctrl, {required bool pending}) {
+    final searching = ctrl.searchQuery.value.trim().isNotEmpty;
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.045),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: AdminAgencyUi.violet.withValues(alpha: 0.18),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              searching
+                  ? Icons.search_off_rounded
+                  : pending
+                  ? Icons.task_alt_rounded
+                  : Icons.people_outline_rounded,
+              color: pending ? AdminAgencyUi.gold : AdminAgencyUi.violet,
+              size: 34,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            searching
+                ? 'No matching hosts'
+                : pending
+                ? 'All caught up'
+                : 'No hosts here yet',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            searching
+                ? 'Try a different name or host ID.'
+                : pending
+                ? 'New host applications will appear here when they are ready for your review.'
+                : 'Approved and rejected applications will appear here after review.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AdminAgencyUi.textMuted,
+              fontSize: 13,
+              height: 1.5,
+            ),
+          ),
+          if (searching) ...[
+            const SizedBox(height: 14),
+            TextButton(
+              onPressed: () {
+                ctrl.searchController.clear();
+                ctrl.searchQuery.value = '';
+              },
+              child: const Text(
+                'Clear search',
+                style: TextStyle(color: AdminAgencyUi.gold),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _hostApplicationsList(
     BuildContext context,
     AgencyHostListController ctrl, {
@@ -387,33 +510,114 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
       onRefresh: () => ctrl.refreshList(showLoading: false),
       child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
         itemCount: hosts.length + 1,
         itemBuilder: (context, index) {
           if (index == 0) {
             return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(
+                  pending ? 'Pending approval' : 'Approved & rejected hosts',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  pending
+                      ? 'Review applications and grow your team.'
+                      : 'Your team and past application decisions.',
+                  style: const TextStyle(
+                    color: AdminAgencyUi.textMuted,
+                    fontSize: 12,
+                  ),
+                ),
+                if (!pending) ...[
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      for (final entry in const {
+                        'all': 'All',
+                        'approved': 'Approved',
+                        'rejected': 'Rejected',
+                      }.entries)
+                        ChoiceChip(
+                          label: Text(entry.value),
+                          selected: ctrl.reviewedStatus.value == entry.key,
+                          onSelected: (_) =>
+                              ctrl.reviewedStatus.value = entry.key,
+                          showCheckmark: false,
+                          selectedColor: AdminAgencyUi.violet,
+                          backgroundColor: Colors.white.withValues(alpha: 0.06),
+                          side: BorderSide(
+                            color: Colors.white.withValues(alpha: 0.12),
+                          ),
+                          labelStyle: TextStyle(
+                            color: ctrl.reviewedStatus.value == entry.key
+                                ? Colors.white
+                                : AdminAgencyUi.textMuted,
+                            fontSize: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
                 if (ctrl.loadError.value.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Text(
-                      ctrl.loadError.value,
-                      style: const TextStyle(color: AdminAgencyUi.gold),
+                  Container(
+                    margin: const EdgeInsets.only(top: 14),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AdminAgencyUi.gold.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.info_outline,
+                          color: AdminAgencyUi.gold,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            ctrl.loadError.value,
+                            style: const TextStyle(
+                              color: AdminAgencyUi.gold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Retry',
+                          onPressed: () => ctrl.refreshList(showLoading: false),
+                          icon: const Icon(
+                            Icons.refresh,
+                            color: AdminAgencyUi.gold,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                if (hosts.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 48),
-                    child: Text(
-                      ctrl.searchQuery.value.trim().isNotEmpty
-                          ? 'No matching hosts'
-                          : pending
-                          ? 'No hosts pending approval'
-                          : 'No approved or rejected hosts yet',
-                      style: const TextStyle(color: kColorWhite),
-                      textAlign: TextAlign.center,
+                if (ctrl.isLoading.value && hosts.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: AdminAgencyUi.gold,
+                      ),
                     ),
-                  ),
+                  )
+                else if (hosts.isEmpty)
+                  _emptyHosts(ctrl, pending: pending),
+                const SizedBox(height: 16),
               ],
             );
           }
@@ -423,6 +627,7 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
             child: Obx(
               () => _HostSheetCard(
                 host: host,
+                compact: true,
                 formatCoins: ctrl.formatCoins,
                 highlighted: ctrl.highlightHostId.value == host.id,
                 showReviewActions: host.isPending,
@@ -653,6 +858,7 @@ class _HostSheetCard extends StatelessWidget {
     required this.host,
     required this.formatCoins,
     this.highlighted = false,
+    this.compact = false,
     this.showHostId = false,
     this.showReviewActions = false,
     this.isProcessing = false,
@@ -664,6 +870,7 @@ class _HostSheetCard extends StatelessWidget {
   final AgencyHostModel host;
   final String Function(int) formatCoins;
   final bool highlighted;
+  final bool compact;
   final bool showHostId;
   final bool showReviewActions;
   final bool isProcessing;
@@ -676,12 +883,12 @@ class _HostSheetCard extends StatelessWidget {
     final card = Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF2A1748),
+        color: const Color(0xFF26183B),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: highlighted
               ? AdminAgencyUi.gold.withValues(alpha: 0.75)
-              : _statusColor(host.status).withValues(alpha: 0.34),
+              : Colors.white.withValues(alpha: 0.12),
         ),
         boxShadow: [
           BoxShadow(
@@ -699,7 +906,7 @@ class _HostSheetCard extends StatelessWidget {
               AppUserAvatar(
                 name: host.name,
                 imageUrl: host.avatarUrl,
-                size: 54,
+                size: compact ? 46 : 54,
                 backgroundColor: AdminAgencyUi.violet.withValues(alpha: 0.55),
                 border: Border.all(
                   color: _statusColor(host.status).withValues(alpha: 0.85),
@@ -713,6 +920,8 @@ class _HostSheetCard extends StatelessWidget {
                   children: [
                     SemiBoldText(
                       text: host.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       fontSize: TextStyles.k16FontSize,
                       color: kColorWhite,
                     ),
@@ -720,73 +929,119 @@ class _HostSheetCard extends StatelessWidget {
                     AppText(
                       text: host.category.isNotEmpty
                           ? host.category
-                          : '${host.coinsPerSecond} coins/sec',
+                          : host.isPending
+                          ? 'Host application'
+                          : 'Agency host',
                       fontSize: TextStyles.k12FontSize,
                       color: kColorWhite.withValues(alpha: 0.6),
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: 8),
               _statusBadge(host.status),
             ],
           ),
-          Spacing.v10,
-          Row(
-            children: [
-              Expanded(
-                child: _metricChip(
-                  Icons.payments_rounded,
-                  'Earnings',
-                  formatCoins(host.totalEarnings),
+          if (compact) ...[
+            const SizedBox(height: 14),
+            Divider(height: 1, color: Colors.white.withValues(alpha: 0.08)),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Icon(
+                  host.isPending
+                      ? Icons.schedule_rounded
+                      : Icons.person_outline_rounded,
+                  size: 15,
+                  color: AdminAgencyUi.textMuted,
                 ),
-              ),
-              Spacing.h8,
-              Expanded(
-                child: _metricChip(
-                  kGiftIcon,
-                  'Gifts',
-                  formatCoins(host.totalGifts),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    host.isPending
+                        ? 'Awaiting your review'
+                        : 'View profile & performance',
+                    style: const TextStyle(
+                      color: AdminAgencyUi.textMuted,
+                      fontSize: 11,
+                    ),
+                  ),
                 ),
-              ),
-              Spacing.h8,
-              Expanded(
-                child: _metricChip(
-                  Icons.call_rounded,
-                  'Calls',
-                  formatCoins(host.totalCallingSpend),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: AdminAgencyUi.textMuted,
+                  size: 18,
                 ),
+              ],
+            ),
+            if (host.isRejected && host.reason?.trim().isNotEmpty == true) ...[
+              const SizedBox(height: 8),
+              Text(
+                host.reason!.trim(),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: AdminAgencyUi.rose, fontSize: 12),
               ),
             ],
-          ),
-          Spacing.v6,
-          Row(
-            children: [
-              Icon(
-                Icons.schedule_rounded,
-                size: 14,
-                color: kColorWhite.withValues(alpha: 0.45),
-              ),
-              Spacing.h6,
-              AppText(
-                text: '${host.callingMinutes} min on calls',
-                fontSize: TextStyles.k10FontSize,
-                color: kColorWhite.withValues(alpha: 0.5),
-              ),
-              if (host.lastViewer.isNotEmpty &&
-                  host.lastViewer.toLowerCase() != 'unknown') ...[
-                const Spacer(),
-                Flexible(
-                  child: AppText(
-                    text: 'Last: ${host.lastViewer}',
-                    fontSize: TextStyles.k10FontSize,
-                    color: kColorWhite.withValues(alpha: 0.5),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+          ] else ...[
+            Spacing.v10,
+            Row(
+              children: [
+                Expanded(
+                  child: _metricChip(
+                    Icons.payments_rounded,
+                    'Earnings',
+                    formatCoins(host.totalEarnings),
+                  ),
+                ),
+                Spacing.h8,
+                Expanded(
+                  child: _metricChip(
+                    kGiftIcon,
+                    'Gifts',
+                    formatCoins(host.totalGifts),
+                  ),
+                ),
+                Spacing.h8,
+                Expanded(
+                  child: _metricChip(
+                    Icons.call_rounded,
+                    'Calls',
+                    formatCoins(host.totalCallingSpend),
                   ),
                 ),
               ],
-            ],
-          ),
+            ),
+            Spacing.v6,
+            Row(
+              children: [
+                Icon(
+                  Icons.schedule_rounded,
+                  size: 14,
+                  color: kColorWhite.withValues(alpha: 0.45),
+                ),
+                Spacing.h6,
+                AppText(
+                  text: '${host.callingMinutes} min on calls',
+                  fontSize: TextStyles.k10FontSize,
+                  color: kColorWhite.withValues(alpha: 0.5),
+                ),
+                if (host.lastViewer.isNotEmpty &&
+                    host.lastViewer.toLowerCase() != 'unknown') ...[
+                  const Spacer(),
+                  Flexible(
+                    child: AppText(
+                      text: 'Last: ${host.lastViewer}',
+                      fontSize: TextStyles.k10FontSize,
+                      color: kColorWhite.withValues(alpha: 0.5),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
           if (showHostId) ...[
             Spacing.v12,
             Divider(height: 1, color: kColorWhite.withValues(alpha: 0.10)),
@@ -951,7 +1206,13 @@ class _HostSheetCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
       ),
       child: AppText(
-        text: status,
+        text: host.isActive
+            ? 'Approved'
+            : host.isPending
+            ? 'Pending'
+            : host.isRejected
+            ? 'Rejected'
+            : status,
         fontSize: TextStyles.k10FontSize,
         color: textColor,
       ),

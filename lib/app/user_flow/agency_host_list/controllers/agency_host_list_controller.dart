@@ -121,6 +121,14 @@ class AgencyHostListController extends GetxController {
 
   final AgencyRepo _agencyRepo;
   final searchQuery = ''.obs;
+  final searchController = TextEditingController();
+  final reviewedStatus = 'all'.obs;
+
+  @override
+  void onClose() {
+    searchController.dispose();
+    super.onClose();
+  }
 
   List<AgencyHostModel> hostsForTab({required bool pending}) {
     final query = searchQuery.value.trim().toLowerCase();
@@ -128,6 +136,11 @@ class AgencyHostListController extends GetxController {
         .where(
           (host) =>
               (pending ? host.isPending : host.isActive || host.isRejected) &&
+              (pending ||
+                  reviewedStatus.value == 'all' ||
+                  (reviewedStatus.value == 'approved'
+                      ? host.isActive
+                      : host.isRejected)) &&
               (query.isEmpty ||
                   host.name.toLowerCase().contains(query) ||
                   host.id.toLowerCase().contains(query) ||

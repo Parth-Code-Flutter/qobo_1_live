@@ -104,27 +104,28 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
                                         Icons.person_outline_rounded,
                                       ),
                                     ),
-                                    Spacing.v16,
-                                    _fieldLabel('WhatsApp Number'),
-                                    Spacing.v6,
-                                    AppTextField(
-                                      controller: controller.whatsappController,
-                                      validator: (v) => controller
-                                          .validateWhatsApp(context, v),
-                                      hintText: '10-digit mobile number',
-                                      borderColor: kColorHint,
-                                      textInputType: TextInputType.number,
-                                      textInputAction: TextInputAction.done,
-                                      maxLength: 10,
-                                      showCounter: false,
-                                      inputFormatters: [
-                                        FilteringTextInputFormatter.digitsOnly,
-                                        LengthLimitingTextInputFormatter(10),
-                                      ],
-                                      prefix: _fieldIcon(
-                                        Icons.phone_android_outlined,
-                                      ),
-                                    ),
+                                    // Mobile input temporarily hidden, including validation.
+//                                     Spacing.v16,
+//                                     _fieldLabel('WhatsApp Number'),
+//                                     Spacing.v6,
+//                                     AppTextField(
+//                                       controller: controller.whatsappController,
+//                                       validator: (v) => controller
+//                                           .validateWhatsApp(context, v),
+//                                       hintText: '10-digit mobile number',
+//                                       borderColor: kColorHint,
+//                                       textInputType: TextInputType.number,
+//                                       textInputAction: TextInputAction.done,
+//                                       maxLength: 10,
+//                                       showCounter: false,
+//                                       inputFormatters: [
+//                                         FilteringTextInputFormatter.digitsOnly,
+//                                         LengthLimitingTextInputFormatter(10),
+//                                       ],
+//                                       prefix: _fieldIcon(
+//                                         Icons.phone_android_outlined,
+//                                       ),
+//                                     ),
                                     Obx(() => _publicInviteFields(context)),
                                     Spacing.v32,
                                     Obx(

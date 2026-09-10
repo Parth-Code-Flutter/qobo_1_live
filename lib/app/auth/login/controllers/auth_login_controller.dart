@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
@@ -71,6 +72,19 @@ class AuthLoginController extends GetxController {
   }
 
   void prepareForLoginScreen() {
+    if (!canReuseForLogin) return;
+    // Route bindings can run while existing text fields are still building.
+    if (SchedulerBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (canReuseForLogin) _resetLoginFields();
+      });
+      return;
+    }
+    _resetLoginFields();
+  }
+
+  void _resetLoginFields() {
     FocusManager.instance.primaryFocus?.unfocus();
     emailController.clear();
     passwordController.clear();

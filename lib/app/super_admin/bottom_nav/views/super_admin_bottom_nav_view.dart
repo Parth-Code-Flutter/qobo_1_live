@@ -3,11 +3,11 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/app/super_admin/agency/views/super_admin_agency_tab_view.dart';
 import 'package:qobo_one_live/app/super_admin/bottom_nav/controllers/super_admin_bottom_nav_controller.dart';
 import 'package:qobo_one_live/app/super_admin/dashboard/views/super_admin_dashboard_tab_view.dart';
-import 'package:qobo_one_live/app/super_admin/home/controllers/super_admin_home_controller.dart';
+// import 'package:qobo_one_live/app/super_admin/home/controllers/super_admin_home_controller.dart';
 import 'package:qobo_one_live/app/super_admin/host/views/super_admin_host_tab_view.dart';
 import 'package:qobo_one_live/app/super_admin/settings/views/super_admin_settings_tab_view.dart';
-import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui.dart';
-import 'package:qobo_one_live/constants/color_constants.dart';
+// import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui.dart';
+// import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 
@@ -40,70 +40,71 @@ class SuperAdminBottomNavView extends GetView<SuperAdminBottomNavController> {
               return Spacing.shrink;
           }
         }),
-        // Create agency only — super admin must not create hosts (agencies do).
-        // Host-tab FAB + openCreateHost intentionally commented out.
-        floatingActionButton: Obx(() {
-          final index = controller.selectedIndex.value;
-          final isAgencyTab =
-              index == SuperAdminBottomNavController.agencyTabIndex;
-          // final isHostTab =
-          //     index == SuperAdminBottomNavController.hostTabIndex;
-          // if (!isAgencyTab && !isHostTab) return const SizedBox.shrink();
-          if (!isAgencyTab) return const SizedBox.shrink();
+        // Manual agency creation temporarily hidden.
+//         // Create agency only — super admin must not create hosts (agencies do).
+//         // Host-tab FAB + openCreateHost intentionally commented out.
+//         floatingActionButton: Obx(() {
+//           final index = controller.selectedIndex.value;
+//           final isAgencyTab =
+//               index == SuperAdminBottomNavController.agencyTabIndex;
+//           // final isHostTab =
+//           //     index == SuperAdminBottomNavController.hostTabIndex;
+//           // if (!isAgencyTab && !isHostTab) return const SizedBox.shrink();
+//           if (!isAgencyTab) return const SizedBox.shrink();
 
-          final home = Get.find<SuperAdminHomeController>();
-          // final accent = isAgencyTab ? SuperAdminUi.pink : SuperAdminUi.teal;
-          const accent = SuperAdminUi.pink;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: accent.withValues(alpha: 0.45),
-                    blurRadius: 18,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Material(
-                color: Colors.transparent,
-                shape: const CircleBorder(),
-                child: InkWell(
-                  customBorder: const CircleBorder(),
-                  // onTap: isAgencyTab
-                  //     ? home.openCreateAgency
-                  //     : home.openCreateHost,
-                  onTap: home.openCreateAgency,
-                  child: Ink(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          accent,
-                          Color.lerp(accent, kColorWhite, 0.28)!,
-                        ],
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.add_rounded,
-                      size: 30,
-                      color: kColorWhite,
-                      // semanticLabel:
-                      //     isAgencyTab ? 'Create agency' : 'Create host',
-                      semanticLabel: 'Create agency',
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-        }),
+//           final home = Get.find<SuperAdminHomeController>();
+//           // final accent = isAgencyTab ? SuperAdminUi.pink : SuperAdminUi.teal;
+//           const accent = SuperAdminUi.pink;
+//           return Padding(
+//             padding: const EdgeInsets.only(bottom: 12),
+//             child: Container(
+//               decoration: BoxDecoration(
+//                 shape: BoxShape.circle,
+//                 boxShadow: [
+//                   BoxShadow(
+//                     color: accent.withValues(alpha: 0.45),
+//                     blurRadius: 18,
+//                     offset: const Offset(0, 6),
+//                   ),
+//                 ],
+//               ),
+//               child: Material(
+//                 color: Colors.transparent,
+//                 shape: const CircleBorder(),
+//                 child: InkWell(
+//                   customBorder: const CircleBorder(),
+//                   // onTap: isAgencyTab
+//                   //     ? home.openCreateAgency
+//                   //     : home.openCreateHost,
+//                   onTap: home.openCreateAgency,
+//                   child: Ink(
+//                     width: 56,
+//                     height: 56,
+//                     decoration: BoxDecoration(
+//                       shape: BoxShape.circle,
+//                       gradient: LinearGradient(
+//                         begin: Alignment.topLeft,
+//                         end: Alignment.bottomRight,
+//                         colors: [
+//                           accent,
+//                           Color.lerp(accent, kColorWhite, 0.28)!,
+//                         ],
+//                       ),
+//                     ),
+//                     child: const Icon(
+//                       Icons.add_rounded,
+//                       size: 30,
+//                       color: kColorWhite,
+//                       // semanticLabel:
+//                       //     isAgencyTab ? 'Create agency' : 'Create host',
+//                       semanticLabel: 'Create agency',
+//                     ),
+//                   ),
+//                 ),
+//               ),
+//             ),
+//           );
+//         }),
         bottomNavigationBar: Obx(
           () => AdminBottomNavBar(
             items: controller.items,
