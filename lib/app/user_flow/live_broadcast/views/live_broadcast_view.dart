@@ -28,8 +28,8 @@ import '../widgets/room_options_sheet.dart';
 class LiveBroadcastView extends GetView<LiveBroadcastController> {
   const LiveBroadcastView({super.key});
 
-  static const Color _surface = Color(0xE6121720);
-  static const Color _surfaceSoft = Color(0xB3121720);
+  static const Color _surface = Color(0xE626104F);
+  static const Color _surfaceSoft = Color(0xB324103F);
   static const Color _accent = Color(0xFFFF3F7F);
   static const Color _accentPurple = Color(0xFF8E1B85);
 
@@ -517,7 +517,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
 
   Widget _buildTopHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 14, 12, 0),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final isCompact = constraints.maxWidth < 390;
@@ -527,9 +527,10 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
           );
           return Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Expanded(child: _hostSummaryCard(compact: isCompact)),
                   SizedBox(width: isCompact ? 6 : 10),
@@ -542,8 +543,12 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
               if (controller.isLiveStreamingSession) ...[
                 const SizedBox(height: 8),
                 Obx(
-                  () => Row(
+                  () => Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
+                      _coinEarningsPill(compact: true),
                       _liveTimerChip(
                         icon: Icons.fiber_manual_record_rounded,
                         label: 'LIVE',
@@ -551,10 +556,9 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                         compact: isCompact,
                         colors: const [Color(0xFFFF3B5C), Color(0xFFFF7A45)],
                       ),
-                      const SizedBox(width: 8),
                       _liveTimerChip(
                         icon: Icons.timer_outlined,
-                        label: 'time spend',
+                        label: 'Time spent',
                         value: controller.apiLiveElapsedLabel.value,
                         compact: isCompact,
                         colors: const [Color(0xFF7C5CFF), Color(0xFF29C7FF)],
@@ -582,15 +586,15 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(compact ? 20 : 24),
           child: Container(
-            constraints: BoxConstraints(maxWidth: compact ? 170 : 238),
+            constraints: const BoxConstraints(minHeight: 52),
             padding: EdgeInsets.all(compact ? 6 : 8),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  const Color(0xFF172334).withValues(alpha: 0.96),
-                  const Color(0xFF111827).withValues(alpha: 0.92),
+                  const Color(0xFF2C075C).withValues(alpha: 0.86),
+                  const Color(0xFF2C075C).withValues(alpha: 0.8),
                   const Color(0xFF361030).withValues(alpha: 0.78),
                 ],
               ),
@@ -619,7 +623,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                       frameSeed: controller.receiverId.value.isNotEmpty
                           ? controller.receiverId.value
                           : controller.hostName.value,
-                      size: compact ? 30 : 38,
+                      size: compact ? 36 : 40,
                       fontSize: compact
                           ? TextStyles.k10FontSize
                           : TextStyles.k12FontSize,
@@ -674,10 +678,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                     ],
                   ),
                 ),
-                if (!compact && !controller.isHost.value) ...[
-                  Spacing.h8,
-                  _followButton(),
-                ],
+                if (!controller.isHost.value) ...[Spacing.h8, _followButton()],
               ],
             ),
           ),
@@ -724,8 +725,10 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
       children: [
         _viewerCountPill(compact: compact),
         SizedBox(width: compact ? 5 : 8),
-        _coinEarningsPill(compact: compact, maxWidth: earningsMaxWidth),
-        SizedBox(width: compact ? 5 : 8),
+        if (!controller.isLiveStreamingSession) ...[
+          _coinEarningsPill(compact: compact, maxWidth: earningsMaxWidth),
+          SizedBox(width: compact ? 5 : 8),
+        ],
         // Host: end stream (power). Audience on live: close → listing.
         Obx(() {
           final isLiveAudience =
@@ -765,7 +768,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
       height: compact ? 25 : 28,
       padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 10),
       decoration: BoxDecoration(
-        color: const Color(0xD9141B29),
+        color: const Color(0xB323084C),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: colors.first.withValues(alpha: 0.38)),
         boxShadow: [
@@ -816,7 +819,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFF304B72), Color(0xFF111827)],
+              colors: [Color(0xFF492080), Color(0xFF260B51)],
             ),
             borderRadius: BorderRadius.circular(22),
             border: Border.all(
@@ -1012,7 +1015,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
     return SizedBox(
       height: 170,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.only(left: 12, right: 56),
         child: Obx(
           () => controller.chatMessages.isEmpty
               ? Align(
@@ -1074,12 +1077,11 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                                 ? const Color(0xCC4E2E90)
                                 : _surfaceSoft,
                             borderRadius: BorderRadius.circular(18),
-                            border: isSystem
-                                ? Border.all(
-                                    color: const Color(0xFF7D5BFF),
-                                    width: 1,
-                                  )
-                                : null,
+                            border: Border.all(
+                              color: isSystem
+                                  ? const Color(0xFF9D71EF)
+                                  : Colors.white.withValues(alpha: 0.12),
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -1135,27 +1137,47 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
 
   Widget _buildBottomControls(BuildContext context) {
     final isLive = controller.isLiveStreamingSession;
-    return SafeArea(
-      top: false,
-      minimum: const EdgeInsets.fromLTRB(12, 8, 12, 14),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (isLive) ...[
             _buildLiveAudienceList(context),
-            Spacing.v8,
-            _buildChatInputField(),
-            Spacing.v8,
-            Obx(
-              () => Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                alignment: WrapAlignment.start,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: _liveStreamActionButtons(context, compact: true),
-              ),
+            const SizedBox(height: 8),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                return Obx(() {
+                  final actions = _liveStreamActionButtons(
+                    context,
+                    compact: true,
+                  );
+                  // Keep a usable composer on narrow screens and at large text sizes.
+                  final inline =
+                      constraints.maxWidth >= 340 &&
+                      MediaQuery.textScalerOf(context).scale(14) <= 18;
+                  if (!inline) {
+                    return Column(
+                      children: [
+                        _buildChatInputField(),
+                        const SizedBox(height: 8),
+                        Wrap(spacing: 8, runSpacing: 8, children: actions),
+                      ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      Expanded(child: _buildChatInputField()),
+                      for (final action in actions) ...[
+                        const SizedBox(width: 4),
+                        action,
+                      ],
+                    ],
+                  );
+                });
+              },
             ),
-          ] else
+          ] else ...[
             Row(
               children: [
                 Expanded(child: _buildChatInputField()),
@@ -1163,9 +1185,9 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                 ..._partyRoomActionButtons(context),
               ],
             ),
-          Spacing.v10,
-          if (!isLive)
+            Spacing.v10,
             Row(children: [const Spacer(), _bottomViewerStrip(context)]),
+          ],
         ],
       ),
     );
@@ -1174,11 +1196,11 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
   Widget _buildChatInputField() {
     return AppTextField(
       controller: controller.chatTextController,
-      hintText: 'Say something...',
+      hintText: 'Say hi…',
       fillColor: _surface,
       inputBorderRadius: BorderRadius.circular(24),
       borderColor: kColorWhite.withValues(alpha: 0.06),
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       textStyle: TextStyles.kRegularPoppins(colors: kColorWhite, fontSize: 14),
       hintStyle: TextStyles.kRegularPoppins(
         colors: Colors.white54,
@@ -1355,16 +1377,15 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
 
       return Align(
         alignment: Alignment.centerRight,
-        child: Column(
+        child: Row(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             for (final viewer in viewers) ...[
               _LiveAudienceAvatarButton(
                 viewer: viewer,
                 onTap: () => controller.openViewerProfile(viewer),
               ),
-              if (viewer != viewers.last) const SizedBox(height: 8),
+              if (viewer != viewers.last) const SizedBox(width: 8),
             ],
           ],
         ),
@@ -1379,7 +1400,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
     bool compact = false,
     VoidCallback? onTap,
   }) {
-    final size = compact ? 42.0 : 50.0;
+    final size = compact ? 44.0 : 50.0;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -1387,11 +1408,23 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
         width: size,
         height: size,
         decoration: BoxDecoration(
-          color: active ? _surface : const Color(0xCC351D2B),
-          borderRadius: BorderRadius.circular(compact ? 16 : 20),
-          border: Border.all(color: kColorWhite.withValues(alpha: 0.06)),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: active
+                ? (icon == kGiftIcon
+                      ? const [Color(0xFFCE2BCB), Color(0xFF7C24CA)]
+                      : const [Color(0xFF51218A), Color(0xFF2A0B58)])
+                : const [Color(0xCC54253E), Color(0xCC351D2B)],
+          ),
+          shape: BoxShape.circle,
+          border: Border.all(color: kColorWhite.withValues(alpha: 0.18)),
         ),
-        child: Icon(icon, color: color ?? kColorWhite, size: compact ? 22 : 24),
+        child: Icon(
+          icon,
+          color: icon == kGiftIcon ? kColorWhite : color ?? kColorWhite,
+          size: compact ? 22 : 24,
+        ),
       ),
     );
   }
@@ -1595,10 +1628,10 @@ class _LiveOverlayScrim extends StatelessWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Colors.black.withValues(alpha: 0.42),
+              const Color(0xFF260850).withValues(alpha: 0.55),
               Colors.transparent,
               Colors.transparent,
-              Colors.black.withValues(alpha: 0.58),
+              const Color(0xFF1B0738).withValues(alpha: 0.72),
             ],
             stops: const [0, 0.22, 0.56, 1],
           ),

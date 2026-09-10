@@ -5,12 +5,20 @@ import 'package:get/get.dart';
 
 import '../../app/user_flow/live_broadcast/controllers/live_broadcast_controller.dart';
 
-/// WhatsApp-status-style floating hearts for live streaming reactions.
+/// Colorful floating hearts for live streaming reactions.
 class LiveHeartReactionLayer extends StatelessWidget {
   const LiveHeartReactionLayer({super.key});
 
   static const Color whatsAppHeartGreen = Color(0xFF25D366);
   static const Color liveHeartRed = Color(0xFFFF3B5C);
+  static const reactionColors = <Color>[
+    Color(0xFFFF3B87),
+    Color(0xFFE84DFF),
+    Color(0xFFAA78FF),
+    Color(0xFFFFCA55),
+    Color(0xFF5EDBFF),
+    Color(0xFFFF795E),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -30,6 +38,7 @@ class LiveHeartReactionLayer extends StatelessWidget {
                 key: ValueKey(token),
                 token: token,
                 screenSize: size,
+                topInset: MediaQuery.paddingOf(context).top,
                 onFinished: controller.removeHeartReactionToken,
               ),
           ],
@@ -44,11 +53,13 @@ class _FloatingHeartBubble extends StatefulWidget {
     super.key,
     required this.token,
     required this.screenSize,
+    required this.topInset,
     required this.onFinished,
   });
 
   final int token;
   final Size screenSize;
+  final double topInset;
   final void Function(int token) onFinished;
 
   @override
@@ -69,10 +80,10 @@ class _FloatingHeartBubbleState extends State<_FloatingHeartBubble>
   void initState() {
     super.initState();
     _random = math.Random(widget.token);
-    _startX = widget.screenSize.width * (0.58 + _random.nextDouble() * 0.34);
-    _startBottom = 88 + _random.nextDouble() * 52;
-    _drift = (_random.nextDouble() - 0.5) * 118;
-    _size = 30 + _random.nextDouble() * 24;
+    _startX = widget.screenSize.width - 32 - _random.nextDouble() * 18;
+    _startBottom = 120 + _random.nextDouble() * 28;
+    _drift = (_random.nextDouble() - 0.5) * 24;
+    _size = 22 + _random.nextDouble() * 16;
     _delayFactor = _random.nextDouble() * 0.35;
 
     _controller = AnimationController(
@@ -100,8 +111,8 @@ class _FloatingHeartBubbleState extends State<_FloatingHeartBubble>
   @override
   Widget build(BuildContext context) {
     final travel = math.max(
-      widget.screenSize.height - 190,
-      widget.screenSize.height * 0.62,
+      0.0,
+      widget.screenSize.height - widget.topInset - 180 - _startBottom - _size,
     );
 
     return AnimatedBuilder(
@@ -127,7 +138,9 @@ class _FloatingHeartBubbleState extends State<_FloatingHeartBubble>
       child: Icon(
         Icons.favorite_rounded,
         size: _size,
-        color: LiveHeartReactionLayer.liveHeartRed,
+        color:
+            LiveHeartReactionLayer.reactionColors[widget.token %
+                LiveHeartReactionLayer.reactionColors.length],
         shadows: const [
           Shadow(color: Color(0x66000000), blurRadius: 6, offset: Offset(0, 2)),
         ],
