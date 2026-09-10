@@ -1,6 +1,5 @@
 import 'package:qobo_one_live/utils/roles/recruitment_code_field.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
@@ -105,27 +104,27 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
                                       ),
                                     ),
                                     // Mobile input temporarily hidden, including validation.
-//                                     Spacing.v16,
-//                                     _fieldLabel('WhatsApp Number'),
-//                                     Spacing.v6,
-//                                     AppTextField(
-//                                       controller: controller.whatsappController,
-//                                       validator: (v) => controller
-//                                           .validateWhatsApp(context, v),
-//                                       hintText: '10-digit mobile number',
-//                                       borderColor: kColorHint,
-//                                       textInputType: TextInputType.number,
-//                                       textInputAction: TextInputAction.done,
-//                                       maxLength: 10,
-//                                       showCounter: false,
-//                                       inputFormatters: [
-//                                         FilteringTextInputFormatter.digitsOnly,
-//                                         LengthLimitingTextInputFormatter(10),
-//                                       ],
-//                                       prefix: _fieldIcon(
-//                                         Icons.phone_android_outlined,
-//                                       ),
-//                                     ),
+                                    //                                     Spacing.v16,
+                                    //                                     _fieldLabel('WhatsApp Number'),
+                                    //                                     Spacing.v6,
+                                    //                                     AppTextField(
+                                    //                                       controller: controller.whatsappController,
+                                    //                                       validator: (v) => controller
+                                    //                                           .validateWhatsApp(context, v),
+                                    //                                       hintText: '10-digit mobile number',
+                                    //                                       borderColor: kColorHint,
+                                    //                                       textInputType: TextInputType.number,
+                                    //                                       textInputAction: TextInputAction.done,
+                                    //                                       maxLength: 10,
+                                    //                                       showCounter: false,
+                                    //                                       inputFormatters: [
+                                    //                                         FilteringTextInputFormatter.digitsOnly,
+                                    //                                         LengthLimitingTextInputFormatter(10),
+                                    //                                       ],
+                                    //                                       prefix: _fieldIcon(
+                                    //                                         Icons.phone_android_outlined,
+                                    //                                       ),
+                                    //                                     ),
                                     Obx(() => _publicInviteFields(context)),
                                     Spacing.v32,
                                     Obx(
@@ -285,7 +284,7 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
         if (!controller.isFromSuperAdmin.value) ...[
           RecruitmentCodeField(
             verification: controller.codeVerification,
-            label: 'Super Admin code',
+            label: 'Enter code',
           ),
           Spacing.v16,
         ],
@@ -303,24 +302,6 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
         //   prefix: _fieldIcon(Icons.email_outlined),
         // ),
         // Spacing.v16,
-        _fieldLabel('Country Code'),
-        Spacing.v6,
-        AppTextField(
-          controller: controller.countryCodeController,
-          validator: (v) => controller.validateCountryCode(context, v),
-          hintText: '+91',
-          borderColor: kColorHint,
-          textInputType: TextInputType.phone,
-          textInputAction: TextInputAction.next,
-          maxLength: 5,
-          showCounter: false,
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'[+\d]')),
-            LengthLimitingTextInputFormatter(5),
-          ],
-          prefix: _fieldIcon(Icons.public_rounded),
-        ),
-        Spacing.v16,
         if (controller.isFromSuperAdmin.value) ...[
           _fieldLabel('Commission (%)'),
           AppTextField(

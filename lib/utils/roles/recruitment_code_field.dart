@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
+import 'package:qobo_one_live/utils/text_utils/app_text.dart';
+import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/roles/recruitment_code_verification.dart';
 
 class RecruitmentCodeField extends StatelessWidget {
@@ -16,16 +20,24 @@ class RecruitmentCodeField extends StatelessWidget {
     () => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        TextFormField(
+        AppText(
+          text: label,
+          fontSize: TextStyles.k12FontSize,
+          color: kColorText,
+        ),
+        const SizedBox(height: 6),
+        AppTextField(
           controller: verification.input,
-          autocorrect: false,
-          decoration: InputDecoration(
-            labelText: label,
-            border: const OutlineInputBorder(),
+          hintText: 'Enter code',
+          borderColor: kColorHint,
+          textCapitalization: TextCapitalization.characters,
+          textInputAction: TextInputAction.next,
+          prefix: const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 14),
+            child: Icon(Icons.vpn_key_outlined, color: kColorHint, size: 20),
           ),
-          validator: (value) => value == null || value.trim().isEmpty
-              ? '$label is required'
-              : null,
+          validator: (value) =>
+              value == null || value.trim().isEmpty ? 'Code is required' : null,
         ),
         TextButton.icon(
           onPressed: verification.isChecking.value ? null : verification.verify,
