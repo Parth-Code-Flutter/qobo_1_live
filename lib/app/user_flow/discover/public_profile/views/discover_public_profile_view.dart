@@ -72,6 +72,7 @@ class DiscoverPublicProfileView
                           Spacing.v12,
                           _sectionCard(
                             title: 'More details',
+                            subtitle: 'The finer details',
                             icon: Icons.auto_awesome_rounded,
                             child: Column(children: _extraRows(user)),
                           ),
@@ -208,11 +209,7 @@ class DiscoverPublicProfileView
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFFF4DC4),
-              Color(0xFF7B5CFF),
-              Color(0xFF2ED3FF),
-            ],
+            colors: [Color(0xFFFF4DC4), Color(0xFF7B5CFF), Color(0xFF2ED3FF)],
           ),
         ),
         padding: const EdgeInsets.all(2.5),
@@ -390,15 +387,9 @@ class DiscoverPublicProfileView
                               accent: true,
                             )
                           else if (user.isFollowing)
-                            _chip(
-                              'Following',
-                              Icons.person_add_alt_1_rounded,
-                            )
+                            _chip('Following', Icons.person_add_alt_1_rounded)
                           else if (user.isFollower)
-                            _chip(
-                              'Follows you',
-                              Icons.arrow_downward_rounded,
-                            ),
+                            _chip('Follows you', Icons.arrow_downward_rounded),
                           if (user.canMessage)
                             _chip(
                               'Can message',
@@ -645,7 +636,7 @@ class DiscoverPublicProfileView
       ),
       _HighlightTile(
         icon: Icons.auto_awesome_rounded,
-        label: 'Patti',
+        label: 'Entrance style',
         value: _pattiLabel(user.pattiStyle).isEmpty
             ? 'Classic'
             : _pattiLabel(user.pattiStyle),
@@ -668,61 +659,74 @@ class DiscoverPublicProfileView
     return _sectionCard(
       title: 'Highlights',
       icon: Icons.auto_awesome_rounded,
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: tiles.length,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 10,
-          crossAxisSpacing: 10,
-          childAspectRatio: 1.55,
-        ),
-        itemBuilder: (_, index) => _highlightTile(tiles[index]),
+      subtitle: 'A little more about me',
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final singleColumn =
+              constraints.maxWidth < 280 ||
+              MediaQuery.textScalerOf(context).scale(14) > 18;
+          return Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              for (final tile in tiles)
+                SizedBox(
+                  width: singleColumn
+                      ? constraints.maxWidth
+                      : (constraints.maxWidth - 10) / 2,
+                  child: _highlightTile(tile),
+                ),
+            ],
+          );
+        },
       ),
     );
   }
 
   Widget _highlightTile(_HighlightTile tile) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            tile.colors.first.withValues(alpha: 0.22),
-            tile.colors.last.withValues(alpha: 0.10),
-          ],
+        borderRadius: BorderRadius.circular(20),
+        color: const Color(0xFFEEE5FF).withValues(alpha: 0.08),
+        border: Border.all(
+          color: const Color(0xFFDBC6FF).withValues(alpha: 0.17),
         ),
-        border: Border.all(color: tile.colors.first.withValues(alpha: 0.28)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
           Container(
-            width: 30,
-            height: 30,
+            width: 32,
+            height: 38,
             decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(colors: tile.colors),
+              borderRadius: BorderRadius.circular(13),
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFFFF9AD5).withValues(alpha: 0.22),
+                  const Color(0xFFAB99FF).withValues(alpha: 0.18),
+                ],
+              ),
             ),
-            child: Icon(tile.icon, size: 15, color: kColorWhite),
+            child: Icon(tile.icon, size: 17, color: const Color(0xFFFFBAE6)),
           ),
-          const Spacer(),
-          AppText(
-            text: tile.label,
-            fontSize: TextStyles.k10FontSize,
-            color: kColorWhite.withValues(alpha: 0.62),
-          ),
-          Spacing.v2,
-          SemiBoldText(
-            text: tile.value,
-            fontSize: TextStyles.k14FontSize,
-            color: kColorWhite,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppText(
+                  text: tile.label,
+                  fontSize: TextStyles.k10FontSize,
+                  color: const Color(0xFFD5C8E5),
+                ),
+                const SizedBox(height: 3),
+                SemiBoldText(
+                  text: tile.value,
+                  fontSize: TextStyles.k12FontSize,
+                  color: kColorWhite,
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -733,6 +737,7 @@ class DiscoverPublicProfileView
     required String title,
     required IconData icon,
     required Widget child,
+    String? subtitle,
   }) {
     return Container(
       width: double.infinity,
@@ -780,6 +785,14 @@ class DiscoverPublicProfileView
               ),
             ],
           ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 6),
+            AppText(
+              text: subtitle,
+              fontSize: TextStyles.k12FontSize,
+              color: const Color(0xFFCEBEDF),
+            ),
+          ],
           Spacing.v12,
           child,
         ],
@@ -816,12 +829,21 @@ class DiscoverPublicProfileView
       'followingCount',
     };
 
+    String normalized(String key) =>
+        key.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toLowerCase();
+    final excluded = {
+      ...known,
+      ..._hiddenKeys,
+      'userId',
+    }.map(normalized).toSet();
+    final seen = <String>{};
     final extras = <MapEntry<String, String>>[];
     for (final entry in controller.rawData.entries) {
       final key = entry.key.toString();
-      if (known.contains(key) || _hiddenKeys.contains(key)) continue;
+      final canonical = normalized(key);
+      if (excluded.contains(canonical)) continue;
       final value = _stringify(entry.value);
-      if (value == null) continue;
+      if (value == null || !seen.add(canonical)) continue;
       extras.add(MapEntry(_labelize(key), value));
     }
 
@@ -839,31 +861,80 @@ class DiscoverPublicProfileView
   }
 
   Widget _detailRow(String label, String value) {
+    final icon = switch (label.toLowerCase()) {
+      'is live' => Icons.sensors_rounded,
+      'viewer count' => Icons.visibility_outlined,
+      'join approval required' => Icons.verified_user_outlined,
+      'user id' => Icons.badge_outlined,
+      _ => Icons.info_outline_rounded,
+    };
+    final accent = value == 'Yes'
+        ? const Color(0xFF67E5B3)
+        : const Color(0xFFC5A7FF);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: kColorWhite.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
+        gradient: LinearGradient(
+          colors: [
+            accent.withValues(alpha: 0.12),
+            kColorWhite.withValues(alpha: 0.03),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accent.withValues(alpha: 0.18)),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 110,
-            child: AppText(
-              text: label,
-              fontSize: TextStyles.k12FontSize,
-              color: kColorWhite.withValues(alpha: 0.55),
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(12),
             ),
+            child: Icon(icon, color: accent, size: 19),
           ),
+          const SizedBox(width: 12),
           Expanded(
-            child: AppText(
-              text: value,
-              fontSize: TextStyles.k12FontSize,
-              color: kColorWhite.withValues(alpha: 0.92),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppText(
+                  text: label,
+                  fontSize: TextStyles.k12FontSize,
+                  color: const Color(0xFFD5C8E5),
+                ),
+                if (value.length > 12) ...[
+                  const SizedBox(height: 5),
+                  SemiBoldText(
+                    text: value,
+                    fontSize: TextStyles.k14FontSize,
+                    color: kColorWhite,
+                  ),
+                ],
+              ],
             ),
           ),
+          if (value.length <= 12) ...[
+            const SizedBox(width: 10),
+            Flexible(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 7,
+                ),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.13),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: SemiBoldText(
+                  text: value,
+                  fontSize: TextStyles.k12FontSize,
+                  color: kColorWhite,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -918,7 +989,12 @@ class DiscoverPublicProfileView
         .join(' ');
   }
 
-  Widget _statPill(String value, String label, {IconData? icon, Widget? leading}) {
+  Widget _statPill(
+    String value,
+    String label, {
+    IconData? icon,
+    Widget? leading,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
       decoration: BoxDecoration(
@@ -973,7 +1049,10 @@ class DiscoverPublicProfileView
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: RadialGradient(
-          colors: [color.withValues(alpha: alpha), Colors.transparent],
+          colors: [
+            color.withValues(alpha: alpha),
+            Colors.transparent,
+          ],
         ),
       ),
     );

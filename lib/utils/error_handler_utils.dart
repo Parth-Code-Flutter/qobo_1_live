@@ -134,7 +134,7 @@ class ErrorHandlerUtils {
           try {
             if (!_hasShownLogoutMessage && Get.context != null) {
               _hasShownLogoutMessage = true;
-              Get.find<AlertMessageUtils>().showSuccessSnackBar(
+              Get.find<AlertMessageUtils>().showErrorSnackBar(
                 'Session expired. Please login again.',
               );
             }
@@ -161,7 +161,7 @@ class ErrorHandlerUtils {
             try {
               if (!_hasShownLogoutMessage && Get.context != null) {
                 _hasShownLogoutMessage = true;
-                Get.find<AlertMessageUtils>().showSuccessSnackBar(
+                Get.find<AlertMessageUtils>().showErrorSnackBar(
                   'Session expired. Please login again.',
                 );
               }

@@ -506,35 +506,37 @@ class LiveRoomView extends StatelessWidget {
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          AspectRatio(
-            aspectRatio: 16 / 9,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(19),
-                gradient: LinearGradient(
-                  colors: [
-                    const Color(0xFFFF4B91).withValues(alpha: 0.72),
-                    const Color(0xFF8B5CFF).withValues(alpha: 0.64),
-                    const Color(0xFF52D8FF).withValues(alpha: 0.46),
+          LayoutBuilder(
+            builder: (context, constraints) => SizedBox(
+              height: constraints.maxWidth * 9 / 16 - 2,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(19),
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFFFF4B91).withValues(alpha: 0.72),
+                      const Color(0xFF8B5CFF).withValues(alpha: 0.64),
+                      const Color(0xFF52D8FF).withValues(alpha: 0.46),
+                    ],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFF2E83).withValues(alpha: 0.18),
+                      blurRadius: 24,
+                      offset: const Offset(0, 10),
+                    ),
                   ],
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFFF2E83).withValues(alpha: 0.18),
-                    blurRadius: 24,
-                    offset: const Offset(0, 10),
+                child: Padding(
+                  padding: const EdgeInsets.all(1.4),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(17.5),
+                    child: banners.isEmpty
+                        ? _staticBannerFallback()
+                        : SizedBox.expand(
+                            child: _networkBanner(banners[selectedIndex]),
+                          ),
                   ),
-                ],
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(1.4),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(17.5),
-                  child: banners.isEmpty
-                      ? _staticBannerFallback()
-                      : SizedBox.expand(
-                          child: _networkBanner(banners[selectedIndex]),
-                        ),
                 ),
               ),
             ),

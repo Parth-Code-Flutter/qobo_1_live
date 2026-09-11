@@ -18,8 +18,23 @@ import 'package:get/get.dart';
 
 import '../controllers/auth_login_controller.dart';
 
-class AuthLoginView extends GetView<AuthLoginController> {
+class AuthLoginView extends StatefulWidget {
   const AuthLoginView({super.key});
+
+  @override
+  State<AuthLoginView> createState() => _AuthLoginViewState();
+}
+
+class _AuthLoginViewState extends State<AuthLoginView> {
+  // Navigation transitions can keep two login pages alive at once. Each page
+  // must own its form key and text controllers until that page is disposed.
+  final controller = AuthLoginController();
+
+  @override
+  void dispose() {
+    controller.onClose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -339,15 +354,16 @@ class AuthLoginView extends GetView<AuthLoginController> {
   Widget signUpFooterWidget() {
     return GestureDetector(
       onTap: () => Get.toNamed(Routes.AUTH_SIGN_UP),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 4,
         children: [
           AppText(
             text: LocaleKeys.dontHaveAccount.tr,
             fontSize: TextStyles.k12FontSize,
             color: kColorTextGrey,
           ),
-          Spacing.h4,
           SemiBoldText(
             text: LocaleKeys.signUp.tr,
             fontSize: TextStyles.k12FontSize,
