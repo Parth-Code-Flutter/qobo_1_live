@@ -48,7 +48,6 @@ class LiveRoomController extends GetxController {
 
   final searchController = TextEditingController();
   final searchFocusNode = FocusNode();
-  final promoBannerPageController = PageController(viewportFraction: 0.94);
   Timer? _promoBannerTimer;
 
   bool get hasActiveFilters => filters.hasActiveFilters;
@@ -131,9 +130,6 @@ class LiveRoomController extends GetxController {
     final banners = PromoBanner.listFromResponse(response, type: 'live');
     currentPromoBannerIndex.value = 0;
     promoBanners.assignAll(banners);
-    if (promoBannerPageController.hasClients) {
-      promoBannerPageController.jumpToPage(0);
-    }
     _restartPromoBannerTimer();
   }
 
@@ -183,15 +179,11 @@ class LiveRoomController extends GetxController {
     _promoBannerTimer?.cancel();
     if (promoBanners.length < 2) return;
     _promoBannerTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (!promoBannerPageController.hasClients || promoBanners.length < 2) {
+      if (isClosed || promoBanners.length < 2) {
         return;
       }
       final next = (currentPromoBannerIndex.value + 1) % promoBanners.length;
-      promoBannerPageController.animateToPage(
-        next,
-        duration: const Duration(milliseconds: 420),
-        curve: Curves.easeOutCubic,
-      );
+      currentPromoBannerIndex.value = next;
     });
   }
 
@@ -723,7 +715,8 @@ class LiveRoomController extends GetxController {
       fallbackRoom: roomData,
       fallbackRoomId: roomId,
     );
-    final rawType = _text(payload['type'])?.toUpperCase() ??
+    final rawType =
+        _text(payload['type'])?.toUpperCase() ??
         (room['roomType'] == 'AUDIO' ? 'AUDIO' : 'VIDEO');
     final roomType = rawType == 'AUDIO' ? 'AUDIO' : 'VIDEO';
     payload['type'] = roomType.toLowerCase();
@@ -738,11 +731,7 @@ class LiveRoomController extends GetxController {
     await ZegoEngineUtils.resetForRoomProject();
     Get.toNamed(
       Routes.LIVE_BROADCAST,
-      arguments: {
-        'isHost': false,
-        'roomType': roomType,
-        'roomData': payload,
-      },
+      arguments: {'isHost': false, 'roomType': roomType, 'roomData': payload},
     );
   }
 
@@ -915,7 +904,9 @@ class LiveRoomController extends GetxController {
     required Map<String, dynamic> fallbackRoom,
     required String fallbackRoomId,
   }) {
-    final data = raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{};
+    final data = raw is Map
+        ? Map<String, dynamic>.from(raw)
+        : <String, dynamic>{};
     final joinedRoom = data['room'] is Map
         ? Map<String, dynamic>.from(data['room'] as Map)
         : <String, dynamic>{};
@@ -980,7 +971,6 @@ class LiveRoomController extends GetxController {
   @override
   void onClose() {
     _promoBannerTimer?.cancel();
-    promoBannerPageController.dispose();
     searchController.removeListener(_onSearchChanged);
     searchController.dispose();
     searchFocusNode.dispose();

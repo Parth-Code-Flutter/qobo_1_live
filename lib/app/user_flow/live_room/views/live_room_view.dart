@@ -1,5 +1,3 @@
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
@@ -509,7 +507,7 @@ class LiveRoomView extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           AspectRatio(
-            aspectRatio: 3.05,
+            aspectRatio: 16 / 9,
             child: DecoratedBox(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(19),
@@ -534,25 +532,8 @@ class LiveRoomView extends StatelessWidget {
                   borderRadius: BorderRadius.circular(17.5),
                   child: banners.isEmpty
                       ? _staticBannerFallback()
-                      : PageView.builder(
-                          controller: controller.promoBannerPageController,
-                          clipBehavior: Clip.none,
-                          itemCount: banners.length,
-                          onPageChanged: controller.onPromoBannerPageChanged,
-                          itemBuilder: (_, index) => AnimatedPadding(
-                            duration: const Duration(milliseconds: 260),
-                            curve: Curves.easeOutCubic,
-                            padding: EdgeInsets.fromLTRB(
-                              4,
-                              index == selectedIndex ? 3 : 8,
-                              4,
-                              index == selectedIndex ? 3 : 8,
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(14),
-                              child: _networkBanner(banners[index]),
-                            ),
-                          ),
+                      : SizedBox.expand(
+                          child: _networkBanner(banners[selectedIndex]),
                         ),
                 ),
               ),
@@ -575,56 +556,31 @@ class LiveRoomView extends StatelessWidget {
     return Semantics(
       image: true,
       label: banner.title.isEmpty ? 'Promotional banner' : banner.title,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          ImageFiltered(
-            imageFilter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-            child: Transform.scale(
-              scale: 1.08,
-              child: Image.network(
-                banner.imageUrl,
-                fit: BoxFit.cover,
-                excludeFromSemantics: true,
-                filterQuality: FilterQuality.low,
-                errorBuilder: (_, __, ___) => _bannerFallback(),
+      child: Image.network(
+        banner.imageUrl,
+        fit: BoxFit.cover,
+        alignment: Alignment.center,
+        filterQuality: FilterQuality.high,
+        loadingBuilder: (_, child, progress) {
+          if (progress == null) return child;
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              _bannerFallback(),
+              const Center(
+                child: SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: kColorWhite,
+                  ),
+                ),
               ),
-            ),
-          ),
-          ColoredBox(color: const Color(0xFF100A24).withValues(alpha: 0.30)),
-          Padding(
-            padding: const EdgeInsets.all(3),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Image.network(
-                banner.imageUrl,
-                fit: BoxFit.contain,
-                alignment: Alignment.center,
-                filterQuality: FilterQuality.high,
-                loadingBuilder: (_, child, progress) {
-                  if (progress == null) return child;
-                  return Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      _bannerFallback(),
-                      const Center(
-                        child: SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: kColorWhite,
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                },
-                errorBuilder: (_, __, ___) => _bannerFallback(),
-              ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
+        errorBuilder: (_, __, ___) => _bannerFallback(),
       ),
     );
   }
