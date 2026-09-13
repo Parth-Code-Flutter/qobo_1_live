@@ -552,16 +552,30 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
                           onSelected: (_) =>
                               ctrl.reviewedStatus.value = entry.key,
                           showCheckmark: false,
-                          selectedColor: AdminAgencyUi.violet,
-                          backgroundColor: Colors.white.withValues(alpha: 0.06),
+                          // Explicit state colors prevent the global chip theme
+                          // from painting a light surface behind light labels.
+                          color: WidgetStateProperty.resolveWith(
+                            (states) => states.contains(WidgetState.selected)
+                                ? AdminAgencyUi.violet
+                                : const Color(0xFF302044),
+                          ),
+                          surfaceTintColor: Colors.transparent,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          materialTapTargetSize: MaterialTapTargetSize.padded,
                           side: BorderSide(
-                            color: Colors.white.withValues(alpha: 0.12),
+                            color: ctrl.reviewedStatus.value == entry.key
+                                ? AdminAgencyUi.violet
+                                : const Color(0xFF665076),
                           ),
                           labelStyle: TextStyle(
                             color: ctrl.reviewedStatus.value == entry.key
                                 ? Colors.white
-                                : AdminAgencyUi.textMuted,
+                                : const Color(0xFFE8DDF1),
                             fontSize: 12,
+                            fontWeight: FontWeight.w600,
                           ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),

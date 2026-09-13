@@ -267,7 +267,7 @@ class _RoleApplicationViewState extends State<RoleApplicationView> {
         widget.role,
         code: _verification.verifiedCode,
         name: _name.text,
-        email: _email.text,
+        email: _super ? _email.text : '',
         phone: _phone.text,
         agencyName: _agencyName.text,
         description: _description.text,
@@ -796,7 +796,7 @@ class _RoleApplicationViewState extends State<RoleApplicationView> {
                                                   _name,
                                                   required: true,
                                                 ),
-                                              if (!_agency && !_hasEmail)
+                                              if (_super && !_hasEmail)
                                                 _field(
                                                   'Email',
                                                   _email,

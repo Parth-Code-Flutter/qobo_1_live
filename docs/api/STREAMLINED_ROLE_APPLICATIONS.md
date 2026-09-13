@@ -4,9 +4,9 @@ Aligned with `SuperAdmin_Agency_Host_Complete_API_Documentation.md`.
 
 - Super Admin: POST `/api/user/super-admin-request`; fullName, email, phone, optional description; required doc_photo_front/doc_photo_back. No ID number or original photo.
 - Agency: POST `/api/agency/register-public`; name (agency name), ownerName, phone, invitedBy, optional description and document uploads. Email is not collected or sent.
-- Host: POST `/api/agency/host-onboarding`; hostName, whatsapp, gmail, agencyCode, optional description and document uploads. No additional face photo is required.
+- Host: POST `/api/agency/host-onboarding`; hostName, whatsapp, agencyCode, optional description and document uploads. No additional face photo is required.
 
-Saved profile name/contact values are reused. Missing required contact fields remain editable: the final backend document still requires email for Host and Super Admin submissions. Agency name is separate from the owner's profile name. Applications for another person never reuse the operator's personal details.
+Saved profile name/contact values are reused. Missing required contact fields remain editable: email is collected only for Super Admin submissions. Host email/gmail is omitted entirely at the user’s request, overriding the supplied document’s email requirement. Agency name is separate from the owner's profile name. Applications for another person never reuse the operator's personal details.
 
 Code verification uses GET `/api/agency/verify-super-admin-code?code=...` or GET `/api/agency/verify-code?code=...`.
 

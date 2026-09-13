@@ -49,7 +49,10 @@ class _Repo extends RoleApplicationRepo {
     String description = '',
   }) async {
     submissions++;
-    expect(email, 'saved@example.com');
+    expect(
+      email,
+      role == ApplicationRole.superAdmin ? 'saved@example.com' : '',
+    );
     expect(phone, '9876543210');
     expect(name, 'Saved Name');
     return {
@@ -153,6 +156,14 @@ void main() {
       findsOneWidget,
     );
     expect(Get.find<UserSessionController>().isSuperAdmin, false);
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('host has no email input even without saved profile email', (
+    tester,
+  ) async {
+    await mount(tester, ApplicationRole.host, _Repo());
+    expect(find.text('Email'), findsNothing);
+    expect(find.text('Submit application'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
   testWidgets('required missing host contact remains editable', (tester) async {

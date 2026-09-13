@@ -119,12 +119,7 @@ void main() {
         expect(api.path, RoleApplicationRepo.endpoint(role));
         final expected = switch (role) {
           ApplicationRole.agency => {'invitedBy', 'name', 'phone', 'ownerName'},
-          ApplicationRole.host => {
-            'agencyCode',
-            'whatsapp',
-            'gmail',
-            'hostName',
-          },
+          ApplicationRole.host => {'agencyCode', 'whatsapp', 'hostName'},
           ApplicationRole.superAdmin => {'fullName', 'email', 'phone'},
         };
         expect(api.fields.keys.toSet(), expected);

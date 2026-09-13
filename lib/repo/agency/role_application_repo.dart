@@ -79,7 +79,6 @@ class RoleApplicationRepo {
       ApplicationRole.host => <String, String>{
         'agencyCode': code.trim(),
         'whatsapp': digits,
-        if (email.trim().isNotEmpty) 'gmail': email.trim(),
         'hostName': name.trim(),
         if (description.trim().isNotEmpty) 'description': description.trim(),
       },
