@@ -11,9 +11,11 @@ class RecruitmentCodeField extends StatelessWidget {
     super.key,
     required this.verification,
     required this.label,
+    this.readOnly = false,
   });
   final RecruitmentCodeVerification verification;
   final String label;
+  final bool readOnly;
 
   @override
   Widget build(BuildContext context) => Obx(
@@ -28,6 +30,7 @@ class RecruitmentCodeField extends StatelessWidget {
         const SizedBox(height: 6),
         AppTextField(
           controller: verification.input,
+          readOnly: readOnly,
           hintText: 'Enter code',
           borderColor: kColorHint,
           textCapitalization: TextCapitalization.characters,

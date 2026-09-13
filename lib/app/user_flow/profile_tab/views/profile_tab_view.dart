@@ -1,4 +1,5 @@
-import 'dart:io';
+import 'package:qobo_one_live/app/user_flow/role_application/role_application_view.dart';
+import 'package:qobo_one_live/repo/agency/role_application_repo.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -6,21 +7,16 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
-import 'package:qobo_one_live/repo/user/user_repo.dart';
 import 'package:qobo_one_live/app/bottom_nav/controllers/bottom_nav_controller.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
-import 'package:qobo_one_live/services/agency_session_controller.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/app/user_flow/wallet/bindings/wallet_binding.dart';
 import 'package:qobo_one_live/app/user_flow/wallet/views/wallet_view.dart';
-import 'package:qobo_one_live/utils/alert_message_utils/alert_message_utils.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
-import 'package:qobo_one_live/utils/app_dialogs/audio_room_feedback_dialog.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
-import 'package:qobo_one_live/utils/files_utils/file_utils.dart';
 import 'package:qobo_one_live/app/user_flow/host_dashboard/host_dashboard_view.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -564,12 +560,10 @@ class _ProfileTabViewState extends State<ProfileTabView> {
       await Get.toNamed(Routes.SUPER_ADMIN_BOTTOM_NAV);
       return;
     }
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const _SuperAdminRegistrationSheet(),
+    await Get.to(
+      () => const RoleApplicationView(role: ApplicationRole.superAdmin),
     );
+    await session.refreshProfileFromApi();
   }
 
   Future<void> _openAgencyFlow() async {
@@ -583,35 +577,6 @@ class _ProfileTabViewState extends State<ProfileTabView> {
 
     if (session.isAgency) {
       await Get.toNamed(Routes.AGENCY_OWNER);
-      return;
-    }
-
-    final agencySession = Get.isRegistered<AgencySessionController>()
-        ? Get.find<AgencySessionController>()
-        : Get.put(AgencySessionController(), permanent: true);
-    await agencySession.ensureHydratedFromDashboard(forceRefresh: true);
-
-    if (agencySession.hasApprovedAgency) {
-      await session.refreshProfileFromApi();
-      if (session.isAgency) {
-        await Get.toNamed(Routes.AGENCY_OWNER);
-        return;
-      }
-    }
-    if (agencySession.isApplicationPending ||
-        agencySession.isApplicationRejected) {
-      await Get.toNamed(
-        Routes.AGENCY_OWNER_STATUS,
-        arguments: {
-          if (agencySession.applicationId.value.isNotEmpty)
-            'application_id': agencySession.applicationId.value,
-          if (agencySession.appliedPhone.value.isNotEmpty)
-            'phone': agencySession.appliedPhone.value,
-          'autoFetch':
-              agencySession.applicationId.value.isNotEmpty ||
-              agencySession.appliedPhone.value.isNotEmpty,
-        },
-      );
       return;
     }
 
@@ -668,14 +633,6 @@ class _ProfileTabViewState extends State<ProfileTabView> {
   }
 }
 
-class _SuperAdminRegistrationSheet extends StatefulWidget {
-  const _SuperAdminRegistrationSheet();
-
-  @override
-  State<_SuperAdminRegistrationSheet> createState() =>
-      _SuperAdminRegistrationSheetState();
-}
-
 class _ProfileHeroCard extends StatelessWidget {
   const _ProfileHeroCard({required this.child});
 
@@ -695,361 +652,6 @@ class _ProfileHeroCard extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
           child: child,
-        ),
-      ),
-    );
-  }
-}
-
-class _SuperAdminRegistrationSheetState
-    extends State<_SuperAdminRegistrationSheet> {
-  final UserRepo _userRepo = UserRepo();
-  bool _isLoading = false;
-  final List<File> _documents = <File>[];
-  final TextEditingController _noteController = TextEditingController();
-
-  @override
-  void dispose() {
-    _noteController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submitRequest() async {
-    if (_isLoading) return;
-    final shouldSubmit = await _showDocumentForm();
-    if (shouldSubmit != true) return;
-
-    if (_documents.isEmpty) {
-      _showError('Please upload at least one verification document.');
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      final response = await _userRepo.requestSuperAdmin(
-        documents: List<File>.from(_documents),
-        note: _noteController.text,
-        isShowLoader: true,
-      );
-      if (response == null) {
-        _showError('Could not send request. Please try again.');
-        return;
-      }
-
-      final link = _findFirstLink(response);
-      if (link != null) {
-        await FileUtils.openFileOrLink(link);
-        return;
-      }
-
-      // Prefer dialog over toast so API message / status are easy to read.
-      _showResponseDialog(response);
-    } catch (_) {
-      _showError('Could not send request. Please try again.');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<bool?> _showDocumentForm() {
-    return showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: const Color(0xFF161622),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            return Padding(
-              padding: EdgeInsets.fromLTRB(
-                20,
-                18,
-                20,
-                MediaQuery.viewInsetsOf(context).bottom + 24,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 44,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: kColorWhite.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                  ),
-                  Spacing.v16,
-                  const SemiBoldText(
-                    text: 'Become Super Admin',
-                    fontSize: TextStyles.k18FontSize,
-                    color: kColorWhite,
-                  ),
-                  Spacing.v6,
-                  const AppText(
-                    text:
-                        'Upload verification documents. Admin will review and approve or reject your request.',
-                    fontSize: TextStyles.k12FontSize,
-                    color: Colors.white70,
-                  ),
-                  Spacing.v16,
-                  TextField(
-                    controller: _noteController,
-                    minLines: 2,
-                    maxLines: 3,
-                    style: TextStyles.kRegularPoppins(
-                      fontSize: TextStyles.k14FontSize,
-                      colors: kColorWhite,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: 'Add a short note (optional)',
-                      hintStyle: TextStyles.kRegularPoppins(
-                        fontSize: TextStyles.k12FontSize,
-                        colors: Colors.white54,
-                      ),
-                      filled: true,
-                      fillColor: kColorWhite.withValues(alpha: 0.08),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(
-                          color: kColorWhite.withValues(alpha: 0.14),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Spacing.v12,
-                  OutlinedButton.icon(
-                    onPressed: () async {
-                      final paths = await FileUtils.pickFilePaths();
-                      if (paths.isEmpty) return;
-                      setSheetState(() {
-                        _documents
-                          ..clear()
-                          ..addAll(paths.map(File.new));
-                      });
-                    },
-                    icon: const Icon(Icons.upload_file_rounded),
-                    label: Text(
-                      _documents.isEmpty
-                          ? 'Upload documents'
-                          : '${_documents.length} document(s) selected',
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: kColorWhite,
-                      side: BorderSide(
-                        color: kColorWhite.withValues(alpha: 0.25),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                  ),
-                  if (_documents.isNotEmpty) ...[
-                    Spacing.v10,
-                    ..._documents
-                        .take(3)
-                        .map(
-                          (file) => Padding(
-                            padding: const EdgeInsets.only(bottom: 6),
-                            child: AppText(
-                              text: file.path.split('/').last,
-                              fontSize: TextStyles.k10FontSize,
-                              color: Colors.white60,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ),
-                  ],
-                  Spacing.v16,
-                  appButton(
-                    onPressed: () => Navigator.of(sheetContext).pop(true),
-                    buttonText: 'Submit Request',
-                    buttonColor: kColorPrimary,
-                    borderRadius: 14,
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  String? _findFirstLink(Object? value) {
-    if (value is String) {
-      final trimmed = value.trim();
-      final uri = Uri.tryParse(trimmed);
-      if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
-        return trimmed;
-      }
-    }
-
-    if (value is Map) {
-      for (final entry in value.entries) {
-        final key = entry.key.toString().toLowerCase();
-        if (key.contains('link') ||
-            key.contains('url') ||
-            key.contains('redirect')) {
-          final directLink = _findFirstLink(entry.value);
-          if (directLink != null) return directLink;
-        }
-      }
-      for (final entry in value.entries) {
-        final nestedLink = _findFirstLink(entry.value);
-        if (nestedLink != null) return nestedLink;
-      }
-    }
-
-    if (value is Iterable) {
-      for (final item in value) {
-        final nestedLink = _findFirstLink(item);
-        if (nestedLink != null) return nestedLink;
-      }
-    }
-
-    return null;
-  }
-
-  String? _readMessage(Map<String, dynamic>? response) {
-    final message = response?['message']?.toString().trim();
-    return message == null || message.isEmpty ? null : message;
-  }
-
-  /// Shows only the API message in the room-style feedback dialog.
-  void _showResponseDialog(Map<String, dynamic> response) {
-    if (!mounted) return;
-
-    _documents.clear();
-    _noteController.clear();
-
-    AudioRoomFeedbackDialog.show(
-      context,
-      title: 'Super Admin Request',
-      message: _readMessage(response) ?? 'Request processed successfully.',
-      tone: AudioRoomFeedbackTone.info,
-      barrierDismissible: false,
-    );
-  }
-
-  void _showError(String message) {
-    if (Get.isRegistered<AlertMessageUtils>()) {
-      Get.find<AlertMessageUtils>().showErrorSnackBar(message);
-    } else {
-      Get.snackbar('Error', message);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
-          decoration: BoxDecoration(
-            color: const Color(0xFF161622),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 42,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: kColorWhite.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ),
-              Spacing.v16,
-              const SemiBoldText(
-                text: 'Super Admin',
-                fontSize: TextStyles.k18FontSize,
-                color: kColorWhite,
-                align: TextAlign.center,
-              ),
-              Spacing.v6,
-              const AppText(
-                text:
-                    'Submit your registration request. After approval, you can open the Super Admin dashboard from the Profile grid.',
-                fontSize: TextStyles.k12FontSize,
-                color: Colors.white70,
-                align: TextAlign.center,
-              ),
-              const SizedBox(height: 18),
-              GestureDetector(
-                onTap: _submitRequest,
-                child: AnimatedOpacity(
-                  duration: const Duration(milliseconds: 180),
-                  opacity: _isLoading ? 0.68 : 1,
-                  child: Container(
-                    width: double.infinity,
-                    height: 74,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                        colors: [
-                          kColorProfileActionPinkStart,
-                          kColorProfileChipPurpleEnd,
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: kColorWhite.withValues(alpha: 0.16),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: kColorProfileActionPinkStart.withValues(
-                            alpha: 0.22,
-                          ),
-                          blurRadius: 18,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        if (_isLoading)
-                          const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: kColorWhite,
-                            ),
-                          )
-                        else
-                          const Icon(
-                            Icons.workspace_premium_rounded,
-                            color: kColorWhite,
-                            size: 20,
-                          ),
-                        Spacing.h8,
-                        const SemiBoldText(
-                          text: 'Become Super Admin',
-                          fontSize: TextStyles.k14FontSize,
-                          color: kColorWhite,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

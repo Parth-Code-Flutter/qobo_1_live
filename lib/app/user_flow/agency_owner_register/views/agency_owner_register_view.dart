@@ -1,3 +1,5 @@
+import 'package:qobo_one_live/app/user_flow/role_application/role_application_view.dart';
+import 'package:qobo_one_live/repo/agency/role_application_repo.dart';
 import 'package:qobo_one_live/utils/roles/recruitment_code_field.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -18,6 +20,12 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
 
   @override
   Widget build(BuildContext context) {
+    if (!controller.isFromSuperAdmin.value) {
+      return RoleApplicationView(
+        role: ApplicationRole.agency,
+        initialCode: controller.superAdminCodeController.text,
+      );
+    }
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: AppShellBackground(
