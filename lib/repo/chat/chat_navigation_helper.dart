@@ -17,6 +17,7 @@ abstract final class ChatNavigationHelper {
     required String targetId,
     required String name,
     String? imageUrl,
+    String? avatarFrameUrl,
     String? roomId,
     bool showLoader = true,
     ChatRepo? chatRepo,
@@ -75,6 +76,7 @@ abstract final class ChatNavigationHelper {
           'firestorePath': firestorePath,
           'name': name,
           'imageUrl': imageUrl,
+          'avatarFrameUrl': avatarFrameUrl,
         },
       );
     } catch (e) {

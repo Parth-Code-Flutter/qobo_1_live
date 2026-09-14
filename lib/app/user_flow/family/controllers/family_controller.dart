@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/repo/economy/economy_repo.dart';
 import 'package:qobo_one_live/repo/emoji/emoji_repo.dart';
@@ -1171,9 +1172,10 @@ class FamilyController extends GetxController {
   Map<String, dynamic> _mapMember(Map<String, dynamic> raw) {
     final user = raw['user'] is Map ? _copyMap(raw['user'] as Map) : raw;
     final id = _pickText(user, const ['userId', 'id', 'user_id']);
-    final frame = raw['avatarFrame'] is Map
-        ? _pickText(_copyMap(raw['avatarFrame'] as Map), const ['image'])
-        : _pickText(raw, const ['avatarFrameUrl', 'avatar_frame_url']);
+    final frame =
+        SocialUserCard.fromJson(user).avatarFrameUrl ??
+        SocialUserCard.fromJson(raw).avatarFrameUrl ??
+        '';
     final name = _pickText(user, const ['name', 'fullName', 'username']);
     return <String, dynamic>{
       'userId': id,

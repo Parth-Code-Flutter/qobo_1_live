@@ -508,6 +508,7 @@ class MessagesTabController extends GetxController {
       targetId: user.id,
       name: user.name,
       imageUrl: user.displayPicture,
+      avatarFrameUrl: user.avatarFrameUrl,
     );
     fetchInbox();
   }
@@ -535,6 +536,7 @@ class MessagesTabController extends GetxController {
       targetId: thread.targetId,
       name: thread.name,
       imageUrl: thread.imageUrl,
+      avatarFrameUrl: thread.avatarFrameUrl,
       roomId: thread.roomId.isNotEmpty ? thread.roomId : null,
     );
     fetchInbox();

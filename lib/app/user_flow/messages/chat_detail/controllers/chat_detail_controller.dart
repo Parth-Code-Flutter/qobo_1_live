@@ -8,6 +8,7 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
 import 'package:qobo_one_live/repo/chat/chat_local_store.dart';
 import 'package:qobo_one_live/repo/chat/chat_repo.dart';
+import 'package:qobo_one_live/repo/user/user_repo.dart';
 import 'package:qobo_one_live/repo/chat/models/chat_room_model.dart';
 import 'package:qobo_one_live/repo/emoji/emoji_repo.dart';
 import 'package:qobo_one_live/services/chat/chat_firebase_service.dart';
@@ -103,6 +104,7 @@ class ChatDetailController extends GetxController {
 
   final chatName = 'Chat'.obs;
   final chatImageUrl = RxnString();
+  final avatarFrameUrl = RxnString();
   final targetId = ''.obs;
   final roomId = ''.obs;
   final firestorePath = ''.obs;
@@ -178,6 +180,7 @@ class ChatDetailController extends GetxController {
           args['imageUrl']?.toString(),
         );
       }
+      avatarFrameUrl.value = args['avatarFrameUrl']?.toString();
       if (args['targetId'] != null) {
         targetId.value = args['targetId'].toString();
       }
@@ -201,6 +204,26 @@ class ChatDetailController extends GetxController {
         imageUrl: chatImageUrl.value,
       );
       _bootstrapChat();
+      unawaited(_loadAvatarFrame());
+    }
+  }
+
+  Future<void> _loadAvatarFrame() async {
+    try {
+      final response = await UserRepo().getPublicProfile(
+        userId: targetId.value,
+        isShowLoader: false,
+      );
+      if (isClosed ||
+          !isSocialApiSuccess(response) ||
+          response?['data'] is! Map) {
+        return;
+      }
+      avatarFrameUrl.value = SocialUserCard.fromJson(
+        Map<String, dynamic>.from(response!['data'] as Map),
+      ).avatarFrameUrl;
+    } catch (_) {
+      // Cosmetic metadata must never block chat or replace its error handling.
     }
   }
 

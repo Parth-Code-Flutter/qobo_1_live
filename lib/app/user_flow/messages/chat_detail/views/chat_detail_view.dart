@@ -99,14 +99,12 @@ class ChatDetailView extends GetView<ChatDetailController> {
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
           child: Row(
             children: [
-              AppUserAvatar(
+              FramedUserAvatar(
                 name: controller.chatName.value,
                 imageUrl: controller.chatImageUrl.value,
+                frameUrl: controller.avatarFrameUrl.value,
+                frameSeed: controller.targetId.value,
                 size: 43,
-                border: Border.all(
-                  color: kColorWhite.withValues(alpha: 0.82),
-                  width: 1.5,
-                ),
               ),
               Spacing.h10,
               Expanded(

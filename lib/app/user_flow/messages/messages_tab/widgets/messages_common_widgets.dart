@@ -162,6 +162,8 @@ class MessageSearchUserTile extends StatelessWidget {
             child: AppUserAvatar(
               name: user.name,
               imageUrl: user.displayPicture,
+              frameUrl: user.avatarFrameUrl,
+              frameSeed: user.id,
               size: 44,
             ),
           ),

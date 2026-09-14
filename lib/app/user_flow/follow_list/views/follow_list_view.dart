@@ -48,7 +48,9 @@ class FollowListView extends GetView<FollowListController> {
       child: Obx(
         () => Row(
           children: [
-            Expanded(child: _tabButton('Friends', FollowListController.friendsTab)),
+            Expanded(
+              child: _tabButton('Friends', FollowListController.friendsTab),
+            ),
             Spacing.h8,
             Expanded(
               child: _tabButton('Following', FollowListController.followingTab),
@@ -118,6 +120,8 @@ class FollowListView extends GetView<FollowListController> {
               AppUserAvatar(
                 name: user.name,
                 imageUrl: user.displayPicture,
+                frameUrl: user.avatarFrameUrl,
+                frameSeed: user.id,
                 size: 52,
               ),
               Spacing.h16,
@@ -152,8 +156,9 @@ class FollowListView extends GetView<FollowListController> {
                   buttonText: isProcessing
                       ? '...'
                       : (user.isFollowing ? 'Following' : 'Follow'),
-                  buttonColor:
-                      user.isFollowing ? kColorBackground : kColorPrimary,
+                  buttonColor: user.isFollowing
+                      ? kColorBackground
+                      : kColorPrimary,
                   textColor: user.isFollowing ? kColorText : kColorWhite,
                   borderRadius: 16,
                 ),

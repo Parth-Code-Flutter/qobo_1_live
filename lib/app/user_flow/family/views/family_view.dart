@@ -12,6 +12,7 @@ import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/phone_mask_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/profanity_mask_utils.dart';
@@ -3259,6 +3260,10 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
   Widget _messageBubble(Map<String, dynamic> message) {
     final type = message['type']?.toString().toLowerCase() ?? 'text';
     final sender = message['senderName']?.toString() ?? 'Member';
+    final senderId = message['senderId']?.toString() ?? '';
+    final member = controller.familyMembers.firstWhereOrNull(
+      (member) => member['userId']?.toString() == senderId,
+    );
     final mine = message['senderId']?.toString() == controller.currentUserId;
     final text = _messageText(message, type);
     final media = _messageMedia(message, type);
@@ -3330,12 +3335,26 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
                 if (!mine)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 4),
-                    child: AppText(
-                      text: sender,
-                      fontSize: TextStyles.k10FontSize,
-                      color: _FamilyChatUi.plum,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _Avatar(
+                          imageUrl: member?['displayPicture']?.toString() ?? '',
+                          frameUrl: member?['avatarFrameUrl']?.toString() ?? '',
+                          name: sender,
+                          size: 36,
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: AppText(
+                            text: sender,
+                            fontSize: TextStyles.k10FontSize,
+                            color: _FamilyChatUi.plum,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 if (media.isNotEmpty || type == 'gift') ...[
@@ -4508,11 +4527,12 @@ class FamilyGroupInfoPage extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
       child: Row(
         children: [
-          _Avatar(
+          FramedUserAvatar(
             imageUrl: member['displayPicture']?.toString() ?? '',
-            frameUrl: member['avatarFrameUrl']?.toString() ?? '',
+            frameUrl: member['avatarFrameUrl']?.toString(),
+            frameSeed: userId,
             name: name,
-            size: 48,
+            size: 43,
           ),
           Spacing.h12,
           Expanded(
@@ -5631,44 +5651,12 @@ class _Avatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initial = name.trim().isEmpty ? 'U' : name.trim()[0].toUpperCase();
-    return SizedBox(
-      width: size,
-      height: size,
-      child: Stack(
-        clipBehavior: Clip.none,
-        fit: StackFit.expand,
-        children: [
-          Container(
-            margin: EdgeInsets.all(size * 0.08),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: _FamilyUi.violet,
-              border: Border.all(color: kColorWhite.withValues(alpha: 0.7)),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: _FamilyNetworkImage(
-              url: imageUrl,
-              width: size,
-              height: size,
-              fit: BoxFit.cover,
-              fallback: Center(
-                child: SemiBoldText(
-                  text: initial,
-                  fontSize: size * 0.34,
-                  color: kColorWhite,
-                ),
-              ),
-            ),
-          ),
-          if (frameUrl.isNotEmpty)
-            Image.network(
-              frameUrl,
-              fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-            ),
-        ],
-      ),
+    return FramedUserAvatar(
+      name: name,
+      imageUrl: imageUrl,
+      frameUrl: frameUrl,
+      // Preserve the existing footprint in member rows and sheets.
+      size: size / 1.34,
     );
   }
 }

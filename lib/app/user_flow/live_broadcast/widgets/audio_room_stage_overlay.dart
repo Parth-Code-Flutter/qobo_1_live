@@ -3389,6 +3389,7 @@ class _PremiumAvatarFrame extends StatelessWidget {
       size: frameSize,
       contentSize: avatarSize,
       child: AppUserAvatar(
+        showFrame: false,
         name: name,
         imageUrl: imageUrl,
         size: avatarSize,

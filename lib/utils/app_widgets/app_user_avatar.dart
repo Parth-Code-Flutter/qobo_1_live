@@ -47,6 +47,9 @@ class AppUserAvatar extends StatelessWidget {
     this.textColor,
     this.border,
     this.fit = BoxFit.cover,
+    this.frameUrl,
+    this.frameSeed,
+    this.showFrame = true,
   });
 
   final String name;
@@ -57,9 +60,25 @@ class AppUserAvatar extends StatelessWidget {
   final Color? textColor;
   final BoxBorder? border;
   final BoxFit fit;
+  final String? frameUrl;
+  final String? frameSeed;
+
+  /// Disable only when a parent already supplies the decorative frame.
+  final bool showFrame;
 
   @override
   Widget build(BuildContext context) {
+    if (showFrame) {
+      return FramedUserAvatar(
+        name: name,
+        imageUrl: imageUrl,
+        frameUrl: frameUrl,
+        frameSeed: frameSeed,
+        size: size / 1.34,
+        fontSize: fontSize,
+        fit: fit,
+      );
+    }
     final resolvedUrl = resolveUserAvatarUrl(imageUrl);
     final avatar = ClipOval(
       child: SafeNetworkAvatar(
@@ -146,14 +165,6 @@ class FramedUserAvatar extends StatelessWidget {
         alignment: Alignment.center,
         clipBehavior: Clip.none,
         children: [
-          IgnorePointer(
-            // Key forces a clean remount when the equipped frame URL changes.
-            child: _FrameImage(
-              key: ValueKey(source),
-              source: source,
-              size: frameSize,
-            ),
-          ),
           Container(
             width: avatarSize,
             height: avatarSize,
@@ -168,6 +179,7 @@ class FramedUserAvatar extends StatelessWidget {
               ],
             ),
             child: AppUserAvatar(
+              showFrame: false,
               name: name,
               imageUrl: imageUrl,
               size: avatarSize,
@@ -179,6 +191,14 @@ class FramedUserAvatar extends StatelessWidget {
               fit: fit,
             ),
           ),
+          IgnorePointer(
+            child: _FrameImage(
+              key: ValueKey(source),
+              source: source,
+              fallbackSource: _fallbackFrameSource(),
+              size: frameSize,
+            ),
+          ),
         ],
       ),
     );
@@ -186,8 +206,11 @@ class FramedUserAvatar extends StatelessWidget {
 
   String _resolveFrameSource() {
     final raw = frameUrl?.trim() ?? '';
-    if (raw.isNotEmpty && raw != 'null') return _mapFrameId(raw);
+    if (raw.isNotEmpty && raw.toLowerCase() != 'null') return _mapFrameId(raw);
+    return _fallbackFrameSource();
+  }
 
+  String _fallbackFrameSource() {
     final choices = [_royalFrame, _neonFrame, _luxeFrame];
     final seed = (frameSeed?.trim().isNotEmpty ?? false) ? frameSeed! : name;
     return choices[_stableIndex(seed, choices.length)];
@@ -195,6 +218,8 @@ class FramedUserAvatar extends StatelessWidget {
 
   String _mapFrameId(String value) {
     final normalized = value.toLowerCase();
+    // Never replace an actual URL just because its filename contains "gold".
+    if (value.contains('/') || value.contains('.')) return value;
     if (normalized.contains('gold') || normalized.contains('royal')) {
       return _royalFrame;
     }
@@ -219,10 +244,16 @@ class FramedUserAvatar extends StatelessWidget {
 }
 
 class _FrameImage extends StatefulWidget {
-  const _FrameImage({super.key, required this.source, required this.size});
+  const _FrameImage({
+    super.key,
+    required this.source,
+    required this.size,
+    required this.fallbackSource,
+  });
 
   final String source;
   final double size;
+  final String fallbackSource;
 
   @override
   State<_FrameImage> createState() => _FrameImageState();
@@ -239,10 +270,13 @@ class _FrameImageState extends State<_FrameImage>
       widget.source.startsWith('https://') ||
       widget.source.startsWith('/');
 
-  bool get _isSvg => widget.source.toLowerCase().endsWith('.svg');
+  String get _sourcePath =>
+      (Uri.tryParse(widget.source)?.path ?? widget.source).toLowerCase();
+
+  bool get _isSvg => _sourcePath.endsWith('.svg');
 
   bool get _shouldTrySvga {
-    final normalized = widget.source.toLowerCase();
+    final normalized = _sourcePath;
     return _isRemote &&
         !_isSvg &&
         !normalized.endsWith('.png') &&
@@ -284,10 +318,7 @@ class _FrameImageState extends State<_FrameImage>
       final videoItem = await SVGAParser.shared.decodeFromURL(
         ApiImageUtils.normalize(widget.source) ?? widget.source,
       );
-      if (!mounted || _svgaController != controller) {
-        controller.dispose();
-        return;
-      }
+      if (!mounted || _svgaController != controller) return;
       controller.videoItem = videoItem;
       // Avatar-frame SVGAs must stay silent in profile / chat chrome.
       controller.muted = true;
@@ -311,7 +342,9 @@ class _FrameImageState extends State<_FrameImage>
         ? ApiImageUtils.normalize(widget.source)
         : null;
 
-    // Show a centered spinner while the SVGA frame is still downloading.
+    if (_svgaFailed) return _fallbackFrame();
+
+    // Keep a frame visible while the equipped asset downloads.
     if (_shouldTrySvga && !_isSvgaReady && !_svgaFailed) {
       return _frameLoader();
     }
@@ -339,6 +372,7 @@ class _FrameImageState extends State<_FrameImage>
         height: widget.size,
         fit: BoxFit.contain,
         placeholderBuilder: (_) => _frameLoader(),
+        errorBuilder: (_, __, ___) => _fallbackFrame(),
       );
     }
 
@@ -352,7 +386,7 @@ class _FrameImageState extends State<_FrameImage>
           if (progress == null) return child;
           return _frameLoader();
         },
-        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+        errorBuilder: (_, __, ___) => _fallbackFrame(),
       );
     }
 
@@ -370,25 +404,16 @@ class _FrameImageState extends State<_FrameImage>
       width: widget.size,
       height: widget.size,
       fit: BoxFit.contain,
-      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+      errorBuilder: (_, __, ___) => _fallbackFrame(),
     );
   }
 
-  Widget _frameLoader() {
-    final indicatorSize = (widget.size * 0.18).clamp(16.0, 28.0);
-    return SizedBox(
-      width: widget.size,
-      height: widget.size,
-      child: Center(
-        child: SizedBox(
-          width: indicatorSize,
-          height: indicatorSize,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: kColorPrimary.withValues(alpha: 0.85),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget _fallbackFrame() => SvgPicture.asset(
+    widget.fallbackSource,
+    width: widget.size,
+    height: widget.size,
+    fit: BoxFit.contain,
+  );
+
+  Widget _frameLoader() => _fallbackFrame();
 }
