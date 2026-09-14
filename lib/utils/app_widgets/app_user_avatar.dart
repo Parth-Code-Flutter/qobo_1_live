@@ -192,7 +192,7 @@ class FramedUserAvatar extends StatelessWidget {
             ),
           ),
           IgnorePointer(
-            child: _FrameImage(
+            child: AvatarFrameMedia(
               key: ValueKey(source),
               source: source,
               fallbackSource: _fallbackFrameSource(),
@@ -243,8 +243,9 @@ class FramedUserAvatar extends StatelessWidget {
   }
 }
 
-class _FrameImage extends StatefulWidget {
-  const _FrameImage({
+/// Shared silent renderer for equipped raster, SVG, and SVGA profile frames.
+class AvatarFrameMedia extends StatefulWidget {
+  const AvatarFrameMedia({
     super.key,
     required this.source,
     required this.size,
@@ -256,10 +257,10 @@ class _FrameImage extends StatefulWidget {
   final String fallbackSource;
 
   @override
-  State<_FrameImage> createState() => _FrameImageState();
+  State<AvatarFrameMedia> createState() => _AvatarFrameMediaState();
 }
 
-class _FrameImageState extends State<_FrameImage>
+class _AvatarFrameMediaState extends State<AvatarFrameMedia>
     with SingleTickerProviderStateMixin {
   SVGAAnimationController? _svgaController;
   bool _isSvgaReady = false;
@@ -293,7 +294,7 @@ class _FrameImageState extends State<_FrameImage>
   }
 
   @override
-  void didUpdateWidget(covariant _FrameImage oldWidget) {
+  void didUpdateWidget(covariant AvatarFrameMedia oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.source != widget.source) {
       _svgaController?.dispose();

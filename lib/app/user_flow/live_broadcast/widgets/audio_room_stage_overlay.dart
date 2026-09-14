@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/icon_constants.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
@@ -3446,13 +3445,6 @@ class _AudioSeatFrame extends StatelessWidget {
           alignment: Alignment.center,
           clipBehavior: Clip.none,
           children: [
-            IgnorePointer(
-              child: _FrameMedia(source: assetPath, size: size),
-            ),
-            if (customFrame.isNotEmpty && customFrame != assetPath)
-              IgnorePointer(
-                child: _FrameMedia(source: customFrame, size: size),
-              ),
             Container(
               width: innerSize,
               height: innerSize,
@@ -3473,57 +3465,20 @@ class _AudioSeatFrame extends StatelessWidget {
               ),
               child: child,
             ),
+            IgnorePointer(
+              child: AvatarFrameMedia(
+                source:
+                    customFrame.isEmpty || customFrame.toLowerCase() == 'null'
+                    ? assetPath
+                    : customFrame,
+                fallbackSource: assetPath,
+                size: size,
+              ),
+            ),
           ],
         ),
       ),
     );
-  }
-}
-
-class _FrameMedia extends StatelessWidget {
-  const _FrameMedia({required this.source, required this.size});
-
-  final String source;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    final isRemote =
-        source.startsWith('http://') ||
-        source.startsWith('https://') ||
-        source.startsWith('/');
-    final normalizedUrl = isRemote ? ApiImageUtils.normalize(source) : null;
-    final isSvg = source.toLowerCase().endsWith('.svg');
-
-    if (isRemote && isSvg) {
-      return SvgPicture.network(
-        normalizedUrl!,
-        width: size,
-        height: size,
-        fit: BoxFit.contain,
-      );
-    }
-
-    if (isRemote) {
-      return Image.network(
-        normalizedUrl!,
-        width: size,
-        height: size,
-        fit: BoxFit.contain,
-        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-      );
-    }
-
-    if (isSvg) {
-      return SvgPicture.asset(
-        source,
-        width: size,
-        height: size,
-        fit: BoxFit.contain,
-      );
-    }
-
-    return Image.asset(source, width: size, height: size, fit: BoxFit.contain);
   }
 }
 
