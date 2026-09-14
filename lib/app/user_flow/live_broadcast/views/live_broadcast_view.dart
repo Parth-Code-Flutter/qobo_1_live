@@ -1216,6 +1216,11 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
   }) {
     final isAudience = !controller.isHost.value;
     return [
+      _bottomActionIcon(
+        Icons.emoji_emotions_rounded,
+        compact: compact,
+        onTap: controller.openEmojiSheet,
+      ),
       Obx(
         () => _bottomActionIcon(
           controller.isMicMuted.value

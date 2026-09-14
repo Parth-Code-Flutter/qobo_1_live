@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:qobo_one_live/utils/live_room_listing_utils.dart';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -252,24 +253,17 @@ class LiveRoomController extends GetxController {
       if (liveResponse != null &&
           liveResponse['statusCode'] == 1 &&
           liveResponse['data'] is List) {
-        final seen = <String>{
-          for (final r in fetchedList)
-            if ((r['id']?.toString() ?? '').isNotEmpty) r['id'].toString(),
-        };
         for (final item in liveResponse['data'] as List) {
           if (item is! Map) continue;
           final mapped = _mapRoom({
             ...Map<String, dynamic>.from(item),
             'type': 'live_stream',
           });
-          final id = mapped['id']?.toString() ?? '';
-          if (id.isNotEmpty && seen.contains(id)) continue;
-          if (id.isNotEmpty) seen.add(id);
           fetchedList.add(mapped);
         }
       }
 
-      allRooms.assignAll(fetchedList);
+      allRooms.assignAll(uniqueLiveRoomListings(fetchedList));
       _applySearchFilter();
     } catch (_) {
       // ignore

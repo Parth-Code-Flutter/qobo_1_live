@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -1254,7 +1256,11 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _familyBadge(),
+                _EditableFamilyPhoto(
+                  group: _group,
+                  size: 112,
+                  fallback: _familyBadge(),
+                ),
                 const SizedBox(width: 18),
                 Expanded(
                   child: Column(
@@ -4313,10 +4319,14 @@ class FamilyGroupInfoPage extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _Avatar(
-            imageUrl: group['logo']?.toString() ?? '',
-            name: name,
+          _EditableFamilyPhoto(
+            group: group,
             size: 92,
+            fallback: _Avatar(
+              imageUrl: group['logo']?.toString() ?? '',
+              name: name,
+              size: 92,
+            ),
           ),
           Spacing.v12,
           SemiBoldText(
@@ -5673,5 +5683,87 @@ class _SheetHandle extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _EditableFamilyPhoto extends StatelessWidget {
+  const _EditableFamilyPhoto({
+    required this.group,
+    required this.size,
+    required this.fallback,
+  });
+  final Map<String, dynamic> group;
+  final double size;
+  final Widget fallback;
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Get.find<FamilyController>();
+    final id = controller.familyIdOf(group);
+    return Obx(() {
+      final logo =
+          controller.updatedGroupPhotos[id] ?? group['logo']?.toString() ?? '';
+      final busy = controller.updatingGroupPhotos.contains(id);
+      final owner = controller.isFamilyOwner(group);
+      return Stack(
+        clipBehavior: Clip.none,
+        children: [
+          logo.isEmpty
+              ? fallback
+              : ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: _FamilyNetworkImage(
+                    url: logo,
+                    width: size,
+                    height: size,
+                    fit: BoxFit.cover,
+                    fallback: fallback,
+                  ),
+                ),
+          if (owner)
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: IconButton.filled(
+                tooltip: 'Change group photo',
+                onPressed: busy
+                    ? null
+                    : () async {
+                        try {
+                          final image = await ImagePicker().pickImage(
+                            source: ImageSource.gallery,
+                            maxWidth: 1600,
+                            maxHeight: 1600,
+                            imageQuality: 85,
+                          );
+                          if (image == null || !context.mounted) return;
+                          await controller.updateGroupPhoto(
+                            group,
+                            File(image.path),
+                          );
+                        } catch (_) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Could not open photo library. Please try again.',
+                                ),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                icon: busy
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.add_a_photo_rounded, size: 20),
+              ),
+            ),
+        ],
+      );
+    });
   }
 }

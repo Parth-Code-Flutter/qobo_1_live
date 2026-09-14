@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -151,6 +152,8 @@ class FamilyController extends GetxController {
     required String name,
     required String description,
     required int joiningCoins,
+    String? logo,
+    File? logoFile,
   }) async {
     if (isCreatingFamily.value) return;
     final cleanName = name.trim();
@@ -164,9 +167,9 @@ class FamilyController extends GetxController {
     try {
       response = await _familyRepo.createFamily(
         name: cleanName,
-        description: description.trim().isEmpty
-            ? 'Welcome to $cleanName.'
-            : description,
+        description: description,
+        logo: logo,
+        logoFile: logoFile,
         joiningCoins: joiningCoins,
         initialMemberIds: selectedInitialMembers.toList(),
         isShowLoader: false,
@@ -1018,6 +1021,61 @@ class FamilyController extends GetxController {
     );
   }
 
+  final updatedGroupPhotos = <String, String>{}.obs;
+  final updatingGroupPhotos = <String>[].obs;
+
+  bool isFamilyOwner(Map<String, dynamic> family) {
+    final ownerId =
+        (family['adminUserId'] ??
+                family['ownerId'] ??
+                family['creatorId'] ??
+                '')
+            .toString()
+            .trim();
+    if (currentUserId.isEmpty) return false;
+    if (ownerId.isNotEmpty) return ownerId == currentUserId;
+    final role = (family['myRole'] ?? '').toString().toLowerCase();
+    return role == 'owner' || role == 'creator';
+  }
+
+  Future<void> updateGroupPhoto(Map<String, dynamic> group, File file) async {
+    final id = familyIdOf(group);
+    if (id.isEmpty || !isFamilyOwner(group) || updatingGroupPhotos.contains(id)) {
+      return;
+    }
+    updatingGroupPhotos.add(id);
+    try {
+      final response = await _familyRepo.updateFamily(
+        familyId: id,
+        logoFile: file,
+        isShowLoader: false,
+      );
+      if (!_isSuccess(response)) {
+        _showError(_message(response, 'Could not update group photo.'));
+        return;
+      }
+      var detail = _extractDetailMap(response);
+      var logo = _mapFamily(detail)['logo']?.toString() ?? '';
+      if (logo.isEmpty) {
+        detail = _extractDetailMap(
+          await _familyRepo.getFamilyDetail(familyId: id, isShowLoader: false),
+        );
+        logo = _mapFamily(detail)['logo']?.toString() ?? '';
+      }
+      if (logo.isNotEmpty) {
+        updatedGroupPhotos[id] = logo;
+        for (final groups in [myGroups, discoverGroups]) {
+          final index = groups.indexWhere((g) => familyIdOf(g) == id);
+          if (index >= 0) groups[index] = {...groups[index], 'logo': logo};
+        }
+      }
+    } catch (_) {
+      _showError('Could not update group photo. Please try again.');
+    } finally {
+      updatingGroupPhotos.remove(id);
+    }
+  }
+
   bool isAdmin(Map<String, dynamic> family) {
     if (family['canManageMembers'] == true) return true;
     final role =
@@ -1120,7 +1178,13 @@ class FamilyController extends GetxController {
       'groupId': id,
       'name': name.isEmpty ? 'Family Group' : name,
       'description': _pickText(raw, const ['description', 'notice']),
-      'logo': _pickText(raw, const ['logo', 'image', 'avatar']),
+      'logo': _pickText(raw, const [
+        'logo',
+        'logoUrl',
+        'image',
+        'imageUrl',
+        'avatar',
+      ]),
       'joiningCoins': _toInt(raw['joiningCoins'] ?? raw['joining_coins']),
       'adminUserId': _pickText(raw, const ['adminUserId', 'creatorId']),
       'adminName': _pickText(raw, const ['adminName', 'creatorName', 'leader']),

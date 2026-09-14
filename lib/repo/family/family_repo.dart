@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
+import 'package:http/http.dart' as http;
 
 import 'package:qobo_one_live/services/api_constants.dart';
 import 'package:qobo_one_live/services/api_service.dart';
@@ -133,30 +135,45 @@ class FamilyRepo {
 
   Future<Map<String, dynamic>?> createFamily({
     required String name,
-    required String description,
+    String description = '',
     int joiningCoins = 0,
     String? logo,
+    File? logoFile,
     List<String> initialMemberIds = const [],
     bool isShowLoader = true,
   }) async {
     final body = <String, dynamic>{
       'name': name.trim(),
-      'description': description.trim(),
+      if (description.trim().isNotEmpty) 'description': description.trim(),
       'joiningCoins': max(0, joiningCoins),
-      if ((logo ?? '').trim().isNotEmpty) 'logo': logo!.trim(),
+      if (logoFile == null && (logo ?? '').trim().isNotEmpty)
+        'logo': logo!.trim(),
       if (initialMemberIds.isNotEmpty) 'initialMemberIds': initialMemberIds,
     };
-    var response = await _apiService.postRequest(
-      endPoint: FamilyEndpoints.groups,
-      requestModel: body,
-      isShowLoader: isShowLoader,
-    );
-    if (response?.statusCode == 404) {
-      response = await _apiService.postRequest(
-        endPoint: FamilyEndpoints.create,
+    Future<http.Response?> send(String endpoint) {
+      if (logoFile != null) {
+        return _apiService.multipartFormRequest(
+          endPoint: endpoint,
+          fields: body.map(
+            (key, value) => MapEntry(
+              key,
+              value is List ? jsonEncode(value) : value.toString(),
+            ),
+          ),
+          namedFiles: {'logo': logoFile},
+          isShowLoader: isShowLoader,
+        );
+      }
+      return _apiService.postRequest(
+        endPoint: endpoint,
         requestModel: body,
         isShowLoader: isShowLoader,
       );
+    }
+
+    var response = await send(FamilyEndpoints.groups);
+    if (response?.statusCode == 404) {
+      response = await send(FamilyEndpoints.create);
     }
     if (response == null) return null;
     return ApiResponseUtils.tryDecodeMap(response.body);
@@ -233,6 +250,7 @@ class FamilyRepo {
     required String familyId,
     String? name,
     String? description,
+    File? logoFile,
     bool isShowLoader = true,
   }) async {
     final id = familyId.trim();
@@ -244,6 +262,26 @@ class FamilyRepo {
       if (name != null) 'name': name.trim(),
       if (description != null) 'description': description.trim(),
     };
+    if (logoFile != null) {
+      Future<http.Response?> upload(String endpoint, String method) =>
+          _apiService.multipartFormRequest(
+            endPoint: endpoint,
+            fields: body.map((key, value) => MapEntry(key, value.toString())),
+            namedFiles: {'logo': logoFile},
+            method: method,
+            isShowLoader: isShowLoader,
+          );
+      var response = await upload(FamilyEndpoints.groupUpdate(id), 'PATCH');
+      if (response?.statusCode == 404) {
+        response = await upload(FamilyEndpoints.update, 'PATCH');
+      }
+      if (response?.statusCode == 404) {
+        response = await upload(FamilyEndpoints.groupUpdate(id), 'PUT');
+      }
+      return response == null
+          ? null
+          : ApiResponseUtils.tryDecodeMap(response.body);
+    }
     var response = await _apiService.patchRequest(
       endPoint: FamilyEndpoints.groupUpdate(id),
       requestModel: body,
@@ -309,8 +347,7 @@ class FamilyRepo {
   }) async {
     final id = familyId.trim();
     if (id.isEmpty) return null;
-    final path =
-        '${FamilyEndpoints.groupMessages(id)}?page=$page&limit=$limit';
+    final path = '${FamilyEndpoints.groupMessages(id)}?page=$page&limit=$limit';
     final response = await _apiService.getRequest(
       endPoint: path,
       isShowLoader: isShowLoader,

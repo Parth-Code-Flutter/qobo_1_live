@@ -64,7 +64,7 @@ class EmojiPickerBottomSheet extends GetView<LiveBroadcastController> {
                   size: 22,
                 ),
                 Spacing.h10,
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -75,7 +75,9 @@ class EmojiPickerBottomSheet extends GetView<LiveBroadcastController> {
                       ),
                       SizedBox(height: 2),
                       AppText(
-                        text: 'Your reaction appears on your seat.',
+                        text: controller.isLiveStreamingSession
+                            ? 'Send a reaction to the live stream.'
+                            : 'Your reaction appears on your seat.',
                         fontSize: TextStyles.k12FontSize,
                         color: Colors.white70,
                       ),
