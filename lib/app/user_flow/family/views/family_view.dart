@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
@@ -1730,6 +1731,15 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
 
   Widget _topMemberAvatar(Map<String, dynamic> member, int rank) {
     final name = _text(member['name'], 'Member');
+    final profile = SocialUserCard.fromJson(member);
+    final userId = _text(member['userId'] ?? member['id'], '');
+    final rosterMember = userId.isEmpty
+        ? null
+        : controller.familyMembers.firstWhereOrNull(
+            (entry) => entry['userId']?.toString() == userId,
+          );
+    final frameUrl =
+        profile.avatarFrameUrl ?? rosterMember?['avatarFrameUrl']?.toString();
     final coins = _int(member['contribution'] ?? member['coins']);
     final colors = const [
       Color(0xFFFFC107),
@@ -1745,26 +1755,12 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
           clipBehavior: Clip.none,
           alignment: Alignment.center,
           children: [
-            Container(
-              width: 58,
-              height: 58,
-              padding: const EdgeInsets.all(3),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: color, width: 2),
-              ),
-              child: ClipOval(
-                child: _FamilyNetworkImage(
-                  url: _text(member['displayPicture'], ''),
-                  fit: BoxFit.cover,
-                  fallback: _FamilyImagePlaceholder(
-                    label: name.substring(0, 1).toUpperCase(),
-                    gradient: LinearGradient(
-                      colors: [color.withValues(alpha: 0.82), _FamilyUi.violet],
-                    ),
-                  ),
-                ),
-              ),
+            FramedUserAvatar(
+              name: name,
+              imageUrl: _text(member['displayPicture'], ''),
+              frameUrl: frameUrl,
+              frameSeed: userId.isEmpty ? name : userId,
+              size: 58 / 1.34,
             ),
             Positioned(
               bottom: -8,
