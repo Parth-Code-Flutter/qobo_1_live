@@ -3445,6 +3445,16 @@ class _AudioSeatFrame extends StatelessWidget {
           alignment: Alignment.center,
           clipBehavior: Clip.none,
           children: [
+            IgnorePointer(
+              child: AvatarFrameMedia(
+                source:
+                    customFrame.isEmpty || customFrame.toLowerCase() == 'null'
+                    ? assetPath
+                    : customFrame,
+                fallbackSource: assetPath,
+                size: size,
+              ),
+            ),
             Container(
               width: innerSize,
               height: innerSize,
@@ -3464,16 +3474,6 @@ class _AudioSeatFrame extends StatelessWidget {
                 ],
               ),
               child: child,
-            ),
-            IgnorePointer(
-              child: AvatarFrameMedia(
-                source:
-                    customFrame.isEmpty || customFrame.toLowerCase() == 'null'
-                    ? assetPath
-                    : customFrame,
-                fallbackSource: assetPath,
-                size: size,
-              ),
             ),
           ],
         ),

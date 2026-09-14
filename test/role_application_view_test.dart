@@ -41,7 +41,6 @@ class _Repo extends RoleApplicationRepo {
     ApplicationRole role, {
     required String code,
     required String name,
-    required String email,
     required String phone,
     File? front,
     File? back,
@@ -49,10 +48,6 @@ class _Repo extends RoleApplicationRepo {
     String description = '',
   }) async {
     submissions++;
-    expect(
-      email,
-      role == ApplicationRole.superAdmin ? 'saved@example.com' : '',
-    );
     expect(phone, '9876543210');
     expect(name, 'Saved Name');
     return {
@@ -163,6 +158,16 @@ void main() {
   ) async {
     await mount(tester, ApplicationRole.host, _Repo());
     expect(find.text('Email'), findsNothing);
+    expect(find.text('Submit application'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('super admin has no email input without a saved email', (
+    tester,
+  ) async {
+    await mount(tester, ApplicationRole.superAdmin, _Repo());
+    expect(find.text('Email'), findsNothing);
+    expect(find.text('Full name'), findsWidgets);
+    expect(find.text('Phone number'), findsWidgets);
     expect(find.text('Submit application'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

@@ -165,6 +165,14 @@ class FramedUserAvatar extends StatelessWidget {
         alignment: Alignment.center,
         clipBehavior: Clip.none,
         children: [
+          IgnorePointer(
+            child: AvatarFrameMedia(
+              key: ValueKey(source),
+              source: source,
+              fallbackSource: _fallbackFrameSource(),
+              size: frameSize,
+            ),
+          ),
           Container(
             width: avatarSize,
             height: avatarSize,
@@ -189,14 +197,6 @@ class FramedUserAvatar extends StatelessWidget {
                 width: 1.6,
               ),
               fit: fit,
-            ),
-          ),
-          IgnorePointer(
-            child: AvatarFrameMedia(
-              key: ValueKey(source),
-              source: source,
-              fallbackSource: _fallbackFrameSource(),
-              size: frameSize,
             ),
           ),
         ],

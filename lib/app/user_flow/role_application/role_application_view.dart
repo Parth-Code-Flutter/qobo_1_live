@@ -44,7 +44,6 @@ class _RoleApplicationViewState extends State<RoleApplicationView> {
   final _form = GlobalKey<FormState>();
   final _code = TextEditingController();
   final _name = TextEditingController();
-  final _email = TextEditingController();
   final _phone = TextEditingController();
   final _agencyName = TextEditingController();
   final _description = TextEditingController();
@@ -52,7 +51,7 @@ class _RoleApplicationViewState extends State<RoleApplicationView> {
   late final RoleApplicationRepo _repo;
   late final RecruitmentCodeVerification _verification;
   bool _loading = true, _busy = false;
-  bool _hasName = false, _hasEmail = false, _hasPhone = false;
+  bool _hasName = false, _hasPhone = false;
   File? _front, _back;
   Map<String, dynamic>? _application;
   String? _error;
@@ -86,10 +85,8 @@ class _RoleApplicationViewState extends State<RoleApplicationView> {
       }
       if (!mounted) return;
       _name.text = session.userName;
-      _email.text = session.email;
       _phone.text = session.phone.replaceAll(RegExp(r'\D'), '');
       _hasName = _name.text.trim().isNotEmpty;
-      _hasEmail = _email.text.trim().isEmail;
       _hasPhone = RegExp(r'^\d{6,15}$').hasMatch(_phone.text);
     }
     _lookup.text = _phone.text.isNotEmpty
@@ -107,7 +104,6 @@ class _RoleApplicationViewState extends State<RoleApplicationView> {
     for (final c in [
       _code,
       _name,
-      _email,
       _phone,
       _agencyName,
       _lookup,
@@ -267,7 +263,6 @@ class _RoleApplicationViewState extends State<RoleApplicationView> {
         widget.role,
         code: _verification.verifiedCode,
         name: _name.text,
-        email: _super ? _email.text : '',
         phone: _phone.text,
         agencyName: _agencyName.text,
         description: _description.text,
@@ -304,7 +299,6 @@ class _RoleApplicationViewState extends State<RoleApplicationView> {
     String label,
     TextEditingController c, {
     bool required = true,
-    bool email = false,
     bool phone = false,
   }) => Padding(
     padding: const EdgeInsets.only(bottom: 16),
@@ -321,15 +315,10 @@ class _RoleApplicationViewState extends State<RoleApplicationView> {
             fontSize: 14,
           ),
           hintText: label,
-          textInputType: email
-              ? TextInputType.emailAddress
-              : phone
-              ? TextInputType.phone
-              : TextInputType.text,
+          textInputType: phone ? TextInputType.phone : TextInputType.text,
           validator: (value) {
             final text = value?.trim() ?? '';
             if (text.isEmpty) return required ? '$label is required' : null;
-            if (email && !text.isEmail) return 'Enter a valid email';
             if (phone &&
                 !RegExp(
                   r'^\d{6,15}$',
@@ -794,13 +783,6 @@ class _RoleApplicationViewState extends State<RoleApplicationView> {
                                                 _field(
                                                   'Full name',
                                                   _name,
-                                                  required: true,
-                                                ),
-                                              if (_super && !_hasEmail)
-                                                _field(
-                                                  'Email',
-                                                  _email,
-                                                  email: true,
                                                   required: true,
                                                 ),
                                               if (!_hasPhone)

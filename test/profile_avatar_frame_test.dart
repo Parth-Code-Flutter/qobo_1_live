@@ -36,6 +36,17 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byType(FramedUserAvatar), findsOneWidget);
+    final stack = tester.widget<Stack>(
+      find
+          .descendant(
+            of: find.byType(FramedUserAvatar),
+            matching: find.byType(Stack),
+          )
+          .first,
+    );
+    // Bundled frames have opaque centers; the photo must paint after them.
+    expect(stack.children.first, isA<IgnorePointer>());
+    expect(stack.children.last, isA<Container>());
     expect(find.byType(SvgPicture), findsOneWidget);
     expect(tester.getSize(find.byType(FramedUserAvatar)), const Size(48, 48));
     expect(tester.takeException(), isNull);

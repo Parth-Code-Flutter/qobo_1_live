@@ -89,7 +89,6 @@ void main() {
           role,
           code: 'CODE',
           name: 'Name',
-          email: 'name@example.com',
           phone: '9876543210',
           agencyName: 'Agency',
           description: ' Notes ',
@@ -110,7 +109,6 @@ void main() {
           role,
           code: ' CODE ',
           name: ' Applicant ',
-          email: ' applicant@example.com ',
           phone: '+91 9876543210',
           agencyName: 'My Agency',
           front: File('/tmp/front.jpg'),
@@ -120,7 +118,7 @@ void main() {
         final expected = switch (role) {
           ApplicationRole.agency => {'invitedBy', 'name', 'phone', 'ownerName'},
           ApplicationRole.host => {'agencyCode', 'whatsapp', 'hostName'},
-          ApplicationRole.superAdmin => {'fullName', 'email', 'phone'},
+          ApplicationRole.superAdmin => {'fullName', 'phone'},
         };
         expect(api.fields.keys.toSet(), expected);
         expect(

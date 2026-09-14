@@ -60,7 +60,6 @@ class RoleApplicationRepo {
     ApplicationRole role, {
     required String code,
     required String name,
-    required String email,
     required String phone,
     File? front,
     File? back,
@@ -84,7 +83,6 @@ class RoleApplicationRepo {
       },
       ApplicationRole.superAdmin => <String, String>{
         'fullName': name.trim(),
-        'email': email.trim(),
         'phone': digits,
         if (description.trim().isNotEmpty) 'description': description.trim(),
       },
