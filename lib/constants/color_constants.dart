@@ -6,6 +6,9 @@ const kColorSecondPrimary = Color(0xFFFFFFFF);
 const kColorBackground = Color(0xFFFFFFFF);
 const kColorAppBackground = Color(0xFFF5F5F5);
 
+/// Soft lavender app bg — RGB(246, 237, 246). Ready for full-app light theme.
+const kColorLavenderBg = Color.fromRGBO(246, 237, 246, 1);
+
 const kColorBottomNav = Color(0xFF410D37);
 
 const kColorWhite = Color(0xFFFFFFFF);
