@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/icon_constants.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
@@ -7,6 +8,7 @@ import 'package:qobo_one_live/utils/app_widgets/agency_host_review_actions.dart'
 import 'package:qobo_one_live/utils/app_widgets/app_bottom_sheet.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_shell_background.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -15,11 +17,11 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import '../controllers/agency_host_list_controller.dart';
 
 const _agencyHostSheetTheme = AppBottomSheetTheme(
-  backgroundColor: Color(0xFF160B29),
-  titleColor: kColorWhite,
-  subtitleColor: AdminAgencyUi.textMuted,
-  handleColor: AdminAgencyUi.violet,
-  dividerColor: Color(0x2EFFFFFF),
+  backgroundColor: AppLightUi.card,
+  titleColor: AppLightUi.title,
+  subtitleColor: AppLightUi.subtitle,
+  handleColor: AppLightUi.borderStrong,
+  dividerColor: AppLightUi.border,
 );
 
 class AgencyHostListView extends GetView<AgencyHostListController> {
@@ -42,7 +44,21 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
   Widget build(BuildContext context) {
     final body = _screenBody(context);
     if (embeddedInBottomNav) return body;
-    return Scaffold(backgroundColor: Colors.transparent, body: body);
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      appBar: PreferredSize(
+        preferredSize:
+            const CommonAppBarWidget(title: 'Agency Hosts').preferredSize,
+        child: Obx(
+          () => CommonAppBarWidget(
+            title: 'Agency Hosts',
+            subtitle: '${controller.agencyDisplayName} team',
+            onBackPressed: controller.onBackPressed,
+          ),
+        ),
+      ),
+      body: body,
+    );
   }
 
   Widget _screenBody(BuildContext context) {
@@ -50,6 +66,7 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
       length: 2,
       child: AppShellBackground(
         child: SafeArea(
+          top: embeddedInBottomNav,
           bottom: !embeddedInBottomNav,
           child: Obx(() {
             final bottomPad = embeddedInBottomNav
@@ -57,7 +74,8 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
                 : MediaQuery.paddingOf(context).bottom + 16;
             return Column(
               children: [
-                _topBar(),
+                if (embeddedInBottomNav) _embeddedTopBar(),
+                _searchBar(),
                 if (controller.isLoading.value)
                   const LinearProgressIndicator(
                     minHeight: 2,
@@ -107,9 +125,10 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
       child: Container(
         padding: const EdgeInsets.all(5),
         decoration: BoxDecoration(
-          color: const Color(0xFF160D29),
+          color: AppLightUi.card,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+          border: Border.all(color: AppLightUi.border),
+          boxShadow: AppLightUi.cardShadow,
         ),
         child: TabBar(
           dividerColor: Colors.transparent,
@@ -119,7 +138,7 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
             borderRadius: BorderRadius.circular(13),
           ),
           labelColor: AdminAgencyUi.ctaInk,
-          unselectedLabelColor: const Color(0xFFCCC3DC),
+          unselectedLabelColor: AppLightUi.subtitle,
           labelStyle: const TextStyle(
             fontWeight: FontWeight.w700,
             fontSize: 13,
@@ -143,7 +162,7 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.20),
+            color: AppLightUi.violet.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(7),
           ),
           child: Text(
@@ -155,92 +174,71 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
     ),
   );
 
-  Widget _topBar() {
+  Widget _embeddedTopBar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              _squareButton(
-                icon: Icons.arrow_back_ios_new_rounded,
-                onTap: controller.onBackPressed,
-              ),
-              Spacing.h10,
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SemiBoldText(
-                      text: 'Agency Hosts',
-                      fontSize: TextStyles.k18FontSize,
-                      color: kColorWhite,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    AppText(
-                      text: '${controller.agencyDisplayName} team',
-                      fontSize: TextStyles.k10FontSize,
-                      color: AdminAgencyUi.textMuted,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              // Manual host creation temporarily hidden.
-              // Spacing.h8,
-              // _addHostButton(),
-            ],
+          const SemiBoldText(
+            text: 'Agency Hosts',
+            fontSize: TextStyles.k18FontSize,
+            color: AppLightUi.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          Obx(
+            () => AppText(
+              text: '${controller.agencyDisplayName} team',
+              fontSize: TextStyles.k10FontSize,
+              color: AppLightUi.subtitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
           Spacing.v12,
-          Container(
-            height: 46,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              color: kColorWhite.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: kColorWhite.withValues(alpha: 0.14)),
-              boxShadow: [
-                BoxShadow(
-                  color: kColorBlack.withValues(alpha: 0.12),
-                  blurRadius: 14,
-                  offset: const Offset(0, 6),
-                ),
-              ],
+        ],
+      ),
+    );
+  }
+
+  Widget _searchBar() {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16, embeddedInBottomNav ? 0 : 8, 16, 12),
+      child: Container(
+        height: 46,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: AppLightUi.searchDecoration(radius: 14),
+        child: Row(
+          children: [
+            Icon(
+              Icons.search_rounded,
+              size: 20,
+              color: AppLightUi.muted,
             ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.search_rounded,
-                  size: 20,
-                  color: kColorWhite.withValues(alpha: 0.68),
+            Spacing.h10,
+            Expanded(
+              child: TextField(
+                controller: controller.searchController,
+                onChanged: (value) => controller.searchQuery.value = value,
+                textInputAction: TextInputAction.search,
+                style: TextStyles.kRegularPoppins(
+                  fontSize: TextStyles.k12FontSize,
+                  colors: AppLightUi.body,
                 ),
-                Spacing.h10,
-                Expanded(
-                  child: TextField(
-                    controller: controller.searchController,
-                    onChanged: (value) => controller.searchQuery.value = value,
-                    textInputAction: TextInputAction.search,
-                    style: TextStyles.kRegularPoppins(
-                      fontSize: TextStyles.k12FontSize,
-                      colors: kColorWhite,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: 'Search by host name or ID',
-                      isDense: true,
-                      border: InputBorder.none,
-                      hintStyle: TextStyles.kRegularPoppins(
-                        fontSize: TextStyles.k12FontSize,
-                        colors: kColorWhite.withValues(alpha: 0.46),
-                      ),
-                    ),
+                decoration: InputDecoration(
+                  hintText: 'Search by host name or ID',
+                  isDense: true,
+                  border: InputBorder.none,
+                  hintStyle: TextStyles.kRegularPoppins(
+                    fontSize: TextStyles.k12FontSize,
+                    colors: AppLightUi.hint,
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -285,20 +283,6 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
   //       ),
   //     );
   //   }
-
-  Widget _squareButton({
-    required IconData icon,
-    required VoidCallback onTap,
-    Color accent = AdminAgencyUi.sky,
-  }) {
-    return AdminAgencyUi.glassIconButton(
-      icon: icon,
-      onTap: onTap,
-      accent: accent,
-      size: 40,
-      iconSize: 16,
-    );
-  }
 
   //   Widget _mapStage(BuildContext context) {
   //     return GetBuilder<AgencyHostListController>(
@@ -430,11 +414,7 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
       width: double.infinity,
       margin: const EdgeInsets.only(top: 24),
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.045),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
+      decoration: AppLightUi.cardDecoration(radius: 22, elevated: false),
       child: Column(
         children: [
           Container(
@@ -462,7 +442,7 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
                 : 'No hosts here yet',
             textAlign: TextAlign.center,
             style: const TextStyle(
-              color: Colors.white,
+              color: AppLightUi.title,
               fontSize: 18,
               fontWeight: FontWeight.w700,
             ),
@@ -476,7 +456,7 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
                 : 'Approved and rejected applications will appear here after review.',
             textAlign: TextAlign.center,
             style: const TextStyle(
-              color: AdminAgencyUi.textMuted,
+              color: AppLightUi.subtitle,
               fontSize: 13,
               height: 1.5,
             ),
@@ -520,7 +500,7 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
                 Text(
                   pending ? 'Pending approval' : 'Approved & rejected hosts',
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: AppLightUi.title,
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
                   ),
@@ -531,7 +511,7 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
                       ? 'Review applications and grow your team.'
                       : 'Your team and past application decisions.',
                   style: const TextStyle(
-                    color: AdminAgencyUi.textMuted,
+                    color: AppLightUi.subtitle,
                     fontSize: 12,
                   ),
                 ),
@@ -557,7 +537,7 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
                           color: WidgetStateProperty.resolveWith(
                             (states) => states.contains(WidgetState.selected)
                                 ? AdminAgencyUi.violet
-                                : const Color(0xFF302044),
+                                : AppLightUi.cardSoft,
                           ),
                           surfaceTintColor: Colors.transparent,
                           padding: const EdgeInsets.symmetric(
@@ -568,12 +548,12 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
                           side: BorderSide(
                             color: ctrl.reviewedStatus.value == entry.key
                                 ? AdminAgencyUi.violet
-                                : const Color(0xFF665076),
+                                : AppLightUi.border,
                           ),
                           labelStyle: TextStyle(
                             color: ctrl.reviewedStatus.value == entry.key
-                                ? Colors.white
-                                : const Color(0xFFE8DDF1),
+                                ? kColorWhite
+                                : AppLightUi.body,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
@@ -897,20 +877,14 @@ class _HostSheetCard extends StatelessWidget {
     final card = Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF26183B),
+        color: AppLightUi.card,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: highlighted
               ? AdminAgencyUi.gold.withValues(alpha: 0.75)
-              : Colors.white.withValues(alpha: 0.12),
+              : AppLightUi.border,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: kColorBlack.withValues(alpha: 0.28),
-            blurRadius: 14,
-            offset: const Offset(0, 7),
-          ),
-        ],
+        boxShadow: AppLightUi.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -937,7 +911,7 @@ class _HostSheetCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       fontSize: TextStyles.k16FontSize,
-                      color: kColorWhite,
+                      color: AppLightUi.title,
                     ),
                     Spacing.v2,
                     AppText(
@@ -947,7 +921,7 @@ class _HostSheetCard extends StatelessWidget {
                           ? 'Host application'
                           : 'Agency host',
                       fontSize: TextStyles.k12FontSize,
-                      color: kColorWhite.withValues(alpha: 0.6),
+                      color: AppLightUi.subtitle,
                     ),
                   ],
                 ),
@@ -958,7 +932,7 @@ class _HostSheetCard extends StatelessWidget {
           ),
           if (compact) ...[
             const SizedBox(height: 14),
-            Divider(height: 1, color: Colors.white.withValues(alpha: 0.08)),
+            Divider(height: 1, color: AppLightUi.border),
             const SizedBox(height: 10),
             Row(
               children: [
@@ -967,7 +941,7 @@ class _HostSheetCard extends StatelessWidget {
                       ? Icons.schedule_rounded
                       : Icons.person_outline_rounded,
                   size: 15,
-                  color: AdminAgencyUi.textMuted,
+                  color: AppLightUi.muted,
                 ),
                 const SizedBox(width: 6),
                 Expanded(
@@ -976,14 +950,14 @@ class _HostSheetCard extends StatelessWidget {
                         ? 'Awaiting your review'
                         : 'View profile & performance',
                     style: const TextStyle(
-                      color: AdminAgencyUi.textMuted,
+                      color: AppLightUi.muted,
                       fontSize: 11,
                     ),
                   ),
                 ),
                 const Icon(
                   Icons.chevron_right_rounded,
-                  color: AdminAgencyUi.textMuted,
+                  color: AppLightUi.muted,
                   size: 18,
                 ),
               ],
@@ -1032,13 +1006,13 @@ class _HostSheetCard extends StatelessWidget {
                 Icon(
                   Icons.schedule_rounded,
                   size: 14,
-                  color: kColorWhite.withValues(alpha: 0.45),
+                  color: AppLightUi.muted,
                 ),
                 Spacing.h6,
                 AppText(
                   text: '${host.callingMinutes} min on calls',
                   fontSize: TextStyles.k10FontSize,
-                  color: kColorWhite.withValues(alpha: 0.5),
+                  color: AppLightUi.subtitle,
                 ),
                 if (host.lastViewer.isNotEmpty &&
                     host.lastViewer.toLowerCase() != 'unknown') ...[
@@ -1047,7 +1021,7 @@ class _HostSheetCard extends StatelessWidget {
                     child: AppText(
                       text: 'Last: ${host.lastViewer}',
                       fontSize: TextStyles.k10FontSize,
-                      color: kColorWhite.withValues(alpha: 0.5),
+                      color: AppLightUi.subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1058,7 +1032,7 @@ class _HostSheetCard extends StatelessWidget {
           ],
           if (showHostId) ...[
             Spacing.v12,
-            Divider(height: 1, color: kColorWhite.withValues(alpha: 0.10)),
+            Divider(height: 1, color: AppLightUi.border),
             Spacing.v8,
             // Phone display temporarily hidden.
             // if (host.phone.isNotEmpty)
@@ -1109,9 +1083,9 @@ class _HostSheetCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
       decoration: BoxDecoration(
-        color: const Color(0xFF190D2D),
+        color: AppLightUi.cardSoft,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.06)),
+        border: Border.all(color: AppLightUi.border),
       ),
       child: Row(
         children: [
@@ -1124,12 +1098,12 @@ class _HostSheetCard extends StatelessWidget {
                 AppText(
                   text: label,
                   fontSize: TextStyles.k8FontSize,
-                  color: kColorWhite.withValues(alpha: 0.44),
+                  color: AppLightUi.muted,
                 ),
                 SemiBoldText(
                   text: value,
                   fontSize: TextStyles.k10FontSize,
-                  color: kColorWhite,
+                  color: AppLightUi.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1156,14 +1130,14 @@ class _HostSheetCard extends StatelessWidget {
           AppText(
             text: label,
             fontSize: TextStyles.k10FontSize,
-            color: kColorWhite.withValues(alpha: 0.48),
+            color: AppLightUi.muted,
           ),
           Spacing.h10,
           Expanded(
             child: AppText(
               text: value,
               fontSize: TextStyles.k10FontSize,
-              color: kColorWhite.withValues(alpha: 0.85),
+              color: AppLightUi.body,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               align: TextAlign.end,
@@ -1209,8 +1183,8 @@ class _HostSheetCard extends StatelessWidget {
         textColor = AdminAgencyUi.rose;
         break;
       default:
-        bgColor = kColorWhite.withValues(alpha: 0.1);
-        textColor = kColorWhite.withValues(alpha: 0.7);
+        bgColor = AppLightUi.border;
+        textColor = AppLightUi.body;
     }
 
     return Container(

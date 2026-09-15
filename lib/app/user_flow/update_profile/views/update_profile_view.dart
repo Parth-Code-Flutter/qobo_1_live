@@ -24,7 +24,7 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kColorWhite,
+      backgroundColor: kColorLavenderBg,
       resizeToAvoidBottomInset: true,
       appBar: CommonAppBarWidget(title: '', showBackButton: true),
       body: GestureDetector(

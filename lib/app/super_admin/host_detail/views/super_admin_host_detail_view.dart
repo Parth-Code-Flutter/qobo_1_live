@@ -7,6 +7,7 @@ import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui.dart';
 import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui_kit.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -21,27 +22,9 @@ class SuperAdminHostDetailView extends GetView<SuperAdminHostDetailController> {
       secondary: SuperAdminUi.sky,
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          iconTheme: const IconThemeData(color: SuperAdminUi.textPrimary),
-          title: Row(
-            children: [
-              SuperAdminUi.glowIcon(
-                icon: Icons.mic_rounded,
-                accent: SuperAdminUi.teal,
-                size: 34,
-                iconSize: 18,
-              ),
-              Spacing.h10,
-              const SemiBoldText(
-                text: 'Host Detail',
-                fontSize: TextStyles.k16FontSize,
-                color: SuperAdminUi.textPrimary,
-              ),
-            ],
-          ),
+        appBar: const CommonAppBarWidget(
+          title: 'Host Detail',
+          trailingIcon: Icons.mic_rounded,
         ),
         body: Obx(() {
           if (controller.isLoading.value && controller.detail.value == null) {

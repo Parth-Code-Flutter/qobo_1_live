@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/agency_host_list/controllers/agency_host_list_controller.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/agency_host_review_actions.dart';
+import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_shell_background.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/safe_network_avatar.dart';
@@ -20,120 +22,52 @@ class AgencyPendingHostsView extends GetView<AgencyPendingHostsController> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
+      appBar: _PendingHostsAppBar(controller: controller),
       body: AppShellBackground(
-        child: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _topBar(),
-              Expanded(
-                child: Obx(() {
-                  if (controller.isLoading.value) {
-                    return const Center(
-                      child: CircularProgressIndicator(color: kColorPrimary),
-                    );
-                  }
-                  if (controller.loadError.value.isNotEmpty &&
-                      controller.applications.isEmpty) {
-                    return _errorState();
-                  }
-                  if (controller.applications.isEmpty) {
-                    return _emptyState();
-                  }
-                  return RefreshIndicator(
-                    color: kColorPrimary,
-                    onRefresh: () =>
-                        controller.fetchPendingApplications(showLoader: false),
-                    child: ListView.separated(
-                      physics: const AlwaysScrollableScrollPhysics(
-                          parent: BouncingScrollPhysics(),
-                        ),
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                        itemCount: controller.applications.length,
-                        separatorBuilder: (_, __) => Spacing.v12,
-                        itemBuilder: (_, index) {
-                          final host = controller.applications[index];
-                          return _PendingHostCard(
-                            host: host,
-                            isProcessing: controller.processingId.value ==
-                                host.reviewApplicationId,
-                            onApprove: () => controller.approveHost(host),
-                            onReject: () async {
-                              final reason =
-                                  await showAgencyHostRejectReasonDialog(
-                                context,
-                              );
-                              if (reason != null && reason.isNotEmpty) {
-                                await controller.rejectHost(host, reason);
-                              }
-                            },
-                          );
-                        },
-                      ),
-                    );
-                  }),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-  }
-
-  Widget _topBar() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-      child: Row(
-        children: [
-          AdminAgencyUi.glassIconButton(
-            icon: Icons.arrow_back_ios_new_rounded,
-            onTap: controller.onBackPressed,
-            accent: AdminAgencyUi.sky,
-            size: 40,
-            iconSize: 16,
-          ),
-          Spacing.h12,
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SemiBoldText(
-                  text: 'Pending hosts',
-                  fontSize: TextStyles.k18FontSize,
-                  color: kColorWhite,
-                ),
-                AppText(
-                  text: 'Review and accept or reject applications',
-                  fontSize: TextStyles.k10FontSize,
-                  color: kColorWhite,
-                ),
-              ],
-            ),
-          ),
-          Obx(() {
-            final count = controller.applications.length;
-            if (count == 0 && !controller.isLoading.value) {
-              return const SizedBox.shrink();
-            }
-            return Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AdminAgencyUi.glowIcon(
-                  icon: Icons.pending_actions_rounded,
-                  accent: AdminAgencyUi.gold,
-                  size: 36,
-                  iconSize: 16,
-                ),
-                Spacing.h8,
-                SemiBoldText(
-                  text: '$count',
-                  fontSize: TextStyles.k14FontSize,
-                  color: AdminAgencyUi.gold,
-                ),
-              ],
+        child: Obx(() {
+          if (controller.isLoading.value) {
+            return const Center(
+              child: CircularProgressIndicator(color: kColorPrimary),
             );
-          }),
-        ],
+          }
+          if (controller.loadError.value.isNotEmpty &&
+              controller.applications.isEmpty) {
+            return _errorState();
+          }
+          if (controller.applications.isEmpty) {
+            return _emptyState();
+          }
+          return RefreshIndicator(
+            color: kColorPrimary,
+            onRefresh: () =>
+                controller.fetchPendingApplications(showLoader: false),
+            child: ListView.separated(
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              itemCount: controller.applications.length,
+              separatorBuilder: (_, __) => Spacing.v12,
+              itemBuilder: (_, index) {
+                final host = controller.applications[index];
+                return _PendingHostCard(
+                  host: host,
+                  isProcessing: controller.processingId.value ==
+                      host.reviewApplicationId,
+                  onApprove: () => controller.approveHost(host),
+                  onReject: () async {
+                    final reason = await showAgencyHostRejectReasonDialog(
+                      context,
+                    );
+                    if (reason != null && reason.isNotEmpty) {
+                      await controller.rejectHost(host, reason);
+                    }
+                  },
+                );
+              },
+            ),
+          );
+        }),
       ),
     );
   }
@@ -148,20 +82,20 @@ class AgencyPendingHostsView extends GetView<AgencyPendingHostsController> {
             Icon(
               Icons.verified_user_outlined,
               size: 64,
-              color: kColorWhite.withValues(alpha: 0.5),
+              color: AppLightUi.muted,
             ),
             Spacing.v16,
             const SemiBoldText(
               text: 'No pending applications',
               fontSize: TextStyles.k18FontSize,
-              color: kColorWhite,
+              color: AppLightUi.title,
               align: TextAlign.center,
             ),
             Spacing.v8,
             AppText(
               text: 'New host applications will appear here for your review.',
               fontSize: TextStyles.k14FontSize,
-              color: kColorWhite.withValues(alpha: 0.65),
+              color: AppLightUi.subtitle,
               align: TextAlign.center,
             ),
           ],
@@ -180,15 +114,15 @@ class AgencyPendingHostsView extends GetView<AgencyPendingHostsController> {
             AppText(
               text: controller.loadError.value,
               fontSize: TextStyles.k14FontSize,
-              color: kColorWhite.withValues(alpha: 0.8),
+              color: AppLightUi.body,
               align: TextAlign.center,
             ),
             Spacing.v16,
             OutlinedButton(
               onPressed: controller.fetchPendingApplications,
               style: OutlinedButton.styleFrom(
-                foregroundColor: kColorWhite,
-                side: BorderSide(color: kColorWhite.withValues(alpha: 0.4)),
+                foregroundColor: AppLightUi.violet,
+                side: const BorderSide(color: AppLightUi.borderStrong),
               ),
               child: const Text('Retry'),
             ),
@@ -196,6 +130,48 @@ class AgencyPendingHostsView extends GetView<AgencyPendingHostsController> {
         ),
       ),
     );
+  }
+}
+
+class _PendingHostsAppBar extends StatelessWidget implements PreferredSizeWidget {
+  const _PendingHostsAppBar({required this.controller});
+
+  final AgencyPendingHostsController controller;
+
+  @override
+  Size get preferredSize =>
+      const CommonAppBarWidget(title: '', subtitle: ' ').preferredSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final count = controller.applications.length;
+      final showCount = count > 0 || controller.isLoading.value;
+      return CommonAppBarWidget(
+        title: 'Pending hosts',
+        subtitle: 'Review and accept or reject applications',
+        onBackPressed: controller.onBackPressed,
+        rowAction: showCount
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AdminAgencyUi.glowIcon(
+                    icon: Icons.pending_actions_rounded,
+                    accent: AdminAgencyUi.gold,
+                    size: 36,
+                    iconSize: 16,
+                  ),
+                  Spacing.h8,
+                  SemiBoldText(
+                    text: '$count',
+                    fontSize: TextStyles.k14FontSize,
+                    color: kColorWhite,
+                  ),
+                ],
+              )
+            : null,
+      );
+    });
   }
 }
 
@@ -216,9 +192,7 @@ class _PendingHostCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: kColorWhite.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
+      decoration: AppLightUi.cardDecoration(radius: 16).copyWith(
         border: Border.all(color: Colors.orange.withValues(alpha: 0.35)),
       ),
       child: Column(
@@ -247,7 +221,7 @@ class _PendingHostCard extends StatelessWidget {
                     SemiBoldText(
                       text: host.name,
                       fontSize: TextStyles.k16FontSize,
-                      color: kColorWhite,
+                      color: AppLightUi.title,
                     ),
                     // Phone display temporarily hidden.
                     // if (host.phone.isNotEmpty) ...[
@@ -263,7 +237,7 @@ class _PendingHostCard extends StatelessWidget {
                       AppText(
                         text: host.category,
                         fontSize: TextStyles.k10FontSize,
-                        color: kColorWhite.withValues(alpha: 0.5),
+                        color: AppLightUi.subtitle,
                       ),
                     ],
                   ],
@@ -288,7 +262,7 @@ class _PendingHostCard extends StatelessWidget {
             AppText(
               text: host.gmail,
               fontSize: TextStyles.k10FontSize,
-              color: kColorWhite.withValues(alpha: 0.45),
+              color: AppLightUi.muted,
             ),
           ],
           Spacing.v12,

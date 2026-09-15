@@ -5,9 +5,11 @@ import 'package:qobo_one_live/app/user_flow/wallet/bindings/wallet_binding.dart'
 import 'package:qobo_one_live/app/user_flow/wallet/views/wallet_view.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_shell_background.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 
 /// Self-service host dashboard; financial details use the existing wallet flow.
 class HostDashboardView extends StatelessWidget {
@@ -15,7 +17,7 @@ class HostDashboardView extends StatelessWidget {
 
   TextStyle _text(
     double size, {
-    Color color = Colors.white,
+    Color color = AppLightUi.title,
     bool bold = false,
   }) => TextStyle(
     fontFamily: 'Poppins',
@@ -77,40 +79,12 @@ class HostDashboardView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
+      appBar: const CommonAppBarWidget(
+        title: 'Host Dashboard',
+        subtitle: 'Your space to shine',
+      ),
       body: AppShellBackground(
-        child: SafeArea(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 22),
-                child: Row(
-                  children: [
-                    Semantics(
-                      label: 'Back',
-                      button: true,
-                      child: AdminAgencyUi.glassIconButton(
-                        icon: Icons.chevron_left_rounded,
-                        onTap: () => Get.back(),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Host Dashboard', style: _text(20, bold: true)),
-                          Text(
-                            'Your space to shine',
-                            style: _text(12, color: AdminAgencyUi.textMuted),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: GetBuilder<UserSessionController>(
+        child: GetBuilder<UserSessionController>(
                   builder: (session) {
                     if (!session.isHost) {
                       return Center(
@@ -172,7 +146,7 @@ class HostDashboardView extends StatelessWidget {
                                 if (session.agencyCode.isNotEmpty) ...[
                                   const SizedBox(height: 18),
                                   const Divider(
-                                    color: Color(0x26FFFFFF),
+                                    color: AppLightUi.border,
                                     height: 1,
                                   ),
                                   const SizedBox(height: 14),
@@ -206,7 +180,7 @@ class HostDashboardView extends StatelessWidget {
                               gradient: const LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
-                                colors: [Color(0xFF68208A), Color(0xFF392068)],
+                                colors: [Color(0xFFFF5CAB), Color(0xFF9C6BFF)],
                               ),
                               borderRadius: BorderRadius.circular(24),
                               border: Border.all(
@@ -214,26 +188,33 @@ class HostDashboardView extends StatelessWidget {
                                   alpha: 0.35,
                                 ),
                               ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AdminAgencyUi.pink.withValues(alpha: 0.28),
+                                  blurRadius: 18,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Icon(
                                   Icons.live_tv_rounded,
-                                  color: AdminAgencyUi.gold,
+                                  color: Colors.white,
                                   size: 32,
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
                                   'Ready for your next live?',
-                                  style: _text(20, bold: true),
+                                  style: _text(20, bold: true, color: Colors.white),
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
                                   'Connect with your audience and share your moment.',
                                   style: _text(
                                     12,
-                                    color: AdminAgencyUi.textSecondary,
+                                    color: Colors.white.withValues(alpha: 0.88),
                                   ),
                                 ),
                                 const SizedBox(height: 22),
@@ -285,10 +266,6 @@ class HostDashboardView extends StatelessWidget {
                     );
                   },
                 ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

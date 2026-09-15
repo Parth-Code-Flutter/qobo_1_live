@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/coin_seller/controllers/coin_seller_controller.dart';
@@ -7,12 +5,12 @@ import 'package:qobo_one_live/app/user_flow/coin_seller/models/seller_sale.dart'
 import 'package:qobo_one_live/app/user_flow/coin_seller/widgets/coin_seller_transaction_actions_sheet.dart';
 import 'package:qobo_one_live/app/user_flow/coin_seller/widgets/coin_seller_ui_kit.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -22,38 +20,47 @@ class CoinSellerView extends GetView<CoinSellerController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: kColorLavenderBg,
       resizeToAvoidBottomInset: true,
+      appBar: PreferredSize(
+        preferredSize: const CommonAppBarWidget(title: 'Merchant Hub').preferredSize,
+        child: Obx(() {
+          final label = controller.sellerLabel.value.trim();
+          final showRefresh =
+              controller.screenState.value == CoinSellerScreenState.approved;
+          return CommonAppBarWidget(
+            title: 'Merchant Hub',
+            subtitle: label.isEmpty ? null : label,
+            actions: showRefresh
+                ? [
+                    IconButton(
+                      onPressed: () => _runDismissKeyboard(
+                        context,
+                        controller.loadDashboard,
+                      ),
+                      icon: const Icon(
+                        Icons.refresh_rounded,
+                        color: kColorWhite,
+                        size: 24,
+                      ),
+                    ),
+                  ]
+                : null,
+          );
+        }),
+      ),
       body: GestureDetector(
         onTap: _dismissKeyboard,
         behavior: HitTestBehavior.deferToChild,
-        child: Container(
-          decoration: const BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage(kImgBG),
-              fit: BoxFit.cover,
-            ),
-          ),
-          child: SafeArea(
-            child: Obx(() {
-              if (controller.isBootstrapping.value ||
-                  controller.screenState.value ==
-                      CoinSellerScreenState.checking) {
-                return const Center(
-                  child: CircularProgressIndicator(color: CoinSellerUi.gold),
-                );
-              }
-              return Column(
-                children: [
-                  _header(context),
-                  Expanded(
-                    child: _bodyForState(context, controller.screenState.value),
-                  ),
-                ],
-              );
-            }),
-          ),
-        ),
+        child: Obx(() {
+          if (controller.isBootstrapping.value ||
+              controller.screenState.value == CoinSellerScreenState.checking) {
+            return const Center(
+              child: CircularProgressIndicator(color: CoinSellerUi.gold),
+            );
+          }
+          return _bodyForState(context, controller.screenState.value);
+        }),
       ),
     );
   }
@@ -83,74 +90,6 @@ class CoinSellerView extends GetView<CoinSellerController> {
     }
   }
 
-  Widget _header(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-      child: Row(
-        children: [
-          _iconButton(context, Icons.arrow_back_ios_new_rounded, Get.back),
-          Expanded(
-            child: Column(
-              children: [
-                const SemiBoldText(
-                  text: 'Merchant Hub',
-                  fontSize: 18,
-                  color: kColorWhite,
-                ),
-                Obx(() {
-                  final label = controller.sellerLabel.value.trim();
-                  if (label.isEmpty) return const SizedBox.shrink();
-                  return AppText(
-                    text: label,
-                    fontSize: 10,
-                    color: Colors.white54,
-                  );
-                }),
-              ],
-            ),
-          ),
-          Obx(() {
-            if (controller.screenState.value != CoinSellerScreenState.approved) {
-              return const SizedBox(width: 40);
-            }
-            return _iconButton(
-              context,
-              Icons.refresh_rounded,
-              () => controller.loadDashboard(),
-            );
-          }),
-        ],
-      ),
-    );
-  }
-
-  Widget _iconButton(
-    BuildContext context,
-    IconData icon,
-    VoidCallback onTap,
-  ) {
-    return GestureDetector(
-      onTap: () => _runDismissKeyboard(context, onTap),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-          child: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
-            ),
-            alignment: Alignment.center,
-            child: Icon(icon, color: kColorWhite, size: 18),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildApplyForm(BuildContext context) {
     return SingleChildScrollView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -170,7 +109,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
                   'Apply with your logged-in account. Once approved, transfer '
                   'coins to buyers and manage your sales ledger from here.',
               fontSize: 12,
-              color: Colors.white60,
+              color: CoinSellerUi.muted,
             ),
             Spacing.v20,
             AppTextField(
@@ -178,10 +117,10 @@ class CoinSellerView extends GetView<CoinSellerController> {
               hintText: 'Payment methods & region (JazzCash, bank, etc.)',
               maxLines: 4,
               textInputType: TextInputType.multiline,
-              fillColor: Colors.white.withValues(alpha: 0.06),
-              borderColor: Colors.white12,
+              fillColor: CoinSellerUi.cardSoft,
+              borderColor: CoinSellerUi.border,
               textStyle: TextStyles.kRegularPoppins(
-                colors: kColorWhite,
+                colors: CoinSellerUi.title,
                 fontSize: 13,
               ),
             ),
@@ -253,7 +192,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
               const SemiBoldText(
                 text: 'Application under review',
                 fontSize: 17,
-                color: kColorWhite,
+                color: CoinSellerUi.title,
               ),
               Spacing.v8,
               const AppText(
@@ -261,7 +200,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
                     'Your request was submitted. An admin will review it soon. '
                     'Tap below once you are approved.',
                 fontSize: 12,
-                color: Colors.white60,
+                color: CoinSellerUi.muted,
                 align: TextAlign.center,
               ),
               Spacing.v20,
@@ -325,15 +264,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
       padding: const EdgeInsets.all(20),
       decoration: CoinSellerUi.glassCard(
         borderColor: CoinSellerUi.gold.withValues(alpha: 0.35),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            kColorWalletCardBgTop,
-            kColorWalletCardBgBottom,
-            Color(0xFF1A0E32),
-          ],
-        ),
+        gradient: CoinSellerUi.heroGradient,
       ),
       child: Stack(
         children: [
@@ -353,7 +284,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
                   const AppText(
                     text: 'Available stock',
                     fontSize: 12,
-                    color: Colors.white70,
+                    color: CoinSellerUi.body,
                   ),
                   const Spacer(),
                   Container(
@@ -404,7 +335,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
               const AppText(
                 text: 'coins ready to sell',
                 fontSize: 12,
-                color: Colors.white54,
+                color: CoinSellerUi.muted,
               ),
             ],
           ),
@@ -463,7 +394,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
         children: [
           Icon(icon, size: 16, color: color),
           Spacing.v4,
-          AppText(text: label, fontSize: 10, color: Colors.white54),
+          AppText(text: label, fontSize: 10, color: CoinSellerUi.muted),
           Spacing.v2,
           SemiBoldText(
             text: value,
@@ -481,9 +412,9 @@ class CoinSellerView extends GetView<CoinSellerController> {
     return Container(
       height: 44,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
+        color: CoinSellerUi.cardSoft,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: CoinSellerUi.border),
       ),
       child: TabBar(
         onTap: (_) => _dismissKeyboard(),
@@ -494,7 +425,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
           borderRadius: BorderRadius.circular(12),
         ),
         labelColor: kColorWhite,
-        unselectedLabelColor: Colors.white60,
+        unselectedLabelColor: CoinSellerUi.muted,
         labelStyle: TextStyles.kSemiBoldPoppins(fontSize: 12),
         unselectedLabelStyle: TextStyles.kSemiBoldPoppins(fontSize: 12),
         tabs: const [
@@ -516,13 +447,13 @@ class CoinSellerView extends GetView<CoinSellerController> {
             const SemiBoldText(
               text: 'Quick transfer',
               fontSize: 15,
-              color: kColorWhite,
+              color: CoinSellerUi.title,
             ),
             Spacing.v6,
             const AppText(
               text: 'Pick a buyer from the list, then enter coins and price.',
               fontSize: 11,
-              color: Colors.white54,
+              color: CoinSellerUi.muted,
             ),
             Spacing.v16,
             _buyerSelector(context),
@@ -561,7 +492,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
                       text:
                           'You will confirm the transfer before coins are sent.',
                       fontSize: 10,
-                      color: Colors.white60,
+                      color: CoinSellerUi.muted,
                     ),
                   ),
                 ],
@@ -625,12 +556,12 @@ class CoinSellerView extends GetView<CoinSellerController> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.06),
+              color: CoinSellerUi.cardSoft,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: buyer != null
                     ? CoinSellerUi.gold.withValues(alpha: 0.4)
-                    : Colors.white12,
+                    : CoinSellerUi.border,
               ),
             ),
             child: Row(
@@ -639,9 +570,9 @@ class CoinSellerView extends GetView<CoinSellerController> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.06),
+                    color: CoinSellerUi.card,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white12),
+                    border: Border.all(color: CoinSellerUi.border),
                   ),
                   alignment: Alignment.center,
                   child: buyer == null
@@ -665,12 +596,12 @@ class CoinSellerView extends GetView<CoinSellerController> {
                             SemiBoldText(
                               text: 'Select buyer',
                               fontSize: 13,
-                              color: kColorWhite,
+                              color: CoinSellerUi.title,
                             ),
                             AppText(
                               text: 'Friends, followers, or search',
                               fontSize: 10,
-                              color: Colors.white38,
+                              color: CoinSellerUi.faint,
                             ),
                           ],
                         )
@@ -680,14 +611,14 @@ class CoinSellerView extends GetView<CoinSellerController> {
                             SemiBoldText(
                               text: buyer.name,
                               fontSize: 13,
-                              color: kColorWhite,
+                              color: CoinSellerUi.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                             AppText(
                               text: buyer.id,
                               fontSize: 10,
-                              color: Colors.white38,
+                              color: CoinSellerUi.faint,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -702,7 +633,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
                     ),
                     icon: const Icon(
                       Icons.close_rounded,
-                      color: Colors.white54,
+                      color: CoinSellerUi.muted,
                       size: 18,
                     ),
                     visualDensity: VisualDensity.compact,
@@ -710,7 +641,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
                 else
                   Icon(
                     Icons.keyboard_arrow_down_rounded,
-                    color: Colors.white.withValues(alpha: 0.5),
+                    color: CoinSellerUi.muted,
                   ),
               ],
             ),
@@ -737,10 +668,10 @@ class CoinSellerView extends GetView<CoinSellerController> {
               : TextInputType.text,
       textInputAction: TextInputAction.done,
       onSubmitted: (_) => _dismissKeyboard(),
-      fillColor: Colors.white.withValues(alpha: 0.06),
-      borderColor: Colors.white12,
+      fillColor: CoinSellerUi.cardSoft,
+      borderColor: CoinSellerUi.border,
       textStyle: TextStyles.kRegularPoppins(
-        colors: kColorWhite,
+        colors: CoinSellerUi.title,
         fontSize: 13,
       ),
       prefix: Padding(
@@ -836,18 +767,18 @@ class CoinSellerView extends GetView<CoinSellerController> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
           gradient: selected ? CoinSellerUi.sellButtonGradient : null,
-          color: selected ? null : Colors.white.withValues(alpha: 0.06),
+          color: selected ? null : CoinSellerUi.cardSoft,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: selected
                 ? Colors.transparent
-                : Colors.white.withValues(alpha: 0.1),
+                : CoinSellerUi.border,
           ),
         ),
         child: SemiBoldText(
           text: label,
           fontSize: 11,
-          color: selected ? kColorWhite : Colors.white60,
+          color: selected ? kColorWhite : CoinSellerUi.muted,
         ),
       ),
     );
@@ -879,9 +810,9 @@ class CoinSellerView extends GetView<CoinSellerController> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                accent.withValues(alpha: 0.14),
-                Colors.white.withValues(alpha: 0.05),
-                Colors.black.withValues(alpha: 0.18),
+                accent.withValues(alpha: 0.12),
+                CoinSellerUi.card,
+                CoinSellerUi.cardSoft,
               ],
             ),
             border: Border.all(color: accent.withValues(alpha: 0.28)),
@@ -913,7 +844,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
                       padding: const EdgeInsets.all(2),
                       decoration: const BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Color(0xFF120A1E),
+                        color: CoinSellerUi.card,
                       ),
                       child: AppUserAvatar(
                         name: sale.displayName,
@@ -930,7 +861,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
                         SemiBoldText(
                           text: sale.displayName,
                           fontSize: 14,
-                          color: kColorWhite,
+                          color: CoinSellerUi.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -943,7 +874,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
                               child: AppText(
                                 text: sale.formattedDate,
                                 fontSize: 10,
-                                color: Colors.white38,
+                                color: CoinSellerUi.faint,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -965,12 +896,12 @@ class CoinSellerView extends GetView<CoinSellerController> {
                       icon: AppCoinIcon(
                         size: 13,
                         color: sale.isReversed
-                            ? Colors.white54
+                            ? CoinSellerUi.muted
                             : CoinSellerUi.gold,
                       ),
                       label: 'Coins',
                       value: coinLabel,
-                      accent: sale.isReversed ? Colors.white54 : CoinSellerUi.gold,
+                      accent: sale.isReversed ? CoinSellerUi.muted : CoinSellerUi.gold,
                     ),
                   ),
                   Spacing.h8,
@@ -1014,7 +945,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
               AppText(
                 text: label,
                 fontSize: 10,
-                color: Colors.white54,
+                color: CoinSellerUi.muted,
               ),
             ],
           ),
@@ -1142,9 +1073,9 @@ class CoinSellerView extends GetView<CoinSellerController> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SemiBoldText(text: title, fontSize: 15, color: kColorWhite),
+              SemiBoldText(text: title, fontSize: 15, color: CoinSellerUi.title),
               Spacing.v2,
-              AppText(text: subtitle, fontSize: 11, color: Colors.white54),
+              AppText(text: subtitle, fontSize: 11, color: CoinSellerUi.muted),
             ],
           ),
         ),
@@ -1157,16 +1088,16 @@ class CoinSellerView extends GetView<CoinSellerController> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 52, color: Colors.white24),
+          Icon(icon, size: 52, color: CoinSellerUi.faint),
           Spacing.v12,
-          SemiBoldText(text: title, fontSize: 14, color: kColorWhite),
+          SemiBoldText(text: title, fontSize: 14, color: CoinSellerUi.title),
           Spacing.v4,
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 40),
             child: AppText(
               text: subtitle,
               fontSize: 11,
-              color: Colors.white38,
+              color: CoinSellerUi.faint,
               align: TextAlign.center,
             ),
           ),

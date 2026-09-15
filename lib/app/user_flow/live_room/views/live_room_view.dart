@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/bottom_nav/controllers/bottom_nav_controller.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
@@ -11,6 +12,7 @@ import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/dating_empty_hero.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -36,10 +38,7 @@ class LiveRoomView extends StatelessWidget {
       builder: (controller) {
         return Container(
           decoration: const BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage(kImgBG),
-              fit: BoxFit.cover,
-            ),
+            color: kColorLavenderBg,
           ),
           child: SafeArea(
             child: Stack(
@@ -270,8 +269,12 @@ class LiveRoomView extends StatelessWidget {
                     LiveRoomUiColors.goLiveGradientEnd,
                   ],
                 )
-              : null,
-          color: filled ? null : const Color(0xFF4C3268),
+              : const LinearGradient(
+                  colors: [
+                    AppLightUi.pink,
+                    AppLightUi.violet,
+                  ],
+                ),
           border: Border.all(
             color: filled
                 ? Colors.transparent
@@ -282,7 +285,7 @@ class LiveRoomView extends StatelessWidget {
             BoxShadow(
               color: filled
                   ? LiveRoomUiColors.goLiveGradientStart.withValues(alpha: 0.4)
-                  : kColorBlack.withValues(alpha: 0.28),
+                  : AppLightUi.pink.withValues(alpha: 0.28),
               blurRadius: filled ? 14 : 12,
               offset: const Offset(0, 6),
             ),
@@ -308,25 +311,7 @@ class LiveRoomView extends StatelessWidget {
   Widget _liveCountStrip(int count) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        gradient: LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [
-            kColorWhite.withValues(alpha: 0.14),
-            kColorWhite.withValues(alpha: 0.07),
-          ],
-        ),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
-        boxShadow: [
-          BoxShadow(
-            color: kColorBlack.withValues(alpha: 0.16),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+      decoration: AppLightUi.cardDecoration(radius: 18),
       child: Row(
         children: [
           Container(
@@ -353,7 +338,7 @@ class LiveRoomView extends StatelessWidget {
                 SemiBoldText(
                   text: '$count ${LocaleKeys.liveRoomActiveNow.tr}',
                   fontSize: TextStyles.k12FontSize,
-                  color: kColorWhite,
+                  color: AppLightUi.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -361,7 +346,7 @@ class LiveRoomView extends StatelessWidget {
                 AppText(
                   text: LocaleKeys.liveRoomJoinHint.tr,
                   fontSize: TextStyles.k10FontSize,
-                  color: kColorWhite.withValues(alpha: 0.68),
+                  color: AppLightUi.subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -402,12 +387,12 @@ class LiveRoomView extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.search_off_rounded, color: kColorHint, size: 48),
+          const Icon(Icons.search_off_rounded, color: AppLightUi.muted, size: 48),
           Spacing.v12,
           SemiBoldText(
             text: 'No rooms match "${controller.searchQuery.value}"',
             fontSize: TextStyles.k14FontSize,
-            color: kColorWhite,
+            color: AppLightUi.title,
             align: TextAlign.center,
           ),
         ],
@@ -418,47 +403,47 @@ class LiveRoomView extends StatelessWidget {
   Widget _emptyState(LiveRoomController controller) {
     return _refreshableEmptyState(
       controller: controller,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 88,
-            height: 88,
-            decoration: BoxDecoration(
-              color: LiveRoomUiColors.chipInactiveBg,
-              shape: BoxShape.circle,
-              border: Border.all(color: LiveRoomUiColors.joinLiveBorder),
-            ),
-            child: const Icon(
-              Icons.live_tv_rounded,
-              color: kColorWhite,
-              size: 38,
-            ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 22),
+          decoration: AppLightUi.cardDecoration(radius: 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const DatingEmptyHero(
+                style: DatingEmptyHeroStyle.live,
+                size: 150,
+                accentColors: [AppLightUi.pink, AppLightUi.violet],
+              ),
+              Spacing.v12,
+              SemiBoldText(
+                text: LocaleKeys.liveRoomEmptyTitle.tr,
+                fontSize: TextStyles.k16FontSize,
+                color: AppLightUi.title,
+                align: TextAlign.center,
+              ),
+              Spacing.v8,
+              AppText(
+                text: LocaleKeys.liveRoomEmptySubtitle.tr,
+                fontSize: TextStyles.k12FontSize,
+                color: AppLightUi.subtitle,
+                align: TextAlign.center,
+              ),
+              Spacing.v20,
+              SizedBox(
+                width: 180,
+                child: _ctaButton(
+                  label: LocaleKeys.liveRoomGoLive.tr,
+                  icon: Icons.videocam_rounded,
+                  filled: true,
+                  onTap: controller.openGoLive,
+                ),
+              ),
+            ],
           ),
-          Spacing.v16,
-          SemiBoldText(
-            text: LocaleKeys.liveRoomEmptyTitle.tr,
-            fontSize: TextStyles.k16FontSize,
-            color: kColorWhite,
-          ),
-          Spacing.v8,
-          AppText(
-            text: LocaleKeys.liveRoomEmptySubtitle.tr,
-            fontSize: TextStyles.k12FontSize,
-            color: kColorHint,
-            align: TextAlign.center,
-          ),
-          Spacing.v20,
-          SizedBox(
-            width: 180,
-            child: _ctaButton(
-              label: LocaleKeys.liveRoomGoLive.tr,
-              icon: Icons.videocam_rounded,
-              filled: true,
-              onTap: controller.openGoLive,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -731,32 +716,36 @@ class LiveRoomView extends StatelessWidget {
                     AppText(
                       text: LocaleKeys.liveRoomWelcome.tr,
                       fontSize: TextStyles.k14FontSize,
-                      color: kColorWhite,
+                      color: AppLightUi.subtitle,
                     ),
                     SemiBoldText(
                       text: session.displayName,
                       fontSize: TextStyles.k14FontSize,
-                      color: kColorWhite,
+                      color: AppLightUi.title,
                     ),
                   ],
                 ),
               ),
               Material(
-                color: kColorWhite,
+                color: AppLightUi.card,
                 borderRadius: BorderRadius.circular(22),
                 child: InkWell(
                   onTap: liveRoomController.openSearch,
                   borderRadius: BorderRadius.circular(22),
-                  child: SizedBox(
+                  child: Container(
                     width: 36,
                     height: 36,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: AppLightUi.border),
+                    ),
                     child: Center(
                       child: SvgPicture.asset(
                         kIconSearch,
                         width: 18,
                         height: 18,
                         colorFilter: const ColorFilter.mode(
-                          kColorPrimary,
+                          AppLightUi.pink,
                           BlendMode.srcIn,
                         ),
                       ),
@@ -775,7 +764,7 @@ class LiveRoomView extends StatelessWidget {
                       width: 17,
                       height: 17,
                       colorFilter: const ColorFilter.mode(
-                        kColorPrimary,
+                        AppLightUi.pink,
                         BlendMode.srcIn,
                       ),
                     ),
@@ -823,18 +812,22 @@ class LiveRoomView extends StatelessWidget {
       child: Row(
         children: [
           Material(
-            color: LiveRoomUiColors.chipInactiveBg,
+            color: AppLightUi.card,
             shape: const CircleBorder(),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
               onTap: controller.closeSearch,
               customBorder: const CircleBorder(),
-              child: const SizedBox(
+              child: Container(
                 width: 40,
                 height: 40,
-                child: Icon(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppLightUi.border),
+                ),
+                child: const Icon(
                   Icons.arrow_back_ios_new,
-                  color: kColorWhite,
+                  color: AppLightUi.title,
                   size: 18,
                 ),
               ),
@@ -845,13 +838,7 @@ class LiveRoomView extends StatelessWidget {
             child: Container(
               height: 44,
               padding: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: BoxDecoration(
-                color: kColorWhite,
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(
-                  color: LiveRoomUiColors.joinLiveBorder.withValues(alpha: 0.6),
-                ),
-              ),
+              decoration: AppLightUi.searchDecoration(radius: 22),
               child: Row(
                 children: [
                   SvgPicture.asset(
@@ -859,7 +846,7 @@ class LiveRoomView extends StatelessWidget {
                     width: 18,
                     height: 18,
                     colorFilter: const ColorFilter.mode(
-                      kColorPrimary,
+                      AppLightUi.pink,
                       BlendMode.srcIn,
                     ),
                   ),
@@ -871,16 +858,16 @@ class LiveRoomView extends StatelessWidget {
                       textInputAction: TextInputAction.search,
                       style: TextStyles.kRegularPoppins(
                         fontSize: TextStyles.k14FontSize,
-                        colors: kColorText,
+                        colors: AppLightUi.body,
                       ),
-                      cursorColor: kColorPrimary,
+                      cursorColor: AppLightUi.pink,
                       decoration: InputDecoration(
                         isDense: true,
                         border: InputBorder.none,
                         hintText: 'Search live rooms...',
                         hintStyle: TextStyles.kRegularPoppins(
                           fontSize: TextStyles.k14FontSize,
-                          colors: kColorHint,
+                          colors: AppLightUi.hint,
                         ),
                         contentPadding: const EdgeInsets.symmetric(
                           vertical: 12,
@@ -897,7 +884,7 @@ class LiveRoomView extends StatelessWidget {
                       child: const Icon(
                         Icons.close_rounded,
                         size: 20,
-                        color: kColorHint,
+                        color: AppLightUi.muted,
                       ),
                     );
                   }),
@@ -915,12 +902,20 @@ class LiveRoomView extends StatelessWidget {
     required Widget child,
   }) {
     return Material(
-      color: kColorWhite,
+      color: AppLightUi.card,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
-        child: SizedBox(width: 36, height: 36, child: Center(child: child)),
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppLightUi.border),
+          ),
+          child: Center(child: child),
+        ),
       ),
     );
   }
@@ -966,23 +961,22 @@ class LiveRoomView extends StatelessWidget {
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
                     colors: [
-                      kColorLiveFilterChipGradientStart,
-                      kColorLiveFilterChipGradientMid,
-                      kColorLiveFilterChipGradientEnd,
+                      AppLightUi.pink,
+                      AppLightUi.violet,
                     ],
                   )
                 : null,
-            color: isSelected ? null : LiveRoomUiColors.chipInactiveBg,
+            color: isSelected ? null : AppLightUi.card,
             border: Border.all(
               color: isSelected
-                  ? kColorLiveFilterChipBorder
-                  : LiveRoomUiColors.cardBorder,
+                  ? AppLightUi.pinkSoft.withValues(alpha: 0.7)
+                  : AppLightUi.border,
               width: 1,
             ),
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: kColorPrimary.withValues(alpha: 0.35),
+                      color: AppLightUi.title.withValues(alpha: 0.08),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -993,7 +987,7 @@ class LiveRoomView extends StatelessWidget {
             child: SemiBoldText(
               text: label,
               fontSize: TextStyles.k12FontSize,
-              color: isSelected ? kColorWhite : const Color(0xFFB8B8D0),
+              color: isSelected ? kColorWhite : AppLightUi.subtitle,
             ),
           ),
         ),

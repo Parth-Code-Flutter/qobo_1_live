@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -49,20 +50,53 @@ class _WalletViewState extends State<WalletView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _walletHeader(),
-                Spacing.v16,
-                _balanceOverviewCard(),
+      backgroundColor: kColorLavenderBg,
+      appBar: CommonAppBarWidget(
+        title: 'Top Up',
+        subtitle: 'Top up coins and enjoy premium features',
+        actions: [
+          GestureDetector(
+            onTap: () => Get.toNamed(Routes.TRANSACTION_HISTORY),
+            child: Container(
+              height: 36,
+              padding: const EdgeInsets.symmetric(horizontal: 11),
+              decoration: BoxDecoration(
+                color: kColorWhite.withValues(alpha: 0.16),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: kColorWhite.withValues(alpha: 0.28)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(
+                    Icons.history_rounded,
+                    size: 17,
+                    color: kColorWhite,
+                  ),
+                  SizedBox(width: 5),
+                  SemiBoldText(
+                    text: 'History',
+                    fontSize: 11,
+                    color: kColorWhite,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Spacing.h8,
+          GestureDetector(
+            onTap: () => Get.toNamed(Routes.VIP_STORE),
+            child: _vipBadge(size: 44),
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
+      body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _balanceOverviewCard(),
                 const SizedBox(height: 14),
                 _vipTopUpBanner(),
                 const SizedBox(height: 18),
@@ -82,10 +116,8 @@ class _WalletViewState extends State<WalletView> {
                 const SizedBox(height: 14),
                 _walletUtilityPanel(),
                 const SizedBox(height: 14),
-                _trustFooter(),
-              ],
-            ),
-          ),
+            _trustFooter(),
+          ],
         ),
       ),
     );
@@ -110,7 +142,7 @@ class _WalletViewState extends State<WalletView> {
                   ? controller.packageError.value
                   : 'No coin packages found.',
               fontSize: 13,
-              color: kColorWhite.withValues(alpha: 0.72),
+              color: AppLightUi.subtitle,
               align: TextAlign.center,
             ),
           ),
@@ -152,19 +184,9 @@ class _WalletViewState extends State<WalletView> {
   Widget _balanceOverviewCard() {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        color: const Color(0xFF130C36).withValues(alpha: 0.72),
-        border: Border.all(
-          color: const Color(0xFF8F36FF).withValues(alpha: 0.7),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF7F28FF).withValues(alpha: 0.18),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
-          ),
-        ],
+      decoration: AppLightUi.cardDecoration(
+        radius: 18,
+        borderColor: AppLightUi.violet.withValues(alpha: 0.35),
       ),
       child: Obx(
         () => Row(
@@ -180,7 +202,7 @@ class _WalletViewState extends State<WalletView> {
             Container(
               width: 1,
               height: 64,
-              color: kColorWhite.withValues(alpha: 0.14),
+              color: AppLightUi.border,
             ),
             Expanded(
               child: _topBalanceItem(
@@ -234,7 +256,7 @@ class _WalletViewState extends State<WalletView> {
                 AppText(
                   text: title,
                   fontSize: TextStyles.k12FontSize,
-                  color: kColorWhite.withValues(alpha: 0.68),
+                  color: AppLightUi.subtitle,
                 ),
                 Spacing.v4,
                 FittedBox(
@@ -360,7 +382,7 @@ class _WalletViewState extends State<WalletView> {
         SemiBoldText(
           text: title,
           fontSize: TextStyles.k14FontSize,
-          color: kColorWhite,
+          color: AppLightUi.title,
         ),
       ],
     );
@@ -379,15 +401,11 @@ class _WalletViewState extends State<WalletView> {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF21115B), Color(0xFF17083E)],
-          ),
+          color: AppLightUi.card,
           border: Border.all(
             color: isSelected
                 ? const Color(0xFFFF4DE3)
-                : kColorWhite.withValues(alpha: 0.12),
+                : AppLightUi.border,
             width: isSelected ? 1.4 : 1,
           ),
           boxShadow: isSelected
@@ -397,8 +415,9 @@ class _WalletViewState extends State<WalletView> {
                     blurRadius: 18,
                     offset: const Offset(0, 8),
                   ),
+                  ...AppLightUi.cardShadow,
                 ]
-              : null,
+              : AppLightUi.cardShadow,
         ),
         child: Stack(
           clipBehavior: Clip.none,
@@ -443,7 +462,7 @@ class _WalletViewState extends State<WalletView> {
                     const AppText(
                       text: 'Coins',
                       fontSize: TextStyles.k12FontSize,
-                      color: kColorWhite,
+                      color: AppLightUi.body,
                     ),
                     Spacing.v6,
                     if (plan.amount >= 500)
@@ -506,8 +525,8 @@ class _WalletViewState extends State<WalletView> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    const Color(0xFF8A3EF1).withValues(alpha: 0.24),
-                    const Color(0xFF2A115A).withValues(alpha: 0.18),
+                    const Color(0xFF8A3EF1).withValues(alpha: 0.18),
+                    AppLightUi.cardSoft,
                   ],
                 ),
                 borderRadius: BorderRadius.circular(28),
@@ -625,19 +644,11 @@ class _WalletViewState extends State<WalletView> {
               maxHeight: MediaQuery.sizeOf(context).height * 0.86,
             ),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFF2A2438),
-                  Color(0xFF1A1528),
-                  Color(0xFF12101C),
-                ],
-              ),
+              color: AppLightUi.card,
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(24),
               ),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              border: Border.all(color: AppLightUi.border),
             ),
             child: SafeArea(
               top: false,
@@ -653,7 +664,7 @@ class _WalletViewState extends State<WalletView> {
                         width: 40,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: Colors.white24,
+                          color: AppLightUi.borderStrong,
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -663,7 +674,7 @@ class _WalletViewState extends State<WalletView> {
                       child: SemiBoldText(
                         text: 'Select Payment Method',
                         fontSize: 16,
-                        color: kColorWhite,
+                        color: AppLightUi.title,
                       ),
                     ),
                     Spacing.v12,
@@ -696,7 +707,7 @@ class _WalletViewState extends State<WalletView> {
                       color: Colors.deepOrange,
                       onTap: () => _submitPayment('Razorpay', plan),
                     ),
-                    const Divider(color: Colors.white10, height: 16),
+                    const Divider(color: AppLightUi.border, height: 16),
                     _paymentMethodTile(
                       logoIcon: Icons.account_balance_wallet_rounded,
                       title: 'Google Pay',
@@ -713,7 +724,7 @@ class _WalletViewState extends State<WalletView> {
                         );
                       },
                     ),
-                    const Divider(color: Colors.white10, height: 16),
+                    const Divider(color: AppLightUi.border, height: 16),
                     _paymentMethodTile(
                       logoIcon: Icons.payment_rounded,
                       title: 'PayPal Gateway',
@@ -730,7 +741,7 @@ class _WalletViewState extends State<WalletView> {
                         );
                       },
                     ),
-                    const Divider(color: Colors.white10, height: 16),
+                    const Divider(color: AppLightUi.border, height: 16),
                     _paymentMethodTile(
                       logo: AppCoinIcon(size: 20, color: Colors.amber),
                       title: 'Buy via Coin Seller',
@@ -776,17 +787,17 @@ class _WalletViewState extends State<WalletView> {
         ),
         child: Center(child: logo ?? Icon(logoIcon, color: color, size: 20)),
       ),
-      title: SemiBoldText(text: title, fontSize: 13, color: kColorWhite),
+      title: SemiBoldText(text: title, fontSize: 13, color: AppLightUi.title),
       subtitle: subtitle == null
           ? null
           : AppText(
               text: subtitle,
               fontSize: 11,
-              color: kColorWhite.withValues(alpha: 0.55),
+              color: AppLightUi.subtitle,
             ),
       trailing: const Icon(
         Icons.arrow_forward_ios_rounded,
-        color: Colors.white24,
+        color: AppLightUi.muted,
         size: 14,
       ),
       onTap: onTap,
@@ -810,7 +821,7 @@ class _WalletViewState extends State<WalletView> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          backgroundColor: const Color(0xFF1E1E2D),
+          backgroundColor: AppLightUi.card,
           child: Padding(
             padding: const EdgeInsets.all(24.0),
             child: Column(
@@ -825,7 +836,7 @@ class _WalletViewState extends State<WalletView> {
                 const Text(
                   'Payment Successful',
                   style: TextStyle(
-                    color: kColorWhite,
+                    color: AppLightUi.title,
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
                   ),
@@ -834,7 +845,7 @@ class _WalletViewState extends State<WalletView> {
                 Text(
                   'Added ${plan.coinsLabel} to your account via $method.',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  style: const TextStyle(color: AppLightUi.body, fontSize: 13),
                 ),
                 const SizedBox(height: 20),
                 SizedBox(
@@ -876,89 +887,6 @@ class _WalletViewState extends State<WalletView> {
         colorText: kColorWhite,
       );
     }
-  }
-
-  Widget _walletHeader() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            _headerBackButton(onTap: Get.back),
-            Spacing.h12,
-            const Expanded(
-              child: SemiBoldText(
-                text: 'Top Up',
-                fontSize: TextStyles.k24FontSize,
-                color: kColorWhite,
-              ),
-            ),
-            GestureDetector(
-              onTap: () => Get.toNamed(Routes.TRANSACTION_HISTORY),
-              child: Container(
-                height: 36,
-                padding: const EdgeInsets.symmetric(horizontal: 11),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF16103A).withValues(alpha: 0.82),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: kColorWhite.withValues(alpha: 0.12),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.history_rounded,
-                      size: 17,
-                      color: kColorWhite,
-                    ),
-                    const SizedBox(width: 5),
-                    const SemiBoldText(
-                      text: 'History',
-                      fontSize: 11,
-                      color: kColorWhite,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Spacing.h8,
-            _vipBadge(size: 44),
-          ],
-        ),
-        Padding(
-          padding: const EdgeInsets.only(left: 50, top: 2, right: 8),
-          child: AppText(
-            text: 'Top up coins and enjoy premium features',
-            fontSize: 12,
-            color: kColorWhite.withValues(alpha: 0.72),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _headerBackButton({required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: const Color(0xFF16103A).withValues(alpha: 0.8),
-          shape: BoxShape.circle,
-          border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
-        ),
-        alignment: Alignment.center,
-        child: const Icon(
-          Icons.arrow_back_ios_new_rounded,
-          size: 18,
-          color: kColorWhite,
-        ),
-      ),
-    );
   }
 
   Widget _vipBadge({required double size}) {
@@ -1039,11 +967,11 @@ class _WalletViewState extends State<WalletView> {
         padding: const EdgeInsets.symmetric(horizontal: 9),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
-          color: const Color(0xFF150C39).withValues(alpha: 0.78),
+          color: AppLightUi.card,
           border: Border.all(
             color: selected
                 ? const Color(0xFFFF4DE3)
-                : kColorWhite.withValues(alpha: 0.10),
+                : AppLightUi.border,
           ),
           boxShadow: selected
               ? [
@@ -1058,7 +986,7 @@ class _WalletViewState extends State<WalletView> {
           children: [
             Icon(
               icon,
-              color: selected ? kColorWalletAmount : kColorWhite,
+              color: selected ? kColorWalletAmount : AppLightUi.title,
               size: 21,
             ),
             Spacing.h8,
@@ -1070,7 +998,7 @@ class _WalletViewState extends State<WalletView> {
                   SemiBoldText(
                     text: label,
                     fontSize: 11,
-                    color: kColorWhite,
+                    color: AppLightUi.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -1078,7 +1006,7 @@ class _WalletViewState extends State<WalletView> {
                   AppText(
                     text: subtitle,
                     fontSize: 9,
-                    color: kColorWhite.withValues(alpha: 0.62),
+                    color: AppLightUi.subtitle,
                     maxLines: 1,
                   ),
                 ],
@@ -1123,8 +1051,9 @@ class _WalletViewState extends State<WalletView> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        color: const Color(0xFF150C39).withValues(alpha: 0.72),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
+        color: AppLightUi.card,
+        border: Border.all(color: AppLightUi.border),
+        boxShadow: AppLightUi.cardShadow,
       ),
       child: Row(
         children: [
@@ -1173,14 +1102,14 @@ class _WalletViewState extends State<WalletView> {
               SemiBoldText(
                 text: title,
                 fontSize: TextStyles.k10FontSize,
-                color: kColorWhite,
+                color: AppLightUi.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
               AppText(
                 text: subtitle,
                 fontSize: 8,
-                color: kColorWhite.withValues(alpha: 0.62),
+                color: AppLightUi.subtitle,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -1196,7 +1125,7 @@ class _WalletViewState extends State<WalletView> {
       width: 1,
       height: 34,
       margin: const EdgeInsets.symmetric(horizontal: 8),
-      color: kColorWhite.withValues(alpha: 0.10),
+      color: AppLightUi.border,
     );
   }
 
@@ -1204,11 +1133,7 @@ class _WalletViewState extends State<WalletView> {
     return Container(
       width: double.infinity,
       height: height,
-      decoration: BoxDecoration(
-        color: const Color(0xFF130C36).withValues(alpha: 0.58),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
-      ),
+      decoration: AppLightUi.cardDecoration(radius: 18),
       child: child,
     );
   }
@@ -1250,13 +1175,13 @@ class _WalletViewState extends State<WalletView> {
                 const SemiBoldText(
                   text: 'Coin value',
                   fontSize: TextStyles.k14FontSize,
-                  color: kColorWhite,
+                  color: AppLightUi.title,
                 ),
                 Spacing.v2,
                 AppText(
                   text: '10,000 coins = \$1.00 USD',
                   fontSize: TextStyles.k10FontSize,
-                  color: kColorWhite.withValues(alpha: 0.65),
+                  color: AppLightUi.subtitle,
                 ),
               ],
             ),
@@ -1312,13 +1237,13 @@ class _WalletViewState extends State<WalletView> {
                 const SemiBoldText(
                   text: 'Withdrawal limit',
                   fontSize: TextStyles.k14FontSize,
-                  color: kColorWhite,
+                  color: AppLightUi.title,
                 ),
                 Spacing.v2,
                 AppText(
                   text: 'Minimum diamonds required to withdraw',
                   fontSize: TextStyles.k10FontSize,
-                  color: kColorWhite.withValues(alpha: 0.65),
+                  color: AppLightUi.subtitle,
                 ),
               ],
             ),
@@ -1357,11 +1282,7 @@ class _WalletViewState extends State<WalletView> {
         border: Border.all(
           color: kColorWalletCardBorder.withValues(alpha: 0.6),
         ),
-        gradient: const LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [Color(0xFF3F235C), Color(0xFF251A45)],
-        ),
+        color: AppLightUi.cardSoft,
       ),
       child: Row(
         children: [
@@ -1386,14 +1307,14 @@ class _WalletViewState extends State<WalletView> {
                 const SemiBoldText(
                   text: 'Withdraw diamonds',
                   fontSize: TextStyles.k14FontSize,
-                  color: kColorWhite,
+                  color: AppLightUi.title,
                 ),
                 Spacing.v2,
                 AppText(
                   text:
                       'Available: ${controller.withdrawCurrencySymbol.value}${controller.withdrawableBalance.value}',
                   fontSize: TextStyles.k10FontSize,
-                  color: kColorWhite.withValues(alpha: 0.65),
+                  color: AppLightUi.subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1409,10 +1330,10 @@ class _WalletViewState extends State<WalletView> {
               style: TextButton.styleFrom(
                 backgroundColor: isEligible
                     ? kColorWalletAmount
-                    : kColorWhite.withValues(alpha: 0.12),
-                foregroundColor: isEligible ? kColorBlack : kColorWhite,
-                disabledBackgroundColor: kColorWhite.withValues(alpha: 0.08),
-                disabledForegroundColor: kColorWhite.withValues(alpha: 0.35),
+                    : AppLightUi.cardSoft,
+                foregroundColor: isEligible ? kColorBlack : AppLightUi.muted,
+                disabledBackgroundColor: AppLightUi.cardSoft,
+                disabledForegroundColor: AppLightUi.muted,
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
@@ -1421,7 +1342,7 @@ class _WalletViewState extends State<WalletView> {
               child: SemiBoldText(
                 text: isLoading ? 'Loading' : 'Withdraw',
                 fontSize: TextStyles.k12FontSize,
-                color: isEligible ? kColorBlack : kColorWhite,
+                color: isEligible ? kColorBlack : AppLightUi.muted,
               ),
             ),
           ),
@@ -1440,7 +1361,7 @@ class _WalletViewState extends State<WalletView> {
             ),
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
             decoration: const BoxDecoration(
-              color: Color(0xFF1E1E2D),
+              color: AppLightUi.card,
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(24),
                 topRight: Radius.circular(24),
@@ -1460,7 +1381,7 @@ class _WalletViewState extends State<WalletView> {
                           width: 40,
                           height: 4,
                           decoration: BoxDecoration(
-                            color: Colors.white24,
+                            color: AppLightUi.borderStrong,
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
@@ -1470,7 +1391,7 @@ class _WalletViewState extends State<WalletView> {
                         child: SemiBoldText(
                           text: 'Withdraw',
                           fontSize: TextStyles.k18FontSize,
-                          color: kColorWhite,
+                          color: AppLightUi.title,
                         ),
                       ),
                       Spacing.v12,
@@ -1488,7 +1409,7 @@ class _WalletViewState extends State<WalletView> {
                       const SemiBoldText(
                         text: 'Select amount',
                         fontSize: TextStyles.k14FontSize,
-                        color: kColorWhite,
+                        color: AppLightUi.title,
                       ),
                       Spacing.v10,
                       _withdrawTierGrid(),
@@ -1496,13 +1417,13 @@ class _WalletViewState extends State<WalletView> {
                       const SemiBoldText(
                         text: 'Bank details',
                         fontSize: TextStyles.k14FontSize,
-                        color: kColorWhite,
+                        color: AppLightUi.title,
                       ),
                       Spacing.v6,
                       AppText(
                         text: 'Enter UPI ID or bank account number with IFSC.',
                         fontSize: TextStyles.k10FontSize,
-                        color: kColorWhite.withValues(alpha: 0.58),
+                        color: AppLightUi.subtitle,
                       ),
                       Spacing.v10,
                       _withdrawTextField(
@@ -1605,9 +1526,9 @@ class _WalletViewState extends State<WalletView> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: kColorWhite.withValues(alpha: 0.06),
+        color: AppLightUi.cardSoft,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
+        border: Border.all(color: AppLightUi.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1615,7 +1536,7 @@ class _WalletViewState extends State<WalletView> {
           AppText(
             text: label,
             fontSize: TextStyles.k10FontSize,
-            color: kColorWhite.withValues(alpha: 0.62),
+            color: AppLightUi.subtitle,
           ),
           Spacing.v4,
           SemiBoldText(
@@ -1651,7 +1572,7 @@ class _WalletViewState extends State<WalletView> {
             child: AppText(
               text: text,
               fontSize: TextStyles.k12FontSize,
-              color: kColorWhite.withValues(alpha: 0.82),
+              color: AppLightUi.body,
             ),
           ),
         ],
@@ -1665,7 +1586,7 @@ class _WalletViewState extends State<WalletView> {
       return AppText(
         text: 'No withdrawal amount is available right now.',
         fontSize: TextStyles.k12FontSize,
-        color: kColorWhite.withValues(alpha: 0.65),
+        color: AppLightUi.subtitle,
       );
     }
     return Wrap(
@@ -1683,18 +1604,18 @@ class _WalletViewState extends State<WalletView> {
             decoration: BoxDecoration(
               color: selected
                   ? kColorWalletAmount
-                  : kColorWhite.withValues(alpha: 0.08),
+                  : AppLightUi.cardSoft,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: selected
                     ? kColorWalletAmount
-                    : kColorWhite.withValues(alpha: 0.1),
+                    : AppLightUi.border,
               ),
             ),
             child: SemiBoldText(
               text: controller.tierLabel(tier),
               fontSize: TextStyles.k14FontSize,
-              color: selected ? kColorBlack : kColorWhite,
+              color: selected ? kColorBlack : AppLightUi.title,
             ),
           ),
         );
@@ -1716,26 +1637,26 @@ class _WalletViewState extends State<WalletView> {
       textCapitalization: textCapitalization,
       style: TextStyles.kRegularPoppins(
         fontSize: TextStyles.k12FontSize,
-        colors: kColorWhite,
+        colors: AppLightUi.title,
       ),
       cursorColor: kColorWalletAmount,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        prefixIcon: Icon(icon, color: kColorWhite.withValues(alpha: 0.7)),
+        prefixIcon: Icon(icon, color: AppLightUi.subtitle),
         labelStyle: TextStyles.kRegularPoppins(
           fontSize: TextStyles.k12FontSize,
-          colors: kColorWhite.withValues(alpha: 0.72),
+          colors: AppLightUi.subtitle,
         ),
         hintStyle: TextStyles.kRegularPoppins(
           fontSize: TextStyles.k12FontSize,
-          colors: kColorWhite.withValues(alpha: 0.35),
+          colors: AppLightUi.hint,
         ),
         filled: true,
-        fillColor: kColorWhite.withValues(alpha: 0.06),
+        fillColor: AppLightUi.cardSoft,
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: kColorWhite.withValues(alpha: 0.08)),
+          borderSide: BorderSide(color: AppLightUi.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -1755,7 +1676,7 @@ class _WalletViewState extends State<WalletView> {
               child: SemiBoldText(
                 text: 'Recent requests',
                 fontSize: TextStyles.k14FontSize,
-                color: kColorWhite,
+                color: AppLightUi.title,
               ),
             ),
             if (controller.isLoadingWithdrawHistory.value)
@@ -1774,7 +1695,7 @@ class _WalletViewState extends State<WalletView> {
           AppText(
             text: 'No withdrawal request yet.',
             fontSize: TextStyles.k12FontSize,
-            color: kColorWhite.withValues(alpha: 0.62),
+            color: AppLightUi.subtitle,
           )
         else
           Column(
@@ -1788,7 +1709,7 @@ class _WalletViewState extends State<WalletView> {
                       vertical: 10,
                     ),
                     decoration: BoxDecoration(
-                      color: kColorWhite.withValues(alpha: 0.06),
+                      color: AppLightUi.cardSoft,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
@@ -1801,13 +1722,13 @@ class _WalletViewState extends State<WalletView> {
                                 text:
                                     '${controller.withdrawCurrencySymbol.value}${item.amount % 1 == 0 ? item.amount.toInt() : item.amount}',
                                 fontSize: TextStyles.k12FontSize,
-                                color: kColorWhite,
+                                color: AppLightUi.title,
                               ),
                               Spacing.v2,
                               AppText(
                                 text: _withdrawHistorySubtitle(item),
                                 fontSize: TextStyles.k10FontSize,
-                                color: kColorWhite.withValues(alpha: 0.55),
+                                color: AppLightUi.subtitle,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -1899,7 +1820,7 @@ class _WalletViewState extends State<WalletView> {
     Get.back();
     Get.dialog(
       Dialog(
-        backgroundColor: const Color(0xFF1E1E2D),
+        backgroundColor: AppLightUi.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         child: Padding(
           padding: const EdgeInsets.all(22),
@@ -1915,14 +1836,14 @@ class _WalletViewState extends State<WalletView> {
               const SemiBoldText(
                 text: 'Request Submitted',
                 fontSize: TextStyles.k18FontSize,
-                color: kColorWhite,
+                color: AppLightUi.title,
               ),
               Spacing.v8,
               AppText(
                 text:
                     'Withdrawal request ${result.transactionId} is ${result.status.toLowerCase()}.',
                 fontSize: TextStyles.k12FontSize,
-                color: kColorWhite.withValues(alpha: 0.72),
+                color: AppLightUi.subtitle,
                 align: TextAlign.center,
               ),
               Spacing.v20,
@@ -1954,7 +1875,7 @@ class _WalletViewState extends State<WalletView> {
   void _showWithdrawErrorDialog(String message) {
     Get.dialog(
       Dialog(
-        backgroundColor: const Color(0xFF1E1E2D),
+        backgroundColor: AppLightUi.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         child: Padding(
           padding: const EdgeInsets.all(22),
@@ -1978,13 +1899,13 @@ class _WalletViewState extends State<WalletView> {
               const SemiBoldText(
                 text: 'Withdrawal Failed',
                 fontSize: TextStyles.k18FontSize,
-                color: kColorWhite,
+                color: AppLightUi.title,
               ),
               Spacing.v8,
               AppText(
                 text: message,
                 fontSize: TextStyles.k12FontSize,
-                color: kColorWhite.withValues(alpha: 0.72),
+                color: AppLightUi.subtitle,
                 align: TextAlign.center,
               ),
               Spacing.v20,

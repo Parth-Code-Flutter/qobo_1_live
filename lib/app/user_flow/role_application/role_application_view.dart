@@ -1,5 +1,6 @@
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/app/user_flow/host_dashboard/host_dashboard_view.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_shell_background.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
@@ -503,7 +504,7 @@ class _RoleApplicationViewState extends State<RoleApplicationView> {
         Text(
           headline,
           textAlign: TextAlign.center,
-          style: TextStyles.kBoldPoppins(colors: kColorWhite, fontSize: 20),
+          style: TextStyles.kBoldPoppins(colors: AppLightUi.title, fontSize: 20),
         ),
         const SizedBox(height: 10),
         Text(
@@ -518,7 +519,7 @@ class _RoleApplicationViewState extends State<RoleApplicationView> {
               : 'We could not identify your application status. Please refresh to try again.',
           textAlign: TextAlign.center,
           style: TextStyles.kRegularPoppins(
-            colors: Colors.white70,
+            colors: AppLightUi.subtitle,
             fontSize: 13,
           ),
         ),
@@ -530,7 +531,7 @@ class _RoleApplicationViewState extends State<RoleApplicationView> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.06),
+            color: AppLightUi.cardSoft,
             borderRadius: BorderRadius.circular(16),
           ),
           child: Row(
@@ -549,7 +550,7 @@ class _RoleApplicationViewState extends State<RoleApplicationView> {
                     Text(
                       approved || empty ? 'Next step' : 'Application update',
                       style: TextStyles.kBoldPoppins(
-                        colors: kColorWhite,
+                        colors: AppLightUi.title,
                         fontSize: 12,
                       ),
                     ),
@@ -567,7 +568,7 @@ class _RoleApplicationViewState extends State<RoleApplicationView> {
                           ? 'You do not need to apply again. Check back here for the decision.'
                           : 'Your application has not been changed. Try checking again shortly.',
                       style: TextStyles.kRegularPoppins(
-                        colors: Colors.white70,
+                        colors: AppLightUi.subtitle,
                         fontSize: 12,
                       ),
                     ),
@@ -584,7 +585,7 @@ class _RoleApplicationViewState extends State<RoleApplicationView> {
   @override
   Widget build(BuildContext context) {
     final statusScreen = _application != null || widget.statusOnly;
-    final foreground = statusScreen ? kColorWhite : kColorText;
+    final foreground = AppLightUi.title;
     final textTheme = Theme.of(context).textTheme.apply(
       fontFamily: 'Poppins',
       bodyColor: foreground,
@@ -607,7 +608,7 @@ class _RoleApplicationViewState extends State<RoleApplicationView> {
                       onPressed: () => Get.back(),
                       icon: const Icon(
                         Icons.arrow_back_ios_new_rounded,
-                        color: kColorWhite,
+                        color: AppLightUi.title,
                         size: 20,
                       ),
                     ),
@@ -618,7 +619,7 @@ class _RoleApplicationViewState extends State<RoleApplicationView> {
                             : 'Apply for $_title',
                         textAlign: TextAlign.center,
                         style: TextStyles.kBoldPoppins(
-                          colors: kColorWhite,
+                          colors: AppLightUi.title,
                           fontSize: 18,
                         ),
                       ),
@@ -636,7 +637,7 @@ class _RoleApplicationViewState extends State<RoleApplicationView> {
                   decoration: statusScreen
                       ? const BoxDecoration()
                       : const BoxDecoration(
-                          color: kColorWhite,
+                          color: AppLightUi.card,
                           borderRadius: BorderRadius.vertical(
                             top: Radius.circular(28),
                           ),
@@ -650,9 +651,7 @@ class _RoleApplicationViewState extends State<RoleApplicationView> {
                       ),
                       textButtonTheme: TextButtonThemeData(
                         style: TextButton.styleFrom(
-                          foregroundColor: statusScreen
-                              ? kColorWhite
-                              : kColorPrimary,
+                          foregroundColor: AppLightUi.pink,
                           textStyle: TextStyles.kRegularPoppins(fontSize: 12),
                         ),
                       ),
@@ -663,7 +662,7 @@ class _RoleApplicationViewState extends State<RoleApplicationView> {
                         collapsedIconColor: kColorHint,
                       ),
                       progressIndicatorTheme: ProgressIndicatorThemeData(
-                        color: statusScreen ? kColorWhite : kColorPrimary,
+                        color: AppLightUi.pink,
                       ),
                     ),
                     child: Material(
@@ -680,7 +679,7 @@ class _RoleApplicationViewState extends State<RoleApplicationView> {
                                       ? const EdgeInsets.all(24)
                                       : EdgeInsets.zero,
                                   decoration: statusScreen
-                                      ? appShellGlassDecoration(radius: 24)
+                                      ? AppLightUi.cardDecoration(radius: 24)
                                       : null,
                                   child: Column(
                                     crossAxisAlignment:
@@ -691,7 +690,7 @@ class _RoleApplicationViewState extends State<RoleApplicationView> {
                                           _title,
                                           textAlign: TextAlign.center,
                                           style: TextStyles.kRegularPoppins(
-                                            colors: Colors.white70,
+                                            colors: AppLightUi.subtitle,
                                             fontSize: 12,
                                           ),
                                         ),

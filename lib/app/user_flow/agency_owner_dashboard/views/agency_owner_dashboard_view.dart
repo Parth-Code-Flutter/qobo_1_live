@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/icon_constants.dart';
 import 'package:qobo_one_live/app/user_flow/agency_owner_dashboard/models/agency_revenue_demo.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/repo/agency/agency_api_utils.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/services/agency_session_controller.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/app_widgets/earnings_chart_card.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -28,8 +29,9 @@ abstract final class _DashUi {
   static const accentGold = AdminAgencyUi.gold;
   static const accentSky = AdminAgencyUi.sky;
 
-  static const textMuted = AdminAgencyUi.textMuted;
-  static const textSoft = AdminAgencyUi.textFaint;
+  static const textMuted = AppLightUi.subtitle;
+  static const textSoft = AppLightUi.muted;
+  static const title = AppLightUi.title;
 
   static const heroGradient = [Color(0xFF9C27B0), Color(0xFFE91E63)];
   static const earningsGradient = [Color(0xFFFF8F00), Color(0xFFFF5722)];
@@ -52,67 +54,27 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
   @override
   Widget build(BuildContext context) {
     // Scaffold is required so Text has a Material ancestor (avoids yellow underlines).
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _header(),
-              Expanded(child: Obx(() => _dashboardBody())),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _header() {
     final canPop = Get.key.currentState?.canPop() ?? false;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
-      child: Row(
-        children: [
-          if (canPop)
-            AdminAgencyUi.glassIconButton(
-              icon: Icons.arrow_back_ios_new_rounded,
-              onTap: Get.back,
-              accent: _DashUi.accentSky,
-              size: 40,
-              iconSize: 16,
-            )
-          else
-            const SizedBox(width: 40, height: 40),
-          Expanded(
-            child: Column(
-              children: [
-                SemiBoldText(
-                  text: 'Agency Dashboard',
-                  fontSize: TextStyles.k16FontSize,
-                  color: kColorWhite,
-                ),
-                AppText(
-                  text: 'Revenue & hosts overview',
-                  fontSize: TextStyles.k10FontSize,
-                  color: kColorWhite.withValues(alpha: 0.75),
-                ),
-              ],
+    return Scaffold(
+      backgroundColor: kColorLavenderBg,
+      appBar: CommonAppBarWidget(
+        title: 'Agency Dashboard',
+        subtitle: 'Revenue & hosts overview',
+        showBackButton: canPop,
+        actions: [
+          IconButton(
+            onPressed: controller.openRevenue,
+            icon: const Icon(
+              Icons.insights_rounded,
+              color: kColorWhite,
+              size: 22,
             ),
           ),
-          AdminAgencyUi.glassIconButton(
-            icon: Icons.insights_rounded,
-            onTap: controller.openRevenue,
-            accent: _DashUi.accentGold,
-            size: 40,
-            iconSize: 18,
-          ),
-          Spacing.h6,
           _profileIconButton(),
+          const SizedBox(width: 4),
         ],
       ),
+      body: Obx(() => _dashboardBody()),
     );
   }
 
@@ -157,7 +119,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
 
   Widget _dashboardBody() {
     if (controller.isLoading.value) {
-      return const Center(child: CircularProgressIndicator(color: kColorWhite));
+      return const Center(child: CircularProgressIndicator(color: AppLightUi.pink));
     }
 
     if (controller.isApplicationPending.value) {
@@ -251,8 +213,8 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 28),
-        child: AdminColorPanel(
-          colors: _DashUi.panelGradient,
+        child: AdminSolidPanel(
+          accent: _DashUi.accentSky,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
           radius: _DashUi.radiusMd,
           child: Column(
@@ -268,14 +230,14 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
               const SemiBoldText(
                 text: 'Dashboard unavailable',
                 fontSize: TextStyles.k18FontSize,
-                color: kColorWhite,
+                color: AppLightUi.title,
                 align: TextAlign.center,
               ),
               Spacing.v8,
               AppText(
                 text: message,
                 fontSize: TextStyles.k14FontSize,
-                color: kColorWhite.withValues(alpha: 0.9),
+                color: AppLightUi.body,
                 align: TextAlign.center,
               ),
               Spacing.v20,
@@ -1251,7 +1213,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
         SemiBoldText(
           text: title.toUpperCase(),
           fontSize: TextStyles.k12FontSize,
-          color: kColorWhite,
+          color: _DashUi.title,
         ),
       ],
     );
@@ -1267,7 +1229,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
         SemiBoldText(
           text: title,
           fontSize: TextStyles.k18FontSize,
-          color: kColorWhite,
+          color: _DashUi.title,
         ),
         if (action.isNotEmpty) ...[
           const Spacer(),
@@ -1329,10 +1291,8 @@ class _AgencyAccountMenuSheet extends StatelessWidget {
       top: false,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-        child: AdminColorPanel(
-          colors: _DashUi.heroGradient,
-          radius: _DashUi.radiusLg,
-          padding: EdgeInsets.zero,
+        child: Container(
+          decoration: AppLightUi.cardDecoration(radius: _DashUi.radiusLg),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1341,7 +1301,7 @@ class _AgencyAccountMenuSheet extends StatelessWidget {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: kColorWhite.withValues(alpha: 0.28),
+                  color: AppLightUi.borderStrong,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -1365,7 +1325,7 @@ class _AgencyAccountMenuSheet extends StatelessWidget {
                           SemiBoldText(
                             text: name,
                             fontSize: TextStyles.k16FontSize,
-                            color: kColorWhite,
+                            color: AppLightUi.title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -1394,7 +1354,7 @@ class _AgencyAccountMenuSheet extends StatelessWidget {
                                   ? session!.role
                                   : 'agency',
                               fontSize: TextStyles.k10FontSize,
-                              color: kColorWhite,
+                              color: AppLightUi.title,
                             ),
                           ),
                         ],
@@ -1403,7 +1363,7 @@ class _AgencyAccountMenuSheet extends StatelessWidget {
                   ],
                 ),
               ),
-              const Divider(color: Color(0x22FFFFFF), height: 1),
+              const Divider(color: AppLightUi.border, height: 1),
               _menuTile(
                 icon: Icons.manage_accounts_rounded,
                 title: 'Edit profile',
@@ -1449,7 +1409,7 @@ class _AgencyAccountMenuSheet extends StatelessWidget {
                   controller.openRevenue();
                 },
               ),
-              const Divider(color: Color(0x22FFFFFF), height: 1),
+              const Divider(color: AppLightUi.border, height: 1),
               Obx(() {
                 final busy = controller.isLoggingOut.value;
                 return _menuTile(
@@ -1505,7 +1465,7 @@ class _AgencyAccountMenuSheet extends StatelessWidget {
                     SemiBoldText(
                       text: title,
                       fontSize: TextStyles.k14FontSize,
-                      color: destructive ? tileAccent : kColorWhite,
+                      color: destructive ? tileAccent : AppLightUi.title,
                     ),
                     Spacing.v2,
                     AppText(
@@ -1518,7 +1478,7 @@ class _AgencyAccountMenuSheet extends StatelessWidget {
               ),
               Icon(
                 Icons.chevron_right_rounded,
-                color: kColorWhite.withValues(alpha: 0.35),
+                color: AppLightUi.muted,
                 size: 22,
               ),
             ],

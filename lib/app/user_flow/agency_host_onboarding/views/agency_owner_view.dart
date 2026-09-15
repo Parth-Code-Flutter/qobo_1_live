@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_shell_background.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -19,59 +21,16 @@ class AgencyOwnerView extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: AppShellBackground(
-        child: SafeArea(
-          child: Column(
-            children: [
-              _header(),
-              Expanded(
-                child: Obx(() {
-                  if (!controller.hasAgency.value) {
-                    return _buildCreateAgencyScreen(controller);
-                  }
-                  return _buildDashboardScreen(controller);
-                }),
-              ),
-            ],
-          ),
-        ),
+      appBar: const CommonAppBarWidget(
+        title: 'Agency Owner Center',
       ),
-    );
-  }
-
-  Widget _header() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: Get.back,
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: Colors.white10,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              alignment: Alignment.center,
-              child: const Icon(
-                Icons.arrow_back_ios_new_rounded,
-                color: kColorWhite,
-                size: 16,
-              ),
-            ),
-          ),
-          const Expanded(
-            child: Center(
-              child: SemiBoldText(
-                text: 'Agency Owner Center',
-                fontSize: 18,
-                color: kColorWhite,
-              ),
-            ),
-          ),
-          const SizedBox(width: 36), // spacing balance
-        ],
+      body: AppShellBackground(
+        child: Obx(() {
+          if (!controller.hasAgency.value) {
+            return _buildCreateAgencyScreen(controller);
+          }
+          return _buildDashboardScreen(controller);
+        }),
       ),
     );
   }
@@ -85,39 +44,47 @@ class AgencyOwnerView extends StatelessWidget {
           const BoldText(
             text: 'Register Your Agency',
             fontSize: 22,
-            color: kColorWhite,
+            color: AppLightUi.title,
           ),
           Spacing.v6,
           const AppText(
             text:
                 'Create a new agency to onboard hosts, track performance, and earn host commissions.',
             fontSize: 12,
-            color: Colors.white70,
+            color: AppLightUi.subtitle,
           ),
           Spacing.v24,
-          const AppText(text: 'Agency Name', fontSize: 13, color: kColorWhite),
+          const AppText(
+            text: 'Agency Name',
+            fontSize: 13,
+            color: AppLightUi.body,
+          ),
           Spacing.v6,
           AppTextField(
             controller: controller.nameController,
             hintText: 'e.g. Star Agency Pakistan',
-            fillColor: Colors.white10,
-            borderColor: Colors.white12,
+            fillColor: AppLightUi.searchFill,
+            borderColor: AppLightUi.border,
             textStyle: TextStyles.kRegularPoppins(
-              colors: kColorWhite,
+              colors: AppLightUi.body,
               fontSize: 13,
             ),
           ),
           Spacing.v16,
-          const AppText(text: 'Description', fontSize: 13, color: kColorWhite),
+          const AppText(
+            text: 'Description',
+            fontSize: 13,
+            color: AppLightUi.body,
+          ),
           Spacing.v6,
           AppTextField(
             controller: controller.descController,
             hintText: 'Describe your agency goals/requirements...',
             maxLines: 4,
-            fillColor: Colors.white10,
-            borderColor: Colors.white12,
+            fillColor: AppLightUi.searchFill,
+            borderColor: AppLightUi.border,
             textStyle: TextStyles.kRegularPoppins(
-              colors: kColorWhite,
+              colors: AppLightUi.body,
               fontSize: 13,
             ),
           ),
@@ -202,16 +169,12 @@ class AgencyOwnerView extends StatelessWidget {
           const SemiBoldText(
             text: 'Recruitment & Invite Links',
             fontSize: 14,
-            color: kColorWhite,
+            color: AppLightUi.title,
           ),
           Spacing.v10,
           Container(
             padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.black38,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white12),
-            ),
+            decoration: AppLightUi.cardDecoration(radius: 12),
             child: Column(
               children: [
                 Row(
@@ -224,14 +187,14 @@ class AgencyOwnerView extends StatelessWidget {
                           const AppText(
                             text: 'Agency Code',
                             fontSize: 10,
-                            color: Colors.white38,
+                            color: AppLightUi.muted,
                           ),
                           Spacing.v4,
                           Obx(
                             () => SemiBoldText(
                               text: controller.agencyCode.value,
                               fontSize: 13,
-                              color: Colors.amber,
+                              color: AppLightUi.gold,
                             ),
                           ),
                         ],
@@ -240,14 +203,14 @@ class AgencyOwnerView extends StatelessWidget {
                     IconButton(
                       icon: const Icon(
                         Icons.copy_rounded,
-                        color: Colors.amber,
+                        color: AppLightUi.gold,
                         size: 18,
                       ),
                       onPressed: controller.copyInviteCode,
                     ),
                   ],
                 ),
-                const Divider(color: Colors.white12, height: 16),
+                const Divider(color: AppLightUi.border, height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -258,13 +221,13 @@ class AgencyOwnerView extends StatelessWidget {
                           const AppText(
                             text: 'Agency Recruitment Link',
                             fontSize: 10,
-                            color: Colors.white38,
+                            color: AppLightUi.muted,
                           ),
                           Spacing.v4,
                           const AppText(
                             text: 'https://qobo.live/agency/join...',
                             fontSize: 12,
-                            color: Colors.white70,
+                            color: AppLightUi.subtitle,
                           ),
                         ],
                       ),
@@ -272,7 +235,7 @@ class AgencyOwnerView extends StatelessWidget {
                     IconButton(
                       icon: const Icon(
                         Icons.share_rounded,
-                        color: kColorWhite,
+                        color: AppLightUi.violet,
                         size: 18,
                       ),
                       onPressed: controller.copyInviteLink,
@@ -291,12 +254,12 @@ class AgencyOwnerView extends StatelessWidget {
               const SemiBoldText(
                 text: 'My Hosts',
                 fontSize: 14,
-                color: kColorWhite,
+                color: AppLightUi.title,
               ),
               AppText(
                 text: 'Total: ${controller.hosts.length}',
                 fontSize: 11,
-                color: Colors.white38,
+                color: AppLightUi.muted,
               ),
             ],
           ),
@@ -305,30 +268,26 @@ class AgencyOwnerView extends StatelessWidget {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 22),
-              decoration: BoxDecoration(
-                color: Colors.black26,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white12),
-              ),
+              decoration: AppLightUi.cardDecoration(radius: 12),
               child: const Column(
                 children: [
                   Icon(
                     Icons.groups_2_outlined,
-                    color: Colors.white54,
+                    color: AppLightUi.muted,
                     size: 32,
                   ),
                   SizedBox(height: 8),
                   SemiBoldText(
                     text: 'No data found',
                     fontSize: 13,
-                    color: kColorWhite,
+                    color: AppLightUi.title,
                     align: TextAlign.center,
                   ),
                   SizedBox(height: 4),
                   AppText(
                     text: 'Agency hosts will appear here when available.',
                     fontSize: 11,
-                    color: Colors.white54,
+                    color: AppLightUi.subtitle,
                     align: TextAlign.center,
                   ),
                 ],
@@ -344,11 +303,7 @@ class AgencyOwnerView extends StatelessWidget {
                 final host = controller.hosts[index];
                 return Container(
                   padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.black26,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white12),
-                  ),
+                  decoration: AppLightUi.cardDecoration(radius: 12),
                   child: Row(
                     children: [
                       CircleAvatar(
@@ -363,13 +318,13 @@ class AgencyOwnerView extends StatelessWidget {
                             SemiBoldText(
                               text: host['name'],
                               fontSize: 13,
-                              color: kColorWhite,
+                              color: AppLightUi.title,
                             ),
                             Spacing.v2,
                             AppText(
                               text: 'Host ID: ${host['id']}',
                               fontSize: 10,
-                              color: Colors.white54,
+                              color: AppLightUi.subtitle,
                             ),
                           ],
                         ),

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/services/chat/chat_inbox_preview.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/glossy_dating_card.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -63,141 +65,118 @@ class MessageMatchAvatarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const cardWidth = 122.0;
-    const avatarSize = 52.0;
+    const cardWidth = 128.0;
+    const avatarSize = 54.0;
     const frameExtent = avatarSize * 1.34;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
+    return Align(
+      alignment: Alignment.topCenter,
+      child: GlossyDatingCard(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(26),
-        child: Ink(
-          width: cardWidth,
-          padding: const EdgeInsets.fromLTRB(8, 10, 8, 10),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                const Color(0xFFFF6FA8).withValues(alpha: 0.20),
-                const Color(0xFF2A1744).withValues(alpha: 0.92),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(26),
-            border: Border.all(
-              color: const Color(0xFFFF9AB8).withValues(alpha: 0.42),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFFFF5C9A).withValues(alpha: 0.22),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
+        radius: 26,
+        borderWidth: 1.5,
+        padding: const EdgeInsets.fromLTRB(10, 12, 10, 12),
+        child: SizedBox(
+          width: cardWidth - 20,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              SizedBox(
-                width: frameExtent,
-                height: frameExtent,
-                child: Stack(
-                  clipBehavior: Clip.hardEdge,
-                  alignment: Alignment.center,
-                  children: [
-                    Container(
-                      width: frameExtent,
-                      height: frameExtent,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [
-                            const Color(0xFFFF5C9A).withValues(alpha: 0.45),
-                            const Color(0xFF9B6DFF).withValues(alpha: 0.28),
-                          ],
+            SizedBox(
+              width: frameExtent,
+              height: frameExtent,
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    width: frameExtent + 6,
+                    height: frameExtent + 6,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: AppLightUi.glossRingGradient,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppLightUi.title.withValues(alpha: 0.08),
+                          blurRadius: 14,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                  ),
+                  FramedUserAvatar(
+                    name: user.name,
+                    imageUrl: user.displayPicture,
+                    frameUrl: user.avatarFrameUrl,
+                    frameSeed: user.id,
+                    size: avatarSize,
+                    fontSize: TextStyles.k12FontSize,
+                  ),
+                  if (user.isFollowing)
+                    Positioned(
+                      right: 0,
+                      bottom: 2,
+                      child: Container(
+                        width: 18,
+                        height: 18,
+                        decoration: BoxDecoration(
+                          gradient: AppLightUi.ctaGradient,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: kColorWhite, width: 1.5),
+                        ),
+                        child: const Icon(
+                          Icons.favorite_rounded,
+                          size: 10,
+                          color: kColorWhite,
                         ),
                       ),
                     ),
-                    FramedUserAvatar(
-                      name: user.name,
-                      imageUrl: user.displayPicture,
-                      frameUrl: user.avatarFrameUrl,
-                      frameSeed: user.id,
-                      size: avatarSize,
-                      fontSize: TextStyles.k12FontSize,
-                    ),
-                    if (user.isFollowing)
-                      Positioned(
-                        right: 2,
-                        bottom: 2,
-                        child: Container(
-                          width: 16,
-                          height: 16,
-                          decoration: BoxDecoration(
-                            color: Colors.greenAccent.shade400,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: const Color(0xFF1A1230),
-                              width: 1.5,
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.check_rounded,
-                            size: 10,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
+                ],
               ),
-              Spacing.v6,
-              SizedBox(
-                width: cardWidth - 16,
-                child: SemiBoldText(
-                  text: user.name,
+            ),
+            Spacing.v6,
+            SemiBoldText(
+              text: user.name,
+              color: AppLightUi.title,
+              fontSize: TextStyles.k12FontSize,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              align: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              decoration: BoxDecoration(
+                gradient: AppLightUi.familyCtaGradient,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: kColorWhite.withValues(alpha: 0.35),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppLightUi.title.withValues(alpha: 0.08),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              alignment: Alignment.center,
+              child: const Text(
+                'Say hello',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
                   color: kColorWhite,
-                  fontSize: TextStyles.k12FontSize,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  align: TextAlign.center,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.2,
+                  height: 1.1,
                 ),
               ),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: cardWidth - 16,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 5),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFFF5C9A), Color(0xFFB14DFF)],
-                    ),
-                    borderRadius: BorderRadius.circular(999),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFFF5C9A).withValues(alpha: 0.35),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  alignment: Alignment.center,
-                  child: const Text(
-                    'Say hello',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: kColorWhite,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
+      ),
       ),
     );
   }
@@ -220,19 +199,10 @@ class MessageSearchUserTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 5),
+    return GlossyDatingCard(
+      radius: 18,
+      borderWidth: 1.3,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            kColorWhite.withValues(alpha: 0.10),
-            kColorWhite.withValues(alpha: 0.04),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
-      ),
       child: Row(
         children: [
           GestureDetector(
@@ -255,14 +225,14 @@ class MessageSearchUserTile extends StatelessWidget {
                   SemiBoldText(
                     text: user.name,
                     fontSize: TextStyles.k14FontSize,
-                    color: kColorWhite,
+                    color: AppLightUi.title,
                   ),
                   if (user.level > 0) ...[
                     Spacing.v2,
                     AppText(
                       text: 'Level ${user.level}',
                       fontSize: TextStyles.k10FontSize,
-                      color: kColorWhite.withValues(alpha: 0.6),
+                      color: AppLightUi.muted,
                     ),
                   ],
                 ],
@@ -277,17 +247,12 @@ class MessageSearchUserTile extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: user.isFollowing
                     ? null
-                    : const LinearGradient(
-                        colors: [
-                          kColorProfileActionPinkStart,
-                          kColorProfileActionOrangeEnd,
-                        ],
-                      ),
+                    : AppLightUi.familyCtaGradient,
                 color: user.isFollowing ? Colors.transparent : null,
                 borderRadius: BorderRadius.circular(20),
                 border: user.isFollowing
-                    ? Border.all(color: kColorWhite.withValues(alpha: 0.45))
-                    : null,
+                    ? Border.all(color: AppLightUi.borderStrong)
+                    : Border.all(color: kColorWhite.withValues(alpha: 0.35)),
               ),
               child: isProcessing
                   ? const SizedBox(
@@ -295,13 +260,15 @@ class MessageSearchUserTile extends StatelessWidget {
                       height: 16,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: kColorWhite,
+                        color: AppLightUi.pink,
                       ),
                     )
                   : SemiBoldText(
                       text: user.isFollowing ? 'Following' : 'Follow',
                       fontSize: TextStyles.k12FontSize,
-                      color: kColorWhite,
+                      color: user.isFollowing
+                          ? AppLightUi.body
+                          : kColorWhite,
                     ),
             ),
           ),

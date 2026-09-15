@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/models/geo/country_state_models.dart';
 import 'package:qobo_one_live/repo/geo/geo_repo.dart';
@@ -101,29 +102,44 @@ class _DiscoverFilterSheetState extends State<_DiscoverFilterSheet> {
       child: Container(
         padding: EdgeInsets.fromLTRB(20, 16, 20, 16 + bottomInset),
         decoration: const BoxDecoration(
-          color: kColorWhite,
+          color: AppLightUi.card,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          border: Border(
+            top: BorderSide(color: AppLightUi.border),
+          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 14),
+                decoration: BoxDecoration(
+                  color: AppLightUi.borderStrong,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
             const SemiBoldText(
               text: 'Explore filters',
               fontSize: TextStyles.k18FontSize,
-              color: kColorText,
+              color: AppLightUi.title,
             ),
             Spacing.v6,
             const AppText(
-              text: 'Filter users by country, gender, or hide people you already follow.',
+              text:
+                  'Filter users by country, gender, or hide people you already follow.',
               fontSize: TextStyles.k12FontSize,
-              color: kColorHint,
+              color: AppLightUi.subtitle,
             ),
             Spacing.v16,
             const AppText(
               text: 'Gender',
               fontSize: TextStyles.k12FontSize,
-              color: kColorText,
+              color: AppLightUi.body,
             ),
             Spacing.v8,
             Obx(
@@ -153,7 +169,9 @@ class _DiscoverFilterSheetState extends State<_DiscoverFilterSheet> {
               if (isLoading.value) {
                 return const Padding(
                   padding: EdgeInsets.symmetric(vertical: 16),
-                  child: Center(child: CircularProgressIndicator()),
+                  child: Center(
+                    child: CircularProgressIndicator(color: AppLightUi.pink),
+                  ),
                 );
               }
               return CountryStatePickerField(
@@ -177,15 +195,16 @@ class _DiscoverFilterSheetState extends State<_DiscoverFilterSheet> {
                 title: const SemiBoldText(
                   text: 'Hide users I follow',
                   fontSize: TextStyles.k14FontSize,
-                  color: kColorText,
+                  color: AppLightUi.title,
                 ),
                 subtitle: const AppText(
                   text: 'Show only users you have not followed yet',
                   fontSize: TextStyles.k10FontSize,
-                  color: kColorHint,
+                  color: AppLightUi.muted,
                 ),
                 value: excludeFollowing.value,
-                activeColor: kColorPrimary,
+                activeThumbColor: kColorWhite,
+                activeTrackColor: AppLightUi.pink,
                 onChanged: (v) => excludeFollowing.value = v,
               ),
             ),
@@ -196,8 +215,8 @@ class _DiscoverFilterSheetState extends State<_DiscoverFilterSheet> {
                   child: OutlinedButton(
                     onPressed: widget.onClose,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: kColorText,
-                      side: BorderSide(color: kColorHint.withValues(alpha: 0.5)),
+                      foregroundColor: AppLightUi.title,
+                      side: const BorderSide(color: AppLightUi.borderStrong),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(24),
@@ -206,7 +225,7 @@ class _DiscoverFilterSheetState extends State<_DiscoverFilterSheet> {
                     child: const SemiBoldText(
                       text: 'Cancel',
                       fontSize: TextStyles.k14FontSize,
-                      color: kColorText,
+                      color: AppLightUi.title,
                     ),
                   ),
                 ),
@@ -220,8 +239,8 @@ class _DiscoverFilterSheetState extends State<_DiscoverFilterSheet> {
                       widget.onApply(const DiscoverFilterState());
                     },
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: kColorText,
-                      side: BorderSide(color: kColorHint.withValues(alpha: 0.5)),
+                      foregroundColor: AppLightUi.title,
+                      side: const BorderSide(color: AppLightUi.borderStrong),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(24),
@@ -230,7 +249,7 @@ class _DiscoverFilterSheetState extends State<_DiscoverFilterSheet> {
                     child: const SemiBoldText(
                       text: 'Clear',
                       fontSize: TextStyles.k14FontSize,
-                      color: kColorText,
+                      color: AppLightUi.title,
                     ),
                   ),
                 ),
@@ -240,6 +259,8 @@ class _DiscoverFilterSheetState extends State<_DiscoverFilterSheet> {
                   child: appButton(
                     onPressed: () => widget.onApply(_buildResult()),
                     buttonText: 'Apply',
+                    isGradient: true,
+                    gradientColors: const [AppLightUi.pink, AppLightUi.violet],
                   ),
                 ),
               ],
@@ -261,12 +282,12 @@ class _DiscoverFilterSheetState extends State<_DiscoverFilterSheet> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               color: selected
-                  ? kColorPrimary.withValues(alpha: 0.12)
-                  : const Color(0xFFF7F8FA),
+                  ? AppLightUi.pink.withValues(alpha: 0.12)
+                  : AppLightUi.cardSoft,
               border: Border.all(
                 color: selected
-                    ? kColorPrimary.withValues(alpha: 0.55)
-                    : kColorHint.withValues(alpha: 0.25),
+                    ? AppLightUi.pink.withValues(alpha: 0.55)
+                    : AppLightUi.border,
               ),
             ),
             child: Padding(
@@ -275,7 +296,7 @@ class _DiscoverFilterSheetState extends State<_DiscoverFilterSheet> {
                 child: SemiBoldText(
                   text: label,
                   fontSize: TextStyles.k12FontSize,
-                  color: selected ? kColorPrimary : kColorText,
+                  color: selected ? AppLightUi.pink : AppLightUi.title,
                 ),
               ),
             ),

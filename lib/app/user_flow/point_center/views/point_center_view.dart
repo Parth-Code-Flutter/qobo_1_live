@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/constants/image_constants.dart';
-import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
+import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -26,110 +26,26 @@ class PointCenterView extends GetView<PointCenterController> {
     return DefaultTabController(
       length: _frequencies.length,
       child: Scaffold(
-        backgroundColor: const Color(0xFF090516),
-        body: Container(
-          decoration: BoxDecoration(
-            image: const DecorationImage(
-              image: AssetImage(kImgBG),
-              fit: BoxFit.cover,
-              opacity: 0.72,
-            ),
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                const Color(0xFFFF2E83).withValues(alpha: 0.20),
-                const Color(0xFF090516),
-                const Color(0xFF10091D),
-              ],
-            ),
-          ),
-          child: SafeArea(
-            bottom: false,
-            child: Column(
-              children: [
-                _header(),
-                _balanceCard(),
-                const SizedBox(height: 14),
-                _tabs(),
-                Expanded(
-                  child: TabBarView(
-                    children: _frequencies
-                        .map((item) => _tasksList(item.$1))
-                        .toList(),
-                  ),
-                ),
-              ],
-            ),
-          ),
+        backgroundColor: kColorLavenderBg,
+        appBar: const CommonAppBarWidget(
+          title: 'Task Targets',
+          subtitle: 'Complete targets and earn bonus coins',
+          trailingIcon: Icons.assignment_turned_in_rounded,
         ),
-      ),
-    );
-  }
-
-  Widget _header() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: Get.back,
-            child: Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: kColorWhite.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
-              ),
-              child: const Icon(
-                Icons.arrow_back_ios_new_rounded,
-                color: kColorWhite,
-                size: 20,
+        body: Column(
+          children: [
+            _balanceCard(),
+            const SizedBox(height: 14),
+            _tabs(),
+            Expanded(
+              child: TabBarView(
+                children: _frequencies
+                    .map((item) => _tasksList(item.$1))
+                    .toList(),
               ),
             ),
-          ),
-          Spacing.h12,
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SemiBoldText(
-                  text: 'Task Targets',
-                  fontSize: TextStyles.k22FontSize,
-                  color: kColorWhite,
-                ),
-                AppText(
-                  text: 'Complete targets and earn bonus coins',
-                  fontSize: TextStyles.k12FontSize,
-                  color: Color(0xB8FFFFFF),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFFFCF5D), Color(0xFFFF8A48)],
-              ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFFFA000).withValues(alpha: 0.26),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: const Icon(
-              Icons.assignment_turned_in_rounded,
-              color: kColorWhite,
-              size: 24,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -140,9 +56,10 @@ class PointCenterView extends GetView<PointCenterController> {
         margin: const EdgeInsets.symmetric(horizontal: 16),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: LiveRoomUiColors.cardSurface.withValues(alpha: 0.92),
+          color: AppLightUi.card,
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
+          border: Border.all(color: AppLightUi.border),
+          boxShadow: AppLightUi.cardShadow,
         ),
         child: Row(
           children: [
@@ -157,7 +74,7 @@ class PointCenterView extends GetView<PointCenterController> {
             Container(
               width: 1,
               height: 50,
-              color: kColorWhite.withValues(alpha: 0.08),
+              color: AppLightUi.border,
             ),
             Expanded(
               child: _balanceItem(
@@ -203,14 +120,14 @@ class PointCenterView extends GetView<PointCenterController> {
               AppText(
                 text: label,
                 fontSize: 11,
-                color: kColorWhite.withValues(alpha: 0.60),
+                color: AppLightUi.subtitle,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
               SemiBoldText(
                 text: value,
                 fontSize: TextStyles.k16FontSize,
-                color: kColorWhite,
+                color: AppLightUi.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -227,9 +144,9 @@ class PointCenterView extends GetView<PointCenterController> {
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: LiveRoomUiColors.cardSurface.withValues(alpha: 0.74),
+        color: AppLightUi.cardSoft,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
+        border: Border.all(color: AppLightUi.border),
       ),
       child: TabBar(
         dividerColor: Colors.transparent,
@@ -241,7 +158,7 @@ class PointCenterView extends GetView<PointCenterController> {
           ),
         ),
         labelColor: kColorWhite,
-        unselectedLabelColor: kColorWhite.withValues(alpha: 0.58),
+        unselectedLabelColor: AppLightUi.subtitle,
         labelStyle: TextStyles.kSemiBoldPoppins(fontSize: 10),
         unselectedLabelStyle: TextStyles.kSemiBoldPoppins(fontSize: 10),
         tabs: _frequencies.map((item) => Tab(text: item.$2)).toList(),
@@ -276,14 +193,14 @@ class PointCenterView extends GetView<PointCenterController> {
               const SemiBoldText(
                 text: 'No targets found',
                 fontSize: TextStyles.k16FontSize,
-                color: kColorWhite,
+                color: AppLightUi.title,
                 align: TextAlign.center,
               ),
               Spacing.v6,
               AppText(
                 text: 'Targets assigned by admin will appear here.',
                 fontSize: TextStyles.k12FontSize,
-                color: kColorWhite.withValues(alpha: 0.62),
+                color: AppLightUi.subtitle,
                 align: TextAlign.center,
               ),
             ],
@@ -317,7 +234,7 @@ class PointCenterView extends GetView<PointCenterController> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: LiveRoomUiColors.cardSurface.withValues(alpha: 0.92),
+        color: AppLightUi.card,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: accent.withValues(alpha: 0.20)),
         boxShadow: [
@@ -359,7 +276,7 @@ class PointCenterView extends GetView<PointCenterController> {
                     SemiBoldText(
                       text: task['title']?.toString() ?? 'Target Task',
                       fontSize: 15,
-                      color: kColorWhite,
+                      color: AppLightUi.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -367,7 +284,7 @@ class PointCenterView extends GetView<PointCenterController> {
                     AppText(
                       text: task['description']?.toString() ?? '',
                       fontSize: 11,
-                      color: kColorWhite.withValues(alpha: 0.64),
+                      color: AppLightUi.subtitle,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -396,7 +313,7 @@ class PointCenterView extends GetView<PointCenterController> {
                   text:
                       '${_formatTarget(task['progressValue'])} / ${_formatTarget(task['targetValue'])} ${_unit(task['targetMetric'])}',
                   fontSize: TextStyles.k12FontSize,
-                  color: kColorWhite.withValues(alpha: 0.72),
+                  color: AppLightUi.body,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -414,7 +331,7 @@ class PointCenterView extends GetView<PointCenterController> {
             child: LinearProgressIndicator(
               value: ratio,
               minHeight: 8,
-              backgroundColor: kColorWhite.withValues(alpha: 0.08),
+              backgroundColor: AppLightUi.border.withValues(alpha: 0.55),
               valueColor: AlwaysStoppedAnimation<Color>(accent),
             ),
           ),
@@ -461,15 +378,15 @@ class PointCenterView extends GetView<PointCenterController> {
                       ? 'Claim'
                       : 'Pending',
                   buttonColor: claimed
-                      ? kColorWhite.withValues(alpha: 0.10)
+                      ? AppLightUi.cardSoft
                       : completed
                       ? const Color(0xFFFF2E83)
-                      : kColorWhite.withValues(alpha: 0.08),
+                      : AppLightUi.cardSoft,
                   borderRadius: 18,
                   textStyle: TextStyles.kSemiBoldPoppins(
                     fontSize: 11,
                     colors: claimed || !completed
-                        ? kColorWhite.withValues(alpha: 0.64)
+                        ? AppLightUi.muted
                         : kColorWhite,
                   ),
                 ),
@@ -509,19 +426,19 @@ class PointCenterView extends GetView<PointCenterController> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
       decoration: BoxDecoration(
-        color: kColorWhite.withValues(alpha: 0.07),
+        color: AppLightUi.cardSoft,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
+        border: Border.all(color: AppLightUi.border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: const Color(0xFF42E8E0)),
+          Icon(icon, size: 13, color: AppLightUi.cyan),
           const SizedBox(width: 5),
           AppText(
             text: text,
             fontSize: TextStyles.k10FontSize,
-            color: kColorWhite.withValues(alpha: 0.78),
+            color: AppLightUi.body,
           ),
         ],
       ),

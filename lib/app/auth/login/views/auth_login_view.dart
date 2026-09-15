@@ -39,9 +39,9 @@ class _AuthLoginViewState extends State<AuthLoginView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kColorWhite,
+      backgroundColor: kColorLavenderBg,
       resizeToAvoidBottomInset: true,
-      appBar: CommonAppBarWidget(title: '', showBackButton: false),
+      appBar: CommonAppBarWidget(title: '', showBackButton: false, useGradientStyle: false),
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
         child: Form(

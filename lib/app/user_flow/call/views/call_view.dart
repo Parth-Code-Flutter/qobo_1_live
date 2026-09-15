@@ -6,6 +6,7 @@ import 'package:qobo_one_live/app/user_flow/live_room/widgets/common_live_room_w
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/services/chat/chat_call_service.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/app_widgets/safe_network_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -22,7 +23,8 @@ class CallView extends GetView<CallController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F2F8),
+      backgroundColor: kColorLavenderBg,
+      appBar: _CallAppBar(controller: controller),
       body: Stack(
         children: [
           Positioned(
@@ -35,24 +37,21 @@ class CallView extends GetView<CallController> {
             left: -60,
             child: _glowBlob(const Color(0xFF7B61FF), 180),
           ),
-          SafeArea(
-            child: Column(
-              children: [
-                _buildHeader(),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 2, 14, 10),
-                  child: _buildHubTabs(),
-                ),
-                Expanded(
-                  child: Obx(() {
-                    if (controller.hubTab.value == 3) {
-                      return _buildCallsTab(context);
-                    }
-                    return _buildRoomsTab();
-                  }),
-                ),
-              ],
-            ),
+          Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 2, 14, 10),
+                child: _buildHubTabs(),
+              ),
+              Expanded(
+                child: Obx(() {
+                  if (controller.hubTab.value == 3) {
+                    return _buildCallsTab(context);
+                  }
+                  return _buildRoomsTab();
+                }),
+              ),
+            ],
           ),
         ],
       ),
@@ -71,66 +70,6 @@ class CallView extends GetView<CallController> {
               color.withValues(alpha: 0.22),
               color.withValues(alpha: 0.0),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
-      child: Row(
-        children: [
-          _glassIconButton(Icons.arrow_back_ios_new_rounded, Get.back),
-          const Expanded(
-            child: Center(
-              child: BoldText(
-                text: 'Qobo Call',
-                fontSize: TextStyles.k22FontSize,
-                color: kColorText,
-              ),
-            ),
-          ),
-          Obx(() {
-            if (controller.hubTab.value != 3) {
-              return const SizedBox(width: 46, height: 46);
-            }
-            return _glassIconButton(
-              controller.isCallsSearchOpen.value
-                  ? Icons.close_rounded
-                  : Icons.person_add_alt_1_rounded,
-              controller.toggleCallsSearch,
-            );
-          }),
-        ],
-      ),
-    );
-  }
-
-  Widget _glassIconButton(IconData icon, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: kColorWhite.withValues(alpha: 0.72),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: kColorWhite.withValues(alpha: 0.8)),
-              boxShadow: [
-                BoxShadow(
-                  color: kColorBlack.withValues(alpha: 0.06),
-                  blurRadius: 16,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Icon(icon, color: kColorText, size: 20),
           ),
         ),
       ),
@@ -875,6 +814,32 @@ class CallView extends GetView<CallController> {
           color: enabled ? _waGreen : kColorHint,
           size: 20,
         ),
+      ),
+    );
+  }
+}
+
+class _CallAppBar extends StatelessWidget implements PreferredSizeWidget {
+  const _CallAppBar({required this.controller});
+
+  final CallController controller;
+
+  @override
+  Size get preferredSize => const CommonAppBarWidget(title: '').preferredSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(
+      () => CommonAppBarWidget(
+        title: 'Qobo Call',
+        trailingIcon: controller.hubTab.value == 3
+            ? (controller.isCallsSearchOpen.value
+                  ? Icons.close_rounded
+                  : Icons.person_add_alt_1_rounded)
+            : null,
+        onTrailingTap: controller.hubTab.value == 3
+            ? controller.toggleCallsSearch
+            : null,
       ),
     );
   }

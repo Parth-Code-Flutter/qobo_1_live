@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
+import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_shell_background.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
@@ -28,16 +29,15 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
     }
     return Scaffold(
       backgroundColor: Colors.transparent,
+      appBar: const CommonAppBarWidget(title: 'Apply for Agency'),
       body: AppShellBackground(
         child: GestureDetector(
           onTap: () => FocusScope.of(context).unfocus(),
-          child: SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _topBar(context),
-                Expanded(
-                  child: ClipRRect(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: ClipRRect(
                     borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(28),
                     ),
@@ -180,34 +180,6 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _topBar(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 4, 14, 8),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: IconButton(
-              onPressed: () => Get.back<void>(),
-              icon: const Icon(
-                Icons.arrow_back_ios_new,
-                color: kColorWhite,
-                size: 20,
-              ),
-            ),
-          ),
-          const SemiBoldText(
-            text: 'Apply for Agency',
-            fontSize: TextStyles.k18FontSize,
-            color: kColorWhite,
-          ),
-        ],
-      ),
     );
   }
 

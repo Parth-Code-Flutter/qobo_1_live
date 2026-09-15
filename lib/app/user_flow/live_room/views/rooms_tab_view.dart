@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -19,7 +19,7 @@ class RoomsTabView extends StatelessWidget {
 
     return Container(
       decoration: const BoxDecoration(
-        image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
+        color: kColorLavenderBg,
       ),
       child: SafeArea(
         child: Padding(
@@ -72,12 +72,12 @@ class RoomsTabView extends StatelessWidget {
               SemiBoldText(
                 text: 'Rooms',
                 fontSize: TextStyles.k24FontSize,
-                color: kColorWhite,
+                color: AppLightUi.title,
               ),
               AppText(
-                text: 'Browse audio and video rooms',
+                text: 'Hang out, flirt, and go live',
                 fontSize: TextStyles.k12FontSize,
-                color: kColorHint,
+                color: AppLightUi.subtitle,
               ),
             ],
           ),
@@ -92,30 +92,7 @@ class RoomsTabView extends StatelessWidget {
       () => Container(
         height: 78,
         padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              kColorWhite.withValues(alpha: 0.16),
-              kColorWhite.withValues(alpha: 0.07),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: kColorWhite.withValues(alpha: 0.14)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.16),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-            BoxShadow(
-              color: kColorProfileActionPinkStart.withValues(alpha: 0.10),
-              blurRadius: 22,
-              offset: const Offset(0, 0),
-            ),
-          ],
-        ),
+        decoration: AppLightUi.cardDecoration(radius: 28),
         child: Row(
           children: [
             _modeTab(
@@ -180,12 +157,12 @@ class RoomsTabView extends StatelessWidget {
                     colors: [startColor, endColor],
                   )
                 : null,
-            color: selected ? null : kColorWhite.withValues(alpha: 0.06),
+            color: selected ? null : AppLightUi.cardSoft,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: selected
                   ? kColorWhite.withValues(alpha: 0.30)
-                  : kColorWhite.withValues(alpha: 0.06),
+                  : AppLightUi.border,
             ),
             boxShadow: selected
                 ? [
@@ -207,17 +184,17 @@ class RoomsTabView extends StatelessWidget {
                   shape: BoxShape.circle,
                   color: selected
                       ? kColorWhite.withValues(alpha: 0.20)
-                      : kColorWhite.withValues(alpha: 0.10),
+                      : AppLightUi.pink.withValues(alpha: 0.10),
                   border: Border.all(
-                    color: kColorWhite.withValues(
-                      alpha: selected ? 0.28 : 0.08,
-                    ),
+                    color: selected
+                        ? kColorWhite.withValues(alpha: 0.28)
+                        : AppLightUi.border,
                   ),
                 ),
                 child: Icon(
                   icon,
                   size: 20,
-                  color: kColorWhite.withValues(alpha: selected ? 1 : 0.72),
+                  color: selected ? kColorWhite : AppLightUi.pink,
                 ),
               ),
               Spacing.h10,
@@ -229,7 +206,7 @@ class RoomsTabView extends StatelessWidget {
                     SemiBoldText(
                       text: label,
                       fontSize: TextStyles.k14FontSize,
-                      color: kColorWhite.withValues(alpha: selected ? 1 : 0.82),
+                      color: selected ? kColorWhite : AppLightUi.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -237,9 +214,9 @@ class RoomsTabView extends StatelessWidget {
                     AppText(
                       text: subtitle,
                       fontSize: TextStyles.k10FontSize,
-                      color: kColorWhite.withValues(
-                        alpha: selected ? 0.78 : 0.48,
-                      ),
+                      color: selected
+                          ? kColorWhite.withValues(alpha: 0.85)
+                          : AppLightUi.subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),

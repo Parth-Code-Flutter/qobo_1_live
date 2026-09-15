@@ -3,11 +3,12 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/bottom_nav/controllers/bottom_nav_controller.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/dating_empty_hero.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -16,13 +17,12 @@ import '../widgets/match_user_sheet.dart';
 import '../widgets/message_inbox_tile_widget.dart';
 import '../widgets/messages_common_widgets.dart';
 
-/// Local dating polish tokens — keep the same purple/dark Messages theme.
+/// Local dating polish accents for the light Messages tab.
 abstract final class _MessagesUi {
-  static const pink = Color(0xFFFF5C9A);
-  static const pinkSoft = Color(0xFFFF9AB8);
-  static const violet = Color(0xFF9B6DFF);
-  static const cyan = Color(0xFF54D8FF);
-  static const glass = Color(0xFF1C1230);
+  static const pink = AppLightUi.pink;
+  static const pinkSoft = AppLightUi.pinkSoft;
+  static const violet = AppLightUi.violet;
+  static const cyan = AppLightUi.cyan;
 }
 
 class MessagesTabView extends GetView<MessagesTabController> {
@@ -34,29 +34,16 @@ class MessagesTabView extends GetView<MessagesTabController> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        image: const DecorationImage(
-          image: AssetImage(kImgBG),
-          fit: BoxFit.cover,
-        ),
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            const Color(0xFF6D197E).withValues(alpha: 0.18),
-            const Color(0xFF09071B).withValues(alpha: 0.22),
-          ],
-        ),
-      ),
+      color: AppLightUi.bg,
       child: Stack(
         children: [
-          // Soft romantic ambience — does not replace the purple bg theme.
+          // Soft romantic ambience — keep orbs subtle on lavender.
           Positioned(
             top: -40,
             right: -30,
             child: _GlowOrb(
               size: 180,
-              color: _MessagesUi.pink.withValues(alpha: 0.16),
+              color: _MessagesUi.pink.withValues(alpha: 0.08),
             ),
           ),
           Positioned(
@@ -64,7 +51,7 @@ class MessagesTabView extends GetView<MessagesTabController> {
             left: -60,
             child: _GlowOrb(
               size: 160,
-              color: _MessagesUi.violet.withValues(alpha: 0.14),
+              color: _MessagesUi.violet.withValues(alpha: 0.07),
             ),
           ),
           SafeArea(
@@ -81,8 +68,8 @@ class MessagesTabView extends GetView<MessagesTabController> {
                     }
                     return Expanded(
                       child: RefreshIndicator(
-                        color: kColorPrimary,
-                        backgroundColor: kColorWhite,
+                        color: AppLightUi.pink,
+                        backgroundColor: AppLightUi.cardElevated,
                         onRefresh: controller.refreshAll,
                         child: ListView(
                           physics: const AlwaysScrollableScrollPhysics(
@@ -136,7 +123,7 @@ class MessagesTabView extends GetView<MessagesTabController> {
                     onPressed: Get.back,
                     icon: const Icon(
                       Icons.arrow_back_ios_new_rounded,
-                      color: kColorWhite,
+                      color: AppLightUi.title,
                       size: 20,
                     ),
                     padding: EdgeInsets.zero,
@@ -167,7 +154,7 @@ class MessagesTabView extends GetView<MessagesTabController> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: _MessagesUi.pink.withValues(alpha: 0.35),
+                          color: _MessagesUi.pink.withValues(alpha: 0.22),
                           blurRadius: 14,
                           offset: const Offset(0, 4),
                         ),
@@ -191,39 +178,31 @@ class MessagesTabView extends GetView<MessagesTabController> {
                       SemiBoldText(
                         text: 'Messages',
                         fontSize: TextStyles.k20FontSize,
-                        color: kColorWhite,
+                        color: AppLightUi.title,
                       ),
                       SizedBox(height: 2),
                       AppText(
                         text: 'Good connections start with hello.',
                         fontSize: TextStyles.k10FontSize,
-                        color: Color(0xCCFFFFFF),
+                        color: AppLightUi.subtitle,
                       ),
                     ],
                   ),
                 ),
                 Container(
-                  width: 44,
-                  height: 44,
+                  width: 46,
+                  height: 46,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        kColorProfileChipPinkStart,
-                        kColorProfileChipPurpleStart,
-                      ],
-                    ),
+                    gradient: AppLightUi.familyCtaGradient,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: kColorWhite.withValues(alpha: 0.18),
+                      color: kColorWhite.withValues(alpha: 0.40),
+                      width: 1.2,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: kColorProfileChipPinkStart.withValues(
-                          alpha: 0.38,
-                        ),
+                        color: AppLightUi.title.withValues(alpha: 0.08),
                         blurRadius: 16,
                         offset: const Offset(0, 6),
                       ),
@@ -231,7 +210,7 @@ class MessagesTabView extends GetView<MessagesTabController> {
                   ),
                   child: const Icon(
                     Icons.favorite_rounded,
-                    size: 20,
+                    size: 22,
                     color: kColorWhite,
                   ),
                 ),
@@ -250,34 +229,16 @@ class MessagesTabView extends GetView<MessagesTabController> {
       () => ClipRRect(
         borderRadius: BorderRadius.circular(26),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Container(
             height: 50,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  kColorWhite.withValues(alpha: 0.14),
-                  kColorWhite.withValues(alpha: 0.07),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(26),
-              border: Border.all(
-                color: _MessagesUi.pinkSoft.withValues(alpha: 0.28),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: _MessagesUi.pink.withValues(alpha: 0.12),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
+            decoration: AppLightUi.searchDecoration(),
             child: TextField(
               controller: controller.searchController,
               textInputAction: TextInputAction.search,
               style: TextStyles.kRegularPoppins(
                 fontSize: TextStyles.k12FontSize,
-                colors: kColorWhite,
+                colors: AppLightUi.body,
               ),
               decoration: InputDecoration(
                 isDense: true,
@@ -285,22 +246,22 @@ class MessagesTabView extends GetView<MessagesTabController> {
                 hintText: 'Find your next hello',
                 hintStyle: TextStyles.kRegularPoppins(
                   fontSize: TextStyles.k12FontSize,
-                  colors: kColorWhite.withValues(alpha: 0.48),
+                  colors: AppLightUi.hint,
                 ),
                 prefixIcon: Icon(
                   Icons.search_rounded,
                   size: 20,
-                  color: _MessagesUi.pinkSoft.withValues(alpha: 0.9),
+                  color: _MessagesUi.pinkSoft.withValues(alpha: 0.95),
                 ),
                 prefixIconConstraints: const BoxConstraints(minWidth: 44),
                 suffixIcon: controller.searchQuery.value.isEmpty
                     ? null
                     : IconButton(
                         onPressed: controller.searchController.clear,
-                        icon: Icon(
+                        icon: const Icon(
                           Icons.close_rounded,
                           size: 18,
-                          color: kColorWhite.withValues(alpha: 0.68),
+                          color: AppLightUi.muted,
                         ),
                       ),
                 contentPadding: const EdgeInsets.symmetric(vertical: 14),
@@ -325,23 +286,7 @@ class MessagesTabView extends GetView<MessagesTabController> {
           width: 34,
           height: 34,
           alignment: Alignment.center,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                accent.withValues(alpha: 0.34),
-                accent.withValues(alpha: 0.12),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: accent.withValues(alpha: 0.28)),
-            boxShadow: [
-              BoxShadow(
-                color: accent.withValues(alpha: 0.22),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
+          decoration: AppLightUi.iconTileDecoration(accent),
           child: Icon(icon, size: 17, color: accent),
         ),
         Spacing.h10,
@@ -352,12 +297,12 @@ class MessagesTabView extends GetView<MessagesTabController> {
               SemiBoldText(
                 text: title,
                 fontSize: TextStyles.k16FontSize,
-                color: kColorWhite,
+                color: AppLightUi.title,
               ),
               AppText(
                 text: subtitle,
                 fontSize: TextStyles.k10FontSize,
-                color: kColorWhite.withValues(alpha: 0.58),
+                color: AppLightUi.subtitle,
               ),
             ],
           ),
@@ -369,17 +314,17 @@ class MessagesTabView extends GetView<MessagesTabController> {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  accent.withValues(alpha: 0.30),
-                  accent.withValues(alpha: 0.12),
+                  accent.withValues(alpha: 0.22),
+                  accent.withValues(alpha: 0.10),
                 ],
               ),
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: accent.withValues(alpha: 0.35)),
+              border: Border.all(color: accent.withValues(alpha: 0.32)),
             ),
             child: AppText(
               text: '$count',
               fontSize: TextStyles.k10FontSize,
-              color: kColorWhite.withValues(alpha: 0.92),
+              color: AppLightUi.title,
               align: TextAlign.center,
             ),
           ),
@@ -392,7 +337,10 @@ class MessagesTabView extends GetView<MessagesTabController> {
       return const SizedBox(
         height: 176,
         child: Center(
-          child: CircularProgressIndicator(color: kColorWhite, strokeWidth: 2),
+          child: CircularProgressIndicator(
+            color: AppLightUi.pink,
+            strokeWidth: 2,
+          ),
         ),
       );
     }
@@ -402,7 +350,6 @@ class MessagesTabView extends GetView<MessagesTabController> {
       return const SizedBox(
         height: 176,
         child: _InlineEmptyState(
-          icon: Icons.favorite_border_rounded,
           text: 'Your next spark could be one hello away.',
         ),
       );
@@ -430,7 +377,10 @@ class MessagesTabView extends GetView<MessagesTabController> {
   Widget _searchResults(BuildContext context) {
     if (controller.isSearchLoading.value) {
       return const Center(
-        child: CircularProgressIndicator(color: kColorWhite, strokeWidth: 2),
+        child: CircularProgressIndicator(
+          color: AppLightUi.pink,
+          strokeWidth: 2,
+        ),
       );
     }
 
@@ -441,7 +391,7 @@ class MessagesTabView extends GetView<MessagesTabController> {
               ? 'Type to search users'
               : 'No users found for "${controller.searchQuery.value}"',
           fontSize: TextStyles.k14FontSize,
-          color: kColorWhite.withValues(alpha: 0.75),
+          color: AppLightUi.subtitle,
           align: TextAlign.center,
         ),
       );
@@ -450,7 +400,7 @@ class MessagesTabView extends GetView<MessagesTabController> {
     return ListView.separated(
       itemCount: controller.searchResults.length,
       separatorBuilder: (_, __) =>
-          Divider(color: kColorWhite.withValues(alpha: 0.12), height: 1),
+          Divider(color: AppLightUi.border.withValues(alpha: 0.8), height: 1),
       itemBuilder: (_, index) {
         final user = controller.searchResults[index];
         return MessageSearchUserTile(
@@ -469,7 +419,10 @@ class MessagesTabView extends GetView<MessagesTabController> {
       return const SizedBox(
         height: 120,
         child: Center(
-          child: CircularProgressIndicator(color: kColorWhite, strokeWidth: 2),
+          child: CircularProgressIndicator(
+            color: AppLightUi.pink,
+            strokeWidth: 2,
+          ),
         ),
       );
     }
@@ -516,9 +469,8 @@ class _GlowOrb extends StatelessWidget {
 }
 
 class _InlineEmptyState extends StatelessWidget {
-  const _InlineEmptyState({required this.icon, required this.text});
+  const _InlineEmptyState({required this.text});
 
-  final IconData icon;
   final String text;
 
   @override
@@ -526,28 +478,21 @@ class _InlineEmptyState extends StatelessWidget {
     return Container(
       width: double.infinity,
       alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            kColorWhite.withValues(alpha: 0.10),
-            kColorWhite.withValues(alpha: 0.04),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: _MessagesUi.pinkSoft.withValues(alpha: 0.22)),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: AppLightUi.cardDecoration(radius: 22),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: _MessagesUi.pinkSoft, size: 18),
-          Spacing.h8,
-          Flexible(
+          const DatingEmptyHero(
+            style: DatingEmptyHeroStyle.sparks,
+            size: 88,
+            accentColors: [AppLightUi.pink, AppLightUi.violet],
+          ),
+          Spacing.h10,
+          Expanded(
             child: SemiBoldText(
               text: text,
               fontSize: TextStyles.k12FontSize,
-              color: kColorWhite,
-              align: TextAlign.center,
+              color: AppLightUi.body,
             ),
           ),
         ],
@@ -564,56 +509,28 @@ class _MessagesEmptyState extends StatelessWidget {
     return Center(
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 28),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              _MessagesUi.glass.withValues(alpha: 0.72),
-              const Color(0xFF2A1740).withValues(alpha: 0.55),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
-        ),
-        child: Column(
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 22),
+        decoration: AppLightUi.cardDecoration(radius: 24),
+        child: const Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 64,
-              height: 64,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [
-                    _MessagesUi.pink.withValues(alpha: 0.35),
-                    _MessagesUi.violet.withValues(alpha: 0.22),
-                  ],
-                ),
-                border: Border.all(
-                  color: _MessagesUi.pinkSoft.withValues(alpha: 0.4),
-                ),
-              ),
-              child: const Icon(
-                Icons.favorite_border_rounded,
-                color: kColorWhite,
-                size: 30,
-              ),
+            DatingEmptyHero(
+              style: DatingEmptyHeroStyle.messages,
+              size: 132,
+              accentColors: [AppLightUi.pink, AppLightUi.violet],
             ),
-            Spacing.v12,
-            const SemiBoldText(
+            SizedBox(height: 8),
+            SemiBoldText(
               text: 'No chats yet',
               fontSize: TextStyles.k16FontSize,
-              color: kColorWhite,
+              color: AppLightUi.title,
               align: TextAlign.center,
             ),
-            Spacing.v6,
+            SizedBox(height: 6),
             AppText(
               text: 'Say hello to a spark above and start something fun.',
               fontSize: TextStyles.k12FontSize,
-              color: kColorWhite.withValues(alpha: 0.72),
+              color: AppLightUi.subtitle,
               align: TextAlign.center,
             ),
           ],

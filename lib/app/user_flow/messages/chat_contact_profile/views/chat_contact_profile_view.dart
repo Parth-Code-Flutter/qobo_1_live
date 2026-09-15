@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_shell_background.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -17,25 +19,7 @@ class ChatContactProfileView extends GetView<ChatContactProfileController> {
     return AppShellBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          backgroundColor: const Color(0xFF24113D).withValues(alpha: 0.96),
-          surfaceTintColor: Colors.transparent,
-          elevation: 0,
-          centerTitle: true,
-          leading: IconButton(
-            onPressed: Get.back,
-            icon: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              color: kColorWhite,
-              size: 20,
-            ),
-          ),
-          title: const SemiBoldText(
-            text: 'Profile',
-            fontSize: TextStyles.k18FontSize,
-            color: kColorWhite,
-          ),
-        ),
+        appBar: const CommonAppBarWidget(title: 'Profile'),
         body: Obx(() {
           if (controller.isLoadingProfile.value &&
               controller.bio.value.isEmpty &&
@@ -79,13 +63,18 @@ class ChatContactProfileView extends GetView<ChatContactProfileController> {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF52206E), Color(0xFF281442)],
-        ),
+        gradient: AppLightUi.familyCtaGradient,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.14)),
+        border: Border.all(
+          color: const Color(0xFFFF2E83).withValues(alpha: 0.28),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFF2E83).withValues(alpha: 0.20),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -146,7 +135,7 @@ class ChatContactProfileView extends GetView<ChatContactProfileController> {
               AppText(
                 text: controller.presenceLabel.value,
                 fontSize: TextStyles.k12FontSize,
-                color: kColorWhite.withValues(alpha: 0.68),
+                color: kColorWhite.withValues(alpha: 0.86),
               ),
             ],
           ),
@@ -178,14 +167,14 @@ class ChatContactProfileView extends GetView<ChatContactProfileController> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: kColorWhite.withValues(alpha: 0.10),
+        color: kColorWhite.withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.22)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: kColorProfileChipPinkStart),
+          Icon(icon, size: 13, color: kColorWhite),
           Spacing.h6,
           SemiBoldText(
             text: text,
@@ -231,13 +220,13 @@ class ChatContactProfileView extends GetView<ChatContactProfileController> {
         SemiBoldText(
           text: value,
           fontSize: TextStyles.k16FontSize,
-          color: kColorWhite,
+          color: AppLightUi.title,
         ),
         Spacing.v2,
         AppText(
           text: label,
           fontSize: TextStyles.k10FontSize,
-          color: kColorWhite.withValues(alpha: 0.52),
+          color: AppLightUi.subtitle,
         ),
       ],
     );
@@ -250,7 +239,7 @@ class ChatContactProfileView extends GetView<ChatContactProfileController> {
       child: AppText(
         text: controller.bio.value,
         fontSize: TextStyles.k12FontSize,
-        color: kColorWhite.withValues(alpha: 0.78),
+        color: AppLightUi.body,
       ),
     );
   }
@@ -305,13 +294,13 @@ class ChatContactProfileView extends GetView<ChatContactProfileController> {
                 AppText(
                   text: label,
                   fontSize: TextStyles.k10FontSize,
-                  color: kColorWhite.withValues(alpha: 0.45),
+                  color: AppLightUi.subtitle,
                 ),
                 const SizedBox(height: 2),
                 SemiBoldText(
                   text: value,
                   fontSize: TextStyles.k12FontSize,
-                  color: kColorWhite,
+                  color: AppLightUi.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -369,12 +358,12 @@ class ChatContactProfileView extends GetView<ChatContactProfileController> {
                 child: AppText(
                   text: label,
                   fontSize: TextStyles.k12FontSize,
-                  color: const Color(0xFFFF8DA8),
+                  color: const Color(0xFFE85A7A),
                 ),
               ),
               Icon(
                 Icons.chevron_right_rounded,
-                color: kColorWhite.withValues(alpha: 0.35),
+                color: AppLightUi.muted,
               ),
             ],
           ),
@@ -401,7 +390,7 @@ class ChatContactProfileView extends GetView<ChatContactProfileController> {
               SemiBoldText(
                 text: title,
                 fontSize: TextStyles.k14FontSize,
-                color: kColorWhite,
+                color: AppLightUi.title,
               ),
             ],
           ),
@@ -413,18 +402,14 @@ class ChatContactProfileView extends GetView<ChatContactProfileController> {
   }
 
   BoxDecoration _panelDecoration() {
-    return BoxDecoration(
-      color: const Color(0xFF2A1748),
-      borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: kColorWhite.withValues(alpha: 0.11)),
-    );
+    return AppLightUi.cardDecoration(radius: 18);
   }
 
   Widget _divider({double height = 1}) {
     return Container(
       width: height == 1 ? double.infinity : 1,
       height: height,
-      color: kColorWhite.withValues(alpha: 0.09),
+      color: AppLightUi.border,
     );
   }
 

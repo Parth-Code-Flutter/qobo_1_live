@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
@@ -35,14 +36,14 @@ class DiscoverPublicProfileView
       backgroundColor: Colors.transparent,
       body: Container(
         decoration: const BoxDecoration(
-          image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
+          color: kColorLavenderBg,
         ),
         child: SafeArea(
           child: Obx(() {
             final user = controller.profile.value;
             if (user == null && controller.isLoading.value) {
               return const Center(
-                child: CircularProgressIndicator(color: kColorWhite),
+                child: CircularProgressIndicator(color: AppLightUi.pink),
               );
             }
             if (user == null) return _emptyState();
@@ -52,7 +53,7 @@ class DiscoverPublicProfileView
                 _topBar(user),
                 Expanded(
                   child: RefreshIndicator(
-                    color: kColorPrimary,
+                    color: AppLightUi.pink,
                     onRefresh: controller.loadProfile,
                     child: ListView(
                       padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
@@ -97,12 +98,12 @@ class DiscoverPublicProfileView
           AppText(
             text: 'Profile unavailable',
             fontSize: TextStyles.k16FontSize,
-            color: kColorWhite.withValues(alpha: 0.8),
+            color: AppLightUi.subtitle,
           ),
           Spacing.v16,
           TextButton(
             onPressed: () => Get.back(),
-            child: const Text('Go back', style: TextStyle(color: kColorWhite)),
+            child: const Text('Go back', style: TextStyle(color: AppLightUi.pink)),
           ),
         ],
       ),
@@ -126,14 +127,14 @@ class DiscoverPublicProfileView
                 SemiBoldText(
                   text: user.name,
                   fontSize: TextStyles.k18FontSize,
-                  color: kColorWhite,
+                  color: AppLightUi.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 AppText(
                   text: _subtitle(user),
                   fontSize: TextStyles.k10FontSize,
-                  color: kColorWhite.withValues(alpha: 0.62),
+                  color: AppLightUi.subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -146,7 +147,7 @@ class DiscoverPublicProfileView
               height: 18,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: kColorWhite,
+                color: AppLightUi.pink,
               ),
             )
           else
@@ -163,24 +164,12 @@ class DiscoverPublicProfileView
     required IconData icon,
     required VoidCallback onTap,
   }) {
-    return Material(
-      color: Colors.transparent,
-      shape: const CircleBorder(),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: Ink(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: kColorWhite.withValues(alpha: 0.10),
-            border: Border.all(color: kColorWhite.withValues(alpha: 0.16)),
-          ),
-          child: Icon(icon, size: 18, color: kColorWhite),
-        ),
-      ),
+    return AdminAgencyUi.glassIconButton(
+      icon: icon,
+      onTap: onTap,
+      accent: AdminAgencyUi.sky,
+      size: 40,
+      iconSize: 16,
     );
   }
 
@@ -474,10 +463,10 @@ class DiscoverPublicProfileView
                 ? Icons.check_rounded
                 : Icons.person_add_alt_1_rounded,
             gradient: user.isFollowing
-                ? LinearGradient(
+                ? const LinearGradient(
                     colors: [
-                      kColorWhite.withValues(alpha: 0.16),
-                      kColorWhite.withValues(alpha: 0.08),
+                      AppLightUi.card,
+                      AppLightUi.cardSoft,
                     ],
                   )
                 : const LinearGradient(
@@ -495,6 +484,7 @@ class DiscoverPublicProfileView
                     color: kColorProfileChipPinkStart.withValues(alpha: 0.55),
                   )
                 : null,
+            inkColor: user.isFollowing ? AppLightUi.title : null,
             loading: controller.isFollowProcessing.value,
             onTap: () => controller.toggleFollow(context),
           ),
@@ -588,7 +578,7 @@ class DiscoverPublicProfileView
             child: AppText(
               text: text,
               fontSize: TextStyles.k12FontSize,
-              color: kColorWhite.withValues(alpha: 0.9),
+              color: AppLightUi.body,
             ),
           ),
         ],
@@ -603,7 +593,7 @@ class DiscoverPublicProfileView
       child: AppText(
         text: bio,
         fontSize: TextStyles.k14FontSize,
-        color: kColorWhite.withValues(alpha: 0.9),
+        color: AppLightUi.body,
       ),
     );
   }
@@ -688,10 +678,8 @@ class DiscoverPublicProfileView
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: const Color(0xFFEEE5FF).withValues(alpha: 0.08),
-        border: Border.all(
-          color: const Color(0xFFDBC6FF).withValues(alpha: 0.17),
-        ),
+        color: AppLightUi.cardSoft,
+        border: Border.all(color: AppLightUi.border),
       ),
       child: Row(
         children: [
@@ -707,7 +695,7 @@ class DiscoverPublicProfileView
                 ],
               ),
             ),
-            child: Icon(tile.icon, size: 17, color: const Color(0xFFFFBAE6)),
+            child: Icon(tile.icon, size: 17, color: AppLightUi.pink),
           ),
           const SizedBox(width: 9),
           Expanded(
@@ -717,13 +705,13 @@ class DiscoverPublicProfileView
                 AppText(
                   text: tile.label,
                   fontSize: TextStyles.k10FontSize,
-                  color: const Color(0xFFD5C8E5),
+                  color: AppLightUi.muted,
                 ),
                 const SizedBox(height: 3),
                 SemiBoldText(
                   text: tile.value,
                   fontSize: TextStyles.k12FontSize,
-                  color: kColorWhite,
+                  color: AppLightUi.title,
                 ),
               ],
             ),
@@ -742,25 +730,7 @@ class DiscoverPublicProfileView
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            kColorWhite.withValues(alpha: 0.12),
-            kColorWhite.withValues(alpha: 0.05),
-          ],
-        ),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.18),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+      decoration: AppLightUi.cardDecoration(radius: 22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -781,7 +751,7 @@ class DiscoverPublicProfileView
               SemiBoldText(
                 text: title,
                 fontSize: TextStyles.k14FontSize,
-                color: kColorWhite,
+                color: AppLightUi.title,
               ),
             ],
           ),
@@ -790,7 +760,7 @@ class DiscoverPublicProfileView
             AppText(
               text: subtitle,
               fontSize: TextStyles.k12FontSize,
-              color: const Color(0xFFCEBEDF),
+              color: AppLightUi.subtitle,
             ),
           ],
           Spacing.v12,
@@ -902,14 +872,14 @@ class DiscoverPublicProfileView
                 AppText(
                   text: label,
                   fontSize: TextStyles.k12FontSize,
-                  color: const Color(0xFFD5C8E5),
+                  color: AppLightUi.muted,
                 ),
                 if (value.length > 12) ...[
                   const SizedBox(height: 5),
                   SemiBoldText(
                     text: value,
                     fontSize: TextStyles.k14FontSize,
-                    color: kColorWhite,
+                    color: AppLightUi.title,
                   ),
                 ],
               ],
@@ -930,7 +900,7 @@ class DiscoverPublicProfileView
                 child: SemiBoldText(
                   text: value,
                   fontSize: TextStyles.k12FontSize,
-                  color: kColorWhite,
+                  color: AppLightUi.title,
                 ),
               ),
             ),
@@ -1153,6 +1123,7 @@ class _GradientActionButton extends StatelessWidget {
     required this.onTap,
     this.border,
     this.textAlpha = 1,
+    this.inkColor,
     this.loading = false,
   });
 
@@ -1163,11 +1134,13 @@ class _GradientActionButton extends StatelessWidget {
   final VoidCallback onTap;
   final Border? border;
   final double textAlpha;
+  final Color? inkColor;
   final bool loading;
 
   @override
   Widget build(BuildContext context) {
-    final textColor = kColorWhite.withValues(alpha: textAlpha);
+    final textColor =
+        (inkColor ?? kColorWhite).withValues(alpha: textAlpha);
     return Material(
       color: Colors.transparent,
       child: InkWell(

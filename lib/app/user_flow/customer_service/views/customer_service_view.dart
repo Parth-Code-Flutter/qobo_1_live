@@ -15,7 +15,7 @@ class CustomerServiceView extends GetView<CustomerServiceController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kColorBackground,
+      backgroundColor: kColorLavenderBg,
       appBar: const CommonAppBarWidget(
         title: 'Customer Support',
         useMaterialAppBar: true,

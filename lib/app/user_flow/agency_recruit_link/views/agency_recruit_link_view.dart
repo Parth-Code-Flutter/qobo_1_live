@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -15,11 +16,8 @@ abstract final class _RecruitUi {
   static const accentPink = AdminAgencyUi.pink;
   static const accentViolet = AdminAgencyUi.violet;
   static const accentCyan = AdminAgencyUi.cyan;
-  static const accentGold = AdminAgencyUi.gold;
-  static const accentSky = AdminAgencyUi.sky;
-
-  static const textMuted = AdminAgencyUi.textMuted;
-  static const textSoft = AdminAgencyUi.textFaint;
+  static const textMuted = AppLightUi.subtitle;
+  static const textSoft = AppLightUi.muted;
 
   static const heroGradient = [Color(0xFF9C27B0), Color(0xFFE91E63)];
   static const codeGradient = [Color(0xFF5C6BC0), Color(0xFF3949AB)];
@@ -33,72 +31,20 @@ class AgencyRecruitLinkView extends GetView<AgencyRecruitLinkController> {
   Widget build(BuildContext context) {
     // Scaffold is required so Text has a Material ancestor (avoids yellow underlines).
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage(kImgBG),
-            fit: BoxFit.cover,
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _header(),
-              Expanded(
-                child: Obx(() {
-                  if (controller.isLoading.value &&
-                      controller.agencyCode.value.isEmpty) {
-                    return const Center(
-                      child: CircularProgressIndicator(color: kColorWhite),
-                    );
-                  }
-                  return _scrollBody(context);
-                }),
-              ),
-            ],
-          ),
-        ),
+      backgroundColor: kColorLavenderBg,
+      appBar: const CommonAppBarWidget(
+        title: 'Recruit Hosts',
+        subtitle: 'Invite talent to your agency',
+        trailingIcon: Icons.campaign_rounded,
       ),
-    );
-  }
-
-  Widget _header() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
-      child: Row(
-        children: [
-          AdminAgencyUi.glassIconButton(
-            icon: Icons.arrow_back_ios_new_rounded,
-            onTap: Get.back,
-            accent: _RecruitUi.accentSky,
-            size: 40,
-            iconSize: 16,
-          ),
-          const Expanded(
-            child: Column(
-              children: [
-                SemiBoldText(
-                  text: 'Recruit Hosts',
-                  fontSize: TextStyles.k16FontSize,
-                  color: kColorWhite,
-                ),
-                AppText(
-                  text: 'Invite talent to your agency',
-                  fontSize: TextStyles.k10FontSize,
-                  color: _RecruitUi.textSoft,
-                ),
-              ],
-            ),
-          ),
-          AdminAgencyUi.glowIcon(
-            icon: Icons.campaign_rounded,
-            accent: _RecruitUi.accentGold,
-            size: 40,
-            iconSize: 20,
-          ),
-        ],
-      ),
+      body: Obx(() {
+        if (controller.isLoading.value && controller.agencyCode.value.isEmpty) {
+          return const Center(
+            child: CircularProgressIndicator(color: AppLightUi.pink),
+          );
+        }
+        return _scrollBody(context);
+      }),
     );
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 
 import 'messages_common_widgets.dart';
@@ -30,8 +31,8 @@ class MessageInboxPreviewTheme {
             ? item.message
             : 'Start a conversation',
         secondaryText: null,
-        primaryColor: kColorWhite.withValues(alpha: 0.88),
-        secondaryColor: kColorWhite.withValues(alpha: 0.55),
+        primaryColor: AppLightUi.body,
+        secondaryColor: AppLightUi.muted,
         icon: null,
         iconBackground: Colors.transparent,
       );
@@ -47,24 +48,24 @@ class MessageInboxPreviewTheme {
     if (item.isMissedCall) {
       subtitle = 'Missed call';
       accent = kColorRed;
-      primaryColor = kColorWhite.withValues(alpha: 0.92);
-      secondaryColor = const Color(0xFFFF8A80);
+      primaryColor = AppLightUi.body;
+      secondaryColor = const Color(0xFFE25555);
       icon = item.isVideoCall
           ? Icons.missed_video_call_rounded
           : Icons.phone_missed_rounded;
     } else if (item.isUnansweredCall) {
       subtitle = 'No answer';
-      accent = kColorPrimary;
-      primaryColor = kColorWhite.withValues(alpha: 0.92);
-      secondaryColor = kColorWhite.withValues(alpha: 0.58);
+      accent = AppLightUi.pink;
+      primaryColor = AppLightUi.body;
+      secondaryColor = AppLightUi.muted;
       icon = item.isVideoCall
           ? Icons.videocam_rounded
           : Icons.phone_callback_rounded;
     } else {
       subtitle = _completedSubtitle(item.message);
-      accent = kColorPrimary;
-      primaryColor = kColorWhite.withValues(alpha: 0.92);
-      secondaryColor = kColorWhite.withValues(alpha: 0.58);
+      accent = AppLightUi.pink;
+      primaryColor = AppLightUi.body;
+      secondaryColor = AppLightUi.muted;
       if (item.isVideoCall) {
         icon = Icons.videocam_rounded;
       } else {
@@ -80,7 +81,7 @@ class MessageInboxPreviewTheme {
       primaryColor: primaryColor,
       secondaryColor: secondaryColor,
       icon: icon,
-      iconBackground: accent.withValues(alpha: 0.22),
+      iconBackground: accent.withValues(alpha: 0.16),
       isCallPreview: true,
     );
   }

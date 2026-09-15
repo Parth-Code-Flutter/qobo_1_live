@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
@@ -15,7 +15,7 @@ class SettingsView extends GetView<SettingsController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kColorBackground,
+      backgroundColor: AppLightUi.bg,
       appBar: const CommonAppBarWidget(
         title: 'Settings',
         useMaterialAppBar: true,
@@ -44,7 +44,7 @@ class SettingsView extends GetView<SettingsController> {
                   title: 'Privacy Policy & Terms',
                   onTap: controller.onPrivacyTermsTap,
                 ),
-                const Divider(height: 1, color: Colors.white12),
+                Divider(height: 1, color: AppLightUi.border),
                 _buildListTile(
                   icon: Icons.info_outline_rounded,
                   title: 'Version',
@@ -66,7 +66,8 @@ class SettingsView extends GetView<SettingsController> {
             appButton(
               onPressed: controller.onLogoutTap,
               buttonText: 'Logout',
-              buttonColor: kColorPrimary,
+              isGradient: true,
+              gradientColors: const [AppLightUi.pink, AppLightUi.violet],
               borderRadius: 14,
             ),
           ],
@@ -84,14 +85,11 @@ class SettingsView extends GetView<SettingsController> {
           child: SemiBoldText(
             text: title,
             fontSize: TextStyles.k14FontSize,
-            color: kColorHint,
+            color: AppLightUi.subtitle,
           ),
         ),
         Container(
-          decoration: BoxDecoration(
-            color: kColorWhite,
-            borderRadius: BorderRadius.circular(16),
-          ),
+          decoration: AppLightUi.cardDecoration(radius: 16),
           child: Column(
             children: items,
           ),
@@ -110,16 +108,13 @@ class SettingsView extends GetView<SettingsController> {
       onTap: onTap,
       leading: Container(
         padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: kColorBackground,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(icon, color: kColorPrimary, size: 20),
+        decoration: AppLightUi.iconTileDecoration(AppLightUi.pink, radius: 10),
+        child: Icon(icon, color: AppLightUi.pink, size: 20),
       ),
       title: AppText(
         text: title,
         fontSize: TextStyles.k14FontSize,
-        color: kColorText,
+        color: AppLightUi.title,
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
@@ -128,10 +123,10 @@ class SettingsView extends GetView<SettingsController> {
             AppText(
               text: trailingText,
               fontSize: TextStyles.k12FontSize,
-              color: kColorHint,
+              color: AppLightUi.muted,
             ),
           if (trailingText != null) Spacing.h8,
-          const Icon(Icons.chevron_right_rounded, color: kColorHint, size: 20),
+          const Icon(Icons.chevron_right_rounded, color: AppLightUi.muted, size: 20),
         ],
       ),
     );

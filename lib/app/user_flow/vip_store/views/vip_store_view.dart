@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/wallet/bindings/wallet_binding.dart';
 import 'package:qobo_one_live/app/user_flow/wallet/views/wallet_view.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/app_widgets/network_svga_widget.dart';
 import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -20,88 +21,44 @@ class VipStoreView extends GetView<VipStoreController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage(kImgBG),
-            fit: BoxFit.cover,
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _header(context),
-              Expanded(
-                child: Obx(() {
-                  if (controller.isLoading.value &&
-                      controller.vipFrames.isEmpty) {
-                    return const Center(
-                      child: CircularProgressIndicator(color: kColorWhite),
-                    );
-                  }
+      backgroundColor: kColorLavenderBg,
+      appBar: const CommonAppBarWidget(title: 'VIP Frames'),
+      body: Obx(() {
+        if (controller.isLoading.value && controller.vipFrames.isEmpty) {
+          return const Center(
+            child: CircularProgressIndicator(color: AppLightUi.pink),
+          );
+        }
 
-                  return RefreshIndicator(
-                    color: AdminAgencyUi.gold,
-                    backgroundColor: const Color(0xFF1A0B2E),
-                    onRefresh: controller.loadStore,
-                    child: CustomScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(
-                        parent: BouncingScrollPhysics(),
-                      ),
-                      slivers: [
-                        SliverToBoxAdapter(child: _balanceCard()),
-                        SliverToBoxAdapter(child: _sectionHeader()),
-                        if (controller.loadError.value.isNotEmpty &&
-                            controller.vipFrames.isEmpty)
-                          SliverFillRemaining(
-                            hasScrollBody: false,
-                            child: _errorState(),
-                          )
-                        else if (controller.vipFrames.isEmpty)
-                          SliverFillRemaining(
-                            hasScrollBody: false,
-                            child: _emptyState(),
-                          )
-                        else
-                          _framesGrid(),
-                        const SliverToBoxAdapter(child: SizedBox(height: 28)),
-                      ],
-                    ),
-                  );
-                }),
-              ),
+        return RefreshIndicator(
+          color: AdminAgencyUi.gold,
+          backgroundColor: AppLightUi.card,
+          onRefresh: controller.loadStore,
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
+            slivers: [
+              SliverToBoxAdapter(child: _balanceCard()),
+              SliverToBoxAdapter(child: _sectionHeader()),
+              if (controller.loadError.value.isNotEmpty &&
+                  controller.vipFrames.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: _errorState(),
+                )
+              else if (controller.vipFrames.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: _emptyState(),
+                )
+              else
+                _framesGrid(),
+              const SliverToBoxAdapter(child: SizedBox(height: 28)),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _header(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-      child: Row(
-        children: [
-          AdminAgencyUi.glassIconButton(
-            icon: Icons.arrow_back_ios_new_rounded,
-            accent: AdminAgencyUi.sky,
-            onTap: () => Get.back(),
-            size: 40,
-            iconSize: 16,
-          ),
-          const Expanded(
-            child: SemiBoldText(
-              text: 'VIP Frames',
-              fontSize: TextStyles.k18FontSize,
-              color: kColorWhite,
-              align: TextAlign.center,
-            ),
-          ),
-          // Balance + Recharge already cover wallet — no backpack shortcut.
-          const SizedBox(width: 40),
-        ],
-      ),
+        );
+      }),
     );
   }
 
@@ -247,7 +204,7 @@ class VipStoreView extends GetView<VipStoreController> {
           const SemiBoldText(
             text: 'AVAILABLE FRAMES',
             fontSize: TextStyles.k12FontSize,
-            color: kColorWhite,
+            color: AppLightUi.title,
           ),
           const Spacer(),
           // Only show count when there is inventory (avoid unused "0 items").
@@ -257,7 +214,7 @@ class VipStoreView extends GetView<VipStoreController> {
             return AppText(
               text: '$count items',
               fontSize: TextStyles.k12FontSize,
-              color: kColorWhite.withValues(alpha: 0.65),
+              color: AppLightUi.subtitle,
             );
           }),
         ],
@@ -308,14 +265,14 @@ class VipStoreView extends GetView<VipStoreController> {
             const SemiBoldText(
               text: 'No VIP frames yet',
               fontSize: TextStyles.k16FontSize,
-              color: kColorWhite,
+              color: AppLightUi.title,
             ),
             Spacing.v8,
             AppText(
               text:
                   'When admin adds Avatar Frames with category VIP, they will appear here.',
               fontSize: TextStyles.k12FontSize,
-              color: kColorWhite.withValues(alpha: 0.65),
+              color: AppLightUi.subtitle,
               align: TextAlign.center,
             ),
           ],
@@ -341,14 +298,14 @@ class VipStoreView extends GetView<VipStoreController> {
             const SemiBoldText(
               text: 'Could not load VIP frames',
               fontSize: TextStyles.k16FontSize,
-              color: kColorWhite,
+              color: AppLightUi.title,
             ),
             Spacing.v8,
             Obx(
               () => AppText(
                 text: controller.loadError.value,
                 fontSize: TextStyles.k12FontSize,
-                color: kColorWhite.withValues(alpha: 0.65),
+                color: AppLightUi.subtitle,
                 align: TextAlign.center,
               ),
             ),
@@ -404,24 +361,14 @@ class _VipFrameCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF3D2068), Color(0xFF25143F)],
-        ),
+        color: AppLightUi.card,
         border: Border.all(
           color: isEquipped
               ? AdminAgencyUi.gold
-              : kColorWhite.withValues(alpha: 0.12),
+              : AppLightUi.border,
           width: isEquipped ? 1.6 : 1,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: AdminAgencyUi.violet.withValues(alpha: 0.22),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        boxShadow: AppLightUi.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -433,7 +380,7 @@ class _VipFrameCard extends StatelessWidget {
                   child: Container(
                     margin: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.28),
+                      color: AppLightUi.cardSoft,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
                         color: AdminAgencyUi.gold.withValues(alpha: 0.2),
@@ -476,7 +423,7 @@ class _VipFrameCard extends StatelessWidget {
                 SemiBoldText(
                   text: name,
                   fontSize: TextStyles.k14FontSize,
-                  color: kColorWhite,
+                  color: AppLightUi.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -488,7 +435,7 @@ class _VipFrameCard extends StatelessWidget {
                   fontSize: TextStyles.k10FontSize,
                   color: isEquipped
                       ? AdminAgencyUi.mint
-                      : kColorWhite.withValues(alpha: 0.65),
+                      : AppLightUi.subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),

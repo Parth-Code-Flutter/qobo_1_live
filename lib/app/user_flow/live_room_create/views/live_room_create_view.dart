@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/live_broadcast/models/room_background_theme.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
+import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
@@ -20,7 +21,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: LiveRoomUiColors.screenGradientBottom,
+      backgroundColor: kColorLavenderBg,
       body: Obx(() {
         // Preview the selected room background on this create screen
         // (audio + video share the same create form).
@@ -38,12 +39,11 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
                   ? Image.network(
                       previewUrl,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Image.asset(
-                        kImgBG,
-                        fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const ColoredBox(
+                        color: kColorLavenderBg,
                       ),
                     )
-                  : Image.asset(kImgBG, fit: BoxFit.cover),
+                  : const ColoredBox(color: kColorLavenderBg),
             ),
             // Keep form readable over bright background photos.
             if (hasPreview)
@@ -106,11 +106,11 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
           borderColor: LiveRoomUiColors.cardBorder,
           inputBorderRadius: BorderRadius.circular(12),
           textStyle: TextStyles.kRegularPoppins(
-            colors: kColorWhite,
+            colors: AppLightUi.title,
             fontSize: TextStyles.k14FontSize,
           ),
           hintStyle: TextStyles.kRegularPoppins(
-            colors: kColorHint,
+            colors: AppLightUi.hint,
             fontSize: TextStyles.k14FontSize,
           ),
         ),
@@ -189,7 +189,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
         //   maxLines: 3,
         //   minLines: 2,
         //   fillColor: LiveRoomUiColors.cardSurface.withValues(alpha: 0.72),
-        //   borderColor: kColorWhite.withValues(alpha: 0.10),
+        //   borderColor: AppLightUi.cardSoft,
         //   inputBorderRadius: BorderRadius.circular(16),
         //   textStyle: TextStyles.kRegularPoppins(
         //     colors: kColorWhite,
@@ -294,7 +294,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
                   color: kColorWhite.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: kColorWhite.withValues(alpha: 0.18),
+                    color: AppLightUi.border,
                   ),
                 ),
                 child: const Icon(
@@ -315,7 +315,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
           const AppText(
             text: 'Add a title, choose who can join, then start your stream.',
             fontSize: TextStyles.k12FontSize,
-            color: kColorHint,
+            color: AppLightUi.subtitle,
             maxLines: 2,
           ),
         ],
@@ -335,7 +335,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
         children: [
           const Icon(
             Icons.people_outline_rounded,
-            color: kColorWhite,
+            color: AppLightUi.pink,
             size: 20,
           ),
           Spacing.h12,
@@ -346,13 +346,13 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
                 const SemiBoldText(
                   text: 'Only Follows',
                   fontSize: TextStyles.k14FontSize,
-                  color: kColorWhite,
+                  color: AppLightUi.title,
                 ),
                 Spacing.v2,
                 const AppText(
                   text: 'Only users who follow you can join',
                   fontSize: TextStyles.k10FontSize,
-                  color: kColorHint,
+                  color: AppLightUi.subtitle,
                 ),
               ],
             ),
@@ -384,7 +384,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
         children: [
           const Icon(
             Icons.how_to_reg_rounded,
-            color: kColorWhite,
+            color: AppLightUi.violet,
             size: 20,
           ),
           Spacing.h12,
@@ -395,13 +395,13 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
                 const SemiBoldText(
                   text: 'Require Join Approval',
                   fontSize: TextStyles.k14FontSize,
-                  color: kColorWhite,
+                  color: AppLightUi.title,
                 ),
                 Spacing.v2,
                 const AppText(
                   text: 'Viewers wait until you Add or Reject their request',
                   fontSize: TextStyles.k10FontSize,
-                  color: kColorHint,
+                  color: AppLightUi.subtitle,
                 ),
               ],
             ),
@@ -435,7 +435,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
             SemiBoldText(
               text: title,
               fontSize: TextStyles.k18FontSize,
-              color: kColorWhite,
+              color: AppLightUi.title,
             ),
           ],
         ),
@@ -472,7 +472,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
                     SemiBoldText(
                       text: controller.creatorDisplayName,
                       fontSize: TextStyles.k18FontSize,
-                      color: kColorWhite,
+                      color: AppLightUi.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -495,28 +495,12 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
   }
 
   Widget _backButton() {
-    return Material(
-      color: Colors.transparent,
-      shape: const CircleBorder(),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: Get.back,
-        customBorder: const CircleBorder(),
-        child: Ink(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: kColorWhite.withValues(alpha: 0.08),
-            border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
-          ),
-          child: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: kColorWhite,
-            size: 16,
-          ),
-        ),
-      ),
+    return AdminAgencyUi.glassIconButton(
+      icon: Icons.arrow_back_ios_new_rounded,
+      onTap: Get.back,
+      accent: AdminAgencyUi.sky,
+      size: 40,
+      iconSize: 16,
     );
   }
 
@@ -539,7 +523,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
         SemiBoldText(
           text: text,
           fontSize: TextStyles.k14FontSize,
-          color: kColorWhite,
+          color: AppLightUi.title,
         ),
         if (required)
           const AppText(
@@ -565,7 +549,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
           decoration: BoxDecoration(
             color: LiveRoomUiColors.cardSurface.withValues(alpha: 0.7),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: kColorWhite.withValues(alpha: 0.1)),
+            border: Border.all(color: AppLightUi.border),
           ),
           child: const SizedBox(
             width: 22,
@@ -585,13 +569,13 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
           decoration: BoxDecoration(
             color: LiveRoomUiColors.cardSurface.withValues(alpha: 0.7),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: kColorWhite.withValues(alpha: 0.1)),
+            border: Border.all(color: AppLightUi.border),
           ),
           child: Row(
             children: [
               Icon(
                 Icons.wallpaper_rounded,
-                color: kColorWhite.withValues(alpha: 0.55),
+                color: AppLightUi.muted,
                 size: 22,
               ),
               Spacing.h10,
@@ -599,7 +583,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
                 child: AppText(
                   text: 'No room backgrounds available yet.',
                   fontSize: TextStyles.k12FontSize,
-                  color: kColorWhite.withValues(alpha: 0.65),
+                  color: AppLightUi.subtitle,
                 ),
               ),
               GestureDetector(
@@ -666,7 +650,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
             border: selected
                 ? null
                 : Border.all(
-                    color: kColorWhite.withValues(alpha: 0.18),
+                    color: AppLightUi.border,
                     width: 1.2,
                   ),
             boxShadow: selected
@@ -691,7 +675,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
                     color: LiveRoomUiColors.cardSurface,
                     child: Icon(
                       Icons.image_not_supported_outlined,
-                      color: kColorWhite.withValues(alpha: 0.45),
+                      color: AppLightUi.muted,
                     ),
                   ),
                 ),
@@ -788,7 +772,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
             border: Border.all(
               color: isSelected
                   ? accentColors.first.withValues(alpha: 0.85)
-                  : kColorWhite.withValues(alpha: 0.10),
+                  : AppLightUi.cardSoft,
               width: isSelected ? 1.6 : 1,
             ),
             boxShadow: isSelected
@@ -813,11 +797,11 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
                       : null,
                   color: isSelected
                       ? null
-                      : kColorWhite.withValues(alpha: 0.08),
+                      : AppLightUi.cardSoft,
                 ),
                 child: Icon(
                   icon,
-                  color: isSelected ? kColorWhite : kColorHint,
+                  color: isSelected ? kColorWhite : AppLightUi.body,
                   size: 22,
                 ),
               ),
@@ -825,7 +809,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
               SemiBoldText(
                 text: type,
                 fontSize: TextStyles.k14FontSize,
-                color: isSelected ? kColorWhite : kColorHint,
+                color: isSelected ? kColorWhite : AppLightUi.body,
               ),
             ],
           ),
@@ -861,7 +845,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
                 border: Border.all(
                   color: isSelected
                       ? Colors.transparent
-                      : kColorWhite.withValues(alpha: 0.10),
+                      : AppLightUi.cardSoft,
                 ),
                 boxShadow: isSelected
                     ? [
@@ -878,7 +862,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
               child: SemiBoldText(
                 text: LiveRoomCreateController.categories[index],
                 fontSize: TextStyles.k12FontSize,
-                color: isSelected ? kColorWhite : kColorHint,
+                color: isSelected ? kColorWhite : AppLightUi.body,
               ),
             ),
           );
@@ -917,7 +901,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
             border: Border.all(
               color: isSelected
                   ? Colors.transparent
-                  : kColorWhite.withValues(alpha: 0.10),
+                  : AppLightUi.cardSoft,
             ),
             boxShadow: isSelected
                 ? [
@@ -933,7 +917,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
             child: SemiBoldText(
               text: seatCount,
               fontSize: TextStyles.k16FontSize,
-              color: isSelected ? kColorWhite : kColorHint,
+              color: isSelected ? kColorWhite : AppLightUi.body,
             ),
           ),
         ),
@@ -973,13 +957,13 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
                     border: Border.all(
                       color: isSelected
                           ? Colors.transparent
-                          : kColorWhite.withValues(alpha: 0.10),
+                          : AppLightUi.cardSoft,
                     ),
                   ),
                   child: SemiBoldText(
                     text: region.label,
                     fontSize: TextStyles.k12FontSize,
-                    color: isSelected ? kColorWhite : kColorHint,
+                    color: isSelected ? kColorWhite : AppLightUi.body,
                   ),
                 ),
               ),
@@ -1001,7 +985,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
             LiveRoomUiColors.cardSurface.withValues(alpha: 0.72),
           ],
         ),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
+        border: Border.all(color: AppLightUi.border),
       ),
       child: Row(
         children: [
@@ -1019,7 +1003,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
             ),
             child: const Icon(
               Icons.lock_outline_rounded,
-              color: kColorWhite,
+              color: AppLightUi.pink,
               size: 18,
             ),
           ),
@@ -1031,13 +1015,13 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
                 const SemiBoldText(
                   text: 'Private Room',
                   fontSize: TextStyles.k14FontSize,
-                  color: kColorWhite,
+                  color: AppLightUi.title,
                 ),
                 Spacing.v2,
                 AppText(
                   text: 'Only invited users can join',
                   fontSize: TextStyles.k10FontSize,
-                  color: kColorWhite.withValues(alpha: 0.55),
+                  color: AppLightUi.muted,
                 ),
               ],
             ),

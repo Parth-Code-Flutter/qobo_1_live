@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
@@ -16,7 +17,7 @@ class AristocracyCenterView extends GetView<AristocracyCenterController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kColorAppBackground,
+      backgroundColor: AppLightUi.bg,
       appBar: const CommonAppBarWidget(
         title: 'Aristocracy Center',
         useMaterialAppBar: true,
@@ -36,19 +37,20 @@ class AristocracyCenterView extends GetView<AristocracyCenterController> {
 
   Widget _buildBalanceAndActiveRankHeader() {
     return Container(
-      color: kColorWhite,
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: AppLightUi.cardDecoration(radius: 18),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             children: [
-              AppCoinIcon(size: 24, color: Colors.amber),
+              const AppCoinIcon(size: 24, color: Colors.amber),
               Spacing.h8,
               Obx(() => SemiBoldText(
                     text: '${controller.coinsBalance.value} Coins',
                     fontSize: TextStyles.k14FontSize,
-                    color: kColorText,
+                    color: AppLightUi.title,
                   )),
             ],
           ),
@@ -56,14 +58,21 @@ class AristocracyCenterView extends GetView<AristocracyCenterController> {
             final activeRank = controller.activeRankName.value;
             if (activeRank != null) {
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFF8A48)]),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFFD700), Color(0xFFFF8A48)],
+                  ),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.workspace_premium_outlined, color: kColorWhite, size: 14),
+                    const Icon(
+                      Icons.workspace_premium_outlined,
+                      color: kColorWhite,
+                      size: 14,
+                    ),
                     Spacing.h4,
                     BoldText(
                       text: activeRank,
@@ -77,7 +86,7 @@ class AristocracyCenterView extends GetView<AristocracyCenterController> {
             return const AppText(
               text: 'No Active Rank',
               fontSize: TextStyles.k12FontSize,
-              color: kColorHint,
+              color: AppLightUi.muted,
             );
           }),
         ],
@@ -132,7 +141,9 @@ class AristocracyCenterView extends GetView<AristocracyCenterController> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          index >= 2 ? Icons.military_tech_rounded : Icons.shield_rounded,
+                          index >= 2
+                              ? Icons.military_tech_rounded
+                              : Icons.shield_rounded,
                           color: kColorWhite,
                           size: 32,
                         ),
@@ -154,7 +165,11 @@ class AristocracyCenterView extends GetView<AristocracyCenterController> {
                             color: Colors.green,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.check, color: kColorWhite, size: 10),
+                          child: const Icon(
+                            Icons.check,
+                            color: kColorWhite,
+                            size: 10,
+                          ),
                         ),
                       ),
                   ],
@@ -176,17 +191,7 @@ class AristocracyCenterView extends GetView<AristocracyCenterController> {
       return Container(
         margin: const EdgeInsets.fromLTRB(16, 16, 16, 16),
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: kColorWhite,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: kColorBlack.withValues(alpha: 0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
+        decoration: AppLightUi.cardDecoration(radius: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -197,7 +202,7 @@ class AristocracyCenterView extends GetView<AristocracyCenterController> {
                 BoldText(
                   text: '${rank['name']} Privileges',
                   fontSize: TextStyles.k16FontSize,
-                  color: kColorText,
+                  color: AppLightUi.title,
                 ),
               ],
             ),
@@ -225,7 +230,7 @@ class AristocracyCenterView extends GetView<AristocracyCenterController> {
                         child: AppText(
                           text: privileges[index],
                           fontSize: TextStyles.k14FontSize,
-                          color: kColorTextGrey,
+                          color: AppLightUi.body,
                         ),
                       ),
                     ],
@@ -248,14 +253,15 @@ class AristocracyCenterView extends GetView<AristocracyCenterController> {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
-          color: kColorWhite,
+          color: AppLightUi.card,
           boxShadow: [
             BoxShadow(
-              color: kColorBlack.withValues(alpha: 0.05),
+              color: AppLightUi.title.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, -2),
             ),
           ],
+          border: const Border(top: BorderSide(color: AppLightUi.border)),
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(24),
             topRight: Radius.circular(24),
@@ -272,7 +278,7 @@ class AristocracyCenterView extends GetView<AristocracyCenterController> {
                     const AppText(
                       text: 'Subscription Fee',
                       fontSize: 10,
-                      color: kColorHint,
+                      color: AppLightUi.muted,
                     ),
                     Spacing.v2,
                     SemiBoldText(
@@ -288,16 +294,20 @@ class AristocracyCenterView extends GetView<AristocracyCenterController> {
                 height: 44,
                 width: 140,
                 child: appButton(
-                  onPressed: isAlreadyActive ? () {} : () => controller.purchaseNobleRank(rank['name']),
+                  onPressed: isAlreadyActive
+                      ? () {}
+                      : () => controller.purchaseNobleRank(rank['name']),
                   buttonText: isAlreadyActive ? 'Active' : 'Subscribe',
                   isGradient: !isAlreadyActive,
-                  gradientColors: isAlreadyActive ? null : gradients.map((hex) => Color(hex)).toList(),
-                  buttonColor: isAlreadyActive ? const Color(0xFFF3F3F3) : null,
-                  textColor: isAlreadyActive ? kColorHint : kColorWhite,
+                  gradientColors: isAlreadyActive
+                      ? null
+                      : gradients.map((hex) => Color(hex)).toList(),
+                  buttonColor: isAlreadyActive ? AppLightUi.cardSoft : null,
+                  textColor: isAlreadyActive ? AppLightUi.muted : kColorWhite,
                   borderRadius: 22,
                   textStyle: TextStyles.kSemiBoldPoppins(
                     fontSize: TextStyles.k14FontSize,
-                    colors: isAlreadyActive ? kColorHint : kColorWhite,
+                    colors: isAlreadyActive ? AppLightUi.muted : kColorWhite,
                   ),
                 ),
               ),

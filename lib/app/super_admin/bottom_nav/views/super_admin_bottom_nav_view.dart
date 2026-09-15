@@ -21,7 +21,7 @@ class SuperAdminBottomNavView extends GetView<SuperAdminBottomNavController> {
     return PopScope(
       canPop: true,
       child: Scaffold(
-        // Transparent so each tab’s bare [kImgBG] shows through (Messages-style).
+        // Transparent so each tab’s bare [kColorLavenderBg] shows through (Messages-style).
         backgroundColor: Colors.transparent,
         extendBody: true,
         body: Obx(() {

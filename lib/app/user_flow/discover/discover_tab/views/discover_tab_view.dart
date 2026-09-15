@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/bottom_nav/controllers/bottom_nav_controller.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
@@ -24,7 +25,7 @@ class DiscoverTabView extends StatelessWidget {
 
     return Container(
       decoration: const BoxDecoration(
-        image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
+        color: kColorLavenderBg,
       ),
       child: SafeArea(
         child: Padding(
@@ -101,14 +102,14 @@ class DiscoverTabView extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const SemiBoldText(
-                      text: 'EXPLORE',
+                      text: 'Discover',
                       fontSize: TextStyles.k24FontSize,
-                      color: kColorWhite,
+                      color: AppLightUi.title,
                     ),
                     AppText(
-                      text: session.displayName,
+                      text: 'Find your next spark',
                       fontSize: TextStyles.k12FontSize,
-                      color: kColorWhite.withValues(alpha: 0.72),
+                      color: AppLightUi.subtitle,
                       align: TextAlign.center,
                     ),
                   ],
@@ -123,7 +124,7 @@ class DiscoverTabView extends StatelessWidget {
                         icon: const Icon(
                           Icons.search_rounded,
                           size: 21,
-                          color: kColorPrimary,
+                          color: AppLightUi.pink,
                         ),
                       ),
                       Spacing.h6,
@@ -142,7 +143,7 @@ class DiscoverTabView extends StatelessWidget {
                                 width: 21,
                                 height: 21,
                                 colorFilter: const ColorFilter.mode(
-                                  kColorPrimary,
+                                  AppLightUi.pink,
                                   BlendMode.srcIn,
                                 ),
                               ),
@@ -154,7 +155,7 @@ class DiscoverTabView extends StatelessWidget {
                                     width: 8,
                                     height: 8,
                                     decoration: const BoxDecoration(
-                                      color: kColorBottomNavHeart,
+                                      color: AppLightUi.pink,
                                       shape: BoxShape.circle,
                                     ),
                                   ),
@@ -187,11 +188,7 @@ class DiscoverTabView extends StatelessWidget {
       return Align(
         alignment: Alignment.centerRight,
         child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: kColorWhite.withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
-          ),
+          decoration: AppLightUi.cardDecoration(radius: 12),
           child: Padding(
             padding: const EdgeInsets.all(3),
             child: Row(
@@ -225,18 +222,23 @@ class DiscoverTabView extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     return Material(
-      color: selected ? kColorPrimary : Colors.transparent,
+      color: Colors.transparent,
       borderRadius: BorderRadius.circular(9),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: SizedBox(
+        child: Ink(
           width: 36,
           height: 32,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(9),
+            gradient: selected ? AppLightUi.ctaGradient : null,
+            color: selected ? null : Colors.transparent,
+          ),
           child: Icon(
             icon,
             size: 18,
-            color: selected ? kColorWhite : kColorWhite.withValues(alpha: 0.72),
+            color: selected ? kColorWhite : AppLightUi.muted,
           ),
         ),
       ),
@@ -259,14 +261,9 @@ class DiscoverTabView extends StatelessWidget {
           height: 38,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: kColorWhite.withValues(alpha: 0.94),
-            boxShadow: [
-              BoxShadow(
-                color: kColorPrimary.withValues(alpha: 0.20),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-            ],
+            color: AppLightUi.card,
+            border: Border.all(color: AppLightUi.border),
+            boxShadow: AppLightUi.cardShadow,
           ),
           child: Center(child: icon),
         ),
@@ -278,18 +275,22 @@ class DiscoverTabView extends StatelessWidget {
     return Row(
       children: [
         Material(
-          color: kColorWhite.withValues(alpha: 0.14),
+          color: AppLightUi.card,
           shape: const CircleBorder(),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: discoverController.closeSearch,
             customBorder: const CircleBorder(),
-            child: const SizedBox(
+            child: Container(
               width: 44,
               height: 44,
-              child: Icon(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: AppLightUi.border),
+              ),
+              child: const Icon(
                 Icons.arrow_back_ios_new_rounded,
-                color: kColorWhite,
+                color: AppLightUi.title,
                 size: 18,
               ),
             ),
@@ -299,28 +300,17 @@ class DiscoverTabView extends StatelessWidget {
         Expanded(
           child: Material(
             color: Colors.transparent,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(26),
             child: Container(
               height: 46,
               padding: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: BoxDecoration(
-                color: kColorWhite.withValues(alpha: 0.96),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: kColorWhite.withValues(alpha: 0.26)),
-                boxShadow: [
-                  BoxShadow(
-                    color: kColorPrimary.withValues(alpha: 0.16),
-                    blurRadius: 18,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
+              decoration: AppLightUi.searchDecoration(),
               child: Row(
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.search_rounded,
                     size: 22,
-                    color: kColorHint.withValues(alpha: 0.85),
+                    color: AppLightUi.hint,
                   ),
                   Spacing.h10,
                   Expanded(
@@ -330,16 +320,16 @@ class DiscoverTabView extends StatelessWidget {
                       textInputAction: TextInputAction.search,
                       style: TextStyles.kRegularPoppins(
                         fontSize: TextStyles.k14FontSize,
-                        colors: kColorText,
+                        colors: AppLightUi.body,
                       ),
-                      cursorColor: kColorPrimary,
+                      cursorColor: AppLightUi.pink,
                       decoration: InputDecoration(
                         isDense: true,
                         border: InputBorder.none,
                         hintText: 'Search people',
                         hintStyle: TextStyles.kRegularPoppins(
                           fontSize: TextStyles.k14FontSize,
-                          colors: kColorHint,
+                          colors: AppLightUi.hint,
                         ),
                         contentPadding: const EdgeInsets.symmetric(
                           vertical: 12,
@@ -357,13 +347,13 @@ class DiscoverTabView extends StatelessWidget {
                         width: 28,
                         height: 28,
                         decoration: BoxDecoration(
-                          color: kColorHint.withValues(alpha: 0.12),
+                          color: AppLightUi.pink.withValues(alpha: 0.10),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
                           Icons.close_rounded,
                           size: 18,
-                          color: kColorHint,
+                          color: AppLightUi.muted,
                         ),
                       ),
                     );

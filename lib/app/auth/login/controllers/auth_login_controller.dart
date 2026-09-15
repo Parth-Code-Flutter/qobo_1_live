@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/constants/facebook_login_config.dart';
@@ -269,18 +270,18 @@ class AuthLoginController extends GetxController {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          backgroundColor: const Color(0xFF1E1E2D),
+          backgroundColor: AppLightUi.card,
           child: Padding(
             padding: const EdgeInsets.all(24.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.apple_rounded, color: kColorWhite, size: 48),
+                const Icon(Icons.apple_rounded, color: AppLightUi.title, size: 48),
                 const SizedBox(height: 16),
                 const Text(
                   'Sign In with Apple',
                   style: TextStyle(
-                    color: kColorWhite,
+                    color: AppLightUi.title,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -289,7 +290,7 @@ class AuthLoginController extends GetxController {
                 const Text(
                   'Simulating secure native Apple Authentication sheet...',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white70, fontSize: 12),
+                  style: TextStyle(color: AppLightUi.body, fontSize: 12),
                 ),
                 const SizedBox(height: 20),
                 const SizedBox(

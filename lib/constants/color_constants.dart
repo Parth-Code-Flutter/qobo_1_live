@@ -4,10 +4,12 @@ const kColorPrimary = Color(0xFF761B65);
 const kColorSecondPrimary = Color(0xFFFFFFFF);
 
 const kColorBackground = Color(0xFFFFFFFF);
-const kColorAppBackground = Color(0xFFF5F5F5);
 
-/// Soft lavender app bg — RGB(246, 237, 246). Ready for full-app light theme.
-const kColorLavenderBg = Color.fromRGBO(246, 237, 246, 1);
+/// Soft off-white lavender — primary full-app canvas (Profile / Family look).
+const kColorLavenderBg = Color(0xFFF6F0F8);
+
+/// App-level scaffold / page background (aliases canvas color).
+const kColorAppBackground = kColorLavenderBg;
 
 const kColorBottomNav = Color(0xFF410D37);
 
@@ -35,9 +37,9 @@ const kColorLiveCardErrorBg = Color(0xFF241D4D);
 const kColorLiveBadgeBackground = Color(0xFF541878);
 const kColorLiveLocation = Color(0xFF00E676);
 
-/// Bottom-nav glass / heart colors.
-const kColorBottomNavGradientTop = Color(0xFF181A5A);
-const kColorBottomNavGradientBottom = Color(0xFF121644);
+/// Bottom-nav glass / heart colors (slightly deeper navy).
+const kColorBottomNavGradientTop = Color(0xFF0E1038);
+const kColorBottomNavGradientBottom = Color(0xFF07091F);
 const kColorBottomNavHeart = Color(0xFFE6252F);
 
 /// Profile chips.
@@ -64,43 +66,43 @@ const kColorProfileFeaturePink = Color(0xFFFF43C6);
 const kColorProfileFeatureCyan = Color(0xFF4DD5FF);
 
 /// Wallet screen palette.
-const kColorWalletCardBorder = Color(0xFF5C4A79);
-const kColorWalletCardBgTop = Color(0xFF3F235C);
-const kColorWalletCardBgBottom = Color(0xFF33204F);
-const kColorWalletAmount = Color(0xFFFFD83D);
+const kColorWalletCardBorder = Color(0xFFE8D4EA);
+const kColorWalletCardBgTop = Color(0xFFFFFBFE);
+const kColorWalletCardBgBottom = Color(0xFFFDF4FA);
+const kColorWalletAmount = Color(0xFFE6A800);
 const kColorWalletExtraBadge = Color(0xFFFF8A48);
 
 /// Discover screen palette.
-const kColorDiscoverCard = Color(0xFF3B2058);
-const kColorDiscoverSearchBg = Color(0xFFF5F5F5);
-const kColorDiscoverModeBorder = Color(0xFF7E4EA8);
-const kColorDiscoverChip = Color(0xFF5D2D84);
-const kColorDiscoverJoinNow = Color(0xFF5C2E82);
+const kColorDiscoverCard = Color(0xFFFFFBFE);
+const kColorDiscoverSearchBg = Color(0xFFFFFBFE);
+const kColorDiscoverModeBorder = Color(0xFFD9BFE0);
+const kColorDiscoverChip = Color(0xFFF8E8F5);
+const kColorDiscoverJoinNow = Color(0xFF9B1F7A);
 
-/// Discover → Video Room feed (Figma).
-const kColorVideoRoomBgGradientTop = Color(0xFF1E0B36);
-const kColorVideoRoomBgGradientBottom = Color(0xFF050A19);
+/// Discover → Video Room feed (light listing cards).
+const kColorVideoRoomBgGradientTop = kColorLavenderBg;
+const kColorVideoRoomBgGradientBottom = kColorLavenderBg;
 const kColorVideoLiveBadgeRed = Color(0xFFE13434);
-const kColorVideoJoinLivePurple = Color(0xFF7A1E63);
-const kColorVideoViewerPillBg = Color(0xB3472869);
-const kColorVideoListTileBg = Color(0xE628173F);
-const kColorVideoTagBg = Color(0xFF2D1B45);
-const kColorVideoSecondaryText = Color(0xFFB0B0B0);
-const kColorVideoThumbActionPurple = Color(0xFF7A1E63);
-const kColorVideoTileGradientStart = Color(0xFF4A2A72);
-const kColorVideoTileGradientEnd = Color(0xFF24143A);
-const kColorVideoPreviewGradientStart = Color(0xFF5C3488);
-const kColorVideoPreviewGradientEnd = Color(0xFF2E1848);
+const kColorVideoJoinLivePurple = Color(0xFF9B1F7A);
+const kColorVideoViewerPillBg = Color(0xFFF3E4F5);
+const kColorVideoListTileBg = Color(0xFFFFFBFE);
+const kColorVideoTagBg = Color(0xFFF3E4F5);
+const kColorVideoSecondaryText = Color(0xFF7A668C);
+const kColorVideoThumbActionPurple = Color(0xFF9B1F7A);
+const kColorVideoTileGradientStart = Color(0xFFF8ECF8);
+const kColorVideoTileGradientEnd = Color(0xFFFFFBFE);
+const kColorVideoPreviewGradientStart = Color(0xFFE8D4F0);
+const kColorVideoPreviewGradientEnd = Color(0xFFD4B8E8);
 const kColorVideoPreviewAccent = Color(0xFF9B6FD4);
 const kColorVideoJoinLiveGradientEnd = Color(0xFFB8328A);
 
-/// Discover → Audio Room participant grid (Figma).
+/// Discover → Audio Room participant grid (listing chrome).
 const kColorAudioSpeakingGreen = Color(0xFF4ADE80);
-const kColorAudioMicBadgeBg = Color(0xFF3D2458);
-const kColorAudioMicBadgeBorder = Color(0xFF1E0B2E);
-const kColorAudioAddTileBg = Color(0xFF2C2438);
-const kColorAudioOthersPillBg = Color(0xFF4A2D6B);
-const kColorAudioRoleText = Color(0xFFB8B8C8);
+const kColorAudioMicBadgeBg = Color(0xFFF3E4F5);
+const kColorAudioMicBadgeBorder = Color(0xFFD9BFE0);
+const kColorAudioAddTileBg = Color(0xFFFFFBFE);
+const kColorAudioOthersPillBg = Color(0xFFF3E4F5);
+const kColorAudioRoleText = Color(0xFF7A668C);
 
 /// Basic profile extras list card (Figma).
 const kColorProfileExtrasCardBg = Color(0xFFF5F5F7);

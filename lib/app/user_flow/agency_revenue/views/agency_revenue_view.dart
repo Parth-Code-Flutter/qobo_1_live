@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/icon_constants.dart';
 import 'package:qobo_one_live/app/user_flow/agency_owner_dashboard/models/agency_revenue_demo.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_shell_background.dart';
+import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -18,68 +20,37 @@ class AgencyRevenueView extends GetView<AgencyRevenueController> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
+      appBar: const CommonAppBarWidget(
+        title: 'Agency Revenue',
+        trailingIcon: Icons.account_balance_wallet_rounded,
+      ),
       body: AppShellBackground(
-        child: SafeArea(
-          child: Column(
-            children: [
-              _header(),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildMonthSelector(),
-                      Spacing.v16,
-                      _buildBalanceCard(),
-                      Spacing.v16,
-                      Obx(() => _breakdownGrid()),
-                      Spacing.v16,
-                      Obx(() => _statsRow()),
-                      Spacing.v20,
-                      _sectionTitle('Revenue history'),
-                      Spacing.v12,
-                      _buildHistoryList(),
-                    ],
-                  ),
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildMonthSelector(),
+                    Spacing.v16,
+                    _buildBalanceCard(),
+                    Spacing.v16,
+                    Obx(() => _breakdownGrid()),
+                    Spacing.v16,
+                    Obx(() => _statsRow()),
+                    Spacing.v20,
+                    _sectionTitle('Revenue history'),
+                    Spacing.v12,
+                    _buildHistoryList(),
+                  ],
                 ),
               ),
-              _bottomActions(context),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _header() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-      child: Row(
-        children: [
-          AdminAgencyUi.glassIconButton(
-            icon: Icons.arrow_back_ios_new_rounded,
-            onTap: Get.back,
-            accent: AdminAgencyUi.sky,
-            size: 40,
-            iconSize: 16,
-          ),
-          const Expanded(
-            child: Center(
-              child: SemiBoldText(
-                text: 'Agency Revenue',
-                fontSize: TextStyles.k18FontSize,
-                color: kColorWhite,
-              ),
             ),
-          ),
-          AdminAgencyUi.glowIcon(
-            icon: Icons.account_balance_wallet_rounded,
-            accent: AdminAgencyUi.gold,
-            size: 40,
-            iconSize: 20,
-          ),
-        ],
+            _bottomActions(context),
+          ],
+        ),
       ),
     );
   }
@@ -91,7 +62,7 @@ class AgencyRevenueView extends GetView<AgencyRevenueController> {
         const SemiBoldText(
           text: 'Select month',
           fontSize: TextStyles.k14FontSize,
-          color: kColorWhite,
+          color: AppLightUi.title,
         ),
         Spacing.v10,
         Obx(
@@ -108,16 +79,21 @@ class AgencyRevenueView extends GetView<AgencyRevenueController> {
                       duration: const Duration(milliseconds: 180),
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        color: selected ? kColorPrimary : kColorWhite.withValues(alpha: 0.1),
+                        color: selected
+                            ? kColorPrimary
+                            : AppLightUi.card,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: selected ? kColorPrimary : kColorWhite.withValues(alpha: 0.24),
+                          color: selected
+                              ? kColorPrimary
+                              : AppLightUi.border,
                         ),
+                        boxShadow: selected ? null : AppLightUi.cardShadow,
                       ),
                       child: SemiBoldText(
                         text: month,
                         fontSize: TextStyles.k12FontSize,
-                        color: kColorWhite,
+                        color: selected ? kColorWhite : AppLightUi.body,
                       ),
                     ),
                   ),
@@ -232,24 +208,20 @@ class AgencyRevenueView extends GetView<AgencyRevenueController> {
   Widget _miniStat(String label, String value) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: kColorWhite.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.1)),
-      ),
+      decoration: AppLightUi.cardDecoration(radius: 14, elevated: false),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AppText(
             text: label,
             fontSize: TextStyles.k10FontSize,
-            color: kColorWhite.withValues(alpha: 0.6),
+            color: AppLightUi.subtitle,
           ),
           Spacing.v4,
           SemiBoldText(
             text: value,
             fontSize: TextStyles.k14FontSize,
-            color: kColorWhite,
+            color: AppLightUi.title,
           ),
         ],
       ),
@@ -260,7 +232,7 @@ class AgencyRevenueView extends GetView<AgencyRevenueController> {
     return SemiBoldText(
       text: title,
       fontSize: TextStyles.k16FontSize,
-      color: kColorWhite,
+      color: AppLightUi.title,
     );
   }
 
@@ -272,7 +244,7 @@ class AgencyRevenueView extends GetView<AgencyRevenueController> {
           child: AppText(
             text: 'No revenue entries for this month (demo: select June).',
             fontSize: TextStyles.k14FontSize,
-            color: kColorWhite.withValues(alpha: 0.65),
+            color: AppLightUi.subtitle,
             align: TextAlign.center,
           ),
         );
@@ -294,11 +266,7 @@ class AgencyRevenueView extends GetView<AgencyRevenueController> {
   Widget _historyTile(RevenueHistoryModel item) {
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: kColorWhite.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.1)),
-      ),
+      decoration: AppLightUi.cardDecoration(radius: 14, elevated: false),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -306,7 +274,7 @@ class AgencyRevenueView extends GetView<AgencyRevenueController> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: _iconColor(item.type).withValues(alpha: 0.2),
+              color: _iconColor(item.type).withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(_iconFor(item.type), color: _iconColor(item.type), size: 20),
@@ -319,19 +287,19 @@ class AgencyRevenueView extends GetView<AgencyRevenueController> {
                 SemiBoldText(
                   text: item.title,
                   fontSize: TextStyles.k14FontSize,
-                  color: kColorWhite,
+                  color: AppLightUi.title,
                 ),
                 Spacing.v4,
                 AppText(
                   text: item.subtitle,
                   fontSize: TextStyles.k12FontSize,
-                  color: kColorWhite.withValues(alpha: 0.65),
+                  color: AppLightUi.subtitle,
                 ),
                 Spacing.v2,
                 AppText(
                   text: item.date,
                   fontSize: TextStyles.k10FontSize,
-                  color: kColorWhite.withValues(alpha: 0.45),
+                  color: AppLightUi.muted,
                 ),
               ],
             ),
@@ -365,7 +333,7 @@ class AgencyRevenueView extends GetView<AgencyRevenueController> {
             child: const SemiBoldText(
               text: 'Back to Dashboard',
               fontSize: TextStyles.k14FontSize,
-              color: kColorWhite,
+              color: AppLightUi.violet,
             ),
           ),
         ],

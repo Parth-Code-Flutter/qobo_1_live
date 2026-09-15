@@ -15,7 +15,7 @@ class UserLevelView extends GetView<UserLevelController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kColorBackground,
+      backgroundColor: kColorLavenderBg,
       appBar: const CommonAppBarWidget(
         title: 'User Level & Badges',
         useMaterialAppBar: true,

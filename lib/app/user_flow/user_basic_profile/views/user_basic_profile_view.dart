@@ -13,6 +13,7 @@ import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
+import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -52,96 +53,87 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       resizeToAvoidBottomInset: true,
+      appBar: const CommonAppBarWidget(
+        title: 'Edit profile',
+        subtitle: 'Make your profile feel like you',
+        trailingIcon: Icons.auto_awesome_rounded,
+      ),
       floatingActionButton: _floatingSaveButton(context),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       body: Container(
         decoration: const BoxDecoration(
-          image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
+          color: kColorLavenderBg,
         ),
         child: GestureDetector(
           onTap: () => FocusScope.of(context).unfocus(),
-          child: SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _topBar(context),
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(24),
-                    ),
-                    child: ColoredBox(
-                      color: _pageColor,
-                      child: Form(
-                        key: controller.formKey,
-                        autovalidateMode: AutovalidateMode.onUserInteraction,
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            return SingleChildScrollView(
-                              keyboardDismissBehavior:
-                                  ScrollViewKeyboardDismissBehavior.onDrag,
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              padding: EdgeInsets.fromLTRB(
+          child: ClipRRect(
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(24),
+            ),
+            child: ColoredBox(
+              color: _pageColor,
+              child: Form(
+                key: controller.formKey,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: EdgeInsets.fromLTRB(
+                        0,
+                        0,
+                        0,
+                        88 + MediaQuery.of(context).viewInsets.bottom,
+                      ),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: constraints.maxHeight - 40,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Spacing.v16,
+                            _profileCoverHeader(context),
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(
+                                18,
+                                20,
+                                18,
                                 0,
-                                0,
-                                0,
-                                88 + MediaQuery.of(context).viewInsets.bottom,
                               ),
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  minHeight: constraints.maxHeight - 40,
-                                ),
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    Spacing.v16,
-                                    _profileCoverHeader(context),
-                                    Padding(
-                                      padding: const EdgeInsets.fromLTRB(
-                                        18,
-                                        20,
-                                        18,
-                                        0,
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          _sectionHeading(
-                                            icon: Icons.person_rounded,
-                                            title: 'Profile details',
-                                            subtitle:
-                                                'The basics people see first',
-                                            accent: _violet,
-                                          ),
-                                          Spacing.v12,
-                                          _detailsCard(context),
-                                          Spacing.v(22),
-                                          _sectionHeading(
-                                            icon: Icons.auto_awesome_rounded,
-                                            title: 'About you',
-                                            subtitle:
-                                                'Help people get to know you',
-                                            accent: kColorProfileChipPinkStart,
-                                          ),
-                                          Spacing.v12,
-                                          _profileExtrasCard(context),
-                                          Spacing.v16,
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _sectionHeading(
+                                    icon: Icons.person_rounded,
+                                    title: 'Profile details',
+                                    subtitle: 'The basics people see first',
+                                    accent: _violet,
+                                  ),
+                                  Spacing.v12,
+                                  _detailsCard(context),
+                                  Spacing.v(22),
+                                  _sectionHeading(
+                                    icon: Icons.auto_awesome_rounded,
+                                    title: 'About you',
+                                    subtitle: 'Help people get to know you',
+                                    accent: kColorProfileChipPinkStart,
+                                  ),
+                                  Spacing.v12,
+                                  _profileExtrasCard(context),
+                                  Spacing.v16,
+                                ],
                               ),
-                            );
-                          },
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -420,75 +412,7 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
     });
   }
 
-  Widget _topBar(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-      child: Row(
-        children: [
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: Get.back,
-              borderRadius: BorderRadius.circular(14),
-              child: Ink(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: kColorWhite.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: kColorWhite.withValues(alpha: 0.20),
-                  ),
-                ),
-                child: const Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  color: kColorWhite,
-                  size: 18,
-                ),
-              ),
-            ),
-          ),
-          Spacing.h12,
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                BoldText(
-                  text: 'Edit profile',
-                  fontSize: TextStyles.k20FontSize,
-                  color: kColorWhite,
-                ),
-                AppText(
-                  text: 'Make your profile feel like you',
-                  fontSize: TextStyles.k10FontSize,
-                  color: Color(0xBFFFFFFF),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            width: 38,
-            height: 38,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [
-                  kColorProfileChipPinkStart,
-                  kColorProfileChipPurpleStart,
-                ],
-              ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.auto_awesome_rounded,
-              size: 19,
-              color: kColorWhite,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // Removed — uses [CommonAppBarWidget] on Scaffold.appBar.
 
   /// Facebook-style cover banner with overlapping profile photo.
   Widget _profileCoverHeader(BuildContext context) {

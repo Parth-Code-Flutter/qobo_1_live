@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
@@ -33,13 +34,9 @@ class CommonLiveRoomWidget extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(_radius),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.24),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        color: AppLightUi.card,
+        border: Border.all(color: AppLightUi.border),
+        boxShadow: AppLightUi.cardShadow,
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(_radius),
@@ -55,14 +52,14 @@ class CommonLiveRoomWidget extends StatelessWidget {
                         imageUrl,
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => const ColoredBox(
-                          color: LiveRoomUiColors.cardSurface,
+                          color: AppLightUi.cardSoft,
                         ),
                       )
                     : Image.asset(
                         imageUrl,
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => const ColoredBox(
-                          color: LiveRoomUiColors.cardSurface,
+                          color: AppLightUi.cardSoft,
                         ),
                       ),
               ),
@@ -74,8 +71,8 @@ class CommonLiveRoomWidget extends StatelessWidget {
                       end: Alignment.bottomCenter,
                       colors: [
                         Colors.black.withValues(alpha: 0.02),
-                        Colors.black.withValues(alpha: 0.20),
-                        Colors.black.withValues(alpha: 0.78),
+                        Colors.black.withValues(alpha: 0.18),
+                        Colors.black.withValues(alpha: 0.72),
                       ],
                       stops: const [0, 0.42, 1],
                     ),
@@ -113,7 +110,7 @@ class CommonLiveRoomWidget extends StatelessWidget {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(_radius),
                       border: Border.all(
-                        color: kColorWhite.withValues(alpha: 0.10),
+                        color: AppLightUi.pinkSoft.withValues(alpha: 0.35),
                         width: 1,
                       ),
                     ),
@@ -131,7 +128,7 @@ class CommonLiveRoomWidget extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        color: const Color(0xFF541878).withValues(alpha: 0.86),
+        color: AppLightUi.violet.withValues(alpha: 0.86),
         borderRadius: BorderRadius.circular(15),
         border: Border.all(color: kColorWhite.withValues(alpha: 0.14)),
       ),

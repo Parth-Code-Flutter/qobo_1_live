@@ -12,16 +12,16 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 /// Shared design tokens for the Super Admin shell.
 ///
-/// Matches the main app Messages/Discover canvas (purple→navy [kImgBG]).
+/// Matches the main app Messages/Discover canvas ([kColorLavenderBg]).
 /// Button / icon / nav chrome is shared with Agency via [AdminAgencyUi].
 abstract final class SuperAdminUi {
   SuperAdminUi._();
 
-  // —— Canvas (aligned with Discover / Messages) ——
-  static const ink = Color(0xFF12081F);
-  static const inkElevated = Color(0xFF1E0B36);
-  static const sheet = Color(0xFF24143A);
-  static const panel = Color(0xFF3B2058);
+  // —— Canvas (aligned with Discover / Messages light theme) ——
+  static const ink = Color(0xFF2A1744);
+  static const inkElevated = Color(0xFF3D2A52);
+  static const sheet = Color(0xFFFFFBFE);
+  static const panel = Color(0xFFFDF4FA);
 
   // —— Accents (status / icons only — not full-card paint) ——
   static const gold = AdminAgencyUi.gold;
@@ -126,7 +126,7 @@ class SuperAdminPageBackdrop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Exact same canvas as MessagesTabView — bare [kImgBG], no wash/orbs.
+    // Exact same canvas as MessagesTabView — bare [kColorLavenderBg], no wash/orbs.
     return AppShellBackground(
       showOrbs: false,
       child: child,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 
-/// Shared palette + helpers for the coins-seller merchant UI.
+/// Shared palette + helpers for the coins-seller merchant UI (lavender canvas).
 abstract final class CoinSellerUi {
   CoinSellerUi._();
 
@@ -8,16 +9,26 @@ abstract final class CoinSellerUi {
   static const goldDeep = Color(0xFFFF8F00);
   static const mint = Color(0xFF4ADE80);
   static const sky = Color(0xFF60A5FA);
-  static const plum = Color(0xFF2A1538);
-  static const ink = Color(0xFF0E0B18);
+
+  /// Soft plum wash for accent tiles (not a dark page fill).
+  static const plum = Color(0xFFF3E4F5);
+  static const ink = AppLightUi.title;
+
+  static const title = AppLightUi.title;
+  static const body = AppLightUi.body;
+  static const muted = AppLightUi.subtitle;
+  static const faint = AppLightUi.muted;
+  static const card = AppLightUi.card;
+  static const cardSoft = AppLightUi.cardSoft;
+  static const border = AppLightUi.border;
 
   static const heroGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
-      Color(0xFF3D2200),
-      Color(0xFF1A1030),
-      Color(0xFF0D0818),
+      Color(0xFFFFF8E7),
+      Color(0xFFFFFBFE),
+      Color(0xFFFDF4FA),
     ],
   );
 
@@ -25,9 +36,8 @@ abstract final class CoinSellerUi {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
-      Color(0x33FFC107),
-      Color(0x1AFFFFFF),
-      Color(0x12000000),
+      Color(0xFFFFFBFE),
+      Color(0xFFFDF4FA),
     ],
   );
 
@@ -63,18 +73,11 @@ abstract final class CoinSellerUi {
 
   static BoxDecoration glassCard({Color? borderColor, Gradient? gradient}) {
     return BoxDecoration(
+      color: gradient == null ? card : null,
       gradient: gradient ?? cardGradient,
       borderRadius: BorderRadius.circular(20),
-      border: Border.all(
-        color: borderColor ?? Colors.white.withValues(alpha: 0.12),
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.28),
-          blurRadius: 18,
-          offset: const Offset(0, 8),
-        ),
-      ],
+      border: Border.all(color: borderColor ?? border),
+      boxShadow: AppLightUi.cardShadow,
     );
   }
 }

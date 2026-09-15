@@ -1,125 +1,109 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/dating_empty_hero.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
-/// Premium "nothing here yet" card for the audio / video room listings.
-///
-/// Glass surface with a pulsing accent halo, the room-type icon, and a
-/// gradient create CTA so the tab never looks like a dead screen.
-class RoomsEmptyState extends StatefulWidget {
+/// Soft dating-style empty card for audio / video room listings.
+class RoomsEmptyState extends StatelessWidget {
   const RoomsEmptyState({
     super.key,
-    required this.icon,
     required this.title,
     required this.subtitle,
     required this.accentColors,
+    required this.heroStyle,
     this.ctaLabel,
     this.onCta,
     this.hint = 'Pull down to refresh',
   });
 
-  final IconData icon;
   final String title;
   final String subtitle;
   final List<Color> accentColors;
+  final DatingEmptyHeroStyle heroStyle;
   final String? ctaLabel;
   final VoidCallback? onCta;
   final String hint;
 
-  @override
-  State<RoomsEmptyState> createState() => _RoomsEmptyStateState();
-}
-
-class _RoomsEmptyStateState extends State<RoomsEmptyState>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pulse;
-
-  @override
-  void initState() {
-    super.initState();
-    _pulse = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2200),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _pulse.dispose();
-    super.dispose();
-  }
-
-  Color get _accent => widget.accentColors.first;
+  Color get _accent => accentColors.first;
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         child: TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0.92, end: 1),
+          tween: Tween(begin: 0.94, end: 1),
           duration: const Duration(milliseconds: 420),
           curve: Curves.easeOutBack,
           builder: (context, scale, child) {
-            return Transform.scale(
-              scale: scale,
-              child: Opacity(
-                opacity: ((scale - 0.92) / 0.08).clamp(0.0, 1.0),
-                child: child,
-              ),
-            );
+            return Transform.scale(scale: scale, child: child);
           },
           child: ClipRRect(
             borderRadius: BorderRadius.circular(28),
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
               child: Container(
-                padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(28),
                   gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xE62A1638), Color(0xE6140C22)],
+                    colors: [
+                      Color(0xFFFFFFFF),
+                      Color(0xFFFFF0F6),
+                      Color(0xFFF5ECFF),
+                    ],
                   ),
                   border: Border.all(
-                    color: _accent.withValues(alpha: 0.28),
+                    color: AppLightUi.pinkSoft.withValues(alpha: 0.55),
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: _accent.withValues(alpha: 0.18),
-                      blurRadius: 30,
-                      offset: const Offset(0, 14),
+                      color: _accent.withValues(alpha: 0.14),
+                      blurRadius: 28,
+                      offset: const Offset(0, 12),
+                    ),
+                    BoxShadow(
+                      color: AppLightUi.title.withValues(alpha: 0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _haloIcon(),
-                    Spacing.v20,
+                    DatingEmptyHero(
+                      style: heroStyle,
+                      accentColors: accentColors,
+                      size: 156,
+                    ),
+                    Spacing.v12,
                     SemiBoldText(
-                      text: widget.title,
+                      text: title,
                       fontSize: TextStyles.k18FontSize,
-                      color: kColorWhite,
+                      color: AppLightUi.title,
                       align: TextAlign.center,
                     ),
                     Spacing.v8,
                     AppText(
-                      text: widget.subtitle,
+                      text: subtitle,
                       fontSize: TextStyles.k12FontSize,
-                      color: kColorWhite.withValues(alpha: 0.62),
+                      color: AppLightUi.subtitle,
                       align: TextAlign.center,
                     ),
-                    if (widget.ctaLabel != null && widget.onCta != null) ...[
+                    if (ctaLabel != null && onCta != null) ...[
                       Spacing.v20,
                       _ctaButton(),
                     ],
-                    Spacing.v16,
+                    Spacing.v12,
                     _hintRow(),
                   ],
                 ),
@@ -131,68 +115,11 @@ class _RoomsEmptyStateState extends State<RoomsEmptyState>
     );
   }
 
-  Widget _haloIcon() {
-    return AnimatedBuilder(
-      animation: _pulse,
-      builder: (context, child) {
-        final t = Curves.easeInOut.transform(_pulse.value);
-        return SizedBox(
-          width: 116,
-          height: 116,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Container(
-                width: 84 + (t * 26),
-                height: 84 + (t * 26),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: _accent.withValues(alpha: 0.30 - (t * 0.22)),
-                  ),
-                ),
-              ),
-              Container(
-                width: 78,
-                height: 78,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _accent.withValues(alpha: 0.12),
-                ),
-              ),
-              child!,
-            ],
-          ),
-        );
-      },
-      child: Container(
-        width: 58,
-        height: 58,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: widget.accentColors,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: _accent.withValues(alpha: 0.45),
-              blurRadius: 18,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Icon(widget.icon, color: kColorWhite, size: 26),
-      ),
-    );
-  }
-
   Widget _ctaButton() {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: widget.onCta,
+        onTap: onCta,
         borderRadius: BorderRadius.circular(24),
         child: Ink(
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
@@ -201,12 +128,12 @@ class _RoomsEmptyStateState extends State<RoomsEmptyState>
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: widget.accentColors,
+              colors: accentColors,
             ),
             boxShadow: [
               BoxShadow(
-                color: _accent.withValues(alpha: 0.4),
-                blurRadius: 16,
+                color: _accent.withValues(alpha: 0.32),
+                blurRadius: 14,
                 offset: const Offset(0, 6),
               ),
             ],
@@ -217,7 +144,7 @@ class _RoomsEmptyStateState extends State<RoomsEmptyState>
               const Icon(Icons.add_rounded, color: kColorWhite, size: 18),
               Spacing.h6,
               SemiBoldText(
-                text: widget.ctaLabel!,
+                text: ctaLabel!,
                 fontSize: TextStyles.k14FontSize,
                 color: kColorWhite,
               ),
@@ -232,16 +159,12 @@ class _RoomsEmptyStateState extends State<RoomsEmptyState>
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
-          Icons.refresh_rounded,
-          size: 14,
-          color: kColorWhite.withValues(alpha: 0.4),
-        ),
+        Icon(Icons.refresh_rounded, size: 14, color: AppLightUi.muted),
         Spacing.h6,
         AppText(
-          text: widget.hint,
+          text: hint,
           fontSize: TextStyles.k10FontSize,
-          color: kColorWhite.withValues(alpha: 0.4),
+          color: AppLightUi.muted,
         ),
       ],
     );

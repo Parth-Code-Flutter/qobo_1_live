@@ -4,6 +4,7 @@ import 'package:qobo_one_live/repo/agency/role_application_repo.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
@@ -16,6 +17,7 @@ import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/glossy_dating_card.dart';
 import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
 import 'package:qobo_one_live/app/user_flow/host_dashboard/host_dashboard_view.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -77,10 +79,7 @@ class _ProfileTabViewState extends State<ProfileTabView> {
               const Positioned.fill(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    image: DecorationImage(
-                      image: AssetImage(kImgBG),
-                      fit: BoxFit.cover,
-                    ),
+                    color: kColorLavenderBg,
                   ),
                 ),
               ),
@@ -109,10 +108,11 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
-                      _profileHero(session),
-                      _profileFeatureGrid(),
-                      Spacing.v20,
-                      _settingsRow(),
+                      _profileHero(session, onCover: hasEquippedCover),
+                      Spacing.v16,
+                      _profileFeatureGrid(onCover: hasEquippedCover),
+                      Spacing.v16,
+                      _settingsRow(onCover: hasEquippedCover),
                       Spacing.v12,
                       appButton(
                         onPressed: widget.onLogoutPressed,
@@ -141,8 +141,11 @@ class _ProfileTabViewState extends State<ProfileTabView> {
     );
   }
 
-  Widget _profileHero(UserSessionController session) {
+  Widget _profileHero(UserSessionController session, {required bool onCover}) {
     final imageUrl = session.displayPictureUrl;
+    // Family CTA gradient hero → always white type (same as Open Family Chat).
+    const titleColor = kColorWhite;
+    final bodyColor = kColorWhite.withValues(alpha: 0.90);
     return LayoutBuilder(
       builder: (_, constraints) {
         final isCompact = constraints.maxWidth < 360;
@@ -150,6 +153,7 @@ class _ProfileTabViewState extends State<ProfileTabView> {
         final avatarFrameSize = avatarSize * 1.34;
         // Cover media is full-tab now — hero is only identity content.
         return _ProfileHeroCard(
+          onCover: onCover,
           child: Column(
             children: [
               Row(
@@ -185,7 +189,7 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                           fontSize: isCompact
                               ? TextStyles.k18FontSize
                               : TextStyles.k20FontSize,
-                          color: kColorWhite,
+                          color: titleColor,
                         ),
                         Spacing.v2,
                         AppText(
@@ -194,10 +198,10 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           fontSize: TextStyles.k14FontSize,
-                          color: kColorWhite,
+                          color: bodyColor,
                           style: TextStyles.kRegularPoppins(
                             fontSize: TextStyles.k14FontSize,
-                            colors: kColorWhite,
+                            colors: bodyColor,
                           ),
                         ),
                         Spacing.v10,
@@ -228,11 +232,11 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                   ),
                   GestureDetector(
                     onTap: () => _openBasicProfileAndRefresh(),
-                    child: const Padding(
-                      padding: EdgeInsets.only(right: 4),
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 4),
                       child: Icon(
                         Icons.chevron_right_rounded,
-                        color: kColorWhite,
+                        color: titleColor,
                         size: 34,
                       ),
                     ),
@@ -314,19 +318,25 @@ class _ProfileTabViewState extends State<ProfileTabView> {
     return '$parts Patti';
   }
 
-  Widget _statBlock(String value, String label, {VoidCallback? onTap}) {
+  Widget _statBlock(
+    String value,
+    String label, {
+    VoidCallback? onTap,
+  }) {
+    const valueColor = kColorWhite;
+    final labelColor = kColorWhite.withValues(alpha: 0.86);
     final content = Column(
       children: [
         BoldText(
           text: value,
           fontSize: TextStyles.k20FontSize,
-          color: kColorWhite,
+          color: valueColor,
         ),
         Spacing.v6,
         AppText(
           text: label,
           fontSize: TextStyles.k12FontSize,
-          color: kColorWhite,
+          color: labelColor,
         ),
       ],
     );
@@ -347,11 +357,11 @@ class _ProfileTabViewState extends State<ProfileTabView> {
       width: 1.2,
       height: 52,
       margin: const EdgeInsets.symmetric(horizontal: 6),
-      color: kColorWhite.withValues(alpha: 0.85),
+      color: kColorWhite.withValues(alpha: 0.55),
     );
   }
 
-  Widget _profileFeatureGrid() {
+  Widget _profileFeatureGrid({required bool onCover}) {
     final session = _resolveUserSession();
     final showSuperAdmin = session.showSuperAdminIcon;
     final showAgency = session.showAgencyIcon;
@@ -442,16 +452,12 @@ class _ProfileTabViewState extends State<ProfileTabView> {
       ], onTapRoute: Routes.GIFT_TRANSACTIONS),
     ];
 
-    return Container(
-      width: double.infinity,
+    return GlossyDatingCard(
       padding: const EdgeInsets.fromLTRB(12, 14, 12, 18),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: kColorProfileFeatureBorder.withValues(alpha: 0.75),
-          width: 1,
-        ),
-      ),
+      radius: 22,
+      fill: onCover
+          ? kColorWhite.withValues(alpha: 0.94)
+          : AppLightUi.card,
       child: GridView.builder(
         itemCount: features.length,
         shrinkWrap: true,
@@ -504,9 +510,9 @@ class _ProfileTabViewState extends State<ProfileTabView> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: item.gradientColors.first.withValues(alpha: 0.24),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
+                  color: AppLightUi.title.withValues(alpha: 0.08),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
                 ),
               ],
             ),
@@ -524,7 +530,7 @@ class _ProfileTabViewState extends State<ProfileTabView> {
             child: AppText(
               text: item.label,
               fontSize: TextStyles.k12FontSize,
-              color: kColorWhite,
+              color: AppLightUi.body,
               align: TextAlign.center,
             ),
           ),
@@ -600,58 +606,120 @@ class _ProfileTabViewState extends State<ProfileTabView> {
     return Get.put(UserSessionController(), permanent: true);
   }
 
-  Widget _settingsRow() {
-    return GestureDetector(
+  Widget _settingsRow({required bool onCover}) {
+    return GlossyDatingCard(
       onTap: () => Get.toNamed(Routes.SETTINGS),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          color: kColorWhite.withValues(alpha: 0.12),
-          border: Border.all(color: kColorWhite.withValues(alpha: 0.2)),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.settings_rounded, color: kColorWhite, size: 22),
-            Spacing.h12,
-            const Expanded(
-              child: SemiBoldText(
-                text: 'Settings',
-                fontSize: TextStyles.k14FontSize,
-                color: kColorWhite,
-              ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      radius: 18,
+      borderWidth: 1.4,
+      fill: onCover
+          ? kColorWhite.withValues(alpha: 0.94)
+          : AppLightUi.card,
+      child: Row(
+        children: [
+          Icon(Icons.settings_rounded, color: AppLightUi.title, size: 22),
+          Spacing.h12,
+          Expanded(
+            child: SemiBoldText(
+              text: 'Settings',
+              fontSize: TextStyles.k14FontSize,
+              color: AppLightUi.title,
             ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: kColorWhite,
-              size: 22,
-            ),
-          ],
-        ),
+          ),
+          Icon(
+            Icons.chevron_right_rounded,
+            color: AppLightUi.subtitle,
+            size: 22,
+          ),
+        ],
       ),
     );
   }
 }
 
 class _ProfileHeroCard extends StatelessWidget {
-  const _ProfileHeroCard({required this.child});
+  const _ProfileHeroCard({required this.child, required this.onCover});
 
   final Widget child;
+  final bool onCover;
 
   @override
   Widget build(BuildContext context) {
-    // Full-tab cover sits behind this card; keep a light glass shell for stats.
+    return _ProfileGradientPanel(
+      onCover: onCover,
+      radius: 24,
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+      child: child,
+    );
+  }
+}
+
+/// Gradient panel + glossy ring (Profile hero).
+class _ProfileGradientPanel extends StatelessWidget {
+  const _ProfileGradientPanel({
+    required this.child,
+    required this.onCover,
+    this.radius = 22,
+    this.padding = const EdgeInsets.fromLTRB(12, 14, 12, 18),
+  });
+
+  final Widget child;
+  final bool onCover;
+  final double radius;
+  final EdgeInsetsGeometry padding;
+
+  static const _borderWidth = 1.8;
+
+  @override
+  Widget build(BuildContext context) {
+    final innerRadius = radius - _borderWidth;
     return SizedBox(
       width: double.infinity,
-      child: DecoratedBox(
+      child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: kColorWhite.withValues(alpha: 0.16)),
-          color: kColorBlack.withValues(alpha: 0.22),
+          borderRadius: BorderRadius.circular(radius),
+          gradient: GlossyDatingCard.defaultBorderGradient,
+          boxShadow: [
+            BoxShadow(
+              color: AppLightUi.title.withValues(alpha: onCover ? 0.12 : 0.08),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
-          child: child,
+        padding: const EdgeInsets.all(_borderWidth),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(innerRadius),
+          child: Stack(
+            children: [
+              DecoratedBox(
+                decoration: const BoxDecoration(
+                  gradient: AppLightUi.familyCtaGradient,
+                ),
+                child: Padding(padding: padding, child: child),
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                top: 0,
+                height: 32,
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          kColorWhite.withValues(alpha: 0.38),
+                          kColorWhite.withValues(alpha: 0.0),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

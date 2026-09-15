@@ -4,26 +4,27 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/referral/controllers/referral_controller.dart';
 import 'package:qobo_one_live/app/user_flow/referral/models/referral_models.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
+import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
-/// Invite Friends — matches Family / Agency recruit chrome on [kImgBG].
+/// Invite Friends — matches Family / Agency recruit chrome on [kColorLavenderBg].
 abstract final class _ReferralUi {
   static const pink = AdminAgencyUi.pink;
   static const violet = AdminAgencyUi.violet;
   static const gold = AdminAgencyUi.gold;
   static const cyan = AdminAgencyUi.cyan;
-  static const sky = AdminAgencyUi.sky;
   static const mint = AdminAgencyUi.mint;
 
-  static const textMuted = AdminAgencyUi.textMuted;
-  static const textSoft = AdminAgencyUi.textFaint;
+  static const textMuted = AppLightUi.subtitle;
+  static const textSoft = AppLightUi.muted;
+  static const title = AppLightUi.title;
 
   static const heroGradient = [Color(0xFF6A1B9A), Color(0xFFE91E63)];
   static const codeGradient = [Color(0xFF5C6BC0), Color(0xFF3949AB)];
@@ -37,71 +38,26 @@ class ReferralView extends GetView<ReferralController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage(kImgBG),
-            fit: BoxFit.cover,
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _header(),
-              Expanded(
-                child: Obx(() {
-                  if (controller.isLoading.value &&
-                      controller.activeCode.value.isEmpty) {
-                    return const Center(
-                      child: CircularProgressIndicator(color: kColorWhite),
-                    );
-                  }
-                  return _scrollBody(context);
-                }),
-              ),
-              _bottomActions(context),
-            ],
-          ),
-        ),
+      backgroundColor: kColorLavenderBg,
+      appBar: const CommonAppBarWidget(
+        title: 'Invite Friends',
+        subtitle: 'Share code · earn bonus coins',
+        trailingIcon: Icons.card_giftcard_rounded,
       ),
-    );
-  }
-
-  Widget _header() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
-      child: Row(
+      body: Column(
         children: [
-          AdminAgencyUi.glassIconButton(
-            icon: Icons.arrow_back_ios_new_rounded,
-            onTap: Get.back,
-            accent: _ReferralUi.sky,
-            size: 40,
-            iconSize: 16,
+          Expanded(
+            child: Obx(() {
+              if (controller.isLoading.value &&
+                  controller.activeCode.value.isEmpty) {
+                return const Center(
+                  child: CircularProgressIndicator(color: AppLightUi.pink),
+                );
+              }
+              return _scrollBody(context);
+            }),
           ),
-          const Expanded(
-            child: Column(
-              children: [
-                SemiBoldText(
-                  text: 'Invite Friends',
-                  fontSize: TextStyles.k16FontSize,
-                  color: kColorWhite,
-                ),
-                AppText(
-                  text: 'Share code · earn bonus coins',
-                  fontSize: TextStyles.k10FontSize,
-                  color: _ReferralUi.textSoft,
-                ),
-              ],
-            ),
-          ),
-          AdminAgencyUi.glowIcon(
-            icon: Icons.card_giftcard_rounded,
-            accent: _ReferralUi.gold,
-            size: 40,
-            iconSize: 20,
-          ),
+          _bottomActions(context),
         ],
       ),
     );
@@ -155,12 +111,12 @@ class ReferralView extends GetView<ReferralController> {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                const Color(0xFF181A5A).withValues(alpha: 0.72),
-                const Color(0xFF121644).withValues(alpha: 0.94),
+                AppLightUi.card.withValues(alpha: 0.92),
+                AppLightUi.cardSoft,
               ],
             ),
             border: Border(
-              top: BorderSide(color: kColorWhite.withValues(alpha: 0.12)),
+              top: BorderSide(color: AppLightUi.border),
             ),
           ),
           child: Padding(
@@ -461,9 +417,10 @@ class ReferralView extends GetView<ReferralController> {
       () => Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: const Color(0xFF2A1748).withValues(alpha: 0.92),
+          color: AppLightUi.card,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
+          border: Border.all(color: AppLightUi.border),
+          boxShadow: AppLightUi.cardShadow,
         ),
         child: Row(
           children: [
@@ -540,7 +497,7 @@ class ReferralView extends GetView<ReferralController> {
                   SemiBoldText(
                     text: entry.friendName ?? 'New member',
                     fontSize: TextStyles.k14FontSize,
-                    color: kColorWhite,
+                    color: _ReferralUi.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -623,7 +580,7 @@ class ReferralView extends GetView<ReferralController> {
                   SemiBoldText(
                     text: label,
                     fontSize: TextStyles.k12FontSize,
-                    color: kColorWhite,
+                    color: _ReferralUi.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -688,7 +645,7 @@ class ReferralView extends GetView<ReferralController> {
           SemiBoldText(
             text: title,
             fontSize: TextStyles.k14FontSize,
-            color: kColorWhite,
+            color: _ReferralUi.title,
             align: TextAlign.center,
           ),
           Spacing.v6,

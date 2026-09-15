@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/constants/image_constants.dart';
 
-/// Same canvas as Messages / Discover — bare full-bleed [kImgBG], nothing else.
+/// Same canvas as Messages / Discover — full-bleed [kColorLavenderBg].
 class AppShellBackground extends StatelessWidget {
   const AppShellBackground({
     super.key,
@@ -24,10 +23,7 @@ class AppShellBackground extends StatelessWidget {
       children: [
         const DecoratedBox(
           decoration: BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage(kImgBG),
-              fit: BoxFit.cover,
-            ),
+            color: kColorLavenderBg,
           ),
         ),
         if (showOrbs) ...[
@@ -66,33 +62,33 @@ class AppShellBackground extends StatelessWidget {
   }
 }
 
-/// Solid panel on [kImgBG] — Profile-style, no frosted blur / washed alphas.
+/// Solid panel on [kColorLavenderBg] — soft white card, light dating chrome.
 BoxDecoration appShellGlassDecoration({
   Color? glow,
   double radius = 22,
   bool showBorder = true,
 }) {
+  final accent = glow ?? const Color(0xFFFF5C9A);
   return BoxDecoration(
-    color: const Color(0xFF2A1748),
+    color: const Color(0xFFFFFBFE),
     borderRadius: BorderRadius.circular(radius),
     border: showBorder
         ? Border.all(
-            color: (glow ?? kColorWhite)
-                .withValues(alpha: glow == null ? 0.22 : 0.45),
+            color: accent.withValues(alpha: glow == null ? 0.22 : 0.40),
             width: 1.2,
           )
         : null,
     boxShadow: [
       if (glow != null && showBorder)
         BoxShadow(
-          color: glow.withValues(alpha: 0.28),
+          color: glow.withValues(alpha: 0.18),
           blurRadius: 12,
           offset: const Offset(0, 6),
         ),
       BoxShadow(
-        color: kColorBlack.withValues(alpha: 0.35),
+        color: const Color(0xFF2A1744).withValues(alpha: 0.06),
         blurRadius: 14,
-        offset: const Offset(0, 8),
+        offset: const Offset(0, 6),
       ),
     ],
   );

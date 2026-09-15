@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
@@ -37,10 +38,10 @@ class _JoinLiveViewState extends State<JoinLiveView> {
     final liveRoomController = controller;
 
     return Scaffold(
-      backgroundColor: LiveRoomUiColors.screenGradientBottom,
+      backgroundColor: kColorLavenderBg,
       body: Container(
         decoration: const BoxDecoration(
-          image: DecorationImage(image: AssetImage(kImgBG), fit: BoxFit.cover),
+          color: kColorLavenderBg,
         ),
         child: SafeArea(
           child: Column(
@@ -49,6 +50,7 @@ class _JoinLiveViewState extends State<JoinLiveView> {
               Expanded(
                 child: RefreshIndicator(
                   color: kColorPrimary,
+                  backgroundColor: AppLightUi.card,
                   onRefresh: liveRoomController.fetchActiveRooms,
                   child: CustomScrollView(
                     physics: const BouncingScrollPhysics(
@@ -115,17 +117,21 @@ class _JoinLiveViewState extends State<JoinLiveView> {
       child: Row(
         children: [
           Material(
-            color: kColorWhite.withValues(alpha: 0.12),
+            color: AppLightUi.card,
             shape: const CircleBorder(),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
               onTap: Get.back<void>,
-              child: const SizedBox(
+              child: Container(
                 width: 42,
                 height: 42,
-                child: Icon(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppLightUi.border),
+                ),
+                child: const Icon(
                   Icons.arrow_back_ios_new_rounded,
-                  color: kColorWhite,
+                  color: AppLightUi.title,
                   size: 18,
                 ),
               ),
@@ -136,7 +142,7 @@ class _JoinLiveViewState extends State<JoinLiveView> {
             child: SemiBoldText(
               text: 'Join Live',
               fontSize: TextStyles.k22FontSize,
-              color: kColorWhite,
+              color: AppLightUi.title,
               align: TextAlign.center,
             ),
           ),
@@ -149,18 +155,7 @@ class _JoinLiveViewState extends State<JoinLiveView> {
   Widget _manualJoinCard(LiveRoomController liveRoomController) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: LiveRoomUiColors.cardSurface.withValues(alpha: 0.88),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: LiveRoomUiColors.cardBorder),
-        boxShadow: [
-          BoxShadow(
-            color: kColorBlack.withValues(alpha: 0.24),
-            blurRadius: 22,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
+      decoration: AppLightUi.cardDecoration(radius: 22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -189,7 +184,7 @@ class _JoinLiveViewState extends State<JoinLiveView> {
                 child: SemiBoldText(
                   text: 'Manual Join',
                   fontSize: TextStyles.k18FontSize,
-                  color: kColorWhite,
+                  color: AppLightUi.title,
                 ),
               ),
             ],
@@ -198,16 +193,12 @@ class _JoinLiveViewState extends State<JoinLiveView> {
           Container(
             height: 54,
             padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              color: kColorWhite.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: kColorWhite.withValues(alpha: 0.16)),
-            ),
+            decoration: AppLightUi.searchDecoration(radius: 16),
             child: Row(
               children: [
                 const Icon(
                   Icons.tag_rounded,
-                  color: LiveRoomUiColors.joinLiveBorder,
+                  color: AppLightUi.pink,
                   size: 20,
                 ),
                 Spacing.h10,
@@ -218,15 +209,15 @@ class _JoinLiveViewState extends State<JoinLiveView> {
                     keyboardType: TextInputType.text,
                     style: TextStyles.kMediumPoppins(
                       fontSize: TextStyles.k14FontSize,
-                      colors: kColorWhite,
+                      colors: AppLightUi.body,
                     ),
-                    cursorColor: kColorWhite,
+                    cursorColor: AppLightUi.pink,
                     decoration: InputDecoration(
                       hintText: 'Enter live stream ID',
                       border: InputBorder.none,
                       hintStyle: TextStyles.kRegularPoppins(
                         fontSize: 13,
-                        colors: kColorHint,
+                        colors: AppLightUi.hint,
                       ),
                     ),
                     onSubmitted: liveRoomController.joinManualLive,
@@ -239,22 +230,41 @@ class _JoinLiveViewState extends State<JoinLiveView> {
           SizedBox(
             width: double.infinity,
             height: 50,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                liveRoomController.joinManualLive(_liveIdController.text);
-              },
-              icon: const Icon(Icons.play_arrow_rounded, size: 22),
-              label: const SemiBoldText(
-                text: 'Join Manually',
-                fontSize: TextStyles.k14FontSize,
-                color: kColorWhite,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: const LinearGradient(
+                  colors: [
+                    AppLightUi.pink,
+                    AppLightUi.violet,
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppLightUi.title.withValues(alpha: 0.08),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
               ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: kColorPrimary,
-                foregroundColor: kColorWhite,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  liveRoomController.joinManualLive(_liveIdController.text);
+                },
+                icon: const Icon(Icons.play_arrow_rounded, size: 22),
+                label: const SemiBoldText(
+                  text: 'Join Manually',
+                  fontSize: TextStyles.k14FontSize,
+                  color: kColorWhite,
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  foregroundColor: kColorWhite,
+                  shadowColor: Colors.transparent,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                 ),
               ),
             ),
@@ -271,7 +281,7 @@ class _JoinLiveViewState extends State<JoinLiveView> {
           const SemiBoldText(
             text: 'Current Live Streams',
             fontSize: TextStyles.k16FontSize,
-            color: kColorWhite,
+            color: AppLightUi.title,
           ),
           Spacing.h8,
           Container(
@@ -292,7 +302,7 @@ class _JoinLiveViewState extends State<JoinLiveView> {
             child: const SemiBoldText(
               text: 'Refresh',
               fontSize: TextStyles.k12FontSize,
-              color: LiveRoomUiColors.joinLiveBorder,
+              color: AppLightUi.pink,
             ),
           ),
         ],
@@ -311,11 +321,7 @@ class _JoinLiveViewState extends State<JoinLiveView> {
         borderRadius: BorderRadius.circular(18),
         child: Ink(
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: LiveRoomUiColors.cardSurface.withValues(alpha: 0.82),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
-          ),
+          decoration: AppLightUi.cardDecoration(radius: 18),
           child: Row(
             children: [
               ClipRRect(
@@ -330,7 +336,7 @@ class _JoinLiveViewState extends State<JoinLiveView> {
                     SemiBoldText(
                       text: room['nameAge']?.toString() ?? 'Live Room',
                       fontSize: 15,
-                      color: kColorWhite,
+                      color: AppLightUi.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -348,7 +354,7 @@ class _JoinLiveViewState extends State<JoinLiveView> {
                               ? Icons.graphic_eq_rounded
                               : Icons.videocam_rounded,
                           room['roomType']?.toString() ?? 'VIDEO',
-                          LiveRoomUiColors.joinLiveBorder,
+                          AppLightUi.violet,
                         ),
                       ],
                     ),
@@ -357,7 +363,7 @@ class _JoinLiveViewState extends State<JoinLiveView> {
                       text:
                           '${room['location'] ?? 'IN'} • ${room['points'] ?? 0} watching',
                       fontSize: TextStyles.k12FontSize,
-                      color: kColorHint,
+                      color: AppLightUi.subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -370,7 +376,9 @@ class _JoinLiveViewState extends State<JoinLiveView> {
                 height: 42,
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  color: kColorPrimary,
+                  gradient: LinearGradient(
+                    colors: [AppLightUi.pink, AppLightUi.violet],
+                  ),
                 ),
                 child: const Icon(
                   Icons.arrow_forward_rounded,
@@ -389,8 +397,9 @@ class _JoinLiveViewState extends State<JoinLiveView> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.16),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -400,7 +409,7 @@ class _JoinLiveViewState extends State<JoinLiveView> {
           SemiBoldText(
             text: label,
             fontSize: TextStyles.k10FontSize,
-            color: kColorWhite,
+            color: AppLightUi.title,
           ),
         ],
       ),
@@ -424,7 +433,7 @@ class _JoinLiveViewState extends State<JoinLiveView> {
               ),
               child: const Icon(
                 Icons.live_tv_rounded,
-                color: kColorWhite,
+                color: AppLightUi.pink,
                 size: 38,
               ),
             ),
@@ -432,14 +441,14 @@ class _JoinLiveViewState extends State<JoinLiveView> {
             const SemiBoldText(
               text: 'No live streams yet',
               fontSize: TextStyles.k18FontSize,
-              color: kColorWhite,
+              color: AppLightUi.title,
               align: TextAlign.center,
             ),
             Spacing.v8,
             AppText(
               text: 'Use manual join if you already have a live stream ID.',
               fontSize: TextStyles.k12FontSize,
-              color: kColorHint,
+              color: AppLightUi.subtitle,
               align: TextAlign.center,
             ),
             Spacing.v20,
@@ -452,13 +461,11 @@ class _JoinLiveViewState extends State<JoinLiveView> {
                 label: const SemiBoldText(
                   text: 'Refresh',
                   fontSize: 13,
-                  color: kColorWhite,
+                  color: AppLightUi.pink,
                 ),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: kColorWhite,
-                  side: const BorderSide(
-                    color: LiveRoomUiColors.joinLiveBorder,
-                  ),
+                  foregroundColor: AppLightUi.pink,
+                  side: const BorderSide(color: AppLightUi.borderStrong),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(15),
                   ),
@@ -501,8 +508,12 @@ class _RoomThumb extends StatelessWidget {
     return Container(
       width: 82,
       height: 82,
-      color: LiveRoomUiColors.cardBorder,
-      child: const Icon(Icons.live_tv_rounded, color: kColorWhite, size: 26),
+      color: AppLightUi.cardSoft,
+      child: const Icon(
+        Icons.live_tv_rounded,
+        color: AppLightUi.pink,
+        size: 26,
+      ),
     );
   }
 }

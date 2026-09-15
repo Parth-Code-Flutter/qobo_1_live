@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
-import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/app_widgets/rooms_empty_state.dart';
+import 'package:qobo_one_live/utils/app_widgets/dating_empty_hero.dart';
 import 'package:qobo_one_live/utils/geo/country_flag_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -50,7 +51,7 @@ class VideoRoomListView extends StatefulWidget {
   static const _previewGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF2A1548), Color(0xFF12081F)],
+    colors: [AppLightUi.violet, AppLightUi.pink],
   );
 
   @override
@@ -67,13 +68,13 @@ class _VideoRoomListViewState extends State<VideoRoomListView> {
 
     if (widget.isLoading) {
       return const Center(
-        child: CircularProgressIndicator(color: kColorWhite, strokeWidth: 2),
+        child: CircularProgressIndicator(color: kColorPrimary, strokeWidth: 2),
       );
     }
 
     return RefreshIndicator(
       color: kColorPrimary,
-      backgroundColor: LiveRoomUiColors.screenGradientBottom,
+      backgroundColor: AppLightUi.card,
       onRefresh: widget.onRefresh ?? () async {},
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(
@@ -107,14 +108,14 @@ class _VideoRoomListViewState extends State<VideoRoomListView> {
                       child: SemiBoldText(
                         text: 'Live now',
                         fontSize: TextStyles.k16FontSize,
-                        color: kColorWhite,
+                        color: AppLightUi.title,
                       ),
                     ),
                     AppText(
                       text:
                           '${tiles.length} ${tiles.length == 1 ? 'room' : 'rooms'}',
                       fontSize: TextStyles.k12FontSize,
-                      color: kColorWhite.withValues(alpha: 0.55),
+                      color: AppLightUi.subtitle,
                     ),
                   ],
                 ),
@@ -303,9 +304,18 @@ class _CreateVideoRoomPanel extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
             gradient: const LinearGradient(
-              colors: [Color(0xFF7A1E63), Color(0xFFB8328A)],
+              colors: [AppLightUi.pink, AppLightUi.violet],
             ),
-            border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
+            border: Border.all(
+              color: AppLightUi.pinkSoft.withValues(alpha: 0.45),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppLightUi.title.withValues(alpha: 0.08),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
           child: Row(
             children: [
@@ -359,12 +369,11 @@ class _VideoRoomsEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return RoomsEmptyState(
-      icon: Icons.videocam_rounded,
+      heroStyle: DatingEmptyHeroStyle.video,
       title: 'No video rooms yet',
       subtitle:
-          'Go live on camera and your room shows up here for everyone '
-          'browsing right now.',
-      accentColors: const [Color(0xFFFF4DC4), Color(0xFFFF6A3D)],
+          'Go live on camera — someone special might join tonight.',
+      accentColors: const [Color(0xFFFF5C9A), Color(0xFFB14DFF)],
       ctaLabel: onCreate == null ? null : 'Start video room',
       onCta: onCreate,
     );
@@ -388,13 +397,9 @@ class _VideoRoomCard extends StatelessWidget {
         child: Ink(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.28),
-                blurRadius: 16,
-                offset: const Offset(0, 8),
-              ),
-            ],
+            color: AppLightUi.card,
+            border: Border.all(color: AppLightUi.border),
+            boxShadow: AppLightUi.cardShadow,
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(18),

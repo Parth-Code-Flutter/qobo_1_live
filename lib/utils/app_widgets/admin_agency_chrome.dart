@@ -25,10 +25,10 @@ abstract final class AdminAgencyUi {
   static const teal = Color(0xFF5CE1B0);
   static const cyan = Color(0xFF4FD1C5);
 
-  static const textPrimary = Color(0xFFFFFFFF);
-  static const textSecondary = Color(0xCCFFFFFF);
-  static const textMuted = Color(0x99FFFFFF);
-  static const textFaint = Color(0x66FFFFFF);
+  static const textPrimary = Color(0xFF2A1744);
+  static const textSecondary = Color(0xFF7A668C);
+  static const textMuted = Color(0xFF9A86A8);
+  static const textFaint = Color(0xFFB5A4C2);
   static const ctaInk = Color(0xFF1A1200);
 
   static const goldButtonGradient = LinearGradient(
@@ -399,7 +399,7 @@ class AdminBottomNavTab extends StatelessWidget {
   }
 }
 
-/// Solid accent panel on [kImgBG] — Profile / Super Admin style (no blur).
+/// Solid accent panel on [kColorLavenderBg] — Profile / Super Admin style (no blur).
 class AdminSolidPanel extends StatelessWidget {
   const AdminSolidPanel({
     super.key,

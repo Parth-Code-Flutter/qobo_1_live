@@ -2,6 +2,7 @@ import 'package:audio_session/audio_session.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/firebase/firebase_bootstrap.dart';
@@ -47,6 +48,10 @@ Future<void> main() async {
               locale: const Locale('en', 'US'),
               fallbackLocale: const Locale('en', 'US'),
               supportedLocales: const [Locale('en', 'US')],
+              theme: ThemeData(
+                scaffoldBackgroundColor: kColorLavenderBg,
+                canvasColor: kColorLavenderBg,
+              ),
             ),
           ),
         );

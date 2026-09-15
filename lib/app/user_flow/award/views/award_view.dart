@@ -16,7 +16,7 @@ class AwardView extends GetView<AwardController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kColorBackground,
+      backgroundColor: kColorLavenderBg,
       appBar: const CommonAppBarWidget(
         title: 'Medals & Awards',
         useMaterialAppBar: true,

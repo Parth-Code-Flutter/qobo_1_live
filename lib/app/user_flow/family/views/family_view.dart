@@ -5,8 +5,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
 import 'package:qobo_one_live/app/user_flow/live_broadcast/widgets/gift_icon_widget.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
@@ -16,6 +16,8 @@ import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
+import 'package:qobo_one_live/utils/app_widgets/glossy_dating_card.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/phone_mask_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/profanity_mask_utils.dart';
@@ -25,15 +27,20 @@ import '../controllers/family_controller.dart';
 import '../widgets/family_member_tree.dart';
 
 abstract final class _FamilyUi {
-  static const bg = Color(0xFF090516);
-  static const panel = Color(0xFF171025);
-  static const panel2 = Color(0xFF241436);
-  static const pink = Color(0xFFFF2E83);
-  static const violet = Color(0xFF865DFF);
-  static const cyan = Color(0xFF42E8E0);
-  static const gold = Color(0xFFFFCF5D);
+  static const bg = AppLightUi.bg;
+  static const panel = AppLightUi.card;
+  static const panel2 = AppLightUi.cardSoft;
+  static const pink = AppLightUi.pink;
+  static const violet = AppLightUi.violet;
+  static const cyan = AppLightUi.cyan;
+  static const gold = AppLightUi.gold;
   static const green = Color(0xFF25D98F);
-  static const ink = Color(0xFF10091D);
+  /// Soft light end for page washes (was deep plum ink).
+  static const ink = AppLightUi.cardElevated;
+  static const title = AppLightUi.title;
+  static const body = AppLightUi.body;
+  static const muted = AppLightUi.subtitle;
+  static const border = AppLightUi.border;
 }
 
 /// Light chat tokens — match 1:1 [ChatDetailView] look for family group chat only.
@@ -52,116 +59,101 @@ class FamilyView extends GetView<FamilyController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _FamilyUi.bg,
-      body: Container(
-        decoration: BoxDecoration(
-          image: const DecorationImage(
-            image: AssetImage(kImgBG),
-            fit: BoxFit.cover,
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _header(),
-              _tabs(),
-              _searchBar(),
-              Expanded(
-                child: Obx(() {
-                  if (controller.isLoading.value) {
-                    return const Center(
-                      child: CircularProgressIndicator(color: kColorWhite),
-                    );
-                  }
-                  final list = controller.selectedTab.value == 0
-                      ? controller.myGroups
-                      : controller.discoverGroups;
-                  return RefreshIndicator(
-                    color: _FamilyUi.pink,
-                    onRefresh: controller.loadFamilyHub,
-                    child: list.isEmpty
-                        ? _emptyState()
-                        : ListView.separated(
-                            physics: const AlwaysScrollableScrollPhysics(
-                              parent: BouncingScrollPhysics(),
-                            ),
-                            padding: const EdgeInsets.fromLTRB(16, 10, 16, 96),
-                            itemCount: list.length,
-                            separatorBuilder: (_, __) => Spacing.v12,
-                            itemBuilder: (_, index) =>
-                                _groupCard(context, list[index]),
-                          ),
-                  );
-                }),
-              ),
-            ],
-          ),
-        ),
+      backgroundColor: kColorLavenderBg,
+      appBar: const CommonAppBarWidget(
+        title: 'Family Groups',
+        subtitle: 'Chat, gifts, emojis, and members',
+        trailingIcon: Icons.groups_3_rounded,
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Get.to(() => const FamilyGroupCreatePage());
-        },
-        elevation: 14,
-        backgroundColor: _FamilyUi.pink,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-        child: const Icon(Icons.add_rounded, color: kColorWhite, size: 30),
+      body: Column(
+        children: [
+          _tabs(),
+          _searchBar(),
+          Expanded(
+            child: Obx(() {
+              if (controller.isLoading.value) {
+                return const Center(
+                  child: CircularProgressIndicator(color: _FamilyUi.pink),
+                );
+              }
+              final list = controller.selectedTab.value == 0
+                  ? controller.myGroups
+                  : controller.discoverGroups;
+              return RefreshIndicator(
+                color: _FamilyUi.pink,
+                onRefresh: controller.loadFamilyHub,
+                child: list.isEmpty
+                    ? _emptyState()
+                    : ListView.separated(
+                        physics: const AlwaysScrollableScrollPhysics(
+                          parent: BouncingScrollPhysics(),
+                        ),
+                        padding: const EdgeInsets.fromLTRB(16, 10, 16, 96),
+                        itemCount: list.length,
+                        separatorBuilder: (_, __) => Spacing.v12,
+                        itemBuilder: (_, index) =>
+                            _groupCard(context, list[index]),
+                      ),
+              );
+            }),
+          ),
+        ],
+      ),
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: AppLightUi.familyCtaGradient,
+          boxShadow: [
+            BoxShadow(
+              color: AppLightUi.title.withValues(alpha: 0.08),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: FloatingActionButton(
+          onPressed: () {
+            Get.to(() => const FamilyGroupCreatePage());
+          },
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          shape: const CircleBorder(),
+          child: const Icon(Icons.add_rounded, color: kColorWhite, size: 30),
+        ),
       ),
     );
   }
 
-  Widget _header() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-      child: Row(
-        children: [
-          AdminAgencyUi.glassIconButton(
-            icon: Icons.arrow_back_ios_new_rounded,
-            onTap: Get.back,
-            accent: _FamilyUi.violet,
-            size: 44,
-            iconSize: 18,
-          ),
-          Spacing.h12,
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SemiBoldText(
-                  text: 'Family Groups',
-                  fontSize: TextStyles.k20FontSize,
-                  color: kColorWhite,
-                ),
-                AppText(
-                  text: 'Chat, gifts, emojis, and members',
-                  fontSize: TextStyles.k12FontSize,
-                  color: Color(0xB3FFFFFF),
-                ),
-              ],
-            ),
-          ),
-          AdminAgencyUi.glowIcon(
-            icon: Icons.groups_3_rounded,
-            accent: _FamilyUi.cyan,
-            accentEnd: _FamilyUi.violet,
-            size: 44,
-            iconSize: 22,
-          ),
-        ],
-      ),
-    );
-  }
+  // Legacy light header removed — uses [CommonAppBarWidget].
 
   Widget _tabs() {
     return Obx(() {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          children: [
-            _tabButton('My Groups', 0, controller.myGroups.length),
-            Spacing.h10,
-            _tabButton('Discover', 1, controller.discoverGroups.length),
-          ],
+        child: Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: AppLightUi.card.withValues(alpha: 0.92),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: AppLightUi.pinkSoft.withValues(alpha: 0.45),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppLightUi.title.withValues(alpha: 0.08),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              _tabButton('My Groups', 0, controller.myGroups.length),
+              Spacing.h6,
+              _tabButton('Discover', 1, controller.discoverGroups.length),
+            ],
+          ),
         ),
       );
     });
@@ -173,31 +165,19 @@ class FamilyView extends GetView<FamilyController> {
       child: GestureDetector(
         onTap: () => controller.selectTab(index),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          height: 48,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          height: 44,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
-            gradient: selected
-                ? const LinearGradient(
-                    colors: [_FamilyUi.pink, _FamilyUi.violet],
-                  )
-                : LinearGradient(
-                    colors: [
-                      kColorWhite.withValues(alpha: 0.12),
-                      kColorWhite.withValues(alpha: 0.06),
-                    ],
-                  ),
-            border: Border.all(
-              color: selected
-                  ? kColorWhite.withValues(alpha: 0.16)
-                  : kColorWhite.withValues(alpha: 0.08),
-            ),
+            gradient: selected ? AppLightUi.familyCtaGradient : null,
+            color: selected ? null : Colors.transparent,
             boxShadow: selected
                 ? [
                     BoxShadow(
-                      color: _FamilyUi.pink.withValues(alpha: 0.25),
-                      blurRadius: 18,
-                      offset: const Offset(0, 8),
+                      color: AppLightUi.title.withValues(alpha: 0.08),
+                      blurRadius: 14,
+                      offset: const Offset(0, 6),
                     ),
                   ]
                 : null,
@@ -206,7 +186,7 @@ class FamilyView extends GetView<FamilyController> {
             child: SemiBoldText(
               text: '$label ($count)',
               fontSize: 13,
-              color: kColorWhite,
+              color: selected ? kColorWhite : _FamilyUi.title,
             ),
           ),
         ),
@@ -223,24 +203,24 @@ class FamilyView extends GetView<FamilyController> {
           onSubmitted: controller.updateSearch,
           style: TextStyles.kRegularPoppins(
             fontSize: TextStyles.k14FontSize,
-            colors: kColorWhite,
+            colors: _FamilyUi.body,
           ),
           decoration: InputDecoration(
             hintText: 'Search new groups...',
             hintStyle: TextStyles.kRegularPoppins(
               fontSize: 13,
-              colors: kColorWhite.withValues(alpha: 0.55),
+              colors: _FamilyUi.muted,
             ),
             prefixIcon: const Icon(Icons.search_rounded, color: _FamilyUi.gold),
             filled: true,
-            fillColor: _FamilyUi.panel.withValues(alpha: 0.88),
+            fillColor: AppLightUi.searchFill,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: kColorWhite.withValues(alpha: 0.1)),
+              borderSide: BorderSide(color: _FamilyUi.border),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: kColorWhite.withValues(alpha: 0.1)),
+              borderSide: BorderSide(color: _FamilyUi.border),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
@@ -269,7 +249,7 @@ class FamilyView extends GetView<FamilyController> {
         SemiBoldText(
           text: isMine ? 'No groups joined yet' : 'No new groups found',
           fontSize: TextStyles.k18FontSize,
-          color: kColorWhite,
+          color: _FamilyUi.title,
           align: TextAlign.center,
         ),
         Spacing.v8,
@@ -278,7 +258,7 @@ class FamilyView extends GetView<FamilyController> {
               ? 'Create your own family or discover a group to start chatting.'
               : 'Try another search or come back when more families are live.',
           fontSize: 13,
-          color: kColorWhite.withValues(alpha: 0.72),
+          color: _FamilyUi.muted,
           align: TextAlign.center,
         ),
       ],
@@ -289,131 +269,94 @@ class FamilyView extends GetView<FamilyController> {
     final isMine =
         controller.selectedTab.value == 0 || group['isJoined'] == true;
     final joiningCoins = group['joiningCoins'] ?? 0;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          Get.to(() => FamilyDetailDashboardPage(group: group));
-        },
-        borderRadius: BorderRadius.circular(22),
-        child: Ink(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                _FamilyUi.panel2.withValues(alpha: 0.98),
-                _FamilyUi.ink.withValues(alpha: 0.96),
-              ],
-            ),
-            border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.28),
-                blurRadius: 22,
-                offset: const Offset(0, 12),
-              ),
-            ],
-          ),
-          child: Stack(
-            children: [
-              Positioned(
-                right: -28,
-                top: -30,
-                child: Container(
-                  width: 96,
-                  height: 96,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        _FamilyUi.pink.withValues(alpha: 0.22),
-                        Colors.transparent,
-                      ],
-                    ),
-                  ),
+    return GlossyDatingCard(
+      onTap: () {
+        Get.to(() => FamilyDetailDashboardPage(group: group));
+      },
+      padding: const EdgeInsets.all(14),
+      radius: 24,
+      child: Stack(
+        children: [
+          Positioned(
+            right: -24,
+            top: -28,
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    _FamilyUi.pink.withValues(alpha: 0.18),
+                    Colors.transparent,
+                  ],
                 ),
               ),
-              Row(
-                children: [
-                  _groupAvatar(group),
-                  Spacing.h12,
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+          ),
+          Row(
+            children: [
+              _groupAvatar(group),
+              Spacing.h12,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SemiBoldText(
+                      text: group['name']?.toString() ?? 'Family Group',
+                      fontSize: TextStyles.k16FontSize,
+                      color: _FamilyUi.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Spacing.v4,
+                    AppText(
+                      text: group['description']?.toString().isNotEmpty == true
+                          ? group['description'].toString()
+                          : 'Group chat community',
+                      fontSize: TextStyles.k12FontSize,
+                      color: _FamilyUi.muted,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Spacing.v12,
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
-                        SemiBoldText(
-                          text: group['name']?.toString() ?? 'Family Group',
-                          fontSize: TextStyles.k16FontSize,
-                          color: kColorWhite,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        _metaChip(
+                          Icons.people_alt_rounded,
+                          '${group['memberCount'] ?? 0} members',
                         ),
-                        Spacing.v4,
-                        AppText(
-                          text:
-                              group['description']?.toString().isNotEmpty ==
-                                  true
-                              ? group['description'].toString()
-                              : 'Group chat community',
-                          fontSize: TextStyles.k12FontSize,
-                          color: kColorWhite.withValues(alpha: 0.68),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Spacing.v12,
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            _metaChip(
-                              Icons.people_alt_rounded,
-                              '${group['memberCount'] ?? 0} members',
-                            ),
-                            if (!isMine)
-                              _coinChip(
-                                joiningCoins <= 0
-                                    ? 'Free to join'
-                                    : '$joiningCoins coins to join',
-                              ),
-                            if (isMine && joiningCoins > 0)
-                              _coinChip('$joiningCoins join fee'),
-                            if ((group['myRole']?.toString() ?? '').isNotEmpty)
-                              _metaChip(
-                                Icons.shield_rounded,
-                                group['myRole'].toString(),
-                              ),
-                          ],
-                        ),
+                        if (!isMine)
+                          _coinChip(
+                            joiningCoins <= 0
+                                ? 'Free to join'
+                                : '$joiningCoins coins to join',
+                          ),
+                        if (isMine && joiningCoins > 0)
+                          _coinChip('$joiningCoins join fee'),
+                        if ((group['myRole']?.toString() ?? '').isNotEmpty)
+                          _metaChip(
+                            Icons.shield_rounded,
+                            group['myRole'].toString(),
+                          ),
                       ],
                     ),
-                  ),
-                  Spacing.h8,
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: (isMine ? _FamilyUi.cyan : _FamilyUi.gold)
-                          .withValues(alpha: 0.13),
-                      border: Border.all(
-                        color: (isMine ? _FamilyUi.cyan : _FamilyUi.gold)
-                            .withValues(alpha: 0.28),
-                      ),
-                    ),
-                    child: Icon(
-                      isMine ? Icons.chat_bubble_rounded : Icons.login_rounded,
-                      size: 20,
-                      color: isMine ? _FamilyUi.cyan : _FamilyUi.gold,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
+              ),
+              Spacing.h8,
+              GlossyCircleAction(
+                icon: isMine
+                    ? Icons.chat_bubble_rounded
+                    : Icons.login_rounded,
+                size: 44,
+                iconSize: 20,
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
@@ -425,35 +368,40 @@ class FamilyView extends GetView<FamilyController> {
         ? name.trim().substring(0, 1).toUpperCase()
         : 'F';
     return Container(
-      width: 68,
-      height: 68,
-      padding: const EdgeInsets.all(3),
+      width: 70,
+      height: 70,
+      padding: const EdgeInsets.all(2.5),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: const LinearGradient(
-          colors: [_FamilyUi.gold, _FamilyUi.pink, _FamilyUi.violet],
-        ),
+        gradient: AppLightUi.glossRingGradient,
         boxShadow: [
           BoxShadow(
-            color: _FamilyUi.pink.withValues(alpha: 0.22),
+            color: AppLightUi.title.withValues(alpha: 0.08),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: ClipOval(
-        child: _FamilyNetworkImage(
-          url: logo,
-          width: 62,
-          height: 62,
-          fit: BoxFit.cover,
-          fallback: _FamilyImagePlaceholder(
-            icon: Icons.groups_2_rounded,
-            label: initial,
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [_FamilyUi.violet, _FamilyUi.pink],
+      child: Container(
+        padding: const EdgeInsets.all(2),
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          color: kColorWhite,
+        ),
+        child: ClipOval(
+          child: _FamilyNetworkImage(
+            url: logo,
+            width: 62,
+            height: 62,
+            fit: BoxFit.cover,
+            fallback: _FamilyImagePlaceholder(
+              icon: Icons.groups_2_rounded,
+              label: initial,
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [_FamilyUi.violet, _FamilyUi.pink],
+              ),
             ),
           ),
         ),
@@ -463,10 +411,16 @@ class FamilyView extends GetView<FamilyController> {
 
   Widget _metaChip(IconData icon, String text) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: kColorWhite.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
+        gradient: LinearGradient(
+          colors: [
+            _FamilyUi.cyan.withValues(alpha: 0.14),
+            _FamilyUi.violet.withValues(alpha: 0.08),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _FamilyUi.cyan.withValues(alpha: 0.28)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -476,7 +430,7 @@ class FamilyView extends GetView<FamilyController> {
           AppText(
             text: text,
             fontSize: TextStyles.k10FontSize,
-            color: kColorWhite,
+            color: _FamilyUi.body,
           ),
         ],
       ),
@@ -485,10 +439,16 @@ class FamilyView extends GetView<FamilyController> {
 
   Widget _coinChip(String text) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: _FamilyUi.gold.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(12),
+        gradient: LinearGradient(
+          colors: [
+            _FamilyUi.gold.withValues(alpha: 0.22),
+            _FamilyUi.pink.withValues(alpha: 0.10),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _FamilyUi.gold.withValues(alpha: 0.35)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -519,14 +479,17 @@ class FamilyView extends GetView<FamilyController> {
           maxHeight: MediaQuery.sizeOf(context).height * 0.86,
         ),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF1D142B), _FamilyUi.bg],
+            colors: [
+              AppLightUi.cardElevated,
+              _FamilyUi.bg,
+            ],
           ),
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           border: Border(
-            top: BorderSide(color: kColorWhite.withValues(alpha: 0.10)),
+            top: BorderSide(color: _FamilyUi.border),
           ),
         ),
         child: SafeArea(
@@ -555,12 +518,12 @@ class FamilyView extends GetView<FamilyController> {
                           SemiBoldText(
                             text: 'Create Family Group',
                             fontSize: TextStyles.k20FontSize,
-                            color: kColorWhite,
+                            color: _FamilyUi.title,
                           ),
                           AppText(
                             text: 'Add followers or search app users',
                             fontSize: 11,
-                            color: Color(0xB3FFFFFF),
+                            color: _FamilyUi.muted,
                           ),
                         ],
                       ),
@@ -584,7 +547,7 @@ class FamilyView extends GetView<FamilyController> {
                     const SemiBoldText(
                       text: 'Add members',
                       fontSize: TextStyles.k14FontSize,
-                      color: kColorWhite,
+                      color: _FamilyUi.title,
                     ),
                     const Spacer(),
                     Obx(
@@ -623,7 +586,7 @@ class FamilyView extends GetView<FamilyController> {
                   onChanged: controller.searchPickerUsers,
                   style: TextStyles.kRegularPoppins(
                     fontSize: 13,
-                    colors: kColorWhite,
+                    colors: _FamilyUi.body,
                   ),
                   decoration: _inputDecoration(
                     'Search followers or app users',
@@ -722,7 +685,7 @@ class FamilyView extends GetView<FamilyController> {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
-      style: TextStyles.kRegularPoppins(fontSize: 13, colors: kColorWhite),
+      style: TextStyles.kRegularPoppins(fontSize: 13, colors: _FamilyUi.body),
       decoration: _inputDecoration(hint, icon),
     );
   }
@@ -746,19 +709,27 @@ class FamilyView extends GetView<FamilyController> {
                     colors: [_FamilyUi.pink, _FamilyUi.violet],
                   )
                 : null,
-            color: selected ? null : kColorWhite.withValues(alpha: 0.07),
+            color: selected ? null : AppLightUi.card,
             border: Border.all(
               color: selected
-                  ? kColorWhite.withValues(alpha: 0.16)
-                  : kColorWhite.withValues(alpha: 0.09),
+                  ? _FamilyUi.pink.withValues(alpha: 0.35)
+                  : _FamilyUi.border,
             ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 16, color: kColorWhite),
+              Icon(
+                icon,
+                size: 16,
+                color: selected ? kColorWhite : _FamilyUi.title,
+              ),
               Spacing.h6,
-              SemiBoldText(text: label, fontSize: 12, color: kColorWhite),
+              SemiBoldText(
+                text: label,
+                fontSize: 12,
+                color: selected ? kColorWhite : _FamilyUi.title,
+              ),
             ],
           ),
         ),
@@ -771,18 +742,18 @@ class FamilyView extends GetView<FamilyController> {
       hintText: hint,
       hintStyle: TextStyles.kRegularPoppins(
         fontSize: TextStyles.k12FontSize,
-        colors: kColorWhite.withValues(alpha: 0.5),
+        colors: _FamilyUi.muted,
       ),
       prefixIcon: Icon(icon, color: _FamilyUi.gold, size: 20),
       filled: true,
-      fillColor: kColorWhite.withValues(alpha: 0.08),
+      fillColor: AppLightUi.searchFill,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(15),
-        borderSide: BorderSide(color: kColorWhite.withValues(alpha: 0.1)),
+        borderSide: BorderSide(color: _FamilyUi.border),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(15),
-        borderSide: BorderSide(color: kColorWhite.withValues(alpha: 0.1)),
+        borderSide: BorderSide(color: _FamilyUi.border),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(15),
@@ -799,12 +770,12 @@ class FamilyView extends GetView<FamilyController> {
         key: ValueKey('family-picker-$userId-$selected'),
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
-          color: kColorWhite.withValues(alpha: selected ? 0.12 : 0.06),
+          color: selected ? AppLightUi.unreadWash : AppLightUi.card,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: selected
                 ? _FamilyUi.green.withValues(alpha: 0.45)
-                : kColorWhite.withValues(alpha: 0.08),
+                : _FamilyUi.border,
           ),
         ),
         child: ListTile(
@@ -821,13 +792,11 @@ class FamilyView extends GetView<FamilyController> {
           title: SemiBoldText(
             text: user['name']?.toString() ?? 'User',
             fontSize: 13,
-            color: kColorWhite,
+            color: _FamilyUi.title,
           ),
           trailing: Icon(
             selected ? Icons.check_box_rounded : Icons.check_box_outline_blank,
-            color: selected
-                ? _FamilyUi.green
-                : kColorWhite.withValues(alpha: 0.62),
+            color: selected ? _FamilyUi.green : _FamilyUi.muted,
           ),
           onTap: () => controller.toggleInitialMember(userId),
         ),
@@ -862,13 +831,13 @@ class FamilyView extends GetView<FamilyController> {
               child: SemiBoldText(
                 text: name,
                 fontSize: 11,
-                color: kColorWhite,
+                color: _FamilyUi.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
             Spacing.h4,
-            const Icon(Icons.close_rounded, size: 14, color: kColorWhite),
+            const Icon(Icons.close_rounded, size: 14, color: _FamilyUi.muted),
           ],
         ),
       ),
@@ -895,7 +864,7 @@ class FamilyView extends GetView<FamilyController> {
                   ? 'No followers found'
                   : 'No users found',
               fontSize: 12,
-              color: kColorWhite.withValues(alpha: 0.72),
+              color: _FamilyUi.muted,
               align: TextAlign.center,
             ),
           ],
@@ -955,14 +924,17 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
     final levelLabel = level <= 0 ? 'Lv.1 Family' : 'Lv.$level Family';
 
     return Scaffold(
-      backgroundColor: _FamilyUi.bg,
+      backgroundColor: kColorLavenderBg,
+      appBar: CommonAppBarWidget(
+        title: name,
+        subtitle: 'ID: $displayId  ·  $levelLabel',
+        showVerifiedBadge: true,
+        trailingIcon: Icons.group_add_rounded,
+        onTrailingTap: _openAddMembersFromHeader,
+      ),
       body: Container(
         decoration: BoxDecoration(
-          image: const DecorationImage(
-            image: AssetImage(kImgBG),
-            fit: BoxFit.cover,
-            opacity: 0.72,
-          ),
+          color: kColorLavenderBg,
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -973,35 +945,25 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
             ],
           ),
         ),
-        child: SafeArea(
-          bottom: false,
-          child: Column(
+        child: RefreshIndicator(
+          color: _FamilyUi.violet,
+          onRefresh: _load,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 18),
             children: [
-              _purpleHeader(name, displayId, levelLabel),
-              Expanded(
-                child: RefreshIndicator(
-                  color: _FamilyUi.violet,
-                  onRefresh: _load,
-                  child: ListView(
-                    physics: const AlwaysScrollableScrollPhysics(
-                      parent: BouncingScrollPhysics(),
-                    ),
-                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 18),
-                    children: [
-                      _heroSummary(name),
-                      if (!_isJoined) ...[Spacing.v12, _joinAccessCard()],
-                      Spacing.v12,
-                      // Announcement is temporarily hidden.
-                      _quickActions(),
-                      Spacing.v12,
-                      _topMembersCard(),
-                      Spacing.v12,
-                      _activityCard(),
-                      const SizedBox(height: 88),
-                    ],
-                  ),
-                ),
-              ),
+              _heroSummary(name),
+              if (!_isJoined) ...[Spacing.v12, _joinAccessCard()],
+              Spacing.v12,
+              // Announcement is temporarily hidden.
+              _quickActions(),
+              Spacing.v12,
+              _topMembersCard(),
+              Spacing.v12,
+              _activityCard(),
+              const SizedBox(height: 88),
             ],
           ),
         ),
@@ -1016,7 +978,7 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
               onPressed: _isJoined ? _openChat : _confirmJoinFromDetail,
               buttonText: _isJoined ? 'Open Family Chat' : _joinButtonText(),
               isGradient: true,
-              gradientColors: const [Color(0xFF7B5CFF), Color(0xFFFF2E83)],
+              gradientColors: AppLightUi.familyCtaColors,
               borderRadius: 18,
               buttonIcon: Padding(
                 padding: const EdgeInsets.only(right: 8),
@@ -1033,119 +995,7 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
     );
   }
 
-  Widget _purpleHeader(String name, String displayId, String levelLabel) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 12, 16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [
-            _FamilyUi.panel2.withValues(alpha: 0.96),
-            _FamilyUi.violet.withValues(alpha: 0.92),
-            _FamilyUi.pink.withValues(alpha: 0.52),
-          ],
-        ),
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(22)),
-        border: Border(
-          bottom: BorderSide(color: kColorWhite.withValues(alpha: 0.10)),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: _FamilyUi.pink.withValues(alpha: 0.18),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: Get.back,
-            icon: const Icon(
-              Icons.arrow_back_rounded,
-              color: kColorWhite,
-              size: 28,
-            ),
-          ),
-          Spacing.h8,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: SemiBoldText(
-                        text: name,
-                        fontSize: TextStyles.k20FontSize,
-                        color: kColorWhite,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Spacing.h6,
-                    const Icon(
-                      Icons.verified_user_rounded,
-                      color: Color(0xFFFFD45B),
-                      size: 19,
-                    ),
-                  ],
-                ),
-                Spacing.v2,
-                AppText(
-                  text: 'ID: $displayId  ·  $levelLabel',
-                  fontSize: TextStyles.k12FontSize,
-                  color: kColorWhite.withValues(alpha: 0.86),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          // Family badge action temporarily hidden.
-          // _headerAction(Icons.workspace_premium_rounded),
-          // Spacing.h8,
-          _headerAction(
-            Icons.group_add_rounded,
-            onTap: _openAddMembersFromHeader,
-          ),
-          // Overflow menu temporarily hidden.
-          // Spacing.h4,
-          // _headerAction(Icons.more_vert_rounded, transparent: true),
-        ],
-      ),
-    );
-  }
-
-  Widget _headerAction(
-    IconData icon, {
-    bool transparent = false,
-    VoidCallback? onTap,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: Ink(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: transparent ? kColorWhite.withValues(alpha: 0.08) : null,
-            gradient: transparent
-                ? null
-                : const LinearGradient(
-                    colors: [Color(0xFFFFC239), Color(0xFFFF9D1D)],
-                  ),
-            border: Border.all(color: kColorWhite.withValues(alpha: 0.14)),
-          ),
-          child: Icon(icon, color: kColorWhite, size: 24),
-        ),
-      ),
-    );
-  }
+  // Legacy [_purpleHeader] / [_headerAction] removed — uses [CommonAppBarWidget].
 
   void _openAddMembersFromHeader() {
     if (!controller.isAdmin(_group)) {
@@ -1242,14 +1092,8 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
         decoration: BoxDecoration(
           color: LiveRoomUiColors.cardSurface.withValues(alpha: 0.94),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.24),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
+          border: Border.all(color: _FamilyUi.border),
+          boxShadow: AppLightUi.cardShadow,
         ),
         child: Column(
           children: [
@@ -1272,7 +1116,7 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
                             child: SemiBoldText(
                               text: name,
                               fontSize: TextStyles.k18FontSize,
-                              color: kColorWhite,
+                              color: _FamilyUi.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -1298,7 +1142,7 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
                       AppText(
                         text: description,
                         fontSize: 13,
-                        color: kColorWhite.withValues(alpha: 0.72),
+                        color: _FamilyUi.muted,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -1314,13 +1158,13 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
                           SemiBoldText(
                             text: '$memberCount/$memberLimit',
                             fontSize: TextStyles.k16FontSize,
-                            color: kColorWhite,
+                            color: _FamilyUi.title,
                           ),
                           Spacing.h4,
                           AppText(
                             text: 'Members',
                             fontSize: TextStyles.k10FontSize,
-                            color: kColorWhite.withValues(alpha: 0.58),
+                            color: _FamilyUi.muted,
                           ),
                         ],
                       ),
@@ -1330,7 +1174,7 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
               ],
             ),
             Spacing.v16,
-            Divider(color: kColorWhite.withValues(alpha: 0.08), height: 1),
+            Divider(color: _FamilyUi.border, height: 1),
             const SizedBox(height: 14),
             Row(
               children: [
@@ -1464,7 +1308,7 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
                 child: SemiBoldText(
                   text: value,
                   fontSize: TextStyles.k14FontSize,
-                  color: kColorWhite,
+                  color: _FamilyUi.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1475,7 +1319,7 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
           AppText(
             text: label,
             fontSize: TextStyles.k10FontSize,
-            color: kColorWhite.withValues(alpha: 0.62),
+            color: _FamilyUi.muted,
             align: TextAlign.center,
           ),
         ],
@@ -1487,7 +1331,7 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
     return Container(
       width: 1,
       height: 36,
-      color: kColorWhite.withValues(alpha: 0.08),
+      color: _FamilyUi.border,
     );
   }
 
@@ -1532,7 +1376,7 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
                 SemiBoldText(
                   text: free ? 'Free to join' : 'Joining coins required',
                   fontSize: TextStyles.k14FontSize,
-                  color: kColorWhite,
+                  color: _FamilyUi.title,
                 ),
                 Spacing.v4,
                 AppText(
@@ -1540,7 +1384,7 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
                       ? 'Join this family to unlock chat, gifts, and member activity.'
                       : 'Pay $coins coins once to become a member and unlock family chat.',
                   fontSize: 11,
-                  color: kColorWhite.withValues(alpha: 0.68),
+                  color: _FamilyUi.muted,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1642,7 +1486,7 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
                       SemiBoldText(
                         text: item.$2,
                         fontSize: TextStyles.k10FontSize,
-                        color: kColorWhite,
+                        color: _FamilyUi.body,
                         align: TextAlign.center,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -1670,7 +1514,7 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
                   child: SemiBoldText(
                     text: 'Top Members',
                     fontSize: TextStyles.k14FontSize,
-                    color: kColorWhite,
+                    color: _FamilyUi.title,
                   ),
                 ),
                 Material(
@@ -1689,12 +1533,12 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
                           AppText(
                             text: 'View All',
                             fontSize: TextStyles.k12FontSize,
-                            color: kColorWhite.withValues(alpha: 0.65),
+                            color: _FamilyUi.muted,
                           ),
                           Icon(
                             Icons.chevron_right_rounded,
                             size: 20,
-                            color: kColorWhite.withValues(alpha: 0.65),
+                            color: _FamilyUi.muted,
                           ),
                         ],
                       ),
@@ -1710,7 +1554,7 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
                 child: AppText(
                   text: 'Top members will appear after activity starts.',
                   fontSize: TextStyles.k12FontSize,
-                  color: kColorWhite.withValues(alpha: 0.62),
+                  color: _FamilyUi.muted,
                   align: TextAlign.center,
                 ),
               )
@@ -1792,7 +1636,7 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
         SemiBoldText(
           text: name,
           fontSize: 11,
-          color: kColorWhite,
+          color: _FamilyUi.title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           align: TextAlign.center,
@@ -1807,7 +1651,7 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
               child: AppText(
                 text: coins <= 0 ? '-' : _compact(coins),
                 fontSize: TextStyles.k10FontSize,
-                color: kColorWhite.withValues(alpha: 0.70),
+                color: _FamilyUi.muted,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -1828,7 +1672,7 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
           const SemiBoldText(
             text: 'Family Activity',
             fontSize: TextStyles.k14FontSize,
-            color: kColorWhite,
+            color: _FamilyUi.title,
           ),
           Spacing.v12,
           if (activities.isEmpty)
@@ -1837,7 +1681,7 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
               child: AppText(
                 text: 'No recent activity yet.',
                 fontSize: TextStyles.k12FontSize,
-                color: kColorWhite.withValues(alpha: 0.62),
+                color: _FamilyUi.muted,
               ),
             )
           else
@@ -1879,7 +1723,7 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
                 SemiBoldText(
                   text: label,
                   fontSize: TextStyles.k12FontSize,
-                  color: kColorWhite,
+                  color: _FamilyUi.body,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1888,7 +1732,7 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
                   AppText(
                     text: time,
                     fontSize: TextStyles.k10FontSize,
-                    color: kColorWhite.withValues(alpha: 0.56),
+                    color: _FamilyUi.muted,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -1900,7 +1744,7 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
             SemiBoldText(
               text: '+$coins',
               fontSize: TextStyles.k12FontSize,
-              color: kColorWhite,
+              color: _FamilyUi.title,
             ),
             Spacing.h4,
             const AppCoinIcon(size: 15, color: Color(0xFFFFB521)),
@@ -1920,14 +1764,8 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
       decoration: BoxDecoration(
         color: LiveRoomUiColors.cardSurface.withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.09)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.22),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        border: Border.all(color: _FamilyUi.border),
+        boxShadow: AppLightUi.cardShadow,
       ),
       child: child,
     );
@@ -2055,14 +1893,14 @@ class _FamilyRankingsPageState extends State<FamilyRankingsPage> {
   Widget build(BuildContext context) {
     final familyName = _value(widget.group['name'], 'Family');
     return Scaffold(
-      backgroundColor: _FamilyUi.bg,
+      backgroundColor: kColorLavenderBg,
+      appBar: CommonAppBarWidget(
+        title: 'Family Rankings',
+        subtitle: familyName,
+      ),
       body: Container(
         decoration: BoxDecoration(
-          image: const DecorationImage(
-            image: AssetImage(kImgBG),
-            fit: BoxFit.cover,
-            opacity: 0.55,
-          ),
+          color: kColorLavenderBg,
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -2073,12 +1911,7 @@ class _FamilyRankingsPageState extends State<FamilyRankingsPage> {
             ],
           ),
         ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _header(familyName),
-              Expanded(
-                child: Obx(() {
+        child: Obx(() {
                   final members =
                       controller.familyMembers
                           .map(Map<String, dynamic>.from)
@@ -2123,15 +1956,13 @@ class _FamilyRankingsPageState extends State<FamilyRankingsPage> {
                                     const SemiBoldText(
                                       text: 'Other Members',
                                       fontSize: TextStyles.k16FontSize,
-                                      color: kColorWhite,
+                                      color: _FamilyUi.title,
                                     ),
                                     const Spacer(),
                                     AppText(
                                       text: '${remainingMembers.length}',
                                       fontSize: TextStyles.k12FontSize,
-                                      color: kColorWhite.withValues(
-                                        alpha: 0.58,
-                                      ),
+                                      color: _FamilyUi.muted,
                                     ),
                                   ],
                                 ),
@@ -2153,54 +1984,6 @@ class _FamilyRankingsPageState extends State<FamilyRankingsPage> {
                           ),
                   );
                 }),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _header(String familyName) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-      child: Row(
-        children: [
-          AdminAgencyUi.glassIconButton(
-            icon: Icons.arrow_back_ios_new_rounded,
-            onTap: Get.back,
-            accent: _FamilyUi.violet,
-            size: 44,
-            iconSize: 18,
-          ),
-          Spacing.h12,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SemiBoldText(
-                  text: 'Family Rankings',
-                  fontSize: TextStyles.k20FontSize,
-                  color: kColorWhite,
-                ),
-                AppText(
-                  text: familyName,
-                  fontSize: TextStyles.k12FontSize,
-                  color: kColorWhite.withValues(alpha: 0.62),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          AdminAgencyUi.glowIcon(
-            icon: Icons.emoji_events_rounded,
-            accent: _FamilyUi.gold,
-            accentEnd: _FamilyUi.pink,
-            size: 44,
-            iconSize: 22,
-          ),
-        ],
       ),
     );
   }
@@ -2223,7 +2006,7 @@ class _FamilyRankingsPageState extends State<FamilyRankingsPage> {
         border: Border.all(
           color: rank <= 3
               ? rankColor.withValues(alpha: 0.55)
-              : kColorWhite.withValues(alpha: 0.08),
+              : _FamilyUi.border,
         ),
       ),
       child: Row(
@@ -2258,7 +2041,7 @@ class _FamilyRankingsPageState extends State<FamilyRankingsPage> {
                 SemiBoldText(
                   text: name,
                   fontSize: TextStyles.k14FontSize,
-                  color: kColorWhite,
+                  color: _FamilyUi.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -2268,7 +2051,7 @@ class _FamilyRankingsPageState extends State<FamilyRankingsPage> {
                       ? 'Family admin'
                       : 'Family member',
                   fontSize: 11,
-                  color: kColorWhite.withValues(alpha: 0.55),
+                  color: _FamilyUi.muted,
                 ),
               ],
             ),
@@ -2292,7 +2075,7 @@ class _FamilyRankingsPageState extends State<FamilyRankingsPage> {
               AppText(
                 text: 'Contribution',
                 fontSize: TextStyles.k10FontSize,
-                color: kColorWhite.withValues(alpha: 0.48),
+                color: _FamilyUi.muted,
               ),
             ],
           ),
@@ -2316,7 +2099,7 @@ class _FamilyRankingsPageState extends State<FamilyRankingsPage> {
         const SemiBoldText(
           text: 'No rankings yet',
           fontSize: TextStyles.k18FontSize,
-          color: kColorWhite,
+          color: _FamilyUi.title,
           align: TextAlign.center,
         ),
         Spacing.v8,
@@ -2324,7 +2107,7 @@ class _FamilyRankingsPageState extends State<FamilyRankingsPage> {
           text:
               'Member rankings will appear when contribution data is available.',
           fontSize: TextStyles.k12FontSize,
-          color: kColorWhite.withValues(alpha: 0.58),
+          color: _FamilyUi.muted,
           align: TextAlign.center,
         ),
       ],
@@ -2386,74 +2169,61 @@ class _FamilyGroupCreatePageState extends State<FamilyGroupCreatePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _FamilyUi.bg,
+      backgroundColor: kColorLavenderBg,
+      appBar: const CommonAppBarWidget(
+        title: 'Create Family Group',
+        subtitle: 'Invite followers or search app users',
+      ),
       body: Stack(
         children: [
-          Container(
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage(kImgBG),
-                fit: BoxFit.cover,
-              ),
-            ),
-            child: SafeArea(
-              child: Column(
-                children: [
-                  _header(),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(18, 10, 18, 24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _sectionLabel('Group Details', required: true),
-                          Spacing.v10,
-                          _sectionCard(
-                            child: Column(
-                              children: [
-                                _input(
-                                  _nameController,
-                                  'Group name',
-                                  Icons.groups_rounded,
-                                ),
-                                Spacing.v10,
-                                _input(
-                                  _descController,
-                                  'Description',
-                                  Icons.notes_rounded,
-                                  maxLines: 3,
-                                ),
-                                Spacing.v10,
-                                _input(
-                                  _coinsController,
-                                  'Joining coins',
-                                  Icons.monetization_on_rounded,
-                                  keyboardType: TextInputType.number,
-                                ),
-                                Spacing.v10,
-                                _infoStrip(),
-                              ],
-                            ),
-                          ),
-                          Spacing.v20,
-                          _sectionLabel('Add Members'),
-                          Spacing.v10,
-                          _membersHeader(),
-                          Spacing.v8,
-                          _memberTools(),
-                          Spacing.v12,
-                          _selectedMembersStrip(),
-                          Spacing.v12,
-                          _membersList(),
-                          Spacing.v24,
-                          _createButton(),
-                        ],
+          SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(18, 10, 18, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _sectionLabel('Group Details', required: true),
+                Spacing.v10,
+                _sectionCard(
+                  child: Column(
+                    children: [
+                      _input(
+                        _nameController,
+                        'Group name',
+                        Icons.groups_rounded,
                       ),
-                    ),
+                      Spacing.v10,
+                      _input(
+                        _descController,
+                        'Description',
+                        Icons.notes_rounded,
+                        maxLines: 3,
+                      ),
+                      Spacing.v10,
+                      _input(
+                        _coinsController,
+                        'Joining coins',
+                        Icons.monetization_on_rounded,
+                        keyboardType: TextInputType.number,
+                      ),
+                      Spacing.v10,
+                      _infoStrip(),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                Spacing.v20,
+                _sectionLabel('Add Members'),
+                Spacing.v10,
+                _membersHeader(),
+                Spacing.v8,
+                _memberTools(),
+                Spacing.v12,
+                _selectedMembersStrip(),
+                Spacing.v12,
+                _membersList(),
+                Spacing.v24,
+                _createButton(),
+              ],
             ),
           ),
           Obx(() {
@@ -2478,7 +2248,7 @@ class _FamilyGroupCreatePageState extends State<FamilyGroupCreatePage> {
                         border: Border.all(color: LiveRoomUiColors.cardBorder),
                         boxShadow: [
                           BoxShadow(
-                            color: _FamilyUi.pink.withValues(alpha: 0.22),
+                            color: AppLightUi.title.withValues(alpha: 0.08),
                             blurRadius: 24,
                             offset: const Offset(0, 12),
                           ),
@@ -2510,64 +2280,6 @@ class _FamilyGroupCreatePageState extends State<FamilyGroupCreatePage> {
             );
           }),
         ],
-      ),
-    );
-  }
-
-  Widget _header() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 14, 8),
-      child: Row(
-        children: [
-          _backButton(),
-          Spacing.h10,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SemiBoldText(
-                  text: 'Create Family Group',
-                  fontSize: TextStyles.k18FontSize,
-                  color: kColorWhite,
-                ),
-                Spacing.v4,
-                const SemiBoldText(
-                  text: 'Invite followers or search app users',
-                  fontSize: TextStyles.k14FontSize,
-                  color: Color(0xFFFF9AD5),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _backButton() {
-    return Material(
-      color: Colors.transparent,
-      shape: const CircleBorder(),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: Get.back,
-        customBorder: const CircleBorder(),
-        child: Ink(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: kColorWhite.withValues(alpha: 0.08),
-            border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
-          ),
-          child: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: kColorWhite,
-            size: 16,
-          ),
-        ),
       ),
     );
   }
@@ -3048,8 +2760,16 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
     return Scaffold(
       backgroundColor: _FamilyChatUi.scaffold,
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(kToolbarHeight),
-        child: _chatHeader(name),
+        preferredSize: const Size.fromHeight(
+          64 + CommonAppBarWidget.bottomGap,
+        ),
+        child: Obx(
+          () => CommonAppBarWidget(
+            title: name,
+            subtitle: _chatAppBarSubtitle(),
+            onTitleTap: _openGroupInfo,
+          ),
+        ),
       ),
       body: Container(
         decoration: const BoxDecoration(
@@ -3122,90 +2842,14 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
     );
   }
 
-  Widget _chatHeader(String name) {
-    return AppBar(
-      backgroundColor: Colors.transparent,
-      surfaceTintColor: Colors.transparent,
-      elevation: 0,
-      centerTitle: true,
-      automaticallyImplyLeading: false,
-      flexibleSpace: Container(
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: [
-              _FamilyChatUi.plum,
-              _FamilyChatUi.lilac,
-              _FamilyChatUi.rose,
-            ],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: _FamilyChatUi.rose.withValues(alpha: 0.20),
-              blurRadius: 22,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-      ),
-      leadingWidth: 60,
-      leading: Padding(
-        padding: const EdgeInsets.only(left: 10),
-        child: IconButton.filled(
-          onPressed: Get.back,
-          style: IconButton.styleFrom(
-            backgroundColor: kColorWhite.withValues(alpha: 0.16),
-          ),
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: kColorWhite,
-            size: 18,
-          ),
-        ),
-      ),
-      title: GestureDetector(
-        onTap: _openGroupInfo,
-        behavior: HitTestBehavior.opaque,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyles.kBoldPoppins(
-                  fontSize: TextStyles.k18FontSize,
-                  colors: kColorWhite,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Obx(() {
-                if (controller.isAnyoneTyping) {
-                  return AppText(
-                    text: controller.typingStatusLabel,
-                    fontSize: TextStyles.k12FontSize,
-                    color: kColorWhite.withValues(alpha: 0.88),
-                    maxLines: 1,
-                  );
-                }
-                final count = controller.familyMembers.isNotEmpty
-                    ? controller.familyMembers.length
-                    : (widget.group['memberCount'] ?? 0);
-                return AppText(
-                  text: '$count members',
-                  fontSize: TextStyles.k12FontSize,
-                  color: kColorWhite.withValues(alpha: 0.78),
-                );
-              }),
-            ],
-          ),
-        ),
-      ),
-      actions: const [SizedBox(width: 48)],
-    );
+  String _chatAppBarSubtitle() {
+    if (controller.isAnyoneTyping) {
+      return controller.typingStatusLabel;
+    }
+    final count = controller.familyMembers.isNotEmpty
+        ? controller.familyMembers.length
+        : (widget.group['memberCount'] ?? 0);
+    return '$count members';
   }
 
   Widget _chatEmpty({String errorHint = ''}) {
@@ -3760,13 +3404,14 @@ class _FamilyGiftsPageState extends State<FamilyGiftsPage> {
   Widget build(BuildContext context) {
     final name = widget.group['name']?.toString() ?? 'Family Group';
     return Scaffold(
-      backgroundColor: _FamilyUi.bg,
+      backgroundColor: kColorLavenderBg,
+      appBar: CommonAppBarWidget(
+        title: 'Family Gifts',
+        subtitle: name,
+      ),
       body: Container(
         decoration: BoxDecoration(
-          image: const DecorationImage(
-            image: AssetImage(kImgBG),
-            fit: BoxFit.cover,
-          ),
+          color: kColorLavenderBg,
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -3777,13 +3422,7 @@ class _FamilyGiftsPageState extends State<FamilyGiftsPage> {
             ],
           ),
         ),
-        child: SafeArea(
-          bottom: false,
-          child: Column(
-            children: [
-              _header(name),
-              Expanded(
-                child: Obx(() {
+        child: Obx(() {
                   if (controller.isLoadingGifts.value) {
                     return const Center(
                       child: CircularProgressIndicator(color: _FamilyUi.pink),
@@ -3803,51 +3442,6 @@ class _FamilyGiftsPageState extends State<FamilyGiftsPage> {
                     ],
                   );
                 }),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _header(String familyName) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-      child: Row(
-        children: [
-          _circleButton(Icons.arrow_back_ios_new_rounded, Get.back),
-          Spacing.h12,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SemiBoldText(
-                  text: 'Family Gifts',
-                  fontSize: TextStyles.k20FontSize,
-                  color: kColorWhite,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Spacing.v2,
-                AppText(
-                  text: familyName,
-                  fontSize: TextStyles.k12FontSize,
-                  color: kColorWhite.withValues(alpha: 0.72),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          AdminAgencyUi.glowIcon(
-            icon: Icons.card_giftcard_rounded,
-            accent: _FamilyUi.pink,
-            accentEnd: _FamilyUi.gold,
-            size: 46,
-            iconSize: 23,
-          ),
-        ],
       ),
     );
   }
@@ -4098,22 +3692,6 @@ class _FamilyGiftsPageState extends State<FamilyGiftsPage> {
     );
   }
 
-  Widget _circleButton(IconData icon, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 46,
-        height: 46,
-        decoration: BoxDecoration(
-          color: LiveRoomUiColors.cardSurface.withValues(alpha: 0.82),
-          shape: BoxShape.circle,
-          border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
-        ),
-        child: Icon(icon, color: kColorWhite, size: 20),
-      ),
-    );
-  }
-
   Widget _emptyState() {
     return RefreshIndicator(
       color: _FamilyUi.pink,
@@ -4214,14 +3792,11 @@ class FamilyGroupInfoPage extends StatelessWidget {
     final joiningCoins = group['joiningCoins'] ?? 0;
 
     return Scaffold(
-      backgroundColor: _FamilyUi.bg,
+      backgroundColor: kColorLavenderBg,
+      appBar: const CommonAppBarWidget(title: 'Group info'),
       body: Container(
         decoration: BoxDecoration(
-          image: const DecorationImage(
-            image: AssetImage(kImgBG),
-            fit: BoxFit.cover,
-            opacity: 0.55,
-          ),
+          color: kColorLavenderBg,
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -4232,60 +3807,19 @@ class FamilyGroupInfoPage extends StatelessWidget {
             ],
           ),
         ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _infoHeader(),
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
-                  children: [
-                    _heroCard(
-                      controller: controller,
-                      name: name,
-                      description: description,
-                      joiningCoins: joiningCoins,
-                    ),
-                    Spacing.v16,
-                    _membersSection(controller: controller, familyId: familyId),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _infoHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-      child: Row(
-        children: [
-          AdminAgencyUi.glassIconButton(
-            icon: Icons.arrow_back_ios_new_rounded,
-            onTap: Get.back,
-            accent: _FamilyUi.violet,
-            size: 44,
-            iconSize: 18,
-          ),
-          Spacing.h12,
-          const Expanded(
-            child: SemiBoldText(
-              text: 'Group info',
-              fontSize: TextStyles.k20FontSize,
-              color: kColorWhite,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+          children: [
+            _heroCard(
+              controller: controller,
+              name: name,
+              description: description,
+              joiningCoins: joiningCoins,
             ),
-          ),
-          AdminAgencyUi.glowIcon(
-            icon: Icons.info_outline_rounded,
-            accent: _FamilyUi.cyan,
-            accentEnd: _FamilyUi.violet,
-            size: 42,
-            iconSize: 20,
-          ),
-        ],
+            Spacing.v16,
+            _membersSection(controller: controller, familyId: familyId),
+          ],
+        ),
       ),
     );
   }

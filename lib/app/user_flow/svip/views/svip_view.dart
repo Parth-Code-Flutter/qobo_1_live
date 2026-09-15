@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
@@ -13,10 +13,13 @@ import '../controllers/svip_controller.dart';
 class SvipView extends GetView<SvipController> {
   const SvipView({super.key});
 
+  static const _gold = AppLightUi.gold;
+  static const _goldDeep = Color(0xFFD4AF37);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kColorAppBackground,
+      backgroundColor: AppLightUi.bg,
       appBar: const CommonAppBarWidget(
         title: 'SVIP Center',
         useMaterialAppBar: true,
@@ -44,35 +47,35 @@ class SvipView extends GetView<SvipController> {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF1E1E1E), Color(0xFF0F0F0F), Color(0xFF2C2C2C)],
+          colors: [Color(0xFFFFF8E7), Color(0xFFFFF0D6), Color(0xFFFFE8C8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: const Color(0xFFD4AF37).withValues(alpha: 0.5),
+          color: _goldDeep.withValues(alpha: 0.45),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: kColorBlack.withValues(alpha: 0.4),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
+            color: _gold.withValues(alpha: 0.22),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Column(
         children: [
-          // Glimmering Star
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFFFD700).withValues(alpha: 0.1),
+              color: _gold.withValues(alpha: 0.16),
               shape: BoxShape.circle,
+              border: Border.all(color: _gold.withValues(alpha: 0.35)),
             ),
             child: const Icon(
               Icons.stars_rounded,
-              color: Color(0xFFFFD700),
+              color: _goldDeep,
               size: 56,
             ),
           ),
@@ -80,7 +83,7 @@ class SvipView extends GetView<SvipController> {
           const BoldText(
             text: 'SUPREME VIP',
             fontSize: TextStyles.k22FontSize,
-            color: Color(0xFFFFD700),
+            color: _goldDeep,
             style: TextStyle(letterSpacing: 2),
           ),
           Spacing.v8,
@@ -91,13 +94,13 @@ class SvipView extends GetView<SvipController> {
                   : 'Unlock elite customizations and absolute immunity.',
               fontSize: TextStyles.k14FontSize,
               color: controller.isSvipActive.value
-                  ? const Color(0xFFFFD700)
-                  : kColorWhite.withValues(alpha: 0.8),
+                  ? _goldDeep
+                  : AppLightUi.body,
               align: TextAlign.center,
               style: controller.isSvipActive.value
                   ? const TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFFFFD700),
+                      color: _goldDeep,
                       fontSize: TextStyles.k14FontSize,
                     )
                   : null,
@@ -107,19 +110,20 @@ class SvipView extends GetView<SvipController> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              color: kColorWhite.withValues(alpha: 0.08),
+              color: AppLightUi.card.withValues(alpha: 0.85),
               borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppLightUi.border),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                AppCoinIcon(size: 18, color: Colors.amber),
+                const AppCoinIcon(size: 18, color: Colors.amber),
                 Spacing.h6,
                 Obx(
                   () => AppText(
                     text: 'Balance: ${controller.coinsBalance.value} Coins',
                     fontSize: TextStyles.k12FontSize,
-                    color: kColorWhite,
+                    color: AppLightUi.title,
                   ),
                 ),
               ],
@@ -141,7 +145,7 @@ class SvipView extends GetView<SvipController> {
             child: SemiBoldText(
               text: 'Exclusive Privileges',
               fontSize: TextStyles.k18FontSize,
-              color: kColorText,
+              color: AppLightUi.title,
             ),
           ),
           GridView.builder(
@@ -150,7 +154,6 @@ class SvipView extends GetView<SvipController> {
             itemCount: controller.privileges.length,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              // Tall enough for a two-line title + two-line description.
               childAspectRatio: 0.98,
               crossAxisSpacing: 10,
               mainAxisSpacing: 10,
@@ -160,17 +163,7 @@ class SvipView extends GetView<SvipController> {
               final Color color = privilege['color'] as Color;
               return Container(
                 padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: kColorWhite,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: kColorBlack.withValues(alpha: 0.02),
-                      blurRadius: 6,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
+                decoration: AppLightUi.cardDecoration(radius: 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -190,7 +183,7 @@ class SvipView extends GetView<SvipController> {
                     SemiBoldText(
                       text: privilege['title'] as String,
                       fontSize: TextStyles.k14FontSize,
-                      color: kColorText,
+                      color: AppLightUi.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -199,7 +192,7 @@ class SvipView extends GetView<SvipController> {
                       child: AppText(
                         text: privilege['desc'] as String,
                         fontSize: 11,
-                        color: kColorHint,
+                        color: AppLightUi.subtitle,
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -223,17 +216,15 @@ class SvipView extends GetView<SvipController> {
           child: SemiBoldText(
             text: 'Choose Your Membership',
             fontSize: TextStyles.k18FontSize,
-            color: kColorText,
+            color: AppLightUi.title,
           ),
         ),
-        // Plans come from the API and can be many — scroll horizontally
-        // instead of squeezing them all into one row.
         SizedBox(
           height: 150,
           child: Obx(() {
             if (controller.isLoading.value && controller.plans.isEmpty) {
               return const Center(
-                child: CircularProgressIndicator(color: Color(0xFFD4AF37)),
+                child: CircularProgressIndicator(color: _goldDeep),
               );
             }
 
@@ -271,18 +262,12 @@ class SvipView extends GetView<SvipController> {
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: kColorWhite,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: const Color(0xFFD4AF37).withValues(alpha: 0.2),
-          ),
-        ),
+        decoration: AppLightUi.cardDecoration(radius: 16),
         child: Center(
           child: AppText(
             text: message,
             fontSize: TextStyles.k12FontSize,
-            color: kColorHint,
+            color: AppLightUi.subtitle,
             align: TextAlign.center,
           ),
         ),
@@ -306,20 +291,14 @@ class SvipView extends GetView<SvipController> {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
         decoration: BoxDecoration(
           color: isSelected
-              ? const Color(0xFFFFD700).withValues(alpha: 0.08)
-              : kColorWhite,
+              ? _gold.withValues(alpha: 0.12)
+              : AppLightUi.card,
           border: Border.all(
-            color: isSelected ? const Color(0xFFFFD700) : Colors.transparent,
+            color: isSelected ? _gold : AppLightUi.border,
             width: 1.5,
           ),
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: kColorBlack.withValues(alpha: 0.03),
-              blurRadius: 6,
-              offset: const Offset(0, 3),
-            ),
-          ],
+          boxShadow: AppLightUi.cardShadow,
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -328,8 +307,8 @@ class SvipView extends GetView<SvipController> {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? const Color(0xFFFFD700).withValues(alpha: 0.18)
-                    : const Color(0xFFF3F3F3),
+                    ? _gold.withValues(alpha: 0.18)
+                    : AppLightUi.cardSoft,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -340,7 +319,7 @@ class SvipView extends GetView<SvipController> {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 9,
-                  color: isSelected ? const Color(0xFFD4AF37) : kColorHint,
+                  color: isSelected ? _goldDeep : AppLightUi.muted,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -349,7 +328,7 @@ class SvipView extends GetView<SvipController> {
             SemiBoldText(
               text: plan['duration'] as String,
               fontSize: TextStyles.k14FontSize,
-              color: kColorText,
+              color: AppLightUi.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -357,12 +336,12 @@ class SvipView extends GetView<SvipController> {
             BoldText(
               text: '${plan['price']}',
               fontSize: TextStyles.k16FontSize,
-              color: const Color(0xFFD4AF37),
+              color: _goldDeep,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
             Spacing.v2,
-            const AppText(text: 'Coins', fontSize: 10, color: kColorHint),
+            const AppText(text: 'Coins', fontSize: 10, color: AppLightUi.muted),
           ],
         ),
       ),
@@ -373,10 +352,11 @@ class SvipView extends GetView<SvipController> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: kColorWhite,
+        color: AppLightUi.card,
+        border: const Border(top: BorderSide(color: AppLightUi.border)),
         boxShadow: [
           BoxShadow(
-            color: kColorBlack.withValues(alpha: 0.04),
+            color: AppLightUi.title.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, -4),
           ),
@@ -396,10 +376,12 @@ class SvipView extends GetView<SvipController> {
                 : isBusy
                 ? 'Opening SVIP...'
                 : 'Open SVIP Now',
-            buttonColor: isAlreadyActive
-                ? const Color(0xFFF3F3F3)
-                : const Color(0xFF1E1E1E),
-            textColor: isAlreadyActive ? kColorHint : const Color(0xFFFFD700),
+            isGradient: !isAlreadyActive,
+            gradientColors: isAlreadyActive
+                ? null
+                : const [Color(0xFFFFD700), Color(0xFFFF8A48)],
+            buttonColor: isAlreadyActive ? AppLightUi.cardSoft : null,
+            textColor: isAlreadyActive ? AppLightUi.muted : AppLightUi.title,
             borderRadius: 24,
           );
         }),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -125,26 +126,26 @@ class _FilterPill extends StatelessWidget {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      kColorLiveFilterChipGradientStart,
-                      kColorLiveFilterChipGradientEnd,
+                      AppLightUi.pink,
+                      AppLightUi.violet,
                     ],
                   )
                 : null,
-            color: selected ? null : kColorWhite.withValues(alpha: 0.14),
+            color: selected ? null : AppLightUi.card,
             border: Border.all(
               color: selected
-                  ? kColorWhite.withValues(alpha: 0.26)
-                  : kColorWhite.withValues(alpha: 0.12),
+                  ? AppLightUi.pinkSoft.withValues(alpha: 0.55)
+                  : AppLightUi.border,
             ),
             boxShadow: selected
                 ? [
                     BoxShadow(
-                      color: kColorPrimary.withValues(alpha: 0.20),
+                      color: AppLightUi.title.withValues(alpha: 0.08),
                       blurRadius: 12,
                       offset: const Offset(0, 5),
                     ),
                   ]
-                : null,
+                : AppLightUi.cardShadow,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -152,13 +153,13 @@ class _FilterPill extends StatelessWidget {
               Icon(
                 icon,
                 size: 17,
-                color: kColorWhite.withValues(alpha: selected ? 1 : 0.82),
+                color: selected ? kColorWhite : AppLightUi.pink,
               ),
               Spacing.h6,
               SemiBoldText(
                 text: label,
                 fontSize: TextStyles.k12FontSize,
-                color: kColorWhite.withValues(alpha: selected ? 1 : 0.88),
+                color: selected ? kColorWhite : AppLightUi.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -167,7 +168,7 @@ class _FilterPill extends StatelessWidget {
                 Icon(
                   trailing,
                   size: 18,
-                  color: kColorWhite.withValues(alpha: selected ? 0.95 : 0.78),
+                  color: selected ? kColorWhite : AppLightUi.subtitle,
                 ),
               ],
             ],

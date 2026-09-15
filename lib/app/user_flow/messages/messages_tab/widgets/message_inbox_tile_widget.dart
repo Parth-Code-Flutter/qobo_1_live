@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/glossy_dating_card.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -23,7 +25,7 @@ class MessageInboxCallPreviewWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = hasUnread
         ? theme.primaryColor
-        : theme.primaryColor.withValues(alpha: 0.72);
+        : theme.primaryColor.withValues(alpha: 0.78);
     return Row(
       children: [
         Icon(theme.icon, size: 14, color: color),
@@ -59,9 +61,7 @@ class MessageInboxTextPreviewWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppText(
       text: theme.primaryText,
-      color: hasUnread
-          ? kColorWhite.withValues(alpha: 0.92)
-          : kColorWhite.withValues(alpha: 0.58),
+      color: hasUnread ? AppLightUi.body : AppLightUi.muted,
       fontSize: TextStyles.k12FontSize,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
@@ -91,104 +91,86 @@ class MessageInboxTileWidget extends StatelessWidget {
     final previewTheme = MessageInboxPreviewTheme.fromItem(item);
     final hasUnread = item.unreadCount > 0;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        splashColor: const Color(0xFFFF5C9A).withValues(alpha: 0.10),
-        highlightColor: kColorWhite.withValues(alpha: 0.04),
-        child: Ink(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-          decoration: BoxDecoration(
-            color: hasUnread
-                ? const Color(0xFFFF5C9A).withValues(alpha: 0.08)
-                : kColorWhite.withValues(alpha: 0.04),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: hasUnread
-                  ? const Color(0xFFFF5C9A).withValues(alpha: 0.18)
-                  : kColorWhite.withValues(alpha: 0.06),
-            ),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              _InboxAvatar(item: item),
-              Spacing.h12,
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    return GlossyDatingCard(
+      onTap: onTap,
+      radius: 20,
+      borderWidth: hasUnread ? 1.8 : 1.4,
+      emphasized: hasUnread,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      fill: hasUnread ? AppLightUi.cardSoft : AppLightUi.card,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          _InboxAvatar(item: item),
+          Spacing.h12,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            item.name,
+                    Expanded(
+                      child: Text(
+                        item.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: AppLightUi.title,
+                          fontSize: TextStyles.k14FontSize,
+                          fontWeight:
+                              hasUnread ? FontWeight.w700 : FontWeight.w600,
+                          height: 1.2,
+                        ),
+                      ),
+                    ),
+                    Spacing.h10,
+                    SizedBox(
+                      width: 56,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            item.time,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.right,
                             style: TextStyle(
-                              color: kColorWhite,
-                              fontSize: TextStyles.k14FontSize,
-                              fontWeight: hasUnread
-                                  ? FontWeight.w700
-                                  : FontWeight.w600,
+                              color: hasUnread
+                                  ? AppLightUi.pink
+                                  : AppLightUi.muted,
+                              fontSize: 11,
+                              fontWeight:
+                                  hasUnread ? FontWeight.w600 : FontWeight.w400,
                               height: 1.2,
                             ),
                           ),
-                        ),
-                        Spacing.h10,
-                        // Trailing meta column — time + badge share one scan path.
-                        SizedBox(
-                          width: 56,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                item.time,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.right,
-                                style: TextStyle(
-                                  color: hasUnread
-                                      ? const Color(0xFFFF8AB8)
-                                      : kColorWhite.withValues(alpha: 0.45),
-                                  fontSize: 11,
-                                  fontWeight: hasUnread
-                                      ? FontWeight.w600
-                                      : FontWeight.w400,
-                                  height: 1.2,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              if (hasUnread)
-                                _UnreadBadge(count: item.unreadCount)
-                              else
-                                const SizedBox(height: 18),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Padding(
-                      padding: const EdgeInsets.only(right: 66),
-                      child: previewTheme.isCallPreview
-                          ? MessageInboxCallPreviewWidget(
-                              theme: previewTheme,
-                              hasUnread: hasUnread,
-                            )
-                          : MessageInboxTextPreviewWidget(
-                              theme: previewTheme,
-                              hasUnread: hasUnread,
-                            ),
+                          const SizedBox(height: 6),
+                          if (hasUnread)
+                            _UnreadBadge(count: item.unreadCount)
+                          else
+                            const SizedBox(height: 18),
+                        ],
+                      ),
                     ),
                   ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 4),
+                Padding(
+                  padding: const EdgeInsets.only(right: 66),
+                  child: previewTheme.isCallPreview
+                      ? MessageInboxCallPreviewWidget(
+                          theme: previewTheme,
+                          hasUnread: hasUnread,
+                        )
+                      : MessageInboxTextPreviewWidget(
+                          theme: previewTheme,
+                          hasUnread: hasUnread,
+                        ),
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -208,19 +190,47 @@ class _InboxAvatar extends StatelessWidget {
     return SizedBox(
       width: frameExtent,
       height: frameExtent,
-      child: FramedUserAvatar(
-        name: item.name,
-        imageUrl: item.imageUrl,
-        frameUrl: item.avatarFrameUrl,
-        frameSeed: item.targetId,
-        size: avatarSize,
-        fontSize: TextStyles.k12FontSize,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: frameExtent,
+            height: frameExtent,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: AppLightUi.glossRingGradient,
+              boxShadow: [
+                BoxShadow(
+                  color: AppLightUi.title.withValues(alpha: 0.08),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: frameExtent - 4,
+            height: frameExtent - 4,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: kColorWhite,
+            ),
+          ),
+          FramedUserAvatar(
+            name: item.name,
+            imageUrl: item.imageUrl,
+            frameUrl: item.avatarFrameUrl,
+            frameSeed: item.targetId,
+            size: avatarSize,
+            fontSize: TextStyles.k12FontSize,
+          ),
+        ],
       ),
     );
   }
 }
 
-/// Compact unread count — capped, high-contrast, no oversized glow.
+/// Compact unread count — capped, high-contrast pink badge.
 class _UnreadBadge extends StatelessWidget {
   const _UnreadBadge({required this.count});
 
@@ -233,7 +243,7 @@ class _UnreadBadge extends StatelessWidget {
       constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
       padding: EdgeInsets.symmetric(horizontal: label.length > 1 ? 5 : 0),
       decoration: const BoxDecoration(
-        color: Color(0xFFFF4D8D),
+        gradient: AppLightUi.familyCtaGradient,
         borderRadius: BorderRadius.all(Radius.circular(999)),
       ),
       alignment: Alignment.center,

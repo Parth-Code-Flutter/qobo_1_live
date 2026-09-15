@@ -26,7 +26,7 @@ class BottomNavView extends GetView<BottomNavController> {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
-      backgroundColor: kColorWhite,
+      backgroundColor: kColorLavenderBg,
       extendBody: true,
       body: Stack(
         fit: StackFit.expand,
@@ -72,8 +72,8 @@ class BottomNavView extends GetView<BottomNavController> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    const Color(0xFF181A5A).withValues(alpha: 0.86),
-                    const Color(0xFF121644).withValues(alpha: 0.93),
+                    kColorBottomNavGradientTop.withValues(alpha: 0.94),
+                    kColorBottomNavGradientBottom.withValues(alpha: 0.98),
                   ],
                 ),
                 borderRadius: const BorderRadius.only(

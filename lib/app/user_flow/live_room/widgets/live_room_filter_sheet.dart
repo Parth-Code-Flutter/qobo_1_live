@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:qobo_one_live/app/user_flow/live_room/models/live_room_filter_state.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
@@ -15,7 +16,7 @@ Future<LiveRoomFilterState?> showLiveRoomFilterSheet({
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    barrierColor: Colors.black54,
+    barrierColor: Colors.black45,
     builder: (sheetContext) => _LiveRoomFilterSheet(
       initial: initial,
       onClose: () => Navigator.of(sheetContext).pop(),
@@ -61,20 +62,13 @@ class _LiveRoomFilterSheetState extends State<_LiveRoomFilterSheet> {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          gradient: const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF2A1A4E),
-              Color(0xFF140C28),
-            ],
-          ),
+          color: AppLightUi.bg,
           border: Border.all(
-            color: LiveRoomUiColors.joinLiveBorder.withValues(alpha: 0.35),
+            color: AppLightUi.borderStrong.withValues(alpha: 0.8),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.45),
+              color: AppLightUi.title.withValues(alpha: 0.08),
               blurRadius: 24,
               offset: const Offset(0, -8),
             ),
@@ -90,7 +84,7 @@ class _LiveRoomFilterSheetState extends State<_LiveRoomFilterSheet> {
                 width: 44,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.28),
+                  color: AppLightUi.borderStrong,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -102,25 +96,10 @@ class _LiveRoomFilterSheetState extends State<_LiveRoomFilterSheet> {
                     Container(
                       width: 44,
                       height: 44,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [
-                            kColorPrimary.withValues(alpha: 0.5),
-                            LiveRoomUiColors.joinLiveBorder.withValues(
-                              alpha: 0.4,
-                            ),
-                          ],
-                        ),
-                        border: Border.all(
-                          color: LiveRoomUiColors.joinLiveBorder.withValues(
-                            alpha: 0.5,
-                          ),
-                        ),
-                      ),
+                      decoration: AppLightUi.iconTileDecoration(AppLightUi.pink),
                       child: const Icon(
                         Icons.tune_rounded,
-                        color: kColorWhite,
+                        color: AppLightUi.pink,
                         size: 22,
                       ),
                     ),
@@ -132,13 +111,13 @@ class _LiveRoomFilterSheetState extends State<_LiveRoomFilterSheet> {
                           const SemiBoldText(
                             text: 'Filter Rooms',
                             fontSize: TextStyles.k18FontSize,
-                            color: kColorWhite,
+                            color: AppLightUi.title,
                           ),
                           Spacing.v4,
-                          AppText(
+                          const AppText(
                             text: 'Refine what you see in the list',
                             fontSize: TextStyles.k12FontSize,
-                            color: const Color(0xFFB8B8D0),
+                            color: AppLightUi.subtitle,
                           ),
                         ],
                       ),
@@ -147,7 +126,7 @@ class _LiveRoomFilterSheetState extends State<_LiveRoomFilterSheet> {
                       onPressed: widget.onClose,
                       icon: const Icon(
                         Icons.close_rounded,
-                        color: kColorWhite,
+                        color: AppLightUi.title,
                         size: 24,
                       ),
                     ),
@@ -253,22 +232,18 @@ class _FilterSectionCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: LiveRoomUiColors.cardSurface.withValues(alpha: 0.65),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: LiveRoomUiColors.cardBorder),
-      ),
+      decoration: AppLightUi.cardDecoration(radius: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, size: 18, color: LiveRoomUiColors.joinLiveBorder),
+              Icon(icon, size: 18, color: AppLightUi.pink),
               Spacing.h8,
               SemiBoldText(
                 text: title,
                 fontSize: TextStyles.k14FontSize,
-                color: kColorWhite,
+                color: AppLightUi.title,
               ),
             ],
           ),
@@ -297,11 +272,9 @@ class _SegmentedFilterRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.22),
+        color: AppLightUi.cardSoft,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: LiveRoomUiColors.cardBorder.withValues(alpha: 0.8),
-        ),
+        border: Border.all(color: AppLightUi.border),
       ),
       child: Row(
         children: options.map((option) {
@@ -318,15 +291,15 @@ class _SegmentedFilterRow extends StatelessWidget {
                   gradient: isSelected
                       ? const LinearGradient(
                           colors: [
-                            kColorLiveFilterChipGradientStart,
-                            kColorLiveFilterChipGradientEnd,
+                            AppLightUi.pink,
+                            AppLightUi.violet,
                           ],
                         )
                       : null,
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
-                            color: kColorPrimary.withValues(alpha: 0.35),
+                            color: AppLightUi.title.withValues(alpha: 0.08),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -337,7 +310,7 @@ class _SegmentedFilterRow extends StatelessWidget {
                   child: SemiBoldText(
                     text: option.label,
                     fontSize: TextStyles.k12FontSize,
-                    color: isSelected ? kColorWhite : const Color(0xFF9E9EB8),
+                    color: isSelected ? kColorWhite : AppLightUi.subtitle,
                   ),
                 ),
               ),
@@ -377,28 +350,25 @@ class _RegionChipGrid extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(22),
-                color: isSelected
-                    ? null
-                    : Colors.black.withValues(alpha: 0.18),
+                color: isSelected ? null : AppLightUi.cardSoft,
                 gradient: isSelected
                     ? const LinearGradient(
                         colors: [
-                          kColorLiveFilterChipGradientStart,
-                          kColorLiveFilterChipGradientMid,
-                          kColorLiveFilterChipGradientEnd,
+                          AppLightUi.pink,
+                          AppLightUi.violet,
                         ],
                       )
                     : null,
                 border: Border.all(
                   color: isSelected
-                      ? kColorLiveFilterChipBorder
-                      : LiveRoomUiColors.cardBorder,
+                      ? AppLightUi.pinkSoft.withValues(alpha: 0.7)
+                      : AppLightUi.border,
                 ),
               ),
               child: SemiBoldText(
                 text: option.label,
                 fontSize: TextStyles.k12FontSize,
-                color: isSelected ? kColorWhite : const Color(0xFF9E9EB8),
+                color: isSelected ? kColorWhite : AppLightUi.subtitle,
               ),
             ),
           ),
@@ -430,7 +400,7 @@ class _FooterButton extends StatelessWidget {
           height: 50,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            color: outlined ? Colors.transparent : null,
+            color: outlined ? AppLightUi.card : null,
             gradient: outlined
                 ? null
                 : const LinearGradient(
@@ -440,10 +410,7 @@ class _FooterButton extends StatelessWidget {
                     ],
                   ),
             border: outlined
-                ? Border.all(
-                    color: Colors.white.withValues(alpha: 0.35),
-                    width: 1.2,
-                  )
+                ? Border.all(color: AppLightUi.borderStrong, width: 1.2)
                 : null,
             boxShadow: outlined
                 ? null
@@ -460,7 +427,7 @@ class _FooterButton extends StatelessWidget {
             child: SemiBoldText(
               text: label,
               fontSize: TextStyles.k14FontSize,
-              color: outlined ? kColorWhite : kColorWhite,
+              color: outlined ? AppLightUi.title : kColorWhite,
             ),
           ),
         ),

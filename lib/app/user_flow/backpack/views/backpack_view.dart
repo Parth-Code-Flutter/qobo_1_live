@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
@@ -19,7 +20,7 @@ class BackpackView extends GetView<BackpackController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kColorAppBackground,
+      backgroundColor: AppLightUi.bg,
       appBar: const CommonAppBarWidget(
         title: 'My Backpack',
         useMaterialAppBar: true,
@@ -158,7 +159,7 @@ class BackpackView extends GetView<BackpackController> {
 
   Widget _buildTabs() {
     return Container(
-      color: kColorWhite,
+      color: AppLightUi.card,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Obx(() {
         return SingleChildScrollView(
@@ -180,13 +181,13 @@ class BackpackView extends GetView<BackpackController> {
                     border: Border.all(
                       color: isSelected
                           ? kColorPrimary
-                          : kColorHint.withValues(alpha: 0.3),
+                          : AppLightUi.border,
                     ),
                   ),
                   child: AppText(
                     text: cat['name'] as String,
                     fontSize: TextStyles.k14FontSize,
-                    color: isSelected ? kColorWhite : kColorHint,
+                    color: isSelected ? kColorWhite : AppLightUi.subtitle,
                   ),
                 ),
               );
@@ -224,13 +225,13 @@ class BackpackView extends GetView<BackpackController> {
                 const SemiBoldText(
                   text: 'No Items Found',
                   fontSize: TextStyles.k16FontSize,
-                  color: kColorText,
+                  color: AppLightUi.title,
                 ),
                 Spacing.v8,
                 const AppText(
                   text:
                       'You don\'t own any customizations in this category yet.',
-                  color: kColorHint,
+                  color: AppLightUi.subtitle,
                   align: TextAlign.center,
                 ),
                 Spacing.v20,
@@ -295,7 +296,7 @@ class BackpackView extends GetView<BackpackController> {
           return Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: kColorWhite,
+              color: AppLightUi.card,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: isEquipped ? Colors.amber : Colors.transparent,
@@ -367,7 +368,7 @@ class BackpackView extends GetView<BackpackController> {
                 SemiBoldText(
                   text: item['name'] as String,
                   fontSize: TextStyles.k14FontSize,
-                  color: kColorText,
+                  color: AppLightUi.title,
                   align: TextAlign.center,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -376,7 +377,7 @@ class BackpackView extends GetView<BackpackController> {
                 AppText(
                   text: item['description'] ?? '',
                   fontSize: 9,
-                  color: kColorHint,
+                  color: AppLightUi.subtitle,
                   align: TextAlign.center,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -513,7 +514,7 @@ class _PurchasedFrameCard extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: isEquipped
               ? [const Color(0xFFFFF9E8), const Color(0xFFFFF1C1)]
-              : [kColorWhite, const Color(0xFFF9F2F8)],
+              : [AppLightUi.card, AppLightUi.cardSoft],
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
@@ -569,7 +570,7 @@ class _PurchasedFrameCard extends StatelessWidget {
           SemiBoldText(
             text: frame['name']?.toString() ?? 'Avatar Frame',
             fontSize: TextStyles.k14FontSize,
-            color: kColorText,
+            color: AppLightUi.title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             align: TextAlign.center,
@@ -578,7 +579,7 @@ class _PurchasedFrameCard extends StatelessWidget {
           AppText(
             text: frame['description']?.toString() ?? 'Purchased frame',
             fontSize: 9,
-            color: kColorHint,
+            color: AppLightUi.subtitle,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             align: TextAlign.center,
@@ -854,7 +855,7 @@ class _PurchasedBackgroundCard extends StatelessWidget {
           SemiBoldText(
             text: background['name']?.toString() ?? 'Profile Background',
             fontSize: TextStyles.k14FontSize,
-            color: kColorText,
+            color: AppLightUi.title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             align: TextAlign.center,
@@ -863,7 +864,7 @@ class _PurchasedBackgroundCard extends StatelessWidget {
           AppText(
             text: background['description']?.toString() ?? 'Purchased item',
             fontSize: 9,
-            color: kColorHint,
+            color: AppLightUi.subtitle,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             align: TextAlign.center,

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
-import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/rooms_empty_state.dart';
+import 'package:qobo_one_live/utils/app_widgets/dating_empty_hero.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -43,7 +44,7 @@ class AudioRoomGridView extends StatelessWidget {
   Widget build(BuildContext context) {
     if (isLoading) {
       return const Center(
-        child: CircularProgressIndicator(color: kColorWhite, strokeWidth: 2),
+        child: CircularProgressIndicator(color: kColorPrimary, strokeWidth: 2),
       );
     }
 
@@ -54,7 +55,7 @@ class AudioRoomGridView extends StatelessWidget {
 
     return RefreshIndicator(
       color: kColorPrimary,
-      backgroundColor: LiveRoomUiColors.screenGradientBottom,
+      backgroundColor: AppLightUi.card,
       onRefresh: onRefresh ?? () async {},
       child: tiles.isEmpty
           ? ListView(
@@ -162,9 +163,17 @@ class _AudioRoomGridTile extends StatelessWidget {
             clipBehavior: Clip.none,
             alignment: Alignment.center,
             children: [
-              SizedBox(
-                width: 70,
-                height: 70,
+              Container(
+                width: 74,
+                height: 74,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppLightUi.pinkSoft.withValues(alpha: 0.55),
+                    width: 2,
+                  ),
+                  boxShadow: AppLightUi.cardShadow,
+                ),
                 child: ClipOval(child: _RoomImage(path: data.avatar)),
               ),
               Positioned(
@@ -174,10 +183,12 @@ class _AudioRoomGridTile extends StatelessWidget {
                   width: 26,
                   height: 26,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF7B3B93),
+                    gradient: const LinearGradient(
+                      colors: [AppLightUi.violet, AppLightUi.pink],
+                    ),
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: const Color(0xFF20104A),
+                      color: AppLightUi.card,
                       width: 2,
                     ),
                   ),
@@ -194,7 +205,7 @@ class _AudioRoomGridTile extends StatelessWidget {
           SemiBoldText(
             text: roomTitle,
             fontSize: TextStyles.k12FontSize,
-            color: kColorWhite,
+            color: AppLightUi.title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             align: TextAlign.center,
@@ -203,7 +214,7 @@ class _AudioRoomGridTile extends StatelessWidget {
           AppText(
             text: hostName,
             fontSize: TextStyles.k10FontSize,
-            color: kColorWhite.withValues(alpha: 0.72),
+            color: AppLightUi.subtitle,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             align: TextAlign.center,
@@ -231,24 +242,29 @@ class _AudioRoomCreateTile extends StatelessWidget {
             width: 70,
             height: 70,
             decoration: BoxDecoration(
-              color: kColorWhite.withValues(alpha: 0.13),
+              color: AppLightUi.card,
               shape: BoxShape.circle,
-              border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
+              border: Border.all(color: AppLightUi.border),
+              boxShadow: AppLightUi.cardShadow,
             ),
-            child: const Icon(Icons.add_rounded, color: kColorWhite, size: 34),
+            child: const Icon(
+              Icons.add_rounded,
+              color: AppLightUi.pink,
+              size: 34,
+            ),
           ),
           Spacing.v8,
           const SemiBoldText(
             text: 'Create',
             fontSize: TextStyles.k12FontSize,
-            color: kColorWhite,
+            color: AppLightUi.title,
             align: TextAlign.center,
           ),
           Spacing.v2,
-          AppText(
+          const AppText(
             text: 'Audio Room',
             fontSize: TextStyles.k10FontSize,
-            color: kColorWhite.withValues(alpha: 0.72),
+            color: AppLightUi.subtitle,
             align: TextAlign.center,
           ),
         ],
@@ -283,8 +299,8 @@ class _RoomImage extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            kColorVideoPreviewGradientStart,
-            kColorVideoPreviewGradientEnd,
+            AppLightUi.violet,
+            AppLightUi.pink,
           ],
         ),
       ),
@@ -303,12 +319,11 @@ class _AudioRoomsEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return RoomsEmptyState(
-      icon: Icons.graphic_eq_rounded,
+      heroStyle: DatingEmptyHeroStyle.audio,
       title: 'No audio rooms live',
       subtitle:
-          'Be the first to open the mic tonight — start a room and invite '
-          'people to hang out.',
-      accentColors: const [Color(0xFF7B5CFF), Color(0xFF2ED3FF)],
+          'Start a cozy room and invite someone special to hang out.',
+      accentColors: const [Color(0xFFFF5C9A), Color(0xFFB14DFF)],
       ctaLabel: onCreate == null ? null : 'Create audio room',
       onCta: onCreate,
     );

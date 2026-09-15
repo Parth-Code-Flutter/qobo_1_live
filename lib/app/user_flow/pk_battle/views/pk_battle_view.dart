@@ -24,6 +24,7 @@ class PKBattleView extends GetView<PKBattleController> {
       appBar: const CommonAppBarWidget(
         title: 'PK Battle Arena',
         useMaterialAppBar: true,
+        useGradientStyle: false,
       ),
       body: Obx(() {
         switch (controller.pkState.value) {

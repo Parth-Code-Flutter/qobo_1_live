@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
@@ -18,7 +19,7 @@ class MallView extends GetView<MallController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kColorAppBackground,
+      backgroundColor: AppLightUi.bg,
       appBar: const CommonAppBarWidget(
         title: 'Virtual Mall',
         useMaterialAppBar: true,
@@ -38,7 +39,7 @@ class MallView extends GetView<MallController> {
   Widget _buildHeaderBalance() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      color: kColorWhite,
+      color: AppLightUi.card,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -52,13 +53,13 @@ class MallView extends GetView<MallController> {
                   const AppText(
                     text: 'Your Balance',
                     fontSize: 10,
-                    color: kColorHint,
+                    color: AppLightUi.subtitle,
                   ),
                   Obx(
                     () => SemiBoldText(
                       text: '${controller.coinsBalance.value} Coins',
                       fontSize: TextStyles.k16FontSize,
-                      color: kColorText,
+                      color: AppLightUi.title,
                     ),
                   ),
                 ],
@@ -95,12 +96,12 @@ class MallView extends GetView<MallController> {
       height: 200,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF2C1141), Color(0xFF1E0B2E)],
+          colors: [Color(0xFF6A1B9A), Color(0xFFC2185B)],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFF672C5C), width: 1.5),
+        border: Border.all(color: AppLightUi.pinkSoft.withValues(alpha: 0.55), width: 1.5),
         boxShadow: [
           BoxShadow(
             color: kColorBlack.withValues(alpha: 0.15),
@@ -380,7 +381,7 @@ class MallView extends GetView<MallController> {
 
   Widget _buildTabs() {
     return Container(
-      color: kColorWhite,
+      color: AppLightUi.card,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Obx(() {
         return SingleChildScrollView(
@@ -402,13 +403,13 @@ class MallView extends GetView<MallController> {
                     border: Border.all(
                       color: isSelected
                           ? kColorPrimary
-                          : kColorHint.withValues(alpha: 0.3),
+                          : AppLightUi.border,
                     ),
                   ),
                   child: AppText(
                     text: tab['name'] as String,
                     fontSize: TextStyles.k14FontSize,
-                    color: isSelected ? kColorWhite : kColorHint,
+                    color: isSelected ? kColorWhite : AppLightUi.subtitle,
                   ),
                 ),
               );
@@ -434,7 +435,7 @@ class MallView extends GetView<MallController> {
         return Center(
           child: AppText(
             text: 'No items available',
-            color: kColorHint,
+            color: AppLightUi.subtitle,
             fontSize: TextStyles.k14FontSize,
           ),
         );
@@ -505,7 +506,7 @@ class MallView extends GetView<MallController> {
                   SemiBoldText(
                     text: item['name'] as String,
                     fontSize: TextStyles.k14FontSize,
-                    color: kColorText,
+                    color: AppLightUi.title,
                     align: TextAlign.center,
                   ),
                   if (usesBackpackFlow) ...[

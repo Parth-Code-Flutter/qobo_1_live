@@ -17,7 +17,7 @@ class GiftTransactionsView extends GetView<GiftTransactionsController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kColorBackground,
+      backgroundColor: kColorLavenderBg,
       appBar: const CommonAppBarWidget(
         title: 'Transactions',
         useMaterialAppBar: true,
