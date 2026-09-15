@@ -288,27 +288,32 @@ class LiveViewerProfileDialog extends GetView<LiveBroadcastController> {
                       },
                     ),
                   ),
-                  Spacing.h10,
-                  Expanded(
-                    child: _ProfileActionButton(
-                      icon: kGiftIcon,
-                      label: 'Gift',
-                      isPrimary: true,
-                      onTap: () {
-                        // Target this viewer (user scope), same as audio seat Gift.
-                        final receiverId =
-                            viewer['targetId']?.toString().trim().isNotEmpty ==
-                                true
-                            ? viewer['targetId'].toString()
-                            : viewer['id']?.toString() ?? '';
-                        controller.openGiftsSheet(
-                          receiverId: receiverId,
-                          receiverName: name,
-                          roomGift: false,
-                        );
-                      },
+                  if (!controller.isLiveStreamingSession) ...[
+                    Spacing.h10,
+                    Expanded(
+                      child: _ProfileActionButton(
+                        icon: kGiftIcon,
+                        label: 'Gift',
+                        isPrimary: true,
+                        onTap: () {
+                          // Target this viewer (user scope), same as audio seat Gift.
+                          final receiverId =
+                              viewer['targetId']
+                                      ?.toString()
+                                      .trim()
+                                      .isNotEmpty ==
+                                  true
+                              ? viewer['targetId'].toString()
+                              : viewer['id']?.toString() ?? '';
+                          controller.openGiftsSheet(
+                            receiverId: receiverId,
+                            receiverName: name,
+                            roomGift: false,
+                          );
+                        },
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ],

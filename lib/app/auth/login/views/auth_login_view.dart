@@ -141,13 +141,7 @@ class _AuthLoginViewState extends State<AuthLoginView> {
             textCapitalization: TextCapitalization.none,
             prefix: Padding(
               padding: const EdgeInsets.only(left: 14, right: 12),
-              child: SvgPicture.asset(
-                kIconMail,
-                colorFilter: const ColorFilter.mode(
-                  kColorHint,
-                  BlendMode.srcIn,
-                ),
-              ),
+              child: const Icon(Icons.phone_outlined, color: kColorHint),
             ),
           ),
         ),

@@ -38,7 +38,7 @@ class AuthLoginController extends GetxController {
   final isFacebookLoginLoading = false.obs;
   final isAppleLoginLoading = false.obs;
   final isFirebaseLoginLoading = false.obs;
-  final isPhoneInput = false.obs;
+  final isPhoneInput = true.obs;
   bool _textControllersDisposed = false;
 
   bool get canReuseForLogin => !_textControllersDisposed;
@@ -94,7 +94,7 @@ class AuthLoginController extends GetxController {
     isFacebookLoginLoading.value = false;
     isAppleLoginLoading.value = false;
     isFirebaseLoginLoading.value = false;
-    isPhoneInput.value = false;
+    isPhoneInput.value = true;
   }
 
   void togglePasswordVisibility() {
@@ -105,29 +105,15 @@ class AuthLoginController extends GetxController {
     return formKey.currentState?.validate() ?? false;
   }
 
-  /// Detect phone vs email mode from first typed character (digits → phone).
+  /// Password login accepts phone numbers only.
   void onUsernameChanged(String value) {
-    final trimmed = value.trimLeft();
-    if (trimmed.isEmpty) {
-      isPhoneInput.value = false;
-      return;
-    }
-    final first = trimmed[0];
-    isPhoneInput.value = RegExp(r'^\d$').hasMatch(first);
+    isPhoneInput.value = true;
   }
 
   String? validateUsername(BuildContext context, String? value) {
     final username = (value ?? '').trim();
-    if (username.isEmpty) {
-      return LocaleKeys.loginUsernameRequired.tr;
-    }
-    if (isPhoneInput.value) {
-      if (!RegExp(r'^\d{10}$').hasMatch(username)) {
-        return LocaleKeys.loginEmailOrPhoneInvalid.tr;
-      }
-      return null;
-    }
-    if (!username.isEmail) {
+    if (username.isEmpty) return LocaleKeys.loginUsernameRequired.tr;
+    if (!RegExp(r'^\d{10}$').hasMatch(username)) {
       return LocaleKeys.loginEmailOrPhoneInvalid.tr;
     }
     return null;

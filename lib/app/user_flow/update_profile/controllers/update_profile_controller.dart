@@ -237,13 +237,13 @@ class UpdateProfileController extends GetxController
   /// Opens a bottom-sheet wheel picker for integer age values.
   /// We still derive/store DOB internally so API contract remains unchanged.
   Future<void> pickAge(BuildContext context) async {
-    const int minAge = 13;
+    const int minAge = 18;
     const int maxAge = 100;
     final ageValues = List<int>.generate(
       maxAge - minAge + 1,
       (index) => minAge + index,
     );
-    final initialAge = (selectedAge.value ?? 18).clamp(minAge, maxAge);
+    const initialAge = 18;
     var temporaryAge = initialAge;
     final scrollController = FixedExtentScrollController(
       initialItem: ageValues.indexOf(initialAge),
@@ -325,6 +325,10 @@ class UpdateProfileController extends GetxController
   String? validateBirthdate(String? value) {
     if ((value ?? '').trim().isEmpty) {
       return LocaleKeys.ageRequiredError.tr;
+    }
+    final age = int.tryParse(value!.trim());
+    if (age == null || age < 18 || age > 100) {
+      return 'Age must be between 18 and 100';
     }
     return null;
   }
