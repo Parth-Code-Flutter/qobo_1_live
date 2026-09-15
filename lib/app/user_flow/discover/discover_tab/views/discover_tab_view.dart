@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
-import 'package:qobo_one_live/app/bottom_nav/controllers/bottom_nav_controller.dart';
 import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
-import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
-import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -35,8 +32,6 @@ class DiscoverTabView extends StatelessWidget {
             children: [
               _topHeader(context, discoverController),
               Spacing.v10,
-              _feedLayoutToggle(discoverController),
-              Spacing.v10,
               Expanded(
                 child: Obx(() {
                   if (discoverController.searchQuery.value.isNotEmpty) {
@@ -63,153 +58,117 @@ class DiscoverTabView extends StatelessWidget {
     BuildContext context,
     DiscoverTabController discoverController,
   ) {
-    final userSession = _resolveUserSession();
     return Obx(() {
       if (discoverController.isSearchExpanded.value) {
         return _expandedSearchBar(discoverController);
       }
 
-      return GetBuilder<UserSessionController>(
-        init: userSession,
-        builder: (session) {
-          final avatarUrl = session.displayPictureUrl;
-          return SizedBox(
-            height: 58,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: GestureDetector(
-                    onTap: () {
-                      if (!Get.isRegistered<BottomNavController>()) return;
-                      Get.find<BottomNavController>().openOwnProfileSheet(
-                        context,
-                      );
-                    },
-                    behavior: HitTestBehavior.opaque,
-                    child: FramedUserAvatar(
-                      name: session.displayName,
-                      imageUrl: avatarUrl,
-                      frameUrl: session.profileFrameUrl,
-                      frameSeed: session.userId,
-                      size: 30,
-                      fontSize: TextStyles.k10FontSize,
-                    ),
+      return SizedBox(
+        height: 58,
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SemiBoldText(
+                    text: 'Discover',
+                    fontSize: TextStyles.k24FontSize,
+                    color: AppLightUi.title,
                   ),
-                ),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
+                  AppText(
+                    text: 'Find your next spark',
+                    fontSize: TextStyles.k12FontSize,
+                    color: AppLightUi.subtitle,
+                  ),
+                ],
+              ),
+            ),
+            _headerIconButton(
+              onTap: discoverController.openSearch,
+              icon: const Icon(
+                Icons.search_rounded,
+                size: 21,
+                color: AppLightUi.pink,
+              ),
+            ),
+            Spacing.h6,
+            Obx(() {
+              final hasFilter = discoverController.hasActiveDiscoverFilters;
+              return _headerIconButton(
+                onTap: () =>
+                    _openCountryFilter(context, discoverController),
+                icon: Stack(
+                  alignment: Alignment.center,
+                  clipBehavior: Clip.none,
                   children: [
-                    const SemiBoldText(
-                      text: 'Discover',
-                      fontSize: TextStyles.k24FontSize,
-                      color: AppLightUi.title,
+                    SvgPicture.asset(
+                      kIconFilter,
+                      width: 21,
+                      height: 21,
+                      colorFilter: const ColorFilter.mode(
+                        AppLightUi.pink,
+                        BlendMode.srcIn,
+                      ),
                     ),
-                    AppText(
-                      text: 'Find your next spark',
-                      fontSize: TextStyles.k12FontSize,
-                      color: AppLightUi.subtitle,
-                      align: TextAlign.center,
-                    ),
-                  ],
-                ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _headerIconButton(
-                        onTap: discoverController.openSearch,
-                        icon: const Icon(
-                          Icons.search_rounded,
-                          size: 21,
-                          color: AppLightUi.pink,
+                    if (hasFilter)
+                      Positioned(
+                        top: -2,
+                        right: -2,
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: AppLightUi.pink,
+                            shape: BoxShape.circle,
+                          ),
                         ),
                       ),
-                      Spacing.h6,
-                      Obx(() {
-                        final hasFilter =
-                            discoverController.hasActiveDiscoverFilters;
-                        return _headerIconButton(
-                          onTap: () =>
-                              _openCountryFilter(context, discoverController),
-                          icon: Stack(
-                            alignment: Alignment.center,
-                            clipBehavior: Clip.none,
-                            children: [
-                              SvgPicture.asset(
-                                kIconFilter,
-                                width: 21,
-                                height: 21,
-                                colorFilter: const ColorFilter.mode(
-                                  AppLightUi.pink,
-                                  BlendMode.srcIn,
-                                ),
-                              ),
-                              if (hasFilter)
-                                Positioned(
-                                  top: -2,
-                                  right: -2,
-                                  child: Container(
-                                    width: 8,
-                                    height: 8,
-                                    decoration: const BoxDecoration(
-                                      color: AppLightUi.pink,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        );
-                      }),
-                    ],
-                  ),
+                  ],
                 ),
-              ],
-            ),
-          );
-        },
+              );
+            }),
+            Spacing.h6,
+            _feedLayoutToggle(discoverController),
+          ],
+        ),
       );
     });
   }
 
-  /// Grid / single-profile switch under the Explore header.
+  /// Grid / single-profile switch in the AppBar (rightmost).
+  /// Hidden while searching so results stay full-width without layout noise.
   Widget _feedLayoutToggle(DiscoverTabController discoverController) {
     return Obx(() {
-      // Hide while searching so results stay full-width without layout noise.
       if (discoverController.isSearchExpanded.value ||
           discoverController.searchQuery.value.isNotEmpty) {
         return const SizedBox.shrink();
       }
 
       final selected = discoverController.feedLayout.value;
-      return Align(
-        alignment: Alignment.centerRight,
-        child: DecoratedBox(
-          decoration: AppLightUi.cardDecoration(radius: 12),
-          child: Padding(
-            padding: const EdgeInsets.all(3),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _layoutToggleButton(
-                  icon: Icons.grid_view_rounded,
-                  selected: selected == DiscoverFeedLayout.grid,
-                  onTap: () =>
-                      discoverController.setFeedLayout(DiscoverFeedLayout.grid),
+      return DecoratedBox(
+        decoration: AppLightUi.cardDecoration(radius: 12),
+        child: Padding(
+          padding: const EdgeInsets.all(3),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _layoutToggleButton(
+                icon: Icons.grid_view_rounded,
+                selected: selected == DiscoverFeedLayout.grid,
+                onTap: () =>
+                    discoverController.setFeedLayout(DiscoverFeedLayout.grid),
+              ),
+              Spacing.h4,
+              _layoutToggleButton(
+                icon: Icons.view_agenda_rounded,
+                selected: selected == DiscoverFeedLayout.single,
+                onTap: () => discoverController.setFeedLayout(
+                  DiscoverFeedLayout.single,
                 ),
-                Spacing.h4,
-                _layoutToggleButton(
-                  icon: Icons.view_agenda_rounded,
-                  selected: selected == DiscoverFeedLayout.single,
-                  onTap: () => discoverController.setFeedLayout(
-                    DiscoverFeedLayout.single,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       );
@@ -377,13 +336,6 @@ class DiscoverTabView extends StatelessWidget {
     );
     if (result == null) return;
     await controller.applyDiscoverFilters(result);
-  }
-
-  UserSessionController _resolveUserSession() {
-    if (Get.isRegistered<UserSessionController>()) {
-      return Get.find<UserSessionController>();
-    }
-    return Get.put(UserSessionController(), permanent: true);
   }
 
   DiscoverTabController _resolveController() {
