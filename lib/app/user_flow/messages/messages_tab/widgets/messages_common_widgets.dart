@@ -63,21 +63,38 @@ class MessageMatchAvatarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const avatarSize = 55.0;
+    const cardWidth = 122.0;
+    const avatarSize = 52.0;
     const frameExtent = avatarSize * 1.34;
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(26),
         child: Ink(
-          width: 106,
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+          width: cardWidth,
+          padding: const EdgeInsets.fromLTRB(8, 10, 8, 10),
           decoration: BoxDecoration(
-            color: kColorWhite.withValues(alpha: 0.07),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: kColorWhite.withValues(alpha: 0.18)),
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                const Color(0xFFFF6FA8).withValues(alpha: 0.20),
+                const Color(0xFF2A1744).withValues(alpha: 0.92),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(26),
+            border: Border.all(
+              color: const Color(0xFFFF9AB8).withValues(alpha: 0.42),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFFF5C9A).withValues(alpha: 0.22),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -86,9 +103,22 @@ class MessageMatchAvatarItem extends StatelessWidget {
                 width: frameExtent,
                 height: frameExtent,
                 child: Stack(
-                  clipBehavior: Clip.none,
+                  clipBehavior: Clip.hardEdge,
                   alignment: Alignment.center,
                   children: [
+                    Container(
+                      width: frameExtent,
+                      height: frameExtent,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color(0xFFFF5C9A).withValues(alpha: 0.45),
+                            const Color(0xFF9B6DFF).withValues(alpha: 0.28),
+                          ],
+                        ),
+                      ),
+                    ),
                     FramedUserAvatar(
                       name: user.name,
                       imageUrl: user.displayPicture,
@@ -99,15 +129,18 @@ class MessageMatchAvatarItem extends StatelessWidget {
                     ),
                     if (user.isFollowing)
                       Positioned(
-                        right: 1,
-                        bottom: 1,
+                        right: 2,
+                        bottom: 2,
                         child: Container(
                           width: 16,
                           height: 16,
                           decoration: BoxDecoration(
                             color: Colors.greenAccent.shade400,
                             shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xFF1A1230)),
+                            border: Border.all(
+                              color: const Color(0xFF1A1230),
+                              width: 1.5,
+                            ),
                           ),
                           child: const Icon(
                             Icons.check_rounded,
@@ -119,34 +152,48 @@ class MessageMatchAvatarItem extends StatelessWidget {
                   ],
                 ),
               ),
-              Spacing.v4,
-              SemiBoldText(
-                text: user.name,
-                color: kColorWhite,
-                fontSize: TextStyles.k12FontSize,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                align: TextAlign.center,
+              Spacing.v6,
+              SizedBox(
+                width: cardWidth - 16,
+                child: SemiBoldText(
+                  text: user.name,
+                  color: kColorWhite,
+                  fontSize: TextStyles.k12FontSize,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  align: TextAlign.center,
+                ),
               ),
-              const SizedBox(height: 5),
-              const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.favorite_rounded,
-                    color: Color(0xFFFFA8BE),
-                    size: 10,
+              const SizedBox(height: 8),
+              SizedBox(
+                width: cardWidth - 16,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 5),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFF5C9A), Color(0xFFB14DFF)],
+                    ),
+                    borderRadius: BorderRadius.circular(999),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFFF5C9A).withValues(alpha: 0.35),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                  SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      'Say hello',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: Color(0xFFFFCFDC), fontSize: 10),
+                  alignment: Alignment.center,
+                  child: const Text(
+                    'Say hello',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: kColorWhite,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                ],
+                ),
               ),
             ],
           ),
@@ -173,8 +220,19 @@ class MessageSearchUserTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            kColorWhite.withValues(alpha: 0.10),
+            kColorWhite.withValues(alpha: 0.04),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
+      ),
       child: Row(
         children: [
           GestureDetector(
@@ -215,7 +273,7 @@ class MessageSearchUserTile extends StatelessWidget {
             onTap: isProcessing ? null : onFollowTap,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
               decoration: BoxDecoration(
                 gradient: user.isFollowing
                     ? null

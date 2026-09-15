@@ -44,7 +44,7 @@ void main() {
           home: Scaffold(
             body: Center(
               child: SizedBox(
-                height: 148,
+                height: 176,
                 child: MessageMatchAvatarItem(
                   user: const SocialUserCard(
                     id: 'u1',
