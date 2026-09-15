@@ -60,8 +60,8 @@ class MessagesTabView extends GetView<MessagesTabController> {
                       ),
                       children: [
                         _sectionHeader(
-                          icon: Icons.auto_awesome_rounded,
-                          title: 'New Matches',
+                          icon: Icons.favorite_border_rounded,
+                          title: 'New sparks',
                           count: controller.newMatches.length,
                           accent: kColorProfileChipPinkStart,
                         ),
@@ -70,13 +70,13 @@ class MessagesTabView extends GetView<MessagesTabController> {
                         Spacing.v24,
                         _sectionHeader(
                           icon: Icons.forum_rounded,
-                          title: 'Conversations',
+                          title: 'Your chats',
                           count: controller.inboxThreads.length,
                           accent: const Color(0xFF54D8FF),
                         ),
                         Spacing.v12,
                         _inboxSection(context),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 112),
                       ],
                     ),
                   ),
@@ -141,7 +141,7 @@ class MessagesTabView extends GetView<MessagesTabController> {
                         color: kColorWhite,
                       ),
                       AppText(
-                        text: 'Your matches and conversations',
+                        text: 'Good connections start with hello.',
                         fontSize: TextStyles.k10FontSize,
                         color: Color(0xBFFFFFFF),
                       ),
@@ -171,7 +171,7 @@ class MessagesTabView extends GetView<MessagesTabController> {
                     ],
                   ),
                   child: const Icon(
-                    Icons.chat_bubble_rounded,
+                    Icons.favorite_rounded,
                     size: 20,
                     color: kColorWhite,
                   ),
@@ -192,7 +192,7 @@ class MessagesTabView extends GetView<MessagesTabController> {
         height: 48,
         decoration: BoxDecoration(
           color: kColorWhite.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(color: kColorWhite.withValues(alpha: 0.13)),
         ),
         child: TextField(
@@ -205,7 +205,7 @@ class MessagesTabView extends GetView<MessagesTabController> {
           decoration: InputDecoration(
             isDense: true,
             border: InputBorder.none,
-            hintText: 'Search users',
+            hintText: 'Find your next hello',
             hintStyle: TextStyles.kRegularPoppins(
               fontSize: TextStyles.k12FontSize,
               colors: kColorWhite.withValues(alpha: 0.50),
@@ -281,7 +281,7 @@ class MessagesTabView extends GetView<MessagesTabController> {
   Widget _newMatchRow(BuildContext context) {
     if (controller.isNewMatchesLoading.value) {
       return const SizedBox(
-        height: 112,
+        height: 148,
         child: Center(
           child: CircularProgressIndicator(color: kColorWhite, strokeWidth: 2),
         ),
@@ -291,16 +291,16 @@ class MessagesTabView extends GetView<MessagesTabController> {
     final matches = controller.newMatches;
     if (matches.isEmpty) {
       return const SizedBox(
-        height: 112,
+        height: 148,
         child: _InlineEmptyState(
           icon: Icons.favorite_border_rounded,
-          text: 'New matches will appear here',
+          text: 'Your next connection could be a hello away.',
         ),
       );
     }
 
     return SizedBox(
-      height: 112,
+      height: 148,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),

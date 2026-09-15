@@ -63,21 +63,21 @@ class MessageMatchAvatarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const avatarSize = 48.0;
+    const avatarSize = 55.0;
     const frameExtent = avatarSize * 1.34;
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
         child: Ink(
-          width: 86,
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 7),
+          width: 106,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
           decoration: BoxDecoration(
             color: kColorWhite.withValues(alpha: 0.07),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: kColorWhite.withValues(alpha: 0.18)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -123,10 +123,30 @@ class MessageMatchAvatarItem extends StatelessWidget {
               SemiBoldText(
                 text: user.name,
                 color: kColorWhite,
-                fontSize: TextStyles.k10FontSize,
+                fontSize: TextStyles.k12FontSize,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 align: TextAlign.center,
+              ),
+              const SizedBox(height: 5),
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.favorite_rounded,
+                    color: Color(0xFFFFA8BE),
+                    size: 10,
+                  ),
+                  SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      'Say hello',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: Color(0xFFFFCFDC), fontSize: 10),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

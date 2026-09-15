@@ -97,7 +97,7 @@ class MessageInboxTileWidget extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         splashColor: kColorWhite.withValues(alpha: 0.08),
         highlightColor: kColorWhite.withValues(alpha: 0.04),
         child: Ink(
@@ -105,29 +105,29 @@ class MessageInboxTileWidget extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                kColorWhite.withValues(alpha: hasUnread ? 0.15 : 0.10),
-                const Color(
-                  0xFF351A52,
-                ).withValues(alpha: hasUnread ? 0.68 : 0.50),
-              ],
+              colors: hasUnread
+                  ? const [Color(0xFF763D68), Color(0xFF442449)]
+                  : const [Color(0xFF393254), Color(0xFF24203D)],
             ),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: kColorWhite.withValues(alpha: hasUnread ? 0.18 : 0.1),
+              color: hasUnread
+                  ? const Color(0xFFFF9AB5).withValues(alpha: 0.55)
+                  : kColorWhite.withValues(alpha: 0.09),
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.12),
-                blurRadius: 12,
+                color: (hasUnread ? const Color(0xFFB63279) : Colors.black)
+                    .withValues(alpha: 0.18),
+                blurRadius: 18,
                 offset: const Offset(0, 5),
               ),
             ],
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 _InboxAvatar(item: item, hasUnread: hasUnread),
                 Spacing.h12,
@@ -135,26 +135,12 @@ class MessageInboxTileWidget extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: SemiBoldText(
-                              text: item.name,
-                              color: kColorWhite,
-                              fontSize: TextStyles.k14FontSize,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          Spacing.h8,
-                          AppText(
-                            text: item.time,
-                            color: hasUnread
-                                ? kColorWhite
-                                : kColorWhite.withValues(alpha: 0.62),
-                            fontSize: TextStyles.k10FontSize,
-                          ),
-                        ],
+                      SemiBoldText(
+                        text: item.name,
+                        color: kColorWhite,
+                        fontSize: TextStyles.k14FontSize,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       Spacing.v4,
                       previewTheme.isCallPreview
@@ -163,17 +149,34 @@ class MessageInboxTileWidget extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (hasUnread) ...[
-                  Spacing.h8,
-                  _UnreadBadge(count: item.unreadCount),
-                ] else ...[
-                  Spacing.h6,
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    color: kColorWhite.withValues(alpha: 0.38),
-                    size: 20,
+                Spacing.h8,
+                SizedBox(
+                  width: 68,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AppText(
+                        text: item.time,
+                        color: hasUnread
+                            ? const Color(0xFFFFD4E4)
+                            : kColorWhite.withValues(alpha: 0.55),
+                        fontSize: TextStyles.k8FontSize,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 10),
+                      if (hasUnread)
+                        _UnreadBadge(count: item.unreadCount)
+                      else
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          color: Color(0xFFB5A2CE),
+                          size: 22,
+                        ),
+                    ],
                   ),
-                ],
+                ),
               ],
             ),
           ),
@@ -218,7 +221,7 @@ class _InboxAvatar extends StatelessWidget {
                 width: 12,
                 height: 12,
                 decoration: BoxDecoration(
-                  color: kColorBottomNavHeart,
+                  color: const Color(0xFFFF6FA8),
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: const Color(0xFF1A1230),
@@ -242,11 +245,11 @@ class _UnreadBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final label = count > 9 ? '9+' : '$count';
     return Container(
-      constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+      constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: kColorBottomNavHeart,
-        borderRadius: BorderRadius.circular(10),
+        color: const Color(0xFFFF6FA8),
+        borderRadius: BorderRadius.circular(12),
       ),
       alignment: Alignment.center,
       child: AppText(
