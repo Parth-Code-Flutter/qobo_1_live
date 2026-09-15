@@ -69,7 +69,7 @@ class MessageInboxTextPreviewWidget extends StatelessWidget {
   }
 }
 
-/// Inbox conversation row — Bumble/WhatsApp-style dating list UX.
+/// Inbox conversation row — dense, scannable dating list UX (~64–72dp).
 ///
 /// Hierarchy:
 /// `[Avatar]  Name (bold if unread) .............. time`
@@ -93,18 +93,20 @@ class MessageInboxTileWidget extends StatelessWidget {
 
     return GlossyDatingCard(
       onTap: onTap,
-      radius: 20,
-      borderWidth: hasUnread ? 1.8 : 1.4,
+      radius: 16,
+      borderWidth: hasUnread ? 1.3 : 1.0,
       emphasized: hasUnread,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      // Compact padding keeps rows scannable (Material list ~64–72dp).
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       fill: hasUnread ? AppLightUi.cardSoft : AppLightUi.card,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           _InboxAvatar(item: item),
-          Spacing.h12,
+          Spacing.h10,
           Expanded(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
@@ -119,53 +121,45 @@ class MessageInboxTileWidget extends StatelessWidget {
                           fontSize: TextStyles.k14FontSize,
                           fontWeight:
                               hasUnread ? FontWeight.w700 : FontWeight.w600,
-                          height: 1.2,
+                          height: 1.15,
                         ),
                       ),
                     ),
-                    Spacing.h10,
-                    SizedBox(
-                      width: 56,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            item.time,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.right,
-                            style: TextStyle(
-                              color: hasUnread
-                                  ? AppLightUi.pink
-                                  : AppLightUi.muted,
-                              fontSize: 11,
-                              fontWeight:
-                                  hasUnread ? FontWeight.w600 : FontWeight.w400,
-                              height: 1.2,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          if (hasUnread)
-                            _UnreadBadge(count: item.unreadCount)
-                          else
-                            const SizedBox(height: 18),
-                        ],
+                    Spacing.h8,
+                    Text(
+                      item.time,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                        color: hasUnread ? AppLightUi.pink : AppLightUi.muted,
+                        fontSize: 11,
+                        fontWeight:
+                            hasUnread ? FontWeight.w600 : FontWeight.w400,
+                        height: 1.15,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
-                Padding(
-                  padding: const EdgeInsets.only(right: 66),
-                  child: previewTheme.isCallPreview
-                      ? MessageInboxCallPreviewWidget(
-                          theme: previewTheme,
-                          hasUnread: hasUnread,
-                        )
-                      : MessageInboxTextPreviewWidget(
-                          theme: previewTheme,
-                          hasUnread: hasUnread,
-                        ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Expanded(
+                      child: previewTheme.isCallPreview
+                          ? MessageInboxCallPreviewWidget(
+                              theme: previewTheme,
+                              hasUnread: hasUnread,
+                            )
+                          : MessageInboxTextPreviewWidget(
+                              theme: previewTheme,
+                              hasUnread: hasUnread,
+                            ),
+                    ),
+                    if (hasUnread) ...[
+                      Spacing.h8,
+                      _UnreadBadge(count: item.unreadCount),
+                    ],
+                  ],
                 ),
               ],
             ),
@@ -183,9 +177,9 @@ class _InboxAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Slightly smaller frames keep chat rows dense like Bumble/Hinge.
-    const avatarSize = 44.0;
-    final frameExtent = avatarSize * 1.34;
+    // Framed avatar sized so the full row lands near ~64–72dp with padding.
+    const avatarSize = 42.0;
+    final frameExtent = avatarSize * 1.28;
 
     return SizedBox(
       width: frameExtent,
@@ -201,16 +195,16 @@ class _InboxAvatar extends StatelessWidget {
               gradient: AppLightUi.glossRingGradient,
               boxShadow: [
                 BoxShadow(
-                  color: AppLightUi.title.withValues(alpha: 0.08),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+                  color: AppLightUi.title.withValues(alpha: 0.06),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
           ),
           Container(
-            width: frameExtent - 4,
-            height: frameExtent - 4,
+            width: frameExtent - 3.5,
+            height: frameExtent - 3.5,
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
               color: kColorWhite,
