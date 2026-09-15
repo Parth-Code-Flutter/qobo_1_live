@@ -20,7 +20,7 @@ class CommonLiveRoomWidget extends StatelessWidget {
     this.isFavorite = false,
   });
 
-  static const _radius = 16.0;
+  static const _radius = 14.0;
 
   final String imageUrl;
   final String userNameAge;
@@ -70,25 +70,46 @@ class CommonLiveRoomWidget extends StatelessWidget {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Colors.black.withValues(alpha: 0.02),
-                        Colors.black.withValues(alpha: 0.18),
-                        Colors.black.withValues(alpha: 0.72),
+                        Colors.black.withValues(alpha: 0.04),
+                        Colors.black.withValues(alpha: 0.08),
+                        Colors.black.withValues(alpha: 0.78),
                       ],
-                      stops: const [0, 0.42, 1],
+                      stops: const [0, 0.48, 1],
                     ),
                   ),
                 ),
               ),
-              const Positioned(left: 10, top: 10, child: _LiveBadge()),
+              // Subtle top gloss for dating-app polish.
+              Positioned(
+                left: 0,
+                right: 0,
+                top: 0,
+                height: 48,
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          kColorWhite.withValues(alpha: 0.14),
+                          kColorWhite.withValues(alpha: 0),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const Positioned(left: 8, top: 8, child: _LiveBadge()),
               if (badgeText.trim().isNotEmpty)
-                Positioned(right: 10, top: 10, child: _topBadge()),
+                Positioned(right: 8, top: 8, child: _topBadge()),
               if (isFavorite)
                 Positioned(
-                  right: 10,
-                  top: 48,
+                  right: 8,
+                  top: 40,
                   child: Container(
-                    width: 30,
-                    height: 30,
+                    width: 26,
+                    height: 26,
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.34),
                       shape: BoxShape.circle,
@@ -99,18 +120,18 @@ class CommonLiveRoomWidget extends StatelessWidget {
                     child: const Icon(
                       Icons.favorite_rounded,
                       color: Colors.pinkAccent,
-                      size: 16,
+                      size: 14,
                     ),
                   ),
                 ),
-              Positioned(left: 8, right: 8, bottom: 8, child: _bottomInfo()),
+              Positioned(left: 6, right: 6, bottom: 6, child: _bottomInfo()),
               Positioned.fill(
                 child: IgnorePointer(
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(_radius),
                       border: Border.all(
-                        color: AppLightUi.pinkSoft.withValues(alpha: 0.35),
+                        color: AppLightUi.borderStrong.withValues(alpha: 0.55),
                         width: 1,
                       ),
                     ),
@@ -126,17 +147,17 @@ class CommonLiveRoomWidget extends StatelessWidget {
 
   Widget _topBadge() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       decoration: BoxDecoration(
-        color: AppLightUi.violet.withValues(alpha: 0.86),
-        borderRadius: BorderRadius.circular(15),
+        color: AppLightUi.violet.withValues(alpha: 0.88),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: kColorWhite.withValues(alpha: 0.14)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SvgPicture.asset(kIconMedal, width: 16, height: 16),
-          Spacing.h4,
+          SvgPicture.asset(kIconMedal, width: 13, height: 13),
+          Spacing.h2,
           SemiBoldText(
             text: badgeText,
             fontSize: TextStyles.k10FontSize,
@@ -151,10 +172,10 @@ class CommonLiveRoomWidget extends StatelessWidget {
 
   Widget _bottomInfo() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),
+      padding: const EdgeInsets.fromLTRB(8, 7, 8, 7),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.36),
-        borderRadius: BorderRadius.circular(14),
+        color: Colors.black.withValues(alpha: 0.40),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
       ),
       child: Stack(
@@ -162,21 +183,22 @@ class CommonLiveRoomWidget extends StatelessWidget {
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               BoldText(
                 text: userNameAge,
-                fontSize: TextStyles.k14FontSize,
+                fontSize: TextStyles.k12FontSize,
                 color: kColorWhite,
-                maxLines: 2,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              Spacing.v6,
+              Spacing.v4,
               Row(
                 children: [
                   const Icon(
                     Icons.location_on_outlined,
                     color: Color(0xFF00E676),
-                    size: 14,
+                    size: 12,
                   ),
                   Spacing.h2,
                   Expanded(
@@ -188,7 +210,7 @@ class CommonLiveRoomWidget extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  Spacing.h6,
+                  Spacing.h4,
                   _HeatPill(pointsText: pointsText),
                 ],
               ),
@@ -196,8 +218,8 @@ class CommonLiveRoomWidget extends StatelessWidget {
           ),
           Positioned(
             right: 0,
-            top: -20,
-            child: SvgPicture.asset(kIconBadge, width: 19, height: 19),
+            top: -16,
+            child: SvgPicture.asset(kIconBadge, width: 16, height: 16),
           ),
         ],
       ),
@@ -212,18 +234,22 @@ class _LiveBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     const liveGreen = Color(0xFF22C55E);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
       decoration: BoxDecoration(
         color: liveGreen.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
-          BoxShadow(color: liveGreen.withValues(alpha: 0.35), blurRadius: 10),
+          BoxShadow(
+            color: AppLightUi.title.withValues(alpha: 0.18),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
         ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.circle, color: kColorWhite, size: 7),
+          const Icon(Icons.circle, color: kColorWhite, size: 6),
           Spacing.h4,
           SemiBoldText(
             text: 'LIVE',
@@ -244,10 +270,10 @@ class _HeatPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       decoration: BoxDecoration(
         color: kColorWhite.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
       ),
       child: Row(
@@ -256,9 +282,9 @@ class _HeatPill extends StatelessWidget {
           const Icon(
             Icons.local_fire_department_rounded,
             color: Color(0xFFFFC04D),
-            size: 13,
+            size: 12,
           ),
-          const SizedBox(width: 3),
+          const SizedBox(width: 2),
           AppText(
             text: pointsText,
             fontSize: TextStyles.k10FontSize,

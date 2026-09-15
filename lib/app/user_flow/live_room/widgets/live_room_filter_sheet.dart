@@ -155,25 +155,6 @@ class _LiveRoomFilterSheetState extends State<_LiveRoomFilterSheet> {
                             _update(_draft.copyWith(roomType: id)),
                       ),
                     ),
-                    Spacing.v12,
-                    _FilterSectionCard(
-                      title: 'Region',
-                      icon: Icons.public_rounded,
-                      child: _RegionChipGrid(
-                        options: const [
-                          _FilterOption(
-                            id: LiveRoomFilterState.allRegions,
-                            label: 'All',
-                          ),
-                          _FilterOption(id: 'IN', label: 'India'),
-                          _FilterOption(id: 'BD', label: 'Bangladesh'),
-                          _FilterOption(id: 'GLOBAL', label: 'Global'),
-                        ],
-                        selectedId: _draft.region,
-                        onSelected: (id) =>
-                            _update(_draft.copyWith(region: id)),
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -318,62 +299,6 @@ class _SegmentedFilterRow extends StatelessWidget {
           );
         }).toList(),
       ),
-    );
-  }
-}
-
-class _RegionChipGrid extends StatelessWidget {
-  const _RegionChipGrid({
-    required this.options,
-    required this.selectedId,
-    required this.onSelected,
-  });
-
-  final List<_FilterOption> options;
-  final String selectedId;
-  final ValueChanged<String> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: options.map((option) {
-        final isSelected = selectedId == option.id;
-        return Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () => onSelected(option.id),
-            borderRadius: BorderRadius.circular(22),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(22),
-                color: isSelected ? null : AppLightUi.cardSoft,
-                gradient: isSelected
-                    ? const LinearGradient(
-                        colors: [
-                          AppLightUi.pink,
-                          AppLightUi.violet,
-                        ],
-                      )
-                    : null,
-                border: Border.all(
-                  color: isSelected
-                      ? AppLightUi.pinkSoft.withValues(alpha: 0.7)
-                      : AppLightUi.border,
-                ),
-              ),
-              child: SemiBoldText(
-                text: option.label,
-                fontSize: TextStyles.k12FontSize,
-                color: isSelected ? kColorWhite : AppLightUi.subtitle,
-              ),
-            ),
-          ),
-        );
-      }).toList(),
     );
   }
 }

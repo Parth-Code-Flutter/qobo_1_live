@@ -2760,9 +2760,7 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
     return Scaffold(
       backgroundColor: _FamilyChatUi.scaffold,
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(
-          64 + CommonAppBarWidget.bottomGap,
-        ),
+        preferredSize: const CommonAppBarWidget(title: '').preferredSize,
         child: Obx(
           () => CommonAppBarWidget(
             title: name,

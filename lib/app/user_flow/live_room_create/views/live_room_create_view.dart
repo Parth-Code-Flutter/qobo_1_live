@@ -5,11 +5,11 @@ import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
-import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -22,6 +22,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kColorLavenderBg,
+      appBar: _buildAppBar(),
       body: Obx(() {
         // Preview the selected room background on this create screen
         // (audio + video share the same create form).
@@ -54,38 +55,56 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Colors.black.withValues(alpha: 0.55),
-                        Colors.black.withValues(alpha: 0.72),
-                        Colors.black.withValues(alpha: 0.82),
+                        Colors.black.withValues(alpha: 0.45),
+                        Colors.black.withValues(alpha: 0.62),
+                        Colors.black.withValues(alpha: 0.78),
                       ],
                     ),
                   ),
                 ),
               ),
-            SafeArea(
-              child: Column(
-                children: [
-                  _header(
-                    title: controller.isLiveStreamingMode
-                        ? 'Live Streaming'
-                        : 'Create Room',
-                    showCreatorProfile: !controller.isLiveStreamingMode,
-                  ),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                      child: controller.isLiveStreamingMode
-                          ? _liveStreamingForm(context)
-                          : _audioVideoRoomForm(context),
-                    ),
-                  ),
-                ],
-              ),
+            SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+              child: controller.isLiveStreamingMode
+                  ? _liveStreamingForm(context)
+                  : _audioVideoRoomForm(context),
             ),
           ],
         );
       }),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar() {
+    if (controller.isLiveStreamingMode) {
+      return const CommonAppBarWidget(title: 'Live Streaming');
+    }
+
+    final session = Get.isRegistered<UserSessionController>()
+        ? Get.find<UserSessionController>()
+        : Get.put(UserSessionController(), permanent: true);
+
+    return PreferredSize(
+      preferredSize: const CommonAppBarWidget(title: '').preferredSize,
+      child: GetBuilder<UserSessionController>(
+        init: session,
+        builder: (_) => CommonAppBarWidget(
+          title: controller.creatorRoomTitle,
+          subtitle: controller.creatorDisplayName,
+          rowAction: Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: FramedUserAvatar(
+              name: controller.creatorDisplayName,
+              imageUrl: controller.creatorAvatarUrl,
+              frameUrl: controller.creatorFrameUrl,
+              frameSeed: controller.creatorUserId,
+              size: 36,
+              fontSize: TextStyles.k10FontSize,
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -418,89 +437,6 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _header({
-    required String title,
-    bool showCreatorProfile = false,
-  }) {
-    if (!showCreatorProfile) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-        child: Row(
-          children: [
-            _backButton(),
-            Spacing.h10,
-            SemiBoldText(
-              text: title,
-              fontSize: TextStyles.k18FontSize,
-              color: AppLightUi.title,
-            ),
-          ],
-        ),
-      );
-    }
-
-    // Audio/video create: host profile in the app bar (no body profile card).
-    final session = Get.isRegistered<UserSessionController>()
-        ? Get.find<UserSessionController>()
-        : Get.put(UserSessionController(), permanent: true);
-
-    return GetBuilder<UserSessionController>(
-      init: session,
-      builder: (_) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 14, 8),
-          child: Row(
-            children: [
-              _backButton(),
-              Spacing.h10,
-              FramedUserAvatar(
-                name: controller.creatorDisplayName,
-                imageUrl: controller.creatorAvatarUrl,
-                frameUrl: controller.creatorFrameUrl,
-                frameSeed: controller.creatorUserId,
-                size: 36,
-                fontSize: TextStyles.k10FontSize,
-              ),
-              Spacing.h10,
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SemiBoldText(
-                      text: controller.creatorDisplayName,
-                      fontSize: TextStyles.k18FontSize,
-                      color: AppLightUi.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Spacing.v4,
-                    SemiBoldText(
-                      text: controller.creatorRoomTitle,
-                      fontSize: TextStyles.k14FontSize,
-                      color: const Color(0xFFFF9AD5),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _backButton() {
-    return AdminAgencyUi.glassIconButton(
-      icon: Icons.arrow_back_ios_new_rounded,
-      onTap: Get.back,
-      accent: AdminAgencyUi.sky,
-      size: 40,
-      iconSize: 16,
     );
   }
 

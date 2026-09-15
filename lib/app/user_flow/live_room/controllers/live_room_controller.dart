@@ -125,6 +125,14 @@ class LiveRoomController extends GetxController {
     fetchActiveRooms();
   }
 
+  /// Instant region filter from hub chips (same effect as former sheet Apply).
+  void onRegionSelected(String region) {
+    if (filters.region == region) return;
+    filters = filters.copyWith(region: region);
+    update();
+    fetchActiveRooms();
+  }
+
   Future<void> fetchPromoBanner() async {
     final response = await _bannerRepo.getActiveBanners(type: 'live');
     if (response == null) return;

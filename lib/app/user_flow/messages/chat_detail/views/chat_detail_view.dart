@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
-import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/app_widgets/direct_gift_bottom_sheet.dart';
 import 'package:qobo_one_live/utils/app_widgets/emoji_catalog_bottom_sheet.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -22,8 +22,26 @@ class ChatDetailView extends GetView<ChatDetailController> {
     return Scaffold(
       backgroundColor: ChatDetailTheme.scaffold,
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(76),
-        child: Obx(() => _buildChatAppBar(context)),
+        preferredSize: const CommonAppBarWidget(title: '').preferredSize,
+        child: Obx(
+          () => CommonAppBarWidget(
+            title: controller.chatName.value,
+            subtitle: controller.presenceStatusLabel,
+            onTitleTap: controller.openContactProfile,
+            actions: [
+              _ChatAppBarAction(
+                icon: Icons.call_rounded,
+                onTap: () => controller.startVoiceCall(context),
+              ),
+              const SizedBox(width: 4),
+              _ChatAppBarAction(
+                icon: Icons.videocam_rounded,
+                onTap: () => controller.startVideoCall(context),
+              ),
+              const SizedBox(width: 8),
+            ],
+          ),
+        ),
       ),
       body: Container(
         decoration: const BoxDecoration(gradient: ChatDetailTheme.bodyGradient),
@@ -61,106 +79,6 @@ class ChatDetailView extends GetView<ChatDetailController> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildChatAppBar(BuildContext context) {
-    return AppBar(
-      backgroundColor: Colors.transparent,
-      surfaceTintColor: Colors.transparent,
-      elevation: 0,
-      automaticallyImplyLeading: false,
-      toolbarHeight: 76,
-      titleSpacing: 0,
-      flexibleSpace: Container(
-        decoration: BoxDecoration(
-          gradient: ChatDetailTheme.headerGradient,
-          boxShadow: [
-            BoxShadow(
-              color: ChatDetailTheme.rose.withValues(alpha: 0.2),
-              blurRadius: 22,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-      ),
-      leadingWidth: 54,
-      leading: Padding(
-        padding: const EdgeInsets.only(left: 10),
-        child: _HeaderIconButton(
-          icon: Icons.arrow_back_ios_new_rounded,
-          onTap: Get.back,
-        ),
-      ),
-      title: InkWell(
-        onTap: controller.openContactProfile,
-        borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-          child: Row(
-            children: [
-              FramedUserAvatar(
-                name: controller.chatName.value,
-                imageUrl: controller.chatImageUrl.value,
-                frameUrl: controller.avatarFrameUrl.value,
-                frameSeed: controller.targetId.value,
-                size: 43,
-              ),
-              Spacing.h10,
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SemiBoldText(
-                      text: controller.chatName.value,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      fontSize: TextStyles.k16FontSize,
-                      color: kColorWhite,
-                    ),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: controller.presenceStatusColor,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 5),
-                        Flexible(
-                          child: AppText(
-                            text: controller.presenceStatusLabel,
-                            fontSize: TextStyles.k10FontSize,
-                            color: kColorWhite.withValues(alpha: 0.65),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      actions: [
-        _HeaderIconButton(
-          icon: Icons.call_rounded,
-          onTap: () => controller.startVoiceCall(context),
-        ),
-        const SizedBox(width: 6),
-        _HeaderIconButton(
-          icon: Icons.videocam_rounded,
-          onTap: () => controller.startVideoCall(context),
-        ),
-        const SizedBox(width: 12),
-      ],
     );
   }
 
@@ -316,24 +234,26 @@ class ChatDetailView extends GetView<ChatDetailController> {
   }
 }
 
-class _HeaderIconButton extends StatelessWidget {
-  const _HeaderIconButton({required this.icon, required this.onTap});
+class _ChatAppBarAction extends StatelessWidget {
+  const _ChatAppBarAction({required this.icon, required this.onTap});
 
   final IconData icon;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: kColorWhite.withValues(alpha: 0.16),
-      shape: const CircleBorder(),
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: SizedBox(
-          width: 40,
-          height: 40,
-          child: Icon(icon, color: kColorWhite, size: 19),
+    return Center(
+      child: Material(
+        color: kColorWhite.withValues(alpha: 0.18),
+        shape: const CircleBorder(),
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: SizedBox(
+            width: 38,
+            height: 38,
+            child: Icon(icon, color: kColorWhite, size: 19),
+          ),
         ),
       ),
     );
