@@ -391,6 +391,32 @@ class LiveRoomController extends GetxController {
     final type = room['type']?.toString().toUpperCase() ?? 'VIDEO';
     final isLiveStream = _isLiveStreamType(room['type']?.toString());
     final rankBadge = room['roomRankBadge'];
+    final host = room['host'] ?? room['owner'] ?? room['user'] ?? room['hostUser'];
+    final hostMap = host is Map ? Map<String, dynamic>.from(host) : null;
+    final hostAvatar = ApiImageUtils.normalize(
+      hostMap?['displayPicture']?.toString() ??
+          hostMap?['avatar']?.toString() ??
+          hostMap?['avatarUrl']?.toString() ??
+          room['hostDisplayPicture']?.toString() ??
+          room['hostAvatar']?.toString() ??
+          room['displayPicture']?.toString(),
+    );
+    final hostFrame = ApiImageUtils.normalize(
+      _extractFrameUrl(hostMap?['avatarFrame']) ??
+          _extractFrameUrl(hostMap?['avatarFrameUrl']) ??
+          _extractFrameUrl(hostMap?['profileFrameUrl']) ??
+          _extractFrameUrl(room['avatarFrame']) ??
+          _extractFrameUrl(room['hostAvatarFrame']) ??
+          room['avatarFrameUrl']?.toString() ??
+          room['hostAvatarFrameUrl']?.toString() ??
+          room['profileFrameUrl']?.toString(),
+    );
+    final hostId = hostMap?['_id']?.toString() ??
+        hostMap?['id']?.toString() ??
+        hostMap?['userId']?.toString() ??
+        room['hostId']?.toString() ??
+        room['createdBy']?.toString() ??
+        room['userId']?.toString();
     final image = ApiImageUtils.normalize(
       room['coverImage']?.toString() ??
           room['image']?.toString() ??
@@ -427,7 +453,37 @@ class LiveRoomController extends GetxController {
       'points': count.toString(),
       'favorite': room['isFavorite'] == true || room['isFollowed'] == true,
       'image': image ?? (type == 'AUDIO' ? kImgTemp2 : kImgTemp3),
+      if (hostAvatar != null) 'hostAvatar': hostAvatar,
+      if (hostAvatar != null) 'displayPicture': hostAvatar,
+      if (hostFrame != null) 'avatarFrameUrl': hostFrame,
+      if (hostFrame != null) 'profileFrameUrl': hostFrame,
+      if (hostId != null && hostId.isNotEmpty && hostId != 'null')
+        'hostId': hostId,
     };
+  }
+
+  /// Pull equipped frame URL from a string or `{ image / url / frameUrl / svga }`.
+  String? _extractFrameUrl(dynamic frame) {
+    if (frame == null) return null;
+    if (frame is String) {
+      final text = frame.trim();
+      return (text.isEmpty || text == 'null') ? null : text;
+    }
+    if (frame is Map) {
+      for (final key in [
+        'image',
+        'imageUrl',
+        'url',
+        'frameUrl',
+        'svga',
+        'svgaUrl',
+        'animationUrl',
+      ]) {
+        final text = frame[key]?.toString().trim();
+        if (text != null && text.isNotEmpty && text != 'null') return text;
+      }
+    }
+    return null;
   }
 
   bool _hasRoomData(Map<String, dynamic>? response) {

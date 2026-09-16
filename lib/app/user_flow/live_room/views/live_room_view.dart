@@ -11,6 +11,7 @@ import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/repo/banner/models/promo_banner.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
+import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/app_widgets/dating_empty_hero.dart';
@@ -121,19 +122,30 @@ class LiveRoomView extends StatelessWidget {
                                       crossAxisCount: 3,
                                       mainAxisSpacing: 9,
                                       crossAxisSpacing: 9,
-                                      // Portrait photo tiles — cover dominates.
-                                      childAspectRatio: 0.78,
+                                      // Framed avatar tiles — room for crowns.
+                                      childAspectRatio: 0.88,
                                     ),
                                     itemBuilder: (context, index) {
                                       final room = controller.rooms[index];
                                       final name = room['nameAge'] as String? ??
                                           'Live';
-                                      final imageUrl = _roomCoverUrl(room);
+                                      final imageUrl =
+                                          _roomHostAvatarUrl(room);
+                                      // Prefer API host frame; if missing and this
+                                      // is the current user's room, use session
+                                      // frame (same as AppBar) — avoids mock fallback.
+                                      final frameUrl =
+                                          _roomHostFrameUrl(room) ??
+                                              _sessionFrameIfOwnRoom(room);
+                                      final frameSeed =
+                                          _roomHostFrameSeed(room) ?? name;
                                       final heat =
                                           room['points']?.toString();
                                       return CompactLiveRoomTile(
                                         displayName: name,
                                         imageUrl: imageUrl,
+                                        frameUrl: frameUrl,
+                                        frameSeed: frameSeed,
                                         viewerLabel: heat,
                                         onTap: () =>
                                             controller.joinRoom(room),
@@ -1250,31 +1262,141 @@ class LiveRoomView extends StatelessWidget {
     return Get.put(LiveRoomController());
   }
 
-  /// Cover / host photo from mapped room (`image`) or nested `roomData`.
-  String? _roomCoverUrl(Map<String, dynamic> room) {
-    String? pick(dynamic value) {
-      final text = value?.toString().trim();
-      if (text == null || text.isEmpty || text == 'null') return null;
-      return text;
+  /// Host profile photo preferred over room cover for hub tiles.
+  String? _roomHostAvatarUrl(Map<String, dynamic> room) {
+    final nestedMap = _nestedRoomMap(room);
+    final hostMap = _hostMap(room, nestedMap);
+
+    return ApiImageUtils.normalize(
+      _firstNonEmpty([
+        room['hostDisplayPicture'],
+        room['hostAvatar'],
+        room['displayPicture'],
+        hostMap['displayPicture'],
+        hostMap['avatar'],
+        hostMap['avatarUrl'],
+        nestedMap['hostDisplayPicture'],
+        nestedMap['hostAvatar'],
+        nestedMap['displayPicture'],
+        // Cover last — only when no host photo exists.
+        room['image'],
+        room['coverImage'],
+        nestedMap['coverImage'],
+      ]),
+    );
+  }
+
+  String? _roomHostFrameUrl(Map<String, dynamic> room) {
+    final nestedMap = _nestedRoomMap(room);
+    final hostMap = _hostMap(room, nestedMap);
+
+    return ApiImageUtils.normalize(
+      _readFrameUrl(room['avatarFrame']) ??
+          _firstNonEmpty([
+            room['avatarFrameUrl'],
+            room['hostAvatarFrame'],
+            room['hostAvatarFrameUrl'],
+            room['profileFrameUrl'],
+            room['frameUrl'],
+          ]) ??
+          _readFrameUrl(hostMap['avatarFrame']) ??
+          _firstNonEmpty([
+            hostMap['avatarFrameUrl'],
+            hostMap['profileFrameUrl'],
+            hostMap['frameUrl'],
+          ]) ??
+          _readFrameUrl(nestedMap['avatarFrame']) ??
+          _readFrameUrl(nestedMap['hostAvatarFrame']) ??
+          _firstNonEmpty([
+            nestedMap['avatarFrameUrl'],
+            nestedMap['hostAvatarFrameUrl'],
+            nestedMap['profileFrameUrl'],
+            nestedMap['frameUrl'],
+          ]),
+    );
+  }
+
+  /// When listing omits host frame but the room is yours, reuse AppBar frame.
+  String? _sessionFrameIfOwnRoom(Map<String, dynamic> room) {
+    final session = _resolveUserSession();
+    final sessionFrame = session.profileFrameUrl.trim();
+    if (sessionFrame.isEmpty) return null;
+
+    final myId = session.userId.trim();
+    if (myId.isEmpty) return null;
+
+    final hostId = _roomHostFrameSeed(room)?.trim() ?? '';
+    if (hostId.isNotEmpty && hostId == myId) {
+      return ApiImageUtils.normalize(sessionFrame);
     }
 
-    final nested = room['roomData'];
-    final nestedMap = nested is Map
-        ? Map<String, dynamic>.from(nested)
-        : const <String, dynamic>{};
-    final host = room['host'] ?? nestedMap['host'];
-    final hostMap = host is Map
-        ? Map<String, dynamic>.from(host)
-        : const <String, dynamic>{};
+    // Title often matches display name for own live rooms.
+    final myName = session.userName.trim().toLowerCase();
+    final title = (room['nameAge'] as String? ?? '').trim().toLowerCase();
+    if (myName.isNotEmpty &&
+        (title == myName || title.startsWith('$myName,'))) {
+      return ApiImageUtils.normalize(sessionFrame);
+    }
+    return null;
+  }
 
-    return pick(room['image']) ??
-        pick(room['coverImage']) ??
-        pick(nestedMap['coverImage']) ??
-        pick(room['hostAvatar']) ??
-        pick(room['displayPicture']) ??
-        pick(hostMap['displayPicture']) ??
-        pick(nestedMap['hostAvatar']) ??
-        pick(nestedMap['displayPicture']);
+  String? _roomHostFrameSeed(Map<String, dynamic> room) {
+    final nestedMap = _nestedRoomMap(room);
+    final hostMap = _hostMap(room, nestedMap);
+
+    return _firstNonEmpty([
+      room['hostId'],
+      room['userId'],
+      hostMap['id'],
+      hostMap['userId'],
+      hostMap['_id'],
+      nestedMap['hostId'],
+      nestedMap['userId'],
+      nestedMap['createdBy'],
+      room['id'],
+    ]);
+  }
+
+  Map<String, dynamic> _nestedRoomMap(Map<String, dynamic> room) {
+    final nested = room['roomData'];
+    if (nested is Map) return Map<String, dynamic>.from(nested);
+    return const <String, dynamic>{};
+  }
+
+  Map<String, dynamic> _hostMap(
+    Map<String, dynamic> room,
+    Map<String, dynamic> nestedMap,
+  ) {
+    final host = room['host'] ??
+        nestedMap['host'] ??
+        nestedMap['owner'] ??
+        nestedMap['user'] ??
+        nestedMap['hostUser'];
+    if (host is Map) return Map<String, dynamic>.from(host);
+    return const <String, dynamic>{};
+  }
+
+  String? _firstNonEmpty(List<dynamic> values) {
+    for (final value in values) {
+      final text = value?.toString().trim();
+      if (text != null && text.isNotEmpty && text != 'null') return text;
+    }
+    return null;
+  }
+
+  String? _readFrameUrl(dynamic frame) {
+    if (frame == null) return null;
+    if (frame is String) return _firstNonEmpty([frame]);
+    if (frame is Map) {
+      return _firstNonEmpty([
+        frame['image'],
+        frame['imageUrl'],
+        frame['url'],
+        frame['frameUrl'],
+        frame['svga'],
+      ]);
+    }
+    return _firstNonEmpty([frame]);
   }
 
   UserSessionController _resolveUserSession() {

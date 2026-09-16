@@ -3,13 +3,14 @@ import 'package:qobo_one_live/repo/agency/role_application_repo.dart';
 import 'package:qobo_one_live/utils/roles/recruitment_code_field.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
-import 'package:qobo_one_live/utils/app_widgets/app_shell_background.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/country_state_picker_sheet.dart';
+import 'package:qobo_one_live/utils/app_widgets/glossy_dating_card.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
@@ -28,158 +29,130 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
       );
     }
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: const CommonAppBarWidget(title: 'Apply for Agency'),
-      body: AppShellBackground(
-        child: GestureDetector(
-          onTap: () => FocusScope.of(context).unfocus(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(28),
-                    ),
-                    child: ColoredBox(
-                      color: kColorWhite,
-                      child: Form(
-                        key: controller.formKey,
-                        autovalidateMode: AutovalidateMode.onUserInteraction,
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            return SingleChildScrollView(
-                              keyboardDismissBehavior:
-                                  ScrollViewKeyboardDismissBehavior.onDrag,
-                              padding: EdgeInsets.fromLTRB(
-                                20,
-                                20,
-                                20,
-                                24 + MediaQuery.of(context).viewInsets.bottom,
+      backgroundColor: kColorLavenderBg,
+      appBar: const CommonAppBarWidget(
+        title: 'Apply for Agency',
+        subtitle: 'Create & approve agency',
+        trailingIcon: Icons.business_center_outlined,
+      ),
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Form(
+          key: controller.formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  8,
+                  16,
+                  24 + MediaQuery.of(context).viewInsets.bottom,
+                ),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: constraints.maxHeight - 40,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      GlossyDatingCard(
+                        radius: 22,
+                        borderWidth: 1.4,
+                        padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+                        child: _formHeader(),
+                      ),
+                      Spacing.v16,
+                      Obx(
+                        () => controller.isFromSuperAdmin.value
+                            ? const SizedBox.shrink()
+                            : Center(
+                                child: _agencyLogoPicker(context),
                               ),
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  minHeight: constraints.maxHeight - 40,
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _formHeader(),
-                                    Spacing.v20,
-                                    Obx(
-                                      () => controller.isFromSuperAdmin.value
-                                          ? const SizedBox.shrink()
-                                          : Center(
-                                              child: _agencyLogoPicker(context),
-                                            ),
-                                    ),
-                                    Spacing.v24,
-                                    _fieldLabel('Agency Name'),
-                                    Spacing.v6,
-                                    AppTextField(
-                                      controller:
-                                          controller.agencyNameController,
-                                      validator: (v) => controller
-                                          .validateAgencyName(context, v),
-                                      hintText: 'Enter agency name',
-                                      borderColor: kColorHint,
-                                      maxLength: 80,
-                                      showCounter: false,
-                                      textInputAction: TextInputAction.next,
-                                      textCapitalization:
-                                          TextCapitalization.words,
-                                      prefix: _fieldIcon(
-                                        Icons.business_rounded,
-                                      ),
-                                    ),
-                                    Spacing.v16,
-                                    _fieldLabel('Owner Name'),
-                                    Spacing.v6,
-                                    AppTextField(
-                                      controller:
-                                          controller.ownerNameController,
-                                      validator: (v) => controller
-                                          .validateOwnerName(context, v),
-                                      hintText: 'Enter your name',
-                                      borderColor: kColorHint,
-                                      maxLength: 60,
-                                      showCounter: false,
-                                      textInputAction: TextInputAction.next,
-                                      textCapitalization:
-                                          TextCapitalization.words,
-                                      prefix: _fieldIcon(
-                                        Icons.person_outline_rounded,
-                                      ),
-                                    ),
-                                    // Mobile input temporarily hidden, including validation.
-                                    //                                     Spacing.v16,
-                                    //                                     _fieldLabel('WhatsApp Number'),
-                                    //                                     Spacing.v6,
-                                    //                                     AppTextField(
-                                    //                                       controller: controller.whatsappController,
-                                    //                                       validator: (v) => controller
-                                    //                                           .validateWhatsApp(context, v),
-                                    //                                       hintText: '10-digit mobile number',
-                                    //                                       borderColor: kColorHint,
-                                    //                                       textInputType: TextInputType.number,
-                                    //                                       textInputAction: TextInputAction.done,
-                                    //                                       maxLength: 10,
-                                    //                                       showCounter: false,
-                                    //                                       inputFormatters: [
-                                    //                                         FilteringTextInputFormatter.digitsOnly,
-                                    //                                         LengthLimitingTextInputFormatter(10),
-                                    //                                       ],
-                                    //                                       prefix: _fieldIcon(
-                                    //                                         Icons.phone_android_outlined,
-                                    //                                       ),
-                                    //                                     ),
-                                    Obx(() => _publicInviteFields(context)),
-                                    Spacing.v32,
-                                    Obx(
-                                      () => appButton(
-                                        onPressed: () {
-                                          if (!controller
-                                              .isSubmitLoading
-                                              .value) {
-                                            controller.onSubmitPressed(context);
-                                          }
-                                        },
-                                        buttonText:
-                                            controller.isSubmitLoading.value
-                                            ? ''
-                                            : controller.isFromSuperAdmin.value
-                                            ? 'Add Agency'
-                                            : 'Submit Application',
-                                        buttonIcon:
-                                            controller.isSubmitLoading.value
-                                            ? const SizedBox(
-                                                width: 20,
-                                                height: 20,
-                                                child: CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                  valueColor:
-                                                      AlwaysStoppedAnimation<
-                                                        Color
-                                                      >(kColorWhite),
-                                                ),
-                                              )
-                                            : null,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                      ),
+                      GlossyDatingCard(
+                        radius: 22,
+                        borderWidth: 1.4,
+                        padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _fieldLabel('Agency Name'),
+                            Spacing.v8,
+                            AppTextField(
+                              controller: controller.agencyNameController,
+                              validator: (v) =>
+                                  controller.validateAgencyName(context, v),
+                              hintText: 'Enter agency name',
+                              borderColor: AppLightUi.borderStrong,
+                              maxLength: 80,
+                              showCounter: false,
+                              textInputAction: TextInputAction.next,
+                              textCapitalization: TextCapitalization.words,
+                              prefix: _fieldIcon(Icons.business_rounded),
+                            ),
+                            Spacing.v16,
+                            _fieldLabel('Owner Name'),
+                            Spacing.v8,
+                            AppTextField(
+                              controller: controller.ownerNameController,
+                              validator: (v) =>
+                                  controller.validateOwnerName(context, v),
+                              hintText: 'Enter your name',
+                              borderColor: AppLightUi.borderStrong,
+                              maxLength: 60,
+                              showCounter: false,
+                              textInputAction: TextInputAction.next,
+                              textCapitalization: TextCapitalization.words,
+                              prefix: _fieldIcon(
+                                Icons.person_outline_rounded,
                               ),
-                            );
-                          },
+                            ),
+                            Obx(() => _publicInviteFields(context)),
+                          ],
                         ),
                       ),
-                    ),
+                      Spacing.v24,
+                      Obx(
+                        () => appButton(
+                          onPressed: () {
+                            if (!controller.isSubmitLoading.value) {
+                              controller.onSubmitPressed(context);
+                            }
+                          },
+                          buttonText: controller.isSubmitLoading.value
+                              ? ''
+                              : controller.isFromSuperAdmin.value
+                              ? 'Add Agency'
+                              : 'Submit Application',
+                          isGradient: true,
+                          gradientColors: AppLightUi.familyCtaColors,
+                          borderRadius: 16,
+                          buttonHeight: 52,
+                          buttonIcon: controller.isSubmitLoading.value
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      kColorWhite,
+                                    ),
+                                  ),
+                                )
+                              : null,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              );
+            },
           ),
         ),
+      ),
     );
   }
 
@@ -192,15 +165,15 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
           BoldText(
             text: isPublic ? 'Apply for Agency' : 'Become an Agency Owner',
             fontSize: TextStyles.k22FontSize,
-            color: kColorText,
+            color: AppLightUi.title,
           ),
-          Spacing.v4,
+          Spacing.v6,
           AppText(
             text: isPublic
                 ? 'Complete your agency profile and documents. A super admin will approve your agency before the dashboard opens.'
                 : 'Add an approved agency under your Super Admin account.',
             fontSize: TextStyles.k12FontSize,
-            color: kColorHint,
+            color: AppLightUi.subtitle,
           ),
         ],
       );
@@ -210,39 +183,50 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
   Widget _agencyLogoPicker(BuildContext context) {
     return Obx(() {
       final file = controller.agencyLogo.value;
-      return GestureDetector(
-        onTap: () => controller.onLogoTap(context),
-        child: Column(
-          children: [
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                shape: BoxShape.rectangle,
-                borderRadius: BorderRadius.circular(20),
-                color: kColorAvatarFallbackBg.withValues(alpha: 0.15),
-                border: Border.all(color: kColorHint.withValues(alpha: 0.4)),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: file != null
-                    ? Image.file(file, fit: BoxFit.cover)
-                    : Center(
-                        child: Icon(
-                          Icons.add_photo_alternate_outlined,
-                          size: 32,
-                          color: kColorHint.withValues(alpha: 0.8),
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: GestureDetector(
+          onTap: () => controller.onLogoTap(context),
+          child: Column(
+            children: [
+              Container(
+                width: 104,
+                height: 104,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(22),
+                  color: AppLightUi.card,
+                  border: Border.all(color: AppLightUi.borderStrong),
+                  boxShadow: AppLightUi.cardShadow,
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(22),
+                  child: file != null
+                      ? Image.file(file, fit: BoxFit.cover)
+                      : Center(
+                          child: Container(
+                            width: 48,
+                            height: 48,
+                            decoration: AppLightUi.iconTileDecoration(
+                              AppLightUi.pink,
+                              radius: 14,
+                            ),
+                            child: const Icon(
+                              Icons.add_photo_alternate_outlined,
+                              size: 24,
+                              color: AppLightUi.pink,
+                            ),
+                          ),
                         ),
-                      ),
+                ),
               ),
-            ),
-            Spacing.v8,
-            const AppText(
-              text: 'Agency logo',
-              fontSize: TextStyles.k12FontSize,
-              color: kColorHint,
-            ),
-          ],
+              Spacing.v8,
+              const AppText(
+                text: 'Agency logo',
+                fontSize: TextStyles.k12FontSize,
+                color: AppLightUi.subtitle,
+              ),
+            ],
+          ),
         ),
       );
     });
@@ -252,7 +236,7 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
     return AppText(
       text: label,
       fontSize: TextStyles.k12FontSize,
-      color: kColorText,
+      color: AppLightUi.title,
     );
   }
 
@@ -284,9 +268,11 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
         // Spacing.v16,
         if (controller.isFromSuperAdmin.value) ...[
           _fieldLabel('Commission (%)'),
+          Spacing.v8,
           AppTextField(
             controller: controller.commissionController,
             textInputType: const TextInputType.numberWithOptions(decimal: true),
+            borderColor: AppLightUi.borderStrong,
             validator: (value) {
               final rate = double.tryParse(value?.trim() ?? '');
               return rate == null || !rate.isFinite || rate < 0 || rate > 100
@@ -302,7 +288,7 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
             controller: controller.passwordController,
             validator: (v) => controller.validatePassword(context, v),
             hintText: 'Min. 6 characters',
-            borderColor: kColorHint,
+            borderColor: AppLightUi.borderStrong,
             obscureText: true,
             textInputAction: TextInputAction.next,
             maxLength: 32,
@@ -347,7 +333,7 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
             controller: controller.cityController,
             validator: (v) => controller.validateRequired('City', v),
             hintText: 'Enter city',
-            borderColor: kColorHint,
+            borderColor: AppLightUi.borderStrong,
             prefix: _fieldIcon(Icons.location_city_outlined),
           ),
           Spacing.v16,
@@ -357,7 +343,7 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
             controller: controller.addressController,
             validator: (v) => controller.validateRequired('Address', v),
             hintText: 'Enter full address',
-            borderColor: kColorHint,
+            borderColor: AppLightUi.borderStrong,
             maxLines: 3,
             textInputAction: TextInputAction.newline,
             prefix: _fieldIcon(Icons.home_outlined),
@@ -414,48 +400,60 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
     required VoidCallback onTap,
   }) {
     final hasFile = fileName != null && fileName.isNotEmpty;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: hasFile
-              ? kColorPrimary.withValues(alpha: 0.08)
-              : kColorBackground,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: hasFile
-                ? kColorPrimary.withValues(alpha: 0.35)
-                : kColorHint.withValues(alpha: 0.25),
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 22, color: hasFile ? kColorPrimary : kColorHint),
-            Spacing.h12,
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SemiBoldText(
-                    text: label,
-                    fontSize: TextStyles.k14FontSize,
-                    color: kColorText,
-                  ),
-                  Spacing.v2,
-                  AppText(
-                    text: hasFile ? fileName : 'Tap to upload',
-                    fontSize: TextStyles.k12FontSize,
-                    color: hasFile ? kColorPrimary : kColorHint,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
+    final accent = hasFile ? AppLightUi.violet : AppLightUi.pink;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Ink(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppLightUi.card,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: hasFile
+                  ? AppLightUi.violet.withValues(alpha: 0.45)
+                  : AppLightUi.borderStrong,
+              width: 1.2,
             ),
-            const Icon(Icons.upload_file_rounded, color: kColorPrimary),
-          ],
+            boxShadow: AppLightUi.cardShadow,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: AppLightUi.iconTileDecoration(accent, radius: 13),
+                child: Icon(icon, size: 22, color: accent),
+              ),
+              Spacing.h12,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SemiBoldText(
+                      text: label,
+                      fontSize: TextStyles.k14FontSize,
+                      color: AppLightUi.title,
+                    ),
+                    Spacing.v2,
+                    AppText(
+                      text: hasFile ? fileName : 'Tap to upload',
+                      fontSize: TextStyles.k12FontSize,
+                      color: hasFile ? AppLightUi.violet : AppLightUi.subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.upload_file_rounded,
+                color: accent,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -464,7 +462,7 @@ class AgencyOwnerRegisterView extends GetView<AgencyOwnerRegisterController> {
   Widget _fieldIcon(IconData icon) {
     return Padding(
       padding: const EdgeInsets.only(left: 14, right: 12),
-      child: Icon(icon, size: 20, color: kColorHint),
+      child: Icon(icon, size: 20, color: AppLightUi.muted),
     );
   }
 }

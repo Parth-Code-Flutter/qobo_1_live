@@ -8,24 +8,31 @@ import 'package:qobo_one_live/utils/app_widgets/glossy_dating_card.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
-/// Premium 3-col hub cell: full-bleed cover, LIVE pill, name scrim.
+/// Premium 3-col hub cell: framed host avatar, LIVE pill, name + optional heat.
 class CompactLiveRoomTile extends StatelessWidget {
   const CompactLiveRoomTile({
     super.key,
     required this.displayName,
     this.imageUrl,
+    this.frameUrl,
+    this.frameSeed,
     this.viewerLabel,
     this.onTap,
   });
 
   final String displayName;
   final String? imageUrl;
+  final String? frameUrl;
+  final String? frameSeed;
   final String? viewerLabel;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final heat = _compactHeat(viewerLabel);
+    final seed = (frameSeed?.trim().isNotEmpty ?? false)
+        ? frameSeed!.trim()
+        : displayName;
 
     return GlossyDatingCard(
       onTap: onTap,
@@ -37,36 +44,71 @@ class CompactLiveRoomTile extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          _CoverLayer(imageUrl: imageUrl, displayName: displayName),
-          // Soft top vignette so the LIVE pill stays readable.
           const DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
                 colors: [
-                  Color(0x66000000),
-                  Color(0x00000000),
-                  Color(0x00000000),
+                  Color(0xFF3A2458),
+                  Color(0xFF1A1224),
+                  Color(0xFF2A1840),
                 ],
-                stops: [0, 0.28, 1],
               ),
             ),
           ),
-          // Bottom scrim for host name.
+          // Soft vignette so the LIVE pill stays readable.
           const DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
+                  Color(0x44000000),
                   Color(0x00000000),
-                  Color(0x00000000),
-                  Color(0x99000000),
-                  Color(0xE6080612),
+                  Color(0x66080612),
                 ],
-                stops: [0, 0.42, 0.72, 1],
+                stops: [0, 0.35, 1],
               ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(6, 26, 6, 8),
+            child: Column(
+              children: [
+                Expanded(
+                  child: Center(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        // FramedUserAvatar lays out at size * 1.34; keep crowns
+                        // inside the cell without clipping.
+                        final maxFrame = constraints.biggest.shortestSide;
+                        final avatarSize =
+                            (maxFrame / 1.34).clamp(42.0, 64.0);
+                        return FramedUserAvatar(
+                          name: displayName,
+                          imageUrl: imageUrl,
+                          frameUrl: frameUrl,
+                          frameSeed: seed,
+                          size: avatarSize,
+                          fontSize: avatarSize >= 56
+                              ? TextStyles.k14FontSize
+                              : TextStyles.k10FontSize,
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                Spacing.v4,
+                SemiBoldText(
+                  text: displayName,
+                  fontSize: TextStyles.k10FontSize,
+                  color: kColorWhite,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  align: TextAlign.center,
+                ),
+              ],
             ),
           ),
           const Positioned(
@@ -80,18 +122,6 @@ class CompactLiveRoomTile extends StatelessWidget {
               top: 6,
               child: _HeatChip(label: heat),
             ),
-          Positioned(
-            left: 8,
-            right: 8,
-            bottom: 8,
-            child: SemiBoldText(
-              text: displayName,
-              fontSize: TextStyles.k10FontSize,
-              color: kColorWhite,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
         ],
       ),
     );
@@ -107,80 +137,6 @@ class CompactLiveRoomTile extends StatelessWidget {
     if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
     if (n >= 1000) return '${(n / 1000).toStringAsFixed(n >= 10000 ? 0 : 1)}K';
     return '$n';
-  }
-}
-
-class _CoverLayer extends StatelessWidget {
-  const _CoverLayer({required this.imageUrl, required this.displayName});
-
-  final String? imageUrl;
-  final String displayName;
-
-  @override
-  Widget build(BuildContext context) {
-    final path = imageUrl?.trim() ?? '';
-    final hasPath = path.isNotEmpty && path != 'null';
-    final isNetwork = hasPath && path.startsWith('http');
-    final isAsset = hasPath && !isNetwork && !isPlaceholderProfileImage(path);
-
-    if (isNetwork) {
-      return Image.network(
-        path,
-        fit: BoxFit.cover,
-        gaplessPlayback: true,
-        errorBuilder: (_, __, ___) => _FallbackCover(name: displayName),
-        loadingBuilder: (context, child, progress) {
-          if (progress == null) return child;
-          return const ColoredBox(color: Color(0xFF1A1224));
-        },
-      );
-    }
-
-    if (isAsset) {
-      return Image.asset(
-        path,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _FallbackCover(name: displayName),
-      );
-    }
-
-    return _FallbackCover(name: displayName);
-  }
-}
-
-class _FallbackCover extends StatelessWidget {
-  const _FallbackCover({required this.name});
-
-  final String name;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF3A2458),
-            Color(0xFF1A1224),
-            Color(0xFF2A1840),
-          ],
-        ),
-      ),
-      child: Center(
-        child: AppUserAvatar(
-          name: name,
-          size: 52,
-          showFrame: false,
-          backgroundColor: AppLightUi.violet.withValues(alpha: 0.45),
-          textColor: kColorWhite,
-          border: Border.all(
-            color: kColorWhite.withValues(alpha: 0.35),
-            width: 1.5,
-          ),
-        ),
-      ),
-    );
   }
 }
 

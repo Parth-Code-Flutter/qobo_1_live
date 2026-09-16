@@ -2,8 +2,9 @@ import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/app/user_flow/host_dashboard/host_dashboard_view.dart';
 import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/utils/app_widgets/app_shell_background.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
+import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
+import 'package:qobo_one_live/utils/app_widgets/glossy_dating_card.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -296,6 +297,25 @@ class _RoleApplicationViewState extends State<RoleApplicationView> {
     }
   }
 
+  Widget _sectionCard({required Widget child, EdgeInsetsGeometry? padding}) {
+    return GlossyDatingCard(
+      radius: 22,
+      borderWidth: 1.4,
+      padding: padding ?? const EdgeInsets.fromLTRB(18, 18, 18, 16),
+      borderGradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          AppLightUi.borderStrong.withValues(alpha: 0.95),
+          AppLightUi.violet.withValues(alpha: 0.35),
+          AppLightUi.pinkSoft.withValues(alpha: 0.45),
+          AppLightUi.border,
+        ],
+      ),
+      child: child,
+    );
+  }
+
   Widget _field(
     String label,
     TextEditingController c, {
@@ -306,13 +326,19 @@ class _RoleApplicationViewState extends State<RoleApplicationView> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label),
-        const SizedBox(height: 6),
+        Text(
+          label,
+          style: TextStyles.kSemiBoldPoppins(
+            colors: AppLightUi.title,
+            fontSize: 12,
+          ),
+        ),
+        const SizedBox(height: 8),
         AppTextField(
           controller: c,
-          borderColor: kColorHint,
+          borderColor: AppLightUi.borderStrong,
           textStyle: TextStyles.kRegularPoppins(
-            colors: kColorText,
+            colors: AppLightUi.body,
             fontSize: 14,
           ),
           hintText: label,
@@ -337,114 +363,157 @@ class _RoleApplicationViewState extends State<RoleApplicationView> {
     absorbing: _busy,
     child: Opacity(
       opacity: _busy ? 0.6 : 1,
-      child: appButton(onPressed: onPressed, buttonText: label),
+      child: appButton(
+        onPressed: onPressed,
+        buttonText: label,
+        isGradient: true,
+        gradientColors: AppLightUi.familyCtaColors,
+        borderRadius: 16,
+        buttonHeight: 52,
+      ),
     ),
   );
 
-  Widget _upload(String label, String key, File? file) => Padding(
-    padding: const EdgeInsets.only(bottom: 12),
-    child: InkWell(
-      onTap: _busy ? null : () => _pick(key),
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: kColorPrimary.withValues(alpha: 0.04),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: file == null
-                ? kColorHint.withValues(alpha: 0.35)
-                : kColorPrimary.withValues(alpha: 0.55),
+  Widget _upload(String label, String key, File? file) {
+    final selected = file != null;
+    final accent = selected ? AppLightUi.violet : AppLightUi.pink;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _busy ? null : () => _pick(key),
+          borderRadius: BorderRadius.circular(18),
+          child: Ink(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppLightUi.card,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: selected
+                    ? AppLightUi.violet.withValues(alpha: 0.45)
+                    : AppLightUi.borderStrong,
+                width: 1.2,
+              ),
+              boxShadow: AppLightUi.cardShadow,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: AppLightUi.iconTileDecoration(accent, radius: 14),
+                  child: Icon(
+                    selected
+                        ? Icons.check_circle_rounded
+                        : Icons.add_photo_alternate_outlined,
+                    color: accent,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        selected ? '$label • Selected' : label,
+                        style: TextStyles.kBoldPoppins(
+                          colors: AppLightUi.title,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        selected
+                            ? 'Tap to replace photo'
+                            : key == 'photo'
+                            ? 'A clear photo of your face'
+                            : key == 'front'
+                            ? 'Front of your identity document'
+                            : 'Back of your identity document',
+                        style: TextStyles.kRegularPoppins(
+                          colors: AppLightUi.subtitle,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppLightUi.muted,
+                ),
+              ],
+            ),
           ),
         ),
-        child: Row(
-          children: [
-            Icon(
-              file == null
-                  ? Icons.add_photo_alternate_outlined
-                  : Icons.check_circle,
-              color: kColorPrimary,
-              size: 26,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    file == null ? label : '$label • Selected',
-                    style: TextStyles.kBoldPoppins(
-                      colors: kColorText,
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    file != null
-                        ? 'Tap to replace photo'
-                        : key == 'photo'
-                        ? 'A clear photo of your face'
-                        : key == 'front'
-                        ? 'Front of your identity document'
-                        : 'Back of your identity document',
-                    style: TextStyles.kRegularPoppins(
-                      colors: kColorHint,
-                      fontSize: 10,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right_rounded, color: kColorHint),
-          ],
-        ),
       ),
-    ),
-  );
+    );
+  }
 
   Widget _statusLookupCard() {
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: kColorPrimary.withValues(alpha: 0.035),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: kColorPrimary.withValues(alpha: 0.16)),
+    return GlossyDatingCard(
+      radius: 20,
+      borderWidth: 1.35,
+      padding: EdgeInsets.zero,
+      borderGradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          AppLightUi.violet.withValues(alpha: 0.4),
+          AppLightUi.pinkSoft.withValues(alpha: 0.55),
+          AppLightUi.borderStrong,
+        ],
       ),
-      child: Material(
-        type: MaterialType.transparency,
+      child: Theme(
+        data: Theme.of(context).copyWith(
+          dividerColor: Colors.transparent,
+          expansionTileTheme: ExpansionTileThemeData(
+            textColor: AppLightUi.title,
+            iconColor: AppLightUi.violet,
+            collapsedTextColor: AppLightUi.title,
+            collapsedIconColor: AppLightUi.muted,
+          ),
+        ),
         child: ExpansionTile(
           shape: const Border(),
           collapsedShape: const Border(),
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
           leading: Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: kColorPrimary.withValues(alpha: 0.09),
-              borderRadius: BorderRadius.circular(12),
+            width: 40,
+            height: 40,
+            decoration: AppLightUi.iconTileDecoration(
+              AppLightUi.violet,
+              radius: 12,
             ),
             child: const Icon(
               Icons.fact_check_outlined,
-              color: kColorPrimary,
+              color: AppLightUi.violet,
               size: 21,
             ),
           ),
           title: Text(
             'Already applied?',
-            style: TextStyles.kBoldPoppins(colors: kColorText, fontSize: 13),
+            style: TextStyles.kBoldPoppins(
+              colors: AppLightUi.title,
+              fontSize: 14,
+            ),
           ),
           subtitle: Text(
             'Check your application status',
-            style: TextStyles.kRegularPoppins(colors: kColorHint, fontSize: 10),
+            style: TextStyles.kRegularPoppins(
+              colors: AppLightUi.subtitle,
+              fontSize: 11,
+            ),
           ),
           children: [
-            const SizedBox(height: 8),
             Text(
               'We use your saved phone number to find your application.',
               style: TextStyles.kRegularPoppins(
-                colors: kColorHint,
-                fontSize: 11,
+                colors: AppLightUi.subtitle,
+                fontSize: 12,
               ),
             ),
             const SizedBox(height: 16),
@@ -474,18 +543,24 @@ class _RoleApplicationViewState extends State<RoleApplicationView> {
         (_application!['feedback'] ?? _application!['reason'] ?? '')
             .toString()
             .trim();
-    final accent = approved ? const Color(0xFF8FE3C0) : const Color(0xFFDFC0FF);
+    final accent = approved ? const Color(0xFF2E9F6E) : AppLightUi.violet;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Center(
           child: Container(
-            width: 72,
-            height: 72,
+            width: 76,
+            height: 76,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: accent.withValues(alpha: 0.12),
-              border: Border.all(color: accent.withValues(alpha: 0.3)),
+              gradient: LinearGradient(
+                colors: [
+                  accent.withValues(alpha: 0.18),
+                  accent.withValues(alpha: 0.06),
+                ],
+              ),
+              border: Border.all(color: accent.withValues(alpha: 0.28)),
+              boxShadow: AppLightUi.cardShadow,
             ),
             child: Icon(
               approved
@@ -525,22 +600,31 @@ class _RoleApplicationViewState extends State<RoleApplicationView> {
         ),
         if (feedback.isNotEmpty) ...[
           const SizedBox(height: 16),
-          Text(feedback, textAlign: TextAlign.center),
+          Text(
+            feedback,
+            textAlign: TextAlign.center,
+            style: TextStyles.kRegularPoppins(
+              colors: AppLightUi.body,
+              fontSize: 13,
+            ),
+          ),
         ],
         const SizedBox(height: 24),
         Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppLightUi.cardSoft,
-            borderRadius: BorderRadius.circular(16),
-          ),
+          decoration: AppLightUi.cardDecoration(radius: 16, elevated: false),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                approved ? Icons.login_rounded : Icons.info_outline_rounded,
-                color: accent,
-                size: 22,
+              Container(
+                width: 40,
+                height: 40,
+                decoration: AppLightUi.iconTileDecoration(accent, radius: 12),
+                child: Icon(
+                  approved ? Icons.login_rounded : Icons.info_outline_rounded,
+                  color: accent,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -582,322 +666,276 @@ class _RoleApplicationViewState extends State<RoleApplicationView> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final statusScreen = _application != null || widget.statusOnly;
-    final foreground = AppLightUi.title;
-    final textTheme = Theme.of(context).textTheme.apply(
-      fontFamily: 'Poppins',
-      bodyColor: foreground,
-      displayColor: foreground,
+  Widget _formIntro() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          _super ? 'Verify your identity' : 'Complete your application',
+          style: TextStyles.kBoldPoppins(
+            colors: AppLightUi.title,
+            fontSize: 20,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Your saved profile details are filled automatically. Upload clear photos for your application review.',
+          style: TextStyles.kRegularPoppins(
+            colors: AppLightUi.subtitle,
+            fontSize: 13,
+          ),
+        ),
+      ],
     );
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: AppShellBackground(
-        child: SafeArea(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 12,
-                ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => Get.back(),
-                      icon: const Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        color: AppLightUi.title,
-                        size: 20,
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        statusScreen
-                            ? 'Application status'
-                            : 'Apply for $_title',
-                        textAlign: TextAlign.center,
-                        style: TextStyles.kBoldPoppins(
-                          colors: AppLightUi.title,
-                          fontSize: 18,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 48),
-                  ],
-                ),
+  }
+
+  Widget _photosHeader() {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            _super
+                ? 'Verification photos'
+                : 'Verification photos (optional)',
+            style: TextStyles.kBoldPoppins(
+              colors: AppLightUi.title,
+              fontSize: 14,
+            ),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: AppLightUi.violet.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: AppLightUi.violet.withValues(alpha: 0.28),
+            ),
+          ),
+          child: Text(
+            '${[_front, _back].whereType<File>().length}/2 added',
+            style: TextStyles.kSemiBoldPoppins(
+              colors: AppLightUi.violet,
+              fontSize: 11,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _applicationForm() {
+    return Form(
+      key: _form,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (!_super)
+            _sectionCard(
+              child: RecruitmentCodeField(
+                verification: _verification,
+                label: 'Enter code',
+                readOnly: widget.lockCode,
               ),
-              Expanded(
-                child: Container(
-                  clipBehavior: Clip.antiAlias,
-                  margin: statusScreen
-                      ? const EdgeInsets.fromLTRB(20, 8, 20, 20)
-                      : EdgeInsets.zero,
-                  decoration: statusScreen
-                      ? const BoxDecoration()
-                      : const BoxDecoration(
-                          color: AppLightUi.card,
-                          borderRadius: BorderRadius.vertical(
-                            top: Radius.circular(28),
-                          ),
+            ),
+          if (!_super) const SizedBox(height: 14),
+          if (_agency || !_hasName || !_hasPhone)
+            _sectionCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (_agency) _field('Agency name', _agencyName),
+                  if (!_hasName)
+                    _field('Full name', _name, required: true),
+                  if (!_hasPhone)
+                    _field(
+                      'Phone number',
+                      _phone,
+                      phone: true,
+                      required: true,
+                    ),
+                ],
+              ),
+            ),
+          if (_agency || !_hasName || !_hasPhone) const SizedBox(height: 14),
+          _sectionCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _photosHeader(),
+                const SizedBox(height: 14),
+                _upload('Document front', 'front', _front),
+                _upload('Document back', 'back', _back),
+                const SizedBox(height: 8),
+                Text(
+                  'Description (optional)',
+                  style: TextStyles.kSemiBoldPoppins(
+                    colors: AppLightUi.title,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                AppTextField(
+                  controller: _description,
+                  hintText: 'Add a short description',
+                  minLines: 2,
+                  maxLines: 2,
+                  borderColor: AppLightUi.borderStrong,
+                  textInputType: TextInputType.multiline,
+                  textInputAction: TextInputAction.newline,
+                  textStyle: TextStyles.kRegularPoppins(
+                    colors: AppLightUi.body,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          _primaryButton('Submit application', _submit),
+        ],
+      ),
+    );
+  }
+
+  Widget _bodyContent(BuildContext context) {
+    if (_loading) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppLightUi.pink),
+      );
+    }
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_application != null) ...[
+            _sectionCard(
+              padding: const EdgeInsets.all(22),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    _title,
+                    textAlign: TextAlign.center,
+                    style: TextStyles.kRegularPoppins(
+                      colors: AppLightUi.subtitle,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _statusSummary(context),
+                  if (isAgencyStatusApproved(
+                        _application!['status']?.toString(),
+                      ) &&
+                      !widget.forAnotherUser) ...[
+                    const SizedBox(height: 24),
+                    _primaryButton(
+                      _busy ? 'Please wait…' : 'Continue to dashboard',
+                      _openApprovedDashboard,
+                    ),
+                  ],
+                  if (_noApplication(_application!['status'])) ...[
+                    const SizedBox(height: 24),
+                    _primaryButton(
+                      'Start application',
+                      () => Get.off(
+                        () => RoleApplicationView(
+                          role: widget.role,
+                          repo: widget.repo,
                         ),
-                  child: Theme(
-                    data: Theme.of(context).copyWith(
-                      textTheme: textTheme,
-                      colorScheme: Theme.of(context).colorScheme.copyWith(
-                        primary: kColorPrimary,
-                        onSurface: foreground,
-                      ),
-                      textButtonTheme: TextButtonThemeData(
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppLightUi.pink,
-                          textStyle: TextStyles.kRegularPoppins(fontSize: 12),
-                        ),
-                      ),
-                      expansionTileTheme: const ExpansionTileThemeData(
-                        textColor: kColorPrimary,
-                        iconColor: kColorPrimary,
-                        collapsedTextColor: kColorText,
-                        collapsedIconColor: kColorHint,
-                      ),
-                      progressIndicatorTheme: ProgressIndicatorThemeData(
-                        color: AppLightUi.pink,
                       ),
                     ),
-                    child: Material(
-                      type: MaterialType.transparency,
-                      child: Builder(
-                        builder: (context) => _loading
-                            ? const Center(child: CircularProgressIndicator())
-                            : SingleChildScrollView(
-                                padding: statusScreen
-                                    ? EdgeInsets.zero
-                                    : const EdgeInsets.all(24),
-                                child: Container(
-                                  padding: statusScreen
-                                      ? const EdgeInsets.all(24)
-                                      : EdgeInsets.zero,
-                                  decoration: statusScreen
-                                      ? AppLightUi.cardDecoration(radius: 24)
-                                      : null,
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                      if (_application != null) ...[
-                                        Text(
-                                          _title,
-                                          textAlign: TextAlign.center,
-                                          style: TextStyles.kRegularPoppins(
-                                            colors: AppLightUi.subtitle,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 20),
-                                        _statusSummary(context),
-                                        if (isAgencyStatusApproved(
-                                              _application!['status']
-                                                  ?.toString(),
-                                            ) &&
-                                            !widget.forAnotherUser) ...[
-                                          const SizedBox(height: 24),
-                                          _primaryButton(
-                                            _busy
-                                                ? 'Please wait…'
-                                                : 'Continue to dashboard',
-                                            _openApprovedDashboard,
-                                          ),
-                                        ],
-                                        if (_noApplication(
-                                          _application!['status'],
-                                        )) ...[
-                                          const SizedBox(height: 24),
-                                          _primaryButton(
-                                            'Start application',
-                                            () => Get.off(
-                                              () => RoleApplicationView(
-                                                role: widget.role,
-                                                repo: widget.repo,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                        const SizedBox(height: 24),
-                                        _primaryButton(
-                                          _busy
-                                              ? 'Checking status…'
-                                              : 'Refresh status',
-                                          () => _checkStatus(),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        TextButton(
-                                          onPressed: () =>
-                                              Get.back(result: true),
-                                          child: const Text('Done'),
-                                        ),
-                                      ] else if (widget.statusOnly) ...[
-                                        const Text(
-                                          'Check the application linked to your saved phone number.',
-                                        ),
-                                        const SizedBox(height: 16),
-                                        _primaryButton(
-                                          'Check status',
-                                          () => _checkStatus(),
-                                        ),
-                                      ] else ...[
-                                        Text(
-                                          _super
-                                              ? 'Verify your identity'
-                                              : 'Complete your application',
-                                          style: Theme.of(
-                                            context,
-                                          ).textTheme.headlineSmall,
-                                        ),
-                                        const SizedBox(height: 8),
-                                        const Text(
-                                          'Your saved profile details are filled automatically. Upload clear photos for your application review.',
-                                        ),
-                                        const SizedBox(height: 24),
-                                        Form(
-                                          key: _form,
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.stretch,
-                                            children: [
-                                              if (!_super)
-                                                RecruitmentCodeField(
-                                                  verification: _verification,
-                                                  label: 'Enter code',
-                                                  readOnly: widget.lockCode,
-                                                ),
-                                              if (!_super)
-                                                const SizedBox(height: 16),
-                                              if (_agency)
-                                                _field(
-                                                  'Agency name',
-                                                  _agencyName,
-                                                ),
-                                              if (!_hasName)
-                                                _field(
-                                                  'Full name',
-                                                  _name,
-                                                  required: true,
-                                                ),
-                                              if (!_hasPhone)
-                                                _field(
-                                                  'Phone number',
-                                                  _phone,
-                                                  phone: true,
-                                                  required: true,
-                                                ),
-                                              Row(
-                                                children: [
-                                                  Expanded(
-                                                    child: Text(
-                                                      _super
-                                                          ? 'Verification photos'
-                                                          : 'Verification photos (optional)',
-                                                      style:
-                                                          TextStyles.kBoldPoppins(
-                                                            colors: kColorText,
-                                                            fontSize: 14,
-                                                          ),
-                                                    ),
-                                                  ),
-                                                  Text(
-                                                    '${[_front, _back].whereType<File>().length}/2 added',
-                                                    style:
-                                                        TextStyles.kRegularPoppins(
-                                                          colors: kColorPrimary,
-                                                          fontSize: 12,
-                                                        ),
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 12),
-                                              _upload(
-                                                'Document front',
-                                                'front',
-                                                _front,
-                                              ),
-                                              _upload(
-                                                'Document back',
-                                                'back',
-                                                _back,
-                                              ),
-                                              ...[
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  'Description (optional)',
-                                                  style:
-                                                      TextStyles.kRegularPoppins(
-                                                        colors: kColorText,
-                                                        fontSize: 12,
-                                                      ),
-                                                ),
-                                                const SizedBox(height: 6),
-                                                AppTextField(
-                                                  controller: _description,
-                                                  hintText:
-                                                      'Add a short description',
-                                                  minLines: 2,
-                                                  maxLines: 2,
-                                                  borderColor: kColorHint,
-                                                  textInputType:
-                                                      TextInputType.multiline,
-                                                  textInputAction:
-                                                      TextInputAction.newline,
-                                                  textStyle:
-                                                      TextStyles.kRegularPoppins(
-                                                        colors: kColorText,
-                                                        fontSize: 14,
-                                                      ),
-                                                ),
-                                                const SizedBox(height: 16),
-                                              ],
-                                              _primaryButton(
-                                                'Submit application',
-                                                _submit,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        const SizedBox(height: 24),
-                                        _statusLookupCard(),
-                                      ],
-                                      if (_busy)
-                                        const Padding(
-                                          padding: EdgeInsets.all(16),
-                                          child: Center(
-                                            child: CircularProgressIndicator(),
-                                          ),
-                                        ),
-                                      if (_error != null)
-                                        Padding(
-                                          padding: const EdgeInsets.only(
-                                            top: 16,
-                                          ),
-                                          child: Text(
-                                            _error!,
-                                            style: const TextStyle(
-                                              color: Colors.red,
-                                            ),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
+                  ],
+                  const SizedBox(height: 16),
+                  _primaryButton(
+                    _busy ? 'Checking status…' : 'Refresh status',
+                    () => _checkStatus(),
+                  ),
+                  const SizedBox(height: 4),
+                  TextButton(
+                    onPressed: () => Get.back(result: true),
+                    child: Text(
+                      'Done',
+                      style: TextStyles.kSemiBoldPoppins(
+                        colors: AppLightUi.subtitle,
+                        fontSize: 13,
                       ),
                     ),
                   ),
+                ],
+              ),
+            ),
+          ] else if (widget.statusOnly) ...[
+            _sectionCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Check the application linked to your saved phone number.',
+                    style: TextStyles.kRegularPoppins(
+                      colors: AppLightUi.subtitle,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _primaryButton('Check status', () => _checkStatus()),
+                ],
+              ),
+            ),
+          ] else ...[
+            _sectionCard(child: _formIntro()),
+            const SizedBox(height: 14),
+            _applicationForm(),
+            const SizedBox(height: 18),
+            _statusLookupCard(),
+          ],
+          if (_busy)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(
+                child: CircularProgressIndicator(color: AppLightUi.pink),
+              ),
+            ),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF0F3),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: Colors.red.withValues(alpha: 0.25),
+                  ),
+                ),
+                child: Text(
+                  _error!,
+                  style: TextStyles.kRegularPoppins(
+                    colors: Colors.red.shade700,
+                    fontSize: 13,
+                  ),
                 ),
               ),
-            ],
-          ),
-        ),
+            ),
+        ],
       ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final statusScreen = _application != null || widget.statusOnly;
+    return Scaffold(
+      backgroundColor: kColorLavenderBg,
+      appBar: CommonAppBarWidget(
+        title: statusScreen ? 'Application status' : 'Apply for $_title',
+        subtitle: statusScreen ? _title : 'Identity & verification',
+        trailingIcon: statusScreen
+            ? Icons.assignment_turned_in_outlined
+            : Icons.verified_user_outlined,
+      ),
+      body: _bodyContent(context),
     );
   }
 }
