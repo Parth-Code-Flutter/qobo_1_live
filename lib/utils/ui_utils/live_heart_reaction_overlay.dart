@@ -80,10 +80,12 @@ class _FloatingHeartBubbleState extends State<_FloatingHeartBubble>
   void initState() {
     super.initState();
     _random = math.Random(widget.token);
-    _startX = widget.screenSize.width - 32 - _random.nextDouble() * 18;
-    _startBottom = 120 + _random.nextDouble() * 28;
-    _drift = (_random.nextDouble() - 0.5) * 24;
-    _size = 22 + _random.nextDouble() * 16;
+    // Keep hearts in the chat right gutter — clear of the bottom-right
+    // framed audience avatars + action bar (gift / more).
+    _startX = widget.screenSize.width - 48 - _random.nextDouble() * 22;
+    _startBottom = 210 + _random.nextDouble() * 36;
+    _drift = (_random.nextDouble() - 0.5) * 20;
+    _size = 20 + _random.nextDouble() * 14;
     _delayFactor = _random.nextDouble() * 0.35;
 
     _controller = AnimationController(

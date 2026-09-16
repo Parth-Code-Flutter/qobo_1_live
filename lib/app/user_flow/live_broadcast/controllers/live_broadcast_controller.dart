@@ -2617,9 +2617,21 @@ class LiveBroadcastController extends GetxController {
   }
 
   String? _extractBackendRoomId(Map<String, dynamic> roomData) {
+    // Prefer real REST room UUIDs. Skip Zego `ls_…` channel ids — send-gift
+    // and other economy APIs reject those as roomId.
     const keys = ['room_id', 'roomId', '_id', 'id'];
+    for (final key in keys) {
+      final value = _firstNonEmpty(roomData, [key]);
+      if (value == null || value.isEmpty) continue;
+      if (_isZegoLiveChannelId(value)) continue;
+      return value;
+    }
+    return null;
+  }
 
-    return _firstNonEmpty(roomData, keys);
+  bool _isZegoLiveChannelId(String value) {
+    final normalized = value.trim().toLowerCase();
+    return normalized.startsWith('ls_') || normalized.startsWith('ls');
   }
 
   String? _extractReceiverId(Map<String, dynamic> roomData) {
@@ -2640,14 +2652,14 @@ class LiveBroadcastController extends GetxController {
     if (!isLiveStreamingSession || _heartReactionTimer != null) return;
     Timer(const Duration(milliseconds: 900), () {
       if (!isClosed && isLiveStreamingSession) {
-        _emitHeartReactionBurst(count: 5, staggerMs: 115);
+        _emitHeartReactionBurst(count: 3, staggerMs: 140);
       }
     });
-    _heartReactionTimer = Timer.periodic(const Duration(milliseconds: 2800), (
+    _heartReactionTimer = Timer.periodic(const Duration(milliseconds: 4200), (
       _,
     ) {
       if (!isClosed && isLiveStreamingSession) {
-        _emitHeartReactionBurst(count: 5, staggerMs: 115);
+        _emitHeartReactionBurst(count: 3, staggerMs: 140);
       }
     });
   }
@@ -2916,12 +2928,13 @@ class LiveBroadcastController extends GetxController {
     );
     final sent = result.errorCode == 0;
     if (sent) {
+      final isGift = GiftMediaUtils.isGiftChatMessage(message);
       chatMessages.add({
         'sender': 'You',
-        'message': message,
+        'message': isGift ? stripGiftAnimMarker(message) : message,
         'translation': '',
         'isTranslated': false,
-        'isSystem': false,
+        'isSystem': isGift,
       });
     }
     return sent;
@@ -2931,22 +2944,118 @@ class LiveBroadcastController extends GetxController {
     if (messages.isEmpty) return;
     final localId = ZegoLiveIdUtils.sanitizeUserId(_currentUserId());
     final incoming = <Map<String, dynamic>>[];
+    final giftEvents = <GiftChatEvent>[];
+
     for (final message in messages) {
       final senderId = ZegoLiveIdUtils.sanitizeUserId(message.fromUser.userID);
       if (senderId.isNotEmpty && senderId == localId) continue;
+      final text = message.message;
+      if (GiftMediaUtils.isGiftChatMessage(text)) {
+        giftEvents.add((
+          key: 'express_${message.messageID}_${message.sendTime}_$senderId',
+          senderId: senderId,
+          message: text,
+        ));
+        incoming.add({
+          'sender': message.fromUser.userName.trim().isEmpty
+              ? 'Viewer'
+              : message.fromUser.userName.trim(),
+          'message': stripGiftAnimMarker(text),
+          'translation': '',
+          'isTranslated': false,
+          'isSystem': true,
+        });
+        continue;
+      }
       incoming.add({
         'sender': message.fromUser.userName.trim().isEmpty
             ? 'Viewer'
             : message.fromUser.userName.trim(),
-        'message': message.message,
+        'message': text,
         'translation': '',
         'isTranslated': false,
         'isSystem': false,
       });
     }
+
+    if (giftEvents.isNotEmpty) {
+      _giftCelebrationTracker.onGiftMessages(
+        myUserId: localId,
+        events: giftEvents,
+        giftCatalog: giftCatalog.toList(),
+        onPeerGift: (event) {
+          unawaited(
+            _handlePeerGiftEarnings(event.message, senderId: event.senderId),
+          );
+        },
+      );
+    }
+
     if (incoming.isNotEmpty) {
       chatMessages.addAll(incoming);
     }
+  }
+
+  /// Removes Express room users that left the live channel.
+  void removeExpressLiveUsers(Iterable<String> userIds) {
+    if (!isLiveStreamingSession) return;
+    final ids = userIds.map((id) => id.trim()).where((id) => id.isNotEmpty);
+    if (ids.isEmpty) return;
+    liveViewers.removeWhere((item) {
+      final id = item['id']?.toString() ?? '';
+      return ids.contains(id);
+    });
+    viewerCount.value = liveViewers.length;
+  }
+
+  /// Keeps [liveViewers] in sync for Express live (UIKit user stream is not mounted).
+  void syncExpressLiveUsers({
+    required List<({String id, String name})> users,
+    required bool replaceAll,
+  }) {
+    if (!isLiveStreamingSession) return;
+    final normalizedHostId = ZegoLiveIdUtils.sanitizeUserId(
+      hostZegoUserId.value.isNotEmpty ? hostZegoUserId.value : receiverId.value,
+    );
+    final hostTargetId = receiverId.value.trim();
+    final mySanitized = ZegoLiveIdUtils.sanitizeUserId(_currentUserId());
+
+    List<Map<String, dynamic>> mapped() {
+      return users.map((user) {
+        final normalizedUserId = ZegoLiveIdUtils.sanitizeUserId(user.id);
+        final isHostUser =
+            normalizedHostId.isNotEmpty && normalizedUserId == normalizedHostId;
+        final isCurrentUser =
+            mySanitized.isNotEmpty && normalizedUserId == mySanitized;
+        return <String, dynamic>{
+          'id': user.id,
+          'targetId': isHostUser && hostTargetId.isNotEmpty
+              ? hostTargetId
+              : user.id,
+          'name': user.name.trim().isNotEmpty ? user.name.trim() : 'Viewer',
+          'avatarUrl': isHostUser ? hostAvatarUrl.value : null,
+          'isHost': isHostUser,
+          'isCurrentUser': isCurrentUser,
+        };
+      }).toList();
+    }
+
+    if (replaceAll) {
+      liveViewers.assignAll(mapped());
+    } else {
+      final next = liveViewers.toList();
+      for (final viewer in mapped()) {
+        final id = viewer['id']?.toString() ?? '';
+        final index = next.indexWhere((item) => item['id']?.toString() == id);
+        if (index >= 0) {
+          next[index] = {...next[index], ...viewer};
+        } else {
+          next.add(viewer);
+        }
+      }
+      liveViewers.assignAll(next);
+    }
+    viewerCount.value = liveViewers.length;
   }
 
   Future<void> translateMessage(int index) async {
@@ -3026,11 +3135,9 @@ class LiveBroadcastController extends GetxController {
     }
 
     final giftId = gift['id']?.trim() ?? '';
-    // Backend gift API needs the real room id (with dashes), not the
-    // sanitized Zego channel id.
-    final currentRoomId = audioRoomApiId.isNotEmpty
-        ? audioRoomApiId
-        : roomId.value.trim();
+    // Same contract as chat / call / family gifts: REST room UUID only.
+    // Live Express stores the Zego `ls_…` channel in [roomId] — never send that.
+    final currentRoomId = economyGiftRoomId;
     final scope = isRoomGiftMode.value ? 'room' : 'user';
     final currentReceiverId = scope == 'room'
         ? ''
@@ -3094,20 +3201,31 @@ class LiveBroadcastController extends GetxController {
         );
 
         // Backend `scope=room` often ignores seatedUserIds and says no seats even
-        // when we sent them. One other seated user == individual gift economically
-        // (80% to that person). Do not fan-out N user gifts — that charges N× price.
+        // when we sent them. Live streams have no mic seats — fall back to a
+        // direct user gift (host for audience room-shares, or the sole peer).
         if (!isEconomyApiSuccess(response) &&
             scope == 'room' &&
-            seatedRecipients.length == 1 &&
+            seatedRecipients.isNotEmpty &&
             _isNoSeatedUsersGiftError(response)) {
-          response = await _economyRepo.sendGift(
-            receiverId: seatedRecipients.first,
-            giftId: giftId,
-            roomId: currentRoomId,
-            scope: 'user',
-            sessionType: sessionType,
-            isShowLoader: false,
-          );
+          final fallbackReceiver = isLiveStreamingSession
+              ? () {
+                  final hostId = receiverId.value.trim();
+                  if (hostId.isNotEmpty && !_userIdsMatch(hostId, myId)) {
+                    return hostId;
+                  }
+                  return seatedRecipients.first;
+                }()
+              : (seatedRecipients.length == 1 ? seatedRecipients.first : null);
+          if (fallbackReceiver != null) {
+            response = await _economyRepo.sendGift(
+              receiverId: fallbackReceiver,
+              giftId: giftId,
+              roomId: currentRoomId,
+              scope: 'user',
+              sessionType: sessionType,
+              isShowLoader: false,
+            );
+          }
         }
 
         if (!isEconomyApiSuccess(response)) {
@@ -3266,8 +3384,11 @@ class LiveBroadcastController extends GetxController {
       comboTotal: comboTotal,
     );
     // Await so peers receive each combo hit (Zego drops unawaited bursts).
+    // Live streaming uses Express IM — UIKit in-room messages never reach peers.
     try {
-      final sentOk = await ZegoUIKit().sendInRoomMessage(giftLabel);
+      final sentOk = isLiveStreamingSession
+          ? await _sendExpressLiveMessage(giftLabel)
+          : await ZegoUIKit().sendInRoomMessage(giftLabel);
       if (!sentOk) {
         chatMessages.add({
           'sender': 'You',
@@ -3286,6 +3407,35 @@ class LiveBroadcastController extends GetxController {
         'isSystem': true,
       });
     }
+  }
+
+  /// Bottom-bar gift entry for standalone live streams.
+  ///
+  /// Matches chat / call gifts: audience sends a direct `user` gift to the host
+  /// (not a party-room `scope=room` share that expects mic seats).
+  void openLiveStreamGiftSheet() {
+    if (!isLiveStreamingSession) {
+      openGiftsSheet();
+      return;
+    }
+    if (isHost.value) {
+      openGiftsSheet(roomGift: true);
+      return;
+    }
+    final hostId = receiverId.value.trim();
+    if (hostId.isEmpty) {
+      _showRoomToast(
+        'Gift not available',
+        'Host id is missing from this live stream.',
+        isError: true,
+      );
+      return;
+    }
+    openGiftsSheet(
+      receiverId: hostId,
+      receiverName: hostName.value,
+      roomGift: false,
+    );
   }
 
   void openViewersSheet() {
@@ -4162,8 +4312,20 @@ class LiveBroadcastController extends GetxController {
       'roomUuid',
       'room_uuid',
     ])?.trim();
-    if (raw != null && raw.isNotEmpty) return raw;
+    if (raw != null && raw.isNotEmpty && !_isZegoLiveChannelId(raw)) {
+      return raw;
+    }
+    // Live Express uses `ls_…` as roomId.value — never send that to REST gifts.
+    if (isLiveStreamingSession) return '';
     return roomId.value.trim();
+  }
+
+  /// Backend UUID for `POST /api/economy/send-gift` (never the Zego live channel).
+  String get economyGiftRoomId {
+    final apiId = audioRoomApiId.trim();
+    if (apiId.isNotEmpty) return apiId;
+    final fallback = _extractBackendRoomId(_roomData)?.trim() ?? '';
+    return fallback;
   }
 
   void _startSeatRefreshPolling() {

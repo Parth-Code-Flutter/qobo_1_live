@@ -268,7 +268,7 @@ class LiveRoomView extends StatelessWidget {
   Widget _searchEmptyState(LiveRoomController controller) {
     return _refreshableEmptyState(
       controller: controller,
-      child: Column(
+      builder: (_, __) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(Icons.search_off_rounded, color: AppLightUi.muted, size: 48),
@@ -287,50 +287,69 @@ class LiveRoomView extends StatelessWidget {
   Widget _emptyState(LiveRoomController controller) {
     return _refreshableEmptyState(
       controller: controller,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(18, 18, 18, 22),
-          decoration: AppLightUi.cardDecoration(radius: 28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const DatingEmptyHero(
-                style: DatingEmptyHeroStyle.live,
-                size: 150,
-                accentColors: [AppLightUi.pink, AppLightUi.violet],
+      builder: (maxHeight, maxWidth) {
+        // Banner + CTAs leave a short listing slot — keep hero + copy fitting.
+        final heroSize = (maxHeight * 0.34).clamp(64.0, 120.0);
+        final cardPadV = maxHeight < 280 ? 10.0 : 16.0;
+        final gapAfterHero = maxHeight < 280 ? 6.0 : 10.0;
+        final titleSize = maxHeight < 280
+            ? TextStyles.k14FontSize
+            : TextStyles.k16FontSize;
+        final cardWidth = (maxWidth - 40).clamp(240.0, 360.0);
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: maxHeight),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Container(
+                width: cardWidth,
+                padding: EdgeInsets.fromLTRB(18, cardPadV, 18, cardPadV),
+                decoration: AppLightUi.cardDecoration(radius: 28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DatingEmptyHero(
+                      style: DatingEmptyHeroStyle.live,
+                      size: heroSize,
+                      accentColors: const [AppLightUi.pink, AppLightUi.violet],
+                    ),
+                    SizedBox(height: gapAfterHero),
+                    SemiBoldText(
+                      text: LocaleKeys.liveRoomEmptyTitle.tr,
+                      fontSize: titleSize,
+                      color: AppLightUi.title,
+                      align: TextAlign.center,
+                    ),
+                    Spacing.v6,
+                    AppText(
+                      text: LocaleKeys.liveRoomEmptySubtitle.tr,
+                      fontSize: TextStyles.k12FontSize,
+                      color: AppLightUi.subtitle,
+                      align: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
-              Spacing.v12,
-              SemiBoldText(
-                text: LocaleKeys.liveRoomEmptyTitle.tr,
-                fontSize: TextStyles.k16FontSize,
-                color: AppLightUi.title,
-                align: TextAlign.center,
-              ),
-              Spacing.v8,
-              AppText(
-                text: LocaleKeys.liveRoomEmptySubtitle.tr,
-                fontSize: TextStyles.k12FontSize,
-                color: AppLightUi.subtitle,
-                align: TextAlign.center,
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
+  /// Pull-to-refresh shell for empty listing.
   Widget _refreshableEmptyState({
     required LiveRoomController controller,
-    required Widget child,
+    required Widget Function(double maxHeight, double maxWidth) builder,
   }) {
     return LayoutBuilder(
       builder: (_, constraints) {
-        final contentHeight = constraints.maxHeight > 120
-            ? constraints.maxHeight - 120
-            : constraints.maxHeight;
+        final maxHeight = constraints.maxHeight.isFinite
+            ? constraints.maxHeight
+            : 320.0;
+        final maxWidth =
+            constraints.maxWidth.isFinite ? constraints.maxWidth : 360.0;
         return RefreshIndicator(
           color: kColorPrimary,
           onRefresh: controller.refreshLiveRoom,
@@ -338,11 +357,13 @@ class LiveRoomView extends StatelessWidget {
             physics: const AlwaysScrollableScrollPhysics(
               parent: BouncingScrollPhysics(),
             ),
-            padding: const EdgeInsets.only(bottom: 110),
+            padding: const EdgeInsets.fromLTRB(0, 4, 0, 24),
             children: [
               SizedBox(
-                height: contentHeight,
-                child: Center(child: child),
+                height: maxHeight,
+                child: Center(
+                  child: builder(maxHeight, maxWidth),
+                ),
               ),
             ],
           ),

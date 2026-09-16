@@ -1273,7 +1273,9 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
           kGiftIcon,
           color: _accent,
           compact: compact,
-          onTap: controller.openGiftsSheet,
+          onTap: controller.isLiveStreamingSession
+              ? controller.openLiveStreamGiftSheet
+              : controller.openGiftsSheet,
         ),
       if (!isAudience)
         _bottomActionIcon(
@@ -2233,6 +2235,24 @@ class _StableZegoExpressLiveStreamingState
       if (roomID != widget.liveId) return;
       _controller.receiveExpressLiveMessages(messageList);
     };
+
+    express.ZegoExpressEngine.onRoomUserUpdate =
+        (roomID, updateType, userList) {
+          if (roomID != widget.liveId) return;
+          final users = userList
+              .map((user) => (id: user.userID, name: user.userName))
+              .toList(growable: false);
+          if (updateType == express.ZegoUpdateType.Delete) {
+            _controller.removeExpressLiveUsers(
+              users.map((user) => user.id),
+            );
+            return;
+          }
+          _controller.syncExpressLiveUsers(
+            users: users,
+            replaceAll: false,
+          );
+        };
   }
 
   Future<void> _stop() async {
@@ -2271,6 +2291,7 @@ class _StableZegoExpressLiveStreamingState
     express.ZegoExpressEngine.onPlayerStateUpdate = null;
     express.ZegoExpressEngine.onRoomStreamUpdate = null;
     express.ZegoExpressEngine.onIMRecvBroadcastMessage = null;
+    express.ZegoExpressEngine.onRoomUserUpdate = null;
 
     try {
       await express.ZegoExpressEngine.destroyEngine();
