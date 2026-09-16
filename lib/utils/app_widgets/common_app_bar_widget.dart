@@ -7,10 +7,9 @@ import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
-/// Shared dating AppBar — purple→pink gradient, flush bottom, white chrome.
+/// Shared dating AppBar — purple→pink gradient, rounded bottom, white chrome.
 ///
-/// Bottom corners are square so Scaffold lavender never peeks through as a
-/// grey strip under the bar (rounded bottoms caused that on every screen).
+/// Matches Family detail header; used by Settings, Visitors, Mall, etc.
 class CommonAppBarWidget extends StatelessWidget implements PreferredSizeWidget {
   const CommonAppBarWidget({
     super.key,
@@ -62,10 +61,14 @@ class CommonAppBarWidget extends StatelessWidget implements PreferredSizeWidget 
 
   static const gradient = AppLightUi.familyCtaGradient;
 
+  /// Transparent margin under the rounded bar so tabs/lists aren't flush.
+  static const double bottomGap = 12;
+
   @override
   Size get preferredSize {
     final extraBottom = bottom?.preferredSize.height ?? 0;
-    return Size.fromHeight(toolbarHeight + extraBottom);
+    final gap = useGradientStyle ? bottomGap : 0.0;
+    return Size.fromHeight(toolbarHeight + gap + extraBottom);
   }
 
   @override
@@ -89,20 +92,22 @@ class CommonAppBarWidget extends StatelessWidget implements PreferredSizeWidget 
       titleSpacing: 0,
       systemOverlayStyle: SystemUiOverlayStyle.light,
       automaticallyImplyLeading: false,
-      // Leave room for optional [bottom] (e.g. tabs); otherwise sit flush on body.
-      // No bottom radius — curves revealed Scaffold bg as a grey band under the bar.
+      // Gradient paints above [bottomGap]; gap itself stays transparent.
       flexibleSpace: Padding(
-        padding: EdgeInsets.only(bottom: extraH),
-        child: DecoratedBox(
+        padding: EdgeInsets.only(bottom: bottomGap + extraH),
+        child: Container(
           decoration: BoxDecoration(
             gradient: gradient,
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF2A1744).withValues(alpha: 0.10),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
+            borderRadius: const BorderRadius.vertical(
+              bottom: Radius.circular(22),
+            ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF2A1744).withValues(alpha: 0.12),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
           ),
         ),
       ),
@@ -178,7 +183,16 @@ class CommonAppBarWidget extends StatelessWidget implements PreferredSizeWidget 
           const SizedBox(width: 8),
         ],
       ],
-      bottom: bottom,
+      bottom: PreferredSize(
+        preferredSize: Size.fromHeight(bottomGap + extraH),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: bottomGap),
+            if (bottom != null) bottom!,
+          ],
+        ),
+      ),
     );
   }
 
