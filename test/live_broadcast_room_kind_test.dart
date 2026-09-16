@@ -93,4 +93,40 @@ void main() {
     expect(controller.isAudioVideoRoom, isFalse);
     expect(controller.isLiveStreamingSession, isTrue);
   });
+
+  test('live stream gift room id uses liveStreamingId like economy docs', () {
+    final controller = _controllerWithArgs({
+      'isHost': false,
+      'roomType': 'LIVE_STREAM',
+      'roomData': {
+        'type': 'live_stream',
+        'id': '11197e1d-be4b-4dc1-a796-0795616e41e6',
+        'room_id': '11197e1d-be4b-4dc1-a796-0795616e41e6',
+        'backendRoomId': '11197e1d-be4b-4dc1-a796-0795616e41e6',
+        'liveStreamingId': 'ls_1787331523501_934491',
+        'zegoLiveId': 'ls_1787331523501_934491',
+        'hostId': 'host-user-1',
+      },
+    });
+    controller.onInit();
+
+    expect(controller.isLiveStreamingSession, isTrue);
+    expect(controller.economyGiftRoomId, 'ls_1787331523501_934491');
+  });
+
+  test('live stream gift room id works when only ls_ channel exists', () {
+    final controller = _controllerWithArgs({
+      'isHost': true,
+      'roomType': 'LIVE_STREAM',
+      'roomData': {
+        'type': 'live_stream',
+        'liveStreamingId': 'ls_only_abc',
+        'zegoLiveId': 'ls_only_abc',
+        'channelName': 'ls_only_abc',
+      },
+    });
+    controller.onInit();
+
+    expect(controller.economyGiftRoomId, 'ls_only_abc');
+  });
 }

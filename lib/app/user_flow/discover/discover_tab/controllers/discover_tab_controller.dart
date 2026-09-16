@@ -462,10 +462,11 @@ class DiscoverTabController extends GetxController {
         roomData['join_request_id'] = joinRequestId;
       }
     }
-    // Bind Zego to zegoLiveId / liveStreamingId (ls_…) from join response.
-    roomData['room_id'] = roomData['room_id'] ?? roomData['roomId'] ?? roomId;
-    roomData['id'] = roomData['id'] ?? roomData['room_id'];
+    // Join payloads often overwrite roomId with the Zego ls_… channel.
+    // Pin the UUID we joined with so economy gifts match party rooms.
+    ZegoLiveIdUtils.pinBackendRoomId(roomData, preferredId: roomId);
     ZegoLiveIdUtils.applyLiveChannelId(roomData);
+    ZegoLiveIdUtils.pinBackendRoomId(roomData, preferredId: roomId);
 
     await ZegoEngineUtils.resetForLiveProject();
     Get.toNamed(
@@ -928,12 +929,26 @@ class DiscoverTabController extends GetxController {
       payload.putIfAbsent('zegoToken', () => zegoStreaming['token']);
       payload.putIfAbsent('streamId', () => zegoStreaming['streamId']);
     }
-    payload['room_id'] =
-        _text(data['room_id']) ??
-        _text(payload['room_id']) ??
-        _text(payload['roomId']) ??
+    // Prefer a real backend UUID; join bodies sometimes put ls_… on roomId.
+    final pinnedRoomId =
+        ZegoLiveIdUtils.preferBackendRoomId([
+          _text(data['room_id']),
+          _text(data['roomId']),
+          _text(data['id']),
+          _text(payload['room_id']),
+          _text(payload['roomId']),
+          _text(payload['id']),
+          fallbackRoomId,
+        ]) ??
         fallbackRoomId;
-    payload['id'] = _text(payload['id']) ?? payload['room_id'];
+    payload['room_id'] = pinnedRoomId;
+    payload['roomId'] = pinnedRoomId;
+    payload['backendRoomId'] = pinnedRoomId;
+    final existingId = _text(payload['id']);
+    payload['id'] =
+        (existingId != null && !ZegoLiveIdUtils.isZegoLiveChannelId(existingId))
+        ? existingId
+        : pinnedRoomId;
     payload['zegoLiveId'] =
         _text(data['zegoLiveId']) ??
         _text(data['channelName']) ??
@@ -947,7 +962,10 @@ class DiscoverTabController extends GetxController {
         payload['zegoLiveId'];
     payload['type'] =
         _text(payload['type']) ?? (isAudioRoomMode ? 'audio' : 'video');
-    return payload;
+    return ZegoLiveIdUtils.pinBackendRoomId(
+      payload,
+      preferredId: pinnedRoomId,
+    );
   }
 
   String _roomId(Map<String, dynamic> room) {

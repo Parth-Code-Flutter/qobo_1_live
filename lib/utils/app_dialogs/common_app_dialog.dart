@@ -452,29 +452,31 @@ class _GiftComboDialog extends StatelessWidget {
                   ),
                 ],
               ),
-              padding: const EdgeInsets.fromLTRB(22, 22, 22, 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _selectedGiftCard(),
-                  const SizedBox(height: 18),
-                  const SemiBoldText(
-                    text: 'Send as Combo?',
-                    fontSize: TextStyles.k18FontSize,
-                    color: kColorWhite,
-                    align: TextAlign.center,
-                  ),
-                  Spacing.v8,
-                  AppText(
-                    text:
-                        'Pick how many to send — 1, 3, 5 or 10 at once.',
-                    fontSize: TextStyles.k12FontSize,
-                    color: kColorWhite.withValues(alpha: 0.68),
-                    align: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  _grid(),
-                ],
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _selectedGiftCard(),
+                    const SizedBox(height: 16),
+                    const SemiBoldText(
+                      text: 'Send as Combo?',
+                      fontSize: TextStyles.k18FontSize,
+                      color: kColorWhite,
+                      align: TextAlign.center,
+                    ),
+                    Spacing.v8,
+                    AppText(
+                      text:
+                          'Pick how many to send — 1, 3, 5 or 10 at once.',
+                      fontSize: TextStyles.k12FontSize,
+                      color: kColorWhite.withValues(alpha: 0.68),
+                      align: TextAlign.center,
+                    ),
+                    const SizedBox(height: 18),
+                    _grid(),
+                  ],
+                ),
               ),
             ),
           ),
@@ -568,20 +570,27 @@ class _GiftComboDialog extends StatelessWidget {
   }
 
   Widget _grid() {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: _options.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 14,
-        crossAxisSpacing: 14,
-        childAspectRatio: 1.05,
-      ),
-      itemBuilder: (context, i) => _ComboPickTile(
-        option: _options[i],
-        delayMs: i * 50,
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Wider phones keep ~1.0; narrow / large text get taller cells.
+        final cellW = (constraints.maxWidth - 14) / 2;
+        final ratio = cellW < 150 ? 0.88 : 0.95;
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: _options.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: ratio,
+          ),
+          itemBuilder: (context, i) => _ComboPickTile(
+            option: _options[i],
+            delayMs: i * 50,
+          ),
+        );
+      },
     );
   }
 }
@@ -610,6 +619,7 @@ class _ComboPickTile extends StatelessWidget {
     final colors = option.colors;
     final accent = colors[0];
     final accentEnd = colors.length > 1 ? colors[1] : colors[0];
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 1.3);
 
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.94, end: 1),
@@ -623,7 +633,6 @@ class _ComboPickTile extends StatelessWidget {
           onTap: () => Navigator.of(context).pop(option.count),
           borderRadius: BorderRadius.circular(16),
           child: Ink(
-            height: double.infinity,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
               gradient: LinearGradient(
@@ -648,47 +657,59 @@ class _ComboPickTile extends StatelessWidget {
                 ),
               ],
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: colors,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: accent.withValues(alpha: 0.4),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: colors,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: accent.withValues(alpha: 0.4),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Icon(option.icon, color: kColorWhite, size: 18),
                       ),
-                    ],
+                    ),
                   ),
-                  child: Icon(option.icon, color: kColorWhite, size: 20),
-                ),
-                const SizedBox(height: 14),
-                Container(
-                  constraints: const BoxConstraints(minWidth: 52),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    gradient: LinearGradient(colors: colors),
+                  SizedBox(height: 6 / textScale),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Container(
+                      constraints: const BoxConstraints(minWidth: 44),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        gradient: LinearGradient(colors: colors),
+                      ),
+                      alignment: Alignment.center,
+                      child: SemiBoldText(
+                        text: label,
+                        fontSize: TextStyles.k14FontSize,
+                        color: kColorWhite,
+                      ),
+                    ),
                   ),
-                  alignment: Alignment.center,
-                  child: SemiBoldText(
-                    text: label,
-                    fontSize: TextStyles.k16FontSize,
-                    color: kColorWhite,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

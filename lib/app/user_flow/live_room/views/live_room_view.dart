@@ -266,13 +266,13 @@ class LiveRoomView extends StatelessWidget {
   }
 
   Widget _searchEmptyState(LiveRoomController controller) {
-    return _refreshableEmptyState(
-      controller: controller,
-      builder: (_, __) => Column(
+    return _slotSafeEmpty(
+      onRefresh: controller.refreshLiveRoom,
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.search_off_rounded, color: AppLightUi.muted, size: 48),
-          Spacing.v12,
+          const Icon(Icons.search_off_rounded, color: AppLightUi.muted, size: 36),
+          Spacing.v8,
           SemiBoldText(
             text: 'No rooms match "${controller.searchQuery.value}"',
             fontSize: TextStyles.k14FontSize,
@@ -285,87 +285,70 @@ class LiveRoomView extends StatelessWidget {
   }
 
   Widget _emptyState(LiveRoomController controller) {
-    return _refreshableEmptyState(
-      controller: controller,
-      builder: (maxHeight, maxWidth) {
-        // Banner + CTAs leave a short listing slot — keep hero + copy fitting.
-        final heroSize = (maxHeight * 0.34).clamp(64.0, 120.0);
-        final cardPadV = maxHeight < 280 ? 10.0 : 16.0;
-        final gapAfterHero = maxHeight < 280 ? 6.0 : 10.0;
-        final titleSize = maxHeight < 280
-            ? TextStyles.k14FontSize
-            : TextStyles.k16FontSize;
-        final cardWidth = (maxWidth - 40).clamp(240.0, 360.0);
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxHeight),
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Container(
-                width: cardWidth,
-                padding: EdgeInsets.fromLTRB(18, cardPadV, 18, cardPadV),
-                decoration: AppLightUi.cardDecoration(radius: 28),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    DatingEmptyHero(
-                      style: DatingEmptyHeroStyle.live,
-                      size: heroSize,
-                      accentColors: const [AppLightUi.pink, AppLightUi.violet],
-                    ),
-                    SizedBox(height: gapAfterHero),
-                    SemiBoldText(
-                      text: LocaleKeys.liveRoomEmptyTitle.tr,
-                      fontSize: titleSize,
-                      color: AppLightUi.title,
-                      align: TextAlign.center,
-                    ),
-                    Spacing.v6,
-                    AppText(
-                      text: LocaleKeys.liveRoomEmptySubtitle.tr,
-                      fontSize: TextStyles.k12FontSize,
-                      color: AppLightUi.subtitle,
-                      align: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
+    return _slotSafeEmpty(
+      onRefresh: controller.refreshLiveRoom,
+      // Compact card — FittedBox scales it down on short devices.
+      child: Container(
+        width: 280,
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        decoration: AppLightUi.cardDecoration(radius: 22),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const DatingEmptyHero(
+              style: DatingEmptyHeroStyle.live,
+              size: 72,
+              accentColors: [AppLightUi.pink, AppLightUi.violet],
             ),
-          ),
-        );
-      },
+            Spacing.v6,
+            SemiBoldText(
+              text: LocaleKeys.liveRoomEmptyTitle.tr,
+              fontSize: TextStyles.k14FontSize,
+              color: AppLightUi.title,
+              align: TextAlign.center,
+            ),
+            Spacing.v2,
+            AppText(
+              text: LocaleKeys.liveRoomEmptySubtitle.tr,
+              fontSize: TextStyles.k10FontSize,
+              color: AppLightUi.subtitle,
+              align: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  /// Pull-to-refresh shell for empty listing.
-  Widget _refreshableEmptyState({
-    required LiveRoomController controller,
-    required Widget Function(double maxHeight, double maxWidth) builder,
+  /// Empty listing that never overflows: fills the Expanded slot and scales
+  /// [child] down with [FittedBox] when the slot is shorter than the card.
+  Widget _slotSafeEmpty({
+    required Future<void> Function() onRefresh,
+    required Widget child,
   }) {
     return LayoutBuilder(
-      builder: (_, constraints) {
-        final maxHeight = constraints.maxHeight.isFinite
-            ? constraints.maxHeight
-            : 320.0;
-        final maxWidth =
-            constraints.maxWidth.isFinite ? constraints.maxWidth : 360.0;
+      builder: (context, constraints) {
+        final h = constraints.maxHeight.isFinite ? constraints.maxHeight : 240.0;
+        final w = constraints.maxWidth.isFinite ? constraints.maxWidth : 320.0;
         return RefreshIndicator(
           color: kColorPrimary,
-          onRefresh: controller.refreshLiveRoom,
-          child: ListView(
+          onRefresh: onRefresh,
+          child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(
               parent: BouncingScrollPhysics(),
             ),
-            padding: const EdgeInsets.fromLTRB(0, 4, 0, 24),
-            children: [
-              SizedBox(
-                height: maxHeight,
-                child: Center(
-                  child: builder(maxHeight, maxWidth),
+            child: SizedBox(
+              height: h,
+              width: w,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.center,
+                  child: child,
                 ),
               ),
-            ],
+            ),
           ),
         );
       },

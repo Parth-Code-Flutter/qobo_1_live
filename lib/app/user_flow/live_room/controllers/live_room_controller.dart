@@ -649,6 +649,7 @@ class LiveRoomController extends GetxController {
     if (backendRoomId != null) {
       map['room_id'] = backendRoomId;
       map['roomId'] = backendRoomId;
+      map['backendRoomId'] = backendRoomId;
       map.putIfAbsent('id', () => backendRoomId);
     }
     map['isLive'] = true;
@@ -656,7 +657,8 @@ class LiveRoomController extends GetxController {
     map.putIfAbsent('hostName', () => session?.displayName ?? title);
     map.putIfAbsent('hostAvatar', () => session?.displayPicturePath ?? '');
     map.putIfAbsent('displayPicture', () => session?.displayPicturePath ?? '');
-    return ZegoLiveIdUtils.applyLiveChannelId(map);
+    ZegoLiveIdUtils.applyLiveChannelId(map);
+    return ZegoLiveIdUtils.pinBackendRoomId(map, preferredId: backendRoomId);
   }
 
   Map<String, dynamic> _buildLocalLiveStreamingPayload(
@@ -859,7 +861,16 @@ class LiveRoomController extends GetxController {
                   _text((response['data'] as Map)['request_id']))
             : null);
     // Prefer zegoLiveId / ls_… from join response (never force UUID).
+    final preferredUuid = ZegoLiveIdUtils.preferBackendRoomId([
+      roomId,
+      _text(payload['backendRoomId']),
+      _text(payload['room_id']),
+      _text(payload['roomId']),
+      _text(payload['id']),
+    ]);
+    ZegoLiveIdUtils.pinBackendRoomId(payload, preferredId: preferredUuid);
     ZegoLiveIdUtils.applyLiveChannelId(payload);
+    ZegoLiveIdUtils.pinBackendRoomId(payload, preferredId: preferredUuid);
 
     if (_text(payload['zegoLiveId']) == null) {
       if (context != null) {
@@ -979,12 +990,26 @@ class LiveRoomController extends GetxController {
       payload.putIfAbsent('zegoToken', () => zegoStreaming['token']);
       payload.putIfAbsent('streamId', () => zegoStreaming['streamId']);
     }
-    payload['room_id'] =
-        _text(data['room_id']) ??
-        _text(payload['room_id']) ??
-        _text(payload['roomId']) ??
+    // Prefer a real backend UUID; join bodies sometimes put ls_… on roomId.
+    final pinnedRoomId =
+        ZegoLiveIdUtils.preferBackendRoomId([
+          _text(data['room_id']),
+          _text(data['roomId']),
+          _text(data['id']),
+          _text(payload['room_id']),
+          _text(payload['roomId']),
+          _text(payload['id']),
+          fallbackRoomId,
+        ]) ??
         fallbackRoomId;
-    payload['id'] = _text(payload['id']) ?? payload['room_id'];
+    payload['room_id'] = pinnedRoomId;
+    payload['roomId'] = pinnedRoomId;
+    payload['backendRoomId'] = pinnedRoomId;
+    final existingId = _text(payload['id']);
+    payload['id'] =
+        (existingId != null && !ZegoLiveIdUtils.isZegoLiveChannelId(existingId))
+        ? existingId
+        : pinnedRoomId;
     payload['zegoLiveId'] =
         _text(data['zegoLiveId']) ??
         _text(data['channelName']) ??
@@ -1003,7 +1028,10 @@ class LiveRoomController extends GetxController {
       data: data,
       joinedRoom: joinedRoom,
     );
-    return payload;
+    return ZegoLiveIdUtils.pinBackendRoomId(
+      payload,
+      preferredId: pinnedRoomId,
+    );
   }
 
   String _roomId(Map<String, dynamic> room) {

@@ -67,6 +67,7 @@ class _DatingEmptyHeroState extends State<DatingEmptyHero>
           final spin = _spin.value * math.pi * 2;
           return Stack(
             alignment: Alignment.center,
+            clipBehavior: Clip.hardEdge,
             children: [
               // Soft blush backdrop
               Container(
@@ -130,18 +131,18 @@ class _DatingEmptyHeroState extends State<DatingEmptyHero>
       ],
     };
 
-    for (var i = 0; i < icons.length; i++) {
+            for (var i = 0; i < icons.length; i++) {
       final angle = spin + (i * 2 * math.pi / icons.length);
       final radius = widget.size * (0.34 + t * 0.02);
       final dx = math.cos(angle) * radius;
       final dy = math.sin(angle) * radius;
-      final size = i == 1 ? 18.0 : 14.0;
+      final size = (widget.size * (i == 1 ? 0.14 : 0.11)).clamp(10.0, 18.0);
       items.add(
         Transform.translate(
           offset: Offset(dx, dy),
           child: Container(
-            width: size + 10,
-            height: size + 10,
+            width: size + 8,
+            height: size + 8,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
@@ -168,9 +169,11 @@ class _DatingEmptyHeroState extends State<DatingEmptyHero>
 
   Widget _centerBadge(double t) {
     final core = widget.size * 0.42;
+    // Limit pulse growth on small heroes so the glyph Column never overflows.
+    final pulse = (t * (widget.size < 90 ? 1.5 : 4));
     return Container(
-      width: core + t * 4,
-      height: core + t * 4,
+      width: core + pulse,
+      height: core + pulse,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: LinearGradient(
@@ -185,46 +188,74 @@ class _DatingEmptyHeroState extends State<DatingEmptyHero>
             offset: const Offset(0, 8),
           ),
         ],
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.85), width: 3),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.85), width: 2.5),
       ),
-      child: Center(child: _centerGlyph()),
+      child: Center(
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Padding(
+            padding: EdgeInsets.all(core * 0.08),
+            child: _centerGlyph(),
+          ),
+        ),
+      ),
     );
   }
 
   Widget _centerGlyph() {
+    final core = widget.size * 0.42;
     switch (widget.style) {
       case DatingEmptyHeroStyle.audio:
         return const _WaveformGlyph();
       case DatingEmptyHeroStyle.video:
-        return const Icon(Icons.videocam_rounded, color: kColorWhite, size: 34);
+        return Icon(
+          Icons.videocam_rounded,
+          color: kColorWhite,
+          size: (core * 0.55).clamp(16.0, 34.0),
+        );
       case DatingEmptyHeroStyle.live:
+        // Scale glyph to the circle — fixed 26px icon overflowed small heroes.
+        final iconSize = (core * 0.42).clamp(12.0, 22.0);
+        final labelSize = (core * 0.22).clamp(7.0, 9.0);
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.sensors_rounded, color: kColorWhite, size: 26),
-            const SizedBox(height: 2),
+            Icon(Icons.sensors_rounded, color: kColorWhite, size: iconSize),
+            SizedBox(height: core * 0.04),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              padding: EdgeInsets.symmetric(
+                horizontal: (core * 0.12).clamp(4.0, 7.0),
+                vertical: (core * 0.04).clamp(1.0, 2.0),
+              ),
               decoration: BoxDecoration(
                 color: kColorWhite.withValues(alpha: 0.22),
                 borderRadius: BorderRadius.circular(999),
               ),
-              child: const Text(
+              child: Text(
                 'LIVE',
                 style: TextStyle(
                   color: kColorWhite,
-                  fontSize: 9,
+                  fontSize: labelSize,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 0.6,
+                  height: 1.0,
                 ),
               ),
             ),
           ],
         );
       case DatingEmptyHeroStyle.messages:
-        return const Icon(Icons.forum_rounded, color: kColorWhite, size: 32);
+        return Icon(
+          Icons.forum_rounded,
+          color: kColorWhite,
+          size: (core * 0.55).clamp(16.0, 32.0),
+        );
       case DatingEmptyHeroStyle.sparks:
-        return const Icon(Icons.favorite_rounded, color: kColorWhite, size: 32);
+        return Icon(
+          Icons.favorite_rounded,
+          color: kColorWhite,
+          size: (core * 0.55).clamp(16.0, 32.0),
+        );
     }
   }
 }

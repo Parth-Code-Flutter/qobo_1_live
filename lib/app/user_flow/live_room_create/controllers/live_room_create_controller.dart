@@ -211,6 +211,7 @@ class LiveRoomCreateController extends GetxController {
   Future<void> _openZegoHost(Map<String, dynamic> roomData) async {
     roomData['type'] = 'live_stream';
     ZegoLiveIdUtils.applyLiveChannelId(roomData);
+    ZegoLiveIdUtils.pinBackendRoomId(roomData);
     await ZegoEngineUtils.resetForLiveProject();
     Get.offNamed(
       Routes.LIVE_BROADCAST,
@@ -414,6 +415,7 @@ class LiveRoomCreateController extends GetxController {
     if (backendRoomId != null) {
       map['room_id'] = backendRoomId;
       map['roomId'] = backendRoomId;
+      map['backendRoomId'] = backendRoomId;
       map.putIfAbsent('id', () => backendRoomId);
     }
     map['onlyFollows'] = map['onlyFollows'] ?? onlyFollows.value;
@@ -430,7 +432,8 @@ class LiveRoomCreateController extends GetxController {
       map.putIfAbsent('hostAvatar', () => session.displayPicturePath);
       map.putIfAbsent('displayPicture', () => session.displayPicturePath);
     }
-    return ZegoLiveIdUtils.applyLiveChannelId(map);
+    ZegoLiveIdUtils.applyLiveChannelId(map);
+    return ZegoLiveIdUtils.pinBackendRoomId(map, preferredId: backendRoomId);
   }
 
   @override

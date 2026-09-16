@@ -227,6 +227,9 @@ class LiveBroadcastController extends GetxController {
       if (args.containsKey('roomType')) roomType.value = args['roomType'];
       if (args.containsKey('roomData') && args['roomData'] != null) {
         _roomData = Map<String, dynamic>.from(args['roomData']);
+        // Keep REST UUID on room_id / backendRoomId — join payloads often
+        // overwrite roomId with the Zego ls_… channel used for Express.
+        ZegoLiveIdUtils.pinBackendRoomId(_roomData);
         receiverId.value = _extractReceiverId(_roomData) ?? '';
         final streamingId = _extractStreamingId(_roomData);
         hasExplicitStreamingId.value = streamingId != null;
@@ -236,6 +239,8 @@ class LiveBroadcastController extends GetxController {
         if (channel.isNotEmpty) {
           ZegoLiveIdUtils.applyLiveChannelId(_roomData);
         }
+        // Re-pin after channel keys are written so gifts still get the UUID.
+        ZegoLiveIdUtils.pinBackendRoomId(_roomData);
         roomId.value = channel.isNotEmpty
             ? channel
             : ZegoLiveIdUtils.sanitize(
@@ -2617,21 +2622,58 @@ class LiveBroadcastController extends GetxController {
   }
 
   String? _extractBackendRoomId(Map<String, dynamic> roomData) {
-    // Prefer real REST room UUIDs. Skip Zego `ls_…` channel ids — send-gift
-    // and other economy APIs reject those as roomId.
-    const keys = ['room_id', 'roomId', '_id', 'id'];
-    for (final key in keys) {
-      final value = _firstNonEmpty(roomData, [key]);
-      if (value == null || value.isEmpty) continue;
-      if (_isZegoLiveChannelId(value)) continue;
-      return value;
+    // Prefer real REST room UUIDs / ObjectIds. Skip Zego `ls_…` channel ids —
+    // send-gift and other economy APIs reject those as roomId.
+    Map<String, dynamic>? asMap(dynamic value) {
+      if (value is Map) return Map<String, dynamic>.from(value);
+      return null;
     }
-    return null;
+
+    final nested =
+        asMap(roomData['room']) ??
+        asMap(roomData['liveStreaming']) ??
+        asMap(roomData['live_streaming']) ??
+        asMap(roomData['data']) ??
+        const <String, dynamic>{};
+
+    const preferredKeys = [
+      'backendRoomId',
+      'backend_room_id',
+      'roomUuid',
+      'room_uuid',
+      'room_id',
+      'roomId',
+      '_id',
+      'id',
+    ];
+
+    String? pick(Map<String, dynamic> source, List<String> keys) {
+      for (final key in keys) {
+        final value = _firstNonEmpty(source, [key]);
+        if (value == null || value.isEmpty) continue;
+        if (_isZegoLiveChannelId(value)) continue;
+        return value.trim();
+      }
+      return null;
+    }
+
+    final fromPreferred =
+        pick(roomData, preferredKeys) ?? pick(nested, preferredKeys);
+    if (fromPreferred != null) return fromPreferred;
+
+    // Legacy live payloads sometimes only carry the REST id on streaming keys.
+    const legacyKeys = [
+      'liveStreamingId',
+      'live_streaming_id',
+      'liveStreamId',
+      'live_id',
+      'liveId',
+    ];
+    return pick(roomData, legacyKeys) ?? pick(nested, legacyKeys);
   }
 
   bool _isZegoLiveChannelId(String value) {
-    final normalized = value.trim().toLowerCase();
-    return normalized.startsWith('ls_') || normalized.startsWith('ls');
+    return ZegoLiveIdUtils.isZegoLiveChannelId(value);
   }
 
   String? _extractReceiverId(Map<String, dynamic> roomData) {
@@ -3134,10 +3176,11 @@ class LiveBroadcastController extends GetxController {
       return;
     }
 
-    final giftId = gift['id']?.trim() ?? '';
-    // Same contract as chat / call / family gifts: REST room UUID only.
-    // Live Express stores the Zego `ls_…` channel in [roomId] — never send that.
-    final currentRoomId = economyGiftRoomId;
+    final giftId = (gift['id'] ?? gift['_id'] ?? gift['giftId'] ?? '')
+        .toString()
+        .trim();
+    // Party rooms: backend UUID. Live: liveStreamingId (often ls_…) with UUID retry.
+    var currentRoomId = economyGiftRoomId;
     final scope = isRoomGiftMode.value ? 'room' : 'user';
     final currentReceiverId = scope == 'room'
         ? ''
@@ -3172,11 +3215,14 @@ class LiveBroadcastController extends GetxController {
     if (giftId.isEmpty ||
         currentRoomId.isEmpty ||
         (scope == 'user' && currentReceiverId.isEmpty)) {
+      final missing = <String>[
+        if (giftId.isEmpty) 'gift id',
+        if (currentRoomId.isEmpty) 'room id',
+        if (scope == 'user' && currentReceiverId.isEmpty) 'receiver id',
+      ].join(', ');
       _showRoomToast(
         'Gift not sent',
-        scope == 'room'
-            ? 'Gift or room id is missing from live room data.'
-            : 'Gift, receiver, or room id is missing from live room data.',
+        'Missing $missing from live room data.',
         isError: true,
       );
       return;
@@ -3190,15 +3236,46 @@ class LiveBroadcastController extends GetxController {
     var sent = 0;
     try {
       for (var i = 0; i < count; i++) {
-        var response = await _economyRepo.sendGift(
-          receiverId: scope == 'room' ? null : currentReceiverId,
-          giftId: giftId,
-          roomId: currentRoomId,
-          scope: scope,
-          seatedUserIds: scope == 'room' ? seatedRecipients : null,
-          sessionType: sessionType,
-          isShowLoader: i == 0,
+        Future<Map<String, dynamic>?> postGift({
+          required String roomIdForGift,
+          required String giftScope,
+          String? receiver,
+          List<String>? seated,
+        }) {
+          return _economyRepo.sendGift(
+            receiverId: giftScope == 'room' ? null : receiver,
+            giftId: giftId,
+            roomId: roomIdForGift,
+            scope: giftScope,
+            seatedUserIds: giftScope == 'room' ? seated : null,
+            sessionType: sessionType,
+            isShowLoader: i == 0,
+          );
+        }
+
+        var response = await postGift(
+          roomIdForGift: currentRoomId,
+          giftScope: scope,
+          receiver: currentReceiverId,
+          seated: seatedRecipients,
         );
+
+        // Live: if primary id (often ls_…) is rejected, retry UUID (or vice versa).
+        final alternateRoomId = _economyGiftRoomIdAlternate;
+        if (!isEconomyApiSuccess(response) &&
+            isLiveStreamingSession &&
+            alternateRoomId.isNotEmpty &&
+            _isGiftRoomContextError(response)) {
+          response = await postGift(
+            roomIdForGift: alternateRoomId,
+            giftScope: scope,
+            receiver: currentReceiverId,
+            seated: seatedRecipients,
+          );
+          if (isEconomyApiSuccess(response)) {
+            currentRoomId = alternateRoomId;
+          }
+        }
 
         // Backend `scope=room` often ignores seatedUserIds and says no seats even
         // when we sent them. Live streams have no mic seats — fall back to a
@@ -3217,14 +3294,20 @@ class LiveBroadcastController extends GetxController {
                 }()
               : (seatedRecipients.length == 1 ? seatedRecipients.first : null);
           if (fallbackReceiver != null) {
-            response = await _economyRepo.sendGift(
-              receiverId: fallbackReceiver,
-              giftId: giftId,
-              roomId: currentRoomId,
-              scope: 'user',
-              sessionType: sessionType,
-              isShowLoader: false,
+            response = await postGift(
+              roomIdForGift: currentRoomId,
+              giftScope: 'user',
+              receiver: fallbackReceiver,
             );
+            if (!isEconomyApiSuccess(response) &&
+                isLiveStreamingSession &&
+                alternateRoomId.isNotEmpty) {
+              response = await postGift(
+                roomIdForGift: alternateRoomId,
+                giftScope: 'user',
+                receiver: fallbackReceiver,
+              );
+            }
           }
         }
 
@@ -3277,6 +3360,24 @@ class LiveBroadcastController extends GetxController {
   bool _isNoSeatedUsersGiftError(Map<String, dynamic>? response) {
     final message = (response?['message'] ?? '').toString().toLowerCase();
     return message.contains('no seated user');
+  }
+
+  bool _isGiftRoomContextError(Map<String, dynamic>? response) {
+    final message = (response?['message'] ?? '').toString().toLowerCase();
+    if (message.isEmpty) return false;
+    final giftMissing =
+        message.contains('gift') &&
+        (message.contains('not found') ||
+            message.contains('missing') ||
+            message.contains('invalid') ||
+            message.contains('required'));
+    final roomMissing =
+        message.contains('room') &&
+        (message.contains('not found') ||
+            message.contains('missing') ||
+            message.contains('invalid') ||
+            message.contains('required'));
+    return giftMissing || roomMissing;
   }
 
   Future<void> _handleGiftSendSuccess({
@@ -3411,11 +3512,20 @@ class LiveBroadcastController extends GetxController {
 
   /// Bottom-bar gift entry for standalone live streams.
   ///
-  /// Matches chat / call gifts: audience sends a direct `user` gift to the host
-  /// (not a party-room `scope=room` share that expects mic seats).
+  /// Uses the same [GiftsBottomSheet] as audio/video rooms. Audience gifts the
+  /// host (`scope=user`); host shares to viewers (`scope=room`) when possible.
   void openLiveStreamGiftSheet() {
     if (!isLiveStreamingSession) {
       openGiftsSheet();
+      return;
+    }
+    final roomKey = economyGiftRoomId;
+    if (roomKey.isEmpty) {
+      _showRoomToast(
+        'Gift not available',
+        'Live stream id is missing. Leave and rejoin, then try again.',
+        isError: true,
+      );
       return;
     }
     if (isHost.value) {
@@ -4320,12 +4430,48 @@ class LiveBroadcastController extends GetxController {
     return roomId.value.trim();
   }
 
-  /// Backend UUID for `POST /api/economy/send-gift` (never the Zego live channel).
+  /// Id for `POST /api/economy/send-gift`.
+  ///
+  /// Live streams: backend UUID when present, else `liveStreamingId` (may be
+  /// `ls_…` — economy docs allow `roomId = liveStreamingId`).
+  /// Audio/video rooms: backend UUID via [audioRoomApiId].
   String get economyGiftRoomId {
-    final apiId = audioRoomApiId.trim();
-    if (apiId.isNotEmpty) return apiId;
-    final fallback = _extractBackendRoomId(_roomData)?.trim() ?? '';
-    return fallback;
+    if (!isLiveStreamingSession) {
+      final apiId = audioRoomApiId.trim();
+      if (apiId.isNotEmpty) return apiId;
+      return _extractBackendRoomId(_roomData)?.trim() ?? '';
+    }
+
+    final resolved = ZegoLiveIdUtils.resolveEconomyGiftRoomId(
+      _roomData,
+      isLiveStreaming: true,
+      liveStreamingId: liveStreamingApiId,
+    ).trim();
+    if (resolved.isEmpty) return '';
+
+    if (!ZegoLiveIdUtils.isZegoLiveChannelId(resolved)) {
+      _roomData['backendRoomId'] = resolved;
+      _roomData['room_id'] = _roomData['room_id'] ?? resolved;
+      _roomData['roomId'] = _roomData['roomId'] ?? resolved;
+    }
+    return resolved;
+  }
+
+  /// Alternate live gift room id when the first send fails (UUID ↔ ls_…).
+  String get _economyGiftRoomIdAlternate {
+    if (!isLiveStreamingSession) return '';
+    final primary = economyGiftRoomId;
+    final uuid = _extractBackendRoomId(_roomData)?.trim() ?? '';
+    final liveId = liveStreamingApiId.trim();
+    if (primary == uuid && liveId.isNotEmpty && liveId != primary) {
+      return liveId;
+    }
+    if (primary == liveId && uuid.isNotEmpty && uuid != primary) {
+      return uuid;
+    }
+    if (uuid.isNotEmpty && primary != uuid) return uuid;
+    if (liveId.isNotEmpty && primary != liveId) return liveId;
+    return '';
   }
 
   void _startSeatRefreshPolling() {
