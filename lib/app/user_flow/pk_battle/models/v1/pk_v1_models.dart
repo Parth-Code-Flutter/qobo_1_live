@@ -223,6 +223,7 @@ class PkSideInfo {
     required this.avatarUrl,
     required this.roomId,
     required this.score,
+    this.followerCount = 0,
     this.audience = const [],
   });
 
@@ -231,6 +232,9 @@ class PkSideInfo {
   final String avatarUrl;
   final String roomId;
   final int score;
+
+  /// Optional fan/follower count for host cards on the PK stage.
+  final int followerCount;
 
   /// Viewers currently in this host's live room (from PK state / sync).
   final List<PkAudienceMember> audience;
@@ -248,12 +252,21 @@ class PkSideInfo {
       avatarUrl: _str(j, const ['avatarUrl', 'avatar_url', 'avatar']),
       roomId: _str(j, const ['roomId', 'room_id']),
       score: _int(j, const ['score']),
+      followerCount: _int(j, const [
+        'followerCount',
+        'follower_count',
+        'followers',
+        'fans',
+        'fanCount',
+        'fan_count',
+      ]),
       audience: PkAudienceMember.listFrom(audienceRaw),
     );
   }
 
   PkSideInfo copyWith({
     int? score,
+    int? followerCount,
     List<PkAudienceMember>? audience,
   }) =>
       PkSideInfo(
@@ -262,6 +275,7 @@ class PkSideInfo {
         avatarUrl: avatarUrl,
         roomId: roomId,
         score: score ?? this.score,
+        followerCount: followerCount ?? this.followerCount,
         audience: audience ?? this.audience,
       );
 

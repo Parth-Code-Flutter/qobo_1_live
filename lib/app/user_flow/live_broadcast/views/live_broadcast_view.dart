@@ -89,9 +89,18 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildTopHeader(),
+                Obx(() {
+                  // During PK the stage owns top chrome (logo / gifters / tug bar).
+                  if (controller.isInRoomPkActive) {
+                    return const SizedBox(height: 4);
+                  }
+                  return _buildTopHeader();
+                }),
                 Expanded(
-                  child: LiveRoomPkStageSlot(minHeight: 260, maxHeightCap: 520),
+                  child: LiveRoomPkStageSlot(
+                    minHeight: 280,
+                    maxHeightCap: 560,
+                  ),
                 ),
                 _buildChatList(),
                 _buildBottomControls(context),
