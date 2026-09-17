@@ -393,92 +393,160 @@ class FamilyView extends GetView<FamilyController> {
     final isMine =
         controller.selectedTab.value == 0 || group['isJoined'] == true;
     final joiningCoins = group['joiningCoins'] ?? 0;
+    final role = (group['myRole']?.toString() ?? '').trim();
+    final memberCount = group['memberCount'] ?? 0;
+    final description = group['description']?.toString().trim() ?? '';
+
     return GlossyDatingCard(
       onTap: () {
         Get.to(() => FamilyDetailDashboardPage(group: group));
       },
-      padding: const EdgeInsets.all(14),
-      radius: 24,
-      child: Stack(
+      padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
+      radius: 22,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Positioned(
-            right: -24,
-            top: -28,
-            child: Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    _FamilyUi.pink.withValues(alpha: 0.18),
-                    Colors.transparent,
+          _groupAvatar(group),
+          Spacing.h12,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: SemiBoldText(
+                        text: group['name']?.toString() ?? 'Family Group',
+                        fontSize: TextStyles.k16FontSize,
+                        color: _FamilyUi.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (role.isNotEmpty) ...[
+                      Spacing.h6,
+                      _rolePill(role),
+                    ],
                   ],
                 ),
-              ),
+                Spacing.v4,
+                AppText(
+                  text: description.isNotEmpty
+                      ? description
+                      : 'Group chat community',
+                  fontSize: TextStyles.k12FontSize,
+                  color: _FamilyUi.muted,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Spacing.v8,
+                _groupMetaRow(
+                  memberCount: memberCount,
+                  joiningCoins: joiningCoins,
+                  isMine: isMine,
+                ),
+              ],
             ),
           ),
-          Row(
-            children: [
-              _groupAvatar(group),
-              Spacing.h12,
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SemiBoldText(
-                      text: group['name']?.toString() ?? 'Family Group',
-                      fontSize: TextStyles.k16FontSize,
-                      color: _FamilyUi.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Spacing.v4,
-                    AppText(
-                      text: group['description']?.toString().isNotEmpty == true
-                          ? group['description'].toString()
-                          : 'Group chat community',
-                      fontSize: TextStyles.k12FontSize,
-                      color: _FamilyUi.muted,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Spacing.v12,
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _metaChip(
-                          Icons.people_alt_rounded,
-                          '${group['memberCount'] ?? 0} members',
-                        ),
-                        if (!isMine)
-                          _coinChip(
-                            joiningCoins <= 0
-                                ? 'Free to join'
-                                : '$joiningCoins coins to join',
-                          ),
-                        if (isMine && joiningCoins > 0)
-                          _coinChip('$joiningCoins join fee'),
-                        if ((group['myRole']?.toString() ?? '').isNotEmpty)
-                          _metaChip(
-                            Icons.shield_rounded,
-                            group['myRole'].toString(),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Spacing.h8,
-              GlossyCircleAction(
-                icon: isMine
-                    ? Icons.chat_bubble_rounded
-                    : Icons.login_rounded,
-                size: 44,
-                iconSize: 20,
-              ),
-            ],
+          Spacing.h8,
+          GlossyCircleAction(
+            icon: isMine ? Icons.chat_bubble_rounded : Icons.login_rounded,
+            size: 40,
+            iconSize: 18,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _groupMetaRow({
+    required Object? memberCount,
+    required Object? joiningCoins,
+    required bool isMine,
+  }) {
+    final coins = joiningCoins is num
+        ? joiningCoins.toInt()
+        : int.tryParse('$joiningCoins') ?? 0;
+    final feeLabel = !isMine
+        ? (coins <= 0 ? 'Free' : '$coins join')
+        : (coins > 0 ? '$coins fee' : null);
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      child: Row(
+        children: [
+          _compactMetaChip(
+            icon: Icons.people_alt_rounded,
+            text: '$memberCount',
+            accent: _FamilyUi.cyan,
+          ),
+          if (feeLabel != null) ...[
+            Spacing.h6,
+            _compactMetaChip(
+              icon: null,
+              text: feeLabel,
+              accent: _FamilyUi.gold,
+              leading: const AppCoinIcon(size: 12, color: _FamilyUi.gold),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _rolePill(String role) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        gradient: LinearGradient(
+          colors: [
+            _FamilyUi.violet.withValues(alpha: 0.16),
+            _FamilyUi.pink.withValues(alpha: 0.12),
+          ],
+        ),
+        border: Border.all(color: _FamilyUi.violet.withValues(alpha: 0.28)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.shield_rounded, size: 11, color: _FamilyUi.violet),
+          Spacing.h4,
+          AppText(
+            text: role,
+            fontSize: 10,
+            color: _FamilyUi.violet,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _compactMetaChip({
+    required IconData? icon,
+    required String text,
+    required Color accent,
+    Widget? leading,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: accent.withValues(alpha: 0.28)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (leading != null) leading else if (icon != null)
+            Icon(icon, size: 12, color: accent),
+          Spacing.h4,
+          AppText(
+            text: text,
+            fontSize: 10,
+            color: _FamilyUi.body,
           ),
         ],
       ),
@@ -492,22 +560,22 @@ class FamilyView extends GetView<FamilyController> {
         ? name.trim().substring(0, 1).toUpperCase()
         : 'F';
     return Container(
-      width: 70,
-      height: 70,
-      padding: const EdgeInsets.all(2.5),
+      width: 56,
+      height: 56,
+      padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: AppLightUi.glossRingGradient,
         boxShadow: [
           BoxShadow(
             color: AppLightUi.title.withValues(alpha: 0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
+            blurRadius: 12,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
       child: Container(
-        padding: const EdgeInsets.all(2),
+        padding: const EdgeInsets.all(1.5),
         decoration: const BoxDecoration(
           shape: BoxShape.circle,
           color: kColorWhite,
@@ -515,8 +583,8 @@ class FamilyView extends GetView<FamilyController> {
         child: ClipOval(
           child: _FamilyNetworkImage(
             url: logo,
-            width: 62,
-            height: 62,
+            width: 50,
+            height: 50,
             fit: BoxFit.cover,
             fallback: _FamilyImagePlaceholder(
               icon: Icons.groups_2_rounded,
@@ -529,62 +597,6 @@ class FamilyView extends GetView<FamilyController> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _metaChip(IconData icon, String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            _FamilyUi.cyan.withValues(alpha: 0.14),
-            _FamilyUi.violet.withValues(alpha: 0.08),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _FamilyUi.cyan.withValues(alpha: 0.28)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 13, color: _FamilyUi.cyan),
-          Spacing.h4,
-          AppText(
-            text: text,
-            fontSize: TextStyles.k10FontSize,
-            color: _FamilyUi.body,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _coinChip(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            _FamilyUi.gold.withValues(alpha: 0.22),
-            _FamilyUi.pink.withValues(alpha: 0.10),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _FamilyUi.gold.withValues(alpha: 0.35)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const AppCoinIcon(size: 13, color: _FamilyUi.gold),
-          Spacing.h4,
-          AppText(
-            text: text,
-            fontSize: TextStyles.k10FontSize,
-            color: _FamilyUi.gold,
-          ),
-        ],
       ),
     );
   }
@@ -1226,8 +1238,8 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
               children: [
                 _EditableFamilyPhoto(
                   group: _group,
-                  size: 112,
-                  fallback: _familyBadge(),
+                  size: 96,
+                  fallback: _familyPhotoFallback(96),
                 ),
                 const SizedBox(width: 18),
                 Expanded(
@@ -1330,86 +1342,61 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
     );
   }
 
-  Widget _familyBadge() {
+  Widget _familyPhotoFallback(double size) {
     final logo = _text(_group['logo'], '');
-    return SizedBox(
-      width: 138,
-      child: Column(
-        children: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              Container(
-                width: 112,
-                height: 112,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFFFD24D), Color(0xFF7B5CFF)],
-                  ),
-                  borderRadius: BorderRadius.circular(28),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFFFFB521).withValues(alpha: 0.32),
-                      blurRadius: 18,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                width: 86,
-                height: 86,
-                decoration: BoxDecoration(
-                  color: kColorWhite,
-                  borderRadius: BorderRadius.circular(22),
-                ),
-                child: logo.isEmpty
-                    ? const Icon(
-                        Icons.family_restroom_rounded,
-                        color: Color(0xFF6C4CDE),
-                        size: 48,
-                      )
-                    : ClipRRect(
-                        borderRadius: BorderRadius.circular(22),
-                        child: _FamilyNetworkImage(
-                          url: logo,
-                          fit: BoxFit.cover,
-                          fallback: const _FamilyImagePlaceholder(
-                            icon: Icons.family_restroom_rounded,
-                            iconColor: Color(0xFF6C4CDE),
-                          ),
-                        ),
-                      ),
-              ),
-              const Positioned(
-                top: -2,
-                child: Icon(
-                  Icons.workspace_premium_rounded,
-                  color: Color(0xFFFFB521),
-                  size: 34,
-                ),
-              ),
-            ],
-          ),
-          Transform.translate(
-            offset: const Offset(0, -12),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 5),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFB42FD7), Color(0xFFFF2E83)],
-                ),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: const Color(0xFFFFD24D), width: 1.2),
-              ),
-              child: const SemiBoldText(
-                text: 'MY FAMILY',
-                fontSize: TextStyles.k10FontSize,
-                color: kColorWhite,
-              ),
-            ),
+    final radius = size * 0.22;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFFFD24D), Color(0xFF7B5CFF)],
+        ),
+        borderRadius: BorderRadius.circular(radius + 4),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFFB521).withValues(alpha: 0.28),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
           ),
         ],
+      ),
+      padding: const EdgeInsets.all(3),
+      child: Container(
+        decoration: BoxDecoration(
+          color: kColorWhite,
+          borderRadius: BorderRadius.circular(radius),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: logo.isEmpty
+            ? const ColoredBox(
+                color: Color(0xFFF4EEFF),
+                child: Center(
+                  child: Icon(
+                    Icons.family_restroom_rounded,
+                    color: Color(0xFF6C4CDE),
+                    size: 40,
+                  ),
+                ),
+              )
+            : _FamilyNetworkImage(
+                url: logo,
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                fallback: const ColoredBox(
+                  color: Color(0xFFF4EEFF),
+                  child: Center(
+                    child: Icon(
+                      Icons.family_restroom_rounded,
+                      color: Color(0xFF6C4CDE),
+                      size: 40,
+                    ),
+                  ),
+                ),
+              ),
       ),
     );
   }
@@ -1551,7 +1538,7 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
     final actions = [
       (
         Icons.chat_bubble_rounded,
-        'Family Chat',
+        'Chat',
         const Color(0xFF7B5CFF),
         _isJoined ? _openChat : _confirmJoinFromDetail,
       ),
@@ -1563,7 +1550,7 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
       ),
       (
         Icons.card_giftcard_rounded,
-        'Family Gifts',
+        'Gifts',
         const Color(0xFFFFA000),
         _openGifts,
       ),
@@ -1581,39 +1568,48 @@ class _FamilyDetailDashboardPageState extends State<FamilyDetailDashboardPage> {
       ),
     ];
     return _whiteCard(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      padding: const EdgeInsets.fromLTRB(8, 14, 8, 12),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: actions
             .map(
               (item) => Expanded(
                 child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
                   onTap: item.$4,
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        width: 58,
-                        height: 58,
+                        width: 48,
+                        height: 48,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: item.$3,
                           boxShadow: [
                             BoxShadow(
                               color: item.$3.withValues(alpha: 0.28),
-                              blurRadius: 12,
-                              offset: const Offset(0, 6),
+                              blurRadius: 10,
+                              offset: const Offset(0, 5),
                             ),
                           ],
                         ),
-                        child: Icon(item.$1, color: kColorWhite, size: 28),
+                        child: Icon(item.$1, color: kColorWhite, size: 22),
                       ),
-                      Spacing.v8,
-                      SemiBoldText(
-                        text: item.$2,
-                        fontSize: TextStyles.k10FontSize,
-                        color: _FamilyUi.body,
-                        align: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                      Spacing.v6,
+                      SizedBox(
+                        height: 28,
+                        child: Align(
+                          alignment: Alignment.topCenter,
+                          child: SemiBoldText(
+                            text: item.$2,
+                            fontSize: TextStyles.k10FontSize,
+                            color: _FamilyUi.body,
+                            align: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -5325,64 +5321,98 @@ class _EditableFamilyPhoto extends StatelessWidget {
           controller.updatedGroupPhotos[id] ?? group['logo']?.toString() ?? '';
       final busy = controller.updatingGroupPhotos.contains(id);
       final owner = controller.isFamilyOwner(group);
-      return Stack(
-        clipBehavior: Clip.none,
-        children: [
-          logo.isEmpty
-              ? fallback
-              : ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
-                  child: _FamilyNetworkImage(
-                    url: logo,
-                    width: size,
-                    height: size,
-                    fit: BoxFit.cover,
-                    fallback: fallback,
+      return SizedBox(
+        width: size,
+        height: size,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned.fill(
+              child: logo.isEmpty
+                  ? fallback
+                  : ClipRRect(
+                      borderRadius: BorderRadius.circular(22),
+                      child: _FamilyNetworkImage(
+                        url: logo,
+                        width: size,
+                        height: size,
+                        fit: BoxFit.cover,
+                        fallback: fallback,
+                      ),
+                    ),
+            ),
+            if (owner)
+              Positioned(
+                right: -4,
+                bottom: -4,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: busy
+                        ? null
+                        : () async {
+                            try {
+                              final image = await ImagePicker().pickImage(
+                                source: ImageSource.gallery,
+                                maxWidth: 1600,
+                                maxHeight: 1600,
+                                imageQuality: 85,
+                              );
+                              if (image == null || !context.mounted) return;
+                              await controller.updateGroupPhoto(
+                                group,
+                                File(image.path),
+                              );
+                            } catch (_) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Could not open photo library. Please try again.',
+                                    ),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                    borderRadius: BorderRadius.circular(999),
+                    child: Ink(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: AppLightUi.familyCtaGradient,
+                        border: Border.all(color: kColorWhite, width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppLightUi.pink.withValues(alpha: 0.28),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: busy
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: kColorWhite,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.add_a_photo_rounded,
+                                size: 15,
+                                color: kColorWhite,
+                              ),
+                      ),
+                    ),
                   ),
                 ),
-          if (owner)
-            Positioned(
-              right: 0,
-              bottom: 0,
-              child: IconButton.filled(
-                tooltip: 'Change group photo',
-                onPressed: busy
-                    ? null
-                    : () async {
-                        try {
-                          final image = await ImagePicker().pickImage(
-                            source: ImageSource.gallery,
-                            maxWidth: 1600,
-                            maxHeight: 1600,
-                            imageQuality: 85,
-                          );
-                          if (image == null || !context.mounted) return;
-                          await controller.updateGroupPhoto(
-                            group,
-                            File(image.path),
-                          );
-                        } catch (_) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Could not open photo library. Please try again.',
-                                ),
-                              ),
-                            );
-                          }
-                        }
-                      },
-                icon: busy
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.add_a_photo_rounded, size: 20),
               ),
-            ),
-        ],
+          ],
+        ),
       );
     });
   }
