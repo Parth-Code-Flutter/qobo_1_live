@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
@@ -8,6 +9,7 @@ import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
+import 'package:qobo_one_live/utils/app_widgets/glossy_auth_field_border.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/validations/text_field_validations.dart';
@@ -17,12 +19,18 @@ import '../controllers/auth_sign_up_controller.dart';
 class AuthSignUpView extends GetView<AuthSignUpController> {
   const AuthSignUpView({super.key});
 
+  static const _fieldRadius = BorderRadius.all(Radius.circular(18));
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kColorLavenderBg,
+      backgroundColor: AppLightUi.bg,
       resizeToAvoidBottomInset: true,
-      appBar: CommonAppBarWidget(title: '', showBackButton: true, useGradientStyle: false),
+      appBar: const CommonAppBarWidget(
+        title: '',
+        showBackButton: true,
+        useGradientStyle: false,
+      ),
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
         child: Form(
@@ -30,46 +38,63 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
           autovalidateMode: AutovalidateMode.onUserInteraction,
           child: LayoutBuilder(
             builder: (_, constraints) => SingleChildScrollView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              keyboardDismissBehavior:
+                  ScrollViewKeyboardDismissBehavior.onDrag,
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Spacing.v24,
+                    Spacing.v12,
                     signUpHeader(),
-                    Spacing.v24,
+                    Spacing.v16,
                     emailUsernamePasswordTextFields(context),
                     Spacing.v10,
                     _referralCodeSection(context),
-                    Spacing.v28,
+                    Spacing.v20,
                     Obx(
-                      () => appButton(
-                        onPressed: () => controller.onSignUpPressed(context),
-                        buttonText: controller.isSignUpLoading.value
-                            ? ''
-                            : LocaleKeys.signUp.tr,
-                        buttonIcon: controller.isSignUpLoading.value
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    kColorWhite,
+                      () => Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppLightUi.pink.withValues(alpha: 0.35),
+                              blurRadius: 18,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: appButton(
+                          onPressed: () =>
+                              controller.onSignUpPressed(context),
+                          buttonText: controller.isSignUpLoading.value
+                              ? ''
+                              : LocaleKeys.signUp.tr,
+                          isGradient: true,
+                          gradientColors: AppLightUi.familyCtaColors,
+                          borderRadius: 18,
+                          buttonIcon: controller.isSignUpLoading.value
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      kColorWhite,
+                                    ),
                                   ),
-                                ),
-                              )
-                            : null,
+                                )
+                              : null,
+                        ),
                       ),
                     ),
-                    Spacing.v20,
+                    Spacing.v16,
                     orLoginWithDividerWidget(),
-                    Spacing.v16,
+                    Spacing.v12,
                     socialMediaLogin(context),
-                    Spacing.v16,
+                    Spacing.v12,
                     signInFooterWidget(),
                   ],
                 ),
@@ -86,14 +111,14 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
       children: [
         BoldText(
           text: LocaleKeys.signUp.tr,
-          fontSize: TextStyles.k22FontSize,
-          color: kColorText,
+          fontSize: TextStyles.k20FontSize,
+          color: AppLightUi.title,
         ),
-        Spacing.v2,
+        Spacing.v4,
         AppText(
           text: LocaleKeys.loginSubTitle.tr,
-          fontSize: TextStyles.k14FontSize,
-          color: kColorTextGrey,
+          fontSize: TextStyles.k12FontSize,
+          color: AppLightUi.subtitle,
         ),
       ],
     );
@@ -102,85 +127,73 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
   Widget emailUsernamePasswordTextFields(BuildContext context) {
     return Column(
       children: [
-        AppTextField(
-          controller: controller.usernameController,
-          validator: (value) =>
-              Validate.nameValidation(context, value?.trim() ?? ''),
-          hintText: LocaleKeys.signUpUsernameHint.tr,
-          borderColor: kColorHint,
-          hintStyle: TextStyles.kRegularPoppins(
-            fontSize: TextStyles.k14FontSize,
-            colors: kColorHint,
-          ),
-          textInputAction: TextInputAction.next,
-          textCapitalization: TextCapitalization.none,
-          prefix: Padding(
-            padding: const EdgeInsets.only(left: 14, right: 12),
-            child: SvgPicture.asset(
-              kIconUser,
-              colorFilter: const ColorFilter.mode(kColorHint, BlendMode.srcIn),
-            ),
-          ),
-        ),
-        // Email field hidden — registration uses username + password only.
-        // Spacing.v10,
-        // AppTextField(
-        //   controller: controller.emailController,
-        //   validator: (value) =>
-        //       Validate.emailValidation(context, value?.trim() ?? ''),
-        //   hintText: LocaleKeys.loginEmailHint.tr,
-        //   borderColor: kColorHint,
-        //   hintStyle: TextStyles.kRegularPoppins(
-        //     fontSize: TextStyles.k14FontSize,
-        //     colors: kColorHint,
-        //   ),
-        //   textInputType: TextInputType.emailAddress,
-        //   textInputAction: TextInputAction.next,
-        //   textCapitalization: TextCapitalization.none,
-        //   prefix: Padding(
-        //     padding: const EdgeInsets.only(left: 14, right: 12),
-        //     child: SvgPicture.asset(
-        //       kIconMail,
-        //       colorFilter: const ColorFilter.mode(kColorHint, BlendMode.srcIn),
-        //     ),
-        //   ),
-        // ),
-        Spacing.v10,
-        Obx(
-          () => AppTextField(
-            controller: controller.passwordController,
+        GlossyAuthFieldBorder(
+          child: AppTextField(
+            controller: controller.usernameController,
             validator: (value) =>
-                Validate.passwordValidation(context, value?.trim() ?? ''),
-            hintText: LocaleKeys.loginPasswordHint.tr,
-            borderColor: kColorHint,
+                Validate.nameValidation(context, value?.trim() ?? ''),
+            hintText: LocaleKeys.signUpUsernameHint.tr,
+            borderColor: Colors.transparent,
+            fillColor: Colors.transparent,
+            inputBorderRadius: _fieldRadius,
             hintStyle: TextStyles.kRegularPoppins(
               fontSize: TextStyles.k14FontSize,
-              colors: kColorHint,
+              colors: AppLightUi.hint,
             ),
-            obscureText: controller.isPasswordHidden.value,
-            textInputType: TextInputType.visiblePassword,
-            textInputAction: TextInputAction.done,
+            textInputAction: TextInputAction.next,
             textCapitalization: TextCapitalization.none,
             prefix: Padding(
               padding: const EdgeInsets.only(left: 14, right: 12),
               child: SvgPicture.asset(
-                kIconPassword,
-                colorFilter: const ColorFilter.mode(
-                  kColorHint,
+                kIconUser,
+                colorFilter: ColorFilter.mode(
+                  AppLightUi.violet.withValues(alpha: 0.85),
                   BlendMode.srcIn,
                 ),
               ),
             ),
-            suffix: Padding(
-              padding: const EdgeInsets.only(right: 14),
-              child: GestureDetector(
-                onTap: controller.togglePasswordVisibility,
-                child: Icon(
-                  controller.isPasswordHidden.value
-                      ? Icons.visibility_off_outlined
-                      : Icons.visibility_outlined,
-                  color: kColorHint,
-                  size: 16,
+          ),
+        ),
+        Spacing.v10,
+        Obx(
+          () => GlossyAuthFieldBorder(
+            child: AppTextField(
+              controller: controller.passwordController,
+              validator: (value) =>
+                  Validate.passwordValidation(context, value?.trim() ?? ''),
+              hintText: LocaleKeys.loginPasswordHint.tr,
+              borderColor: Colors.transparent,
+              fillColor: Colors.transparent,
+              inputBorderRadius: _fieldRadius,
+              hintStyle: TextStyles.kRegularPoppins(
+                fontSize: TextStyles.k14FontSize,
+                colors: AppLightUi.hint,
+              ),
+              obscureText: controller.isPasswordHidden.value,
+              textInputType: TextInputType.visiblePassword,
+              textInputAction: TextInputAction.done,
+              textCapitalization: TextCapitalization.none,
+              prefix: Padding(
+                padding: const EdgeInsets.only(left: 14, right: 12),
+                child: SvgPicture.asset(
+                  kIconPassword,
+                  colorFilter: ColorFilter.mode(
+                    AppLightUi.violet.withValues(alpha: 0.85),
+                    BlendMode.srcIn,
+                  ),
+                ),
+              ),
+              suffix: Padding(
+                padding: const EdgeInsets.only(right: 14),
+                child: GestureDetector(
+                  onTap: controller.togglePasswordVisibility,
+                  child: Icon(
+                    controller.isPasswordHidden.value
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    color: AppLightUi.muted,
+                    size: 16,
+                  ),
                 ),
               ),
             ),
@@ -197,30 +210,34 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
         AppText(
           text: 'Have a referral code? (optional)',
           fontSize: TextStyles.k12FontSize,
-          color: kColorTextGrey,
+          color: AppLightUi.subtitle,
         ),
         Spacing.v8,
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: AppTextField(
-                controller: controller.referralCodeController,
-                hintText: 'Enter code e.g. QOBO8X9A',
-                borderColor: kColorHint,
-                hintStyle: TextStyles.kRegularPoppins(
-                  fontSize: TextStyles.k14FontSize,
-                  colors: kColorHint,
-                ),
-                textInputAction: TextInputAction.done,
-                textCapitalization: TextCapitalization.characters,
-                maxLength: 8,
-                prefix: const Padding(
-                  padding: EdgeInsets.only(left: 14, right: 10),
-                  child: Icon(
-                    Icons.card_giftcard_outlined,
-                    color: kColorHint,
-                    size: 18,
+              child: GlossyAuthFieldBorder(
+                child: AppTextField(
+                  controller: controller.referralCodeController,
+                  hintText: 'Enter code e.g. QOBO8X9A',
+                  borderColor: Colors.transparent,
+                  fillColor: Colors.transparent,
+                  inputBorderRadius: _fieldRadius,
+                  hintStyle: TextStyles.kRegularPoppins(
+                    fontSize: TextStyles.k14FontSize,
+                    colors: AppLightUi.hint,
+                  ),
+                  textInputAction: TextInputAction.done,
+                  textCapitalization: TextCapitalization.characters,
+                  maxLength: 8,
+                  prefix: Padding(
+                    padding: const EdgeInsets.only(left: 14, right: 10),
+                    child: Icon(
+                      Icons.card_giftcard_outlined,
+                      color: AppLightUi.violet.withValues(alpha: 0.85),
+                      size: 18,
+                    ),
                   ),
                 ),
               ),
@@ -238,10 +255,11 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
                         ? const Color(0xFF12B845)
                         : kColorPrimary,
                     foregroundColor: kColorWhite,
-                    disabledBackgroundColor: kColorHint.withValues(alpha: 0.35),
+                    disabledBackgroundColor:
+                        AppLightUi.hint.withValues(alpha: 0.35),
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
                   child: controller.isReferralVerifying.value
@@ -277,7 +295,7 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
               fontSize: TextStyles.k12FontSize,
               color: controller.isReferralVerified.value
                   ? const Color(0xFF12B845)
-                  : kColorTextGrey,
+                  : AppLightUi.subtitle,
             ),
           );
         }),
@@ -288,18 +306,32 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
   Widget orLoginWithDividerWidget() {
     return Row(
       children: [
-        const Expanded(
-          child: Divider(thickness: 1, color: kColorTextFieldBorder),
+        Expanded(
+          child: Divider(
+            thickness: 1,
+            color: AppLightUi.borderStrong.withValues(alpha: 0.7),
+          ),
         ),
-        Spacing.h4,
-        AppText(
-          text: LocaleKeys.orLoginWith.tr,
-          fontSize: TextStyles.k10FontSize,
-          color: kColorTextGrey,
+        Spacing.h8,
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.7),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppLightUi.border),
+          ),
+          child: AppText(
+            text: LocaleKeys.orLoginWith.tr,
+            fontSize: TextStyles.k10FontSize,
+            color: AppLightUi.subtitle,
+          ),
         ),
-        Spacing.h4,
-        const Expanded(
-          child: Divider(thickness: 1, color: kColorTextFieldBorder),
+        Spacing.h8,
+        Expanded(
+          child: Divider(
+            thickness: 1,
+            color: AppLightUi.borderStrong.withValues(alpha: 0.7),
+          ),
         ),
       ],
     );
@@ -319,7 +351,7 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
             isLoading: controller.isFacebookLoginLoading.value,
           ),
         ),
-        Spacing.v10,
+        Spacing.v8,
         Obx(
           () => _socialOutlinedButton(
             iconPath: kIconGoogle,
@@ -330,18 +362,6 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
             isLoading: controller.isGoogleLoginLoading.value,
           ),
         ),
-        // Spacing.v10,
-        // _socialOutlinedButton(
-        //   iconPath: kIconLock,
-        //   onTap: () => Get.toNamed(
-        //     Routes.AUTH_VERIFY_ACCOUNT,
-        //     arguments: {'isFromLoginWithOtp': true},
-        //   ),
-        //   iconHeight: 22,
-        //   iconWidth: 22,
-        //   tintIcon: true,
-        //   title: LocaleKeys.loginWithOtp.tr,
-        // ),
       ],
     );
   }
@@ -354,42 +374,45 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
     double iconWidth = 24,
     bool isLoading = false,
   }) {
-    return GestureDetector(
-      onTap: isLoading ? null : onTap,
-      child: Container(
-        height: 48,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        decoration: BoxDecoration(
-          color: kColorWhite,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: kColorTextFieldBorder, width: 0.7),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (isLoading)
-              SizedBox(
-                width: iconWidth,
-                height: iconHeight,
-                child: const CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(kColorPrimary),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: isLoading ? null : onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Ink(
+          height: 46,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.92),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppLightUi.border),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (isLoading)
+                SizedBox(
+                  width: iconWidth,
+                  height: iconHeight,
+                  child: const CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(kColorPrimary),
+                  ),
+                )
+              else
+                SvgPicture.asset(
+                  iconPath,
+                  fit: BoxFit.contain,
+                  height: iconHeight,
+                  width: iconWidth,
                 ),
-              )
-            else
-              SvgPicture.asset(
-                iconPath,
-                fit: BoxFit.contain,
-                height: iconHeight,
-                width: iconWidth,
+              Spacing.h10,
+              SemiBoldText(
+                text: isLoading ? '' : title,
+                fontSize: TextStyles.k12FontSize,
+                color: AppLightUi.title,
               ),
-            Spacing.h10,
-            SemiBoldText(
-              text: isLoading ? '' : title,
-              fontSize: TextStyles.k12FontSize,
-              color: kColorText,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -398,21 +421,24 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
   Widget signInFooterWidget() {
     return GestureDetector(
       onTap: Get.back,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          AppText(
-            text: LocaleKeys.haveAccount.tr,
-            fontSize: TextStyles.k12FontSize,
-            color: kColorTextGrey,
-          ),
-          Spacing.h4,
-          SemiBoldText(
-            text: LocaleKeys.signIn.tr,
-            fontSize: TextStyles.k12FontSize,
-            color: kColorPrimary,
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AppText(
+              text: LocaleKeys.haveAccount.tr,
+              fontSize: TextStyles.k12FontSize,
+              color: AppLightUi.subtitle,
+            ),
+            Spacing.h4,
+            SemiBoldText(
+              text: LocaleKeys.signIn.tr,
+              fontSize: TextStyles.k12FontSize,
+              color: kColorPrimary,
+            ),
+          ],
+        ),
       ),
     );
   }

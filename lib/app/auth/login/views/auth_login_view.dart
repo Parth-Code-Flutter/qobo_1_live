@@ -12,6 +12,7 @@ import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
+import 'package:qobo_one_live/utils/app_widgets/glossy_auth_field_border.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/validations/text_field_validations.dart';
@@ -176,14 +177,14 @@ class _AuthLoginViewState extends State<AuthLoginView> {
     return Column(
       children: [
         Obx(
-          () => _glossyFieldBorder(
+          () => GlossyAuthFieldBorder(
             child: AppTextField(
               controller: controller.emailController,
               onChanged: controller.onUsernameChanged,
               validator: (value) => controller.validateUsername(context, value),
               hintText: LocaleKeys.loginEmailOrPhoneHint.tr,
               borderColor: Colors.transparent,
-              fillColor: Colors.white.withValues(alpha: 0.92),
+              fillColor: Colors.transparent,
               inputBorderRadius: _fieldRadius,
               hintStyle: TextStyles.kRegularPoppins(
                 fontSize: TextStyles.k14FontSize,
@@ -211,14 +212,14 @@ class _AuthLoginViewState extends State<AuthLoginView> {
         ),
         Spacing.v10,
         Obx(
-          () => _glossyFieldBorder(
+          () => GlossyAuthFieldBorder(
             child: AppTextField(
               controller: controller.passwordController,
               validator: (value) =>
                   Validate.passwordValidation(context, value?.trim() ?? ''),
               hintText: LocaleKeys.loginPasswordHint.tr,
               borderColor: Colors.transparent,
-              fillColor: Colors.white.withValues(alpha: 0.92),
+              fillColor: Colors.transparent,
               inputBorderRadius: _fieldRadius,
               hintStyle: TextStyles.kRegularPoppins(
                 fontSize: TextStyles.k14FontSize,
@@ -272,31 +273,6 @@ class _AuthLoginViewState extends State<AuthLoginView> {
           ),
         ),
       ],
-    );
-  }
-
-  /// Soft glossy gradient ring around login fields (border only, no shadow).
-  Widget _glossyFieldBorder({required Widget child}) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.white.withValues(alpha: 0.95),
-            AppLightUi.violet.withValues(alpha: 0.55),
-            AppLightUi.pink.withValues(alpha: 0.7),
-            Colors.white.withValues(alpha: 0.85),
-          ],
-          stops: const [0.0, 0.35, 0.72, 1.0],
-        ),
-      ),
-      padding: const EdgeInsets.all(1.5),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16.5),
-        child: child,
-      ),
     );
   }
 

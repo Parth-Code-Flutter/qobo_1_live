@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
@@ -10,14 +11,12 @@ import 'package:qobo_one_live/utils/app_widgets/common_country_code_picker.dart'
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
+import 'package:qobo_one_live/utils/app_widgets/glossy_auth_field_border.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/validations/text_field_validations.dart';
 
 import '../controllers/auth_verify_account_controller.dart';
-
-/// Figma: light grey stroke on inputs for this flow.
-const Color _kVerifyInputBorder = Color(0xFFD1D1D1);
 
 class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
   const AuthVerifyAccountView({super.key});
@@ -266,19 +265,27 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
   Widget _orDividerWithLabel() {
     return Row(
       children: [
-        const Expanded(
-          child: Divider(thickness: 1, height: 1, color: _kVerifyInputBorder),
+        Expanded(
+          child: Divider(
+            thickness: 1,
+            height: 1,
+            color: AppLightUi.borderStrong,
+          ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: AppText(
             text: LocaleKeys.verifyContactOr.tr,
             fontSize: TextStyles.k14FontSize,
-            color: kColorTextGrey,
+            color: AppLightUi.subtitle,
           ),
         ),
-        const Expanded(
-          child: Divider(thickness: 1, height: 1, color: _kVerifyInputBorder),
+        Expanded(
+          child: Divider(
+            thickness: 1,
+            height: 1,
+            color: AppLightUi.borderStrong,
+          ),
         ),
       ],
     );
@@ -288,42 +295,39 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        CommonCountryCodePicker(
-          borderColor: _kVerifyInputBorder,
-          onChanged: controller.onCountryCodeChanged,
+        GlossyAuthFieldBorder(
+          radius: 14,
+          child: CommonCountryCodePicker(
+            borderColor: Colors.transparent,
+            onChanged: controller.onCountryCodeChanged,
+          ),
         ),
         Spacing.h8,
         Expanded(
-          child: AppTextField(
-            controller: controller.phoneNumberController,
-            validator: (value) {
-              final p = value?.trim() ?? '';
-              // Email OTP path commented — require a 10-digit phone only.
-              // final e = controller.emailController.text.trim();
-              if (p.length == 10) return null;
-              // final emailOk =
-              //     e.isNotEmpty && Validate.emailValidation(context, e) == null;
-              // if (emailOk) return null;
-              // if (p.isEmpty && e.isEmpty) {
-              //   return LocaleKeys.verifyEnterPhoneOrEmail.tr;
-              // }
-              // if (p.isEmpty) return null;
-              if (p.isEmpty) {
-                return LocaleKeys.verifyEnterPhoneOrEmail.tr;
-              }
-              return Validate.phone10DigitValidation(context, p);
-            },
-            hintText: LocaleKeys.verifyPhoneHint.tr,
-            borderColor: _kVerifyInputBorder,
-            hintStyle: TextStyles.kRegularPoppins(
-              fontSize: TextStyles.k14FontSize,
-              colors: kColorHint,
+          child: GlossyAuthFieldBorder(
+            child: AppTextField(
+              controller: controller.phoneNumberController,
+              validator: (value) {
+                final p = value?.trim() ?? '';
+                if (p.length == 10) return null;
+                if (p.isEmpty) {
+                  return LocaleKeys.verifyEnterPhoneOrEmail.tr;
+                }
+                return Validate.phone10DigitValidation(context, p);
+              },
+              hintText: LocaleKeys.verifyPhoneHint.tr,
+              borderColor: Colors.transparent,
+              fillColor: Colors.transparent,
+              hintStyle: TextStyles.kRegularPoppins(
+                fontSize: TextStyles.k14FontSize,
+                colors: AppLightUi.hint,
+              ),
+              textInputType: TextInputType.phone,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              maxLength: 10,
+              textInputAction: TextInputAction.next,
+              textCapitalization: TextCapitalization.none,
             ),
-            textInputType: TextInputType.phone,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            maxLength: 10,
-            textInputAction: TextInputAction.next,
-            textCapitalization: TextCapitalization.none,
           ),
         ),
       ],
@@ -331,32 +335,38 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
   }
 
   Widget emailFieldWidget(BuildContext context) {
-    return AppTextField(
-      controller: controller.emailController,
-      validator: (value) {
-        final p = controller.phoneNumberController.text.trim();
-        final e = value?.trim() ?? '';
-        if (p.length == 10) return null;
-        final emailOk =
-            e.isNotEmpty && Validate.emailValidation(context, e) == null;
-        if (emailOk) return null;
-        if (p.isEmpty && e.isEmpty) return null;
-        return Validate.emailValidation(context, e);
-      },
-      hintText: LocaleKeys.loginEmailHint.tr,
-      borderColor: _kVerifyInputBorder,
-      hintStyle: TextStyles.kRegularPoppins(
-        fontSize: TextStyles.k14FontSize,
-        colors: kColorHint,
-      ),
-      textInputType: TextInputType.emailAddress,
-      textInputAction: TextInputAction.done,
-      textCapitalization: TextCapitalization.none,
-      prefix: Padding(
-        padding: const EdgeInsets.only(left: 14, right: 12),
-        child: SvgPicture.asset(
-          kIconMail,
-          colorFilter: const ColorFilter.mode(kColorHint, BlendMode.srcIn),
+    return GlossyAuthFieldBorder(
+      child: AppTextField(
+        controller: controller.emailController,
+        validator: (value) {
+          final p = controller.phoneNumberController.text.trim();
+          final e = value?.trim() ?? '';
+          if (p.length == 10) return null;
+          final emailOk =
+              e.isNotEmpty && Validate.emailValidation(context, e) == null;
+          if (emailOk) return null;
+          if (p.isEmpty && e.isEmpty) return null;
+          return Validate.emailValidation(context, e);
+        },
+        hintText: LocaleKeys.loginEmailHint.tr,
+        borderColor: Colors.transparent,
+        fillColor: Colors.transparent,
+        hintStyle: TextStyles.kRegularPoppins(
+          fontSize: TextStyles.k14FontSize,
+          colors: AppLightUi.hint,
+        ),
+        textInputType: TextInputType.emailAddress,
+        textInputAction: TextInputAction.done,
+        textCapitalization: TextCapitalization.none,
+        prefix: Padding(
+          padding: const EdgeInsets.only(left: 14, right: 12),
+          child: SvgPicture.asset(
+            kIconMail,
+            colorFilter: ColorFilter.mode(
+              AppLightUi.violet.withValues(alpha: 0.85),
+              BlendMode.srcIn,
+            ),
+          ),
         ),
       ),
     );
@@ -367,14 +377,14 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
       children: [
         BoldText(
           text: LocaleKeys.otpVerificationTitle.tr,
-          fontSize: TextStyles.k22FontSize,
-          color: kColorText,
+          fontSize: TextStyles.k20FontSize,
+          color: AppLightUi.title,
         ),
-        Spacing.v2,
+        Spacing.v4,
         AppText(
           text: LocaleKeys.otpVerificationSubTitle.tr,
-          fontSize: TextStyles.k14FontSize,
-          color: kColorTextGrey,
+          fontSize: TextStyles.k12FontSize,
+          color: AppLightUi.subtitle,
           align: TextAlign.center,
         ),
       ],
@@ -390,40 +400,37 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
             4,
             (index) => Padding(
               padding: const EdgeInsets.symmetric(horizontal: 6),
-              child: SizedBox(
-                width: 42,
-                height: 42,
-                child: TextField(
-                  controller: controller.otpControllers[index],
-                  focusNode: controller.otpFocusNodes[index],
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: false,
-                    signed: false,
-                  ),
-                  textAlign: TextAlign.center,
-                  style: TextStyles.kSemiBoldPoppins(
-                    fontSize: TextStyles.k18FontSize,
-                    colors: kColorText,
-                  ),
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  maxLength: 1,
-                  onChanged: (value) {
-                    controller.onOtpChanged(index: index, value: value);
-                  },
-                  decoration: InputDecoration(
-                    counterText: '',
-                    contentPadding: EdgeInsets.zero,
-                    filled: true,
-                    fillColor: kColorWhite,
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(
-                        color: kColorTextFieldBorder,
-                      ),
+              child: GlossyAuthFieldBorder(
+                radius: 12,
+                borderWidth: 1.4,
+                child: SizedBox(
+                  width: 42,
+                  height: 42,
+                  child: TextField(
+                    controller: controller.otpControllers[index],
+                    focusNode: controller.otpFocusNodes[index],
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: false,
+                      signed: false,
                     ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: kColorPrimary),
+                    textAlign: TextAlign.center,
+                    style: TextStyles.kSemiBoldPoppins(
+                      fontSize: TextStyles.k18FontSize,
+                      colors: AppLightUi.title,
+                    ),
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    maxLength: 1,
+                    onChanged: (value) {
+                      controller.onOtpChanged(index: index, value: value);
+                    },
+                    decoration: const InputDecoration(
+                      counterText: '',
+                      contentPadding: EdgeInsets.zero,
+                      filled: true,
+                      fillColor: Colors.transparent,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
                     ),
                   ),
                 ),
