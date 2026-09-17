@@ -68,6 +68,18 @@ class PkV1Controller extends GetxController {
   final lastGift = Rxn<PkGiftEvent>();
   final connectionNote = ''.obs; // e.g. "Reconnecting..."
 
+  /// Raw server state-machine stage (`COUNTDOWN`, `BATTLE_ACTIVE`, …).
+  final machineState = ''.obs;
+
+  /// 5s pre-battle countdown from `PK_COUNTDOWN_TICK`.
+  final countdownRemainingSec = 0.obs;
+
+  /// Latest `PK_RTC_BRIDGE` payload (stream ids / tokens). Cleared on unbridge.
+  final rtcBridge = Rxn<PkRtcBridgePayload>();
+
+  /// Latest `PK_STATE_TRANSITION` (winner side available during punishment).
+  final lastStateTransition = Rxn<PkStateTransition>();
+
   /// Per-side room audience (self side synced from live room; opponent from API).
   final sideAAudience = <PkAudienceMember>[].obs;
   final sideBAudience = <PkAudienceMember>[].obs;
@@ -182,6 +194,10 @@ class PkV1Controller extends GetxController {
     scoreA.value = 0;
     scoreB.value = 0;
     remainingSeconds.value = 0;
+    countdownRemainingSec.value = 0;
+    machineState.value = '';
+    rtcBridge.value = null;
+    lastStateTransition.value = null;
     connectionNote.value = '';
     sideAAudience.clear();
     sideBAudience.clear();
@@ -194,6 +210,96 @@ class PkV1Controller extends GetxController {
     stage.value = PkArenaStage.selecting;
     loadEligibleHosts();
     loadGiftCatalog();
+  }
+
+  /// Temporary local-only preview of the in-room PK battle UI (no API).
+  ///
+  /// Used for design QA from live streaming. Call [clearEmbeddedBattle] or
+  /// End PK on the overlay to dismiss.
+  void loadUiPreview({
+    String? selfName,
+    String? selfAvatar,
+    String? selfRoomId,
+  }) {
+    _clockTimer?.cancel();
+    _resyncTimer?.cancel();
+    _exitAfterResultTimer?.cancel();
+    _resultHandled = false;
+
+    // selfName kept for call-site API; preview always uses design-ref hosts.
+    final avatarA = selfAvatar ?? this.selfAvatar;
+    final roomA = (selfRoomId ?? this.selfRoomId).trim();
+    assert(selfName == null || selfName is String);
+
+    session.value = PkSession(
+      pkId: 'ui_preview_${DateTime.now().millisecondsSinceEpoch}',
+      status: PkSessionStatus.live,
+      mode: 'ONE_VS_ONE',
+      durationSec: 180,
+      remainingSec: 165,
+      startsAt: DateTime.now().toUtc().subtract(const Duration(seconds: 15)),
+      endsAt: DateTime.now().toUtc().add(const Duration(seconds: 165)),
+      serverTime: DateTime.now().toUtc(),
+      currentUserSide: PkBattleSide.a,
+      sideA: PkSideInfo(
+        hostId: selfUserId.isEmpty ? 'preview_host_a' : selfUserId,
+        // TEMP mock hosts for UI preview — matches design reference.
+        displayName: 'Mike_Stream',
+        avatarUrl: avatarA,
+        roomId: roomA.isEmpty ? 'preview_room_a' : roomA,
+        score: 215000,
+        followerCount: 98000,
+      ),
+      sideB: const PkSideInfo(
+        hostId: 'preview_host_b',
+        displayName: 'Sarah_Live',
+        avatarUrl: '',
+        roomId: 'preview_room_b',
+        score: 238000,
+        followerCount: 105000,
+      ),
+    );
+    scoreA.value = 215000;
+    scoreB.value = 238000;
+    remainingSeconds.value = 165;
+    sideAAudience.assignAll(const [
+      PkAudienceMember(
+        userId: 'g1',
+        displayName: 'Alex',
+        avatarUrl: '',
+      ),
+      PkAudienceMember(
+        userId: 'g2',
+        displayName: 'Sam',
+        avatarUrl: '',
+      ),
+      PkAudienceMember(
+        userId: 'g3',
+        displayName: 'Rio',
+        avatarUrl: '',
+      ),
+    ]);
+    sideBAudience.assignAll(const [
+      PkAudienceMember(
+        userId: 'g4',
+        displayName: 'Mia',
+        avatarUrl: '',
+      ),
+      PkAudienceMember(
+        userId: 'g5',
+        displayName: 'Lee',
+        avatarUrl: '',
+      ),
+      PkAudienceMember(
+        userId: 'g6',
+        displayName: 'Kai',
+        avatarUrl: '',
+      ),
+    ]);
+    stage.value = PkArenaStage.battling;
+    embeddedInLiveRoom.value = true;
+    PkLiveRoomBridge.setActive(true);
+    _startClock();
   }
 
   /// Public entry used by the live room when opening the invite list again.
@@ -530,6 +636,7 @@ class PkV1Controller extends GetxController {
     session.value = s;
     scoreA.value = s.sideA.score;
     scoreB.value = s.sideB.score;
+    machineState.value = s.status.name;
     outgoingInvitation.value = null;
     _applyAudiencesFromSession(s);
 
@@ -543,12 +650,31 @@ class PkV1Controller extends GetxController {
 
     if (s.status == PkSessionStatus.ended ||
         s.status == PkSessionStatus.cancelled ||
-        s.status == PkSessionStatus.expired) {
+        s.status == PkSessionStatus.expired ||
+        s.status == PkSessionStatus.idle) {
       _loadResult(s.pkId);
       return;
     }
 
-    stage.value = PkArenaStage.battling;
+    // Map server state machine → existing arena stages (no UI rewrite).
+    switch (s.status) {
+      case PkSessionStatus.countdown:
+      case PkSessionStatus.starting:
+      case PkSessionStatus.accepted:
+        stage.value = PkArenaStage.starting;
+        break;
+      case PkSessionStatus.matching:
+      case PkSessionStatus.pending:
+        stage.value = PkArenaStage.waiting;
+        break;
+      case PkSessionStatus.punishmentRound:
+      case PkSessionStatus.battleActive:
+      case PkSessionStatus.live:
+      default:
+        stage.value = PkArenaStage.battling;
+        break;
+    }
+
     connectionNote.value = '';
     _startClock();
     _startResync();
@@ -653,7 +779,8 @@ class PkV1Controller extends GetxController {
     // Periodic authoritative resync in case a socket event was missed.
     _resyncTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       final pkId = session.value?.pkId;
-      if (pkId != null && stage.value == PkArenaStage.battling) {
+      if (pkId == null || pkId.startsWith('ui_preview_')) return;
+      if (stage.value == PkArenaStage.battling) {
         refreshSession(pkId);
       }
     });
@@ -740,11 +867,17 @@ class PkV1Controller extends GetxController {
       return;
     }
     // Server returns the authoritative scores — apply immediately; the
-    // PK_SCORE_UPDATED broadcast will confirm for everyone.
+    // PK_SCORE_UPDATE / PK_SCORE_UPDATED broadcast will confirm for everyone.
     final res = PkGiftSendResult.fromJson(PkV1Repo.dataOf(body));
     if (res.scoreA > 0 || res.scoreB > 0) {
       scoreA.value = res.scoreA;
       scoreB.value = res.scoreB;
+    }
+    if (res.topContributorsA.isNotEmpty) {
+      sideAAudience.assignAll(_filterAudienceMembers(res.topContributorsA));
+    }
+    if (res.topContributorsB.isNotEmpty) {
+      sideBAudience.assignAll(_filterAudienceMembers(res.topContributorsB));
     }
   }
 
@@ -752,7 +885,7 @@ class PkV1Controller extends GetxController {
   // Leave / report / end
   // ========================================================================
 
-  Future<void> leaveBattle({String reason = 'host_leave'}) async {
+  Future<void> leaveBattle({String reason = 'host_forfeit'}) async {
     final s = session.value;
     if (s == null) {
       _exitBattleUi();
@@ -789,34 +922,41 @@ class PkV1Controller extends GetxController {
 
   /// Confirm + end PK from the live room overlay (hosts only).
   void confirmEndEmbeddedBattle() {
+    final isPreview = session.value?.pkId.startsWith('ui_preview_') == true;
     Get.dialog(
       AlertDialog(
         backgroundColor: const Color(0xFF1E1230),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Text(
-          'End PK Battle?',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+        title: Text(
+          isPreview ? 'Close PK preview?' : 'End PK Battle?',
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
         ),
         content: Text(
-          'This ends the PK only. Your audio/video room stays open.',
+          isPreview
+              ? 'This only hides the temporary PK UI preview.'
+              : 'This ends the PK only. Your audio/video room stays open.',
           style: TextStyle(color: Colors.white.withValues(alpha: 0.75)),
         ),
         actions: [
           TextButton(
             onPressed: () => Get.back(),
             child: Text(
-              'Keep battling',
+              isPreview ? 'Keep preview' : 'Keep battling',
               style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
             ),
           ),
           TextButton(
             onPressed: () {
               Get.back();
-              leaveBattle(reason: 'host_end');
+              if (isPreview) {
+                clearEmbeddedBattle();
+              } else {
+                leaveBattle(reason: 'host_forfeit');
+              }
             },
-            child: const Text(
-              'End PK',
-              style: TextStyle(
+            child: Text(
+              isPreview ? 'Close preview' : 'End PK',
+              style: const TextStyle(
                 color: Color(0xFFFF5C7A),
                 fontWeight: FontWeight.w700,
               ),
@@ -905,9 +1045,28 @@ class PkV1Controller extends GetxController {
         outgoingInvitation.value = null;
         if (stage.value == PkArenaStage.waiting) _startAtSelection();
         break;
+      case 'PK_INVITATION_TIMEOUT':
+        _toast('PK invitation timed out');
+        outgoingInvitation.value = null;
+        incomingInvitation.value = null;
+        if (stage.value == PkArenaStage.waiting) _startAtSelection();
+        break;
+      case 'PK_RTC_BRIDGE':
+        _handleRtcBridge(data);
+        break;
+      case 'PK_RTC_UNBRIDGE':
+        _handleRtcUnbridge(data);
+        break;
+      case 'PK_COUNTDOWN_TICK':
+        _handleCountdownTick(data);
+        break;
+      case 'PK_STATE_TRANSITION':
+        _handleStateTransition(data);
+        break;
       case 'PK_STATE_SYNC':
         _handleStateSync(data);
         break;
+      case 'PK_SCORE_UPDATE':
       case 'PK_SCORE_UPDATED':
         _handleScoreUpdate(data);
         break;
@@ -947,6 +1106,120 @@ class PkV1Controller extends GetxController {
     }
   }
 
+  void _handleRtcBridge(Map<String, dynamic> data) {
+    try {
+      final bridge = PkRtcBridgePayload.fromJson(data);
+      rtcBridge.value = bridge;
+      if (bridge.pkId.isNotEmpty) {
+        _socket?.joinPkChannel(bridge.pkId);
+        if (bridge.bridgeChannel.isNotEmpty) {
+          _socket?.joinPkChannel(bridge.bridgeChannel);
+        }
+      }
+      // Ensure session is hydrated once bridge arrives (accept may only
+      // return COUNTDOWN without a follow-up GET yet).
+      if (session.value == null && bridge.pkId.isNotEmpty) {
+        refreshSession(bridge.pkId);
+      } else {
+        _ensurePkHostVideoPublishing();
+        _enterEmbeddedLiveRoomMode();
+        if (stage.value == PkArenaStage.selecting ||
+            stage.value == PkArenaStage.waiting) {
+          stage.value = PkArenaStage.starting;
+        }
+      }
+      LoggerUtils.logInfo(
+        'PkV1: RTC bridge ready pk=${bridge.pkId} '
+        'provider=${bridge.provider} channel=${bridge.bridgeChannel}',
+      );
+    } catch (e) {
+      LoggerUtils.logWarning('PkV1: RTC bridge parse error — $e');
+    }
+  }
+
+  void _handleRtcUnbridge(Map<String, dynamic> data) {
+    rtcBridge.value = null;
+    final id = (data['pkId'] ?? data['pk_id'] ?? session.value?.pkId ?? '')
+        .toString()
+        .trim();
+    if (id.isNotEmpty) {
+      _socket?.leavePkChannel(id);
+    }
+    LoggerUtils.logInfo('PkV1: RTC unbridge pk=$id');
+  }
+
+  void _handleCountdownTick(Map<String, dynamic> data) {
+    final sec = _toInt(
+      data['remainingCountdownSec'] ??
+          data['remaining_countdown_sec'] ??
+          data['remainingSec'] ??
+          data['remaining_sec'],
+    );
+    countdownRemainingSec.value = sec;
+    machineState.value = 'COUNTDOWN';
+    if (stage.value != PkArenaStage.battling &&
+        stage.value != PkArenaStage.finished) {
+      stage.value = PkArenaStage.starting;
+    }
+    final serverMs = data['serverTime'] ?? data['server_time'];
+    if (serverMs is num) {
+      _serverOffset = DateTime.fromMillisecondsSinceEpoch(
+            serverMs.toInt(),
+            isUtc: true,
+          ).difference(DateTime.now().toUtc());
+    }
+  }
+
+  void _handleStateTransition(Map<String, dynamic> data) {
+    try {
+      final t = PkStateTransition.fromJson(data);
+      lastStateTransition.value = t;
+      machineState.value = t.toState;
+      if (t.remainingSec > 0) {
+        remainingSeconds.value = t.remainingSec;
+      }
+      final to = t.toState.toUpperCase();
+      if (to == 'COUNTDOWN') {
+        stage.value = PkArenaStage.starting;
+        countdownRemainingSec.value =
+            t.remainingSec > 0 ? t.remainingSec : countdownRemainingSec.value;
+      } else if (to == 'BATTLE_ACTIVE' || to == 'LIVE') {
+        countdownRemainingSec.value = 0;
+        stage.value = PkArenaStage.battling;
+        _enterEmbeddedLiveRoomMode();
+        _ensurePkHostVideoPublishing();
+        _startClock();
+        _startResync();
+      } else if (to == 'PUNISHMENT_ROUND' || to == 'PUNISHMENT') {
+        stage.value = PkArenaStage.battling;
+      } else if (to == 'ENDED' || to == 'IDLE') {
+        final id = t.pkId.isNotEmpty ? t.pkId : (session.value?.pkId ?? '');
+        if (id.isNotEmpty) {
+          _loadResult(id);
+        } else if (t.winnerSide != PkBattleSide.none) {
+          _applyResult(
+            PkResult(
+              pkId: t.pkId,
+              status: PkSessionStatus.ended,
+              winnerSide: t.winnerSide,
+              winnerId: t.winnerId,
+              scoreA: scoreA.value,
+              scoreB: scoreB.value,
+              durationSec: t.durationSec,
+            ),
+          );
+        }
+      }
+      // Keep session if we already have one; otherwise refresh.
+      final current = session.value?.pkId ?? '';
+      if (current.isEmpty && t.pkId.isNotEmpty) {
+        refreshSession(t.pkId);
+      }
+    } catch (e) {
+      LoggerUtils.logWarning('PkV1: state transition parse error — $e');
+    }
+  }
+
   void _handleStateSync(Map<String, dynamic> data) {
     try {
       _applySession(PkSession.fromJson(data));
@@ -958,32 +1231,59 @@ class PkV1Controller extends GetxController {
   void _handleScoreUpdate(Map<String, dynamic> data) {
     final sideA = data['sideA'] ?? data['side_a'];
     final sideB = data['sideB'] ?? data['side_b'];
-    if (sideA is Map && sideA['score'] != null) {
+
+    // Guide shape: hostA_score / hostB_score
+    if (data['hostA_score'] != null || data['host_a_score'] != null) {
+      scoreA.value = _toInt(data['hostA_score'] ?? data['host_a_score']);
+    } else if (sideA is Map && sideA['score'] != null) {
       scoreA.value = _toInt(sideA['score']);
-    } else if (data['scoreA'] != null) {
-      scoreA.value = _toInt(data['scoreA']);
+    } else if (data['scoreA'] != null || data['score_a'] != null) {
+      scoreA.value = _toInt(data['scoreA'] ?? data['score_a']);
     }
-    if (sideB is Map && sideB['score'] != null) {
+
+    if (data['hostB_score'] != null || data['host_b_score'] != null) {
+      scoreB.value = _toInt(data['hostB_score'] ?? data['host_b_score']);
+    } else if (sideB is Map && sideB['score'] != null) {
       scoreB.value = _toInt(sideB['score']);
-    } else if (data['scoreB'] != null) {
-      scoreB.value = _toInt(data['scoreB']);
+    } else if (data['scoreB'] != null || data['score_b'] != null) {
+      scoreB.value = _toInt(data['scoreB'] ?? data['score_b']);
     }
-    // Optional per-side audience updates on score events.
-    if (sideA is Map) {
-      final list = PkAudienceMember.listFrom(
-        sideA['audience'] ?? sideA['viewers'] ?? sideA['topViewers'],
-      );
-      if (list.isNotEmpty) {
-        sideAAudience.assignAll(_filterAudienceMembers(list));
-      }
+
+    final rem = data['remainingSec'] ?? data['remaining_sec'];
+    if (rem != null) {
+      remainingSeconds.value = _toInt(rem);
     }
-    if (sideB is Map) {
-      final list = PkAudienceMember.listFrom(
-        sideB['audience'] ?? sideB['viewers'] ?? sideB['topViewers'],
-      );
-      if (list.isNotEmpty) {
-        sideBAudience.assignAll(_filterAudienceMembers(list));
-      }
+    final state = (data['state'] ?? data['status'] ?? '').toString().trim();
+    if (state.isNotEmpty) {
+      machineState.value = state;
+    }
+
+    // Top contributors (guide) + legacy audience keys.
+    final contribA = PkAudienceMember.listFrom(
+      data['topContributorsA'] ??
+          data['top_contributors_a'] ??
+          (sideA is Map
+              ? (sideA['topContributors'] ??
+                  sideA['audience'] ??
+                  sideA['viewers'] ??
+                  sideA['topViewers'])
+              : null),
+    );
+    final contribB = PkAudienceMember.listFrom(
+      data['topContributorsB'] ??
+          data['top_contributors_b'] ??
+          (sideB is Map
+              ? (sideB['topContributors'] ??
+                  sideB['audience'] ??
+                  sideB['viewers'] ??
+                  sideB['topViewers'])
+              : null),
+    );
+    if (contribA.isNotEmpty) {
+      sideAAudience.assignAll(_filterAudienceMembers(contribA));
+    }
+    if (contribB.isNotEmpty) {
+      sideBAudience.assignAll(_filterAudienceMembers(contribB));
     }
   }
 

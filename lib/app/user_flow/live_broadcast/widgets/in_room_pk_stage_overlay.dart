@@ -3,29 +3,29 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/pk_battle/controllers/pk_v1_controller.dart';
 import 'package:qobo_one_live/app/user_flow/pk_battle/models/v1/pk_v1_models.dart';
 import 'package:qobo_one_live/app/user_flow/pk_battle/widgets/pk_v1_battle_widgets.dart';
-import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 
-/// In-room PK Battle stage for host + audience (live stream and party rooms).
+/// In-room PK Battle stage (host + audience).
 ///
-/// Matches the product reference: PK logo · top gifters · tug-of-war score bar
-/// with center timer/VS · 50/50 host video panes with team + host cards.
-/// Chat / gift dock stay in the parent live room overlay below this stage.
+/// Layout: Top Gifters · PK BATTLE · tug-of-war (scores + timer/VS) ·
+/// 50/50 host panes. Chat / bottom dock stay in the parent (or temp preview).
 class InRoomPkStageOverlay extends StatelessWidget {
   const InRoomPkStageOverlay({
     super.key,
     required this.controller,
     this.compact = false,
     this.maxHeight,
+    this.showEndButton = true,
   });
 
   final PkV1Controller controller;
   final bool compact;
   final double? maxHeight;
+  final bool showEndButton;
 
-  static const _red = Color(0xFFFF2D55);
-  static const _blue = Color(0xFF2F6BFF);
+  static const red = Color(0xFFFF2D55);
+  static const blue = Color(0xFF2F6BFF);
 
   @override
   Widget build(BuildContext context) {
@@ -34,116 +34,141 @@ class InRoomPkStageOverlay extends StatelessWidget {
       final sideA = session?.sideA ?? PkSideInfo.empty;
       final sideB = session?.sideB ?? PkSideInfo.empty;
       final finished = controller.stage.value == PkArenaStage.finished;
+      final isPreview =
+          (session?.pkId ?? '').startsWith('ui_preview_');
 
-      return SizedBox(
-        height: maxHeight,
-        width: double.infinity,
-        child: Column(
-          children: [
-            _PkBattleTitleRow(
-              compact: compact,
-              leftGifters: controller.sideAAudience.toList(),
-              rightGifters: controller.sideBAudience.toList(),
-              leftAccent: _red,
-              rightAccent: _blue,
-            ),
-            SizedBox(height: compact ? 6 : 8),
-            _PkTugOfWarBar(
-              scoreA: controller.scoreA.value,
-              scoreB: controller.scoreB.value,
-              progressA: controller.sideAProgress,
-              leftName: sideA.displayName,
-              rightName: sideB.displayName,
-              timerText: finished ? 'END' : controller.formattedTime,
-              compact: compact,
-            ),
-            SizedBox(height: compact ? 6 : 8),
-            Expanded(
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _HostVideoPane(
-                          side: sideA,
-                          accent: _red,
-                          teamLabel: 'TEAM RED',
-                          hostLabel: 'HOST A',
-                          alignEnd: false,
-                          isSelf: controller.isSelfSideA,
-                          compact: compact,
+      Widget body = Column(
+        children: [
+          _TopGiftersAndLogo(
+            compact: compact,
+            leftGifters: controller.sideAAudience.toList(),
+            rightGifters: controller.sideBAudience.toList(),
+          ),
+          SizedBox(height: compact ? 6 : 8),
+          _TugOfWarScoreBoard(
+            scoreA: controller.scoreA.value,
+            scoreB: controller.scoreB.value,
+            progressA: controller.sideAProgress,
+            leftName: sideA.displayName,
+            rightName: sideB.displayName,
+            timerText: finished ? 'END' : controller.formattedTime,
+            compact: compact,
+          ),
+          SizedBox(height: compact ? 6 : 8),
+          // Host panes: compact band like the reference (~40% screen), not full rest.
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final screenH = MediaQuery.sizeOf(context).height;
+              final paneH = (screenH * (compact ? 0.34 : 0.38))
+                  .clamp(210.0, 320.0);
+              return SizedBox(
+                height: paneH,
+                width: double.infinity,
+                child: Stack(
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: _HostVideoPane(
+                            side: sideA,
+                            accent: red,
+                            teamLabel: 'TEAM RED',
+                            hostLabel: 'HOST A',
+                            alignEnd: false,
+                            isSelf: controller.isSelfSideA,
+                            compact: compact,
+                            // TEMP mock covers for UI preview only.
+                            mockCoverAsset: isPreview
+                                ? 'assets/images/temp4.png'
+                                : null,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 3),
-                      Expanded(
-                        child: _HostVideoPane(
-                          side: sideB,
-                          accent: _blue,
-                          teamLabel: 'TEAM BLUE',
-                          hostLabel: 'HOST B',
-                          alignEnd: true,
-                          isSelf: !controller.isSelfSideA,
-                          compact: compact,
+                        Container(
+                          width: 1.5,
+                          color: Colors.white.withValues(alpha: 0.12),
                         ),
-                      ),
-                    ],
-                  ),
-                  if (!finished && controller.isSelfHost)
-                    Positioned(
-                      top: 6,
-                      right: 6,
-                      child: _EndPkButton(
-                        compact: compact,
-                        onTap: controller.confirmEndEmbeddedBattle,
-                      ),
+                        Expanded(
+                          child: _HostVideoPane(
+                            side: sideB,
+                            accent: blue,
+                            teamLabel: 'TEAM BLUE',
+                            hostLabel: 'HOST B',
+                            alignEnd: true,
+                            isSelf: !controller.isSelfSideA,
+                            compact: compact,
+                            mockCoverAsset: isPreview
+                                ? 'assets/images/temp2.png'
+                                : null,
+                          ),
+                        ),
+                      ],
                     ),
-                ],
-              ),
-            ),
-          ],
-        ),
+                    if (showEndButton &&
+                        !finished &&
+                        controller.isSelfHost)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: _EndPkButton(
+                          compact: compact,
+                          onTap: controller.confirmEndEmbeddedBattle,
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
+          const Spacer(),
+        ],
       );
+
+      if (maxHeight != null) {
+        body = SizedBox(height: maxHeight, width: double.infinity, child: body);
+      }
+
+      return body;
     });
   }
 }
 
-class _PkBattleTitleRow extends StatelessWidget {
-  const _PkBattleTitleRow({
+// ---------------------------------------------------------------------------
+// Top: gifters + PK BATTLE logo
+// ---------------------------------------------------------------------------
+
+class _TopGiftersAndLogo extends StatelessWidget {
+  const _TopGiftersAndLogo({
     required this.compact,
     required this.leftGifters,
     required this.rightGifters,
-    required this.leftAccent,
-    required this.rightAccent,
   });
 
   final bool compact;
   final List<PkAudienceMember> leftGifters;
   final List<PkAudienceMember> rightGifters;
-  final Color leftAccent;
-  final Color rightAccent;
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: _TopGiftersCluster(
+          child: _GifterCluster(
             members: leftGifters,
-            accent: leftAccent,
+            accent: InRoomPkStageOverlay.red,
             alignEnd: false,
             compact: compact,
           ),
         ),
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: compact ? 4 : 8),
+          padding: EdgeInsets.only(top: compact ? 2 : 4, left: 6, right: 6),
           child: const _PkBattleLogo(),
         ),
         Expanded(
-          child: _TopGiftersCluster(
+          child: _GifterCluster(
             members: rightGifters,
-            accent: rightAccent,
+            accent: InRoomPkStageOverlay.blue,
             alignEnd: true,
             compact: compact,
           ),
@@ -171,7 +196,8 @@ class _PkBattleLogo extends StatelessWidget {
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w900,
-              letterSpacing: 1.2,
+              fontStyle: FontStyle.italic,
+              letterSpacing: 0.5,
               height: 1,
             ),
           ),
@@ -181,9 +207,9 @@ class _PkBattleLogo extends StatelessWidget {
           style: TextStyle(
             fontSize: 9,
             fontWeight: FontWeight.w800,
-            letterSpacing: 2.4,
-            color: Colors.white.withValues(alpha: 0.92),
-            height: 1.1,
+            letterSpacing: 2.8,
+            color: Colors.white.withValues(alpha: 0.95),
+            height: 1.15,
           ),
         ),
       ],
@@ -191,8 +217,8 @@ class _PkBattleLogo extends StatelessWidget {
   }
 }
 
-class _TopGiftersCluster extends StatelessWidget {
-  const _TopGiftersCluster({
+class _GifterCluster extends StatelessWidget {
+  const _GifterCluster({
     required this.members,
     required this.accent,
     required this.alignEnd,
@@ -204,45 +230,46 @@ class _TopGiftersCluster extends StatelessWidget {
   final bool alignEnd;
   final bool compact;
 
-  static const _max = 3;
-
   @override
   Widget build(BuildContext context) {
-    final visible = members.take(_max).toList();
-    final avatarSize = compact ? 22.0 : 26.0;
+    final visible = members.take(3).toList();
+    final size = compact ? 24.0 : 28.0;
+    // Overlap without negative SizedBox widths (those crash layout).
+    final overlap = size * 0.32;
 
     return Column(
       crossAxisAlignment:
           alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        AppText(
+        const AppText(
           text: 'Top Gifters',
           fontSize: 9,
           color: Colors.white70,
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 5),
         if (visible.isEmpty)
-          AppText(
-            text: '—',
-            fontSize: 10,
-            color: Colors.white38,
-          )
+          const AppText(text: '—', fontSize: 10, color: Colors.white38)
         else
           SizedBox(
-            height: avatarSize + 4,
-            width: avatarSize + (visible.length - 1) * (avatarSize * 0.62),
+            height: size + 4,
+            width: size + (visible.length - 1) * (size - overlap),
             child: Stack(
               clipBehavior: Clip.none,
               children: [
                 for (var i = 0; i < visible.length; i++)
                   Positioned(
-                    left: alignEnd ? null : i * (avatarSize * 0.62),
-                    right: alignEnd ? i * (avatarSize * 0.62) : null,
+                    left: alignEnd
+                        ? null
+                        : i * (size - overlap),
+                    right: alignEnd
+                        ? i * (size - overlap)
+                        : null,
                     child: _RankedAvatar(
                       member: visible[i],
                       rank: i + 1,
                       accent: accent,
-                      size: avatarSize,
+                      size: size,
                     ),
                   ),
               ],
@@ -275,26 +302,24 @@ class _RankedAvatar extends StatelessWidget {
           padding: const EdgeInsets.all(1.5),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: accent, width: 1.5),
+            border: Border.all(color: accent, width: 1.6),
             boxShadow: [
-              BoxShadow(
-                color: accent.withValues(alpha: 0.45),
-                blurRadius: 8,
-              ),
+              BoxShadow(color: accent.withValues(alpha: 0.5), blurRadius: 8),
             ],
           ),
           child: AppUserAvatar(
             name: member.displayName,
             imageUrl: member.avatarUrl,
             size: size - 3,
+            showFrame: false,
           ),
         ),
         Positioned(
           right: -2,
           bottom: -2,
           child: Container(
-            width: 12,
-            height: 12,
+            width: 13,
+            height: 13,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
@@ -305,7 +330,7 @@ class _RankedAvatar extends StatelessWidget {
               '$rank',
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 7,
+                fontSize: 7.5,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -316,8 +341,12 @@ class _RankedAvatar extends StatelessWidget {
   }
 }
 
-class _PkTugOfWarBar extends StatelessWidget {
-  const _PkTugOfWarBar({
+// ---------------------------------------------------------------------------
+// Tug-of-war score bar + timer / VS
+// ---------------------------------------------------------------------------
+
+class _TugOfWarScoreBoard extends StatelessWidget {
+  const _TugOfWarScoreBoard({
     required this.scoreA,
     required this.scoreB,
     required this.progressA,
@@ -335,74 +364,74 @@ class _PkTugOfWarBar extends StatelessWidget {
   final String timerText;
   final bool compact;
 
-  static const _red = Color(0xFFFF2D55);
-  static const _blue = Color(0xFF2F6BFF);
-
   @override
   Widget build(BuildContext context) {
-    final clamped = progressA.clamp(0.08, 0.92);
+    final clamped = progressA.clamp(0.12, 0.88);
     final barH = compact ? 22.0 : 26.0;
+    final stackH = compact ? 54.0 : 60.0;
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
-          height: barH + 28,
+          height: stackH,
+          width: double.infinity,
           child: Stack(
             alignment: Alignment.center,
-            clipBehavior: Clip.none,
             children: [
-              Positioned(
-                left: 0,
-                right: 0,
-                top: 10,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(barH / 2),
-                  child: SizedBox(
-                    height: barH,
-                    child: TweenAnimationBuilder<double>(
-                      tween: Tween(begin: 0.5, end: clamped),
-                      duration: const Duration(milliseconds: 420),
-                      curve: Curves.easeOutCubic,
-                      builder: (context, value, _) {
+              Align(
+                alignment: Alignment.center,
+                child: SizedBox(
+                  height: barH,
+                  width: double.infinity,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(barH / 2),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final total = constraints.maxWidth;
+                        final leftW = (total * clamped).clamp(24.0, total - 24);
+                        final rightW = total - leftW;
                         return Row(
                           children: [
-                            Expanded(
-                              flex: (value * 1000).round().clamp(1, 999),
-                              child: Container(
-                                decoration: const BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Color(0xFFFF1744),
-                                      Color(0xFFFF5C8A),
-                                    ],
-                                  ),
+                            Container(
+                              width: leftW,
+                              alignment: Alignment.centerLeft,
+                              padding: const EdgeInsets.only(left: 12),
+                              decoration: const BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Color(0xFFFF1744),
+                                    Color(0xFFFF5C8A),
+                                  ],
                                 ),
-                                alignment: Alignment.centerLeft,
-                                padding: const EdgeInsets.only(left: 10),
-                                child: BoldText(
-                                  text: _compactScore(scoreA),
-                                  fontSize: compact ? 11 : 12,
-                                  color: kColorWhite,
+                              ),
+                              child: Text(
+                                _compactScore(scoreA),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: compact ? 11 : 13,
                                 ),
                               ),
                             ),
-                            Expanded(
-                              flex: ((1 - value) * 1000).round().clamp(1, 999),
-                              child: Container(
-                                decoration: const BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Color(0xFF5B8CFF),
-                                      Color(0xFF1E5BFF),
-                                    ],
-                                  ),
+                            Container(
+                              width: rightW,
+                              alignment: Alignment.centerRight,
+                              padding: const EdgeInsets.only(right: 12),
+                              decoration: const BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Color(0xFF5B8CFF),
+                                    Color(0xFF1E5BFF),
+                                  ],
                                 ),
-                                alignment: Alignment.centerRight,
-                                padding: const EdgeInsets.only(right: 10),
-                                child: BoldText(
-                                  text: _compactScore(scoreB),
-                                  fontSize: compact ? 11 : 12,
-                                  color: kColorWhite,
+                              ),
+                              child: Text(
+                                _compactScore(scoreB),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: compact ? 11 : 13,
                                 ),
                               ),
                             ),
@@ -419,55 +448,60 @@ class _PkTugOfWarBar extends StatelessWidget {
                   Container(
                     padding: EdgeInsets.symmetric(
                       horizontal: compact ? 10 : 12,
-                      vertical: compact ? 4 : 5,
+                      vertical: compact ? 3 : 4,
                     ),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(18),
-                      color: const Color(0xFF12121A),
+                      color: const Color(0xFF0C0C14),
                       border: Border.all(
                         color: Colors.white.withValues(alpha: 0.35),
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: _red.withValues(alpha: 0.35),
-                          blurRadius: 10,
-                          offset: const Offset(-3, 0),
+                          color:
+                              InRoomPkStageOverlay.red.withValues(alpha: 0.55),
+                          blurRadius: 14,
+                          offset: const Offset(-5, 0),
                         ),
                         BoxShadow(
-                          color: _blue.withValues(alpha: 0.35),
-                          blurRadius: 10,
-                          offset: const Offset(3, 0),
+                          color:
+                              InRoomPkStageOverlay.blue.withValues(alpha: 0.55),
+                          blurRadius: 14,
+                          offset: const Offset(5, 0),
                         ),
                       ],
                     ),
-                    child: BoldText(
-                      text: timerText,
-                      fontSize: compact ? 12 : 13,
-                      color: kColorWhite,
+                    child: Text(
+                      timerText,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: compact ? 12 : 14,
+                        letterSpacing: 0.8,
+                        height: 1.1,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 3),
                   Container(
-                    width: compact ? 22 : 26,
-                    height: compact ? 22 : 26,
+                    width: compact ? 22 : 24,
+                    height: compact ? 22 : 24,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: const LinearGradient(
                         colors: [Color(0xFFFF2D55), Color(0xFF2F6BFF)],
                       ),
-                      border: Border.all(color: Colors.white, width: 1.5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.white.withValues(alpha: 0.35),
-                          blurRadius: 8,
-                        ),
-                      ],
+                      border: Border.all(color: Colors.white, width: 1.6),
                     ),
-                    child: BoldText(
-                      text: 'VS',
-                      fontSize: compact ? 8 : 9,
-                      color: kColorWhite,
+                    child: Text(
+                      'VS',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: compact ? 8 : 9,
+                        height: 1,
+                      ),
                     ),
                   ),
                 ],
@@ -475,13 +509,13 @@ class _PkTugOfWarBar extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 4),
         Row(
           children: [
             Expanded(
               child: AppText(
                 text: _handle(leftName),
-                fontSize: 10,
+                fontSize: 11,
                 color: Colors.white70,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -490,7 +524,7 @@ class _PkTugOfWarBar extends StatelessWidget {
             Expanded(
               child: AppText(
                 text: _handle(rightName),
-                fontSize: 10,
+                fontSize: 11,
                 color: Colors.white70,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -504,6 +538,10 @@ class _PkTugOfWarBar extends StatelessWidget {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Host panes — full-bleed video / mock cover (matches reference)
+// ---------------------------------------------------------------------------
+
 class _HostVideoPane extends StatelessWidget {
   const _HostVideoPane({
     required this.side,
@@ -513,6 +551,7 @@ class _HostVideoPane extends StatelessWidget {
     required this.alignEnd,
     required this.isSelf,
     required this.compact,
+    this.mockCoverAsset,
   });
 
   final PkSideInfo side;
@@ -522,35 +561,51 @@ class _HostVideoPane extends StatelessWidget {
   final bool alignEnd;
   final bool isSelf;
   final bool compact;
+  final String? mockCoverAsset;
 
   @override
   Widget build(BuildContext context) {
     final name = side.displayName.isEmpty
         ? (isSelf ? 'You' : 'Host')
         : side.displayName;
-    final fans = side.followerCount;
 
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: accent.withValues(alpha: 0.65), width: 1.4),
-        boxShadow: [
-          BoxShadow(
-            color: accent.withValues(alpha: 0.22),
-            blurRadius: 14,
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
+    return ClipRect(
       child: Stack(
         fit: StackFit.expand,
         children: [
-          PkHostLiveVideoFill(
-            userId: side.hostId,
-            name: name,
-            imageUrl: side.avatarUrl,
-            preferLocalUser: isSelf,
+          // Edge-to-edge host visual (ref: live video fill, not framed avatar).
+          if (mockCoverAsset != null)
+            Image.asset(
+              mockCoverAsset!,
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+            )
+          else
+            PkHostLiveVideoFill(
+              userId: side.hostId,
+              name: name,
+              imageUrl: side.avatarUrl,
+              preferLocalUser: isSelf,
+            ),
+          // Soft team tint at the outer edge.
+          Align(
+            alignment: alignEnd ? Alignment.centerRight : Alignment.centerLeft,
+            child: Container(
+              width: 3,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    accent.withValues(alpha: 0.0),
+                    accent.withValues(alpha: 0.85),
+                    accent.withValues(alpha: 0.0),
+                  ],
+                ),
+              ),
+            ),
           ),
+          // Bottom readable gradient for team + host card.
           DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -558,39 +613,46 @@ class _HostVideoPane extends StatelessWidget {
                 end: Alignment.bottomCenter,
                 colors: [
                   Colors.transparent,
-                  Colors.black.withValues(alpha: 0.15),
+                  Colors.black.withValues(alpha: 0.05),
                   Colors.black.withValues(alpha: 0.72),
                 ],
-                stops: const [0.35, 0.62, 1],
+                stops: const [0.45, 0.68, 1],
               ),
             ),
           ),
           Positioned(
-            left: alignEnd ? null : 8,
-            right: alignEnd ? 8 : null,
-            bottom: compact ? 44 : 52,
-            child: SemiBoldText(
-              text: teamLabel,
-              fontSize: compact ? 9 : 10,
-              color: accent,
-            ),
-          ),
-          Positioned(
-            left: 6,
-            right: 6,
-            bottom: 6,
-            child: Align(
-              alignment:
-                  alignEnd ? Alignment.centerRight : Alignment.centerLeft,
-              child: _HostInfoCard(
-                name: name,
-                hostLabel: hostLabel,
-                avatarUrl: side.avatarUrl,
-                accent: accent,
-                fans: fans,
-                compact: compact,
-                alignEnd: alignEnd,
-              ),
+            left: 8,
+            right: 8,
+            bottom: 8,
+            child: Column(
+              crossAxisAlignment: alignEnd
+                  ? CrossAxisAlignment.end
+                  : CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  teamLabel,
+                  style: TextStyle(
+                    color: accent,
+                    fontWeight: FontWeight.w900,
+                    fontSize: compact ? 11 : 12,
+                    letterSpacing: 1.1,
+                    shadows: const [
+                      Shadow(color: Colors.black87, blurRadius: 6),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 6),
+                _HostInfoCard(
+                  name: name,
+                  hostLabel: hostLabel,
+                  avatarUrl: side.avatarUrl,
+                  accent: accent,
+                  fans: side.followerCount,
+                  compact: compact,
+                  alignEnd: alignEnd,
+                ),
+              ],
             ),
           ),
         ],
@@ -620,69 +682,96 @@ class _HostInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final avatarSize = compact ? 34.0 : 40.0;
     final avatar = Container(
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: accent, width: 1.6),
+        border: Border.all(color: accent, width: 2),
         boxShadow: [
-          BoxShadow(color: accent.withValues(alpha: 0.55), blurRadius: 8),
+          BoxShadow(
+            color: accent.withValues(alpha: 0.65),
+            blurRadius: 12,
+            spreadRadius: 0.5,
+          ),
         ],
       ),
       child: AppUserAvatar(
         name: name,
         imageUrl: avatarUrl,
-        size: compact ? 26 : 30,
+        size: avatarSize,
+        showFrame: false,
       ),
     );
 
-    final textBlock = Column(
+    final text = Column(
       crossAxisAlignment:
           alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        BoldText(
-          text: hostLabel,
-          fontSize: 9,
-          color: accent,
+        Text(
+          hostLabel,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+            fontSize: 10,
+            letterSpacing: 0.4,
+          ),
         ),
-        SemiBoldText(
-          text: _handle(name),
-          fontSize: compact ? 10 : 11,
-          color: kColorWhite,
+        Text(
+          _handle(name),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.95),
+            fontWeight: FontWeight.w700,
+            fontSize: compact ? 11 : 12,
+          ),
         ),
-        AppText(
-          text: fans > 0 ? '${_compactScore(fans)} Fans' : 'Live now',
-          fontSize: 9,
-          color: Colors.white70,
+        Text(
+          fans > 0 ? '${_compactScore(fans)} Fans' : 'Live now',
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.65),
+            fontSize: 9,
+          ),
         ),
       ],
     );
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      constraints: const BoxConstraints(maxWidth: 168),
+      padding: const EdgeInsets.fromLTRB(8, 6, 10, 6),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: Colors.black.withValues(alpha: 0.42),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        borderRadius: BorderRadius.circular(14),
+        color: Colors.black.withValues(alpha: 0.48),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.35),
+            blurRadius: 10,
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: alignEnd
-            ? [Flexible(child: textBlock), const SizedBox(width: 6), avatar]
-            : [avatar, const SizedBox(width: 6), Flexible(child: textBlock)],
+            ? [
+                Flexible(child: text),
+                const SizedBox(width: 8),
+                avatar,
+              ]
+            : [
+                avatar,
+                const SizedBox(width: 8),
+                Flexible(child: text),
+              ],
       ),
     );
   }
 }
 
 class _EndPkButton extends StatelessWidget {
-  const _EndPkButton({
-    required this.onTap,
-    required this.compact,
-  });
+  const _EndPkButton({required this.onTap, required this.compact});
 
   final VoidCallback onTap;
   final bool compact;
@@ -705,13 +794,6 @@ class _EndPkButton extends StatelessWidget {
               colors: [Color(0xFFFF5C7A), Color(0xFFE53935)],
             ),
             border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFFE53935).withValues(alpha: 0.4),
-                blurRadius: 10,
-                offset: const Offset(0, 3),
-              ),
-            ],
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -722,10 +804,13 @@ class _EndPkButton extends StatelessWidget {
                 size: compact ? 13 : 14,
               ),
               const SizedBox(width: 4),
-              BoldText(
-                text: 'End PK',
-                fontSize: compact ? 10 : 11,
-                color: kColorWhite,
+              Text(
+                'End PK',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: compact ? 10 : 11,
+                ),
               ),
             ],
           ),

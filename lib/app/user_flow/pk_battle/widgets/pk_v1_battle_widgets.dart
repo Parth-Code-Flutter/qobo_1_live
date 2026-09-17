@@ -6,6 +6,7 @@ import 'package:qobo_one_live/app/user_flow/pk_battle/controllers/pk_v1_controll
 import 'package:qobo_one_live/app/user_flow/pk_battle/models/v1/pk_v1_models.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/safe_network_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
@@ -574,7 +575,8 @@ class _PkHostLiveVideoFillState extends State<PkHostLiveVideoFill> {
             return AppUserAvatar(
               name: widget.name,
               imageUrl: widget.imageUrl,
-              size: size.shortestSide * 0.42,
+              size: (size.shortestSide * 0.42).clamp(24.0, 96.0),
+              showFrame: false,
             );
           },
         ),
@@ -583,15 +585,66 @@ class _PkHostLiveVideoFillState extends State<PkHostLiveVideoFill> {
   }
 
   Widget _fallbackAvatar() {
-    return ColoredBox(
-      color: const Color(0xFF1A1228),
-      child: Center(
-        child: AppUserAvatar(
-          name: widget.name,
-          imageUrl: widget.imageUrl,
-          size: 72,
-        ),
-      ),
+    // Full-bleed pane fill (reference: video edge-to-edge — never a framed
+    // crown avatar sitting in the middle of an empty box).
+    final resolved = resolveUserAvatarUrl(widget.imageUrl);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final w = constraints.maxWidth.isFinite ? constraints.maxWidth : 200.0;
+        final h = constraints.maxHeight.isFinite ? constraints.maxHeight : 320.0;
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            const ColoredBox(color: Color(0xFF120B1C)),
+            if (resolved != null)
+              Positioned.fill(
+                child: SafeNetworkAvatar(
+                  url: resolved,
+                  size: w > h ? w : h,
+                  fit: BoxFit.cover,
+                  fallback: const ColoredBox(color: Color(0xFF1A1228)),
+                ),
+              )
+            else
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color(0xFF2A1840),
+                      const Color(0xFF120B1C),
+                      Colors.black.withValues(alpha: 0.95),
+                    ],
+                  ),
+                ),
+              ),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.12),
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.62),
+                  ],
+                  stops: const [0, 0.4, 1],
+                ),
+              ),
+            ),
+            if (resolved == null)
+              Center(
+                child: AppUserAvatar(
+                  name: widget.name,
+                  imageUrl: widget.imageUrl,
+                  size: (w * 0.42).clamp(64.0, 110.0),
+                  showFrame: false,
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }

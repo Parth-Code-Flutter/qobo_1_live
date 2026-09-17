@@ -39,13 +39,22 @@ String pkSideToApi(PkBattleSide side) {
   }
 }
 
-/// Lifecycle of a PK session (mirrors the spec state machine).
+/// Lifecycle of a PK session (server-authoritative state machine).
+///
+/// Spec stages: IDLE → MATCHING → COUNTDOWN → BATTLE_ACTIVE →
+/// PUNISHMENT_ROUND → ENDED. Legacy aliases (PENDING / LIVE / …) still parse.
 enum PkSessionStatus {
+  idle,
+  matching,
+  countdown,
+  battleActive,
+  punishmentRound,
+  ended,
+  // Legacy / invitation-adjacent
   pending,
   accepted,
   starting,
   live,
-  ended,
   cancelled,
   expired,
   unknown,
@@ -54,6 +63,19 @@ enum PkSessionStatus {
 PkSessionStatus pkStatusFromRaw(dynamic raw) {
   final value = raw?.toString().trim().toUpperCase();
   switch (value) {
+    case 'IDLE':
+      return PkSessionStatus.idle;
+    case 'MATCHING':
+      return PkSessionStatus.matching;
+    case 'COUNTDOWN':
+      return PkSessionStatus.countdown;
+    case 'BATTLE_ACTIVE':
+    case 'BATTLEACTIVE':
+    case 'ACTIVE':
+      return PkSessionStatus.battleActive;
+    case 'PUNISHMENT_ROUND':
+    case 'PUNISHMENT':
+      return PkSessionStatus.punishmentRound;
     case 'PENDING':
       return PkSessionStatus.pending;
     case 'ACCEPTED':
@@ -68,6 +90,7 @@ PkSessionStatus pkStatusFromRaw(dynamic raw) {
     case 'CANCELED':
       return PkSessionStatus.cancelled;
     case 'EXPIRED':
+    case 'TIMEOUT':
       return PkSessionStatus.expired;
     default:
       return PkSessionStatus.unknown;
@@ -240,7 +263,9 @@ class PkSideInfo {
   final List<PkAudienceMember> audience;
 
   factory PkSideInfo.fromJson(Map<String, dynamic> j) {
-    final audienceRaw = j['audience'] ??
+    final audienceRaw = j['topContributors'] ??
+        j['top_contributors'] ??
+        j['audience'] ??
         j['viewers'] ??
         j['topViewers'] ??
         j['top_viewers'] ??
@@ -290,17 +315,21 @@ class PkSideInfo {
   );
 }
 
-/// A viewer / floor audience member belonging to one PK side's room.
+/// A viewer / top contributor belonging to one PK side.
 class PkAudienceMember {
   const PkAudienceMember({
     required this.userId,
     required this.displayName,
     required this.avatarUrl,
+    this.points = 0,
+    this.rank = 0,
   });
 
   final String userId;
   final String displayName;
   final String avatarUrl;
+  final int points;
+  final int rank;
 
   factory PkAudienceMember.fromJson(Map<String, dynamic> j) {
     return PkAudienceMember(
@@ -314,6 +343,8 @@ class PkAudienceMember {
         'displayPicture',
         'profileImage',
       ]),
+      points: _int(j, const ['points', 'pkPoints', 'pk_points', 'score']),
+      rank: _int(j, const ['rank']),
     );
   }
 
@@ -386,6 +417,8 @@ class PkGiftSendResult {
     required this.pkPoints,
     required this.scoreA,
     required this.scoreB,
+    this.topContributorsA = const [],
+    this.topContributorsB = const [],
   });
 
   final bool success;
@@ -395,6 +428,8 @@ class PkGiftSendResult {
   final int pkPoints;
   final int scoreA;
   final int scoreB;
+  final List<PkAudienceMember> topContributorsA;
+  final List<PkAudienceMember> topContributorsB;
 
   factory PkGiftSendResult.fromJson(Map<String, dynamic> j) {
     return PkGiftSendResult(
@@ -405,6 +440,12 @@ class PkGiftSendResult {
       pkPoints: _int(j, const ['pkPoints', 'pk_points']),
       scoreA: _int(j, const ['scoreA', 'score_a']),
       scoreB: _int(j, const ['scoreB', 'score_b']),
+      topContributorsA: PkAudienceMember.listFrom(
+        j['topContributorsA'] ?? j['top_contributors_a'],
+      ),
+      topContributorsB: PkAudienceMember.listFrom(
+        j['topContributorsB'] ?? j['top_contributors_b'],
+      ),
     );
   }
 }
@@ -524,6 +565,165 @@ class PkGiftCatalogItem {
       coinCost: _int(j, const ['coinCost', 'coin_cost', 'price', 'coins']),
       pkPointValue:
           _int(j, const ['pkPointValue', 'pk_point_value', 'pkPoints', 'points']),
+    );
+  }
+}
+
+/// One host's RTC credentials inside a `PK_RTC_BRIDGE` payload.
+class PkRtcHostStream {
+  const PkRtcHostStream({
+    required this.hostId,
+    required this.displayName,
+    required this.avatarUrl,
+    required this.roomId,
+    required this.streamId,
+    required this.rtcToken,
+    required this.appId,
+    required this.role,
+  });
+
+  final String hostId;
+  final String displayName;
+  final String avatarUrl;
+  final String roomId;
+  final String streamId;
+  final String rtcToken;
+  final int appId;
+  final String role;
+
+  factory PkRtcHostStream.fromJson(Map<String, dynamic> j) {
+    return PkRtcHostStream(
+      hostId: _str(j, const ['hostId', 'host_id', 'userId', 'user_id']),
+      displayName: _str(j, const ['displayName', 'display_name', 'name']),
+      avatarUrl: _str(j, const ['avatarUrl', 'avatar_url', 'avatar']),
+      roomId: _str(j, const ['roomId', 'room_id']),
+      streamId: _str(j, const ['streamId', 'stream_id']),
+      rtcToken: _str(j, const ['rtcToken', 'rtc_token', 'token']),
+      appId: _int(j, const ['appId', 'app_id']),
+      role: _str(j, const ['role'], 'publisher'),
+    );
+  }
+}
+
+/// Audience subscription hints from `PK_RTC_BRIDGE`.
+class PkRtcAudienceSubscription {
+  const PkRtcAudienceSubscription({
+    required this.roomAStreamToPlay,
+    required this.roomBStreamToPlay,
+    required this.bridgeRoomId,
+    required this.tokenA,
+    required this.tokenB,
+  });
+
+  final String roomAStreamToPlay;
+  final String roomBStreamToPlay;
+  final String bridgeRoomId;
+  final String tokenA;
+  final String tokenB;
+
+  factory PkRtcAudienceSubscription.fromJson(Map<String, dynamic> j) {
+    return PkRtcAudienceSubscription(
+      roomAStreamToPlay: _str(j, const [
+        'roomAStreamToPlay',
+        'room_a_stream_to_play',
+      ]),
+      roomBStreamToPlay: _str(j, const [
+        'roomBStreamToPlay',
+        'room_b_stream_to_play',
+      ]),
+      bridgeRoomId: _str(j, const ['bridgeRoomId', 'bridge_room_id']),
+      tokenA: _str(j, const ['tokenA', 'token_a']),
+      tokenB: _str(j, const ['tokenB', 'token_b']),
+    );
+  }
+}
+
+/// Authoritative dual-RTC bridge payload (`PK_RTC_BRIDGE`).
+class PkRtcBridgePayload {
+  const PkRtcBridgePayload({
+    required this.pkId,
+    required this.provider,
+    required this.bridgeChannel,
+    required this.serverTimeMs,
+    required this.hostA,
+    required this.hostB,
+    required this.audienceSubscription,
+  });
+
+  final String pkId;
+  final String provider;
+  final String bridgeChannel;
+  final int serverTimeMs;
+  final PkRtcHostStream hostA;
+  final PkRtcHostStream hostB;
+  final PkRtcAudienceSubscription audienceSubscription;
+
+  factory PkRtcBridgePayload.fromJson(Map<String, dynamic> j) {
+    return PkRtcBridgePayload(
+      pkId: _str(j, const ['pkId', 'pk_id']),
+      provider: _str(j, const ['provider'], 'ZEGOCLOUD'),
+      bridgeChannel: _str(j, const ['bridgeChannel', 'bridge_channel']),
+      serverTimeMs: _int(j, const ['serverTime', 'server_time']),
+      hostA: PkRtcHostStream.fromJson(_asMap(j['hostA'] ?? j['host_a'])),
+      hostB: PkRtcHostStream.fromJson(_asMap(j['hostB'] ?? j['host_b'])),
+      audienceSubscription: PkRtcAudienceSubscription.fromJson(
+        _asMap(j['audienceSubscription'] ?? j['audience_subscription']),
+      ),
+    );
+  }
+
+  /// Opponent stream id for a viewer currently in [localRoomId].
+  String opponentStreamForRoom(String localRoomId) {
+    final room = localRoomId.trim();
+    if (room.isEmpty) return '';
+    if (room == hostA.roomId) {
+      return audienceSubscription.roomAStreamToPlay;
+    }
+    if (room == hostB.roomId) {
+      return audienceSubscription.roomBStreamToPlay;
+    }
+    return '';
+  }
+}
+
+/// Server state-machine transition (`PK_STATE_TRANSITION`).
+class PkStateTransition {
+  const PkStateTransition({
+    required this.pkId,
+    required this.fromState,
+    required this.toState,
+    required this.durationSec,
+    required this.remainingSec,
+    required this.serverTimeMs,
+    required this.phaseEndsAt,
+    required this.winnerSide,
+    required this.winnerId,
+    required this.reason,
+  });
+
+  final String pkId;
+  final String fromState;
+  final String toState;
+  final int durationSec;
+  final int remainingSec;
+  final int serverTimeMs;
+  final DateTime? phaseEndsAt;
+  final PkBattleSide winnerSide;
+  final String winnerId;
+  final String reason;
+
+  factory PkStateTransition.fromJson(Map<String, dynamic> j) {
+    return PkStateTransition(
+      pkId: _str(j, const ['pkId', 'pk_id']),
+      fromState: _str(j, const ['fromState', 'from_state']),
+      toState: _str(j, const ['toState', 'to_state']),
+      durationSec: _int(j, const ['durationSec', 'duration_sec']),
+      remainingSec: _int(j, const ['remainingSec', 'remaining_sec']),
+      serverTimeMs: _int(j, const ['serverTime', 'server_time']),
+      phaseEndsAt: _date(j, const ['phaseEndsAt', 'phase_ends_at']),
+      winnerSide: pkSideFromRaw(_str(j, const ['winnerSide', 'winner_side'])),
+      winnerId: _str(j, const ['winnerId', 'winner_id']),
+      reason: _str(j, const ['reason']),
     );
   }
 }

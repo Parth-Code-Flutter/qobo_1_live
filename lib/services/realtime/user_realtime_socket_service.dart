@@ -57,16 +57,28 @@ class UserRealtimeSocketService extends GetxController {
   String? _joinedPkId;
 
   /// All PK Battle v1 socket event names (server → client).
+  ///
+  /// Includes both the state-machine guide events and legacy aliases so older
+  /// backends keep working during migration.
   static const List<String> pkV1Events = [
+    // Invitations
     'PK_INVITATION_RECEIVED',
     'PK_INVITATION_ACCEPTED',
     'PK_INVITATION_REJECTED',
+    'PK_INVITATION_TIMEOUT',
+    // State machine + RTC bridge (guide)
+    'PK_RTC_BRIDGE',
+    'PK_RTC_UNBRIDGE',
+    'PK_COUNTDOWN_TICK',
+    'PK_STATE_TRANSITION',
+    'PK_SCORE_UPDATE',
+    'PK_GIFT_RECEIVED',
+    'PK_RESULT',
+    // Legacy aliases
     'PK_STARTED',
     'PK_STATE_SYNC',
     'PK_SCORE_UPDATED',
-    'PK_GIFT_RECEIVED',
     'PK_ENDED',
-    'PK_RESULT',
     'PK_CANCELLED',
     'PK_HOST_DISCONNECTED',
     'PK_HOST_RECONNECTED',

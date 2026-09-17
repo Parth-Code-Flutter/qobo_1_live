@@ -3,6 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/bottom_nav/controllers/bottom_nav_controller.dart';
+import 'package:qobo_one_live/app/user_flow/live_broadcast/widgets/in_room_pk_stage_overlay.dart';
+import 'package:qobo_one_live/app/user_flow/live_broadcast/widgets/live_room_pk_stage_slot.dart';
+import 'package:qobo_one_live/app/user_flow/pk_battle/controllers/pk_v1_controller.dart';
 import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
@@ -10,6 +13,7 @@ import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/repo/banner/models/promo_banner.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/services/pk/pk_v1_coordinator.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
@@ -748,6 +752,16 @@ class LiveRoomView extends StatelessWidget {
           ),
         ),
         Spacing.h6,
+        // TEMP: preview new PK battle stage UI — commented for now.
+        // _headerIconButton(
+        //   onTap: () => _openPkBattleUiPreview(),
+        //   child: const Icon(
+        //     Icons.sports_mma_rounded,
+        //     size: 18,
+        //     color: Color(0xFFFF2D55),
+        //   ),
+        // ),
+        // Spacing.h6,
         _headerIconButton(
           onTap: () => Get.toNamed(Routes.LEADER_BOARD),
           goldAccent: true,
@@ -1258,6 +1272,30 @@ class LiveRoomView extends StatelessWidget {
     );
   }
 
+  /// TEMP: full-screen mock of the new PK battle stage (no API).
+  void _openPkBattleUiPreview() {
+    final session = Get.isRegistered<UserSessionController>()
+        ? Get.find<UserSessionController>()
+        : null;
+    final pk = PkV1Coordinator.ensureController();
+    pk.bindLiveRoomContext(
+      roomId: 'ui_preview_room',
+      name: session?.displayName ?? 'You',
+      avatar: session?.displayPictureUrl,
+    );
+    pk.loadUiPreview(
+      selfName: session?.displayName,
+      selfAvatar: session?.displayPictureUrl,
+      selfRoomId: 'ui_preview_room',
+    );
+
+    Get.to(
+      () => const _PkBattleUiPreviewPage(),
+      transition: Transition.fadeIn,
+      fullscreenDialog: true,
+    )?.whenComplete(pk.clearEmbeddedBattle);
+  }
+
   LiveRoomController _resolveController() {
     if (Get.isRegistered<LiveRoomController>()) {
       return Get.find<LiveRoomController>();
@@ -1438,6 +1476,315 @@ class _HubPressScaleState extends State<_HubPressScale> {
         curve: Curves.easeOutCubic,
         child: widget.child,
       ),
+    );
+  }
+}
+
+class _PkBattleUiPreviewPage extends StatelessWidget {
+  const _PkBattleUiPreviewPage();
+
+  // TEMP mock chat lines for PK UI preview only.
+  static const _mockChat = <(String, String, bool)>[
+    ('AlexG', 'Team Blue let\'s go! (GIFT: Star)', true),
+    ('GamerPro', 'Mike finish strong!', false),
+    ('SarahFan', 'Level 5 Firework! (Gift)', true),
+    ('Leo', 'WOW — clock is ticking!', false),
+    ('System', 'Mike got an ELITE Gift!', true),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final pk = Get.isRegistered<PkV1Controller>()
+        ? Get.find<PkV1Controller>()
+        : PkV1Coordinator.ensureController();
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          const LiveRoomPkBattleBackdrop(),
+          SafeArea(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          pk.clearEmbeddedBattle();
+                          Get.back();
+                        },
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const Expanded(
+                        child: SemiBoldText(
+                          text: 'PK UI preview (temp)',
+                          fontSize: TextStyles.k14FontSize,
+                          color: kColorWhite,
+                          align: TextAlign.center,
+                        ),
+                      ),
+                      const SizedBox(width: 48),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // Stage fills remaining space above the mock dock.
+                      Positioned(
+                        left: 8,
+                        right: 8,
+                        top: 0,
+                        bottom: 118,
+                        child: InRoomPkStageOverlay(
+                          controller: pk,
+                          showEndButton: false,
+                        ),
+                      ),
+                      // Mock chat + floating reactions (preview only).
+                      Positioned(
+                        left: 12,
+                        right: 72,
+                        bottom: 72,
+                        height: 140,
+                        child: IgnorePointer(
+                          child: ListView.separated(
+                            reverse: true,
+                            padding: EdgeInsets.zero,
+                            itemCount: _mockChat.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 6),
+                            itemBuilder: (context, index) {
+                              final item =
+                                  _mockChat[_mockChat.length - 1 - index];
+                              return _MockChatBubble(
+                                name: item.$1,
+                                message: item.$2,
+                                isGift: item.$3,
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      const Positioned(
+                        right: 14,
+                        bottom: 90,
+                        child: IgnorePointer(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.favorite_rounded,
+                                  color: Color(0xFFFF4F98), size: 18),
+                              SizedBox(height: 8),
+                              Icon(Icons.star_rounded,
+                                  color: Color(0xFFFFC857), size: 16),
+                              SizedBox(height: 8),
+                              Icon(Icons.monetization_on_rounded,
+                                  color: Color(0xFFFFB020), size: 18),
+                              SizedBox(height: 8),
+                              Icon(Icons.favorite_rounded,
+                                  color: Color(0xFF2F6BFF), size: 14),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // Viewer chip (preview mock — matches reference).
+                      Positioned(
+                        left: 12,
+                        bottom: 58,
+                        child: IgnorePointer(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: Colors.white24),
+                            ),
+                            child: const Text(
+                              '@Sarah_Live (13,450 Views)',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: 12,
+                        right: 12,
+                        bottom: 12,
+                        child: _MockPkBottomBar(
+                          onClose: () {
+                            pk.clearEmbeddedBattle();
+                            Get.back();
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MockChatBubble extends StatelessWidget {
+  const _MockChatBubble({
+    required this.name,
+    required this.message,
+    required this.isGift,
+  });
+
+  final String name;
+  final String message;
+  final bool isGift;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.42),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: RichText(
+          text: TextSpan(
+            children: [
+              TextSpan(
+                text: '@$name ',
+                style: TextStyle(
+                  color: isGift
+                      ? const Color(0xFFFFC857)
+                      : const Color(0xFF7CFFB2),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 11,
+                ),
+              ),
+              TextSpan(
+                text: message,
+                style: TextStyle(
+                  color: isGift ? const Color(0xFFFFE08A) : Colors.white,
+                  fontSize: 11,
+                  fontWeight: isGift ? FontWeight.w600 : FontWeight.w400,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MockPkBottomBar extends StatelessWidget {
+  const _MockPkBottomBar({required this.onClose});
+
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.55),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.white24),
+          ),
+          child: const Text(
+            'LIVE',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 11,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        _circleIcon(Icons.add_rounded),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Container(
+            height: 40,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white24),
+            ),
+            child: const Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Type a message...',
+                    style: TextStyle(color: Colors.white54, fontSize: 12),
+                  ),
+                ),
+                Icon(Icons.emoji_emotions_outlined,
+                    color: Colors.white54, size: 18),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: const LinearGradient(
+              colors: [Color(0xFFFF2D55), Color(0xFF2F6BFF)],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFFF2D55).withValues(alpha: 0.45),
+                blurRadius: 12,
+              ),
+            ],
+          ),
+          child: const Icon(Icons.card_giftcard_rounded,
+              color: Colors.white, size: 20),
+        ),
+        const SizedBox(width: 8),
+        _circleIcon(Icons.ios_share_rounded),
+        const SizedBox(width: 6),
+        GestureDetector(
+          onTap: onClose,
+          child: _circleIcon(Icons.favorite_border_rounded),
+        ),
+      ],
+    );
+  }
+
+  Widget _circleIcon(IconData icon) {
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.black.withValues(alpha: 0.45),
+        border: Border.all(color: Colors.white24),
+      ),
+      child: Icon(icon, color: Colors.white, size: 18),
     );
   }
 }

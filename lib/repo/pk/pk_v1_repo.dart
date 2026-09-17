@@ -190,9 +190,11 @@ class PkV1Repo {
   }
 
   /// POST /api/v1/pk/{pkId}/leave — host leaves / forfeits.
+  ///
+  /// Spec reason for intentional host forfeit: `host_forfeit`.
   Future<Map<String, dynamic>?> leave({
     required String pkId,
-    String reason = 'host_leave',
+    String reason = 'host_forfeit',
     bool isShowLoader = true,
   }) async {
     final response = await _apiService.postRequest(
