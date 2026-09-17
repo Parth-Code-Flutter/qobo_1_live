@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/models/geo/country_state_models.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_bottom_sheet.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/glossy_auth_field_border.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -152,11 +154,6 @@ class CountryStatePickerField extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasError = errorText != null && errorText!.isNotEmpty;
     final hasValue = value != null && value!.trim().isNotEmpty;
-    final borderColor = hasError
-        ? kColorRed
-        : hasValue
-        ? kColorPrimary.withValues(alpha: 0.65)
-        : kColorHint.withValues(alpha: 0.5);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -164,31 +161,28 @@ class CountryStatePickerField extends StatelessWidget {
         AppText(
           text: label,
           fontSize: TextStyles.k12FontSize,
-          color: kColorText,
+          color: AppLightUi.title,
         ),
         Spacing.v6,
         Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: onTap,
-            borderRadius: BorderRadius.circular(12),
-            child: Ink(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: borderColor, width: hasValue ? 1.2 : 1),
-                color: hasValue
-                    ? kColorPrimary.withValues(alpha: 0.04)
-                    : kColorWhite,
-              ),
+            borderRadius: BorderRadius.circular(18),
+            child: GlossyAuthFieldBorder(
+              radius: 18,
+              borderWidth: hasError ? 1.8 : 1.6,
               child: Padding(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                 child: Row(
                   children: [
                     Icon(
                       Icons.public_outlined,
                       size: 20,
-                      color: hasValue ? kColorPrimary : kColorHint,
+                      color: hasValue
+                          ? AppLightUi.violet
+                          : AppLightUi.violet.withValues(alpha: 0.85),
                     ),
                     Spacing.h10,
                     Expanded(
@@ -196,26 +190,29 @@ class CountryStatePickerField extends StatelessWidget {
                           ? SemiBoldText(
                               text: value!,
                               fontSize: TextStyles.k14FontSize,
-                              color: kColorText,
+                              color: AppLightUi.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             )
                           : AppText(
                               text: hint,
                               fontSize: TextStyles.k14FontSize,
-                              color: kColorHint.withValues(alpha: 0.9),
+                              color: AppLightUi.hint,
                             ),
                     ),
                     if (isLoading)
                       const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppLightUi.pink,
+                        ),
                       )
                     else
-                      Icon(
+                      const Icon(
                         Icons.keyboard_arrow_down_rounded,
-                        color: kColorHint.withValues(alpha: 0.9),
+                        color: AppLightUi.muted,
                       ),
                   ],
                 ),
@@ -224,7 +221,7 @@ class CountryStatePickerField extends StatelessWidget {
           ),
         ),
         if (hasError) ...[
-          Spacing.v4,
+          Spacing.v6,
           AppText(
             text: errorText!,
             fontSize: TextStyles.k10FontSize,

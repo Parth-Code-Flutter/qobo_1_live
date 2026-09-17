@@ -121,4 +121,19 @@ abstract final class AppLightUi {
       ],
     );
   }
+
+  /// Shared light bottom-sheet chrome (lavender canvas + soft top edge).
+  static BoxDecoration bottomSheetDecoration({double topRadius = 28}) {
+    return BoxDecoration(
+      gradient: const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [card, bg],
+      ),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(topRadius)),
+      border: const Border(
+        top: BorderSide(color: borderStrong),
+      ),
+    );
+  }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
@@ -21,12 +22,13 @@ class AppBottomSheetTheme {
   final Color handleColor;
   final Color dividerColor;
 
+  /// Default dating-app light sheet on [AppLightUi.bg].
   static const light = AppBottomSheetTheme(
-    backgroundColor: kColorWhite,
-    titleColor: kColorText,
-    subtitleColor: kColorHint,
-    handleColor: Color(0xFFE2E8F0),
-    dividerColor: Color(0xFFE2E8F0),
+    backgroundColor: AppLightUi.bg,
+    titleColor: AppLightUi.title,
+    subtitleColor: AppLightUi.subtitle,
+    handleColor: AppLightUi.borderStrong,
+    dividerColor: AppLightUi.border,
   );
 
   static const dark = AppBottomSheetTheme(
@@ -101,18 +103,24 @@ class AppBottomSheetShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final sheetContext = context;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final isLight = theme.backgroundColor == AppLightUi.bg ||
+        theme.backgroundColor == AppLightUi.card ||
+        theme.backgroundColor == kColorLavenderBg ||
+        theme.backgroundColor == kColorWhite;
 
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.viewInsetsOf(context).bottom,
       ),
       child: Container(
-        decoration: BoxDecoration(
-          color: theme.backgroundColor,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(24),
-          ),
-        ),
+        decoration: isLight
+            ? AppLightUi.bottomSheetDecoration()
+            : BoxDecoration(
+                color: theme.backgroundColor,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(24),
+                ),
+              ),
         child: SafeArea(
           top: false,
           bottom: useSafeArea,
@@ -186,14 +194,13 @@ class AppBottomSheetShell extends StatelessWidget {
               ? appButton(
                   onPressed: () => action.onPressed(sheetContext),
                   buttonText: action.label,
-                  buttonColor: kColorPrimary,
                 )
               : appButton(
                   onPressed: () => action.onPressed(sheetContext),
                   buttonText: action.label,
-                  buttonColor: kColorWhite,
-                  buttonBorderColor: kColorHint,
-                  textColor: kColorText,
+                  buttonColor: AppLightUi.card,
+                  buttonBorderColor: AppLightUi.borderStrong,
+                  textColor: AppLightUi.title,
                   isGradient: false,
                 ),
         ),

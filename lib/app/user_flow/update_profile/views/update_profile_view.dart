@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/generated/locales.g.dart';
@@ -21,12 +22,17 @@ import '../controllers/update_profile_controller.dart';
 class UpdateProfileView extends GetView<UpdateProfileController> {
   const UpdateProfileView({super.key});
 
+  static final _fieldRadius = BorderRadius.circular(18);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kColorLavenderBg,
+      backgroundColor: AppLightUi.bg,
       resizeToAvoidBottomInset: true,
-      appBar: CommonAppBarWidget(title: '', showBackButton: true),
+      appBar: const CommonAppBarWidget(
+        title: 'Additional Information',
+        showBackButton: true,
+      ),
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
         child: Form(
@@ -38,7 +44,7 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: EdgeInsets.fromLTRB(
                 20,
-                0,
+                8,
                 20,
                 24 + MediaQuery.of(context).viewInsets.bottom,
               ),
@@ -47,9 +53,7 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Spacing.v24,
-                    _headerWidget(),
-                    Spacing.v28,
+                    Spacing.v16,
                     Center(child: _profileImagePicker(context)),
                     Spacing.v28,
                     Obx(
@@ -64,17 +68,6 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
                           : const SizedBox.shrink(),
                     ),
                     _userNameField(context),
-                    // First-time email field + OTP flow temporarily disabled.
-                    // Obx(
-                    //   () => controller.isComeFromOtpScreen.value
-                    //       ? Column(
-                    //           children: [
-                    //             Spacing.v10,
-                    //             _emailField(context),
-                    //           ],
-                    //         )
-                    //       : const SizedBox.shrink(),
-                    // ),
                     Spacing.v10,
                     _ageField(context),
                     Spacing.v10,
@@ -99,11 +92,12 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
                             : (controller.isComeFromOtpScreen.value
                                   ? 'Next'
                                   : 'Update Profile'),
+                        borderRadius: 18,
                         buttonIcon: controller.isSubmitLoading.value
-                            ? SizedBox(
+                            ? const SizedBox(
                                 width: 20,
                                 height: 20,
-                                child: const CircularProgressIndicator(
+                                child: CircularProgressIndicator(
                                   strokeWidth: 2,
                                   valueColor: AlwaysStoppedAnimation<Color>(
                                     kColorWhite,
@@ -120,16 +114,6 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _headerWidget() {
-    return const Center(
-      child: BoldText(
-        text: 'Additional Information',
-        fontSize: TextStyles.k22FontSize,
-        color: kColorText,
       ),
     );
   }
@@ -312,42 +296,102 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
       return GestureDetector(
         onTap: () => controller.onProfileMediaTap(context),
         child: SizedBox(
-          width: 124,
-          height: 124,
+          width: 132,
+          height: 132,
           child: Stack(
             clipBehavior: Clip.none,
+            alignment: Alignment.center,
             children: [
-              Positioned(
-                top: 0,
-                left: 0,
-                child: Container(
-                  width: 130,
-                  height: 130,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF5F5F5),
+              // Soft pink/violet aura behind the avatar ring.
+              Container(
+                width: 132,
+                height: 132,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppLightUi.pink.withValues(alpha: 0.22),
+                      blurRadius: 22,
+                      offset: const Offset(0, 8),
+                    ),
+                    BoxShadow(
+                      color: AppLightUi.violet.withValues(alpha: 0.14),
+                      blurRadius: 16,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+              ),
+              // Glossy gradient ring.
+              Container(
+                width: 120,
+                height: 120,
+                padding: const EdgeInsets.all(3.2),
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: AppLightUi.glossRingGradient,
+                ),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
                     shape: BoxShape.circle,
+                    color: AppLightUi.card,
+                    border: Border.all(
+                      color: kColorWhite.withValues(alpha: 0.9),
+                      width: 2,
+                    ),
                   ),
                   child: ClipOval(
                     child: selectedMedia == null
-                        ? const Icon(
-                            Icons.camera_alt_outlined,
-                            color: kColorTextGrey,
-                            size: 34,
+                        ? ColoredBox(
+                            color: AppLightUi.cardSoft,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.add_a_photo_rounded,
+                                  color: AppLightUi.violet.withValues(
+                                    alpha: 0.9,
+                                  ),
+                                  size: 32,
+                                ),
+                                Spacing.v4,
+                                const AppText(
+                                  text: 'Add photo',
+                                  fontSize: 10,
+                                  color: AppLightUi.subtitle,
+                                ),
+                              ],
+                            ),
                           )
                         : Image.file(selectedMedia, fit: BoxFit.cover),
                   ),
                 ),
               ),
-              // Bottom-right edit affordance as per Figma.
-              Align(
-                alignment: Alignment.bottomRight,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => controller.onProfileMediaTap(context),
-                  child: SizedBox(
-                    width: 34,
-                    height: 34,
-                    child: SvgPicture.asset(kIconEditBG, fit: BoxFit.contain),
+              // Camera / edit badge.
+              Positioned(
+                right: 4,
+                bottom: 6,
+                child: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: AppLightUi.familyCtaGradient,
+                    border: Border.all(color: kColorWhite, width: 2.4),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppLightUi.pink.withValues(alpha: 0.35),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    selectedMedia == null
+                        ? Icons.camera_alt_rounded
+                        : Icons.edit_rounded,
+                    color: kColorWhite,
+                    size: 18,
                   ),
                 ),
               ),
@@ -363,10 +407,12 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
       controller: controller.userNameController,
       validator: (value) => controller.validateUserName(context, value),
       hintText: LocaleKeys.nickNameHint.tr,
-      borderColor: kColorHint,
+      glossyBorder: true,
+      fillColor: Colors.transparent,
+      inputBorderRadius: _fieldRadius,
       hintStyle: TextStyles.kRegularPoppins(
         fontSize: TextStyles.k14FontSize,
-        colors: kColorHint,
+        colors: AppLightUi.hint,
       ),
       textInputAction: TextInputAction.next,
       textCapitalization: TextCapitalization.none,
@@ -374,7 +420,10 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
         padding: const EdgeInsets.only(left: 14, right: 12),
         child: SvgPicture.asset(
           kIconUser,
-          colorFilter: const ColorFilter.mode(kColorHint, BlendMode.srcIn),
+          colorFilter: ColorFilter.mode(
+            AppLightUi.violet.withValues(alpha: 0.85),
+            BlendMode.srcIn,
+          ),
         ),
       ),
     );
@@ -386,10 +435,12 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
       controller: controller.emailController,
       validator: (value) => controller.validateEmail(context, value),
       hintText: LocaleKeys.loginEmailHint.tr,
-      borderColor: kColorHint,
+      glossyBorder: true,
+      fillColor: Colors.transparent,
+      inputBorderRadius: _fieldRadius,
       hintStyle: TextStyles.kRegularPoppins(
         fontSize: TextStyles.k14FontSize,
-        colors: kColorHint,
+        colors: AppLightUi.hint,
       ),
       textInputType: TextInputType.emailAddress,
       textInputAction: TextInputAction.next,
@@ -398,7 +449,10 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
         padding: const EdgeInsets.only(left: 14, right: 12),
         child: SvgPicture.asset(
           kIconMail,
-          colorFilter: const ColorFilter.mode(kColorHint, BlendMode.srcIn),
+          colorFilter: ColorFilter.mode(
+            AppLightUi.violet.withValues(alpha: 0.85),
+            BlendMode.srcIn,
+          ),
         ),
       ),
     );
@@ -411,16 +465,24 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
       hintText: LocaleKeys.ageHint.tr,
       readOnly: true,
       onTap: () => controller.pickAge(context),
-      borderColor: kColorHint,
+      glossyBorder: true,
+      fillColor: Colors.transparent,
+      inputBorderRadius: _fieldRadius,
       hintStyle: TextStyles.kRegularPoppins(
         fontSize: TextStyles.k14FontSize,
-        colors: kColorHint,
+        colors: AppLightUi.hint,
       ),
       textInputAction: TextInputAction.next,
       textCapitalization: TextCapitalization.none,
-      prefix:  Padding(
-        padding: EdgeInsets.only(left: 14, right: 12),
-        child: SvgPicture.asset(kIconCalendar),
+      prefix: Padding(
+        padding: const EdgeInsets.only(left: 14, right: 12),
+        child: SvgPicture.asset(
+          kIconCalendar,
+          colorFilter: ColorFilter.mode(
+            AppLightUi.violet.withValues(alpha: 0.85),
+            BlendMode.srcIn,
+          ),
+        ),
       ),
     );
   }
@@ -430,43 +492,52 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
       controller: controller.cityController,
       validator: controller.validateCity,
       hintText: 'Enter city',
-      borderColor: kColorHint,
+      glossyBorder: true,
+      fillColor: Colors.transparent,
+      inputBorderRadius: _fieldRadius,
       hintStyle: TextStyles.kRegularPoppins(
         fontSize: TextStyles.k14FontSize,
-        colors: kColorHint,
+        colors: AppLightUi.hint,
       ),
       textInputAction: TextInputAction.next,
       textCapitalization: TextCapitalization.words,
       prefix: Padding(
         padding: const EdgeInsets.only(left: 14, right: 12),
-        child: Icon(Icons.location_city_outlined, size: 20, color: kColorHint),
+        child: Icon(
+          Icons.location_city_outlined,
+          size: 20,
+          color: AppLightUi.violet.withValues(alpha: 0.85),
+        ),
       ),
     );
   }
 
   Widget _countryStateFields(BuildContext context) {
-    return Column(
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        CountryStatePickerField(
-          label: 'Country',
-          value: controller.selectedCountry.value?.name,
-          hint: 'Select country',
-          isLoading: controller.isCountriesLoading.value,
-          onTap: () => _pickCountry(context),
+        Expanded(
+          child: CountryStatePickerField(
+            label: 'Country',
+            value: controller.selectedCountry.value?.name,
+            hint: 'Country',
+            isLoading: controller.isCountriesLoading.value,
+            onTap: () => _pickCountry(context),
+          ),
         ),
-        Spacing.v10,
-        CountryStatePickerField(
-          label: 'State',
-          value: controller.selectedState.value?.name,
-          hint: controller.selectedCountry.value == null
-              ? 'Select country first'
-              : 'Select state',
-          isLoading: controller.isStatesLoading.value,
-          onTap: controller.selectedCountry.value == null
-              ? () {
-                  AppToast.showError(context, 'Please select country first');
-                }
-              : () => _pickState(context),
+        Spacing.h10,
+        Expanded(
+          child: CountryStatePickerField(
+            label: 'State',
+            value: controller.selectedState.value?.name,
+            hint: 'State',
+            isLoading: controller.isStatesLoading.value,
+            onTap: controller.selectedCountry.value == null
+                ? () {
+                    AppToast.showError(context, 'Please select country first');
+                  }
+                : () => _pickState(context),
+          ),
         ),
       ],
     );
@@ -502,10 +573,10 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppText(
+        const AppText(
           text: 'Select Gender',
           fontSize: TextStyles.k14FontSize,
-          color: kColorText,
+          color: AppLightUi.title,
         ),
         Spacing.v12,
         Obx(
@@ -605,7 +676,7 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
     );
   }
 
-  /// Figma-style circular chip: filled primary when selected, white + grey border when not.
+  /// Circular chip: violet→pink when selected, glossy ring when not.
   Widget _genderCircleOption({
     required String label,
     required String value,
@@ -621,11 +692,14 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
         height: kGenderCircleSize,
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: isSelected ? kColorPrimary : kColorWhite,
+            gradient: isSelected ? AppLightUi.familyCtaGradient : null,
+            color: isSelected ? null : AppLightUi.card,
             shape: BoxShape.circle,
             border: Border.all(
-              color: isSelected ? kColorPrimary : kColorTextFieldBorder,
-              width: 0.5,
+              color: isSelected
+                  ? Colors.transparent
+                  : AppLightUi.borderStrong,
+              width: 1.2,
             ),
           ),
           child: Column(
@@ -637,7 +711,7 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
                 width: 32,
                 fit: BoxFit.contain,
                 colorFilter: ColorFilter.mode(
-                  isSelected ? kColorWhite : kColorHint,
+                  isSelected ? kColorWhite : AppLightUi.violet,
                   BlendMode.srcIn,
                 ),
               ),
@@ -652,7 +726,7 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
                 AppText(
                   text: label,
                   fontSize: TextStyles.k14FontSize,
-                  color: kColorHint,
+                  color: AppLightUi.subtitle,
                 ),
             ],
           ),
@@ -671,16 +745,21 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
         textInputType: TextInputType.visiblePassword,
         textInputAction: TextInputAction.next,
         textCapitalization: TextCapitalization.none,
-        borderColor: kColorHint,
+        glossyBorder: true,
+        fillColor: Colors.transparent,
+        inputBorderRadius: _fieldRadius,
         hintStyle: TextStyles.kRegularPoppins(
           fontSize: TextStyles.k14FontSize,
-          colors: kColorHint,
+          colors: AppLightUi.hint,
         ),
         prefix: Padding(
           padding: const EdgeInsets.only(left: 14, right: 12),
           child: SvgPicture.asset(
             kIconPassword,
-            colorFilter: const ColorFilter.mode(kColorHint, BlendMode.srcIn),
+            colorFilter: ColorFilter.mode(
+              AppLightUi.violet.withValues(alpha: 0.85),
+              BlendMode.srcIn,
+            ),
           ),
         ),
         suffix: Padding(
@@ -691,8 +770,8 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
               controller.isPasswordHidden.value
                   ? Icons.visibility_off_outlined
                   : Icons.visibility_outlined,
-              color: kColorHint,
-              size: 16,
+              color: AppLightUi.muted,
+              size: 18,
             ),
           ),
         ),
@@ -711,16 +790,21 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
         textInputType: TextInputType.visiblePassword,
         textInputAction: TextInputAction.done,
         textCapitalization: TextCapitalization.none,
-        borderColor: kColorHint,
+        glossyBorder: true,
+        fillColor: Colors.transparent,
+        inputBorderRadius: _fieldRadius,
         hintStyle: TextStyles.kRegularPoppins(
           fontSize: TextStyles.k14FontSize,
-          colors: kColorHint,
+          colors: AppLightUi.hint,
         ),
         prefix: Padding(
           padding: const EdgeInsets.only(left: 14, right: 12),
           child: SvgPicture.asset(
             kIconPassword,
-            colorFilter: const ColorFilter.mode(kColorHint, BlendMode.srcIn),
+            colorFilter: ColorFilter.mode(
+              AppLightUi.violet.withValues(alpha: 0.85),
+              BlendMode.srcIn,
+            ),
           ),
         ),
         suffix: Padding(
@@ -731,8 +815,8 @@ class UpdateProfileView extends GetView<UpdateProfileController> {
               controller.isConfirmPasswordHidden.value
                   ? Icons.visibility_off_outlined
                   : Icons.visibility_outlined,
-              color: kColorHint,
-              size: 16,
+              color: AppLightUi.muted,
+              size: 18,
             ),
           ),
         ),

@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
@@ -11,10 +12,7 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 enum FamilyMemberAction { sendGift, directMessage }
 
-/// Premium glass sheet: Send Gift / Direct Message for a family member.
-///
-/// Icons use [AdminAgencyUi.glowIcon] (same as Family Tree / Announcement).
-/// Avatar uses [FramedUserAvatar] like Discover / live-room profiles.
+/// Premium light sheet: Send Gift / Direct Message for a family member.
 class FamilyMemberActionsSheet extends StatelessWidget {
   const FamilyMemberActionsSheet({
     super.key,
@@ -33,7 +31,7 @@ class FamilyMemberActionsSheet extends StatelessWidget {
       FamilyMemberActionsSheet(member: member, isSelf: isSelf),
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withValues(alpha: 0.55),
+      barrierColor: Colors.black.withValues(alpha: 0.35),
     );
   }
 
@@ -57,7 +55,7 @@ class FamilyMemberActionsSheet extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(28),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(28),
@@ -65,21 +63,11 @@ class FamilyMemberActionsSheet extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Color(0xF02A1638),
-                  Color(0xF0140C22),
-                  Color(0xF00C0814),
+                  AppLightUi.card,
+                  AppLightUi.bg,
                 ],
               ),
-              border: Border.all(
-                color: AdminAgencyUi.gold.withValues(alpha: 0.28),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: AdminAgencyUi.goldDeep.withValues(alpha: 0.18),
-                  blurRadius: 28,
-                  offset: const Offset(0, 12),
-                ),
-              ],
+              border: Border.all(color: AppLightUi.borderStrong),
             ),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
@@ -90,7 +78,7 @@ class FamilyMemberActionsSheet extends StatelessWidget {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: kColorWhite.withValues(alpha: 0.22),
+                      color: AppLightUi.borderStrong,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -125,22 +113,22 @@ class FamilyMemberActionsSheet extends StatelessWidget {
                   SemiBoldText(
                     text: name,
                     fontSize: TextStyles.k18FontSize,
-                    color: kColorWhite,
+                    color: AppLightUi.title,
                     align: TextAlign.center,
                   ),
                   Spacing.v4,
                   AppText(
                     text: '$role · Lv.$level',
                     fontSize: TextStyles.k12FontSize,
-                    color: kColorWhite.withValues(alpha: 0.72),
+                    color: AppLightUi.subtitle,
                     align: TextAlign.center,
                   ),
                   Spacing.v20,
                   if (isSelf)
-                    AppText(
+                    const AppText(
                       text: 'This is you — pick another member to gift or DM.',
                       fontSize: TextStyles.k12FontSize,
-                      color: kColorWhite.withValues(alpha: 0.7),
+                      color: AppLightUi.subtitle,
                       align: TextAlign.center,
                     )
                   else
@@ -207,21 +195,12 @@ class _ActionTile extends StatelessWidget {
           height: 96,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                accent.withValues(alpha: 0.42),
-                accentEnd.withValues(alpha: 0.22),
-                const Color(0xFF1A0B2E),
-              ],
-            ),
-            border: Border.all(color: accent.withValues(alpha: 0.28)),
+            color: AppLightUi.cardSoft,
+            border: Border.all(color: accent.withValues(alpha: 0.35)),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Same solid gradient tile + white glyph as Family Tree / header.
               AdminAgencyUi.glowIcon(
                 icon: icon,
                 accent: accent,
@@ -233,7 +212,7 @@ class _ActionTile extends StatelessWidget {
               SemiBoldText(
                 text: label,
                 fontSize: TextStyles.k14FontSize,
-                color: kColorWhite,
+                color: AppLightUi.title,
               ),
             ],
           ),

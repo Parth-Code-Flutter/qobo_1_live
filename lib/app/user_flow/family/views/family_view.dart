@@ -99,28 +99,35 @@ class FamilyView extends GetView<FamilyController> {
           ),
         ],
       ),
-      floatingActionButton: Container(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: AppLightUi.familyCtaGradient,
-          boxShadow: [
-            BoxShadow(
-              color: AppLightUi.title.withValues(alpha: 0.08),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: FloatingActionButton(
-          onPressed: () {
-            Get.to(() => const FamilyGroupCreatePage());
-          },
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-          shape: const CircleBorder(),
-          child: const Icon(Icons.add_rounded, color: kColorWhite, size: 30),
-        ),
-      ),
+      floatingActionButton: Obx(() {
+        final list = controller.selectedTab.value == 0
+            ? controller.myGroups
+            : controller.discoverGroups;
+        // FAB only when there is a list to browse; empty My Groups uses center CTA.
+        if (list.isEmpty) return const SizedBox.shrink();
+        return Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: AppLightUi.familyCtaGradient,
+            boxShadow: [
+              BoxShadow(
+                color: AppLightUi.pink.withValues(alpha: 0.28),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: FloatingActionButton(
+            onPressed: () {
+              Get.to(() => const FamilyGroupCreatePage());
+            },
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            shape: const CircleBorder(),
+            child: const Icon(Icons.add_rounded, color: kColorWhite, size: 30),
+          ),
+        );
+      }),
     );
   }
 
@@ -236,16 +243,10 @@ class FamilyView extends GetView<FamilyController> {
     final isMine = controller.selectedTab.value == 0;
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(24, 110, 24, 24),
+      padding: const EdgeInsets.fromLTRB(28, 56, 28, 40),
       children: [
-        AdminAgencyUi.glowIcon(
-          icon: isMine ? Icons.forum_rounded : Icons.travel_explore_rounded,
-          accent: isMine ? _FamilyUi.cyan : _FamilyUi.gold,
-          accentEnd: _FamilyUi.violet,
-          size: 76,
-          iconSize: 36,
-        ),
-        Spacing.v16,
+        _emptyHeroArt(isMine: isMine),
+        Spacing.v24,
         SemiBoldText(
           text: isMine ? 'No groups joined yet' : 'No new groups found',
           fontSize: TextStyles.k18FontSize,
@@ -261,7 +262,130 @@ class FamilyView extends GetView<FamilyController> {
           color: _FamilyUi.muted,
           align: TextAlign.center,
         ),
+        if (isMine) ...[
+          Spacing.v28,
+          appButton(
+            onPressed: () => Get.to(() => const FamilyGroupCreatePage()),
+            buttonText: 'Create Family Group',
+            borderRadius: 18,
+            buttonHeight: 52,
+            buttonIcon: const Padding(
+              padding: EdgeInsets.only(right: 8),
+              child: Icon(
+                Icons.groups_rounded,
+                color: kColorWhite,
+                size: 22,
+              ),
+            ),
+            gradientColors: AppLightUi.familyCtaColors,
+          ),
+          Spacing.v12,
+          Center(
+            child: GestureDetector(
+              onTap: () => controller.selectTab(1),
+              child: SemiBoldText(
+                text: 'Browse Discover',
+                fontSize: TextStyles.k12FontSize,
+                color: _FamilyUi.pink,
+              ),
+            ),
+          ),
+        ],
       ],
+    );
+  }
+
+  /// Soft dating-style illustration for empty hub states.
+  Widget _emptyHeroArt({required bool isMine}) {
+    return Center(
+      child: SizedBox(
+        width: 220,
+        height: 160,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Positioned(
+              left: 18,
+              top: 28,
+              child: _orb(56, AppLightUi.violet.withValues(alpha: 0.22)),
+            ),
+            Positioned(
+              right: 12,
+              top: 18,
+              child: _orb(44, AppLightUi.pink.withValues(alpha: 0.2)),
+            ),
+            Positioned(
+              bottom: 10,
+              left: 48,
+              child: _orb(36, AppLightUi.cyan.withValues(alpha: 0.18)),
+            ),
+            Container(
+              width: 112,
+              height: 112,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: AppLightUi.familyCtaGradient,
+                border: Border.all(
+                  color: kColorWhite.withValues(alpha: 0.85),
+                  width: 3,
+                ),
+              ),
+              child: Icon(
+                isMine ? Icons.groups_rounded : Icons.travel_explore_rounded,
+                color: kColorWhite,
+                size: 48,
+              ),
+            ),
+            Positioned(
+              right: 42,
+              bottom: 28,
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppLightUi.card,
+                  border: Border.all(color: AppLightUi.borderStrong),
+                ),
+                child: Icon(
+                  isMine ? Icons.favorite_rounded : Icons.search_rounded,
+                  color: isMine ? AppLightUi.pink : AppLightUi.gold,
+                  size: 20,
+                ),
+              ),
+            ),
+            Positioned(
+              left: 40,
+              bottom: 36,
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppLightUi.card,
+                  border: Border.all(color: AppLightUi.borderStrong),
+                ),
+                child: Icon(
+                  isMine ? Icons.chat_bubble_rounded : Icons.public_rounded,
+                  color: AppLightUi.violet,
+                  size: 18,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _orb(double size, Color color) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color,
+      ),
     );
   }
 
@@ -2233,7 +2357,7 @@ class _FamilyGroupCreatePageState extends State<FamilyGroupCreatePage> {
             return Positioned.fill(
               child: AbsorbPointer(
                 child: Container(
-                  color: Colors.black.withValues(alpha: 0.52),
+                  color: Colors.black.withValues(alpha: 0.35),
                   child: Center(
                     child: Container(
                       padding: const EdgeInsets.symmetric(
@@ -2241,14 +2365,12 @@ class _FamilyGroupCreatePageState extends State<FamilyGroupCreatePage> {
                         vertical: 18,
                       ),
                       decoration: BoxDecoration(
-                        color: LiveRoomUiColors.cardSurface.withValues(
-                          alpha: 0.92,
-                        ),
+                        color: AppLightUi.card,
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: LiveRoomUiColors.cardBorder),
+                        border: Border.all(color: AppLightUi.borderStrong),
                         boxShadow: [
                           BoxShadow(
-                            color: AppLightUi.title.withValues(alpha: 0.08),
+                            color: AppLightUi.title.withValues(alpha: 0.1),
                             blurRadius: 24,
                             offset: const Offset(0, 12),
                           ),
@@ -2269,7 +2391,7 @@ class _FamilyGroupCreatePageState extends State<FamilyGroupCreatePage> {
                           SemiBoldText(
                             text: 'Creating group...',
                             fontSize: 13,
-                            color: kColorWhite,
+                            color: _FamilyUi.title,
                           ),
                         ],
                       ),
@@ -2289,27 +2411,23 @@ class _FamilyGroupCreatePageState extends State<FamilyGroupCreatePage> {
       children: [
         Container(
           width: 4,
-          height: 14,
+          height: 16,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(4),
-            gradient: const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFFFF4DC4), Color(0xFF7B5CFF)],
-            ),
+            gradient: AppLightUi.familyCtaGradient,
           ),
         ),
         Spacing.h8,
         SemiBoldText(
           text: text,
           fontSize: TextStyles.k14FontSize,
-          color: kColorWhite,
+          color: _FamilyUi.title,
         ),
         if (required)
           const AppText(
             text: ' *',
             fontSize: TextStyles.k14FontSize,
-            color: Color(0xFFFF6A3D),
+            color: AppLightUi.pink,
           ),
       ],
     );
@@ -2319,9 +2437,9 @@ class _FamilyGroupCreatePageState extends State<FamilyGroupCreatePage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: LiveRoomUiColors.cardSurface.withValues(alpha: 0.72),
+        color: AppLightUi.cardSoft,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: LiveRoomUiColors.cardBorder),
+        border: Border.all(color: AppLightUi.borderStrong),
       ),
       child: Row(
         children: [
@@ -2329,9 +2447,7 @@ class _FamilyGroupCreatePageState extends State<FamilyGroupCreatePage> {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [_FamilyUi.pink, _FamilyUi.violet],
-              ),
+              gradient: AppLightUi.familyCtaGradient,
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
@@ -2348,12 +2464,12 @@ class _FamilyGroupCreatePageState extends State<FamilyGroupCreatePage> {
                 SemiBoldText(
                   text: 'Build your family space',
                   fontSize: TextStyles.k14FontSize,
-                  color: kColorWhite,
+                  color: _FamilyUi.title,
                 ),
                 AppText(
                   text: 'Set entry coins, add members, and start chatting.',
                   fontSize: TextStyles.k10FontSize,
-                  color: kColorHint,
+                  color: _FamilyUi.muted,
                   maxLines: 2,
                 ),
               ],
@@ -2365,14 +2481,9 @@ class _FamilyGroupCreatePageState extends State<FamilyGroupCreatePage> {
   }
 
   Widget _sectionCard({required Widget child}) {
-    return Container(
-      width: double.infinity,
+    return GlossyDatingCard(
+      radius: 18,
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: LiveRoomUiColors.cardSurface.withValues(alpha: 0.72),
-        border: Border.all(color: LiveRoomUiColors.cardBorder),
-      ),
       child: child,
     );
   }
@@ -2388,7 +2499,10 @@ class _FamilyGroupCreatePageState extends State<FamilyGroupCreatePage> {
       controller: controller,
       keyboardType: keyboardType,
       maxLines: maxLines,
-      style: TextStyles.kRegularPoppins(fontSize: 13, colors: kColorWhite),
+      style: TextStyles.kRegularPoppins(
+        fontSize: 13,
+        colors: _FamilyUi.title,
+      ),
       decoration: _inputDecoration(hint, icon),
     );
   }
@@ -2398,22 +2512,22 @@ class _FamilyGroupCreatePageState extends State<FamilyGroupCreatePage> {
       hintText: hint,
       hintStyle: TextStyles.kRegularPoppins(
         fontSize: TextStyles.k12FontSize,
-        colors: kColorWhite.withValues(alpha: 0.52),
+        colors: _FamilyUi.muted,
       ),
-      prefixIcon: Icon(icon, color: _FamilyUi.gold, size: 20),
+      prefixIcon: Icon(icon, color: _FamilyUi.violet, size: 20),
       filled: true,
-      fillColor: LiveRoomUiColors.cardSurface.withValues(alpha: 0.70),
+      fillColor: AppLightUi.cardSoft,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: kColorWhite.withValues(alpha: 0.10)),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppLightUi.border),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: kColorWhite.withValues(alpha: 0.10)),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppLightUi.border),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: _FamilyUi.pink),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppLightUi.pink, width: 1.4),
       ),
     );
   }
@@ -2424,14 +2538,14 @@ class _FamilyGroupCreatePageState extends State<FamilyGroupCreatePage> {
         const SemiBoldText(
           text: 'Add members',
           fontSize: TextStyles.k16FontSize,
-          color: kColorWhite,
+          color: _FamilyUi.title,
         ),
         const Spacer(),
         Obx(
           () => AppText(
             text: '${controller.selectedInitialMembers.length} selected',
             fontSize: 11,
-            color: _FamilyUi.cyan,
+            color: _FamilyUi.violet,
           ),
         ),
       ],
@@ -2467,7 +2581,7 @@ class _FamilyGroupCreatePageState extends State<FamilyGroupCreatePage> {
             onChanged: controller.searchPickerUsers,
             style: TextStyles.kRegularPoppins(
               fontSize: 13,
-              colors: kColorWhite,
+              colors: _FamilyUi.title,
             ),
             decoration: _inputDecoration(
               'Search followers or app users',
@@ -2490,29 +2604,31 @@ class _FamilyGroupCreatePageState extends State<FamilyGroupCreatePage> {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          height: 38,
+          height: 40,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            gradient: selected
-                ? const LinearGradient(
-                    colors: [_FamilyUi.pink, _FamilyUi.violet],
-                  )
-                : null,
-            color: selected
-                ? null
-                : LiveRoomUiColors.cardSurface.withValues(alpha: 0.70),
+            gradient: selected ? AppLightUi.familyCtaGradient : null,
+            color: selected ? null : AppLightUi.cardSoft,
             border: Border.all(
               color: selected
-                  ? kColorWhite.withValues(alpha: 0.18)
-                  : kColorWhite.withValues(alpha: 0.09),
+                  ? Colors.transparent
+                  : AppLightUi.borderStrong,
             ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 16, color: kColorWhite),
+              Icon(
+                icon,
+                size: 16,
+                color: selected ? kColorWhite : _FamilyUi.violet,
+              ),
               Spacing.h6,
-              SemiBoldText(text: label, fontSize: 12, color: kColorWhite),
+              SemiBoldText(
+                text: label,
+                fontSize: 12,
+                color: selected ? kColorWhite : _FamilyUi.title,
+              ),
             ],
           ),
         ),
@@ -2571,14 +2687,15 @@ class _FamilyGroupCreatePageState extends State<FamilyGroupCreatePage> {
         key: ValueKey('family-create-picker-$userId-$selected'),
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
-          color: LiveRoomUiColors.cardSurface.withValues(
-            alpha: selected ? 0.88 : 0.68,
-          ),
+          color: selected
+              ? AppLightUi.pink.withValues(alpha: 0.08)
+              : AppLightUi.card,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: selected
-                ? _FamilyUi.green.withValues(alpha: 0.45)
-                : kColorWhite.withValues(alpha: 0.08),
+                ? AppLightUi.pink.withValues(alpha: 0.55)
+                : AppLightUi.border,
+            width: selected ? 1.4 : 1,
           ),
         ),
         child: ListTile(
@@ -2595,13 +2712,11 @@ class _FamilyGroupCreatePageState extends State<FamilyGroupCreatePage> {
           title: SemiBoldText(
             text: user['name']?.toString() ?? 'User',
             fontSize: 13,
-            color: kColorWhite,
+            color: _FamilyUi.title,
           ),
           trailing: Icon(
             selected ? Icons.check_box_rounded : Icons.check_box_outline_blank,
-            color: selected
-                ? _FamilyUi.green
-                : kColorWhite.withValues(alpha: 0.62),
+            color: selected ? AppLightUi.pink : AppLightUi.muted,
           ),
           onTap: () => controller.toggleInitialMember(userId),
         ),
@@ -2617,9 +2732,9 @@ class _FamilyGroupCreatePageState extends State<FamilyGroupCreatePage> {
       child: Container(
         padding: const EdgeInsets.fromLTRB(5, 4, 10, 4),
         decoration: BoxDecoration(
-          color: _FamilyUi.green.withValues(alpha: 0.15),
+          color: AppLightUi.violet.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: _FamilyUi.green.withValues(alpha: 0.35)),
+          border: Border.all(color: AppLightUi.violet.withValues(alpha: 0.35)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -2636,13 +2751,13 @@ class _FamilyGroupCreatePageState extends State<FamilyGroupCreatePage> {
               child: SemiBoldText(
                 text: name,
                 fontSize: 11,
-                color: kColorWhite,
+                color: _FamilyUi.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
             Spacing.h4,
-            const Icon(Icons.close_rounded, size: 14, color: kColorWhite),
+            const Icon(Icons.close_rounded, size: 14, color: AppLightUi.muted),
           ],
         ),
       ),
@@ -2655,12 +2770,15 @@ class _FamilyGroupCreatePageState extends State<FamilyGroupCreatePage> {
       child: Center(
         child: Column(
           children: [
-            AdminAgencyUi.glowIcon(
-              icon: Icons.person_search_rounded,
-              accent: _FamilyUi.cyan,
-              accentEnd: _FamilyUi.violet,
-              size: 56,
-              iconSize: 26,
+            Container(
+              width: 56,
+              height: 56,
+              decoration: AppLightUi.iconTileDecoration(AppLightUi.violet),
+              child: const Icon(
+                Icons.person_search_rounded,
+                color: AppLightUi.violet,
+                size: 26,
+              ),
             ),
             Spacing.v10,
             AppText(
@@ -2668,7 +2786,7 @@ class _FamilyGroupCreatePageState extends State<FamilyGroupCreatePage> {
                   ? 'No followers found'
                   : 'No users found',
               fontSize: 12,
-              color: kColorWhite.withValues(alpha: 0.72),
+              color: _FamilyUi.muted,
               align: TextAlign.center,
             ),
           ],
@@ -2693,7 +2811,7 @@ class _FamilyGroupCreatePageState extends State<FamilyGroupCreatePage> {
                   );
                 },
           buttonText: isCreating ? 'Creating...' : 'Create Group',
-          isGradient: true,
+          borderRadius: 18,
           buttonIcon: Padding(
             padding: const EdgeInsets.only(right: 8),
             child: isCreating
@@ -2711,11 +2829,7 @@ class _FamilyGroupCreatePageState extends State<FamilyGroupCreatePage> {
                     size: 20,
                   ),
           ),
-          gradientColors: const [
-            Color(0xFFFF4DC4),
-            Color(0xFFFF2D7B),
-            Color(0xFFFF6A3D),
-          ],
+          gradientColors: AppLightUi.familyCtaColors,
         ),
       );
     });
@@ -4215,17 +4329,7 @@ class _EditFamilyNameSheetState extends State<_EditFamilyNameSheet> {
         constraints: BoxConstraints(
           maxHeight: MediaQuery.sizeOf(context).height * 0.78,
         ),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF241833), _FamilyUi.bg],
-          ),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          border: Border(
-            top: BorderSide(color: kColorWhite.withValues(alpha: 0.10)),
-          ),
-        ),
+        decoration: AppLightUi.bottomSheetDecoration(),
         child: SafeArea(
           top: false,
           child: SingleChildScrollView(
@@ -4252,12 +4356,12 @@ class _EditFamilyNameSheetState extends State<_EditFamilyNameSheet> {
                           SemiBoldText(
                             text: 'Edit group',
                             fontSize: TextStyles.k18FontSize,
-                            color: kColorWhite,
+                            color: _FamilyUi.title,
                           ),
                           AppText(
                             text: 'Update name and description',
                             fontSize: 11,
-                            color: Color(0xB3FFFFFF),
+                            color: _FamilyUi.muted,
                           ),
                         ],
                       ),
@@ -4270,23 +4374,31 @@ class _EditFamilyNameSheetState extends State<_EditFamilyNameSheet> {
                   textInputAction: TextInputAction.next,
                   style: TextStyles.kRegularPoppins(
                     fontSize: 14,
-                    colors: kColorWhite,
+                    colors: _FamilyUi.title,
                   ),
                   decoration: InputDecoration(
                     hintText: 'Group name',
                     hintStyle: TextStyles.kRegularPoppins(
                       fontSize: 13,
-                      colors: kColorWhite.withValues(alpha: 0.45),
+                      colors: _FamilyUi.muted,
                     ),
                     filled: true,
-                    fillColor: kColorWhite.withValues(alpha: 0.07),
+                    fillColor: AppLightUi.cardSoft,
                     prefixIcon: const Icon(
                       Icons.badge_rounded,
                       color: _FamilyUi.violet,
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
+                      borderSide: const BorderSide(color: AppLightUi.border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: AppLightUi.border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: AppLightUi.pink),
                     ),
                   ),
                 ),
@@ -4296,19 +4408,27 @@ class _EditFamilyNameSheetState extends State<_EditFamilyNameSheet> {
                   maxLines: 3,
                   style: TextStyles.kRegularPoppins(
                     fontSize: 14,
-                    colors: kColorWhite,
+                    colors: _FamilyUi.title,
                   ),
                   decoration: InputDecoration(
                     hintText: 'Description (optional)',
                     hintStyle: TextStyles.kRegularPoppins(
                       fontSize: 13,
-                      colors: kColorWhite.withValues(alpha: 0.45),
+                      colors: _FamilyUi.muted,
                     ),
                     filled: true,
-                    fillColor: kColorWhite.withValues(alpha: 0.07),
+                    fillColor: AppLightUi.cardSoft,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
+                      borderSide: const BorderSide(color: AppLightUi.border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: AppLightUi.border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: AppLightUi.pink),
                     ),
                   ),
                 ),
@@ -4321,17 +4441,15 @@ class _EditFamilyNameSheetState extends State<_EditFamilyNameSheet> {
                         child: OutlinedButton(
                           onPressed: Get.back,
                           style: OutlinedButton.styleFrom(
-                            side: BorderSide(
-                              color: kColorWhite.withValues(alpha: 0.22),
-                            ),
+                            side: const BorderSide(color: AppLightUi.borderStrong),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
                           ),
-                          child: SemiBoldText(
+                          child: const SemiBoldText(
                             text: 'Cancel',
                             fontSize: TextStyles.k14FontSize,
-                            color: kColorWhite.withValues(alpha: 0.85),
+                            color: _FamilyUi.title,
                           ),
                         ),
                       ),
@@ -4386,17 +4504,7 @@ class _FamilyAddMembersSheet extends StatelessWidget {
       constraints: BoxConstraints(
         maxHeight: MediaQuery.sizeOf(context).height * 0.82,
       ),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF241833), _FamilyUi.bg],
-        ),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border(
-          top: BorderSide(color: kColorWhite.withValues(alpha: 0.10)),
-        ),
-      ),
+      decoration: AppLightUi.bottomSheetDecoration(),
       child: SafeArea(
         top: false,
         child: Padding(
@@ -4423,12 +4531,12 @@ class _FamilyAddMembersSheet extends StatelessWidget {
                         SemiBoldText(
                           text: 'Add members',
                           fontSize: TextStyles.k18FontSize,
-                          color: kColorWhite,
+                          color: _FamilyUi.title,
                         ),
                         AppText(
                           text: 'Invite followers or search app users',
                           fontSize: 11,
-                          color: Color(0xB3FFFFFF),
+                          color: _FamilyUi.muted,
                         ),
                       ],
                     ),
@@ -4461,7 +4569,7 @@ class _FamilyAddMembersSheet extends StatelessWidget {
                 onChanged: controller.searchPickerUsers,
                 style: TextStyles.kRegularPoppins(
                   fontSize: 13,
-                  colors: kColorWhite,
+                  colors: _FamilyUi.title,
                 ),
                 decoration: _inputDecoration(
                   'Search followers or app users',
@@ -4578,26 +4686,28 @@ class _FamilyAddMembersSheet extends StatelessWidget {
           height: 40,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            gradient: selected
-                ? const LinearGradient(
-                    colors: [_FamilyUi.pink, _FamilyUi.violet],
-                  )
-                : null,
-            color: selected
-                ? null
-                : LiveRoomUiColors.cardSurface.withValues(alpha: 0.70),
+            gradient: selected ? AppLightUi.familyCtaGradient : null,
+            color: selected ? null : AppLightUi.cardSoft,
             border: Border.all(
               color: selected
-                  ? kColorWhite.withValues(alpha: 0.18)
-                  : kColorWhite.withValues(alpha: 0.09),
+                  ? Colors.transparent
+                  : AppLightUi.borderStrong,
             ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 16, color: kColorWhite),
+              Icon(
+                icon,
+                size: 16,
+                color: selected ? kColorWhite : _FamilyUi.violet,
+              ),
               Spacing.h6,
-              SemiBoldText(text: label, fontSize: 12, color: kColorWhite),
+              SemiBoldText(
+                text: label,
+                fontSize: 12,
+                color: selected ? kColorWhite : _FamilyUi.title,
+              ),
             ],
           ),
         ),
@@ -4610,22 +4720,22 @@ class _FamilyAddMembersSheet extends StatelessWidget {
       hintText: hint,
       hintStyle: TextStyles.kRegularPoppins(
         fontSize: TextStyles.k12FontSize,
-        colors: kColorWhite.withValues(alpha: 0.52),
+        colors: _FamilyUi.muted,
       ),
-      prefixIcon: Icon(icon, color: _FamilyUi.gold, size: 20),
+      prefixIcon: Icon(icon, color: _FamilyUi.violet, size: 20),
       filled: true,
-      fillColor: LiveRoomUiColors.cardSurface.withValues(alpha: 0.70),
+      fillColor: AppLightUi.cardSoft,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: kColorWhite.withValues(alpha: 0.10)),
+        borderSide: const BorderSide(color: AppLightUi.border),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: kColorWhite.withValues(alpha: 0.10)),
+        borderSide: const BorderSide(color: AppLightUi.border),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: _FamilyUi.pink),
+        borderSide: const BorderSide(color: AppLightUi.pink),
       ),
     );
   }
@@ -4652,18 +4762,18 @@ class _FamilyAddMembersSheet extends StatelessWidget {
               size: 30,
             ),
             Spacing.h6,
-            ConstrainedBox(
+              ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 92),
               child: SemiBoldText(
                 text: name,
                 fontSize: 11,
-                color: kColorWhite,
+                color: _FamilyUi.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
             Spacing.h4,
-            const Icon(Icons.close_rounded, size: 14, color: kColorWhite),
+            const Icon(Icons.close_rounded, size: 14, color: AppLightUi.muted),
           ],
         ),
       ),
@@ -4678,14 +4788,15 @@ class _FamilyAddMembersSheet extends StatelessWidget {
         key: ValueKey('family-add-member-$userId-$selected'),
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
-          color: LiveRoomUiColors.cardSurface.withValues(
-            alpha: selected ? 0.88 : 0.68,
-          ),
+          color: selected
+              ? AppLightUi.pink.withValues(alpha: 0.08)
+              : AppLightUi.card,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: selected
-                ? _FamilyUi.green.withValues(alpha: 0.45)
-                : kColorWhite.withValues(alpha: 0.08),
+                ? AppLightUi.pink.withValues(alpha: 0.55)
+                : AppLightUi.border,
+            width: selected ? 1.4 : 1,
           ),
         ),
         child: ListTile(
@@ -4702,15 +4813,13 @@ class _FamilyAddMembersSheet extends StatelessWidget {
           title: SemiBoldText(
             text: user['name']?.toString() ?? 'User',
             fontSize: 13,
-            color: kColorWhite,
+            color: _FamilyUi.title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           trailing: Icon(
             selected ? Icons.check_box_rounded : Icons.check_box_outline_blank,
-            color: selected
-                ? _FamilyUi.green
-                : kColorWhite.withValues(alpha: 0.62),
+            color: selected ? AppLightUi.pink : AppLightUi.muted,
           ),
           onTap: () => controller.toggleInitialMember(userId),
         ),
@@ -4723,12 +4832,15 @@ class _FamilyAddMembersSheet extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          AdminAgencyUi.glowIcon(
-            icon: Icons.person_search_rounded,
-            accent: _FamilyUi.cyan,
-            accentEnd: _FamilyUi.violet,
-            size: 58,
-            iconSize: 27,
+          Container(
+            width: 58,
+            height: 58,
+            decoration: AppLightUi.iconTileDecoration(AppLightUi.violet),
+            child: const Icon(
+              Icons.person_search_rounded,
+              color: AppLightUi.violet,
+              size: 27,
+            ),
           ),
           Spacing.v10,
           AppText(
@@ -4736,7 +4848,7 @@ class _FamilyAddMembersSheet extends StatelessWidget {
                 ? 'No followers available to add'
                 : 'No users available to add',
             fontSize: 12,
-            color: kColorWhite.withValues(alpha: 0.72),
+            color: _FamilyUi.muted,
             align: TextAlign.center,
           ),
         ],
@@ -4766,10 +4878,7 @@ class _CatalogSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: MediaQuery.sizeOf(context).height * 0.56,
-      decoration: const BoxDecoration(
-        color: _FamilyUi.panel,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
+      decoration: AppLightUi.bottomSheetDecoration(),
       child: SafeArea(
         top: false,
         child: Column(
@@ -4778,7 +4887,7 @@ class _CatalogSheet extends StatelessWidget {
             SemiBoldText(
               text: title,
               fontSize: TextStyles.k18FontSize,
-              color: kColorWhite,
+              color: _FamilyUi.title,
             ),
             Expanded(
               child: Obx(() {
@@ -4788,11 +4897,11 @@ class _CatalogSheet extends StatelessWidget {
                   );
                 }
                 if (items.isEmpty) {
-                  return Center(
+                  return const Center(
                     child: AppText(
                       text: 'No items available right now.',
                       fontSize: 13,
-                      color: kColorWhite.withValues(alpha: 0.65),
+                      color: _FamilyUi.muted,
                     ),
                   );
                 }
@@ -4814,10 +4923,10 @@ class _CatalogSheet extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: kColorWhite.withValues(alpha: 0.07),
+                          color: AppLightUi.card,
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
-                            color: accent.withValues(alpha: 0.22),
+                            color: accent.withValues(alpha: 0.28),
                           ),
                         ),
                         child: Column(
@@ -4833,7 +4942,7 @@ class _CatalogSheet extends StatelessWidget {
                             AppText(
                               text: item['name'] ?? 'Item',
                               fontSize: TextStyles.k10FontSize,
-                              color: kColorWhite,
+                              color: _FamilyUi.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -4844,18 +4953,14 @@ class _CatalogSheet extends StatelessWidget {
                                 children: [
                                   const Icon(
                                     Icons.diamond_outlined,
-                                    color: Colors.orange,
-                                    size: 10,
+                                    color: AppLightUi.gold,
+                                    size: 11,
                                   ),
                                   Spacing.h2,
-                                  Flexible(
-                                    child: AppText(
-                                      text: price,
-                                      fontSize: 10,
-                                      color: kColorHint,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
+                                  AppText(
+                                    text: price,
+                                    fontSize: 9,
+                                    color: AppLightUi.gold,
                                   ),
                                 ],
                               ),
@@ -4924,17 +5029,7 @@ class _JoinFamilyConfirmSheet extends StatelessWidget {
     final isPaid = joiningCoins > 0;
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF241833), _FamilyUi.bg],
-        ),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border(
-          top: BorderSide(color: kColorWhite.withValues(alpha: 0.10)),
-        ),
-      ),
+      decoration: AppLightUi.bottomSheetDecoration(),
       child: SafeArea(
         top: false,
         child: Column(
@@ -4952,7 +5047,7 @@ class _JoinFamilyConfirmSheet extends StatelessWidget {
             SemiBoldText(
               text: 'Join $name',
               fontSize: TextStyles.k18FontSize,
-              color: kColorWhite,
+              color: _FamilyUi.title,
               align: TextAlign.center,
             ),
             Spacing.v8,
@@ -4961,7 +5056,7 @@ class _JoinFamilyConfirmSheet extends StatelessWidget {
                   ? 'This group requires joining coins. Your wallet will be debited and the admin receives the fee.'
                   : 'This group is free to join. No coins will be charged.',
               fontSize: 13,
-              color: kColorWhite.withValues(alpha: 0.72),
+              color: _FamilyUi.muted,
               align: TextAlign.center,
             ),
             Spacing.v16,
@@ -4970,12 +5065,7 @@ class _JoinFamilyConfirmSheet extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(18),
-                gradient: LinearGradient(
-                  colors: [
-                    _FamilyUi.gold.withValues(alpha: 0.18),
-                    _FamilyUi.pink.withValues(alpha: 0.12),
-                  ],
-                ),
+                color: AppLightUi.cardSoft,
                 border: Border.all(
                   color: _FamilyUi.gold.withValues(alpha: 0.35),
                 ),
@@ -4991,7 +5081,7 @@ class _JoinFamilyConfirmSheet extends StatelessWidget {
                         AppText(
                           text: isPaid ? 'Joining coins' : 'Join fee',
                           fontSize: TextStyles.k12FontSize,
-                          color: kColorWhite.withValues(alpha: 0.7),
+                          color: _FamilyUi.muted,
                         ),
                         Spacing.v2,
                         SemiBoldText(
@@ -5030,17 +5120,15 @@ class _JoinFamilyConfirmSheet extends StatelessWidget {
                     child: OutlinedButton(
                       onPressed: Get.back,
                       style: OutlinedButton.styleFrom(
-                        side: BorderSide(
-                          color: kColorWhite.withValues(alpha: 0.22),
-                        ),
+                        side: const BorderSide(color: AppLightUi.borderStrong),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
                       ),
-                      child: SemiBoldText(
+                      child: const SemiBoldText(
                         text: 'Cancel',
                         fontSize: TextStyles.k14FontSize,
-                        color: kColorWhite.withValues(alpha: 0.85),
+                        color: _FamilyUi.title,
                       ),
                     ),
                   ),
@@ -5210,7 +5298,7 @@ class _SheetHandle extends StatelessWidget {
         height: 4,
         margin: const EdgeInsets.only(bottom: 14),
         decoration: BoxDecoration(
-          color: kColorWhite.withValues(alpha: 0.24),
+          color: AppLightUi.borderStrong,
           borderRadius: BorderRadius.circular(4),
         ),
       ),

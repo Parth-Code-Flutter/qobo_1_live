@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -11,40 +11,57 @@ class CommonMediaPicker {
   static Future<ImageSource?> show(BuildContext context) {
     return showModalBottomSheet<ImageSource>(
       context: context,
-      backgroundColor: kColorWhite,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.photo_library_outlined),
-                  title: AppText(
-                    text: 'Select From Gallery',
-                    style: TextStyles.kMediumPoppins(
-                      fontSize: TextStyles.k14FontSize,
-                      colors: kColorText,
+        return Container(
+          decoration: AppLightUi.bottomSheetDecoration(topRadius: 18),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: AppLightUi.borderStrong,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
-                  onTap: () => Navigator.of(context).pop(ImageSource.gallery),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.camera_alt_outlined),
-                  title: AppText(
-                    text: 'Open Camera',
-                    style: TextStyles.kMediumPoppins(
-                      fontSize: TextStyles.k14FontSize,
-                      colors: kColorText,
+                  ListTile(
+                    leading: const Icon(
+                      Icons.photo_library_outlined,
+                      color: AppLightUi.violet,
                     ),
+                    title: AppText(
+                      text: 'Select From Gallery',
+                      style: TextStyles.kMediumPoppins(
+                        fontSize: TextStyles.k14FontSize,
+                        colors: AppLightUi.title,
+                      ),
+                    ),
+                    onTap: () => Navigator.of(context).pop(ImageSource.gallery),
                   ),
-                  onTap: () => Navigator.of(context).pop(ImageSource.camera),
-                ),
-              ],
+                  ListTile(
+                    leading: const Icon(
+                      Icons.camera_alt_outlined,
+                      color: AppLightUi.pink,
+                    ),
+                    title: AppText(
+                      text: 'Open Camera',
+                      style: TextStyles.kMediumPoppins(
+                        fontSize: TextStyles.k14FontSize,
+                        colors: AppLightUi.title,
+                      ),
+                    ),
+                    onTap: () => Navigator.of(context).pop(ImageSource.camera),
+                  ),
+                ],
+              ),
             ),
           ),
         );

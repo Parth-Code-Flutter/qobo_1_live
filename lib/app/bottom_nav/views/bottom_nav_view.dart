@@ -11,6 +11,7 @@ import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/glossy_auth_field_border.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -19,13 +20,33 @@ import '../controllers/bottom_nav_controller.dart';
 class BottomNavView extends GetView<BottomNavController> {
   const BottomNavView({super.key});
 
-  /// Cool dating-app icons (labels stay from [BottomNavController.items]).
-  static const _tabIcons = <(IconData, IconData)>[
-    (Icons.explore_outlined, Icons.explore_rounded), // Discover
-    (Icons.meeting_room_outlined, Icons.meeting_room_rounded), // Rooms
-    (Icons.videocam_rounded, Icons.videocam_rounded), // Go Live (FAB)
-    (Icons.chat_bubble_outline_rounded, Icons.chat_bubble_rounded), // Messages
-    (Icons.person_outline_rounded, Icons.person_rounded), // Profile
+  /// Per-tab colorful icons (outline / filled) + accent color.
+  static const _tabs = <_NavTabStyle>[
+    _NavTabStyle(
+      icon: Icons.explore_outlined,
+      selectedIcon: Icons.explore_rounded,
+      color: Color(0xFF5B8CFF), // Discover — sky
+    ),
+    _NavTabStyle(
+      icon: Icons.meeting_room_outlined,
+      selectedIcon: Icons.meeting_room_rounded,
+      color: Color(0xFFFFB020), // Rooms — gold
+    ),
+    _NavTabStyle(
+      icon: Icons.videocam_rounded,
+      selectedIcon: Icons.videocam_rounded,
+      color: Color(0xFFFF2E83), // Go Live — hot pink
+    ),
+    _NavTabStyle(
+      icon: Icons.chat_bubble_outline_rounded,
+      selectedIcon: Icons.chat_bubble_rounded,
+      color: Color(0xFFFF6B8A), // Messages — rose
+    ),
+    _NavTabStyle(
+      icon: Icons.person_outline_rounded,
+      selectedIcon: Icons.person_rounded,
+      color: Color(0xFF9B6DFF), // Profile — violet
+    ),
   ];
 
   @override
@@ -70,90 +91,53 @@ class BottomNavView extends GetView<BottomNavController> {
         if (controller.permissionBlocked.value) {
           return const SizedBox.shrink();
         }
+        // Float above home indicator — reads as a glass dock, not edge-stuck.
         return Padding(
-          padding: EdgeInsets.fromLTRB(14, 0, 14, bottomInset + 10),
+          padding: EdgeInsets.fromLTRB(16, 0, 16, bottomInset + 18),
           child: SizedBox(
-            height: 78,
+            height: 84,
             child: Stack(
               clipBehavior: Clip.none,
               alignment: Alignment.bottomCenter,
               children: [
-                // Frosted dating glass bar.
                 Positioned(
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(28),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(28),
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              Colors.white.withValues(alpha: 0.92),
-                              const Color(0xFFFFF0F7).withValues(alpha: 0.9),
-                              Colors.white.withValues(alpha: 0.88),
-                            ],
-                          ),
-                          border: Border.all(
-                            color: AppLightUi.borderStrong.withValues(
-                              alpha: 0.85,
-                            ),
-                            width: 1.1,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppLightUi.pink.withValues(alpha: 0.14),
-                              blurRadius: 22,
-                              offset: const Offset(0, 8),
-                            ),
-                            BoxShadow(
-                              color: AppLightUi.title.withValues(alpha: 0.06),
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: SizedBox(
-                          height: 64,
-                          child: Row(
-                            children: List.generate(
-                              controller.items.length,
-                              (index) {
-                                final isGoLive =
-                                    index == BottomNavController.goLiveTabIndex;
-                                if (isGoLive) {
-                                  // Reserve center slot for floating FAB.
-                                  return const Expanded(child: SizedBox());
-                                }
-                                final icons = _tabIcons[index];
-                                final selected =
-                                    controller.selectedIndex.value == index;
-                                return Expanded(
-                                  child: _DatingNavTab(
-                                    label: controller.items[index].label,
-                                    icon: icons.$1,
-                                    selectedIcon: icons.$2,
-                                    selected: selected,
-                                    onTap: () =>
-                                        controller.onNavBarTabSelected(index),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
+                  child: _FloatingGlossyNavBar(
+                    child: SizedBox(
+                      height: 66,
+                      child: Row(
+                        children: List.generate(
+                          controller.items.length,
+                          (index) {
+                            final isGoLive =
+                                index == BottomNavController.goLiveTabIndex;
+                            if (isGoLive) {
+                              return const Expanded(child: SizedBox());
+                            }
+                            final style = _tabs[index];
+                            final selected =
+                                controller.selectedIndex.value == index;
+                            return Expanded(
+                              child: _DatingNavTab(
+                                label: controller.items[index].label,
+                                icon: style.icon,
+                                selectedIcon: style.selectedIcon,
+                                accent: style.color,
+                                selected: selected,
+                                onTap: () =>
+                                    controller.onNavBarTabSelected(index),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ),
                   ),
                 ),
-                // Floating Go Live heart/video CTA.
                 Positioned(
-                  top: -6,
+                  top: -10,
                   child: _GoLiveNavAction(
                     label: controller
                         .items[BottomNavController.goLiveTabIndex].label,
@@ -234,11 +218,71 @@ class BottomNavView extends GetView<BottomNavController> {
   }
 }
 
+class _NavTabStyle {
+  const _NavTabStyle({
+    required this.icon,
+    required this.selectedIcon,
+    required this.color,
+  });
+
+  final IconData icon;
+  final IconData selectedIcon;
+  final Color color;
+}
+
+/// Floating glass dock with sweep glossy ring — no drop shadow.
+class _FloatingGlossyNavBar extends StatelessWidget {
+  const _FloatingGlossyNavBar({required this.child});
+
+  final Widget child;
+
+  static const _radius = 30.0;
+  static const _borderWidth = 1.7;
+
+  @override
+  Widget build(BuildContext context) {
+    final innerRadius = _radius - _borderWidth;
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(_radius),
+        gradient: GlossyAuthFieldBorder.authSweepGradient,
+      ),
+      padding: const EdgeInsets.all(_borderWidth),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(innerRadius),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(innerRadius),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white.withValues(alpha: 0.94),
+                  const Color(0xFFFFF5FA).withValues(alpha: 0.9),
+                  Colors.white.withValues(alpha: 0.9),
+                ],
+              ),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.65),
+                width: 0.6,
+              ),
+            ),
+            child: child,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _DatingNavTab extends StatelessWidget {
   const _DatingNavTab({
     required this.label,
     required this.icon,
     required this.selectedIcon,
+    required this.accent,
     required this.selected,
     required this.onTap,
   });
@@ -246,29 +290,31 @@ class _DatingNavTab extends StatelessWidget {
   final String label;
   final IconData icon;
   final IconData selectedIcon;
+  final Color accent;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final color =
-        selected ? AppLightUi.pink : AppLightUi.muted.withValues(alpha: 0.9);
+    final iconColor = selected ? accent : accent.withValues(alpha: 0.72);
+    final labelColor =
+        selected ? accent : AppLightUi.muted.withValues(alpha: 0.95);
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        splashColor: AppLightUi.pink.withValues(alpha: 0.12),
+        splashColor: accent.withValues(alpha: 0.14),
         highlightColor: Colors.transparent,
         borderRadius: BorderRadius.circular(20),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeOutCubic,
-              width: selected ? 40 : 34,
-              height: selected ? 40 : 34,
+              duration: const Duration(milliseconds: 240),
+              curve: Curves.easeOutBack,
+              width: selected ? 42 : 36,
+              height: selected ? 42 : 36,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
@@ -277,25 +323,22 @@ class _DatingNavTab extends StatelessWidget {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          AppLightUi.pink.withValues(alpha: 0.18),
-                          AppLightUi.violet.withValues(alpha: 0.14),
+                          accent.withValues(alpha: 0.22),
+                          accent.withValues(alpha: 0.08),
                         ],
                       )
                     : null,
-                boxShadow: selected
-                    ? [
-                        BoxShadow(
-                          color: AppLightUi.pink.withValues(alpha: 0.22),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
-                        ),
-                      ]
+                border: selected
+                    ? Border.all(
+                        color: accent.withValues(alpha: 0.35),
+                        width: 1,
+                      )
                     : null,
               ),
               child: Icon(
                 selected ? selectedIcon : icon,
-                size: selected ? 22 : 20,
-                color: color,
+                size: selected ? 23 : 21,
+                color: iconColor,
               ),
             ),
             const SizedBox(height: 2),
@@ -306,11 +349,11 @@ class _DatingNavTab extends StatelessWidget {
               style: selected
                   ? TextStyles.kSemiBoldPoppins(
                       fontSize: 10,
-                      colors: AppLightUi.pink,
+                      colors: labelColor,
                     )
                   : TextStyles.kRegularPoppins(
                       fontSize: 10,
-                      colors: AppLightUi.muted,
+                      colors: labelColor,
                     ),
             ),
           ],
@@ -320,7 +363,7 @@ class _DatingNavTab extends StatelessWidget {
   }
 }
 
-class _GoLiveNavAction extends StatelessWidget {
+class _GoLiveNavAction extends StatefulWidget {
   const _GoLiveNavAction({
     required this.label,
     required this.selected,
@@ -332,55 +375,85 @@ class _GoLiveNavAction extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  State<_GoLiveNavAction> createState() => _GoLiveNavActionState();
+}
+
+class _GoLiveNavActionState extends State<_GoLiveNavAction>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: widget.onTap,
       behavior: HitTestBehavior.opaque,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 58,
-            height: 58,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFFFF5C9A),
-                  Color(0xFFFF2E83),
-                  Color(0xFFB14DFF),
-                ],
+          AnimatedBuilder(
+            animation: _pulse,
+            builder: (context, child) {
+              final t = Curves.easeInOut.transform(_pulse.value);
+              final scale = 1.0 + (t * 0.04);
+              return Transform.scale(scale: scale, child: child);
+            },
+            child: Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: GlossyAuthFieldBorder.authSweepGradient,
               ),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: selected ? 0.95 : 0.75),
-                width: selected ? 2.4 : 2,
+              padding: const EdgeInsets.all(2.2),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFFFF5C9A),
+                      Color(0xFFFF2E83),
+                      Color(0xFFB14DFF),
+                    ],
+                  ),
+                  border: Border.all(
+                    color: Colors.white.withValues(
+                      alpha: widget.selected ? 0.95 : 0.8,
+                    ),
+                    width: widget.selected ? 2.2 : 1.6,
+                  ),
+                ),
+                child: const Icon(
+                  Icons.videocam_rounded,
+                  color: kColorWhite,
+                  size: 28,
+                ),
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppLightUi.pink.withValues(alpha: 0.45),
-                  blurRadius: 18,
-                  offset: const Offset(0, 6),
-                ),
-                BoxShadow(
-                  color: AppLightUi.violet.withValues(alpha: 0.28),
-                  blurRadius: 12,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: const Icon(
-              Icons.videocam_rounded,
-              color: kColorWhite,
-              size: 28,
             ),
           ),
           const SizedBox(height: 4),
           SemiBoldText(
-            text: label,
+            text: widget.label,
             fontSize: TextStyles.k10FontSize,
-            color: selected ? AppLightUi.pink : AppLightUi.title,
+            color: widget.selected
+                ? const Color(0xFFFF2E83)
+                : AppLightUi.title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),

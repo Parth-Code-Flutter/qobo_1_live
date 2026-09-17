@@ -14,6 +14,7 @@ class GlossyDatingCard extends StatelessWidget {
     this.fill,
     this.emphasized = false,
     this.borderGradient,
+    this.showShadow = false,
   });
 
   final Widget child;
@@ -27,6 +28,9 @@ class GlossyDatingCard extends StatelessWidget {
   final bool emphasized;
 
   final Gradient? borderGradient;
+
+  /// Soft drop shadow under the glossy ring (off by default — ring is enough).
+  final bool showShadow;
 
   static const defaultBorderGradient = LinearGradient(
     begin: Alignment.topLeft,
@@ -52,15 +56,17 @@ class GlossyDatingCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(radius),
         gradient: gradient,
-        boxShadow: [
-          BoxShadow(
-            color: AppLightUi.title.withValues(
-              alpha: emphasized ? 0.10 : 0.07,
-            ),
-            blurRadius: emphasized ? 18 : 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        boxShadow: showShadow
+            ? [
+                BoxShadow(
+                  color: AppLightUi.title.withValues(
+                    alpha: emphasized ? 0.10 : 0.07,
+                  ),
+                  blurRadius: emphasized ? 18 : 14,
+                  offset: const Offset(0, 6),
+                ),
+              ]
+            : null,
       ),
       padding: EdgeInsets.all(borderWidth),
       child: ClipRRect(

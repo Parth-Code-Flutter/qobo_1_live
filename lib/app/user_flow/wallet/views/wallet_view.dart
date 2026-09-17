@@ -5,6 +5,7 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
+import 'package:qobo_one_live/utils/app_widgets/glossy_dating_card.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -161,9 +162,9 @@ class _WalletViewState extends State<WalletView> {
         itemCount: displayIndexes.length,
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          mainAxisSpacing: 10,
-          crossAxisSpacing: 10,
-          childAspectRatio: 0.90,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          mainAxisExtent: 208,
         ),
         itemBuilder: (_, index) {
           final planIndex = displayIndexes[index];
@@ -182,12 +183,9 @@ class _WalletViewState extends State<WalletView> {
   }
 
   Widget _balanceOverviewCard() {
-    return Container(
+    return GlossyDatingCard(
+      radius: 18,
       padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
-      decoration: AppLightUi.cardDecoration(
-        radius: 18,
-        borderColor: AppLightUi.violet.withValues(alpha: 0.35),
-      ),
       child: Obx(
         () => Row(
           children: [
@@ -201,18 +199,18 @@ class _WalletViewState extends State<WalletView> {
             ),
             Container(
               width: 1,
-              height: 64,
+              height: 48,
               color: AppLightUi.border,
             ),
             Expanded(
               child: _topBalanceItem(
                 title: 'My Diamonds',
                 value: controller.diamondBalance.value,
-                accent: const Color(0xFF31C8FF),
+                accent: AppLightUi.cyan,
                 icon: const Icon(
                   Icons.diamond_rounded,
-                  color: Color(0xFF31C8FF),
-                  size: 36,
+                  size: 30,
+                  color: AppLightUi.cyan,
                 ),
               ),
             ),
@@ -282,33 +280,21 @@ class _WalletViewState extends State<WalletView> {
       child: Container(
         padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          gradient: const LinearGradient(
-            colors: [Color(0xFF331258), Color(0xFF5B1678), Color(0xFF31104C)],
-          ),
-          border: Border.all(
-            color: const Color(0xFFFF5EA7).withValues(alpha: 0.55),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFFF43C6).withValues(alpha: 0.16),
-              blurRadius: 24,
-              offset: const Offset(0, 12),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(20),
+          gradient: AppLightUi.familyCtaGradient,
         ),
         child: Row(
           children: [
-            _vipBadge(size: 74),
-            const SizedBox(width: 14),
+            _vipBadge(size: 64),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SemiBoldText(
                     text: 'Become VIP & Get More!',
-                    fontSize: TextStyles.k16FontSize,
-                    color: kColorWalletAmount,
+                    fontSize: TextStyles.k14FontSize,
+                    color: kColorWhite,
                   ),
                   Spacing.v6,
                   _vipBenefit('10% Extra on every top up'),
@@ -320,23 +306,21 @@ class _WalletViewState extends State<WalletView> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFFFD84E), Color(0xFFFF9C2A)],
-                ),
+                color: kColorWhite.withValues(alpha: 0.95),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Row(
+              child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const SemiBoldText(
+                  SemiBoldText(
                     text: 'View',
                     fontSize: 11,
-                    color: kColorBlack,
+                    color: AppLightUi.title,
                   ),
-                  Spacing.h4,
-                  const Icon(
+                  SizedBox(width: 4),
+                  Icon(
                     Icons.arrow_forward_ios_rounded,
-                    color: kColorBlack,
+                    color: AppLightUi.title,
                     size: 10,
                   ),
                 ],
@@ -398,180 +382,160 @@ class _WalletViewState extends State<WalletView> {
       onTap: () => controller.selectedPlanIndex.value = index,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: AppLightUi.card,
-          border: Border.all(
-            color: isSelected
-                ? const Color(0xFFFF4DE3)
-                : AppLightUi.border,
-            width: isSelected ? 1.4 : 1,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: const Color(0xFFFF4DE3).withValues(alpha: 0.32),
-                    blurRadius: 18,
-                    offset: const Offset(0, 8),
-                  ),
-                  ...AppLightUi.cardShadow,
-                ]
-              : AppLightUi.cardShadow,
+          borderRadius: BorderRadius.circular(18),
+          gradient: isSelected
+              ? AppLightUi.familyCtaGradient
+              : GlossyDatingCard.defaultBorderGradient,
         ),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            if (bestValue)
-              Positioned(
-                left: -12,
-                top: -12,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFF2D8A),
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(16),
-                      bottomRight: Radius.circular(14),
+        padding: const EdgeInsets.all(1.6),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+          decoration: BoxDecoration(
+            color: AppLightUi.card,
+            borderRadius: BorderRadius.circular(16.4),
+          ),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              if (bestValue)
+                Positioned(
+                  left: -10,
+                  top: -10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
                     ),
-                  ),
-                  child: const SemiBoldText(
-                    text: 'BEST VALUE',
-                    fontSize: 9,
-                    color: kColorWhite,
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFFFF2E83), Color(0xFFFF5C9A)],
+                      ),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(16),
+                        bottomRight: Radius.circular(12),
+                      ),
+                    ),
+                    child: const SemiBoldText(
+                      text: 'BEST VALUE',
+                      fontSize: 8,
+                      color: kColorWhite,
+                    ),
                   ),
                 ),
-              ),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _coinStackGraphic(index),
-                Column(
-                  children: [
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: SemiBoldText(
-                        text: _formatPlanAmount(plan.amount),
-                        fontSize: TextStyles.k20FontSize,
-                        color: kColorWalletAmount,
-                      ),
-                    ),
-                    const AppText(
-                      text: 'Coins',
-                      fontSize: TextStyles.k12FontSize,
-                      color: AppLightUi.body,
-                    ),
-                    Spacing.v6,
-                    if (plan.amount >= 500)
-                      _extraBadge(_extraLabel(plan.amount))
-                    else
-                      const SizedBox(height: 22),
-                  ],
+              if (isSelected)
+                const Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Icon(
+                    Icons.check_circle_rounded,
+                    color: AppLightUi.pink,
+                    size: 20,
+                  ),
                 ),
-                SizedBox(
-                  width: double.infinity,
-                  height: 34,
-                  child: TextButton(
-                    onPressed: controller.isBuying.value
-                        ? null
-                        : () {
-                            controller.selectedPlanIndex.value = index;
-                            _openCheckoutBottomSheet(plan);
-                          },
-                    style: TextButton.styleFrom(
-                      backgroundColor: isSelected
-                          ? kColorWalletAmount
-                          : const Color(0xFF7424EA),
-                      foregroundColor: isSelected ? kColorBlack : kColorWhite,
-                      disabledBackgroundColor: kColorWhite.withValues(
-                        alpha: 0.10,
-                      ),
-                      padding: EdgeInsets.zero,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
+              Column(
+                children: [
+                  SizedBox(
+                    height: 44,
+                    child: _coinStackGraphic(index),
+                  ),
+                  const Spacer(),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
                     child: SemiBoldText(
-                      text: controller.isBuying.value ? '...' : plan.priceLabel,
-                      fontSize: TextStyles.k14FontSize,
-                      color: isSelected ? kColorBlack : kColorWhite,
+                      text: _formatPlanAmount(plan.amount),
+                      fontSize: TextStyles.k18FontSize,
+                      color: kColorWalletAmount,
                     ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                  const AppText(
+                    text: 'Coins',
+                    fontSize: TextStyles.k10FontSize,
+                    color: AppLightUi.subtitle,
+                  ),
+                  Spacing.v4,
+                  if (plan.amount >= 500)
+                    _extraBadge(_extraLabel(plan.amount))
+                  else
+                    const SizedBox(height: 18),
+                  Spacing.v8,
+                  SizedBox(
+                    width: double.infinity,
+                    height: 32,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        gradient: isSelected
+                            ? const LinearGradient(
+                                colors: [Color(0xFFFFD84E), Color(0xFFFF9C2A)],
+                              )
+                            : AppLightUi.familyCtaGradient,
+                      ),
+                      child: TextButton(
+                        onPressed: controller.isBuying.value
+                            ? null
+                            : () {
+                                controller.selectedPlanIndex.value = index;
+                                _openCheckoutBottomSheet(plan);
+                              },
+                        style: TextButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          foregroundColor:
+                              isSelected ? AppLightUi.title : kColorWhite,
+                          disabledBackgroundColor: Colors.transparent,
+                          padding: EdgeInsets.zero,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: SemiBoldText(
+                            text: controller.isBuying.value
+                                ? '...'
+                                : plan.priceLabel,
+                            fontSize: TextStyles.k12FontSize,
+                            color: isSelected ? AppLightUi.title : kColorWhite,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _coinStackGraphic(int index) {
-    final selected = index == controller.selectedPlanIndex.value;
     return Center(
       child: SizedBox(
-        width: 126,
-        height: 58,
+        width: 100,
+        height: 44,
         child: Stack(
           clipBehavior: Clip.none,
           alignment: Alignment.center,
           children: [
             Container(
-              width: 112,
-              height: 42,
+              width: 96,
+              height: 34,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    const Color(0xFF8A3EF1).withValues(alpha: 0.18),
+                    AppLightUi.violet.withValues(alpha: 0.14),
                     AppLightUi.cardSoft,
                   ],
                 ),
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                    color: kColorWalletAmount.withValues(alpha: 0.15),
-                    blurRadius: 18,
-                  ),
-                ],
+                borderRadius: BorderRadius.circular(18),
               ),
             ),
-            Positioned(left: 12, bottom: 10, child: _coinDisc(30)),
-            Positioned(left: 36, bottom: 12, child: _coinDisc(34)),
-            Positioned(left: 63, bottom: 10, child: _coinDisc(30)),
-            Positioned(left: 87, bottom: 12, child: _coinDisc(26)),
-            Positioned(
-              left: 48,
-              top: 2,
-              child: Transform.rotate(angle: -0.16, child: _coinDisc(28)),
-            ),
-            if (selected)
-              Positioned(
-                right: 16,
-                top: 0,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFF2D8A),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: kColorWhite, width: 1.4),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFFF2D8A).withValues(alpha: 0.35),
-                        blurRadius: 8,
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.check_rounded,
-                    color: kColorWhite,
-                    size: 14,
-                  ),
-                ),
-              ),
+            Positioned(left: 18, bottom: 6, child: _coinDisc(22)),
+            Positioned(left: 36, bottom: 8, child: _coinDisc(26)),
+            Positioned(left: 56, bottom: 6, child: _coinDisc(22)),
           ],
         ),
       ),

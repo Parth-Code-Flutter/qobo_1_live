@@ -41,9 +41,8 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
         backgroundColor: AppLightUi.bg,
         resizeToAvoidBottomInset: true,
         appBar: CommonAppBarWidget(
-          title: '',
+          title: LocaleKeys.otpVerificationTitle.tr,
           showBackButton: true,
-          useGradientStyle: false,
           onBackPressed: () {
             if (controller.handleBackAction()) {
               Get.back();
@@ -325,21 +324,11 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
   }
 
   Widget otpVerificationHeader() {
-    return Column(
-      children: [
-        BoldText(
-          text: LocaleKeys.otpVerificationTitle.tr,
-          fontSize: TextStyles.k20FontSize,
-          color: AppLightUi.title,
-        ),
-        Spacing.v4,
-        AppText(
-          text: LocaleKeys.otpVerificationSubTitle.tr,
-          fontSize: TextStyles.k12FontSize,
-          color: AppLightUi.subtitle,
-          align: TextAlign.center,
-        ),
-      ],
+    return AppText(
+      text: LocaleKeys.otpVerificationSubTitle.tr,
+      fontSize: TextStyles.k12FontSize,
+      color: AppLightUi.subtitle,
+      align: TextAlign.center,
     );
   }
 

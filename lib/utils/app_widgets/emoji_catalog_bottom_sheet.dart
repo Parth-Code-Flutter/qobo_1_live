@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -28,10 +29,7 @@ class EmojiCatalogBottomSheet extends StatelessWidget {
     return Container(
       height: MediaQuery.sizeOf(context).height * 0.58,
       padding: EdgeInsets.fromLTRB(16, 10, 16, bottomInset + 16),
-      decoration: const BoxDecoration(
-        color: Color(0xFF171321),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      decoration: AppLightUi.bottomSheetDecoration(topRadius: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -40,7 +38,7 @@ class EmojiCatalogBottomSheet extends StatelessWidget {
               width: 42,
               height: 4,
               decoration: BoxDecoration(
-                color: kColorWhite.withValues(alpha: 0.22),
+                color: AppLightUi.borderStrong,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -53,12 +51,7 @@ class EmojiCatalogBottomSheet extends StatelessWidget {
                 height: 42,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [
-                      kColorProfileChipPinkStart,
-                      kColorProfileChipPurpleStart,
-                    ],
-                  ),
+                  gradient: AppLightUi.familyCtaGradient,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: const Icon(
@@ -75,12 +68,12 @@ class EmojiCatalogBottomSheet extends StatelessWidget {
                     SemiBoldText(
                       text: title,
                       fontSize: TextStyles.k16FontSize,
-                      color: kColorWhite,
+                      color: AppLightUi.title,
                     ),
                     AppText(
                       text: subtitle,
                       fontSize: TextStyles.k10FontSize,
-                      color: kColorWhite.withValues(alpha: 0.62),
+                      color: AppLightUi.subtitle,
                     ),
                   ],
                 ),
@@ -97,15 +90,15 @@ class EmojiCatalogBottomSheet extends StatelessWidget {
   Widget _content() {
     if (isLoading && items.isEmpty) {
       return const Center(
-        child: CircularProgressIndicator(color: kColorProfileChipPinkStart),
+        child: CircularProgressIndicator(color: AppLightUi.pink),
       );
     }
     if (items.isEmpty) {
-      return Center(
+      return const Center(
         child: AppText(
           text: 'No emojis available right now.',
           fontSize: TextStyles.k12FontSize,
-          color: kColorWhite.withValues(alpha: 0.65),
+          color: AppLightUi.subtitle,
           align: TextAlign.center,
         ),
       );
@@ -132,9 +125,9 @@ class EmojiCatalogBottomSheet extends StatelessWidget {
             child: Ink(
               padding: const EdgeInsets.fromLTRB(7, 9, 7, 7),
               decoration: BoxDecoration(
-                color: kColorWhite.withValues(alpha: 0.06),
+                color: AppLightUi.card,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
+                border: Border.all(color: AppLightUi.border),
               ),
               child: Column(
                 children: [
@@ -149,7 +142,7 @@ class EmojiCatalogBottomSheet extends StatelessWidget {
                   AppText(
                     text: emoji['name'] ?? 'Emoji',
                     fontSize: 9,
-                    color: kColorWhite,
+                    color: AppLightUi.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     align: TextAlign.center,
