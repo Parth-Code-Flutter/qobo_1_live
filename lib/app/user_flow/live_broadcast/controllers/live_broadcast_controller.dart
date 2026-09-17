@@ -55,6 +55,7 @@ import '../widgets/emoji_picker_bottom_sheet.dart';
 import '../widgets/gifts_bottom_sheet.dart';
 import '../widgets/follower_pk_gift_target_sheet.dart';
 import '../widgets/live_filters_sheet.dart';
+import '../widgets/live_stream_end_summary_dialog.dart';
 import '../widgets/live_viewers_sheet.dart';
 import '../widgets/room_background_sheet.dart';
 
@@ -107,16 +108,22 @@ class LiveBroadcastController extends GetxController {
   var _heartReactionSeq = 0;
   Timer? _heartReactionTimer;
   Timer? _liveDurationTimer;
+  DateTime? _lastHeartTapAt;
   int _apiPreviousLiveSeconds = 0;
   int? _apiCurrentLiveSeconds;
   int? _apiTotalLiveSeconds;
   DateTime? _apiLiveStartedAtUtc;
+  /// Distinct audience joins observed this live (for end analytics).
+  final Map<String, Map<String, dynamic>> _liveJoinRecords = {};
+  var _peakAudienceCount = 0;
 
   final chatMessages = <Map<String, dynamic>>[].obs;
   final chatTextController = TextEditingController();
 
   final isMicMuted = false.obs;
   final isCameraOff = false.obs;
+  /// Host Go Live — front camera by default; flipped via [flipLiveCamera].
+  final isFrontCamera = true.obs;
 
   final coinsBalance = 0.obs;
   final diamondsBalance = 0.obs;
@@ -2685,9 +2692,21 @@ class LiveBroadcastController extends GetxController {
   }
 
   /// WhatsApp-status-style heart burst (live streaming only).
-  void triggerHeartReaction() {
+  void triggerHeartReaction({int count = 10, int staggerMs = 110}) {
     if (!isLiveStreamingSession) return;
-    _emitHeartReactionBurst(count: 10, staggerMs: 110);
+    _emitHeartReactionBurst(count: count, staggerMs: staggerMs);
+  }
+
+  /// Tap-to-heart on the live video plane (throttled to avoid frame drops).
+  void onLiveVideoTap() {
+    if (!isLiveStreamingSession) return;
+    final now = DateTime.now();
+    if (_lastHeartTapAt != null &&
+        now.difference(_lastHeartTapAt!) < const Duration(milliseconds: 160)) {
+      return;
+    }
+    _lastHeartTapAt = now;
+    triggerHeartReaction(count: 5, staggerMs: 90);
   }
 
   void _startContinuousHeartReactions() {
@@ -3043,11 +3062,13 @@ class LiveBroadcastController extends GetxController {
     if (!isLiveStreamingSession) return;
     final ids = userIds.map((id) => id.trim()).where((id) => id.isNotEmpty);
     if (ids.isEmpty) return;
+    _markLiveJoinLeft(ids);
     liveViewers.removeWhere((item) {
       final id = item['id']?.toString() ?? '';
       return ids.contains(id);
     });
     viewerCount.value = liveViewers.length;
+    _updatePeakAudienceCount();
   }
 
   /// Keeps [liveViewers] in sync for Express live (UIKit user stream is not mounted).
@@ -3098,6 +3119,56 @@ class LiveBroadcastController extends GetxController {
       liveViewers.assignAll(next);
     }
     viewerCount.value = liveViewers.length;
+    _recordLiveJoinsFromViewers(mapped());
+    _updatePeakAudienceCount();
+  }
+
+  void _recordLiveJoinsFromViewers(List<Map<String, dynamic>> viewers) {
+    if (!isLiveStreamingSession || !isHost.value) return;
+    final now = DateTime.now().toUtc().toIso8601String();
+    for (final viewer in viewers) {
+      final id = (viewer['targetId'] ?? viewer['id'])?.toString().trim() ?? '';
+      if (id.isEmpty) continue;
+      final isHostUser = viewer['isHost'] == true;
+      final existing = _liveJoinRecords[id];
+      if (existing != null) continue;
+      _liveJoinRecords[id] = {
+        'userId': id,
+        'userName': viewer['name']?.toString() ?? '',
+        'role': isHostUser ? 'host' : 'audience',
+        'joinedAt': now,
+      };
+    }
+  }
+
+  void _updatePeakAudienceCount() {
+    if (!isLiveStreamingSession) return;
+    final audience = liveViewers.where((v) => v['isHost'] != true).length;
+    if (audience > _peakAudienceCount) {
+      _peakAudienceCount = audience;
+    }
+  }
+
+  void _markLiveJoinLeft(Iterable<String> userIds) {
+    if (!isLiveStreamingSession || !isHost.value) return;
+    final leftAt = DateTime.now().toUtc().toIso8601String();
+    for (final raw in userIds) {
+      final id = raw.trim();
+      if (id.isEmpty) continue;
+      final record = _liveJoinRecords[id];
+      if (record == null) continue;
+      if (record['leftAt'] != null) continue;
+      final joinedAt = DateTime.tryParse(record['joinedAt']?.toString() ?? '');
+      final left = DateTime.tryParse(leftAt);
+      final watch = (joinedAt != null && left != null)
+          ? left.difference(joinedAt).inSeconds.clamp(0, 1 << 31)
+          : null;
+      _liveJoinRecords[id] = {
+        ...record,
+        'leftAt': leftAt,
+        if (watch != null) 'watchDurationSeconds': watch,
+      };
+    }
   }
 
   Future<void> translateMessage(int index) async {
@@ -3164,6 +3235,17 @@ class LiveBroadcastController extends GetxController {
 
   Future<void> sendGift(Map<String, String> gift, {int comboCount = 1}) async {
     if (_giftSendInFlight) return;
+
+    // Live hosts cannot send gifts (self or room share) per product rule.
+    if (isLiveStreamingSession && isHost.value) {
+      _showRoomToast(
+        'Gift disabled',
+        'Hosts cannot send gifts during their own live stream.',
+        isWarning: true,
+      );
+      return;
+    }
+
     final count = comboCount < 1 ? 1 : comboCount;
     final int price = int.tryParse(gift['price'] ?? '0') ?? 0;
     final totalCost = price * count;
@@ -3194,6 +3276,17 @@ class LiveBroadcastController extends GetxController {
     }
 
     final myId = _currentUserId();
+    if (scope == 'user' &&
+        currentReceiverId.isNotEmpty &&
+        _userIdsMatch(currentReceiverId, myId)) {
+      _showRoomToast(
+        'Gift not sent',
+        'You cannot send a gift to yourself.',
+        isError: true,
+      );
+      return;
+    }
+
     final seatedRecipients = scope == 'room'
         ? _roomGiftRecipientIds(excludeUserId: myId)
         : const <String>[];
@@ -3519,6 +3612,14 @@ class LiveBroadcastController extends GetxController {
       openGiftsSheet();
       return;
     }
+    if (isHost.value) {
+      _showRoomToast(
+        'Gift disabled',
+        'Hosts cannot send gifts during their own live stream.',
+        isWarning: true,
+      );
+      return;
+    }
     final roomKey = economyGiftRoomId;
     if (roomKey.isEmpty) {
       _showRoomToast(
@@ -3526,10 +3627,6 @@ class LiveBroadcastController extends GetxController {
         'Live stream id is missing. Leave and rejoin, then try again.',
         isError: true,
       );
-      return;
-    }
-    if (isHost.value) {
-      openGiftsSheet(roomGift: true);
       return;
     }
     final hostId = receiverId.value.trim();
@@ -4280,13 +4377,48 @@ class LiveBroadcastController extends GetxController {
     liveSkinTone.value = 25;
     liveBlush.value = 12;
     liveSharpen.value = 15;
+    if (isLiveStreamingSession) {
+      try {
+        await ZegoExpressEngine.instance.enableEffectsBeauty(false);
+      } catch (_) {}
+      return;
+    }
     try {
       await ZegoUIKit().resetBeautyEffect();
       await ZegoUIKit().enableBeauty(false);
     } catch (_) {}
   }
 
+  /// Call from Express host path after [startEffectsEnv] / before preview.
+  Future<void> applyExpressBeautyAfterEngineReady() async {
+    if (!isLiveStreamingSession || !isHost.value) return;
+    await _applyLiveBeauty();
+  }
+
   Future<void> _applyLiveBeauty() async {
+    if (isLiveStreamingSession) {
+      try {
+        await ZegoExpressEngine.instance.enableEffectsBeauty(
+          liveBeautyEnabled.value,
+        );
+        if (!liveBeautyEnabled.value) return;
+        await ZegoExpressEngine.instance.setEffectsBeautyParam(
+          ZegoEffectsBeautyParam(
+            liveSkinTone.value.clamp(0, 100),
+            liveBlush.value.clamp(0, 100),
+            liveSmooth.value.clamp(0, 100),
+            liveSharpen.value.clamp(0, 100),
+          ),
+        );
+      } catch (_) {
+        _showRoomToast(
+          'Filters',
+          'Unable to apply filters on this device right now.',
+          isWarning: true,
+        );
+      }
+      return;
+    }
     try {
       await ZegoUIKit().startEffectsEnv();
       await ZegoUIKit().enableBeauty(liveBeautyEnabled.value);
@@ -6099,6 +6231,18 @@ class LiveBroadcastController extends GetxController {
     } catch (_) {}
   }
 
+  /// Flip front/back camera for Express Go Live host.
+  void flipLiveCamera() {
+    if (!isLiveStreamingSession || !isHost.value) return;
+    final next = !isFrontCamera.value;
+    isFrontCamera.value = next;
+    try {
+      unawaited(ZegoExpressEngine.instance.useFrontCamera(next));
+    } catch (_) {
+      isFrontCamera.value = !next;
+    }
+  }
+
   void leaveRoom() {
     if (isHost.value) {
       if (isAudioVideoRoom) {
@@ -6160,21 +6304,60 @@ class LiveBroadcastController extends GetxController {
     final liveStreamingId = liveStreamingApiId;
     Map<String, dynamic>? response;
 
+    final endedAt = DateTime.now().toUtc();
+    final startedAt = _resolveLiveStartedAtUtc();
+    final durationSeconds = endedAt
+        .difference(startedAt)
+        .inSeconds
+        .clamp(0, 1 << 31);
+
+    // Ensure host is present in joins analytics.
+    final hostId = _currentUserId();
+    if (hostId.isNotEmpty && !_liveJoinRecords.containsKey(hostId)) {
+      _liveJoinRecords[hostId] = {
+        'userId': hostId,
+        'userName': hostName.value,
+        'role': 'host',
+        'joinedAt': startedAt.toIso8601String(),
+        'leftAt': endedAt.toIso8601String(),
+        'watchDurationSeconds': durationSeconds,
+      };
+    } else if (hostId.isNotEmpty) {
+      final existing = _liveJoinRecords[hostId]!;
+      _liveJoinRecords[hostId] = {
+        ...existing,
+        'role': 'host',
+        'leftAt': endedAt.toIso8601String(),
+        'watchDurationSeconds': durationSeconds,
+      };
+    }
+
+    final joins = _liveJoinRecords.values
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList(growable: false);
+    final uniqueViewers = joins
+        .where((j) => j['role']?.toString() != 'host')
+        .map((j) => j['userId']?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .length;
+    final peak = _peakAudienceCount > 0
+        ? _peakAudienceCount
+        : uniqueViewers;
+    final diamonds = sessionEarnings.displayCoins;
+
     // Live streaming and audio/video rooms use different backend resources.
     // Keep this path isolated so closing a Go Live stream never calls room APIs.
     if (liveStreamingId.isNotEmpty) {
       try {
-        final endedAt = DateTime.now().toUtc();
-        final startedAt = _resolveLiveStartedAtUtc();
-        final durationSeconds = endedAt
-            .difference(startedAt)
-            .inSeconds
-            .clamp(0, 1 << 31);
         response = await _roomRepo.endLiveStreaming(
           liveStreamingId: liveStreamingId,
           startedAt: startedAt.toIso8601String(),
           endedAt: endedAt.toIso8601String(),
           durationSeconds: durationSeconds,
+          peakViewerCount: peak,
+          uniqueViewerCount: uniqueViewers,
+          joins: joins,
           isShowLoader: true,
         );
       } catch (_) {
@@ -6183,6 +6366,23 @@ class LiveBroadcastController extends GetxController {
     }
 
     final apiConfirmed = liveStreamingId.isNotEmpty && _isApiSuccess(response);
+    final data = response?['data'];
+    final summaryDuration = data is Map
+        ? (int.tryParse(data['durationSeconds']?.toString() ?? '') ??
+              durationSeconds)
+        : durationSeconds;
+    final summaryUnique = data is Map
+        ? (int.tryParse(data['uniqueViewerCount']?.toString() ?? '') ??
+              uniqueViewers)
+        : uniqueViewers;
+
+    await LiveStreamEndSummaryDialog.show(
+      durationSeconds: summaryDuration,
+      uniqueViewers: summaryUnique,
+      peakViewers: peak,
+      diamondsEarned: diamonds,
+    );
+
     await _closeLiveStreamLocally();
 
     if (apiConfirmed) return;

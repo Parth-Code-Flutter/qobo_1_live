@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
@@ -12,18 +13,19 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 /// Shared design tokens for the Super Admin shell.
 ///
-/// Matches the main app Messages/Discover canvas ([kColorLavenderBg]).
-/// Button / icon / nav chrome is shared with Agency via [AdminAgencyUi].
+/// Aligned with [AppLightUi] dating canvas (lavender bg, white cards,
+/// violet→pink CTAs). Button / icon / nav chrome shared via [AdminAgencyUi].
 abstract final class SuperAdminUi {
   SuperAdminUi._();
 
-  // —— Canvas (aligned with Discover / Messages light theme) ——
-  static const ink = Color(0xFF2A1744);
-  static const inkElevated = Color(0xFF3D2A52);
-  static const sheet = Color(0xFFFFFBFE);
-  static const panel = Color(0xFFFDF4FA);
+  // —— Canvas ——
+  static const ink = AppLightUi.title;
+  static const inkElevated = AppLightUi.body;
+  static const sheet = AppLightUi.card;
+  static const panel = AppLightUi.cardSoft;
+  static const bg = AppLightUi.bg;
 
-  // —— Accents (status / icons only — not full-card paint) ——
+  // —— Accents ——
   static const gold = AdminAgencyUi.gold;
   static const goldDeep = AdminAgencyUi.goldDeep;
   static const violet = AdminAgencyUi.violet;
@@ -32,17 +34,17 @@ abstract final class SuperAdminUi {
   static const sky = AdminAgencyUi.sky;
   static const pink = AdminAgencyUi.pink;
   static const teal = AdminAgencyUi.teal;
-  static const danger = Color(0xFFFF8A80);
-  static const warning = Color(0xFFFFB74D);
+  static const danger = Color(0xFFFF6B6B);
+  static const warning = Color(0xFFFFB020);
   static const success = Color(0xFF2E9E5B);
 
-  // —— Type colors ——
-  static const textPrimary = AdminAgencyUi.textPrimary;
-  static const textSecondary = AdminAgencyUi.textSecondary;
-  static const textMuted = AdminAgencyUi.textMuted;
-  static const textFaint = AdminAgencyUi.textFaint;
+  // —— Type ——
+  static const textPrimary = AppLightUi.title;
+  static const textSecondary = AppLightUi.body;
+  static const textMuted = AppLightUi.subtitle;
+  static const textFaint = AppLightUi.muted;
 
-  // —— Layout (8px grid) ——
+  // —— Layout ——
   static const double pagePad = 20;
   static const double sectionGap = 16;
   static const double cardPad = 16;
@@ -51,7 +53,7 @@ abstract final class SuperAdminUi {
     pagePad,
     4,
     pagePad,
-    100,
+    110,
   );
   static const EdgeInsets detailInsets = EdgeInsets.fromLTRB(
     pagePad,
@@ -60,22 +62,10 @@ abstract final class SuperAdminUi {
     32,
   );
 
-  static const headerGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [
-      kColorLiveFilterChipGradientStart,
-      kColorLiveFilterChipGradientMid,
-      kColorLiveFilterChipGradientEnd,
-    ],
-  );
-
+  static const headerGradient = AppLightUi.familyCtaGradient;
   static const goldButtonGradient = AdminAgencyUi.goldButtonGradient;
-
-  /// Brand CTA gradient — matches main-app Go Live / primary chrome.
   static const primaryButtonGradient = AdminAgencyUi.primaryButtonGradient;
 
-  /// Solid card panel — Profile-style opaque purple, not frosted glass.
   static BoxDecoration glassDecoration({
     Color? glow,
     double radius = cardRadius,
@@ -83,7 +73,6 @@ abstract final class SuperAdminUi {
     return appShellGlassDecoration(glow: glow, radius: radius);
   }
 
-  /// Solid gradient icon tile — white glyph (Profile feature style).
   static Widget glowIcon({
     required IconData icon,
     required Color accent,
@@ -233,23 +222,21 @@ class SuperAdminFilterPill extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(22),
           gradient: isSelected ? SuperAdminUi.headerGradient : null,
-          color: isSelected
-              ? null
-              : SuperAdminUi.panel.withValues(alpha: 0.55),
+          color: isSelected ? null : AppLightUi.card,
           border: Border.all(
             color: isSelected
-                ? kColorLiveFilterChipBorder
-                : kColorWhite.withValues(alpha: 0.10),
+                ? Colors.transparent
+                : AppLightUi.borderStrong,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: SuperAdminUi.violet.withValues(alpha: 0.28),
-                    blurRadius: 10,
+                    color: SuperAdminUi.pink.withValues(alpha: 0.28),
+                    blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
                 ]
-              : null,
+              : AppLightUi.cardShadow,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -257,15 +244,13 @@ class SuperAdminFilterPill extends StatelessWidget {
             Icon(
               icon,
               size: 15,
-              color: isSelected ? SuperAdminUi.textPrimary : SuperAdminUi.textMuted,
+              color: isSelected ? kColorWhite : SuperAdminUi.textMuted,
             ),
             Spacing.h6,
             SemiBoldText(
               text: label,
               fontSize: TextStyles.k12FontSize,
-              color: isSelected
-                  ? SuperAdminUi.textPrimary
-                  : SuperAdminUi.textSecondary,
+              color: isSelected ? kColorWhite : SuperAdminUi.textSecondary,
             ),
           ],
         ),
@@ -292,7 +277,7 @@ class SuperAdminSheetScaffold extends StatelessWidget {
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
         child: Container(
           padding: EdgeInsets.fromLTRB(
             SuperAdminUi.pagePad,
@@ -301,16 +286,16 @@ class SuperAdminSheetScaffold extends StatelessWidget {
             20 + MediaQuery.paddingOf(context).bottom,
           ),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                SuperAdminUi.sheet.withValues(alpha: 0.96),
-                SuperAdminUi.ink.withValues(alpha: 0.98),
-              ],
-            ),
+            color: AppLightUi.card.withValues(alpha: 0.96),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
+            border: Border.all(color: AppLightUi.borderStrong),
+            boxShadow: [
+              BoxShadow(
+                color: AppLightUi.title.withValues(alpha: 0.08),
+                blurRadius: 24,
+                offset: const Offset(0, -8),
+              ),
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -321,7 +306,7 @@ class SuperAdminSheetScaffold extends StatelessWidget {
                   width: 42,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: SuperAdminUi.textFaint,
+                    gradient: SuperAdminUi.headerGradient,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -370,7 +355,7 @@ class SuperAdminSheetAction extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
-        color: SuperAdminUi.panel.withValues(alpha: 0.55),
+        color: AppLightUi.cardSoft,
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
           onTap: onTap,
@@ -509,7 +494,7 @@ class SuperAdminAvatarRing extends StatelessWidget {
           ),
           child: ClipOval(
             child: ColoredBox(
-              color: SuperAdminUi.ink,
+              color: AppLightUi.card,
               child: url.trim().isNotEmpty
                   ? SafeNetworkAvatar(
                       url: url,
@@ -530,12 +515,12 @@ class SuperAdminAvatarRing extends StatelessWidget {
               decoration: BoxDecoration(
                 color: SuperAdminUi.rose,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: SuperAdminUi.textPrimary, width: 1.5),
+                border: Border.all(color: kColorWhite, width: 1.5),
               ),
               child: const SemiBoldText(
                 text: 'LIVE',
                 fontSize: 8,
-                color: SuperAdminUi.textPrimary,
+                color: kColorWhite,
               ),
             ),
           ),
@@ -562,7 +547,7 @@ class SuperAdminAvatarRing extends StatelessWidget {
             ? fallbackLetter.characters.first.toUpperCase()
             : '?',
         style: const TextStyle(
-          color: SuperAdminUi.textPrimary,
+          color: kColorWhite,
           fontWeight: FontWeight.w700,
           fontSize: 22,
           fontFamily: Font.Poppins,

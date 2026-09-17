@@ -38,57 +38,89 @@ class BackpackView extends GetView<BackpackController> {
 
   Widget _buildEquippedSummaryCard() {
     return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF761B65), Color(0xFF410D37)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: kColorPrimary.withValues(alpha: 0.15),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      padding: const EdgeInsets.all(18),
+      decoration: AppLightUi.cardDecoration(radius: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.style, color: Colors.amber, size: 22),
-              SizedBox(width: 8),
-              SemiBoldText(
-                text: 'Active Customizations',
-                fontSize: TextStyles.k16FontSize,
-                color: kColorWhite,
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  gradient: AppLightUi.familyCtaGradient,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppLightUi.pink.withValues(alpha: 0.28),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.style_rounded,
+                  color: kColorWhite,
+                  size: 18,
+                ),
+              ),
+              Spacing.h10,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SemiBoldText(
+                      text: 'Active Customizations',
+                      fontSize: TextStyles.k16FontSize,
+                      color: AppLightUi.title,
+                    ),
+                    Spacing.v2,
+                    const AppText(
+                      text: 'What’s equipped on your profile right now',
+                      fontSize: TextStyles.k10FontSize,
+                      color: AppLightUi.subtitle,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
           Spacing.v16,
+          // 2×2 grid so long names (e.g. “Royal Emerald”) aren’t clipped.
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _equippedSlot(
                 'Frame',
                 controller.equippedFrame,
                 displayNameObs: controller.equippedFrameName,
+                accent: AppLightUi.gold,
               ),
-              _equippedSlot('Entrance', controller.equippedEffect),
-              _equippedSlot('Chat Bubble', controller.equippedBubble),
+              Spacing.h8,
+              _equippedSlot(
+                'Entrance',
+                controller.equippedEffect,
+                accent: AppLightUi.violet,
+              ),
             ],
           ),
           Spacing.v8,
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _equippedSlot(
+                'Chat Bubble',
+                controller.equippedBubble,
+                accent: AppLightUi.cyan,
+              ),
+              Spacing.h8,
               _equippedSlot(
                 'Background',
                 controller.equippedBackground,
                 displayNameObs: controller.equippedBackgroundName,
+                accent: AppLightUi.pink,
               ),
             ],
           ),
@@ -101,93 +133,131 @@ class BackpackView extends GetView<BackpackController> {
     String label,
     RxnString equippedObs, {
     RxnString? displayNameObs,
+    Color accent = AppLightUi.violet,
   }) {
-    return Obx(() {
-      final itemId = equippedObs.value;
-      final isActive = itemId != null;
+    return Expanded(
+      child: Obx(() {
+        final itemId = equippedObs.value;
+        final isActive = itemId != null && itemId.trim().isNotEmpty;
 
-      // Extract simple display name
-      String displayName = displayNameObs?.value ?? 'None';
-      if (isActive) {
-        if (displayName == 'None') {
-          if (itemId.contains('gold')) displayName = 'Golden Crown';
-          if (itemId.contains('neon')) displayName = 'Neon Border';
-          if (itemId.contains('vip')) displayName = 'VVIP';
-          if (itemId.contains('dragon')) displayName = 'Dragon';
-          if (itemId.contains('star')) displayName = 'Star Shower';
-          if (itemId.contains('ocean')) displayName = 'Ocean';
-          if (itemId.contains('love')) displayName = 'Love Heart';
+        var displayName = displayNameObs?.value?.trim() ?? '';
+        if (isActive) {
+          if (displayName.isEmpty || displayName == 'None') {
+            displayName = _friendlyEquippedName(itemId);
+          }
+        } else {
+          displayName = 'None';
         }
-      } else {
-        displayName = 'None';
-      }
 
-      return Expanded(
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
           decoration: BoxDecoration(
-            color: kColorWhite.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
+            color: isActive
+                ? accent.withValues(alpha: 0.08)
+                : AppLightUi.cardSoft,
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isActive ? Colors.amber : Colors.white24,
-              width: 1,
+              color: isActive
+                  ? accent.withValues(alpha: 0.55)
+                  : AppLightUi.border,
+              width: isActive ? 1.4 : 1,
             ),
           ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               AppText(
                 text: label,
                 fontSize: 10,
-                color: kColorWhite.withValues(alpha: 0.7),
+                color: AppLightUi.subtitle,
               ),
               Spacing.v6,
               SemiBoldText(
                 text: displayName,
                 fontSize: TextStyles.k12FontSize,
-                color: isActive ? Colors.amber : kColorWhite,
-                align: TextAlign.center,
-                maxLines: 1,
+                color: isActive ? accent : AppLightUi.title,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
-        ),
-      );
-    });
+        );
+      }),
+    );
+  }
+
+  String _friendlyEquippedName(String itemId) {
+    final id = itemId.toLowerCase();
+    if (id.contains('gold')) return 'Golden Crown';
+    if (id.contains('neon')) return 'Neon Border';
+    if (id.contains('vip')) return 'VVIP';
+    if (id.contains('dragon')) return 'Dragon';
+    if (id.contains('star')) return 'Star Shower';
+    if (id.contains('ocean')) return 'Ocean';
+    if (id.contains('love') || id.contains('rose')) return 'Love Heart';
+    if (id.contains('royal')) return 'Royal Emerald';
+    // Avoid showing raw UUIDs in the summary.
+    if (_looksLikeUuid(itemId)) return 'Equipped';
+    return itemId;
+  }
+
+  bool _looksLikeUuid(String value) {
+    final v = value.trim();
+    return RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+    ).hasMatch(v);
   }
 
   Widget _buildTabs() {
-    return Container(
-      color: AppLightUi.card,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
       child: Obx(() {
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
             children: controller.categories.map((cat) {
               final isSelected = controller.selectedCategory.value == cat['id'];
-              return GestureDetector(
-                onTap: () => controller.selectCategory(cat['id'] as int),
-                child: Container(
-                  margin: const EdgeInsets.only(right: 12),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isSelected ? kColorPrimary : Colors.transparent,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: isSelected
-                          ? kColorPrimary
-                          : AppLightUi.border,
+              final label = _shortCategoryLabel(cat['name']?.toString() ?? '');
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => controller.selectCategory(cat['id'] as int),
+                    borderRadius: BorderRadius.circular(22),
+                    child: Ink(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(22),
+                        gradient: isSelected
+                            ? AppLightUi.familyCtaGradient
+                            : null,
+                        color: isSelected ? null : AppLightUi.card,
+                        border: Border.all(
+                          color: isSelected
+                              ? Colors.transparent
+                              : AppLightUi.borderStrong,
+                        ),
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color: AppLightUi.pink.withValues(alpha: 0.28),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ]
+                            : AppLightUi.cardShadow,
+                      ),
+                      child: SemiBoldText(
+                        text: label,
+                        fontSize: TextStyles.k12FontSize,
+                        color: isSelected ? kColorWhite : AppLightUi.subtitle,
+                      ),
                     ),
-                  ),
-                  child: AppText(
-                    text: cat['name'] as String,
-                    fontSize: TextStyles.k14FontSize,
-                    color: isSelected ? kColorWhite : AppLightUi.subtitle,
                   ),
                 ),
               );
@@ -196,6 +266,39 @@ class BackpackView extends GetView<BackpackController> {
         );
       }),
     );
+  }
+
+  String _shortCategoryLabel(String raw) {
+    final name = raw.trim();
+    if (name.isEmpty) return 'Items';
+    final lower = name.toLowerCase();
+    if (lower.contains('entrance')) return 'Entrance';
+    if (lower.contains('avatar') && lower.contains('frame')) return 'Frames';
+    if (lower.contains('chat')) return 'Bubbles';
+    if (lower.contains('background')) return 'Backgrounds';
+    if (lower.contains('gift')) return 'Gifts';
+    return name;
+  }
+
+  String _displayItemName(Map<String, dynamic> item) {
+    final name = item['name']?.toString().trim() ?? '';
+    final id = item['id']?.toString().trim() ?? '';
+    if (name.isNotEmpty && !_looksLikeUuid(name)) return name;
+    if (id.isNotEmpty && !_looksLikeUuid(id)) return id;
+    final desc = item['description']?.toString().trim() ?? '';
+    if (desc.isNotEmpty) {
+      final first = desc.split('.').first.trim();
+      if (first.isNotEmpty && first.length <= 28) return first;
+    }
+    return 'Gift';
+  }
+
+  String _displayItemDescription(Map<String, dynamic> item) {
+    final desc = item['description']?.toString().trim() ?? '';
+    if (desc.isNotEmpty && !_looksLikeUuid(desc)) return desc;
+    final qty = item['quantity'];
+    if (qty != null) return 'Qty $qty · Ready to send';
+    return 'Owned item';
   }
 
   Widget _buildItemsGrid() {
@@ -243,7 +346,6 @@ class BackpackView extends GetView<BackpackController> {
                       Get.toNamed(Routes.MALL);
                     },
                     buttonText: 'Visit Mall',
-                    buttonColor: kColorPrimary,
                     borderRadius: 20,
                     textStyle: TextStyles.kSemiBoldPoppins(
                       fontSize: TextStyles.k12FontSize,
@@ -297,18 +399,12 @@ class BackpackView extends GetView<BackpackController> {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: AppLightUi.card,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: isEquipped ? Colors.amber : Colors.transparent,
-                width: 1.5,
+                color: isEquipped ? AppLightUi.gold : AppLightUi.border,
+                width: isEquipped ? 1.6 : 1,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: kColorBlack.withValues(alpha: 0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              boxShadow: AppLightUi.cardShadow,
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -319,28 +415,25 @@ class BackpackView extends GetView<BackpackController> {
                     if (categoryId == 1)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
+                          horizontal: 8,
+                          vertical: 3,
                         ),
                         decoration: BoxDecoration(
-                          color: kColorPrimary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
+                          color: AppLightUi.violet.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Text(
-                          'x${item['quantity']}',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: kColorPrimary,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        child: SemiBoldText(
+                          text: 'x${item['quantity']}',
+                          fontSize: 10,
+                          color: AppLightUi.violet,
                         ),
                       )
                     else
                       const SizedBox.shrink(),
                     if (isEquipped)
                       const Icon(
-                        Icons.check_circle,
-                        color: Colors.amber,
+                        Icons.check_circle_rounded,
+                        color: AppLightUi.gold,
                         size: 18,
                       )
                     else
@@ -350,15 +443,25 @@ class BackpackView extends GetView<BackpackController> {
                 Expanded(
                   child: Center(
                     child: Container(
-                      padding: const EdgeInsets.all(8),
+                      width: 64,
+                      height: 64,
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: kColorPrimary.withValues(alpha: 0.05),
                         shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [
+                            AppLightUi.violet.withValues(alpha: 0.12),
+                            AppLightUi.pink.withValues(alpha: 0.1),
+                          ],
+                        ),
+                        border: Border.all(
+                          color: AppLightUi.borderStrong,
+                        ),
                       ),
                       child: SvgPicture.asset(
                         item['icon'] as String,
-                        width: 44,
-                        height: 44,
+                        width: 36,
+                        height: 36,
                         fit: BoxFit.contain,
                       ),
                     ),
@@ -366,59 +469,58 @@ class BackpackView extends GetView<BackpackController> {
                 ),
                 Spacing.v8,
                 SemiBoldText(
-                  text: item['name'] as String,
+                  text: _displayItemName(item),
                   fontSize: TextStyles.k14FontSize,
                   color: AppLightUi.title,
                   align: TextAlign.center,
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
                 Spacing.v4,
                 AppText(
-                  text: item['description'] ?? '',
-                  fontSize: 9,
+                  text: _displayItemDescription(item),
+                  fontSize: 10,
                   color: AppLightUi.subtitle,
                   align: TextAlign.center,
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
                 Spacing.v10,
                 if (categoryId > 1)
                   SizedBox(
-                    height: 32,
+                    height: 34,
                     width: double.infinity,
                     child: appButton(
                       onPressed: () => controller.equipItem(categoryId, item),
                       buttonText: isEquipped ? 'Unequip' : 'Equip',
+                      isGradient: !isEquipped,
                       buttonColor: isEquipped
-                          ? const Color(0xFFF3F3F3)
-                          : kColorPrimary,
-                      textColor: isEquipped ? kColorTextGrey : kColorWhite,
+                          ? AppLightUi.cardSoft
+                          : null,
+                      textColor: isEquipped ? AppLightUi.subtitle : kColorWhite,
                       borderRadius: 16,
                       textStyle: TextStyles.kSemiBoldPoppins(
                         fontSize: TextStyles.k12FontSize,
-                        colors: isEquipped ? kColorTextGrey : kColorWhite,
+                        colors: isEquipped ? AppLightUi.subtitle : kColorWhite,
                       ),
                     ),
                   )
                 else
                   SizedBox(
-                    height: 32,
+                    height: 34,
                     width: double.infinity,
                     child: appButton(
                       onPressed: () {
                         Get.snackbar(
                           'Backpack',
-                          'Rose can be gifted to streamers inside live rooms.',
+                          'Gifts can be sent to streamers inside live rooms.',
                         );
                       },
                       buttonText: 'Send Gift',
-                      buttonColor: kColorPrimary.withValues(alpha: 0.1),
-                      textColor: kColorPrimary,
                       borderRadius: 16,
                       textStyle: TextStyles.kSemiBoldPoppins(
                         fontSize: TextStyles.k12FontSize,
-                        colors: kColorPrimary,
+                        colors: kColorWhite,
                       ),
                     ),
                   ),

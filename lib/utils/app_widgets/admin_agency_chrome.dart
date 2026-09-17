@@ -5,13 +5,14 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_shell_background.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/glossy_auth_field_border.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 /// Shared Super Admin + Agency chrome — buttons, icons, bottom nav.
 ///
 /// Keeps both shells on one look: colorful accent icons, gold CTAs, and the
-/// navy glass bottom bar from the Super Admin dashboard.
+/// floating glossy light bottom dock (AppLightUi / main dating nav).
 abstract final class AdminAgencyUi {
   AdminAgencyUi._();
 
@@ -37,10 +38,11 @@ abstract final class AdminAgencyUi {
     colors: [Color(0xFFFFE8A8), Color(0xFFFFD166), Color(0xFFFFB84D)],
   );
 
+  /// Violet→pink CTA — matches AppLightUi.familyCtaGradient.
   static const primaryButtonGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFFFF5CAB), Color(0xFF9C6BFF)],
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [Color(0xFF7B5CFF), Color(0xFFB35CFF), Color(0xFFFF2E83)],
   );
 
   /// Solid gradient icon tile — same language as Profile feature grid.
@@ -280,7 +282,7 @@ class AdminPrimaryCtaButton extends StatelessWidget {
   }
 }
 
-/// Navy glass bottom bar — same chrome as main [BottomNavView].
+/// Floating glossy bottom bar — matches main dating [BottomNavView] dock.
 class AdminBottomNavBar extends StatelessWidget {
   const AdminBottomNavBar({
     super.key,
@@ -293,52 +295,104 @@ class AdminBottomNavBar extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onSelected;
 
+  static const _radius = 30.0;
+  static const _borderWidth = 1.7;
+
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                // Match BottomNavView exactly.
-                const Color(0xFF181A5A).withValues(alpha: 0.86),
-                const Color(0xFF121644).withValues(alpha: 0.93),
-              ],
-            ),
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(26),
-              topRight: Radius.circular(26),
-            ),
-            border: Border(
-              top: BorderSide(
-                color: Colors.white.withValues(alpha: 0.2),
-                width: 0.7,
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16, 0, 16, bottomInset + 14),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(_radius),
+          gradient: GlossyAuthFieldBorder.authSweepGradient,
+        ),
+        padding: const EdgeInsets.all(_borderWidth),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(_radius - _borderWidth),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(_radius - _borderWidth),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withValues(alpha: 0.94),
+                    const Color(0xFFFFF5FA).withValues(alpha: 0.9),
+                    Colors.white.withValues(alpha: 0.9),
+                  ],
+                ),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.65),
+                  width: 0.6,
+                ),
               ),
-            ),
-          ),
-          child: Padding(
-            padding: EdgeInsets.only(bottom: bottomInset),
-            child: SizedBox(
-              height: 84,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: List.generate(items.length, (index) {
-                  final item = items[index];
-                  return Expanded(
-                    child: AdminBottomNavTab(
-                      label: item.label,
-                      icon: item.icon,
-                      selected: selectedIndex == index,
-                      onTap: () => onSelected(index),
-                    ),
-                  );
-                }),
+              child: SizedBox(
+                height: 66,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final tabCount = items.length;
+                    final tabW = constraints.maxWidth / tabCount;
+                    final accent = items[selectedIndex].accent;
+
+                    return Stack(
+                      children: [
+                        AnimatedPositioned(
+                          duration: const Duration(milliseconds: 340),
+                          curve: Curves.easeOutBack,
+                          left: (selectedIndex * tabW) + 5,
+                          top: 7,
+                          width: tabW - 10,
+                          height: 52,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 280),
+                            curve: Curves.easeOutCubic,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(18),
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  accent.withValues(alpha: 0.22),
+                                  accent.withValues(alpha: 0.08),
+                                ],
+                              ),
+                              border: Border.all(
+                                color: accent.withValues(alpha: 0.32),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: accent.withValues(alpha: 0.18),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: List.generate(items.length, (index) {
+                            final item = items[index];
+                            return Expanded(
+                              child: AdminBottomNavTab(
+                                label: item.label,
+                                icon: item.icon,
+                                accent: item.accent,
+                                selected: selectedIndex == index,
+                                onTap: () => onSelected(index),
+                              ),
+                            );
+                          }),
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
           ),
@@ -348,49 +402,109 @@ class AdminBottomNavBar extends StatelessWidget {
   }
 }
 
-/// Tab item styled like main-app nav: white when selected, muted when not.
-class AdminBottomNavTab extends StatelessWidget {
+/// Colorful tab item — bounce + color morph on select (pill slides in parent).
+class AdminBottomNavTab extends StatefulWidget {
   const AdminBottomNavTab({
     super.key,
     required this.label,
     required this.icon,
     required this.selected,
     required this.onTap,
+    this.accent = AdminAgencyUi.violet,
   });
 
   final String label;
   final IconData icon;
   final bool selected;
   final VoidCallback onTap;
+  final Color accent;
+
+  @override
+  State<AdminBottomNavTab> createState() => _AdminBottomNavTabState();
+}
+
+class _AdminBottomNavTabState extends State<AdminBottomNavTab>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _bounce;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _bounce = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 420),
+    );
+    _scale = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1, end: 1.22).chain(
+          CurveTween(curve: Curves.easeOutBack),
+        ),
+        weight: 55,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.22, end: 1).chain(
+          CurveTween(curve: Curves.easeOutCubic),
+        ),
+        weight: 45,
+      ),
+    ]).animate(_bounce);
+    if (widget.selected) _bounce.value = 1;
+  }
+
+  @override
+  void didUpdateWidget(covariant AdminBottomNavTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.selected && widget.selected) {
+      _bounce.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _bounce.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final color =
-        selected ? kColorWhite : Colors.white.withValues(alpha: 0.42);
+    final iconColor =
+        widget.selected ? widget.accent : widget.accent.withValues(alpha: 0.62);
+    final labelColor = widget.selected
+        ? widget.accent
+        : AdminAgencyUi.textMuted.withValues(alpha: 0.95);
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onTap,
-        splashColor: Colors.white.withValues(alpha: 0.08),
+        onTap: widget.onTap,
+        splashColor: widget.accent.withValues(alpha: 0.14),
         highlightColor: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 22, color: color),
-            Spacing.v6,
-            AppText(
-              text: label,
-              fontSize: TextStyles.k10FontSize,
-              style: selected
+            ScaleTransition(
+              scale: _scale,
+              child: Icon(
+                widget.icon,
+                size: widget.selected ? 22 : 20,
+                color: iconColor,
+              ),
+            ),
+            Spacing.v4,
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 220),
+              style: widget.selected
                   ? TextStyles.kSemiBoldPoppins(
-                      fontSize: TextStyles.k12FontSize,
-                      colors: kColorWhite,
+                      fontSize: TextStyles.k10FontSize,
+                      colors: labelColor,
                     )
                   : TextStyles.kRegularPoppins(
                       fontSize: TextStyles.k10FontSize,
-                      colors: Colors.white.withValues(alpha: 0.45),
+                      colors: labelColor,
                     ),
+              child: Text(widget.label),
             ),
           ],
         ),

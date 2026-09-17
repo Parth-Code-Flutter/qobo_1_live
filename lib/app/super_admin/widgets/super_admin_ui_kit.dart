@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -93,14 +94,15 @@ class _SuperAdminBackButton extends StatelessWidget {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: SuperAdminUi.panel.withValues(alpha: 0.72),
+            color: AppLightUi.card,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: accent.withValues(alpha: 0.42)),
+            boxShadow: AppLightUi.cardShadow,
           ),
-          child: const Icon(
+          child: Icon(
             Icons.arrow_back_ios_new_rounded,
             size: 18,
-            color: SuperAdminUi.textPrimary,
+            color: accent,
           ),
         ),
       ),

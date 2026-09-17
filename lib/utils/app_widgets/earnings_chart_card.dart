@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -18,6 +19,7 @@ class EarningsChartPoint {
   final Color color;
 }
 
+/// Light glossy earnings card — AppLightUi dating chrome (not dark navy).
 class EarningsChartCard extends StatelessWidget {
   const EarningsChartCard({
     super.key,
@@ -50,22 +52,7 @@ class EarningsChartCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF28144B), Color(0xFF121E45)],
-        ),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.10)),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF00D9FF).withValues(alpha: 0.12),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
+      decoration: AppLightUi.cardDecoration(radius: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -76,9 +63,14 @@ class EarningsChartCard extends StatelessWidget {
                 height: 42,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF00D9FF), Color(0xFF8B5CFF)],
-                  ),
+                  gradient: AppLightUi.familyCtaGradient,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppLightUi.pink.withValues(alpha: 0.28),
+                      blurRadius: 12,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
                 ),
                 child: Icon(icon, color: kColorWhite, size: 22),
               ),
@@ -90,7 +82,7 @@ class EarningsChartCard extends StatelessWidget {
                     SemiBoldText(
                       text: title,
                       fontSize: TextStyles.k14FontSize,
-                      color: kColorWhite,
+                      color: AppLightUi.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -98,7 +90,7 @@ class EarningsChartCard extends StatelessWidget {
                     AppText(
                       text: subtitle,
                       fontSize: TextStyles.k10FontSize,
-                      color: kColorWhite.withValues(alpha: 0.68),
+                      color: AppLightUi.subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -111,16 +103,16 @@ class EarningsChartCard extends StatelessWidget {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFD15C).withValues(alpha: 0.13),
+                  color: AppLightUi.gold.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: const Color(0xFFFFD15C).withValues(alpha: 0.45),
+                    color: AppLightUi.gold.withValues(alpha: 0.45),
                   ),
                 ),
                 child: SemiBoldText(
                   text: totalLabel,
                   fontSize: TextStyles.k16FontSize,
-                  color: const Color(0xFFFFD15C),
+                  color: const Color(0xFFB8860B),
                 ),
               ),
             ],
@@ -131,8 +123,8 @@ class EarningsChartCard extends StatelessWidget {
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
-              color: kColorBlack.withValues(alpha: 0.16),
-              border: Border.all(color: kColorWhite.withValues(alpha: 0.08)),
+              color: AppLightUi.cardSoft,
+              border: Border.all(color: AppLightUi.border),
             ),
             child: Column(
               children: [
@@ -180,9 +172,9 @@ class _ChartBarRow extends StatelessWidget {
               width: 28,
               height: 28,
               decoration: BoxDecoration(
-                color: point.color.withValues(alpha: 0.16),
+                color: point.color.withValues(alpha: 0.14),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: point.color.withValues(alpha: 0.38)),
+                border: Border.all(color: point.color.withValues(alpha: 0.35)),
               ),
               child: Icon(Icons.circle, size: 8, color: point.color),
             ),
@@ -191,7 +183,7 @@ class _ChartBarRow extends StatelessWidget {
               child: SemiBoldText(
                 text: point.label,
                 fontSize: TextStyles.k12FontSize,
-                color: kColorWhite,
+                color: AppLightUi.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -203,7 +195,7 @@ class _ChartBarRow extends StatelessWidget {
                 SemiBoldText(
                   text: _formatValue(point.value),
                   fontSize: TextStyles.k12FontSize,
-                  color: kColorWhite,
+                  color: AppLightUi.title,
                 ),
                 AppText(
                   text: '$percent%',
@@ -219,7 +211,10 @@ class _ChartBarRow extends StatelessWidget {
           borderRadius: BorderRadius.circular(999),
           child: Stack(
             children: [
-              Container(height: 10, color: kColorWhite.withValues(alpha: 0.08)),
+              Container(
+                height: 10,
+                color: AppLightUi.border.withValues(alpha: 0.85),
+              ),
               FractionallySizedBox(
                 widthFactor: math.max(fraction, value > 0 ? 0.08 : 0),
                 child: Container(
@@ -233,8 +228,8 @@ class _ChartBarRow extends StatelessWidget {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: point.color.withValues(alpha: 0.35),
-                        blurRadius: 10,
+                        color: point.color.withValues(alpha: 0.28),
+                        blurRadius: 8,
                       ),
                     ],
                   ),
@@ -275,19 +270,21 @@ class _EmptyChartState extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: kColorWhite.withValues(alpha: 0.08),
+              color: AppLightUi.violet.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              Icons.insert_chart_outlined_rounded,
-              color: kColorWhite.withValues(alpha: 0.55),
+            child: const Icon(
+              Icons.bar_chart_rounded,
+              color: AppLightUi.violet,
+              size: 22,
             ),
           ),
           Spacing.v10,
-          AppText(
+          const AppText(
             text: 'No earnings data yet',
-            fontSize: TextStyles.k10FontSize,
-            color: kColorWhite.withValues(alpha: 0.65),
+            fontSize: TextStyles.k12FontSize,
+            color: AppLightUi.subtitle,
+            align: TextAlign.center,
           ),
         ],
       ),

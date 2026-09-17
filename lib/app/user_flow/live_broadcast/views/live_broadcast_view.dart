@@ -97,9 +97,15 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                   return _buildTopHeader();
                 }),
                 Expanded(
-                  child: LiveRoomPkStageSlot(
-                    minHeight: 280,
-                    maxHeightCap: 560,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onTap: controller.isLiveStreamingSession
+                        ? controller.onLiveVideoTap
+                        : null,
+                    child: LiveRoomPkStageSlot(
+                      minHeight: 280,
+                      maxHeightCap: 560,
+                    ),
                   ),
                 ),
                 _buildChatList(),
@@ -1270,6 +1276,12 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
             onTap: controller.toggleCamera,
           ),
         ),
+      if (controller.isHost.value && controller.isLiveStreamingSession)
+        _bottomActionIcon(
+          Icons.cameraswitch_rounded,
+          compact: compact,
+          onTap: controller.flipLiveCamera,
+        ),
       if (controller.isHost.value && !controller.isInRoomPkActive)
         _bottomActionIcon(
           Icons.flash_on_rounded,
@@ -1277,7 +1289,8 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
           compact: compact,
           onTap: controller.openPkV1Arena,
         ),
-      if (!(controller.isInRoomPkActive && controller.isHost.value))
+      if (!(controller.isInRoomPkActive && controller.isHost.value) &&
+          !(controller.isLiveStreamingSession && controller.isHost.value))
         _bottomActionIcon(
           kGiftIcon,
           color: _accent,
@@ -1915,6 +1928,10 @@ class _StableZegoExpressLiveStreamingState
   var _mediaStarted = false;
   String? _activePlayStreamId;
   String _status = 'Connecting live stream...';
+  Timer? _reconnectTimer;
+  var _reconnectAttempts = 0;
+  var _stopping = false;
+  static const _maxReconnectAttempts = 5;
 
   LiveBroadcastController get _controller =>
       Get.find<LiveBroadcastController>();
@@ -1954,6 +1971,7 @@ class _StableZegoExpressLiveStreamingState
 
   @override
   void dispose() {
+    _reconnectTimer?.cancel();
     unawaited(_stop());
     super.dispose();
   }
@@ -1968,11 +1986,12 @@ class _StableZegoExpressLiveStreamingState
         _status = 'Connecting live stream...';
       });
     }
+    _stopping = false;
     await _start();
   }
 
   Future<void> _start() async {
-    if (_starting || !mounted) return;
+    if (_starting || !mounted || _stopping) return;
     _starting = true;
 
     final roomId = widget.liveId.trim();
@@ -1999,6 +2018,7 @@ class _StableZegoExpressLiveStreamingState
       final loginResult = await _loginRoomWithAuthFallback(roomId);
       if (loginResult != 0) return;
       _loggedIn = true;
+      _reconnectAttempts = 0;
       _controller.onExpressLiveRoomLogined();
 
       final view = await express.ZegoExpressEngine.instance.createCanvasView((
@@ -2135,11 +2155,18 @@ class _StableZegoExpressLiveStreamingState
         ..viewMode = express.ZegoViewMode.AspectFill;
 
       if (widget.isHost) {
+        // Effects env must be started before preview/publish for beauty filters.
+        try {
+          await express.ZegoExpressEngine.instance.startEffectsEnv();
+        } catch (_) {}
         await express.ZegoExpressEngine.instance.enableCamera(
           widget.cameraEnabled,
         );
         await express.ZegoExpressEngine.instance.muteMicrophone(false);
-        await express.ZegoExpressEngine.instance.useFrontCamera(true);
+        await express.ZegoExpressEngine.instance.useFrontCamera(
+          _controller.isFrontCamera.value,
+        );
+        await _controller.applyExpressBeautyAfterEngineReady();
         await express.ZegoExpressEngine.instance.startPreview(canvas: canvas);
         await express.ZegoExpressEngine.instance.startPublishingStream(
           widget.publishStreamId.trim(),
@@ -2170,10 +2197,18 @@ class _StableZegoExpressLiveStreamingState
     express.ZegoExpressEngine.onRoomStateUpdate =
         (roomID, state, errorCode, extendedData) {
           if (roomID != widget.liveId) return;
-          if (errorCode != 0) {
+          if (errorCode != 0 ||
+              state == express.ZegoRoomState.Disconnected) {
             _controller.onExpressLiveRoomDisconnected(
-              'Live room connection failed ($errorCode).',
+              'Live room connection failed ($errorCode). Reconnecting…',
             );
+            _scheduleExpressReconnect();
+          } else if (state == express.ZegoRoomState.Connected ||
+              state == express.ZegoRoomState.Connecting) {
+            if (_loggedIn) {
+              _reconnectAttempts = 0;
+              _controller.onExpressLiveRoomLogined();
+            }
           } else if (_loggedIn) {
             _controller.onExpressLiveRoomLogined();
           }
@@ -2191,6 +2226,7 @@ class _StableZegoExpressLiveStreamingState
             _controller.onExpressLiveRoomLogined();
           } else if (errorCode != 0) {
             _fail('Publishing failed ($errorCode).');
+            _scheduleExpressReconnect();
           } else {
             setState(() => _status = 'Starting broadcast...');
           }
@@ -2208,6 +2244,7 @@ class _StableZegoExpressLiveStreamingState
             _controller.onExpressLiveRoomLogined();
           } else if (errorCode != 0) {
             _fail('Playback failed ($errorCode).');
+            _scheduleExpressReconnect();
           } else {
             setState(() => _status = 'Waiting for host video...');
           }
@@ -2265,6 +2302,8 @@ class _StableZegoExpressLiveStreamingState
   }
 
   Future<void> _stop() async {
+    _stopping = true;
+    _reconnectTimer?.cancel();
     try {
       if (widget.isHost) {
         await express.ZegoExpressEngine.instance.stopPublishingStream();
@@ -2312,6 +2351,28 @@ class _StableZegoExpressLiveStreamingState
     _controller.onExpressLiveRoomDisconnected(message);
     if (!mounted) return;
     setState(() => _status = message);
+  }
+
+  void _scheduleExpressReconnect() {
+    if (_stopping || !mounted || _starting) return;
+    if (_reconnectAttempts >= _maxReconnectAttempts) {
+      _controller.onExpressLiveRoomDisconnected(
+        'Unable to reconnect to the live room. Check your network and rejoin.',
+      );
+      return;
+    }
+    _reconnectTimer?.cancel();
+    final attempt = ++_reconnectAttempts;
+    final delaySeconds = (attempt * 2).clamp(2, 10);
+    if (mounted) {
+      setState(
+        () => _status = 'Reconnecting… ($attempt/$_maxReconnectAttempts)',
+      );
+    }
+    _reconnectTimer = Timer(Duration(seconds: delaySeconds), () {
+      if (!mounted || _stopping) return;
+      unawaited(_restart());
+    });
   }
 
   @override

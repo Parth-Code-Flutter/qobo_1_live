@@ -5,7 +5,15 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 
-enum _RoomOptionAction { filters, background, share, pkBattle, follow, leave }
+enum _RoomOptionAction {
+  filters,
+  flipCamera,
+  background,
+  share,
+  pkBattle,
+  follow,
+  leave,
+}
 
 class _RoomOption {
   const _RoomOption({
@@ -47,6 +55,16 @@ class RoomOptionsSheet extends StatelessWidget {
             label: 'Filters',
             color: Color(0xFFFF6AD5),
             gradient: [Color(0xFFE12BC5), Color(0xFF9B1FE8)],
+          ),
+        if (isVideoRoom &&
+            Get.isRegistered<LiveBroadcastController>() &&
+            Get.find<LiveBroadcastController>().isLiveStreamingSession)
+          const _RoomOption(
+            action: _RoomOptionAction.flipCamera,
+            icon: Icons.cameraswitch_rounded,
+            label: 'Flip',
+            color: Color(0xFF7AD7FF),
+            gradient: [Color(0xFF4FC3F7), Color(0xFF2979FF)],
           ),
         const _RoomOption(
           action: _RoomOptionAction.background,
@@ -200,6 +218,10 @@ class RoomOptionsSheet extends StatelessWidget {
         _runAfterClose(
           () => Get.find<LiveBroadcastController>().openLiveFiltersSheet(),
         );
+      case _RoomOptionAction.flipCamera:
+        if (Get.isRegistered<LiveBroadcastController>()) {
+          Get.find<LiveBroadcastController>().flipLiveCamera();
+        }
       case _RoomOptionAction.background:
         _runAfterClose(
           () => Get.find<LiveBroadcastController>().openRoomBackgroundSheet(),

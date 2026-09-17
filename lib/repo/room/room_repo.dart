@@ -139,9 +139,15 @@ class RoomRepo {
   /// Calls `POST /api/live-streaming/end` to close a host live stream.
   Future<Map<String, dynamic>?> endLiveStreaming({
     required String liveStreamingId,
+    String? sessionId,
     String? startedAt,
     String? endedAt,
     int? durationSeconds,
+    String endReason = 'host_end',
+    String roomType = 'VIDEO',
+    int? peakViewerCount,
+    int? uniqueViewerCount,
+    List<Map<String, dynamic>>? joins,
     bool isShowLoader = true,
   }) async {
     final id = liveStreamingId.trim();
@@ -150,13 +156,21 @@ class RoomRepo {
     final started = startedAt?.trim() ?? '';
     final ended = endedAt?.trim() ?? '';
     final duration = durationSeconds ?? 0;
+    final session = sessionId?.trim() ?? '';
     final body = <String, dynamic>{
       'liveStreamingId': id,
       'live_streaming_id': id,
       'liveId': id,
+      'zegoLiveId': id,
+      'endReason': endReason,
+      'roomType': roomType,
+      if (session.isNotEmpty) 'sessionId': session,
       if (started.isNotEmpty) 'startedAt': started,
       if (ended.isNotEmpty) 'endedAt': ended,
-      if (duration > 0) 'durationSeconds': duration,
+      if (duration >= 0) 'durationSeconds': duration,
+      if (peakViewerCount != null) 'peakViewerCount': peakViewerCount,
+      if (uniqueViewerCount != null) 'uniqueViewerCount': uniqueViewerCount,
+      'joins': joins ?? const <Map<String, dynamic>>[],
     };
 
     final response = await _apiService.postRequest(

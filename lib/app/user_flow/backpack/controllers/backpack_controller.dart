@@ -151,7 +151,20 @@ class BackpackController extends GetxController {
                 .putIfAbsent(categoryId, () => <Map<String, dynamic>>[])
                 .add({
                   'id': raw['id']?.toString() ?? '',
-                  'name': raw['name']?.toString() ?? '',
+                  'name': () {
+                    final name = raw['name']?.toString().trim() ?? '';
+                    final title = raw['title']?.toString().trim() ?? '';
+                    final giftName = raw['giftName']?.toString().trim() ?? '';
+                    if (giftName.isNotEmpty) return giftName;
+                    if (title.isNotEmpty) return title;
+                    if (name.isNotEmpty &&
+                        !RegExp(
+                          r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+                        ).hasMatch(name)) {
+                      return name;
+                    }
+                    return 'Gift';
+                  }(),
                   'icon': _iconForCategory(categoryId),
                   'iconUrl': raw['iconUrl']?.toString() ?? '',
                   'thumbnailUrl': raw['thumbnailUrl']?.toString() ?? '',
