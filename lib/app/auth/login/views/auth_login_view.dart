@@ -70,15 +70,15 @@ class _AuthLoginViewState extends State<AuthLoginView> {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         welcomeTextHeader(),
-                        Spacing.v20,
+                        Spacing.v12,
                         emailPasswordTextFields(context),
-                        Spacing.v16,
+                        Spacing.v12,
                         _loginCta(context),
-                        Spacing.v16,
+                        Spacing.v12,
                         orLoginWithDividerWidget(),
-                        Spacing.v16,
+                        Spacing.v12,
                         socialMediaLogin(context),
-                        Spacing.v20,
+                        Spacing.v12,
                         signUpFooterWidget(),
                       ],
                     ),
@@ -134,8 +134,8 @@ class _AuthLoginViewState extends State<AuthLoginView> {
     return Column(
       children: [
         Container(
-          width: 88,
-          height: 88,
+          width: 78,
+          height: 78,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: Colors.white,
@@ -143,29 +143,29 @@ class _AuthLoginViewState extends State<AuthLoginView> {
             boxShadow: [
               BoxShadow(
                 color: AppLightUi.title.withValues(alpha: 0.06),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
               ),
             ],
           ),
           alignment: Alignment.center,
           child: Image.asset(
             kIconApp,
-            width: 56,
-            height: 56,
+            width: 50,
+            height: 50,
             fit: BoxFit.contain,
           ),
         ),
-        Spacing.v16,
+        Spacing.v10,
         BoldText(
           text: LocaleKeys.loginWelcomeTitle.tr,
-          fontSize: TextStyles.k22FontSize,
+          fontSize: TextStyles.k18FontSize,
           color: AppLightUi.title,
         ),
-        Spacing.v6,
+        Spacing.v4,
         AppText(
           text: LocaleKeys.loginSubTitle.tr,
-          fontSize: TextStyles.k14FontSize,
+          fontSize: TextStyles.k12FontSize,
           color: AppLightUi.subtitle,
         ),
       ],
@@ -173,24 +173,17 @@ class _AuthLoginViewState extends State<AuthLoginView> {
   }
 
   Widget emailPasswordTextFields(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(14, 16, 14, 14),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.78),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppLightUi.border),
-        boxShadow: AppLightUi.cardShadow,
-      ),
-      child: Column(
-        children: [
-          Obx(
-            () => AppTextField(
+    return Column(
+      children: [
+        Obx(
+          () => _glossyFieldBorder(
+            child: AppTextField(
               controller: controller.emailController,
               onChanged: controller.onUsernameChanged,
               validator: (value) => controller.validateUsername(context, value),
               hintText: LocaleKeys.loginEmailOrPhoneHint.tr,
-              borderColor: AppLightUi.borderStrong,
-              fillColor: AppLightUi.cardSoft,
+              borderColor: Colors.transparent,
+              fillColor: Colors.white.withValues(alpha: 0.92),
               inputBorderRadius: _fieldRadius,
               hintStyle: TextStyles.kRegularPoppins(
                 fontSize: TextStyles.k14FontSize,
@@ -215,15 +208,17 @@ class _AuthLoginViewState extends State<AuthLoginView> {
               ),
             ),
           ),
-          Spacing.v12,
-          Obx(
-            () => AppTextField(
+        ),
+        Spacing.v10,
+        Obx(
+          () => _glossyFieldBorder(
+            child: AppTextField(
               controller: controller.passwordController,
               validator: (value) =>
                   Validate.passwordValidation(context, value?.trim() ?? ''),
               hintText: LocaleKeys.loginPasswordHint.tr,
-              borderColor: AppLightUi.borderStrong,
-              fillColor: AppLightUi.cardSoft,
+              borderColor: Colors.transparent,
+              fillColor: Colors.white.withValues(alpha: 0.92),
               inputBorderRadius: _fieldRadius,
               hintStyle: TextStyles.kRegularPoppins(
                 fontSize: TextStyles.k14FontSize,
@@ -258,24 +253,49 @@ class _AuthLoginViewState extends State<AuthLoginView> {
               ),
             ),
           ),
-          Spacing.v10,
-          Align(
-            alignment: Alignment.centerRight,
-            child: GestureDetector(
-              onTap: () => Get.toNamed(
-                Routes.AUTH_VERIFY_ACCOUNT,
-                arguments: <String, dynamic>{
-                  AuthVerifyAccountArgs.isComeFromForgotPassword: true,
-                },
-              ),
-              child: SemiBoldText(
-                text: LocaleKeys.forgotPassword.tr,
-                fontSize: TextStyles.k12FontSize,
-                color: kColorPrimary,
-              ),
+        ),
+        Spacing.v8,
+        Align(
+          alignment: Alignment.centerRight,
+          child: GestureDetector(
+            onTap: () => Get.toNamed(
+              Routes.AUTH_VERIFY_ACCOUNT,
+              arguments: <String, dynamic>{
+                AuthVerifyAccountArgs.isComeFromForgotPassword: true,
+              },
+            ),
+            child: SemiBoldText(
+              text: LocaleKeys.forgotPassword.tr,
+              fontSize: TextStyles.k12FontSize,
+              color: kColorPrimary,
             ),
           ),
-        ],
+        ),
+      ],
+    );
+  }
+
+  /// Soft glossy gradient ring around login fields (border only, no shadow).
+  Widget _glossyFieldBorder({required Widget child}) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withValues(alpha: 0.95),
+            AppLightUi.violet.withValues(alpha: 0.55),
+            AppLightUi.pink.withValues(alpha: 0.7),
+            Colors.white.withValues(alpha: 0.85),
+          ],
+          stops: const [0.0, 0.35, 0.72, 1.0],
+        ),
+      ),
+      padding: const EdgeInsets.all(1.5),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16.5),
+        child: child,
       ),
     );
   }
@@ -364,7 +384,7 @@ class _AuthLoginViewState extends State<AuthLoginView> {
             isLoading: controller.isFacebookLoginLoading.value,
           ),
         ),
-        Spacing.v10,
+        Spacing.v8,
         Obx(
           () => _socialOutlinedButton(
             iconPath: kIconGoogle,
@@ -375,7 +395,7 @@ class _AuthLoginViewState extends State<AuthLoginView> {
             isLoading: controller.isGoogleLoginLoading.value,
           ),
         ),
-        Spacing.v10,
+        Spacing.v8,
         _socialOutlinedButton(
           iconPath: kIconLock,
           onTap: () => Get.toNamed(
@@ -408,7 +428,7 @@ class _AuthLoginViewState extends State<AuthLoginView> {
         onTap: isLoading ? null : onTap,
         borderRadius: BorderRadius.circular(16),
         child: Ink(
-          height: 50,
+          height: 46,
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.92),
             borderRadius: BorderRadius.circular(16),
@@ -462,13 +482,8 @@ class _AuthLoginViewState extends State<AuthLoginView> {
   Widget signUpFooterWidget() {
     return GestureDetector(
       onTap: () => Get.toNamed(Routes.AUTH_SIGN_UP),
-      child: Container(
+      child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.55),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: AppLightUi.border),
-        ),
         child: Wrap(
           alignment: WrapAlignment.center,
           crossAxisAlignment: WrapCrossAlignment.center,
