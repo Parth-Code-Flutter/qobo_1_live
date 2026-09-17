@@ -58,6 +58,7 @@ import '../widgets/live_filters_sheet.dart';
 import '../widgets/live_stream_end_summary_dialog.dart';
 import '../widgets/live_viewers_sheet.dart';
 import '../widgets/room_background_sheet.dart';
+import 'package:qobo_one_live/utils/app_widgets/emoji_catalog_bottom_sheet.dart';
 
 class LiveBroadcastController extends GetxController {
   LiveBroadcastController({
@@ -1505,6 +1506,11 @@ class LiveBroadcastController extends GetxController {
   }
 
   void openEmojiSheet({String? receiverId, String? receiverName}) {
+    // Live-stream / PK comment bar: insert emoji into the chat composer.
+    if (isLiveStreamingSession || isInRoomPkActive) {
+      openCommentEmojiPicker();
+      return;
+    }
     final senderId = _currentUserId();
     if (senderId.isEmpty) {
       _showRoomToast(
@@ -1530,6 +1536,50 @@ class LiveBroadcastController extends GetxController {
     Future.delayed(const Duration(milliseconds: 140), () {
       Get.bottomSheet(
         const EmojiPickerBottomSheet(),
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        barrierColor: Colors.black.withValues(alpha: 0.58),
+      );
+    });
+  }
+
+  /// Inserts an emoji character into the live / PK comment field.
+  void openCommentEmojiPicker() {
+    if (emojiCatalog.isEmpty && !isLoadingEmojis.value) {
+      unawaited(loadEmojiCatalog());
+    }
+    if (Get.isDialogOpen == true) Get.back<void>();
+    if (Get.isBottomSheetOpen == true) Get.back<void>();
+
+    Future.delayed(const Duration(milliseconds: 120), () {
+      Get.bottomSheet(
+        Obx(() {
+          final items = emojiCatalog.isNotEmpty
+              ? emojiCatalog.toList()
+              : _fallbackEmojiCatalog();
+          return EmojiCatalogBottomSheet(
+            items: items,
+            isLoading: isLoadingEmojis.value && items.isEmpty,
+            title: 'Comment emoji',
+            subtitle: 'Tap to add to your message',
+            onTap: (emoji) {
+              final code = (emoji['code'] ?? emoji['char'] ?? emoji['emoji'] ?? '')
+                  .trim();
+              if (code.isEmpty) return;
+              final ctrl = chatTextController;
+              final text = ctrl.text;
+              final sel = ctrl.selection;
+              final start = sel.isValid ? sel.start : text.length;
+              final end = sel.isValid ? sel.end : text.length;
+              final next = text.replaceRange(start, end, code);
+              ctrl.value = TextEditingValue(
+                text: next,
+                selection: TextSelection.collapsed(offset: start + code.length),
+              );
+              Get.back<void>();
+            },
+          );
+        }),
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
         barrierColor: Colors.black.withValues(alpha: 0.58),
@@ -3610,6 +3660,11 @@ class LiveBroadcastController extends GetxController {
   void openLiveStreamGiftSheet() {
     if (!isLiveStreamingSession) {
       openGiftsSheet();
+      return;
+    }
+    // During host-vs-host PK, audience supports a side (not plain host gift).
+    if (isInRoomPkActive) {
+      openGiftsSheet(roomGift: true);
       return;
     }
     if (isHost.value) {

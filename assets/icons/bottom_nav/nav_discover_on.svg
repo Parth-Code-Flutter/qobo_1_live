@@ -1,0 +1,20 @@
+<svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(2.5,2.8) rotate(-12 8.66 10.85)">
+    <path opacity="0.7" d="M4.2875 0.7875H13.0375C14.9692 0.7875 16.5375 2.3558 16.5375 4.2875V17.4125C16.5375 19.3442 14.9692 20.9125 13.0375 20.9125H4.2875C2.3558 20.9125 0.7875 19.3442 0.7875 17.4125V4.2875C0.7875 2.3558 2.3558 0.7875 4.2875 0.7875Z" stroke="#FF5388" stroke-width="1.575"/>
+  </g>
+  <g transform="translate(7,3.5)">
+    <path d="M4.375 0.875H13.125C15.0567 0.875 16.625 2.4433 16.625 4.375V18.375C16.625 20.3067 15.0567 21.875 13.125 21.875H4.375C2.4433 21.875 0.875 20.3067 0.875 18.375V4.375C0.875 2.4433 2.4433 0.875 4.375 0.875Z" fill="#241A48"/>
+    <path d="M4.375 0.875H13.125C15.0567 0.875 16.625 2.4433 16.625 4.375V18.375C16.625 20.3067 15.0567 21.875 13.125 21.875H4.375C2.4433 21.875 0.875 20.3067 0.875 18.375V4.375C0.875 2.4433 2.4433 0.875 4.375 0.875Z" stroke="url(#discOnStroke)" stroke-width="1.75"/>
+    <path transform="translate(3.5,7.5)" d="M5.25 2.02865C5.25 0.278651 3.675 -0.596349 2.625 0.453651C1.575 -0.596349 0 0.278651 0 2.02865C0 4.21615 2.625 6.14115 5.25 7.71615C7.875 6.14115 10.5 4.21615 10.5 2.02865C10.5 0.278651 8.925 -0.596349 7.875 0.453651C6.825 -0.596349 5.25 0.278651 5.25 2.02865Z" fill="url(#discOnHeart)"/>
+  </g>
+  <defs>
+    <linearGradient id="discOnStroke" x1="0.875" y1="0.875" x2="16.625" y2="21.875" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF2A7A"/>
+      <stop offset="1" stop-color="#FF758C"/>
+    </linearGradient>
+    <linearGradient id="discOnHeart" x1="-2.625" y1="-5.4" x2="13.125" y2="15.6" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF2A7A"/>
+      <stop offset="1" stop-color="#FF758C"/>
+    </linearGradient>
+  </defs>
+</svg>

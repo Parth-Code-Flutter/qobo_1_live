@@ -19,7 +19,7 @@ const String kGifLoveGift = '$gifPath/love_gif.gif';
 /// PNG Icons
 const String kIconApp = '$iconPath/app_icon.png';
 
-/// SVG Bottom Nav Icons
+/// SVG Bottom Nav Icons (legacy paths — still used elsewhere)
 const String kIconDiscover = '$iconPath/discover_icon.svg';
 const String kIconChat = '$iconPath/chat_icon.svg';
 const String kIconLiveRoom = '$iconPath/live_room_icon.svg';
@@ -30,6 +30,17 @@ const String kIconDiscoverEnable = '$iconPath/discover_enable_icon.svg';
 const String kIconLiveRoomEnable = '$iconPath/live_room_enable_icon.svg';
 const String kIconChatEnable = '$iconPath/chat_enable_icon.svg';
 const String kIconUserEnable = '$iconPath/user_enable_icon.svg';
+
+/// Figma Spark bottom-nav icons (selected / deselected).
+const String kNavIconPath = '$iconPath/bottom_nav';
+const String kNavDiscoverOn = '$kNavIconPath/nav_discover_on.svg';
+const String kNavDiscoverOff = '$kNavIconPath/nav_discover_off.svg';
+const String kNavRoomsOn = '$kNavIconPath/nav_rooms_on.svg';
+const String kNavRoomsOff = '$kNavIconPath/nav_rooms_off.svg';
+const String kNavMessagesOn = '$kNavIconPath/nav_messages_on.svg';
+const String kNavMessagesOff = '$kNavIconPath/nav_messages_off.svg';
+const String kNavProfileOn = '$kNavIconPath/nav_profile_on.svg';
+const String kNavProfileOff = '$kNavIconPath/nav_profile_off.svg';
 
 /// SVG Icons
 const String kIconArrowBack = '$iconPath/arrow_back_icon.svg';

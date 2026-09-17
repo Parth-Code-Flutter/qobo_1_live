@@ -61,14 +61,10 @@ class CommonAppBarWidget extends StatelessWidget implements PreferredSizeWidget 
 
   static const gradient = AppLightUi.familyCtaGradient;
 
-  /// Transparent margin under the rounded bar so tabs/lists aren't flush.
-  static const double bottomGap = 12;
-
   @override
   Size get preferredSize {
     final extraBottom = bottom?.preferredSize.height ?? 0;
-    final gap = useGradientStyle ? bottomGap : 0.0;
-    return Size.fromHeight(toolbarHeight + gap + extraBottom);
+    return Size.fromHeight(toolbarHeight + extraBottom);
   }
 
   @override
@@ -81,33 +77,23 @@ class CommonAppBarWidget extends StatelessWidget implements PreferredSizeWidget 
 
   PreferredSizeWidget _buildGradientAppBar() {
     final hasSubtitle = subtitle != null && subtitle!.trim().isNotEmpty;
-    final extraH = bottom?.preferredSize.height ?? 0;
     return AppBar(
       toolbarHeight: toolbarHeight,
       backgroundColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
+      shadowColor: Colors.transparent,
+      forceMaterialTransparency: true,
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,
       titleSpacing: 0,
       systemOverlayStyle: SystemUiOverlayStyle.light,
       automaticallyImplyLeading: false,
-      // Gradient paints above [bottomGap]; gap itself stays transparent.
-      flexibleSpace: Padding(
-        padding: EdgeInsets.only(bottom: bottomGap + extraH),
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: gradient,
-            borderRadius: const BorderRadius.vertical(
-              bottom: Radius.circular(22),
-            ),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF2A1744).withValues(alpha: 0.12),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
+      flexibleSpace: Container(
+        decoration: BoxDecoration(
+          gradient: gradient,
+          borderRadius: const BorderRadius.vertical(
+            bottom: Radius.circular(22),
           ),
         ),
       ),
@@ -183,16 +169,7 @@ class CommonAppBarWidget extends StatelessWidget implements PreferredSizeWidget 
           const SizedBox(width: 8),
         ],
       ],
-      bottom: PreferredSize(
-        preferredSize: Size.fromHeight(bottomGap + extraH),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: bottomGap),
-            if (bottom != null) bottom!,
-          ],
-        ),
-      ),
+      bottom: bottom,
     );
   }
 

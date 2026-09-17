@@ -12,6 +12,7 @@ import 'package:qobo_one_live/services/pk/pk_live_room_bridge.dart';
 import 'package:qobo_one_live/services/realtime/user_realtime_socket_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
+import 'package:qobo_one_live/utils/ui_utils/gift_media_utils.dart';
 import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 
 /// Which sub-screen of the PK arena is active.
@@ -879,6 +880,69 @@ class PkV1Controller extends GetxController {
     if (res.topContributorsB.isNotEmpty) {
       sideBAudience.assignAll(_filterAudienceMembers(res.topContributorsB));
     }
+
+    final localEvent = PkGiftEvent(
+      pkId: s.pkId,
+      targetSide: side,
+      giftId: gift.id,
+      giftName: gift.name,
+      iconUrl: gift.iconUrl,
+      animationUrl: gift.animationUrl,
+      soundUrl: gift.soundUrl,
+      quantity: quantity,
+      pkPoints: gift.pkPointValue * quantity,
+      senderId: selfUserId,
+      senderName: selfName.isEmpty ? 'You' : selfName,
+      senderAvatar: selfAvatar,
+    );
+    _presentPkGift(localEvent);
+  }
+
+  /// Celebrate gift + push sender into Top Gifters for the supported side.
+  void _presentPkGift(PkGiftEvent event) {
+    lastGift.value = event;
+    _bumpTopGifter(
+      side: event.targetSide,
+      userId: event.senderId,
+      name: event.senderName,
+      avatar: event.senderAvatar,
+    );
+    unawaited(
+      GiftMediaUtils.dismissSheetThenCelebrate(
+        giftName: event.giftName,
+        animationUrl: event.animationUrl,
+        soundUrl: event.soundUrl,
+      ),
+    );
+    // Keep banner visible briefly for the in-room PK stage toast.
+    Future<void>.delayed(const Duration(seconds: 4), () {
+      if (lastGift.value?.giftId == event.giftId &&
+          lastGift.value?.senderId == event.senderId) {
+        lastGift.value = null;
+      }
+    });
+  }
+
+  void _bumpTopGifter({
+    required PkBattleSide side,
+    required String userId,
+    required String name,
+    required String avatar,
+  }) {
+    final id = userId.trim();
+    if (id.isEmpty || side == PkBattleSide.none) return;
+    if (_isPkHostUserId(id, session.value)) return;
+    final member = PkAudienceMember(
+      userId: id,
+      displayName: name.trim().isEmpty ? 'Viewer' : name.trim(),
+      avatarUrl: avatar.trim(),
+    );
+    final list = side == PkBattleSide.b ? sideBAudience : sideAAudience;
+    list.removeWhere((m) => _idsMatch(m.userId, id));
+    list.insert(0, member);
+    while (list.length > 5) {
+      list.removeLast();
+    }
   }
 
   // ========================================================================
@@ -1071,7 +1135,11 @@ class PkV1Controller extends GetxController {
         _handleScoreUpdate(data);
         break;
       case 'PK_GIFT_RECEIVED':
-        lastGift.value = PkGiftEvent.fromJson(data);
+        try {
+          _presentPkGift(PkGiftEvent.fromJson(data));
+        } catch (e) {
+          LoggerUtils.logWarning('PkV1: gift event parse error — $e');
+        }
         break;
       case 'PK_ENDED':
         final id = pkId.isNotEmpty ? pkId : (currentPk ?? '');
@@ -1284,6 +1352,19 @@ class PkV1Controller extends GetxController {
     }
     if (contribB.isNotEmpty) {
       sideBAudience.assignAll(_filterAudienceMembers(contribB));
+    }
+
+    // Some backends nest the gift on score updates instead of PK_GIFT_RECEIVED.
+    final giftRaw = data['lastGift'] ?? data['last_gift'] ?? data['gift'];
+    if (giftRaw is Map) {
+      try {
+        final event = PkGiftEvent.fromJson(
+          Map<String, dynamic>.from(giftRaw),
+        );
+        if (event.giftId.isNotEmpty || event.giftName.isNotEmpty) {
+          _presentPkGift(event);
+        }
+      } catch (_) {}
     }
   }
 

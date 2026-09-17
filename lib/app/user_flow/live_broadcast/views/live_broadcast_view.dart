@@ -1215,11 +1215,22 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
       fillColor: _surface,
       inputBorderRadius: BorderRadius.circular(24),
       borderColor: kColorWhite.withValues(alpha: 0.06),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
       textStyle: TextStyles.kRegularPoppins(colors: kColorWhite, fontSize: 14),
       hintStyle: TextStyles.kRegularPoppins(
         colors: Colors.white54,
         fontSize: 14,
+      ),
+      prefix: IconButton(
+        tooltip: 'Emoji',
+        onPressed: controller.openCommentEmojiPicker,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+        icon: Icon(
+          Icons.emoji_emotions_outlined,
+          color: kColorWhite.withValues(alpha: 0.85),
+          size: 22,
+        ),
       ),
       suffix: _sendButton(),
     );
@@ -1289,13 +1300,13 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
           compact: compact,
           onTap: controller.openPkV1Arena,
         ),
-      if (!(controller.isInRoomPkActive && controller.isHost.value) &&
-          !(controller.isLiveStreamingSession && controller.isHost.value))
+      // Audience can gift during live + during PK (hosts cannot).
+      if (!controller.isHost.value)
         _bottomActionIcon(
           kGiftIcon,
           color: _accent,
           compact: compact,
-          onTap: controller.isLiveStreamingSession
+          onTap: controller.isLiveStreamingSession || controller.isInRoomPkActive
               ? controller.openLiveStreamGiftSheet
               : controller.openGiftsSheet,
         ),

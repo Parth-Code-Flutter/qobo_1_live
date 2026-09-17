@@ -121,6 +121,14 @@ class InRoomPkStageOverlay extends StatelessWidget {
             },
           ),
           const Spacer(),
+          Obx(() {
+            final gift = controller.lastGift.value;
+            if (gift == null) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+              child: _PkIncomingGiftBanner(gift: gift),
+            );
+          }),
         ],
       );
 
@@ -814,6 +822,93 @@ class _EndPkButton extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PkIncomingGiftBanner extends StatelessWidget {
+  const _PkIncomingGiftBanner({required this.gift});
+
+  final PkGiftEvent gift;
+
+  @override
+  Widget build(BuildContext context) {
+    final sideColor = gift.targetSide == PkBattleSide.b
+        ? InRoomPkStageOverlay.blue
+        : InRoomPkStageOverlay.red;
+    final sideLabel =
+        gift.targetSide == PkBattleSide.b ? 'Team Blue' : 'Team Red';
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          color: Colors.black.withValues(alpha: 0.72),
+          border: Border.all(color: sideColor.withValues(alpha: 0.75)),
+          boxShadow: [
+            BoxShadow(
+              color: sideColor.withValues(alpha: 0.35),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppUserAvatar(
+              name: gift.senderName.isEmpty ? 'Viewer' : gift.senderName,
+              imageUrl: gift.senderAvatar,
+              size: 28,
+              showFrame: false,
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    gift.senderName.isEmpty ? 'Viewer' : gift.senderName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12,
+                    ),
+                  ),
+                  Text(
+                    'sent ${gift.giftName.isEmpty ? 'a gift' : gift.giftName}'
+                    '${gift.quantity > 1 ? ' x${gift.quantity}' : ''}'
+                    ' → $sideLabel',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.78),
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (gift.iconUrl.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              Image.network(
+                gift.iconUrl,
+                width: 28,
+                height: 28,
+                errorBuilder: (_, __, ___) => Icon(
+                  Icons.card_giftcard_rounded,
+                  color: sideColor,
+                  size: 22,
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );
