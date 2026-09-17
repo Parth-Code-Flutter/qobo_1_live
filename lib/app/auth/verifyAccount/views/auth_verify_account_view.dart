@@ -125,9 +125,8 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
         backgroundColor: AppLightUi.bg,
         resizeToAvoidBottomInset: true,
         appBar: CommonAppBarWidget(
-          title: '',
+          title: LocaleKeys.secureAccountTitle.tr,
           showBackButton: true,
-          useGradientStyle: false,
           onBackPressed: () {
             if (controller.handleBackAction()) {
               Get.back();
@@ -197,22 +196,11 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
   }
 
   Widget _secureAccountHeader() {
-    return Column(
-      children: [
-        BoldText(
-          text: LocaleKeys.secureAccountTitle.tr,
-          fontSize: TextStyles.k20FontSize,
-          color: AppLightUi.title,
-          align: TextAlign.center,
-        ),
-        Spacing.v8,
-        AppText(
-          text: LocaleKeys.secureAccountSubtitle.tr,
-          fontSize: TextStyles.k12FontSize,
-          color: AppLightUi.subtitle,
-          align: TextAlign.center,
-        ),
-      ],
+    return AppText(
+      text: LocaleKeys.secureAccountSubtitle.tr,
+      fontSize: TextStyles.k12FontSize,
+      color: AppLightUi.subtitle,
+      align: TextAlign.center,
     );
   }
 

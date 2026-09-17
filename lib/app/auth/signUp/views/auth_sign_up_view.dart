@@ -25,10 +25,9 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
     return Scaffold(
       backgroundColor: AppLightUi.bg,
       resizeToAvoidBottomInset: true,
-      appBar: const CommonAppBarWidget(
-        title: '',
+      appBar: CommonAppBarWidget(
+        title: LocaleKeys.signUp.tr,
         showBackButton: true,
-        useGradientStyle: false,
       ),
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
@@ -92,20 +91,11 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
   }
 
   Widget signUpHeader() {
-    return Column(
-      children: [
-        BoldText(
-          text: LocaleKeys.signUp.tr,
-          fontSize: TextStyles.k20FontSize,
-          color: AppLightUi.title,
-        ),
-        Spacing.v4,
-        AppText(
-          text: LocaleKeys.loginSubTitle.tr,
-          fontSize: TextStyles.k12FontSize,
-          color: AppLightUi.subtitle,
-        ),
-      ],
+    return AppText(
+      text: LocaleKeys.loginSubTitle.tr,
+      fontSize: TextStyles.k12FontSize,
+      color: AppLightUi.subtitle,
+      align: TextAlign.center,
     );
   }
 

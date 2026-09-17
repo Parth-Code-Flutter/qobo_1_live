@@ -8,17 +8,16 @@ import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
+import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 import '../controllers/new_password_controller.dart';
 
-/// Figma: light grey back pill, centered “New Password” + subtitle, two matching
-/// bordered fields (lock + visibility), full-width **Confirm**, footer **Sign In**.
+/// Light dating canvas + gradient app bar; glossy password fields + Confirm CTA.
 class NewPasswordView extends GetView<NewPasswordController> {
   const NewPasswordView({super.key});
 
-  static const Color _kBackPillFill = Color(0xFFE8E8E8);
   static const _fieldRadius = BorderRadius.all(Radius.circular(18));
 
   @override
@@ -26,112 +25,80 @@ class NewPasswordView extends GetView<NewPasswordController> {
     return Scaffold(
       backgroundColor: AppLightUi.bg,
       resizeToAvoidBottomInset: true,
-      body: SafeArea(
-        child: GestureDetector(
-          onTap: () => FocusScope.of(context).unfocus(),
-          child: Form(
-            key: controller.formKey,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 20, 0),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: _figmaBackPill(context),
-                  ),
-                ),
-                Expanded(
-                  child: SingleChildScrollView(
-                    keyboardDismissBehavior:
-                        ScrollViewKeyboardDismissBehavior.onDrag,
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Spacing.v8,
-                        BoldText(
-                          text: LocaleKeys.newPasswordTitle.tr,
-                          fontSize: TextStyles.k20FontSize,
-                          color: AppLightUi.title,
-                          align: TextAlign.center,
-                        ),
-                        Spacing.v8,
-                        AppText(
-                          text: LocaleKeys.newPasswordSubtitle.tr,
-                          fontSize: TextStyles.k14FontSize,
-                          color: AppLightUi.subtitle,
-                          align: TextAlign.center,
-                        ),
-                        Spacing.v28,
-                        _passwordFields(context),
-                        const SizedBox(height: 24),
-                      ],
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    20,
-                    0,
-                    20,
-                    16 + MediaQuery.of(context).viewInsets.bottom,
-                  ),
+      appBar: CommonAppBarWidget(
+        title: LocaleKeys.newPasswordTitle.tr,
+        showBackButton: true,
+      ),
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Form(
+          key: controller.formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Obx(
-                        () => appButton(
-                          onPressed: () =>
-                              controller.onConfirmPressed(context),
-                          buttonText: controller.isSubmitLoading.value
-                              ? ''
-                              : LocaleKeys.newPasswordConfirmCta.tr,
-                          borderRadius: 18,
-                          buttonIcon: controller.isSubmitLoading.value
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      kColorWhite,
-                                    ),
-                                  ),
-                                )
-                              : null,
-                        ),
-                      ),
-                      Spacing.v20,
-                      _signInFooter(context),
                       Spacing.v8,
+                      AppText(
+                        text: LocaleKeys.newPasswordSubtitle.tr,
+                        fontSize: TextStyles.k14FontSize,
+                        color: AppLightUi.subtitle,
+                        align: TextAlign.center,
+                      ),
+                      Spacing.v28,
+                      _passwordFields(context),
+                      const SizedBox(height: 24),
                     ],
                   ),
                 ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _figmaBackPill(BuildContext context) {
-    return Material(
-      color: _kBackPillFill,
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        onTap: () => Get.back(),
-        borderRadius: BorderRadius.circular(10),
-        child: const SizedBox(
-          width: 40,
-          height: 40,
-          child: Icon(
-            Icons.arrow_back_ios_new,
-            size: 16,
-            color: kColorText,
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  0,
+                  20,
+                  16 + MediaQuery.of(context).viewInsets.bottom,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Obx(
+                      () => appButton(
+                        onPressed: () =>
+                            controller.onConfirmPressed(context),
+                        buttonText: controller.isSubmitLoading.value
+                            ? ''
+                            : LocaleKeys.newPasswordConfirmCta.tr,
+                        borderRadius: 18,
+                        buttonIcon: controller.isSubmitLoading.value
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    kColorWhite,
+                                  ),
+                                ),
+                              )
+                            : null,
+                      ),
+                    ),
+                    Spacing.v20,
+                    _signInFooter(context),
+                    Spacing.v8,
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),

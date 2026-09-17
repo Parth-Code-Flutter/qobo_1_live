@@ -43,10 +43,9 @@ class _AuthLoginViewState extends State<AuthLoginView> {
     return Scaffold(
       backgroundColor: AppLightUi.bg,
       resizeToAvoidBottomInset: true,
-      appBar: const CommonAppBarWidget(
-        title: '',
+      appBar: CommonAppBarWidget(
+        title: LocaleKeys.loginWelcomeTitle.tr,
         showBackButton: false,
-        useGradientStyle: false,
       ),
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
@@ -157,12 +156,6 @@ class _AuthLoginViewState extends State<AuthLoginView> {
           ),
         ),
         Spacing.v10,
-        BoldText(
-          text: LocaleKeys.loginWelcomeTitle.tr,
-          fontSize: TextStyles.k18FontSize,
-          color: AppLightUi.title,
-        ),
-        Spacing.v4,
         AppText(
           text: LocaleKeys.loginSubTitle.tr,
           fontSize: TextStyles.k12FontSize,
