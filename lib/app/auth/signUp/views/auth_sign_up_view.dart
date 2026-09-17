@@ -9,7 +9,6 @@ import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
-import 'package:qobo_one_live/utils/app_widgets/glossy_auth_field_border.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/validations/text_field_validations.dart';
@@ -55,39 +54,25 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
                     _referralCodeSection(context),
                     Spacing.v20,
                     Obx(
-                      () => Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(18),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppLightUi.pink.withValues(alpha: 0.35),
-                              blurRadius: 18,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: appButton(
-                          onPressed: () =>
-                              controller.onSignUpPressed(context),
-                          buttonText: controller.isSignUpLoading.value
-                              ? ''
-                              : LocaleKeys.signUp.tr,
-                          isGradient: true,
-                          gradientColors: AppLightUi.familyCtaColors,
-                          borderRadius: 18,
-                          buttonIcon: controller.isSignUpLoading.value
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      kColorWhite,
-                                    ),
+                      () => appButton(
+                        onPressed: () =>
+                            controller.onSignUpPressed(context),
+                        buttonText: controller.isSignUpLoading.value
+                            ? ''
+                            : LocaleKeys.signUp.tr,
+                        borderRadius: 18,
+                        buttonIcon: controller.isSignUpLoading.value
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    kColorWhite,
                                   ),
-                                )
-                              : null,
-                        ),
+                                ),
+                              )
+                            : null,
                       ),
                     ),
                     Spacing.v16,
@@ -127,73 +112,69 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
   Widget emailUsernamePasswordTextFields(BuildContext context) {
     return Column(
       children: [
-        GlossyAuthFieldBorder(
-          child: AppTextField(
-            controller: controller.usernameController,
-            validator: (value) =>
-                Validate.nameValidation(context, value?.trim() ?? ''),
-            hintText: LocaleKeys.signUpUsernameHint.tr,
-            borderColor: Colors.transparent,
-            fillColor: Colors.transparent,
-            inputBorderRadius: _fieldRadius,
-            hintStyle: TextStyles.kRegularPoppins(
-              fontSize: TextStyles.k14FontSize,
-              colors: AppLightUi.hint,
-            ),
-            textInputAction: TextInputAction.next,
-            textCapitalization: TextCapitalization.none,
-            prefix: Padding(
-              padding: const EdgeInsets.only(left: 14, right: 12),
-              child: SvgPicture.asset(
-                kIconUser,
-                colorFilter: ColorFilter.mode(
-                  AppLightUi.violet.withValues(alpha: 0.85),
-                  BlendMode.srcIn,
-                ),
+        AppTextField(
+          controller: controller.usernameController,
+          validator: (value) =>
+              Validate.nameValidation(context, value?.trim() ?? ''),
+          hintText: LocaleKeys.signUpUsernameHint.tr,
+          glossyBorder: true,
+          fillColor: Colors.transparent,
+          inputBorderRadius: _fieldRadius,
+          hintStyle: TextStyles.kRegularPoppins(
+            fontSize: TextStyles.k14FontSize,
+            colors: AppLightUi.hint,
+          ),
+          textInputAction: TextInputAction.next,
+          textCapitalization: TextCapitalization.none,
+          prefix: Padding(
+            padding: const EdgeInsets.only(left: 14, right: 12),
+            child: SvgPicture.asset(
+              kIconUser,
+              colorFilter: ColorFilter.mode(
+                AppLightUi.violet.withValues(alpha: 0.85),
+                BlendMode.srcIn,
               ),
             ),
           ),
         ),
         Spacing.v10,
         Obx(
-          () => GlossyAuthFieldBorder(
-            child: AppTextField(
-              controller: controller.passwordController,
-              validator: (value) =>
-                  Validate.passwordValidation(context, value?.trim() ?? ''),
-              hintText: LocaleKeys.loginPasswordHint.tr,
-              borderColor: Colors.transparent,
-              fillColor: Colors.transparent,
-              inputBorderRadius: _fieldRadius,
-              hintStyle: TextStyles.kRegularPoppins(
-                fontSize: TextStyles.k14FontSize,
-                colors: AppLightUi.hint,
-              ),
-              obscureText: controller.isPasswordHidden.value,
-              textInputType: TextInputType.visiblePassword,
-              textInputAction: TextInputAction.done,
-              textCapitalization: TextCapitalization.none,
-              prefix: Padding(
-                padding: const EdgeInsets.only(left: 14, right: 12),
-                child: SvgPicture.asset(
-                  kIconPassword,
-                  colorFilter: ColorFilter.mode(
-                    AppLightUi.violet.withValues(alpha: 0.85),
-                    BlendMode.srcIn,
-                  ),
+          () => AppTextField(
+            controller: controller.passwordController,
+            validator: (value) =>
+                Validate.passwordValidation(context, value?.trim() ?? ''),
+            hintText: LocaleKeys.loginPasswordHint.tr,
+            glossyBorder: true,
+            fillColor: Colors.transparent,
+            inputBorderRadius: _fieldRadius,
+            hintStyle: TextStyles.kRegularPoppins(
+              fontSize: TextStyles.k14FontSize,
+              colors: AppLightUi.hint,
+            ),
+            obscureText: controller.isPasswordHidden.value,
+            textInputType: TextInputType.visiblePassword,
+            textInputAction: TextInputAction.done,
+            textCapitalization: TextCapitalization.none,
+            prefix: Padding(
+              padding: const EdgeInsets.only(left: 14, right: 12),
+              child: SvgPicture.asset(
+                kIconPassword,
+                colorFilter: ColorFilter.mode(
+                  AppLightUi.violet.withValues(alpha: 0.85),
+                  BlendMode.srcIn,
                 ),
               ),
-              suffix: Padding(
-                padding: const EdgeInsets.only(right: 14),
-                child: GestureDetector(
-                  onTap: controller.togglePasswordVisibility,
-                  child: Icon(
-                    controller.isPasswordHidden.value
-                        ? Icons.visibility_off_outlined
-                        : Icons.visibility_outlined,
-                    color: AppLightUi.muted,
-                    size: 16,
-                  ),
+            ),
+            suffix: Padding(
+              padding: const EdgeInsets.only(right: 14),
+              child: GestureDetector(
+                onTap: controller.togglePasswordVisibility,
+                child: Icon(
+                  controller.isPasswordHidden.value
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  color: AppLightUi.muted,
+                  size: 16,
                 ),
               ),
             ),
@@ -217,27 +198,25 @@ class AuthSignUpView extends GetView<AuthSignUpController> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: GlossyAuthFieldBorder(
-                child: AppTextField(
-                  controller: controller.referralCodeController,
-                  hintText: 'Enter code e.g. QOBO8X9A',
-                  borderColor: Colors.transparent,
-                  fillColor: Colors.transparent,
-                  inputBorderRadius: _fieldRadius,
-                  hintStyle: TextStyles.kRegularPoppins(
-                    fontSize: TextStyles.k14FontSize,
-                    colors: AppLightUi.hint,
-                  ),
-                  textInputAction: TextInputAction.done,
-                  textCapitalization: TextCapitalization.characters,
-                  maxLength: 8,
-                  prefix: Padding(
-                    padding: const EdgeInsets.only(left: 14, right: 10),
-                    child: Icon(
-                      Icons.card_giftcard_outlined,
-                      color: AppLightUi.violet.withValues(alpha: 0.85),
-                      size: 18,
-                    ),
+              child: AppTextField(
+                controller: controller.referralCodeController,
+                glossyBorder: true,
+                hintText: 'Enter code e.g. QOBO8X9A',
+                fillColor: Colors.transparent,
+                inputBorderRadius: _fieldRadius,
+                hintStyle: TextStyles.kRegularPoppins(
+                  fontSize: TextStyles.k14FontSize,
+                  colors: AppLightUi.hint,
+                ),
+                textInputAction: TextInputAction.done,
+                textCapitalization: TextCapitalization.characters,
+                maxLength: 8,
+                prefix: Padding(
+                  padding: const EdgeInsets.only(left: 14, right: 10),
+                  child: Icon(
+                    Icons.card_giftcard_outlined,
+                    color: AppLightUi.violet.withValues(alpha: 0.85),
+                    size: 18,
                   ),
                 ),
               ),

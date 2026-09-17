@@ -12,7 +12,6 @@ import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
-import 'package:qobo_one_live/utils/app_widgets/glossy_auth_field_border.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/validations/text_field_validations.dart';
@@ -177,79 +176,75 @@ class _AuthLoginViewState extends State<AuthLoginView> {
     return Column(
       children: [
         Obx(
-          () => GlossyAuthFieldBorder(
-            child: AppTextField(
-              controller: controller.emailController,
-              onChanged: controller.onUsernameChanged,
-              validator: (value) => controller.validateUsername(context, value),
-              hintText: LocaleKeys.loginEmailOrPhoneHint.tr,
-              borderColor: Colors.transparent,
-              fillColor: Colors.transparent,
-              inputBorderRadius: _fieldRadius,
-              hintStyle: TextStyles.kRegularPoppins(
-                fontSize: TextStyles.k14FontSize,
-                colors: AppLightUi.hint,
-              ),
-              textInputType: controller.isPhoneInput.value
-                  ? TextInputType.phone
-                  : TextInputType.emailAddress,
-              inputFormatters: controller.isPhoneInput.value
-                  ? [FilteringTextInputFormatter.digitsOnly]
-                  : null,
-              maxLength: controller.isPhoneInput.value ? 10 : null,
-              textInputAction: TextInputAction.next,
-              textCapitalization: TextCapitalization.none,
-              prefix: Padding(
-                padding: const EdgeInsets.only(left: 14, right: 12),
-                child: Icon(
-                  Icons.phone_iphone_rounded,
-                  color: AppLightUi.violet.withValues(alpha: 0.85),
-                  size: 20,
-                ),
+          () => AppTextField(
+            controller: controller.emailController,
+            onChanged: controller.onUsernameChanged,
+            validator: (value) => controller.validateUsername(context, value),
+            hintText: LocaleKeys.loginEmailOrPhoneHint.tr,
+            glossyBorder: true,
+            fillColor: Colors.transparent,
+            inputBorderRadius: _fieldRadius,
+            hintStyle: TextStyles.kRegularPoppins(
+              fontSize: TextStyles.k14FontSize,
+              colors: AppLightUi.hint,
+            ),
+            textInputType: controller.isPhoneInput.value
+                ? TextInputType.phone
+                : TextInputType.emailAddress,
+            inputFormatters: controller.isPhoneInput.value
+                ? [FilteringTextInputFormatter.digitsOnly]
+                : null,
+            maxLength: controller.isPhoneInput.value ? 10 : null,
+            textInputAction: TextInputAction.next,
+            textCapitalization: TextCapitalization.none,
+            prefix: Padding(
+              padding: const EdgeInsets.only(left: 14, right: 12),
+              child: Icon(
+                Icons.phone_iphone_rounded,
+                color: AppLightUi.violet.withValues(alpha: 0.85),
+                size: 20,
               ),
             ),
           ),
         ),
         Spacing.v10,
         Obx(
-          () => GlossyAuthFieldBorder(
-            child: AppTextField(
-              controller: controller.passwordController,
-              validator: (value) =>
-                  Validate.passwordValidation(context, value?.trim() ?? ''),
-              hintText: LocaleKeys.loginPasswordHint.tr,
-              borderColor: Colors.transparent,
-              fillColor: Colors.transparent,
-              inputBorderRadius: _fieldRadius,
-              hintStyle: TextStyles.kRegularPoppins(
-                fontSize: TextStyles.k14FontSize,
-                colors: AppLightUi.hint,
-              ),
-              obscureText: controller.isPasswordHidden.value,
-              textInputType: TextInputType.visiblePassword,
-              textInputAction: TextInputAction.done,
-              textCapitalization: TextCapitalization.none,
-              prefix: Padding(
-                padding: const EdgeInsets.only(left: 14, right: 12),
-                child: SvgPicture.asset(
-                  kIconPassword,
-                  colorFilter: ColorFilter.mode(
-                    AppLightUi.violet.withValues(alpha: 0.85),
-                    BlendMode.srcIn,
-                  ),
+          () => AppTextField(
+            controller: controller.passwordController,
+            validator: (value) =>
+                Validate.passwordValidation(context, value?.trim() ?? ''),
+            hintText: LocaleKeys.loginPasswordHint.tr,
+            glossyBorder: true,
+            fillColor: Colors.transparent,
+            inputBorderRadius: _fieldRadius,
+            hintStyle: TextStyles.kRegularPoppins(
+              fontSize: TextStyles.k14FontSize,
+              colors: AppLightUi.hint,
+            ),
+            obscureText: controller.isPasswordHidden.value,
+            textInputType: TextInputType.visiblePassword,
+            textInputAction: TextInputAction.done,
+            textCapitalization: TextCapitalization.none,
+            prefix: Padding(
+              padding: const EdgeInsets.only(left: 14, right: 12),
+              child: SvgPicture.asset(
+                kIconPassword,
+                colorFilter: ColorFilter.mode(
+                  AppLightUi.violet.withValues(alpha: 0.85),
+                  BlendMode.srcIn,
                 ),
               ),
-              suffix: Padding(
-                padding: const EdgeInsets.only(right: 14),
-                child: GestureDetector(
-                  onTap: controller.togglePasswordVisibility,
-                  child: Icon(
-                    controller.isPasswordHidden.value
-                        ? Icons.visibility_off_outlined
-                        : Icons.visibility_outlined,
-                    color: AppLightUi.muted,
-                    size: 18,
-                  ),
+            ),
+            suffix: Padding(
+              padding: const EdgeInsets.only(right: 14),
+              child: GestureDetector(
+                onTap: controller.togglePasswordVisibility,
+                child: Icon(
+                  controller.isPasswordHidden.value
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  color: AppLightUi.muted,
+                  size: 18,
                 ),
               ),
             ),
@@ -278,36 +273,22 @@ class _AuthLoginViewState extends State<AuthLoginView> {
 
   Widget _loginCta(BuildContext context) {
     return Obx(
-      () => Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: AppLightUi.pink.withValues(alpha: 0.35),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: appButton(
-          onPressed: () => controller.onLoginPressed(context),
-          buttonText: controller.isLoginLoading.value
-              ? ''
-              : LocaleKeys.loginButtonText.tr,
-          isGradient: true,
-          gradientColors: AppLightUi.familyCtaColors,
-          borderRadius: 18,
-          buttonIcon: controller.isLoginLoading.value
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(kColorWhite),
-                  ),
-                )
-              : null,
-        ),
+      () => appButton(
+        onPressed: () => controller.onLoginPressed(context),
+        buttonText: controller.isLoginLoading.value
+            ? ''
+            : LocaleKeys.loginButtonText.tr,
+        borderRadius: 18,
+        buttonIcon: controller.isLoginLoading.value
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(kColorWhite),
+                ),
+              )
+            : null,
       ),
     );
   }

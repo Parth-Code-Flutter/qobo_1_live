@@ -1,3 +1,4 @@
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/ui_utils/app_ui_utils.dart';
@@ -6,7 +7,7 @@ import 'package:get/get.dart';
 
 /// Creates a customizable button widget with support for gradient and solid colors.
 ///
-/// By default, buttons use a gradient effect with primary color variations.
+/// By default, buttons use the login CTA gradient (violet → pink).
 /// Set `isGradient: false` to use a solid color instead.
 ///
 /// Parameters:
@@ -21,7 +22,7 @@ import 'package:get/get.dart';
 /// - [textStyle]: Custom text style for the button text
 /// - [borderRadius]: Border radius of the button
 /// - [isGradient]: Whether to use gradient effect (defaults to true)
-/// - [gradientColors]: Custom gradient colors (defaults to primary color gradient)
+/// - [gradientColors]: Custom gradient colors (defaults to [AppLightUi.familyCtaColors])
 Widget appButton({
   required VoidCallback onPressed,
   required String buttonText,
@@ -33,7 +34,7 @@ Widget appButton({
   double? buttonWidth,
   TextStyle? textStyle,
   double? borderRadius,
-  bool? isGradient = false, // Default to gradient for whole project
+  bool? isGradient = true,
   List<Color>? gradientColors,
 }) {
   return GestureDetector(
@@ -86,69 +87,42 @@ BoxDecoration _simpleDecoration(buttonColor, borderRadius, buttonBorderColor) {
     borderRadius: BorderRadius.circular(
       borderRadius ?? AppUIUtils.primaryRadius,
     ),
-    border: Border.all(color: buttonBorderColor ?? kColorPrimary, width: 0.5),
+    border: Border.all(
+      color: buttonBorderColor ?? buttonColor ?? kColorPrimary,
+      width: 0.5,
+    ),
   );
 }
 
-/// Creates a gradient decoration for buttons using primary color variations.
-///
-/// By default, creates a horizontal gradient from lighter primary color to darker primary color.
-/// Custom gradient colors can be provided via [gradientColors] parameter.
-///
-/// Parameters:
-/// - [gradientColors]: Custom gradient colors (defaults to primary color gradient)
-/// - [buttonColor]: Base color (used for border if provided)
-/// - [borderRadius]: Border radius (defaults to primary radius)
-/// - [buttonBorderColor]: Border color (defaults to primary color)
+/// Creates a gradient decoration matching the login CTA (violet → pink).
 BoxDecoration _gradientDecoration(
   gradientColors,
   buttonColor,
   borderRadius,
   buttonBorderColor,
 ) {
-  // Premium gradient: Primary color (left) -> slightly lighter (middle) -> more lighter (right)
-  // Creates a premium look with smooth color transition
-  final defaultGradientColors =
-      gradientColors ??
-      [
-        kColorPrimary, // Primary color on the left
-        _getLighterPrimaryColor(0.15), // Slightly lighter in the middle
-        _getLighterPrimaryColor(0.25), // More lighter on the right
-      ];
+  final List<Color> colors =
+      (gradientColors as List<Color>?) ?? AppLightUi.familyCtaColors;
 
   return BoxDecoration(
     gradient: LinearGradient(
-      begin: Alignment.centerLeft, // Start from left
-      end: Alignment.centerRight, // End at right (horizontal gradient)
-      colors: defaultGradientColors,
+      begin: Alignment.centerLeft,
+      end: Alignment.centerRight,
+      colors: colors,
     ),
     borderRadius: BorderRadius.circular(
       borderRadius ?? AppUIUtils.primaryRadius,
     ),
-    border: Border.all(color: buttonBorderColor ?? kColorPrimary, width: 1),
+    border: Border.all(
+      color: buttonBorderColor ?? Colors.transparent,
+      width: buttonBorderColor == null ? 0 : 1,
+    ),
+    boxShadow: [
+      BoxShadow(
+        color: AppLightUi.pink.withValues(alpha: 0.28),
+        blurRadius: 14,
+        offset: const Offset(0, 6),
+      ),
+    ],
   );
-}
-
-/// Generates a lighter shade of the primary color for gradient effects.
-///
-/// Creates a lighter version by blending the primary color with white.
-/// The [lightnessFactor] parameter controls how light the color becomes:
-/// - 0.0 = fully white
-/// - 1.0 = fully primary color
-///
-/// Parameters:
-/// - [lightnessFactor]: Factor controlling lightness (defaults to 0.2 for subtle effect)
-Color _getLighterPrimaryColor([double lightnessFactor = 0.2]) {
-  // Extract primary color
-  final primary = kColorPrimary;
-
-  // Create a lighter version by blending with white
-  // Lower lightnessFactor = lighter color
-  // Higher lightnessFactor = closer to primary color
-  return Color.lerp(
-        Colors.white,
-        primary,
-        1.0 - lightnessFactor, // Invert to make it lighter
-      ) ??
-      kColorPrimary;
 }

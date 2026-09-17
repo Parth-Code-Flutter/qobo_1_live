@@ -33,12 +33,12 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
     );
   }
 
-  /// Original white layout + [CommonAppBarWidget] — OTP step only (unchanged UX).
+  /// OTP step — light dating canvas + [CommonAppBarWidget].
   Widget _buildOtpVerificationScaffold(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
-        backgroundColor: kColorLavenderBg,
+        backgroundColor: AppLightUi.bg,
         resizeToAvoidBottomInset: true,
         appBar: CommonAppBarWidget(
           title: '',
@@ -118,91 +118,77 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
     );
   }
 
-  /// Figma “Secure your account” layout: purple header + white sheet (phone / email only).
+  /// Phone / email contact step — same light canvas as login & signup.
   Widget _buildPhoneEmailVerificationScaffold(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-      ),
+      value: SystemUiOverlayStyle.dark,
       child: Scaffold(
-        backgroundColor: kColorPrimary,
-        resizeToAvoidBottomInset: false,
+        backgroundColor: AppLightUi.bg,
+        resizeToAvoidBottomInset: true,
+        appBar: CommonAppBarWidget(
+          title: '',
+          showBackButton: true,
+          useGradientStyle: false,
+          onBackPressed: () {
+            if (controller.handleBackAction()) {
+              Get.back();
+            }
+          },
+        ),
         body: GestureDetector(
           onTap: () => FocusScope.of(context).unfocus(),
-          child: AnimatedPadding(
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOut,
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.viewInsetsOf(context).bottom,
-            ),
-            child: SafeArea(
-              bottom: false,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _verifyPhoneEmailPurpleHeader(context),
-                  Expanded(
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        color: kColorWhite,
-                        borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(30),
-                        ),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
-                        child: Form(
-                          key: controller.formKey,
-                          autovalidateMode: AutovalidateMode.onUserInteraction,
-                          child: SingleChildScrollView(
-                            keyboardDismissBehavior:
-                                ScrollViewKeyboardDismissBehavior.onDrag,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                phoneNumberInputWidget(context),
-                                // Email OTP entry temporarily disabled — phone only.
-                                // Spacing.v24,
-                                // _orDividerWithLabel(),
-                                // Spacing.v24,
-                                // emailFieldWidget(context),
-                                Spacing.v32,
-                                Obx(
-                                  () => appButton(
-                                    onPressed: () =>
-                                        controller.onContinuePressed(context),
-                                    buttonText:
-                                        controller.isContinueLoading.value
-                                        ? ''
-                                        : LocaleKeys.continueButton.tr,
-                                    isGradient: false,
-                                    buttonColor: kColorPrimary,
-                                    buttonIcon:
-                                        controller.isContinueLoading.value
-                                        ? const SizedBox(
-                                            width: 20,
-                                            height: 20,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              valueColor:
-                                                  AlwaysStoppedAnimation<Color>(
-                                                    kColorWhite,
-                                                  ),
-                                            ),
-                                          )
-                                        : null,
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.fromLTRB(
+                20,
+                0,
+                20,
+                24 + MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Form(
+                  key: controller.formKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Spacing.v16,
+                      _secureAccountHeader(),
+                      Spacing.v28,
+                      phoneNumberInputWidget(context),
+                      // Email OTP entry temporarily disabled — phone only.
+                      // Spacing.v24,
+                      // _orDividerWithLabel(),
+                      // Spacing.v24,
+                      // emailFieldWidget(context),
+                      Spacing.v32,
+                      Obx(
+                        () => appButton(
+                          onPressed: () =>
+                              controller.onContinuePressed(context),
+                          buttonText: controller.isContinueLoading.value
+                              ? ''
+                              : LocaleKeys.continueButton.tr,
+                          buttonIcon: controller.isContinueLoading.value
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      kColorWhite,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
+                                )
+                              : null,
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -211,53 +197,23 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
     );
   }
 
-  Widget _verifyPhoneEmailPurpleHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 20, 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: _verifyPhoneEmailBackPill(context),
-          ),
-          Spacing.v16,
-          BoldText(
-            text: LocaleKeys.secureAccountTitle.tr,
-            fontSize: TextStyles.k22FontSize,
-            color: kColorWhite,
-            align: TextAlign.center,
-          ),
-          Spacing.v12,
-          AppText(
-            text: LocaleKeys.secureAccountSubtitle.tr,
-            fontSize: TextStyles.k14FontSize,
-            color: kColorWhite.withValues(alpha: 0.92),
-            align: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Dark rounded control + white chevron (Figma); only for phone/email step.
-  Widget _verifyPhoneEmailBackPill(BuildContext context) {
-    return Material(
-      color: kColorBottomNav,
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        onTap: () {
-          if (controller.handleBackAction()) {
-            Get.back();
-          }
-        },
-        borderRadius: BorderRadius.circular(10),
-        child: const SizedBox(
-          width: 40,
-          height: 40,
-          child: Icon(Icons.arrow_back_ios_new, size: 16, color: kColorWhite),
+  Widget _secureAccountHeader() {
+    return Column(
+      children: [
+        BoldText(
+          text: LocaleKeys.secureAccountTitle.tr,
+          fontSize: TextStyles.k20FontSize,
+          color: AppLightUi.title,
+          align: TextAlign.center,
         ),
-      ),
+        Spacing.v8,
+        AppText(
+          text: LocaleKeys.secureAccountSubtitle.tr,
+          fontSize: TextStyles.k12FontSize,
+          color: AppLightUi.subtitle,
+          align: TextAlign.center,
+        ),
+      ],
     );
   }
 
@@ -304,30 +260,28 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
         ),
         Spacing.h8,
         Expanded(
-          child: GlossyAuthFieldBorder(
-            child: AppTextField(
-              controller: controller.phoneNumberController,
-              validator: (value) {
-                final p = value?.trim() ?? '';
-                if (p.length == 10) return null;
-                if (p.isEmpty) {
-                  return LocaleKeys.verifyEnterPhoneOrEmail.tr;
-                }
-                return Validate.phone10DigitValidation(context, p);
-              },
-              hintText: LocaleKeys.verifyPhoneHint.tr,
-              borderColor: Colors.transparent,
-              fillColor: Colors.transparent,
-              hintStyle: TextStyles.kRegularPoppins(
-                fontSize: TextStyles.k14FontSize,
-                colors: AppLightUi.hint,
-              ),
-              textInputType: TextInputType.phone,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              maxLength: 10,
-              textInputAction: TextInputAction.next,
-              textCapitalization: TextCapitalization.none,
+          child: AppTextField(
+            controller: controller.phoneNumberController,
+            glossyBorder: true,
+            validator: (value) {
+              final p = value?.trim() ?? '';
+              if (p.length == 10) return null;
+              if (p.isEmpty) {
+                return LocaleKeys.verifyEnterPhoneOrEmail.tr;
+              }
+              return Validate.phone10DigitValidation(context, p);
+            },
+            hintText: LocaleKeys.verifyPhoneHint.tr,
+            fillColor: Colors.transparent,
+            hintStyle: TextStyles.kRegularPoppins(
+              fontSize: TextStyles.k14FontSize,
+              colors: AppLightUi.hint,
             ),
+            textInputType: TextInputType.phone,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            maxLength: 10,
+            textInputAction: TextInputAction.next,
+            textCapitalization: TextCapitalization.none,
           ),
         ),
       ],
@@ -335,37 +289,35 @@ class AuthVerifyAccountView extends GetView<AuthVerifyAccountController> {
   }
 
   Widget emailFieldWidget(BuildContext context) {
-    return GlossyAuthFieldBorder(
-      child: AppTextField(
-        controller: controller.emailController,
-        validator: (value) {
-          final p = controller.phoneNumberController.text.trim();
-          final e = value?.trim() ?? '';
-          if (p.length == 10) return null;
-          final emailOk =
-              e.isNotEmpty && Validate.emailValidation(context, e) == null;
-          if (emailOk) return null;
-          if (p.isEmpty && e.isEmpty) return null;
-          return Validate.emailValidation(context, e);
-        },
-        hintText: LocaleKeys.loginEmailHint.tr,
-        borderColor: Colors.transparent,
-        fillColor: Colors.transparent,
-        hintStyle: TextStyles.kRegularPoppins(
-          fontSize: TextStyles.k14FontSize,
-          colors: AppLightUi.hint,
-        ),
-        textInputType: TextInputType.emailAddress,
-        textInputAction: TextInputAction.done,
-        textCapitalization: TextCapitalization.none,
-        prefix: Padding(
-          padding: const EdgeInsets.only(left: 14, right: 12),
-          child: SvgPicture.asset(
-            kIconMail,
-            colorFilter: ColorFilter.mode(
-              AppLightUi.violet.withValues(alpha: 0.85),
-              BlendMode.srcIn,
-            ),
+    return AppTextField(
+      controller: controller.emailController,
+      glossyBorder: true,
+      validator: (value) {
+        final p = controller.phoneNumberController.text.trim();
+        final e = value?.trim() ?? '';
+        if (p.length == 10) return null;
+        final emailOk =
+            e.isNotEmpty && Validate.emailValidation(context, e) == null;
+        if (emailOk) return null;
+        if (p.isEmpty && e.isEmpty) return null;
+        return Validate.emailValidation(context, e);
+      },
+      hintText: LocaleKeys.loginEmailHint.tr,
+      fillColor: Colors.transparent,
+      hintStyle: TextStyles.kRegularPoppins(
+        fontSize: TextStyles.k14FontSize,
+        colors: AppLightUi.hint,
+      ),
+      textInputType: TextInputType.emailAddress,
+      textInputAction: TextInputAction.done,
+      textCapitalization: TextCapitalization.none,
+      prefix: Padding(
+        padding: const EdgeInsets.only(left: 14, right: 12),
+        child: SvgPicture.asset(
+          kIconMail,
+          colorFilter: ColorFilter.mode(
+            AppLightUi.violet.withValues(alpha: 0.85),
+            BlendMode.srcIn,
           ),
         ),
       ),

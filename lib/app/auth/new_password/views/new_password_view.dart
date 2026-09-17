@@ -8,7 +8,6 @@ import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
-import 'package:qobo_one_live/utils/app_widgets/glossy_auth_field_border.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -90,8 +89,6 @@ class NewPasswordView extends GetView<NewPasswordController> {
                           buttonText: controller.isSubmitLoading.value
                               ? ''
                               : LocaleKeys.newPasswordConfirmCta.tr,
-                          isGradient: true,
-                          gradientColors: AppLightUi.familyCtaColors,
                           borderRadius: 18,
                           buttonIcon: controller.isSubmitLoading.value
                               ? const SizedBox(
@@ -162,35 +159,33 @@ class NewPasswordView extends GetView<NewPasswordController> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Obx(
-          () => GlossyAuthFieldBorder(
-            child: AppTextField(
-              controller: controller.newPasswordController,
-              onChanged: (_) => controller.formKey.currentState?.validate(),
-              validator: (v) => controller.validateNewPassword(context, v),
-              hintText: LocaleKeys.newPasswordFieldHint.tr,
-              borderColor: Colors.transparent,
-              fillColor: Colors.transparent,
-              inputBorderRadius: _fieldRadius,
-              hintStyle: TextStyles.kRegularPoppins(
-                fontSize: TextStyles.k14FontSize,
-                colors: AppLightUi.hint,
-              ),
-              obscureText: controller.isNewPasswordHidden.value,
-              textInputType: TextInputType.visiblePassword,
-              textInputAction: TextInputAction.next,
-              textCapitalization: TextCapitalization.none,
-              prefix: _passwordPrefixIcon(kIconLock),
-              suffix: Padding(
-                padding: const EdgeInsets.only(right: 14),
-                child: GestureDetector(
-                  onTap: controller.toggleNewPasswordVisibility,
-                  child: Icon(
-                    controller.isNewPasswordHidden.value
-                        ? Icons.visibility_off_outlined
-                        : Icons.visibility_outlined,
-                    color: AppLightUi.muted,
-                    size: 20,
-                  ),
+          () => AppTextField(
+            controller: controller.newPasswordController,
+            onChanged: (_) => controller.formKey.currentState?.validate(),
+            validator: (v) => controller.validateNewPassword(context, v),
+            hintText: LocaleKeys.newPasswordFieldHint.tr,
+            glossyBorder: true,
+            fillColor: Colors.transparent,
+            inputBorderRadius: _fieldRadius,
+            hintStyle: TextStyles.kRegularPoppins(
+              fontSize: TextStyles.k14FontSize,
+              colors: AppLightUi.hint,
+            ),
+            obscureText: controller.isNewPasswordHidden.value,
+            textInputType: TextInputType.visiblePassword,
+            textInputAction: TextInputAction.next,
+            textCapitalization: TextCapitalization.none,
+            prefix: _passwordPrefixIcon(kIconLock),
+            suffix: Padding(
+              padding: const EdgeInsets.only(right: 14),
+              child: GestureDetector(
+                onTap: controller.toggleNewPasswordVisibility,
+                child: Icon(
+                  controller.isNewPasswordHidden.value
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  color: AppLightUi.muted,
+                  size: 20,
                 ),
               ),
             ),
@@ -198,36 +193,34 @@ class NewPasswordView extends GetView<NewPasswordController> {
         ),
         Spacing.v10,
         Obx(
-          () => GlossyAuthFieldBorder(
-            child: AppTextField(
-              controller: controller.confirmPasswordController,
-              onChanged: (_) => controller.formKey.currentState?.validate(),
-              validator: (v) =>
-                  controller.validateConfirmPassword(context, v),
-              hintText: LocaleKeys.retypePasswordHint.tr,
-              borderColor: Colors.transparent,
-              fillColor: Colors.transparent,
-              inputBorderRadius: _fieldRadius,
-              hintStyle: TextStyles.kRegularPoppins(
-                fontSize: TextStyles.k14FontSize,
-                colors: AppLightUi.hint,
-              ),
-              obscureText: controller.isConfirmPasswordHidden.value,
-              textInputType: TextInputType.visiblePassword,
-              textInputAction: TextInputAction.done,
-              textCapitalization: TextCapitalization.none,
-              prefix: _passwordPrefixIcon(kIconLock),
-              suffix: Padding(
-                padding: const EdgeInsets.only(right: 14),
-                child: GestureDetector(
-                  onTap: controller.toggleConfirmPasswordVisibility,
-                  child: Icon(
-                    controller.isConfirmPasswordHidden.value
-                        ? Icons.visibility_off_outlined
-                        : Icons.visibility_outlined,
-                    color: AppLightUi.muted,
-                    size: 20,
-                  ),
+          () => AppTextField(
+            controller: controller.confirmPasswordController,
+            onChanged: (_) => controller.formKey.currentState?.validate(),
+            validator: (v) =>
+                controller.validateConfirmPassword(context, v),
+            hintText: LocaleKeys.retypePasswordHint.tr,
+            glossyBorder: true,
+            fillColor: Colors.transparent,
+            inputBorderRadius: _fieldRadius,
+            hintStyle: TextStyles.kRegularPoppins(
+              fontSize: TextStyles.k14FontSize,
+              colors: AppLightUi.hint,
+            ),
+            obscureText: controller.isConfirmPasswordHidden.value,
+            textInputType: TextInputType.visiblePassword,
+            textInputAction: TextInputAction.done,
+            textCapitalization: TextCapitalization.none,
+            prefix: _passwordPrefixIcon(kIconLock),
+            suffix: Padding(
+              padding: const EdgeInsets.only(right: 14),
+              child: GestureDetector(
+                onTap: controller.toggleConfirmPasswordVisibility,
+                child: Icon(
+                  controller.isConfirmPasswordHidden.value
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  color: AppLightUi.muted,
+                  size: 20,
                 ),
               ),
             ),

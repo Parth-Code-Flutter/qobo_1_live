@@ -1,5 +1,6 @@
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/glossy_auth_field_border.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/ui_utils/app_ui_utils.dart';
@@ -49,6 +50,9 @@ class AppTextField extends StatelessWidget {
     this.textInputAction,
     this.textCapitalization,
     this.borderColor,
+    this.glossyBorder = false,
+    this.glossyRadius = 18,
+    this.glossyBorderWidth = 1.6,
   });
 
   final TextEditingController? controller;
@@ -94,150 +98,245 @@ class AppTextField extends StatelessWidget {
   /// Optional border color override.
   final Color? borderColor;
 
+  /// Wraps the input in [GlossyAuthFieldBorder] and shows validator errors
+  /// below the ring (never inside it).
+  final bool glossyBorder;
+  final double glossyRadius;
+  final double glossyBorderWidth;
+
   @override
   Widget build(BuildContext context) {
+    if (forProfile) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (fieldTitle != null) ...[
+            _title(context),
+            Spacing.v8,
+          ],
+          AppText(
+            text: value ?? '',
+            style: TextStyles.kRegularPoppins(),
+          ),
+          Divider(color: Theme.of(context).primaryColor),
+        ],
+      );
+    }
+
+    // Glossy auth fields: keep the gradient ring around the input only;
+    // FormField error text renders as a sibling below the ring.
+    if (glossyBorder) {
+      return _buildGlossyField(context);
+    }
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Show fieldTitle if provided, otherwise show labelText above the field
-        if (fieldTitle != null) ...[
-          _title(context),
-          Spacing.v8,
-        ] else if (labelText != null) ...[
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Flexible(
-                  child: AppText(
-                    text: labelText ?? '',
-                    style: labelStyle ?? AppUIUtils.labelTextFieldTextStyle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                if (isRequired)
-                  AppText(
-                    text: ' *',
-                    style: labelStyle ??
-                        AppUIUtils.labelTextFieldTextStyle
-                            .copyWith(color: kColorRed),
-                  ),
-              ],
-            ),
-          ),
-          Spacing.v6,
-        ],
-        if (forProfile)
-          AppText(
-            text: value ?? '',
-            style: TextStyles.kRegularPoppins(),
-          )
-        else
-          TextFormField(
-            autofocus: autoFocus ?? false,
-            controller: controller,
-            cursorColor: kColorPrimary,
-            style: textStyle ?? AppUIUtils.globalTextStyle,
-            // TextStyles.kPrimaryBoldInter(
-            // fontSize: TextStyles.k24FontSize, colors: kColorD9D9D9),
-            keyboardType: textInputType,
-            textCapitalization: textCapitalization ?? TextCapitalization.sentences,
-            onChanged: onChanged,
-            onFieldSubmitted: onSubmitted,
-            textInputAction: textInputAction ?? TextInputAction.next,
-            maxLength: maxLength,
-            initialValue: value,
-            inputFormatters: inputFormatters,
-            maxLines: maxLines ?? 1,
-            minLines: minLines ?? 1,
-            readOnly: readOnly,
-            onTap: onTap,
-            focusNode: focusNode,
-            obscureText: obscureText,
-            obscuringCharacter: '*',
-            validator: validator,
-            autofillHints: autofillHints,
-            decoration: InputDecoration(
-              fillColor: fillColor ?? kColorWhite,
-              filled: true,
-              isDense: true,
-              // alignLabelWithHint: true,
-              counterText: !showCounter ? '' : null,
-              contentPadding: padding,
-              hintText: hintText,
-              hintStyle: hintStyle ?? AppUIUtils.hintTextFieldTextStyle,
-              errorStyle: TextStyles.kMediumPoppins(
-                colors: kColorRed,
-                fontSize: TextStyles.k10FontSize,
-              ),
-              // Only show label inside if fieldTitle is used (for backward compatibility)
-              // Otherwise label is shown above the field
-              label: fieldTitle != null && labelText != null
-                  ? Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      child: RichText(
-                        text: TextSpan(
-                          children: [
-                            TextSpan(
-                              text: labelText ?? '',
-                              style: labelStyle ?? AppUIUtils.labelTextFieldTextStyle,
-                            ),
-                            TextSpan(
-                              text: (isRequired ? ' *' : ''),
-                              style: labelStyle ??
-                                  AppUIUtils.labelTextFieldTextStyle
-                                      .copyWith(color: kColorRed),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  : null,
-              // labelText: labelText != null
-              //     ? ((labelText ?? '') + (isRequired ? ' *' : ''))
-              //     : null,
-              // floatingLabelStyle:
-              //     AppTextStyles.textFieldLabel(isFloating: true),
-              // labelStyle:
-              enabledBorder: _enabledBorder(context),
-              focusedBorder: _focusedBorder(context),
-              floatingLabelBehavior:
-                  floatingLabelBehavior ?? 
-                  (labelText != null && fieldTitle == null 
-                      ? FloatingLabelBehavior.never 
-                      : FloatingLabelBehavior.always),
-              errorBorder: _enabledErrorBorder(context),
-              focusedErrorBorder: _focusedErrorBorder(context),
-              prefixIcon: prefix,
-              // Must bound height/width: `BoxConstraints()` is unbounded and lets
-              // SVG prefix icons expand to fill the viewport (e.g. lock icon).
-              prefixIconConstraints: const BoxConstraints(
-                minWidth: 0,
-                maxWidth: 120,
-                minHeight: 48,
-                maxHeight: 48,
-              ),
-              suffixIcon: suffix,
-              suffixIconConstraints: const BoxConstraints(
-                minWidth: 0,
-                maxWidth: 120,
-                minHeight: 48,
-                maxHeight: 48,
-              ),
-            ),
-          ),
+        ..._labelWidgets(context),
+        TextFormField(
+          autofocus: autoFocus ?? false,
+          controller: controller,
+          cursorColor: kColorPrimary,
+          style: textStyle ?? AppUIUtils.globalTextStyle,
+          keyboardType: textInputType,
+          textCapitalization:
+              textCapitalization ?? TextCapitalization.sentences,
+          onChanged: onChanged,
+          onFieldSubmitted: onSubmitted,
+          textInputAction: textInputAction ?? TextInputAction.next,
+          maxLength: maxLength,
+          initialValue: controller == null ? value : null,
+          inputFormatters: inputFormatters,
+          maxLines: maxLines ?? 1,
+          minLines: minLines ?? 1,
+          readOnly: readOnly,
+          onTap: onTap,
+          focusNode: focusNode,
+          obscureText: obscureText,
+          obscuringCharacter: '*',
+          validator: validator,
+          autofillHints: autofillHints,
+          decoration: _decoration(context, showInlineError: true),
+        ),
         if (exText != null) ...[
           Spacing.v8,
           _ex(context),
         ],
-        if (forProfile)
-          Divider(
-            color: Theme.of(context).primaryColor,
-          ),
       ],
+    );
+  }
+
+  Widget _buildGlossyField(BuildContext context) {
+    return FormField<String>(
+      validator: validator,
+      initialValue: controller?.text ?? value,
+      builder: (FormFieldState<String> field) {
+        final input = TextField(
+          autofocus: autoFocus ?? false,
+          controller: controller,
+          cursorColor: kColorPrimary,
+          style: textStyle ?? AppUIUtils.globalTextStyle,
+          keyboardType: textInputType,
+          textCapitalization:
+              textCapitalization ?? TextCapitalization.sentences,
+          onChanged: (v) {
+            field.didChange(v);
+            onChanged?.call(v);
+          },
+          onSubmitted: onSubmitted,
+          textInputAction: textInputAction ?? TextInputAction.next,
+          maxLength: maxLength,
+          inputFormatters: inputFormatters,
+          maxLines: maxLines ?? 1,
+          minLines: minLines ?? 1,
+          readOnly: readOnly,
+          onTap: onTap,
+          focusNode: focusNode,
+          obscureText: obscureText,
+          obscuringCharacter: '*',
+          autofillHints: autofillHints,
+          decoration: _decoration(context, showInlineError: false).copyWith(
+            // Ring owns the chrome — hide Material outline entirely.
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            errorBorder: InputBorder.none,
+            focusedErrorBorder: InputBorder.none,
+            disabledBorder: InputBorder.none,
+          ),
+        );
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ..._labelWidgets(context),
+            GlossyAuthFieldBorder(
+              radius: glossyRadius,
+              borderWidth: glossyBorderWidth,
+              child: input,
+            ),
+            if (field.hasError && (field.errorText ?? '').isNotEmpty) ...[
+              Spacing.v6,
+              Padding(
+                padding: const EdgeInsets.only(left: 4, right: 4),
+                child: Text(
+                  field.errorText!,
+                  style: TextStyles.kMediumPoppins(
+                    colors: kColorRed,
+                    fontSize: TextStyles.k10FontSize,
+                  ),
+                ),
+              ),
+            ],
+            if (exText != null) ...[
+              Spacing.v8,
+              _ex(context),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  List<Widget> _labelWidgets(BuildContext context) {
+    if (fieldTitle != null) {
+      return [_title(context), Spacing.v8];
+    }
+    if (labelText != null) {
+      return [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: AppText(
+                  text: labelText ?? '',
+                  style: labelStyle ?? AppUIUtils.labelTextFieldTextStyle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (isRequired)
+                AppText(
+                  text: ' *',
+                  style: labelStyle ??
+                      AppUIUtils.labelTextFieldTextStyle
+                          .copyWith(color: kColorRed),
+                ),
+            ],
+          ),
+        ),
+        Spacing.v6,
+      ];
+    }
+    return const [];
+  }
+
+  InputDecoration _decoration(
+    BuildContext context, {
+    required bool showInlineError,
+  }) {
+    return InputDecoration(
+      fillColor: fillColor ?? kColorWhite,
+      filled: true,
+      isDense: true,
+      counterText: !showCounter ? '' : null,
+      contentPadding: padding,
+      hintText: hintText,
+      hintStyle: hintStyle ?? AppUIUtils.hintTextFieldTextStyle,
+      errorStyle: showInlineError
+          ? TextStyles.kMediumPoppins(
+              colors: kColorRed,
+              fontSize: TextStyles.k10FontSize,
+            )
+          : const TextStyle(height: 0, fontSize: 0),
+      label: fieldTitle != null && labelText != null
+          ? Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: RichText(
+                text: TextSpan(
+                  children: [
+                    TextSpan(
+                      text: labelText ?? '',
+                      style: labelStyle ?? AppUIUtils.labelTextFieldTextStyle,
+                    ),
+                    TextSpan(
+                      text: (isRequired ? ' *' : ''),
+                      style: labelStyle ??
+                          AppUIUtils.labelTextFieldTextStyle
+                              .copyWith(color: kColorRed),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : null,
+      enabledBorder: _enabledBorder(context),
+      focusedBorder: _focusedBorder(context),
+      floatingLabelBehavior: floatingLabelBehavior ??
+          (labelText != null && fieldTitle == null
+              ? FloatingLabelBehavior.never
+              : FloatingLabelBehavior.always),
+      errorBorder: _enabledErrorBorder(context),
+      focusedErrorBorder: _focusedErrorBorder(context),
+      prefixIcon: prefix,
+      prefixIconConstraints: const BoxConstraints(
+        minWidth: 0,
+        maxWidth: 120,
+        minHeight: 48,
+        maxHeight: 48,
+      ),
+      suffixIcon: suffix,
+      suffixIconConstraints: const BoxConstraints(
+        minWidth: 0,
+        maxWidth: 120,
+        minHeight: 48,
+        maxHeight: 48,
+      ),
     );
   }
 
@@ -273,9 +372,10 @@ class AppTextField extends StatelessWidget {
       gapPadding: gapPadding,
       borderRadius: inputBorderRadius ?? AppUIUtils.primaryBorderRadius,
       borderSide: BorderSide(
-        color: error ?? false ? kColorRed : (borderColor ?? kColorTextFieldBorder),
+        color: error ?? false
+            ? kColorRed
+            : (borderColor ?? kColorTextFieldBorder),
         width: borderWidth,
-        // width: error ?? false ? 0.7 : 0.7,
       ),
     );
   }
@@ -285,9 +385,10 @@ class AppTextField extends StatelessWidget {
       gapPadding: gapPadding,
       borderRadius: inputBorderRadius ?? AppUIUtils.primaryBorderRadius,
       borderSide: BorderSide(
-        color: error ?? false ? kColorRed : (borderColor ?? kColorTextFieldBorder),
+        color: error ?? false
+            ? kColorRed
+            : (borderColor ?? kColorTextFieldBorder),
         width: borderWidth,
-        // width: error ?? false ? 0.7 : 0.7,
       ),
     );
   }
@@ -299,7 +400,6 @@ class AppTextField extends StatelessWidget {
       borderSide: BorderSide(
         color: kColorRed,
         width: borderWidth,
-        // width: error ?? false ? 0.7 : 0.7,
       ),
     );
   }
@@ -311,7 +411,6 @@ class AppTextField extends StatelessWidget {
       borderSide: BorderSide(
         color: kColorPrimary,
         width: borderWidth,
-        // width: error ?? false ? 0.7 : 0.7,
       ),
     );
   }
