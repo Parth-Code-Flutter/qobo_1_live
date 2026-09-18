@@ -18,6 +18,16 @@ class LiveHeartReactionLayer extends StatelessWidget {
     Color(0xFFFFCA55),
     Color(0xFF5EDBFF),
     Color(0xFFFF795E),
+    Color(0xFFFF2D55),
+    Color(0xFF00E5A8),
+    Color(0xFFFF8A00),
+    Color(0xFF4D9FFF),
+    Color(0xFFFF4DD2),
+    Color(0xFFB8FF3C),
+    Color(0xFFFF6B6B),
+    Color(0xFF7B61FF),
+    Color(0xFFFFD166),
+    Color(0xFF06D6A0),
   ];
 
   @override
@@ -75,6 +85,7 @@ class _FloatingHeartBubbleState extends State<_FloatingHeartBubble>
   late final double _size;
   late final double _delayFactor;
   late final double _startBottom;
+  late final Color _color;
 
   @override
   void initState() {
@@ -85,8 +96,10 @@ class _FloatingHeartBubbleState extends State<_FloatingHeartBubble>
     _startX = widget.screenSize.width - 48 - _random.nextDouble() * 22;
     _startBottom = 210 + _random.nextDouble() * 36;
     _drift = (_random.nextDouble() - 0.5) * 20;
-    _size = 20 + _random.nextDouble() * 14;
+    _size = 24 + _random.nextDouble() * 14;
     _delayFactor = _random.nextDouble() * 0.35;
+    final palette = LiveHeartReactionLayer.reactionColors;
+    _color = palette[_random.nextInt(palette.length)];
 
     _controller = AnimationController(
       vsync: this,
@@ -140,9 +153,7 @@ class _FloatingHeartBubbleState extends State<_FloatingHeartBubble>
       child: Icon(
         Icons.favorite_rounded,
         size: _size,
-        color:
-            LiveHeartReactionLayer.reactionColors[widget.token %
-                LiveHeartReactionLayer.reactionColors.length],
+        color: _color,
         shadows: const [
           Shadow(color: Color(0x66000000), blurRadius: 6, offset: Offset(0, 2)),
         ],

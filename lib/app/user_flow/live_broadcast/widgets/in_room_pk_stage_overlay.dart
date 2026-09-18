@@ -217,6 +217,7 @@ class _SideAudienceRow extends StatelessWidget {
               alignEnd: false,
               compact: compact,
               label: 'Audience',
+              avatarSize: compact ? 38 : 42,
             ),
           ),
           SizedBox(width: compact ? 12 : 20),
@@ -227,6 +228,7 @@ class _SideAudienceRow extends StatelessWidget {
               alignEnd: true,
               compact: compact,
               label: 'Audience',
+              avatarSize: compact ? 38 : 42,
             ),
           ),
         ],
@@ -281,6 +283,7 @@ class _GifterCluster extends StatelessWidget {
     required this.alignEnd,
     required this.compact,
     this.label = 'Top Gifters',
+    this.avatarSize,
   });
 
   final List<PkAudienceMember> members;
@@ -288,12 +291,12 @@ class _GifterCluster extends StatelessWidget {
   final bool alignEnd;
   final bool compact;
   final String label;
+  final double? avatarSize;
 
   @override
   Widget build(BuildContext context) {
     final visible = members.take(3).toList();
-    // +2px vs prior sizes so audience/top clusters read clearer on stage.
-    final size = compact ? 26.0 : 30.0;
+    final size = avatarSize ?? (compact ? 26.0 : 30.0);
     // Overlap without negative SizedBox widths (those crash layout).
     final overlap = size * 0.32;
 
@@ -312,8 +315,8 @@ class _GifterCluster extends StatelessWidget {
           const AppText(text: '—', fontSize: 10, color: Colors.white38)
         else
           SizedBox(
-            height: size + 10,
-            width: size + (visible.length - 1) * (size - overlap) + 4,
+            height: size + 12,
+            width: size + (visible.length - 1) * (size - overlap) + 6,
             child: Stack(
               clipBehavior: Clip.none,
               children: [
