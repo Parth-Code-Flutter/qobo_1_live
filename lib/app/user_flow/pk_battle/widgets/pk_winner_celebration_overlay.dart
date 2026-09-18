@@ -585,7 +585,9 @@ class _PkWinnerCelebrationViewState extends State<_PkWinnerCelebrationView>
                         child: AppUserAvatar(
                           name: widget.winnerName,
                           imageUrl: widget.winnerAvatar,
+                          frameSeed: widget.winnerName,
                           size: 76,
+                          showFrame: true,
                         ),
                       ),
                     ),

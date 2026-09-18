@@ -249,6 +249,7 @@ class PkSideInfo {
     this.followerCount = 0,
     this.diamonds = 0,
     this.earnings = 0,
+    this.frameUrl = '',
     this.audience = const [],
     this.topContributors = const [],
   });
@@ -267,6 +268,9 @@ class PkSideInfo {
 
   /// Alias / same as diamonds on newer payloads (`earnings` / `totalDiamonds`).
   final int earnings;
+
+  /// Equipped profile frame URL / id when the API sends one.
+  final String frameUrl;
 
   /// Viewers in this host's room — only from `side*.audienceList`.
   final List<PkAudienceMember> audience;
@@ -312,6 +316,16 @@ class PkSideInfo {
       ]),
       diamonds: diamonds,
       earnings: earnings > 0 ? earnings : diamonds,
+      frameUrl: _str(j, const [
+        'frameUrl',
+        'frame_url',
+        'profileFrame',
+        'profile_frame',
+        'avatarFrame',
+        'avatar_frame',
+        'equippedFrame',
+        'equipped_frame',
+      ]),
       audience: PkAudienceMember.listFrom(audienceRaw),
       topContributors: PkAudienceMember.listFrom(topRaw),
     );
@@ -322,6 +336,7 @@ class PkSideInfo {
     int? followerCount,
     int? diamonds,
     int? earnings,
+    String? frameUrl,
     List<PkAudienceMember>? audience,
     List<PkAudienceMember>? topContributors,
   }) =>
@@ -334,6 +349,7 @@ class PkSideInfo {
         followerCount: followerCount ?? this.followerCount,
         diamonds: diamonds ?? this.diamonds,
         earnings: earnings ?? this.earnings,
+        frameUrl: frameUrl ?? this.frameUrl,
         audience: audience ?? this.audience,
         topContributors: topContributors ?? this.topContributors,
       );
@@ -355,6 +371,7 @@ class PkAudienceMember {
     required this.userId,
     required this.displayName,
     required this.avatarUrl,
+    this.frameUrl = '',
     this.points = 0,
     this.rank = 0,
   });
@@ -362,6 +379,7 @@ class PkAudienceMember {
   final String userId;
   final String displayName;
   final String avatarUrl;
+  final String frameUrl;
   final int points;
   final int rank;
 
@@ -376,6 +394,16 @@ class PkAudienceMember {
         'avatar',
         'displayPicture',
         'profileImage',
+      ]),
+      frameUrl: _str(j, const [
+        'frameUrl',
+        'frame_url',
+        'profileFrame',
+        'profile_frame',
+        'avatarFrame',
+        'avatar_frame',
+        'equippedFrame',
+        'equipped_frame',
       ]),
       points: _int(j, const ['points', 'pkPoints', 'pk_points', 'score']),
       rank: _int(j, const ['rank']),

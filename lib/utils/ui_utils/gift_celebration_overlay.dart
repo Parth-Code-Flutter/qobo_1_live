@@ -179,7 +179,8 @@ class GiftCelebrationOverlay {
   }
 
   /// Removes any active celebration (dialog or overlay entry).
-  static void dismiss() {
+  static void dismiss({bool clearQueue = true}) {
+    if (clearQueue) _queue.clear();
     final dialogContext = _dialogContext;
     _dialogContext = null;
     try {

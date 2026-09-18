@@ -120,6 +120,7 @@ class PkHostVideoTile extends StatelessWidget {
                 name: name.isEmpty ? 'Host' : name,
                 imageUrl: avatarUrl,
                 size: 84,
+                showFrame: true,
               ),
             ),
           ),
@@ -575,8 +576,9 @@ class _PkHostLiveVideoFillState extends State<PkHostLiveVideoFill> {
             return AppUserAvatar(
               name: widget.name,
               imageUrl: widget.imageUrl,
+              frameSeed: widget.userId,
               size: (size.shortestSide * 0.42).clamp(24.0, 96.0),
-              showFrame: false,
+              showFrame: true,
             );
           },
         ),
@@ -638,8 +640,9 @@ class _PkHostLiveVideoFillState extends State<PkHostLiveVideoFill> {
                 child: AppUserAvatar(
                   name: widget.name,
                   imageUrl: widget.imageUrl,
+                  frameSeed: widget.userId,
                   size: (w * 0.42).clamp(64.0, 110.0),
-                  showFrame: false,
+                  showFrame: true,
                 ),
               ),
           ],

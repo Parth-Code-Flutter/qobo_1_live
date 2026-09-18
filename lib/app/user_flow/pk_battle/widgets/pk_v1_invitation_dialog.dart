@@ -91,7 +91,11 @@ class _PkV1InvitationDialogState extends State<PkV1InvitationDialog> {
                   child: AppUserAvatar(
                     name: inv.fromUserName,
                     imageUrl: inv.fromUserAvatar,
+                    frameSeed: inv.fromUserId.isNotEmpty
+                        ? inv.fromUserId
+                        : inv.fromUserName,
                     size: 76,
+                    showFrame: true,
                   ),
                 ),
                 _countdownPill(),

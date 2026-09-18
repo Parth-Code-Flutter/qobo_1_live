@@ -45,7 +45,7 @@ class InRoomPkStageOverlay extends StatelessWidget {
             rightGifters: controller.sideBTopContributors.toList(),
             label: 'Top Gifters',
           ),
-          SizedBox(height: compact ? 6 : 8),
+          SizedBox(height: compact ? 4 : 6),
           _TugOfWarScoreBoard(
             scoreA: controller.scoreA.value,
             scoreB: controller.scoreB.value,
@@ -55,94 +55,87 @@ class InRoomPkStageOverlay extends StatelessWidget {
             timerText: finished ? 'END' : controller.formattedTime,
             compact: compact,
           ),
-          SizedBox(height: compact ? 6 : 8),
-          // Host panes: compact band like the reference (~40% screen), not full rest.
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final screenH = MediaQuery.sizeOf(context).height;
-              final paneH = (screenH * (compact ? 0.34 : 0.38))
-                  .clamp(210.0, 320.0);
-              return SizedBox(
-                height: paneH,
-                width: double.infinity,
-                child: Stack(
+          SizedBox(height: compact ? 4 : 6),
+          // Host panes flex so Top Gifters + score + Audience always fit
+          // inside the parent maxHeight (avoids bottom overflow).
+          Expanded(
+            child: Stack(
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(
-                          child: _HostVideoPane(
-                            side: sideA,
-                            accent: red,
-                            teamLabel: 'TEAM RED',
-                            hostLabel: 'HOST A',
-                            alignEnd: false,
-                            isSelf: controller.isSelfSideA,
-                            compact: compact,
-                            diamonds: controller.sideADiamonds.value,
-                            mockCoverAsset: isPreview
-                                ? 'assets/images/temp4.png'
-                                : null,
-                          ),
-                        ),
-                        Container(
-                          width: 1.5,
-                          color: Colors.white.withValues(alpha: 0.12),
-                        ),
-                        Expanded(
-                          child: _HostVideoPane(
-                            side: sideB,
-                            accent: blue,
-                            teamLabel: 'TEAM BLUE',
-                            hostLabel: 'HOST B',
-                            alignEnd: true,
-                            isSelf: !controller.isSelfSideA,
-                            compact: compact,
-                            diamonds: controller.sideBDiamonds.value,
-                            mockCoverAsset: isPreview
-                                ? 'assets/images/temp2.png'
-                                : null,
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (showEndButton &&
-                        !finished &&
-                        controller.isSelfHost)
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: _EndPkButton(
-                          compact: compact,
-                          onTap: controller.confirmEndEmbeddedBattle,
-                        ),
+                    Expanded(
+                      child: _HostVideoPane(
+                        side: sideA,
+                        accent: red,
+                        teamLabel: 'TEAM RED',
+                        hostLabel: 'HOST A',
+                        alignEnd: false,
+                        isSelf: controller.isSelfSideA,
+                        compact: compact,
+                        diamonds: controller.sideADiamonds.value,
+                        coinFlyKey: controller.hostACoinFlyKey,
+                        mockCoverAsset: isPreview
+                            ? 'assets/images/temp4.png'
+                            : null,
                       ),
+                    ),
+                    Container(
+                      width: 1.5,
+                      color: Colors.white.withValues(alpha: 0.12),
+                    ),
+                    Expanded(
+                      child: _HostVideoPane(
+                        side: sideB,
+                        accent: blue,
+                        teamLabel: 'TEAM BLUE',
+                        hostLabel: 'HOST B',
+                        alignEnd: true,
+                        isSelf: !controller.isSelfSideA,
+                        compact: compact,
+                        diamonds: controller.sideBDiamonds.value,
+                        coinFlyKey: controller.hostBCoinFlyKey,
+                        mockCoverAsset: isPreview
+                            ? 'assets/images/temp2.png'
+                            : null,
+                      ),
+                    ),
                   ],
                 ),
-              );
-            },
+                if (showEndButton && !finished && controller.isSelfHost)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: _EndPkButton(
+                      compact: compact,
+                      onTap: controller.confirmEndEmbeddedBattle,
+                    ),
+                  ),
+              ],
+            ),
           ),
-          SizedBox(height: compact ? 8 : 10),
+          SizedBox(height: compact ? 6 : 8),
           _SideAudienceRow(
             compact: compact,
             leftAudience: controller.sideAAudience.toList(),
             rightAudience: controller.sideBAudience.toList(),
           ),
-          const Spacer(),
           Obx(() {
             final gift = controller.lastGift.value;
             if (gift == null) return const SizedBox.shrink();
             return Padding(
-              padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+              padding: const EdgeInsets.fromLTRB(10, 6, 10, 4),
               child: _PkIncomingGiftBanner(gift: gift),
             );
           }),
         ],
       );
 
-      if (maxHeight != null) {
-        body = SizedBox(height: maxHeight, width: double.infinity, child: body);
-      }
+      // Always bound height so Expanded host panes can shrink to fit.
+      final height = maxHeight ??
+          (MediaQuery.sizeOf(context).height * (compact ? 0.52 : 0.58))
+              .clamp(320.0, 560.0);
+      body = SizedBox(height: height, width: double.infinity, child: body);
 
       return body;
     });
@@ -299,7 +292,8 @@ class _GifterCluster extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final visible = members.take(3).toList();
-    final size = compact ? 24.0 : 28.0;
+    // +2px vs prior sizes so audience/top clusters read clearer on stage.
+    final size = compact ? 26.0 : 30.0;
     // Overlap without negative SizedBox widths (those crash layout).
     final overlap = size * 0.32;
 
@@ -318,8 +312,8 @@ class _GifterCluster extends StatelessWidget {
           const AppText(text: '—', fontSize: 10, color: Colors.white38)
         else
           SizedBox(
-            height: size + 4,
-            width: size + (visible.length - 1) * (size - overlap),
+            height: size + 10,
+            width: size + (visible.length - 1) * (size - overlap) + 4,
             child: Stack(
               clipBehavior: Clip.none,
               children: [
@@ -364,21 +358,15 @@ class _RankedAvatar extends StatelessWidget {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        Container(
-          padding: const EdgeInsets.all(1.5),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: accent, width: 1.6),
-            boxShadow: [
-              BoxShadow(color: accent.withValues(alpha: 0.5), blurRadius: 8),
-            ],
-          ),
-          child: AppUserAvatar(
-            name: member.displayName,
-            imageUrl: member.avatarUrl,
-            size: size - 3,
-            showFrame: false,
-          ),
+        AppUserAvatar(
+          name: member.displayName,
+          imageUrl: member.avatarUrl,
+          frameUrl: member.frameUrl.isEmpty ? null : member.frameUrl,
+          frameSeed: member.userId.isNotEmpty
+              ? member.userId
+              : member.displayName,
+          size: size,
+          showFrame: true,
         ),
         Positioned(
           right: -2,
@@ -618,6 +606,7 @@ class _HostVideoPane extends StatelessWidget {
     required this.isSelf,
     required this.compact,
     this.diamonds = 0,
+    this.coinFlyKey,
     this.mockCoverAsset,
   });
 
@@ -629,6 +618,7 @@ class _HostVideoPane extends StatelessWidget {
   final bool isSelf;
   final bool compact;
   final int diamonds;
+  final GlobalKey? coinFlyKey;
   final String? mockCoverAsset;
 
   @override
@@ -715,6 +705,8 @@ class _HostVideoPane extends StatelessWidget {
                   name: name,
                   hostLabel: hostLabel,
                   avatarUrl: side.avatarUrl,
+                  frameUrl: side.frameUrl,
+                  frameSeed: side.hostId,
                   accent: accent,
                   fans: side.followerCount,
                   diamonds: diamonds > 0
@@ -722,6 +714,7 @@ class _HostVideoPane extends StatelessWidget {
                       : (side.diamonds > 0 ? side.diamonds : side.earnings),
                   compact: compact,
                   alignEnd: alignEnd,
+                  coinFlyKey: coinFlyKey,
                 ),
               ],
             ),
@@ -742,28 +735,34 @@ class _HostInfoCard extends StatelessWidget {
     required this.compact,
     required this.alignEnd,
     this.diamonds = 0,
+    this.frameUrl = '',
+    this.frameSeed = '',
+    this.coinFlyKey,
   });
 
   final String name;
   final String hostLabel;
   final String avatarUrl;
+  final String frameUrl;
+  final String frameSeed;
   final Color accent;
   final int fans;
   final int diamonds;
   final bool compact;
   final bool alignEnd;
+  final GlobalKey? coinFlyKey;
 
   @override
   Widget build(BuildContext context) {
     final avatarSize = compact ? 34.0 : 40.0;
     final avatar = Container(
-      padding: const EdgeInsets.all(2),
+      key: coinFlyKey,
+      padding: const EdgeInsets.all(1),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: accent, width: 2),
         boxShadow: [
           BoxShadow(
-            color: accent.withValues(alpha: 0.65),
+            color: accent.withValues(alpha: 0.55),
             blurRadius: 12,
             spreadRadius: 0.5,
           ),
@@ -772,8 +771,10 @@ class _HostInfoCard extends StatelessWidget {
       child: AppUserAvatar(
         name: name,
         imageUrl: avatarUrl,
+        frameUrl: frameUrl.isEmpty ? null : frameUrl,
+        frameSeed: frameSeed.isNotEmpty ? frameSeed : name,
         size: avatarSize,
-        showFrame: false,
+        showFrame: true,
       ),
     );
 
@@ -929,8 +930,11 @@ class _PkIncomingGiftBanner extends StatelessWidget {
             AppUserAvatar(
               name: gift.senderName.isEmpty ? 'Viewer' : gift.senderName,
               imageUrl: gift.senderAvatar,
+              frameSeed: gift.senderId.isNotEmpty
+                  ? gift.senderId
+                  : gift.senderName,
               size: 28,
-              showFrame: false,
+              showFrame: true,
             ),
             const SizedBox(width: 8),
             Flexible(

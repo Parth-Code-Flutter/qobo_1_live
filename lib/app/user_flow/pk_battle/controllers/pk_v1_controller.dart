@@ -12,6 +12,8 @@ import 'package:qobo_one_live/services/pk/pk_live_room_bridge.dart';
 import 'package:qobo_one_live/services/realtime/user_realtime_socket_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
+import 'package:qobo_one_live/utils/ui_utils/coin_fly_overlay.dart';
+import 'package:qobo_one_live/utils/ui_utils/gift_celebration_overlay.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_media_utils.dart';
 import 'package:qobo_one_live/utils/zego_live_id_utils.dart';
 
@@ -93,6 +95,10 @@ class PkV1Controller extends GetxController {
   final sideADiamonds = 0.obs;
   final sideBDiamonds = 0.obs;
 
+  /// Coin-fly targets for host A / B cards on the in-room PK stage.
+  final GlobalKey hostACoinFlyKey = GlobalKey(debugLabel: 'pkHostACoinFly');
+  final GlobalKey hostBCoinFlyKey = GlobalKey(debugLabel: 'pkHostBCoinFly');
+
   // Result
   final result = Rxn<PkResult>();
 
@@ -129,6 +135,7 @@ class PkV1Controller extends GetxController {
 
   @override
   void onClose() {
+    _stopPkGiftMedia();
     _clockTimer?.cancel();
     _resyncTimer?.cancel();
     _exitAfterResultTimer?.cancel();
@@ -191,6 +198,7 @@ class PkV1Controller extends GetxController {
 
   /// Clears in-room PK mode and returns the live room to normal seats.
   void clearEmbeddedBattle() {
+    _stopPkGiftMedia();
     _clockTimer?.cancel();
     _resyncTimer?.cancel();
     _exitAfterResultTimer?.cancel();
@@ -979,6 +987,7 @@ class PkV1Controller extends GetxController {
         soundUrl: event.soundUrl,
       ),
     );
+    unawaited(_playPkHostCoinFlyAfterGift(event));
     // Keep banner visible briefly for the in-room PK stage toast.
     Future<void>.delayed(const Duration(seconds: 4), () {
       if (lastGift.value?.giftId == event.giftId &&
@@ -986,6 +995,32 @@ class PkV1Controller extends GetxController {
         lastGift.value = null;
       }
     });
+  }
+
+  Future<void> _playPkHostCoinFlyAfterGift(PkGiftEvent event) async {
+    final earned = event.pkPoints > 0 ? event.pkPoints : event.quantity;
+    if (earned <= 0 || event.targetSide == PkBattleSide.none) return;
+    await GiftCelebrationOverlay.waitUntilIdle();
+    if (isClosed || stage.value == PkArenaStage.finished) return;
+    _playPkHostCoinFly(side: event.targetSide, earnedAmount: earned);
+  }
+
+  void _playPkHostCoinFly({
+    required PkBattleSide side,
+    required int earnedAmount,
+  }) {
+    if (earnedAmount <= 0 || side == PkBattleSide.none) return;
+    final key = side == PkBattleSide.b ? hostBCoinFlyKey : hostACoinFlyKey;
+    final visualCount =
+        (6 + (earnedAmount / 15).ceil()).clamp(6, 16);
+    unawaited(
+      CoinFlyOverlay.show(
+        targetKey: key,
+        coinCount: visualCount,
+        earnedAmount: earnedAmount,
+        delay: const Duration(milliseconds: 180),
+      ),
+    );
   }
 
   bool _claimGiftPresentation(PkGiftEvent event) {
@@ -1134,6 +1169,9 @@ class PkV1Controller extends GetxController {
     if (_resultHandled && result.value?.pkId == r.pkId) return;
     _resultHandled = true;
 
+    // Stop looping gift SVGA/sound from the last send before the win overlay.
+    _stopPkGiftMedia();
+
     result.value = r;
     scoreA.value = r.scoreA;
     scoreB.value = r.scoreB;
@@ -1154,6 +1192,12 @@ class PkV1Controller extends GetxController {
         }
       },
     );
+  }
+
+  void _stopPkGiftMedia() {
+    lastGift.value = null;
+    GiftCelebrationOverlay.dismiss(clearQueue: true);
+    CoinFlyOverlay.dismiss(clearQueue: true);
   }
 
   // ========================================================================
@@ -1409,8 +1453,26 @@ class PkV1Controller extends GetxController {
           data['hostB_earnings'] ??
           (sideB is Map ? (sideB['diamonds'] ?? sideB['earnings']) : null),
     );
-    if (diamondsA > 0) sideADiamonds.value = diamondsA;
-    if (diamondsB > 0) sideBDiamonds.value = diamondsB;
+    if (diamondsA > 0) {
+      final deltaA = diamondsA - sideADiamonds.value;
+      sideADiamonds.value = diamondsA;
+      if (deltaA > 0 &&
+          (data['lastGift'] == null &&
+              data['last_gift'] == null &&
+              data['gift'] == null)) {
+        _playPkHostCoinFly(side: PkBattleSide.a, earnedAmount: deltaA);
+      }
+    }
+    if (diamondsB > 0) {
+      final deltaB = diamondsB - sideBDiamonds.value;
+      sideBDiamonds.value = diamondsB;
+      if (deltaB > 0 &&
+          (data['lastGift'] == null &&
+              data['last_gift'] == null &&
+              data['gift'] == null)) {
+        _playPkHostCoinFly(side: PkBattleSide.b, earnedAmount: deltaB);
+      }
+    }
 
     final rem = data['remainingSec'] ??
         data['remaining_sec'] ??
