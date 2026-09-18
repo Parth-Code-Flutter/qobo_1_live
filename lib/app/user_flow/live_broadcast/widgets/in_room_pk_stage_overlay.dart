@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/pk_battle/controllers/pk_v1_controller.dart';
 import 'package:qobo_one_live/app/user_flow/pk_battle/models/v1/pk_v1_models.dart';
 import 'package:qobo_one_live/app/user_flow/pk_battle/widgets/pk_v1_battle_widgets.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 
@@ -217,7 +218,7 @@ class _SideAudienceRow extends StatelessWidget {
               alignEnd: false,
               compact: compact,
               label: 'Audience',
-              avatarSize: compact ? 38 : 42,
+              avatarSize: compact ? 46 : 50,
             ),
           ),
           SizedBox(width: compact ? 12 : 20),
@@ -228,7 +229,7 @@ class _SideAudienceRow extends StatelessWidget {
               alignEnd: true,
               compact: compact,
               label: 'Audience',
-              avatarSize: compact ? 38 : 42,
+              avatarSize: compact ? 46 : 50,
             ),
           ),
         ],
@@ -620,6 +621,7 @@ class _HostVideoPane extends StatelessWidget {
   final bool alignEnd;
   final bool isSelf;
   final bool compact;
+  /// PK session earnings for this host (`earnings` from side / score events).
   final int diamonds;
   final GlobalKey? coinFlyKey;
   final String? mockCoverAsset;
@@ -712,9 +714,9 @@ class _HostVideoPane extends StatelessWidget {
                   frameSeed: side.hostId,
                   accent: accent,
                   fans: side.followerCount,
-                  diamonds: diamonds > 0
+                  earnings: diamonds > 0
                       ? diamonds
-                      : (side.diamonds > 0 ? side.diamonds : side.earnings),
+                      : (side.earnings > 0 ? side.earnings : side.diamonds),
                   compact: compact,
                   alignEnd: alignEnd,
                   coinFlyKey: coinFlyKey,
@@ -737,7 +739,7 @@ class _HostInfoCard extends StatelessWidget {
     required this.fans,
     required this.compact,
     required this.alignEnd,
-    this.diamonds = 0,
+    this.earnings = 0,
     this.frameUrl = '',
     this.frameSeed = '',
     this.coinFlyKey,
@@ -750,7 +752,7 @@ class _HostInfoCard extends StatelessWidget {
   final String frameSeed;
   final Color accent;
   final int fans;
-  final int diamonds;
+  final int earnings;
   final bool compact;
   final bool alignEnd;
   final GlobalKey? coinFlyKey;
@@ -805,15 +807,30 @@ class _HostInfoCard extends StatelessWidget {
             fontSize: compact ? 11 : 12,
           ),
         ),
-        Text(
-          diamonds > 0
-              ? '${_compactScore(diamonds)} ♦'
-              : (fans > 0 ? '${_compactScore(fans)} Fans' : 'Live now'),
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.65),
-            fontSize: 9,
+        if (earnings > 0)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const AppCoinIcon(size: 11),
+              const SizedBox(width: 3),
+              Text(
+                _compactScore(earnings),
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.85),
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          )
+        else
+          Text(
+            fans > 0 ? '${_compactScore(fans)} Fans' : 'Live now',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.65),
+              fontSize: 9,
+            ),
           ),
-        ),
       ],
     );
 

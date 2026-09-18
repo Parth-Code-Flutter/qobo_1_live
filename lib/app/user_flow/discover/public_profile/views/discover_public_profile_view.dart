@@ -38,7 +38,7 @@ class DiscoverPublicProfileView
       final loading = controller.isLoading.value;
 
       return Scaffold(
-        backgroundColor: AppLightUi.bg,
+        backgroundColor: const Color(0xFFFAF6FF),
         appBar: CommonAppBarWidget(
           title: user?.name.trim().isNotEmpty == true
               ? user!.name
@@ -94,28 +94,22 @@ class DiscoverPublicProfileView
   }
 
   Widget _ambientBackdrop() {
-    return IgnorePointer(
-      child: Stack(
-        children: [
-          Positioned(
-            top: 20,
-            right: -70,
-            child: _glowBlob(
-              AppLightUi.pink.withValues(alpha: 0.10),
-              size: 180,
-              alpha: 1,
-            ),
+    // Soft full-page wash — no large glow blobs (those read as dirty smudges).
+    return const IgnorePointer(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFFFF2F8),
+              Color(0xFFFAF6FF),
+              Color(0xFFF3EEFF),
+            ],
+            stops: [0.0, 0.42, 1.0],
           ),
-          Positioned(
-            bottom: 80,
-            left: -60,
-            child: _glowBlob(
-              AppLightUi.violet.withValues(alpha: 0.09),
-              size: 200,
-              alpha: 1,
-            ),
-          ),
-        ],
+        ),
+        child: SizedBox.expand(),
       ),
     );
   }
@@ -553,15 +547,15 @@ class DiscoverPublicProfileView
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
           colors: [
-            colors.first.withValues(alpha: 0.18),
-            colors.last.withValues(alpha: 0.10),
-            Colors.white.withValues(alpha: 0.85),
+            colors.first.withValues(alpha: 0.22),
+            colors.last.withValues(alpha: 0.14),
+            const Color(0xFFFFFBFD),
           ],
         ),
-        border: Border.all(color: colors.first.withValues(alpha: 0.32)),
+        border: Border.all(color: colors.first.withValues(alpha: 0.38), width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: colors.first.withValues(alpha: 0.12),
+            color: colors.first.withValues(alpha: 0.14),
             blurRadius: 14,
             offset: const Offset(0, 5),
           ),

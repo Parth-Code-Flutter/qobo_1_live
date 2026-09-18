@@ -682,9 +682,9 @@ class PkV1Controller extends GetxController {
     scoreA.value = s.sideA.score;
     scoreB.value = s.sideB.score;
     sideADiamonds.value =
-        s.sideA.diamonds > 0 ? s.sideA.diamonds : s.sideA.earnings;
+        s.sideA.earnings > 0 ? s.sideA.earnings : s.sideA.diamonds;
     sideBDiamonds.value =
-        s.sideB.diamonds > 0 ? s.sideB.diamonds : s.sideB.earnings;
+        s.sideB.earnings > 0 ? s.sideB.earnings : s.sideB.diamonds;
     machineState.value = s.status.name;
     outgoingInvitation.value = null;
     _applyAudiencesFromSession(s);
@@ -1440,18 +1440,20 @@ class PkV1Controller extends GetxController {
     }
 
     final diamondsA = _toInt(
-      data['hostA_diamonds'] ??
+      data['hostA_earnings'] ??
+          data['hostAEarnings'] ??
+          data['hostA_diamonds'] ??
           data['hostADiamonds'] ??
           data['host_a_diamonds'] ??
-          data['hostA_earnings'] ??
-          (sideA is Map ? (sideA['diamonds'] ?? sideA['earnings']) : null),
+          (sideA is Map ? (sideA['earnings'] ?? sideA['diamonds']) : null),
     );
     final diamondsB = _toInt(
-      data['hostB_diamonds'] ??
+      data['hostB_earnings'] ??
+          data['hostBEarnings'] ??
+          data['hostB_diamonds'] ??
           data['hostBDiamonds'] ??
           data['host_b_diamonds'] ??
-          data['hostB_earnings'] ??
-          (sideB is Map ? (sideB['diamonds'] ?? sideB['earnings']) : null),
+          (sideB is Map ? (sideB['earnings'] ?? sideB['diamonds']) : null),
     );
     if (diamondsA > 0) {
       final deltaA = diamondsA - sideADiamonds.value;
