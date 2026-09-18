@@ -55,33 +55,22 @@ class _AuthLoginViewState extends State<AuthLoginView> {
             Form(
               key: controller.formKey,
               autovalidateMode: AutovalidateMode.onUserInteraction,
-              child: LayoutBuilder(
-                builder: (_, constraints) => SingleChildScrollView(
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        welcomeTextHeader(),
-                        Spacing.v12,
-                        emailPasswordTextFields(context),
-                        Spacing.v12,
-                        _loginCta(context),
-                        Spacing.v12,
-                        orLoginWithDividerWidget(),
-                        Spacing.v12,
-                        socialMediaLogin(context),
-                        Spacing.v12,
-                        signUpFooterWidget(),
-                      ],
-                    ),
-                  ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    welcomeTextHeader(),
+                    Spacing.v12,
+                    emailPasswordTextFields(context),
+                    Spacing.v12,
+                    _loginCta(context),
+                    Spacing.v12,
+                    orLoginWithDividerWidget(),
+                    Spacing.v12,
+                    socialMediaLogin(context),
+                  ],
                 ),
               ),
             ),
@@ -133,8 +122,8 @@ class _AuthLoginViewState extends State<AuthLoginView> {
     return Column(
       children: [
         Container(
-          width: 78,
-          height: 78,
+          width: 96,
+          height: 96,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: Colors.white,
@@ -150,16 +139,10 @@ class _AuthLoginViewState extends State<AuthLoginView> {
           alignment: Alignment.center,
           child: Image.asset(
             kIconApp,
-            width: 50,
-            height: 50,
+            width: 64,
+            height: 64,
             fit: BoxFit.contain,
           ),
-        ),
-        Spacing.v10,
-        AppText(
-          text: LocaleKeys.loginSubTitle.tr,
-          fontSize: TextStyles.k12FontSize,
-          color: AppLightUi.subtitle,
         ),
       ],
     );
@@ -429,29 +412,4 @@ class _AuthLoginViewState extends State<AuthLoginView> {
     );
   }
 
-  Widget signUpFooterWidget() {
-    return GestureDetector(
-      onTap: () => Get.toNamed(Routes.AUTH_SIGN_UP),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        child: Wrap(
-          alignment: WrapAlignment.center,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          spacing: 4,
-          children: [
-            AppText(
-              text: LocaleKeys.dontHaveAccount.tr,
-              fontSize: TextStyles.k12FontSize,
-              color: AppLightUi.subtitle,
-            ),
-            SemiBoldText(
-              text: LocaleKeys.signUp.tr,
-              fontSize: TextStyles.k12FontSize,
-              color: kColorPrimary,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

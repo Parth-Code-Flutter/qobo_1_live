@@ -8,6 +8,7 @@ import 'package:qobo_one_live/app/user_flow/pk_battle/controllers/pk_battle_cont
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/repo/pk/pk_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/services/pk/pk_v1_coordinator.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 
@@ -120,6 +121,19 @@ class PkBattlePushHandler {
     }
 
     if (Get.isRegistered<PKBattleController>()) {
+      // Prefer in-room V1 PK while a live session is open.
+      if (_isInActiveLiveRoom() &&
+          (type == PushNotificationTypes.pkStarted ||
+              type == PushNotificationTypes.pkAccepted ||
+              type == PushNotificationTypes.pkRequest)) {
+        if (type == PushNotificationTypes.pkStarted ||
+            type == PushNotificationTypes.pkAccepted) {
+          await _ensureEmbeddedPkV1(data);
+        }
+        _dismissLegacyPkArenaIfOpen();
+        return;
+      }
+
       final pk = Get.find<PKBattleController>();
       switch (type) {
         case PushNotificationTypes.pkRequest:
@@ -164,6 +178,15 @@ class PkBattlePushHandler {
   }
 
   Future<void> _openIncomingChallenge(Map<String, dynamic> data) async {
+    // Live streaming / in-room PK must never leave the live screen.
+    // V1 invitations are shown via [PkV1Coordinator] dialog instead.
+    if (_isInActiveLiveRoom()) {
+      LoggerUtils.logInfo(
+        'PkBattlePush: skip legacy PK arena for incoming challenge (stay in live)',
+      );
+      return;
+    }
+
     final myRoomId = _resolveMyRoomId(data);
     final args = <String, dynamic>{
       'room_id': myRoomId,
@@ -208,6 +231,21 @@ class PkBattlePushHandler {
     Map<String, dynamic> data, {
     required String type,
   }) async {
+    // Host-vs-host PK while live must stay embedded in the live room.
+    // Legacy `pk_started` / `pk_accepted` used to push PKBattleView ("End Battle"
+    // screen) on top of the stream — that breaks camera / chat / gifts.
+    if (_isInActiveLiveRoom()) {
+      LoggerUtils.logInfo(
+        'PkBattlePush: keep host PK embedded in live (type=$type)',
+      );
+      if (type == PushNotificationTypes.pkStarted ||
+          type == PushNotificationTypes.pkAccepted) {
+        await _ensureEmbeddedPkV1(data);
+      }
+      _dismissLegacyPkArenaIfOpen();
+      return;
+    }
+
     final myRoomId = _resolveMyRoomId(data);
     final args = <String, dynamic>{
       'room_id': myRoomId,
@@ -240,6 +278,32 @@ class PkBattlePushHandler {
     Map<String, dynamic> data, {
     required String action,
   }) async {
+    // Prefer V1 accept/reject while already in a live room (no arena navigation).
+    if (_isInActiveLiveRoom()) {
+      final invitationId = _text(data['invitationId']) ??
+          _text(data['invitation_id']) ??
+          _text(data['request_id']) ??
+          _text(data['requestId']);
+      if (invitationId != null && invitationId.isNotEmpty) {
+        final pk = PkV1Coordinator.ensureController();
+        final live = Get.find<LiveBroadcastController>();
+        final roomApiId = live.audioRoomApiId.trim().isNotEmpty
+            ? live.audioRoomApiId.trim()
+            : live.roomId.value.trim();
+        pk.bindLiveRoomContext(
+          roomId: roomApiId,
+          name: live.hostName.value,
+          avatar: live.hostAvatarUrl.value,
+        );
+        if (action == 'accept') {
+          await pk.acceptInvitationById(invitationId);
+        } else {
+          await pk.rejectInvitationById(invitationId);
+        }
+        return;
+      }
+    }
+
     final myRoomId = _resolveMyRoomId(data);
     final requestId =
         _text(data['request_id']) ?? _text(data['sender_room_id']) ?? '';
@@ -292,6 +356,51 @@ class PkBattlePushHandler {
 
     // For recipient of pk_request, room_id is their own room.
     return _text(data['room_id']) ?? _text(data['target_room_id']) ?? '';
+  }
+
+  /// True when the user is already inside a live / audio / video room screen.
+  bool _isInActiveLiveRoom() {
+    if (!Get.isRegistered<LiveBroadcastController>()) return false;
+    final live = Get.find<LiveBroadcastController>();
+    return live.audioRoomApiId.trim().isNotEmpty ||
+        live.roomId.value.trim().isNotEmpty ||
+        live.liveStreamingApiId.trim().isNotEmpty;
+  }
+
+  /// Hand host PK lifecycle to the in-room V1 controller (no route push).
+  Future<void> _ensureEmbeddedPkV1(Map<String, dynamic> data) async {
+    if (!Get.isRegistered<LiveBroadcastController>()) return;
+    final live = Get.find<LiveBroadcastController>();
+    final roomApiId = live.audioRoomApiId.trim().isNotEmpty
+        ? live.audioRoomApiId.trim()
+        : live.roomId.value.trim();
+    final pk = PkV1Coordinator.ensureController();
+    pk.bindLiveRoomContext(
+      roomId: roomApiId,
+      name: live.hostName.value,
+      avatar: live.hostAvatarUrl.value,
+    );
+
+    final pkId = _text(data['pkId']) ??
+        _text(data['pk_id']) ??
+        _text(data['battle_id']) ??
+        _text(data['battleId']) ??
+        pk.session.value?.pkId;
+    if (pkId == null || pkId.isEmpty) {
+      // Still mark embedded so live UI can show PK chrome if session arrives.
+      pk.embeddedInLiveRoom.value = true;
+      return;
+    }
+    await pk.refreshSession(pkId);
+  }
+
+  void _dismissLegacyPkArenaIfOpen() {
+    try {
+      if (Get.currentRoute.contains('pk-battle') &&
+          (Get.key.currentState?.canPop() ?? false)) {
+        Get.back();
+      }
+    } catch (_) {}
   }
 
   String? _text(dynamic value) {

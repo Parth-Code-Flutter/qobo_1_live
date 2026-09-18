@@ -13,6 +13,7 @@ import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -51,7 +52,7 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: _pageColor,
       resizeToAvoidBottomInset: true,
       appBar: const CommonAppBarWidget(
         title: 'Edit profile',
@@ -61,43 +62,35 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
       floatingActionButton: _floatingSaveButton(context),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       body: Container(
-        decoration: const BoxDecoration(
-          color: kColorLavenderBg,
-        ),
+        color: _pageColor,
         child: GestureDetector(
           onTap: () => FocusScope.of(context).unfocus(),
-          child: ClipRRect(
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(24),
-            ),
-            child: ColoredBox(
-              color: _pageColor,
-              child: Form(
-                key: controller.formKey,
-                autovalidateMode: AutovalidateMode.onUserInteraction,
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    return SingleChildScrollView(
-                      keyboardDismissBehavior:
-                          ScrollViewKeyboardDismissBehavior.onDrag,
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: EdgeInsets.fromLTRB(
-                        0,
-                        0,
-                        0,
-                        88 + MediaQuery.of(context).viewInsets.bottom,
-                      ),
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minHeight: constraints.maxHeight - 40,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Spacing.v16,
-                            _profileCoverHeader(context),
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(
+          child: Form(
+            key: controller.formKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.fromLTRB(
+                    0,
+                    0,
+                    0,
+                    88 + MediaQuery.of(context).viewInsets.bottom,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight - 40,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Spacing.v16,
+                        _profileCoverHeader(context),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
                                 18,
                                 20,
                                 18,
@@ -136,8 +129,6 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
               ),
             ),
           ),
-        ),
-      ),
     );
   }
 
@@ -417,8 +408,10 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
   /// Facebook-style cover banner with overlapping profile photo.
   Widget _profileCoverHeader(BuildContext context) {
     const bannerHeight = 150.0;
-    const avatarSize = 108.0;
-    const avatarOverhang = avatarSize / 2;
+    // Matches Profile tab: FramedUserAvatar outer = size * 1.34.
+    const avatarCore = 90.0;
+    const avatarFrameOuter = avatarCore * 1.34;
+    const avatarOverhang = avatarFrameOuter / 2;
 
     return Obx(() {
       final File? localPoster = controller.selectedPosterMedia.value;
@@ -472,8 +465,8 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
                           ),
                         ),
                         Positioned(
-                          right: 14,
-                          bottom: 14,
+                          top: 12,
+                          right: 12,
                           child: _coverEditButton(),
                         ),
                         if (isUploading)
@@ -497,7 +490,11 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
                 left: 0,
                 right: 0,
                 child: Center(
-                  child: _profileAvatarPicker(context, size: avatarSize),
+                  child: _profileAvatarPicker(
+                    context,
+                    avatarCore: avatarCore,
+                    frameOuter: avatarFrameOuter,
+                  ),
                 ),
               ),
             ],
@@ -542,29 +539,44 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
 
   Widget _coverEditButton() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
       decoration: BoxDecoration(
-        color: kColorBlack.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.35)),
+        borderRadius: BorderRadius.circular(16),
+        color: Colors.white.withValues(alpha: 0.94),
+        border: Border.all(
+          color: _violet.withValues(alpha: 0.45),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.18),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: const Row(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.wallpaper_rounded, color: kColorWhite, size: 14),
-          SizedBox(width: 6),
-          AppText(
+          Icon(Icons.wallpaper_rounded, color: _violet, size: 13),
+          const SizedBox(width: 5),
+          SemiBoldText(
             text: 'Edit cover',
             fontSize: TextStyles.k10FontSize,
-            color: kColorWhite,
+            color: _violet,
           ),
         ],
       ),
     );
   }
 
-  Widget _profileAvatarPicker(BuildContext context, {required double size}) {
+  Widget _profileAvatarPicker(
+    BuildContext context, {
+    required double avatarCore,
+    required double frameOuter,
+  }) {
     final userSession = _resolveUserSession();
+    final innerPhoto = avatarCore * 0.75;
 
     return Obx(() {
       final File? selectedMedia = controller.selectedProfileMedia.value;
@@ -575,30 +587,36 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
           return GestureDetector(
             onTap: () => controller.onProfileMediaTap(context),
             child: SizedBox(
-              width: size,
-              height: size,
+              width: frameOuter,
+              height: frameOuter,
               child: Stack(
                 clipBehavior: Clip.none,
+                alignment: Alignment.center,
                 children: [
-                  Container(
-                    width: size,
-                    height: size,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: kColorWhite,
-                      border: Border.all(color: kColorWhite, width: 4),
-                      boxShadow: [
-                        BoxShadow(
-                          color: kColorBlack.withValues(alpha: 0.18),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+                  FramedUserAvatar(
+                    key: ValueKey(
+                      'edit_profile_frame_${session.profileFrameUrl}',
                     ),
-                    child: ClipOval(
-                      child: _avatarInner(selectedMedia, session),
-                    ),
+                    name: session.displayName,
+                    imageUrl: selectedMedia == null
+                        ? session.displayPictureUrl
+                        : null,
+                    size: avatarCore,
+                    frameUrl: session.profileFrameUrl,
+                    frameSeed: session.userId.isNotEmpty
+                        ? session.userId
+                        : session.displayName,
+                    fontSize: TextStyles.k16FontSize,
                   ),
+                  if (selectedMedia != null)
+                    ClipOval(
+                      child: Image.file(
+                        selectedMedia,
+                        width: innerPhoto,
+                        height: innerPhoto,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
                   Positioned(
                     right: 2,
                     bottom: 2,
@@ -622,35 +640,6 @@ class _UserBasicProfileViewState extends State<UserBasicProfileView> {
         },
       );
     });
-  }
-
-  /// Matches Live Room: local pick wins; else network avatar from session; else initials.
-  Widget _avatarInner(File? selectedMedia, UserSessionController session) {
-    if (selectedMedia != null) {
-      return Image.file(selectedMedia, fit: BoxFit.cover);
-    }
-    final avatarUrl = session.displayPictureUrl;
-    if (avatarUrl != null && avatarUrl.isNotEmpty) {
-      return Image.network(
-        avatarUrl,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _initialsAvatar(session.initials),
-      );
-    }
-    return _initialsAvatar(session.initials);
-  }
-
-  Widget _initialsAvatar(String initials) {
-    return ColoredBox(
-      color: const Color(0xFF2A2A2A),
-      child: Center(
-        child: SemiBoldText(
-          text: initials,
-          fontSize: TextStyles.k14FontSize,
-          color: kColorWhite,
-        ),
-      ),
-    );
   }
 
   UserSessionController _resolveUserSession() {

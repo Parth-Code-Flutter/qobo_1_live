@@ -1215,23 +1215,24 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
       fillColor: _surface,
       inputBorderRadius: BorderRadius.circular(24),
       borderColor: kColorWhite.withValues(alpha: 0.06),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       textStyle: TextStyles.kRegularPoppins(colors: kColorWhite, fontSize: 14),
       hintStyle: TextStyles.kRegularPoppins(
         colors: Colors.white54,
         fontSize: 14,
       ),
-      prefix: IconButton(
-        tooltip: 'Emoji',
-        onPressed: controller.openCommentEmojiPicker,
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-        icon: Icon(
-          Icons.emoji_emotions_outlined,
-          color: kColorWhite.withValues(alpha: 0.85),
-          size: 22,
-        ),
-      ),
+      // Live-stream comment emoji — temporarily disabled.
+      // prefix: IconButton(
+      //   tooltip: 'Emoji',
+      //   onPressed: controller.openCommentEmojiPicker,
+      //   padding: EdgeInsets.zero,
+      //   constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+      //   icon: Icon(
+      //     Icons.emoji_emotions_outlined,
+      //     color: kColorWhite.withValues(alpha: 0.85),
+      //     size: 22,
+      //   ),
+      // ),
       suffix: _sendButton(),
     );
   }
@@ -1242,11 +1243,12 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
   }) {
     final isAudience = !controller.isHost.value;
     return [
-      _bottomActionIcon(
-        Icons.emoji_emotions_rounded,
-        compact: compact,
-        onTap: controller.openEmojiSheet,
-      ),
+      // Live-stream bottom emoji — temporarily disabled.
+      // _bottomActionIcon(
+      //   Icons.emoji_emotions_rounded,
+      //   compact: compact,
+      //   onTap: controller.openEmojiSheet,
+      // ),
       Obx(
         () => _bottomActionIcon(
           controller.isMicMuted.value

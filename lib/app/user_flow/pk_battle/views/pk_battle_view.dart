@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/app/user_flow/live_broadcast/controllers/live_broadcast_controller.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
@@ -19,6 +20,23 @@ class PKBattleView extends GetView<PKBattleController> {
     if (controller.isFollowerMode.value) {
       return const FollowerPkBattleView();
     }
+
+    // Host-vs-host PK must stay inside the live room — never this arena.
+    if (_shouldBounceBackToLiveRoom()) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (Get.currentRoute.contains('pk-battle') &&
+            (Get.key.currentState?.canPop() ?? false)) {
+          Get.back();
+        }
+      });
+      return const Scaffold(
+        backgroundColor: Color(0xFF0F0F1A),
+        body: Center(
+          child: CircularProgressIndicator(color: kColorPrimary),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F1A),
       appBar: const CommonAppBarWidget(
@@ -47,6 +65,14 @@ class PKBattleView extends GetView<PKBattleController> {
         }
       }),
     );
+  }
+
+  bool _shouldBounceBackToLiveRoom() {
+    if (!Get.isRegistered<LiveBroadcastController>()) return false;
+    final live = Get.find<LiveBroadcastController>();
+    return live.audioRoomApiId.trim().isNotEmpty ||
+        live.roomId.value.trim().isNotEmpty ||
+        live.liveStreamingApiId.trim().isNotEmpty;
   }
 
   // LOBBY STATE: Search & Opponents grid
