@@ -2742,7 +2742,7 @@ class LiveBroadcastController extends GetxController {
   }
 
   /// WhatsApp-status-style heart burst (live streaming only).
-  void triggerHeartReaction({int count = 10, int staggerMs = 110}) {
+  void triggerHeartReaction({int count = 16, int staggerMs = 90}) {
     if (!isLiveStreamingSession) return;
     _emitHeartReactionBurst(count: count, staggerMs: staggerMs);
   }
@@ -2756,21 +2756,21 @@ class LiveBroadcastController extends GetxController {
       return;
     }
     _lastHeartTapAt = now;
-    triggerHeartReaction(count: 5, staggerMs: 90);
+    triggerHeartReaction(count: 10, staggerMs: 70);
   }
 
   void _startContinuousHeartReactions() {
     if (!isLiveStreamingSession || _heartReactionTimer != null) return;
     Timer(const Duration(milliseconds: 900), () {
       if (!isClosed && isLiveStreamingSession) {
-        _emitHeartReactionBurst(count: 3, staggerMs: 140);
+        _emitHeartReactionBurst(count: 6, staggerMs: 110);
       }
     });
     _heartReactionTimer = Timer.periodic(const Duration(milliseconds: 4200), (
       _,
     ) {
       if (!isClosed && isLiveStreamingSession) {
-        _emitHeartReactionBurst(count: 3, staggerMs: 140);
+        _emitHeartReactionBurst(count: 6, staggerMs: 110);
       }
     });
   }

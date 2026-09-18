@@ -96,7 +96,7 @@ class _FloatingHeartBubbleState extends State<_FloatingHeartBubble>
     _startX = widget.screenSize.width - 48 - _random.nextDouble() * 22;
     _startBottom = 210 + _random.nextDouble() * 36;
     _drift = (_random.nextDouble() - 0.5) * 20;
-    _size = 24 + _random.nextDouble() * 14;
+    _size = 28 + _random.nextDouble() * 14;
     _delayFactor = _random.nextDouble() * 0.35;
     final palette = LiveHeartReactionLayer.reactionColors;
     _color = palette[_random.nextInt(palette.length)];
