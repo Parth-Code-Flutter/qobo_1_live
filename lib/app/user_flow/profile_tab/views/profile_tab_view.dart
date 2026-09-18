@@ -112,18 +112,17 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                       Spacing.v16,
                       _profileFeatureGrid(onCover: hasEquippedCover),
                       Spacing.v16,
-                      _settingsRow(onCover: hasEquippedCover),
-                      Spacing.v12,
                       appButton(
                         onPressed: widget.onLogoutPressed,
                         buttonText: LocaleKeys.logoutButtonText.tr,
-                        isGradient: false,
-                        buttonColor: kColorPrimary,
-                        borderRadius: 14,
-                        buttonIcon: Padding(
-                          padding: const EdgeInsets.only(right: 12),
-                          child: const Icon(
-                            Icons.logout,
+                        isGradient: true,
+                        gradientColors: AppLightUi.familyCtaColors,
+                        borderRadius: 16,
+                        buttonHeight: 52,
+                        buttonIcon: const Padding(
+                          padding: EdgeInsets.only(right: 12),
+                          child: Icon(
+                            Icons.logout_rounded,
                             color: kColorWhite,
                             size: 18,
                           ),
@@ -403,7 +402,7 @@ class _ProfileTabViewState extends State<ProfileTabView> {
         Color(0xFFFF8A1D),
         Color(0xFFFFD21E),
       ], onTapRoute: Routes.FAMILY),
-      _ProfileFeatureItem('Invite\nFriends', kIconAward, const [
+      _ProfileFeatureItem('Invite', kIconAward, const [
         Color(0xFFFF3F7F),
         Color(0xFF8E1B85),
       ], onTapRoute: Routes.REFERRAL),
@@ -441,7 +440,7 @@ class _ProfileTabViewState extends State<ProfileTabView> {
           Color(0xFFFF6B00),
         ], onTapRoute: Routes.COIN_SELLER),
       _ProfileFeatureItem(
-        'Customer\nservice',
+        'Support',
         kIconCustomerService,
         const [Color(0xFFFFC51D), Color(0xFFFFFF35)],
         onTapRoute: Routes.CUSTOMER_SERVICE,
@@ -450,6 +449,13 @@ class _ProfileTabViewState extends State<ProfileTabView> {
         Color(0xFFFFB020),
         Color(0xFFFF6B57),
       ], onTapRoute: Routes.GIFT_TRANSACTIONS),
+      _ProfileFeatureItem(
+        'Settings',
+        '',
+        const [Color(0xFF7B5CFF), Color(0xFFFF2E83)],
+        materialIcon: Icons.settings_rounded,
+        onTapRoute: Routes.SETTINGS,
+      ),
     ];
 
     return GlossyDatingCard(
@@ -517,13 +523,18 @@ class _ProfileTabViewState extends State<ProfileTabView> {
               ],
             ),
             alignment: Alignment.center,
-            child: SvgPicture.asset(
-              item.iconPath,
-              width: 29,
-              height: 29,
-              fit: BoxFit.contain,
-              colorFilter: const ColorFilter.mode(kColorWhite, BlendMode.srcIn),
-            ),
+            child: item.materialIcon != null
+                ? Icon(item.materialIcon, color: kColorWhite, size: 28)
+                : SvgPicture.asset(
+                    item.iconPath,
+                    width: 29,
+                    height: 29,
+                    fit: BoxFit.contain,
+                    colorFilter: const ColorFilter.mode(
+                      kColorWhite,
+                      BlendMode.srcIn,
+                    ),
+                  ),
           ),
           Spacing.v8,
           Center(
@@ -604,36 +615,6 @@ class _ProfileTabViewState extends State<ProfileTabView> {
       return Get.find<UserSessionController>();
     }
     return Get.put(UserSessionController(), permanent: true);
-  }
-
-  Widget _settingsRow({required bool onCover}) {
-    return GlossyDatingCard(
-      onTap: () => Get.toNamed(Routes.SETTINGS),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      radius: 18,
-      borderWidth: 1.4,
-      fill: onCover
-          ? kColorWhite.withValues(alpha: 0.94)
-          : AppLightUi.card,
-      child: Row(
-        children: [
-          Icon(Icons.settings_rounded, color: AppLightUi.title, size: 22),
-          Spacing.h12,
-          Expanded(
-            child: SemiBoldText(
-              text: 'Settings',
-              fontSize: TextStyles.k14FontSize,
-              color: AppLightUi.title,
-            ),
-          ),
-          Icon(
-            Icons.chevron_right_rounded,
-            color: AppLightUi.subtitle,
-            size: 22,
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -733,6 +714,7 @@ class _ProfileFeatureItem {
     this.gradientColors, {
     this.onTapRoute,
     this.onTap,
+    this.materialIcon,
   });
 
   final String label;
@@ -740,4 +722,5 @@ class _ProfileFeatureItem {
   final List<Color> gradientColors;
   final String? onTapRoute;
   final Future<void> Function()? onTap;
+  final IconData? materialIcon;
 }

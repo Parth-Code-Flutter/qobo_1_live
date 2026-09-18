@@ -195,6 +195,14 @@ class ChatVoiceCallView extends GetView<ChatVoiceCallController> {
       imageUrl: isCurrentUser
           ? controller.currentUserAvatar
           : controller.peerAvatar.value,
+      frameUrl: isCurrentUser
+          ? controller.currentUserFrameUrl
+          : controller.peerFrameUrl.value,
+      frameSeed: isCurrentUser
+          ? controller.currentUserFrameSeed
+          : (controller.hostId.value.isNotEmpty
+                ? controller.hostId.value
+                : controller.peerName.value),
       size: size.shortestSide,
       fontSize: size.shortestSide * 0.28,
     );
@@ -223,6 +231,8 @@ class _VoiceCallPortraitStage extends GetView<ChatVoiceCallController> {
                     _PortraitHalo(
                       name: controller.currentUserName,
                       imageUrl: controller.currentUserAvatar,
+                      frameUrl: controller.currentUserFrameUrl,
+                      frameSeed: controller.currentUserFrameSeed,
                       size: haloSize,
                       label: controller.currentUserName,
                       labelPrefix: controller.hasPeerJoined.value
@@ -263,6 +273,8 @@ class _VideoParticipantStrip extends GetView<ChatVoiceCallController> {
                   child: _MiniParticipantPill(
                     name: controller.currentUserName,
                     imageUrl: controller.currentUserAvatar,
+                    frameUrl: controller.currentUserFrameUrl,
+                    frameSeed: controller.currentUserFrameSeed,
                     label: 'You',
                     dark: true,
                   ),
@@ -272,6 +284,10 @@ class _VideoParticipantStrip extends GetView<ChatVoiceCallController> {
                   child: _MiniParticipantPill(
                     name: controller.peerName.value,
                     imageUrl: controller.peerAvatar.value,
+                    frameUrl: controller.peerFrameUrl.value,
+                    frameSeed: controller.hostId.value.isNotEmpty
+                        ? controller.hostId.value
+                        : controller.peerName.value,
                     label: controller.hasPeerJoined.value
                         ? controller.peerName.value
                         : 'Ringing',
@@ -667,6 +683,10 @@ class _VoiceReceiverPreviewCardState extends State<_VoiceReceiverPreviewCard> {
                     () => _VoiceParticipantCard(
                       name: controller.peerName.value,
                       imageUrl: controller.peerAvatar.value,
+                      frameUrl: controller.peerFrameUrl.value,
+                      frameSeed: controller.hostId.value.isNotEmpty
+                          ? controller.hostId.value
+                          : controller.peerName.value,
                       label: controller.peerName.value,
                       status: controller.hasPeerJoined.value
                           ? 'Connected'
@@ -689,10 +709,14 @@ class _VoiceParticipantCard extends StatelessWidget {
     required this.imageUrl,
     required this.label,
     required this.status,
+    this.frameUrl,
+    this.frameSeed,
   });
 
   final String name;
   final String? imageUrl;
+  final String? frameUrl;
+  final String? frameSeed;
   final String label;
   final String status;
 
@@ -723,27 +747,13 @@ class _VoiceParticipantCard extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [
-                  kColorProfileActionPinkStart.withValues(alpha: 0.95),
-                  kColorProfileChipPurpleEnd.withValues(alpha: 0.9),
-                ],
-              ),
-            ),
-            child: AppUserAvatar(
-              name: name,
-              imageUrl: imageUrl,
-              size: 62,
-              fontSize: TextStyles.k16FontSize,
-              border: Border.all(
-                color: kColorWhite.withValues(alpha: 0.80),
-                width: 2,
-              ),
-            ),
+          AppUserAvatar(
+            name: name,
+            imageUrl: imageUrl,
+            frameUrl: frameUrl,
+            frameSeed: frameSeed ?? name,
+            size: 72,
+            fontSize: TextStyles.k16FontSize,
           ),
           const SizedBox(height: 8),
           SemiBoldText(
@@ -791,11 +801,15 @@ class _PortraitHalo extends StatelessWidget {
     required this.size,
     required this.label,
     required this.labelPrefix,
+    this.frameUrl,
+    this.frameSeed,
     this.prominent = false,
   });
 
   final String name;
   final String? imageUrl;
+  final String? frameUrl;
+  final String? frameSeed;
   final double size;
   final String label;
   final String labelPrefix;
@@ -806,42 +820,38 @@ class _PortraitHalo extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: size + 22,
-          height: size + 22,
-          padding: const EdgeInsets.all(7),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: kColorWhite.withValues(alpha: 0.14)),
-            boxShadow: [
-              BoxShadow(
-                color: kColorPrimary.withValues(alpha: prominent ? 0.32 : 0.18),
-                blurRadius: prominent ? 36 : 18,
-                spreadRadius: prominent ? 5 : 1,
+        SizedBox(
+          width: size + 28,
+          height: size + 28,
+          child: Stack(
+            alignment: Alignment.center,
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: size * 0.92,
+                height: size * 0.92,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: kColorPrimary.withValues(
+                        alpha: prominent ? 0.42 : 0.22,
+                      ),
+                      blurRadius: prominent ? 40 : 20,
+                      spreadRadius: prominent ? 6 : 2,
+                    ),
+                  ],
+                ),
+              ),
+              AppUserAvatar(
+                name: name,
+                imageUrl: imageUrl,
+                frameUrl: frameUrl,
+                frameSeed: frameSeed ?? name,
+                size: size,
+                fontSize: TextStyles.k48FontSize,
               ),
             ],
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [
-                  kColorProfileActionPinkStart.withValues(alpha: 0.95),
-                  kColorProfileChipPurpleEnd.withValues(alpha: 0.9),
-                ],
-              ),
-            ),
-            child: AppUserAvatar(
-              name: name,
-              imageUrl: imageUrl,
-              size: size,
-              fontSize: TextStyles.k48FontSize,
-              border: Border.all(
-                color: kColorWhite.withValues(alpha: 0.76),
-                width: 3,
-              ),
-            ),
           ),
         ),
         const SizedBox(height: 18),
@@ -870,20 +880,24 @@ class _MiniParticipantPill extends StatelessWidget {
     required this.name,
     required this.imageUrl,
     required this.label,
+    this.frameUrl,
+    this.frameSeed,
     this.dark = false,
   });
 
   final String name;
   final String? imageUrl;
+  final String? frameUrl;
+  final String? frameSeed;
   final String label;
   final bool dark;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 96,
-      height: 44,
-      padding: const EdgeInsets.fromLTRB(7, 6, 8, 6),
+      width: 108,
+      height: 48,
+      padding: const EdgeInsets.fromLTRB(6, 5, 8, 5),
       decoration: BoxDecoration(
         color: (dark ? Colors.black : kColorWhite).withValues(
           alpha: dark ? 0.52 : 0.10,
@@ -897,11 +911,12 @@ class _MiniParticipantPill extends StatelessWidget {
           AppUserAvatar(
             name: name,
             imageUrl: imageUrl,
-            size: 30,
+            frameUrl: frameUrl,
+            frameSeed: frameSeed ?? name,
+            size: 36,
             fontSize: TextStyles.k10FontSize,
-            border: Border.all(color: kColorWhite.withValues(alpha: 0.72)),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 4),
           Expanded(
             child: SemiBoldText(
               text: label,
@@ -981,7 +996,15 @@ class _CallTopOverlay extends GetView<ChatVoiceCallController> {
                           imageUrl: controller.isVideo.value
                               ? controller.peerAvatar.value
                               : controller.currentUserAvatar,
-                          size: 40,
+                          frameUrl: controller.isVideo.value
+                              ? controller.peerFrameUrl.value
+                              : controller.currentUserFrameUrl,
+                          frameSeed: controller.isVideo.value
+                              ? (controller.hostId.value.isNotEmpty
+                                    ? controller.hostId.value
+                                    : controller.peerName.value)
+                              : controller.currentUserFrameSeed,
+                          size: 44,
                           fontSize: TextStyles.k14FontSize,
                         ),
                         Spacing.h8,
@@ -1208,7 +1231,11 @@ class _CallProfileSheet extends StatelessWidget {
               AppUserAvatar(
                 name: controller.peerName.value,
                 imageUrl: controller.peerAvatar.value,
-                size: 82,
+                frameUrl: controller.peerFrameUrl.value,
+                frameSeed: controller.hostId.value.isNotEmpty
+                    ? controller.hostId.value
+                    : controller.peerName.value,
+                size: 92,
                 fontSize: TextStyles.k22FontSize,
               ),
               Spacing.v12,

@@ -37,6 +37,7 @@ abstract final class ChatCallLauncher {
     required String targetId,
     required String peerName,
     String? peerAvatar,
+    String? peerAvatarFrame,
     String? peerCountry,
     String? peerBio,
     double? coinsPerSecond,
@@ -176,6 +177,8 @@ abstract final class ChatCallLauncher {
           'peerName': peerName,
           if (peerAvatar?.trim().isNotEmpty == true)
             'peerAvatar': peerAvatar!.trim(),
+          if (peerAvatarFrame?.trim().isNotEmpty == true)
+            'peerAvatarFrame': peerAvatarFrame!.trim(),
           if (peerCountry?.trim().isNotEmpty == true)
             'peerCountry': peerCountry!.trim(),
           if (peerBio?.trim().isNotEmpty == true) 'peerBio': peerBio!.trim(),

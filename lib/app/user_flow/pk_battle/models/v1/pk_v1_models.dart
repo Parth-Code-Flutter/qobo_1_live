@@ -263,7 +263,9 @@ class PkSideInfo {
   final List<PkAudienceMember> audience;
 
   factory PkSideInfo.fromJson(Map<String, dynamic> j) {
-    final audienceRaw = j['topContributors'] ??
+    final audienceRaw = j['audienceList'] ??
+        j['audience_list'] ??
+        j['topContributors'] ??
         j['top_contributors'] ??
         j['audience'] ??
         j['viewers'] ??
@@ -274,7 +276,13 @@ class PkSideInfo {
     return PkSideInfo(
       hostId: _str(j, const ['hostId', 'host_id', 'userId', 'user_id']),
       displayName: _str(j, const ['displayName', 'display_name', 'name'], 'Host'),
-      avatarUrl: _str(j, const ['avatarUrl', 'avatar_url', 'avatar']),
+      avatarUrl: _str(j, const [
+        'avatarUrl',
+        'avatar_url',
+        'avatar',
+        'displayPicture',
+        'profileImage',
+      ]),
       roomId: _str(j, const ['roomId', 'room_id']),
       score: _int(j, const ['score']),
       followerCount: _int(j, const [
@@ -284,6 +292,8 @@ class PkSideInfo {
         'fans',
         'fanCount',
         'fan_count',
+        'audienceCount',
+        'audience_count',
       ]),
       audience: PkAudienceMember.listFrom(audienceRaw),
     );
@@ -389,6 +399,16 @@ class PkSession {
   final PkSideInfo sideB;
 
   factory PkSession.fromJson(Map<String, dynamic> j) {
+    var sideA = PkSideInfo.fromJson(_asMap(j['sideA'] ?? j['side_a']));
+    var sideB = PkSideInfo.fromJson(_asMap(j['sideB'] ?? j['side_b']));
+
+    // Newer payloads also send me/opponent audience mirrors — fill a side
+    // when its nested audienceList was empty.
+    final me = _asMap(j['me']);
+    final opponent = _asMap(j['opponent']);
+    sideA = _enrichSideAudience(sideA, me, opponent);
+    sideB = _enrichSideAudience(sideB, me, opponent);
+
     return PkSession(
       pkId: _str(j, const ['pkId', 'pk_id', 'id']),
       status: pkStatusFromRaw(j['status']),
@@ -401,9 +421,31 @@ class PkSession {
       currentUserSide: pkSideFromRaw(
         _str(j, const ['currentUserSide', 'current_user_side']),
       ),
-      sideA: PkSideInfo.fromJson(_asMap(j['sideA'] ?? j['side_a'])),
-      sideB: PkSideInfo.fromJson(_asMap(j['sideB'] ?? j['side_b'])),
+      sideA: sideA,
+      sideB: sideB,
     );
+  }
+
+  /// Prefer side.audience; otherwise copy from me/opponent when hostIds match.
+  static PkSideInfo _enrichSideAudience(
+    PkSideInfo side,
+    Map<String, dynamic> me,
+    Map<String, dynamic> opponent,
+  ) {
+    if (side.audience.isNotEmpty || side.hostId.isEmpty) return side;
+    for (final block in [me, opponent]) {
+      final hostId = _str(block, const ['hostId', 'host_id']);
+      if (hostId.isEmpty || hostId != side.hostId) continue;
+      final list = PkAudienceMember.listFrom(
+        block['audienceList'] ??
+            block['audience_list'] ??
+            block['audience'] ??
+            block['topContributors'],
+      );
+      if (list.isEmpty) continue;
+      return side.copyWith(audience: list);
+    }
+    return side;
   }
 }
 

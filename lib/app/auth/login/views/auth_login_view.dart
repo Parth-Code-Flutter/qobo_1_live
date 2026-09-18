@@ -55,23 +55,34 @@ class _AuthLoginViewState extends State<AuthLoginView> {
             Form(
               key: controller.formKey,
               autovalidateMode: AutovalidateMode.onUserInteraction,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    welcomeTextHeader(),
-                    Spacing.v12,
-                    emailPasswordTextFields(context),
-                    Spacing.v12,
-                    _loginCta(context),
-                    Spacing.v12,
-                    orLoginWithDividerWidget(),
-                    Spacing.v12,
-                    socialMediaLogin(context),
-                  ],
-                ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight - 12,
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          welcomeTextHeader(),
+                          Spacing.v12,
+                          emailPasswordTextFields(context),
+                          Spacing.v12,
+                          _loginCta(context),
+                          Spacing.v12,
+                          orLoginWithDividerWidget(),
+                          Spacing.v12,
+                          socialMediaLogin(context),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
           ],

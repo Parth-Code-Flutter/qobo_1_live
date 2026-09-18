@@ -718,12 +718,9 @@ class PkV1Controller extends GetxController {
   }
 
   void _applyAudiencesFromSession(PkSession s) {
-    if (s.sideA.audience.isNotEmpty) {
-      sideAAudience.assignAll(_filterAudienceMembers(s.sideA.audience));
-    }
-    if (s.sideB.audience.isNotEmpty) {
-      sideBAudience.assignAll(_filterAudienceMembers(s.sideB.audience));
-    }
+    // Always sync (including empty) so stale Top Gifters don't linger.
+    sideAAudience.assignAll(_filterAudienceMembers(s.sideA.audience));
+    sideBAudience.assignAll(_filterAudienceMembers(s.sideB.audience));
   }
 
   /// Push the current live room's audience onto the local host's PK side.
@@ -1326,12 +1323,14 @@ class PkV1Controller extends GetxController {
       machineState.value = state;
     }
 
-    // Top contributors (guide) + legacy audience keys.
+    // Top contributors + room audienceList (updated PK session payload).
     final contribA = PkAudienceMember.listFrom(
       data['topContributorsA'] ??
           data['top_contributors_a'] ??
           (sideA is Map
-              ? (sideA['topContributors'] ??
+              ? (sideA['audienceList'] ??
+                  sideA['audience_list'] ??
+                  sideA['topContributors'] ??
                   sideA['audience'] ??
                   sideA['viewers'] ??
                   sideA['topViewers'])
@@ -1341,18 +1340,35 @@ class PkV1Controller extends GetxController {
       data['topContributorsB'] ??
           data['top_contributors_b'] ??
           (sideB is Map
-              ? (sideB['topContributors'] ??
+              ? (sideB['audienceList'] ??
+                  sideB['audience_list'] ??
+                  sideB['topContributors'] ??
                   sideB['audience'] ??
                   sideB['viewers'] ??
                   sideB['topViewers'])
               : null),
     );
-    if (contribA.isNotEmpty) {
-      sideAAudience.assignAll(_filterAudienceMembers(contribA));
-    }
-    if (contribB.isNotEmpty) {
-      sideBAudience.assignAll(_filterAudienceMembers(contribB));
-    }
+    // Fill from me/opponent mirrors when nested side lists are empty.
+    final me = data['me'];
+    final opponent = data['opponent'];
+    final filledA = contribA.isNotEmpty
+        ? contribA
+        : _audienceFromMeOpponentMirror(
+            sideHostId: (sideA is Map ? sideA['hostId'] ?? sideA['host_id'] : null)
+                ?.toString(),
+            me: me,
+            opponent: opponent,
+          );
+    final filledB = contribB.isNotEmpty
+        ? contribB
+        : _audienceFromMeOpponentMirror(
+            sideHostId: (sideB is Map ? sideB['hostId'] ?? sideB['host_id'] : null)
+                ?.toString(),
+            me: me,
+            opponent: opponent,
+          );
+    sideAAudience.assignAll(_filterAudienceMembers(filledA));
+    sideBAudience.assignAll(_filterAudienceMembers(filledB));
 
     // Some backends nest the gift on score updates instead of PK_GIFT_RECEIVED.
     final giftRaw = data['lastGift'] ?? data['last_gift'] ?? data['gift'];
@@ -1366,6 +1382,29 @@ class PkV1Controller extends GetxController {
         }
       } catch (_) {}
     }
+  }
+
+  List<PkAudienceMember> _audienceFromMeOpponentMirror({
+    required String? sideHostId,
+    required dynamic me,
+    required dynamic opponent,
+  }) {
+    final host = (sideHostId ?? '').trim();
+    if (host.isEmpty) return const [];
+    for (final block in [me, opponent]) {
+      if (block is! Map) continue;
+      final map = block.map((k, v) => MapEntry(k.toString(), v));
+      final blockHost =
+          (map['hostId'] ?? map['host_id'] ?? '').toString().trim();
+      if (blockHost.isEmpty || blockHost != host) continue;
+      return PkAudienceMember.listFrom(
+        map['audienceList'] ??
+            map['audience_list'] ??
+            map['audience'] ??
+            map['topContributors'],
+      );
+    }
+    return const [];
   }
 
   int _toInt(dynamic v) {

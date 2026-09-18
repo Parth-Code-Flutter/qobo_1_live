@@ -63,6 +63,7 @@ class ChatCallMessageShell extends StatelessWidget {
                 _CallIconBadge(
                   icon: theme.icon,
                   accentColor: theme.accentColor,
+                  onOutgoingGradient: message.isMe,
                   showOutgoingBadge:
                       showDirectionBadge &&
                       message.isMe &&
@@ -115,14 +116,21 @@ class _CallIconBadge extends StatelessWidget {
     required this.icon,
     required this.accentColor,
     required this.showOutgoingBadge,
+    required this.onOutgoingGradient,
   });
 
   final IconData icon;
   final Color accentColor;
   final bool showOutgoingBadge;
+  final bool onOutgoingGradient;
 
   @override
   Widget build(BuildContext context) {
+    final badgeFill = onOutgoingGradient
+        ? kColorWhite.withValues(alpha: 0.22)
+        : accentColor.withValues(alpha: 0.16);
+    final iconColor = onOutgoingGradient ? kColorWhite : accentColor;
+
     return SizedBox(
       width: 36,
       height: 36,
@@ -133,11 +141,14 @@ class _CallIconBadge extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: accentColor.withValues(alpha: 0.16),
+              color: badgeFill,
               shape: BoxShape.circle,
+              border: onOutgoingGradient
+                  ? Border.all(color: kColorWhite.withValues(alpha: 0.35))
+                  : null,
             ),
             alignment: Alignment.center,
-            child: Icon(icon, size: 18, color: accentColor),
+            child: Icon(icon, size: 18, color: iconColor),
           ),
           if (showOutgoingBadge)
             Positioned(
@@ -149,13 +160,15 @@ class _CallIconBadge extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: const Color(0xFF2B1946),
                   shape: BoxShape.circle,
-                  border: Border.all(color: accentColor.withValues(alpha: 0.2)),
+                  border: Border.all(
+                    color: kColorWhite.withValues(alpha: 0.35),
+                  ),
                 ),
                 alignment: Alignment.center,
                 child: Icon(
                   Icons.north_east_rounded,
                   size: 9,
-                  color: accentColor,
+                  color: kColorWhite,
                 ),
               ),
             ),

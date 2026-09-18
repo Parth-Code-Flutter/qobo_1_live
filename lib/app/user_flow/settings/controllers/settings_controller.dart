@@ -53,6 +53,14 @@ class SettingsController extends GetxController {
     Get.snackbar('Language', 'Language selection coming soon');
   }
 
+  void onInviteTap() {
+    Get.toNamed(Routes.REFERRAL);
+  }
+
+  void onSupportTap() {
+    Get.toNamed(Routes.CUSTOMER_SERVICE);
+  }
+
   void onPrivacyTermsTap() {
     Get.snackbar('Privacy & Terms', 'Opening privacy policy');
   }

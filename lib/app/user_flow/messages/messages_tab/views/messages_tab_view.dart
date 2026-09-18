@@ -428,7 +428,7 @@ class MessagesTabView extends GetView<MessagesTabController> {
     }
 
     if (controller.inboxThreads.isEmpty) {
-      return const SizedBox(height: 180, child: _MessagesEmptyState());
+      return const SizedBox(height: 168, child: _MessagesEmptyState());
     }
 
     return ListView.separated(
@@ -509,24 +509,25 @@ class _MessagesEmptyState extends StatelessWidget {
     return Center(
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(18, 16, 18, 22),
-        decoration: AppLightUi.cardDecoration(radius: 24),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+        decoration: AppLightUi.cardDecoration(radius: 22),
         child: const Column(
           mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             DatingEmptyHero(
               style: DatingEmptyHeroStyle.messages,
-              size: 132,
+              size: 72,
               accentColors: [AppLightUi.pink, AppLightUi.violet],
             ),
             SizedBox(height: 8),
             SemiBoldText(
               text: 'No chats yet',
-              fontSize: TextStyles.k16FontSize,
+              fontSize: TextStyles.k14FontSize,
               color: AppLightUi.title,
               align: TextAlign.center,
             ),
-            SizedBox(height: 6),
+            SizedBox(height: 4),
             AppText(
               text: 'Say hello to a spark above and start something fun.',
               fontSize: TextStyles.k12FontSize,

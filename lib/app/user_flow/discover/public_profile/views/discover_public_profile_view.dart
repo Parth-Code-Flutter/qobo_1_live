@@ -3,10 +3,11 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
 import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -32,60 +33,89 @@ class DiscoverPublicProfileView
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Container(
-        decoration: const BoxDecoration(
-          color: kColorLavenderBg,
-        ),
-        child: SafeArea(
-          child: Obx(() {
-            final user = controller.profile.value;
-            if (user == null && controller.isLoading.value) {
-              return const Center(
-                child: CircularProgressIndicator(color: AppLightUi.pink),
-              );
-            }
-            if (user == null) return _emptyState();
+    return Obx(() {
+      final user = controller.profile.value;
+      final loading = controller.isLoading.value;
 
-            return Column(
-              children: [
-                _topBar(user),
-                Expanded(
-                  child: RefreshIndicator(
-                    color: AppLightUi.pink,
-                    onRefresh: controller.loadProfile,
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
-                      children: [
-                        _heroCard(user),
-                        Spacing.v16,
-                        _actionButtons(context, user),
-                        Spacing.v12,
-                        _connectionBanner(user),
-                        if (user.bio.trim().isNotEmpty) ...[
-                          Spacing.v12,
-                          _aboutCard(user.bio.trim()),
-                        ],
-                        Spacing.v12,
-                        _highlightsCard(user),
-                        if (_extraRows(user).isNotEmpty) ...[
-                          Spacing.v12,
-                          _sectionCard(
-                            title: 'More details',
-                            subtitle: 'The finer details',
-                            icon: Icons.auto_awesome_rounded,
-                            child: Column(children: _extraRows(user)),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            );
-          }),
+      return Scaffold(
+        backgroundColor: AppLightUi.bg,
+        appBar: CommonAppBarWidget(
+          title: user?.name.trim().isNotEmpty == true
+              ? user!.name
+              : 'Profile',
+          subtitle: user == null ? 'Discover someone new' : _subtitle(user),
+          trailingIcon: Icons.refresh_rounded,
+          onTrailingTap: loading ? null : controller.loadProfile,
         ),
+        body: Stack(
+          children: [
+            _ambientBackdrop(),
+            if (user == null && loading)
+              const Center(
+                child: CircularProgressIndicator(color: AppLightUi.pink),
+              )
+            else if (user == null)
+              _emptyState()
+            else
+              RefreshIndicator(
+                color: AppLightUi.pink,
+                onRefresh: controller.loadProfile,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 36),
+                  children: [
+                    _heroCard(user),
+                    Spacing.v16,
+                    _actionButtons(context, user),
+                    Spacing.v12,
+                    _connectionBanner(user),
+                    if (user.bio.trim().isNotEmpty) ...[
+                      Spacing.v12,
+                      _aboutCard(user.bio.trim()),
+                    ],
+                    Spacing.v12,
+                    _highlightsCard(user),
+                    // More details section temporarily hidden — keep highlights only.
+                    // if (_extraRows(user).isNotEmpty) ...[
+                    //   Spacing.v12,
+                    //   _sectionCard(
+                    //     title: 'More details',
+                    //     subtitle: 'The finer details',
+                    //     icon: Icons.auto_awesome_rounded,
+                    //     child: Column(children: _extraRows(user)),
+                    //   ),
+                    // ],
+                  ],
+                ),
+              ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _ambientBackdrop() {
+    return IgnorePointer(
+      child: Stack(
+        children: [
+          Positioned(
+            top: 20,
+            right: -70,
+            child: _glowBlob(
+              AppLightUi.pink.withValues(alpha: 0.10),
+              size: 180,
+              alpha: 1,
+            ),
+          ),
+          Positioned(
+            bottom: 80,
+            left: -60,
+            child: _glowBlob(
+              AppLightUi.violet.withValues(alpha: 0.09),
+              size: 200,
+              alpha: 1,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -95,81 +125,50 @@ class DiscoverPublicProfileView
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          AppText(
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  AppLightUi.pink.withValues(alpha: 0.2),
+                  AppLightUi.violet.withValues(alpha: 0.15),
+                ],
+              ),
+            ),
+            child: const Icon(
+              Icons.person_off_rounded,
+              color: AppLightUi.pink,
+              size: 32,
+            ),
+          ),
+          Spacing.v16,
+          SemiBoldText(
             text: 'Profile unavailable',
             fontSize: TextStyles.k16FontSize,
+            color: AppLightUi.title,
+          ),
+          Spacing.v8,
+          AppText(
+            text: 'Pull to retry or go back',
+            fontSize: TextStyles.k12FontSize,
             color: AppLightUi.subtitle,
           ),
           Spacing.v16,
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Go back', style: TextStyle(color: AppLightUi.pink)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 48),
+            child: appButton(
+              onPressed: () => Get.back(),
+              buttonText: 'Go back',
+              isGradient: true,
+              gradientColors: AppLightUi.familyCtaColors,
+              borderRadius: 16,
+              buttonHeight: 48,
+            ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _topBar(SocialUserCard user) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
-      child: Row(
-        children: [
-          _glassIconButton(
-            icon: Icons.arrow_back_ios_new_rounded,
-            onTap: () => Get.back(),
-          ),
-          Spacing.h10,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SemiBoldText(
-                  text: user.name,
-                  fontSize: TextStyles.k18FontSize,
-                  color: AppLightUi.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                AppText(
-                  text: _subtitle(user),
-                  fontSize: TextStyles.k10FontSize,
-                  color: AppLightUi.subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          if (controller.isLoading.value)
-            const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: AppLightUi.pink,
-              ),
-            )
-          else
-            _glassIconButton(
-              icon: Icons.refresh_rounded,
-              onTap: controller.loadProfile,
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _glassIconButton({
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return AdminAgencyUi.glassIconButton(
-      icon: icon,
-      onTap: onTap,
-      accent: AdminAgencyUi.sky,
-      size: 40,
-      iconSize: 16,
     );
   }
 
@@ -470,15 +469,11 @@ class DiscoverPublicProfileView
                     ],
                   )
                 : const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFFFF4DC4),
-                      Color(0xFFFF2D7B),
-                      Color(0xFFFF6A3D),
-                    ],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: AppLightUi.familyCtaColors,
                   ),
-            glow: const Color(0xFFFF2D7B),
+            glow: AppLightUi.pink,
             border: user.isFollowing
                 ? Border.all(
                     color: kColorProfileChipPinkStart.withValues(alpha: 0.55),
@@ -551,27 +546,44 @@ class DiscoverPublicProfileView
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         gradient: LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
           colors: [
-            colors.first.withValues(alpha: 0.22),
-            colors.last.withValues(alpha: 0.12),
+            colors.first.withValues(alpha: 0.18),
+            colors.last.withValues(alpha: 0.10),
+            Colors.white.withValues(alpha: 0.85),
           ],
         ),
-        border: Border.all(color: colors.first.withValues(alpha: 0.35)),
+        border: Border.all(color: colors.first.withValues(alpha: 0.32)),
+        boxShadow: [
+          BoxShadow(
+            color: colors.first.withValues(alpha: 0.12),
+            blurRadius: 14,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: Row(
         children: [
           Container(
-            width: 34,
-            height: 34,
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(colors: colors),
+              boxShadow: [
+                BoxShadow(
+                  color: colors.first.withValues(alpha: 0.4),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
-            child: Icon(icon, size: 16, color: kColorWhite),
+            child: Icon(icon, size: 17, color: kColorWhite),
           ),
           Spacing.h10,
           Expanded(
@@ -730,39 +742,65 @@ class DiscoverPublicProfileView
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-      decoration: AppLightUi.cardDecoration(radius: 22),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white,
+            AppLightUi.cardSoft.withValues(alpha: 0.92),
+          ],
+        ),
+        border: Border.all(color: AppLightUi.border),
+        boxShadow: AppLightUi.cardShadow,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                width: 28,
-                height: 28,
-                decoration: const BoxDecoration(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [Color(0xFFFF4DC4), Color(0xFF7B5CFF)],
+                  gradient: const LinearGradient(
+                    colors: AppLightUi.familyCtaColors,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppLightUi.pink.withValues(alpha: 0.35),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
-                child: Icon(icon, size: 14, color: kColorWhite),
+                child: Icon(icon, size: 15, color: kColorWhite),
               ),
-              Spacing.h8,
-              SemiBoldText(
-                text: title,
-                fontSize: TextStyles.k14FontSize,
-                color: AppLightUi.title,
+              Spacing.h10,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SemiBoldText(
+                      text: title,
+                      fontSize: TextStyles.k16FontSize,
+                      color: AppLightUi.title,
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      AppText(
+                        text: subtitle,
+                        fontSize: TextStyles.k12FontSize,
+                        color: AppLightUi.subtitle,
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ],
           ),
-          if (subtitle != null) ...[
-            const SizedBox(height: 6),
-            AppText(
-              text: subtitle,
-              fontSize: TextStyles.k12FontSize,
-              color: AppLightUi.subtitle,
-            ),
-          ],
           Spacing.v12,
           child,
         ],

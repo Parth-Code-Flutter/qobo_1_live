@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/services/chat/chat_inbox_preview.dart';
 
@@ -38,6 +39,7 @@ class ChatCallMessageTheme {
     required bool isVideo,
   }) {
     final title = isVideo ? 'Video call' : 'Voice call';
+    final mine = message.isMe;
 
     final String? subtitle;
     final Color accentColor;
@@ -46,28 +48,29 @@ class ChatCallMessageTheme {
 
     if (message.isMissedCall) {
       subtitle = 'Missed call';
-      accentColor = kColorRed;
-      titleColor = message.isMe ? kColorWhite : kColorText;
-      subtitleColor = kColorRed;
+      // Keep missed red; on outgoing gradient use soft white badge + red icon.
+      accentColor = mine ? const Color(0xFFFF8A9B) : kColorRed;
+      titleColor = mine ? kColorWhite : kColorText;
+      subtitleColor = mine ? const Color(0xFFFFB4C0) : kColorRed;
     } else if (message.isUnansweredCall) {
       subtitle = 'No answer';
-      accentColor = isVideo ? kColorPrimary : const Color(0xFFE65100);
-      titleColor = message.isMe ? kColorWhite : kColorText;
-      subtitleColor = message.isMe
-          ? kColorWhite.withValues(alpha: 0.78)
+      accentColor = mine ? kColorWhite : (isVideo ? AppLightUi.cyan : const Color(0xFFE65100));
+      titleColor = mine ? kColorWhite : kColorText;
+      subtitleColor = mine
+          ? kColorWhite.withValues(alpha: 0.82)
           : ChatDetailTheme.textMuted;
     } else {
       subtitle = ChatInboxPreviewType.callDurationLabel(
         message.callDurationSeconds,
       );
-      accentColor = message.isMe ? kColorPrimary : kColorPrimary;
-      titleColor = message.isMe ? kColorWhite : kColorText;
-      subtitleColor = message.isMe
-          ? kColorWhite.withValues(alpha: 0.78)
+      accentColor = mine ? kColorWhite : kColorPrimary;
+      titleColor = mine ? kColorWhite : kColorText;
+      subtitleColor = mine
+          ? kColorWhite.withValues(alpha: 0.82)
           : ChatDetailTheme.textMuted;
     }
 
-    final bubbleColor = message.isMe
+    final bubbleColor = mine
         ? ChatDetailTheme.rose
         : ChatDetailTheme.incomingBubble;
 

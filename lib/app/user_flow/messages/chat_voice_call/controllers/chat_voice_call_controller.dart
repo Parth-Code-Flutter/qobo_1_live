@@ -63,6 +63,7 @@ class ChatVoiceCallController extends GetxController
   final hostId = ''.obs;
   final peerName = 'User'.obs;
   final peerAvatar = RxnString();
+  final peerFrameUrl = RxnString();
   final peerCountry = ''.obs;
   final peerBio = ''.obs;
   final isCaller = true.obs;
@@ -149,6 +150,18 @@ class ChatVoiceCallController extends GetxController
     return Get.find<UserSessionController>().displayPictureUrl;
   }
 
+  String? get currentUserFrameUrl {
+    if (!Get.isRegistered<UserSessionController>()) return null;
+    final frame = Get.find<UserSessionController>().profileFrameUrl.trim();
+    return frame.isEmpty ? null : frame;
+  }
+
+  String get currentUserFrameSeed {
+    if (!Get.isRegistered<UserSessionController>()) return currentUserName;
+    final id = Get.find<UserSessionController>().userId.trim();
+    return id.isNotEmpty ? id : currentUserName;
+  }
+
   @override
   void onInit() {
     super.onInit();
@@ -159,6 +172,12 @@ class ChatVoiceCallController extends GetxController
       hostId.value = args['hostId']?.toString() ?? '';
       peerName.value = args['peerName']?.toString() ?? 'User';
       peerAvatar.value = _cleanText(args['peerAvatar']);
+      peerFrameUrl.value = _cleanText(
+        args['peerAvatarFrame'] ??
+            args['peerFrameUrl'] ??
+            args['avatarFrameUrl'] ??
+            args['avatarFrame'],
+      );
       peerCountry.value = _cleanText(args['peerCountry']) ?? '';
       peerBio.value = _cleanText(args['peerBio']) ?? '';
       isCaller.value = _parseIsCaller(args['isCaller']);

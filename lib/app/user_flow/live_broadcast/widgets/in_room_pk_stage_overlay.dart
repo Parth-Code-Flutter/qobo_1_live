@@ -8,7 +8,7 @@ import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 
 /// In-room PK Battle stage (host + audience).
 ///
-/// Layout: Top Gifters · PK BATTLE · tug-of-war (scores + timer/VS) ·
+/// Layout: Audience · PK BATTLE · tug-of-war (scores + timer/VS) ·
 /// 50/50 host panes. Chat / bottom dock stay in the parent (or temp preview).
 class InRoomPkStageOverlay extends StatelessWidget {
   const InRoomPkStageOverlay({
@@ -251,7 +251,7 @@ class _GifterCluster extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         const AppText(
-          text: 'Top Gifters',
+          text: 'Audience',
           fontSize: 9,
           color: Colors.white70,
         ),

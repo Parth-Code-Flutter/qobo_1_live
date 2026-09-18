@@ -370,8 +370,8 @@ class ChatDetailController extends GetxController {
       } else if (_hasTextMessages()) {
         await _localStore.markChatSendInit(targetId.value);
       } else {
-        ChatLogger.send('empty thread — attempting REST bootstrap');
-        unawaited(_tryChatSendApiOnce(content: ''));
+        // Never POST empty content — it creates blank chat bubbles.
+        ChatLogger.send('empty thread — waiting for first real message');
       }
     } catch (e) {
       ChatLogger.loadWarn('error — using cache only', {'error': e});
@@ -558,6 +558,8 @@ class ChatDetailController extends GetxController {
         context: context,
         targetId: targetId.value,
         peerName: chatName.value,
+        peerAvatar: chatImageUrl.value,
+        peerAvatarFrame: avatarFrameUrl.value,
         roomId: _effectiveRoomId.isNotEmpty ? _effectiveRoomId : null,
         callType: ChatCallType.voice,
         chatRepo: _chatRepo,
@@ -579,6 +581,8 @@ class ChatDetailController extends GetxController {
         context: context,
         targetId: targetId.value,
         peerName: chatName.value,
+        peerAvatar: chatImageUrl.value,
+        peerAvatarFrame: avatarFrameUrl.value,
         roomId: _effectiveRoomId.isNotEmpty ? _effectiveRoomId : null,
         callType: ChatCallType.video,
         chatRepo: _chatRepo,
@@ -1432,12 +1436,24 @@ class ChatDetailController extends GetxController {
   static String _sanitize(String text) =>
       ProfanityMaskUtils.mask(PhoneMaskUtils.mask(text));
 
+  /// Drop blank text bubbles (no body / media). Keep call, gift, and emoji rows.
+  static bool _shouldKeepMessage(ChatMessageModel msg) {
+    if (msg.isCallEntry) return true;
+    if (msg.isGift || msg.isEmoji) {
+      final hasMedia = (msg.mediaUrl?.trim().isNotEmpty ?? false) ||
+          (msg.animationUrl?.trim().isNotEmpty ?? false);
+      return hasMedia || msg.text.trim().isNotEmpty;
+    }
+    return msg.text.trim().isNotEmpty;
+  }
+
   static List<ChatMessageModel> _mergeMessages(
     List<ChatMessageModel> a,
     List<ChatMessageModel> b,
   ) {
     final byKey = <String, ChatMessageModel>{};
     for (final msg in [...a, ...b]) {
+      if (!_shouldKeepMessage(msg)) continue;
       final key = msg.isCallEntry
           ? 'call_${msg.id?.isNotEmpty == true ? msg.id : msg.createdAt?.toIso8601String() ?? msg.time}'
           : msg.clientMessageId?.isNotEmpty == true
