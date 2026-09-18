@@ -247,7 +247,10 @@ class PkSideInfo {
     required this.roomId,
     required this.score,
     this.followerCount = 0,
+    this.diamonds = 0,
+    this.earnings = 0,
     this.audience = const [],
+    this.topContributors = const [],
   });
 
   final String hostId;
@@ -259,20 +262,34 @@ class PkSideInfo {
   /// Optional fan/follower count for host cards on the PK stage.
   final int followerCount;
 
-  /// Viewers currently in this host's live room (from PK state / sync).
+  /// PK-session diamonds credited to this host (from gifts during battle).
+  final int diamonds;
+
+  /// Alias / same as diamonds on newer payloads (`earnings` / `totalDiamonds`).
+  final int earnings;
+
+  /// Viewers in this host's room — only from `side*.audienceList`.
   final List<PkAudienceMember> audience;
 
+  /// Gift leaderboard for this side — only from `side*.topContributors`.
+  final List<PkAudienceMember> topContributors;
+
   factory PkSideInfo.fromJson(Map<String, dynamic> j) {
-    final audienceRaw = j['audienceList'] ??
-        j['audience_list'] ??
-        j['topContributors'] ??
-        j['top_contributors'] ??
-        j['audience'] ??
-        j['viewers'] ??
-        j['topViewers'] ??
-        j['top_viewers'] ??
-        j['roomAudience'] ??
-        j['room_audience'];
+    // Do not mix audienceList ↔ topContributors (API keeps them separate).
+    final audienceRaw = j['audienceList'] ?? j['audience_list'];
+    final topRaw = j['topContributors'] ?? j['top_contributors'];
+    final diamonds = _int(j, const [
+      'diamonds',
+      'totalDiamonds',
+      'total_diamonds',
+      'earnings',
+    ]);
+    final earnings = _int(j, const [
+      'earnings',
+      'diamonds',
+      'totalDiamonds',
+      'total_diamonds',
+    ]);
     return PkSideInfo(
       hostId: _str(j, const ['hostId', 'host_id', 'userId', 'user_id']),
       displayName: _str(j, const ['displayName', 'display_name', 'name'], 'Host'),
@@ -292,17 +309,21 @@ class PkSideInfo {
         'fans',
         'fanCount',
         'fan_count',
-        'audienceCount',
-        'audience_count',
       ]),
+      diamonds: diamonds,
+      earnings: earnings > 0 ? earnings : diamonds,
       audience: PkAudienceMember.listFrom(audienceRaw),
+      topContributors: PkAudienceMember.listFrom(topRaw),
     );
   }
 
   PkSideInfo copyWith({
     int? score,
     int? followerCount,
+    int? diamonds,
+    int? earnings,
     List<PkAudienceMember>? audience,
+    List<PkAudienceMember>? topContributors,
   }) =>
       PkSideInfo(
         hostId: hostId,
@@ -311,7 +332,10 @@ class PkSideInfo {
         roomId: roomId,
         score: score ?? this.score,
         followerCount: followerCount ?? this.followerCount,
+        diamonds: diamonds ?? this.diamonds,
+        earnings: earnings ?? this.earnings,
         audience: audience ?? this.audience,
+        topContributors: topContributors ?? this.topContributors,
       );
 
   PkSideInfo copyWithScore(int newScore) => copyWith(score: newScore);
@@ -399,16 +423,8 @@ class PkSession {
   final PkSideInfo sideB;
 
   factory PkSession.fromJson(Map<String, dynamic> j) {
-    var sideA = PkSideInfo.fromJson(_asMap(j['sideA'] ?? j['side_a']));
-    var sideB = PkSideInfo.fromJson(_asMap(j['sideB'] ?? j['side_b']));
-
-    // Newer payloads also send me/opponent audience mirrors — fill a side
-    // when its nested audienceList was empty.
-    final me = _asMap(j['me']);
-    final opponent = _asMap(j['opponent']);
-    sideA = _enrichSideAudience(sideA, me, opponent);
-    sideB = _enrichSideAudience(sideB, me, opponent);
-
+    // Audience / contributors / earnings live only on sideA / sideB
+    // (root audienceList removed; me/opponent are mirrors — do not replace sides).
     return PkSession(
       pkId: _str(j, const ['pkId', 'pk_id', 'id']),
       status: pkStatusFromRaw(j['status']),
@@ -421,31 +437,9 @@ class PkSession {
       currentUserSide: pkSideFromRaw(
         _str(j, const ['currentUserSide', 'current_user_side']),
       ),
-      sideA: sideA,
-      sideB: sideB,
+      sideA: PkSideInfo.fromJson(_asMap(j['sideA'] ?? j['side_a'])),
+      sideB: PkSideInfo.fromJson(_asMap(j['sideB'] ?? j['side_b'])),
     );
-  }
-
-  /// Prefer side.audience; otherwise copy from me/opponent when hostIds match.
-  static PkSideInfo _enrichSideAudience(
-    PkSideInfo side,
-    Map<String, dynamic> me,
-    Map<String, dynamic> opponent,
-  ) {
-    if (side.audience.isNotEmpty || side.hostId.isEmpty) return side;
-    for (final block in [me, opponent]) {
-      final hostId = _str(block, const ['hostId', 'host_id']);
-      if (hostId.isEmpty || hostId != side.hostId) continue;
-      final list = PkAudienceMember.listFrom(
-        block['audienceList'] ??
-            block['audience_list'] ??
-            block['audience'] ??
-            block['topContributors'],
-      );
-      if (list.isEmpty) continue;
-      return side.copyWith(audience: list);
-    }
-    return side;
   }
 }
 
@@ -459,6 +453,8 @@ class PkGiftSendResult {
     required this.pkPoints,
     required this.scoreA,
     required this.scoreB,
+    this.hostADiamonds = 0,
+    this.hostBDiamonds = 0,
     this.topContributorsA = const [],
     this.topContributorsB = const [],
   });
@@ -470,10 +466,14 @@ class PkGiftSendResult {
   final int pkPoints;
   final int scoreA;
   final int scoreB;
+  final int hostADiamonds;
+  final int hostBDiamonds;
   final List<PkAudienceMember> topContributorsA;
   final List<PkAudienceMember> topContributorsB;
 
   factory PkGiftSendResult.fromJson(Map<String, dynamic> j) {
+    final sideA = _asMap(j['sideA'] ?? j['side_a']);
+    final sideB = _asMap(j['sideB'] ?? j['side_b']);
     return PkGiftSendResult(
       success: _bool(j, const ['success'], true),
       transactionId: _str(j, const ['transactionId', 'transaction_id']),
@@ -482,6 +482,36 @@ class PkGiftSendResult {
       pkPoints: _int(j, const ['pkPoints', 'pk_points']),
       scoreA: _int(j, const ['scoreA', 'score_a']),
       scoreB: _int(j, const ['scoreB', 'score_b']),
+      hostADiamonds: _int(j, const [
+            'hostA_diamonds',
+            'hostADiamonds',
+            'host_a_diamonds',
+            'hostA_earnings',
+            'hostAEarnings',
+          ]) > 0
+          ? _int(j, const [
+              'hostA_diamonds',
+              'hostADiamonds',
+              'host_a_diamonds',
+              'hostA_earnings',
+              'hostAEarnings',
+            ])
+          : _int(sideA, const ['diamonds', 'earnings', 'totalDiamonds']),
+      hostBDiamonds: _int(j, const [
+            'hostB_diamonds',
+            'hostBDiamonds',
+            'host_b_diamonds',
+            'hostB_earnings',
+            'hostBEarnings',
+          ]) > 0
+          ? _int(j, const [
+              'hostB_diamonds',
+              'hostBDiamonds',
+              'host_b_diamonds',
+              'hostB_earnings',
+              'hostBEarnings',
+            ])
+          : _int(sideB, const ['diamonds', 'earnings', 'totalDiamonds']),
       topContributorsA: PkAudienceMember.listFrom(
         j['topContributorsA'] ?? j['top_contributors_a'],
       ),
@@ -558,20 +588,45 @@ class PkGiftEvent {
   factory PkGiftEvent.fromJson(Map<String, dynamic> j) {
     final gift = _asMap(j['gift']);
     final sender = _asMap(j['sender']);
+    // Support nested gift/sender (PK_GIFT_RECEIVED) and flat lastGift on score.
     return PkGiftEvent(
       pkId: _str(j, const ['pkId', 'pk_id']),
       targetSide: pkSideFromRaw(_str(j, const ['targetSide', 'target_side'])),
-      giftId: _str(gift, const ['id', 'giftId']),
-      giftName: _str(gift, const ['name'], 'Gift'),
-      iconUrl: _str(gift, const ['iconUrl', 'icon_url', 'icon']),
-      animationUrl:
-          _str(gift, const ['animationUrl', 'animation_url', 'svgaUrl']),
-      soundUrl: _str(gift, const ['soundUrl', 'sound_url']),
-      quantity: _int(gift, const ['quantity', 'qty'], 1),
-      pkPoints: _int(gift, const ['pkPoints', 'pk_points']),
-      senderId: _str(sender, const ['userId', 'user_id', 'id']),
-      senderName: _str(sender, const ['displayName', 'display_name', 'name']),
-      senderAvatar: _str(sender, const ['avatarUrl', 'avatar_url', 'avatar']),
+      giftId: _str(gift, const ['id', 'giftId']).isNotEmpty
+          ? _str(gift, const ['id', 'giftId'])
+          : _str(j, const ['giftId', 'gift_id', 'id']),
+      giftName: _str(gift, const ['name'], '').isNotEmpty
+          ? _str(gift, const ['name'], 'Gift')
+          : _str(j, const ['giftName', 'gift_name'], 'Gift'),
+      iconUrl: _str(gift, const ['iconUrl', 'icon_url', 'icon']).isNotEmpty
+          ? _str(gift, const ['iconUrl', 'icon_url', 'icon'])
+          : _str(j, const ['iconUrl', 'icon_url']),
+      animationUrl: _str(
+                gift,
+                const ['animationUrl', 'animation_url', 'svgaUrl'],
+              ).isNotEmpty
+          ? _str(gift, const ['animationUrl', 'animation_url', 'svgaUrl'])
+          : _str(j, const ['animationUrl', 'animation_url', 'svgaUrl']),
+      soundUrl: _str(gift, const ['soundUrl', 'sound_url']).isNotEmpty
+          ? _str(gift, const ['soundUrl', 'sound_url'])
+          : _str(j, const ['soundUrl', 'sound_url']),
+      quantity: _int(gift, const ['quantity', 'qty']) > 0
+          ? _int(gift, const ['quantity', 'qty'], 1)
+          : _int(j, const ['quantity', 'qty'], 1),
+      pkPoints: _int(gift, const ['pkPoints', 'pk_points']) > 0
+          ? _int(gift, const ['pkPoints', 'pk_points'])
+          : _int(j, const ['pkPoints', 'pk_points', 'coinValue', 'coin_value']),
+      senderId: _str(sender, const ['userId', 'user_id', 'id']).isNotEmpty
+          ? _str(sender, const ['userId', 'user_id', 'id'])
+          : _str(j, const ['senderId', 'sender_id']),
+      senderName:
+          _str(sender, const ['displayName', 'display_name', 'name']).isNotEmpty
+              ? _str(sender, const ['displayName', 'display_name', 'name'])
+              : _str(j, const ['senderName', 'sender_name']),
+      senderAvatar:
+          _str(sender, const ['avatarUrl', 'avatar_url', 'avatar']).isNotEmpty
+              ? _str(sender, const ['avatarUrl', 'avatar_url', 'avatar'])
+              : _str(j, const ['senderAvatar', 'sender_avatar', 'avatarUrl']),
     );
   }
 }

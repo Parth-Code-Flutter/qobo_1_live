@@ -8,8 +8,8 @@ import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 
 /// In-room PK Battle stage (host + audience).
 ///
-/// Layout: Audience · PK BATTLE · tug-of-war (scores + timer/VS) ·
-/// 50/50 host panes. Chat / bottom dock stay in the parent (or temp preview).
+/// Layout: Top Gifters · PK BATTLE · tug-of-war · 50/50 host panes ·
+/// per-side Audience under hosts. Chat / bottom dock stay in the parent.
 class InRoomPkStageOverlay extends StatelessWidget {
   const InRoomPkStageOverlay({
     super.key,
@@ -41,8 +41,9 @@ class InRoomPkStageOverlay extends StatelessWidget {
         children: [
           _TopGiftersAndLogo(
             compact: compact,
-            leftGifters: controller.sideAAudience.toList(),
-            rightGifters: controller.sideBAudience.toList(),
+            leftGifters: controller.sideATopContributors.toList(),
+            rightGifters: controller.sideBTopContributors.toList(),
+            label: 'Top Gifters',
           ),
           SizedBox(height: compact ? 6 : 8),
           _TugOfWarScoreBoard(
@@ -78,7 +79,7 @@ class InRoomPkStageOverlay extends StatelessWidget {
                             alignEnd: false,
                             isSelf: controller.isSelfSideA,
                             compact: compact,
-                            // TEMP mock covers for UI preview only.
+                            diamonds: controller.sideADiamonds.value,
                             mockCoverAsset: isPreview
                                 ? 'assets/images/temp4.png'
                                 : null,
@@ -97,6 +98,7 @@ class InRoomPkStageOverlay extends StatelessWidget {
                             alignEnd: true,
                             isSelf: !controller.isSelfSideA,
                             compact: compact,
+                            diamonds: controller.sideBDiamonds.value,
                             mockCoverAsset: isPreview
                                 ? 'assets/images/temp2.png'
                                 : null,
@@ -119,6 +121,12 @@ class InRoomPkStageOverlay extends StatelessWidget {
                 ),
               );
             },
+          ),
+          SizedBox(height: compact ? 8 : 10),
+          _SideAudienceRow(
+            compact: compact,
+            leftAudience: controller.sideAAudience.toList(),
+            rightAudience: controller.sideBAudience.toList(),
           ),
           const Spacer(),
           Obx(() {
@@ -150,11 +158,13 @@ class _TopGiftersAndLogo extends StatelessWidget {
     required this.compact,
     required this.leftGifters,
     required this.rightGifters,
+    this.label = 'Top Gifters',
   });
 
   final bool compact;
   final List<PkAudienceMember> leftGifters;
   final List<PkAudienceMember> rightGifters;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -167,6 +177,7 @@ class _TopGiftersAndLogo extends StatelessWidget {
             accent: InRoomPkStageOverlay.red,
             alignEnd: false,
             compact: compact,
+            label: label,
           ),
         ),
         Padding(
@@ -179,9 +190,54 @@ class _TopGiftersAndLogo extends StatelessWidget {
             accent: InRoomPkStageOverlay.blue,
             alignEnd: true,
             compact: compact,
+            label: label,
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Room audience under each host pane (sideA left / sideB right).
+class _SideAudienceRow extends StatelessWidget {
+  const _SideAudienceRow({
+    required this.compact,
+    required this.leftAudience,
+    required this.rightAudience,
+  });
+
+  final bool compact;
+  final List<PkAudienceMember> leftAudience;
+  final List<PkAudienceMember> rightAudience;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: _GifterCluster(
+              members: leftAudience,
+              accent: InRoomPkStageOverlay.red,
+              alignEnd: false,
+              compact: compact,
+              label: 'Audience',
+            ),
+          ),
+          SizedBox(width: compact ? 12 : 20),
+          Expanded(
+            child: _GifterCluster(
+              members: rightAudience,
+              accent: InRoomPkStageOverlay.blue,
+              alignEnd: true,
+              compact: compact,
+              label: 'Audience',
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -231,12 +287,14 @@ class _GifterCluster extends StatelessWidget {
     required this.accent,
     required this.alignEnd,
     required this.compact,
+    this.label = 'Top Gifters',
   });
 
   final List<PkAudienceMember> members;
   final Color accent;
   final bool alignEnd;
   final bool compact;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -250,8 +308,8 @@ class _GifterCluster extends StatelessWidget {
           alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        const AppText(
-          text: 'Audience',
+        AppText(
+          text: label,
           fontSize: 9,
           color: Colors.white70,
         ),
@@ -559,6 +617,7 @@ class _HostVideoPane extends StatelessWidget {
     required this.alignEnd,
     required this.isSelf,
     required this.compact,
+    this.diamonds = 0,
     this.mockCoverAsset,
   });
 
@@ -569,6 +628,7 @@ class _HostVideoPane extends StatelessWidget {
   final bool alignEnd;
   final bool isSelf;
   final bool compact;
+  final int diamonds;
   final String? mockCoverAsset;
 
   @override
@@ -657,6 +717,9 @@ class _HostVideoPane extends StatelessWidget {
                   avatarUrl: side.avatarUrl,
                   accent: accent,
                   fans: side.followerCount,
+                  diamonds: diamonds > 0
+                      ? diamonds
+                      : (side.diamonds > 0 ? side.diamonds : side.earnings),
                   compact: compact,
                   alignEnd: alignEnd,
                 ),
@@ -678,6 +741,7 @@ class _HostInfoCard extends StatelessWidget {
     required this.fans,
     required this.compact,
     required this.alignEnd,
+    this.diamonds = 0,
   });
 
   final String name;
@@ -685,6 +749,7 @@ class _HostInfoCard extends StatelessWidget {
   final String avatarUrl;
   final Color accent;
   final int fans;
+  final int diamonds;
   final bool compact;
   final bool alignEnd;
 
@@ -737,7 +802,9 @@ class _HostInfoCard extends StatelessWidget {
           ),
         ),
         Text(
-          fans > 0 ? '${_compactScore(fans)} Fans' : 'Live now',
+          diamonds > 0
+              ? '${_compactScore(diamonds)} ♦'
+              : (fans > 0 ? '${_compactScore(fans)} Fans' : 'Live now'),
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.65),
             fontSize: 9,

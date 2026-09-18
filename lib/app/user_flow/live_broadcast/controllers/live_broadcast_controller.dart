@@ -3544,6 +3544,9 @@ class LiveBroadcastController extends GetxController {
       receiverId: currentReceiverId.isEmpty ? null : currentReceiverId,
     );
 
+    // When host is in PK, economy gift responses may include pkBattle scores.
+    _applyPkBattleFromEconomyGiftResponse(response);
+
     var creditedIds = _parseCreditedUserIdsFromGiftResponse(response);
     if (creditedIds.isEmpty &&
         scope == 'room' &&
@@ -4318,6 +4321,10 @@ class LiveBroadcastController extends GetxController {
   }
 
   void _celebrateLiveGiftFromSocket(Map<String, dynamic> data) {
+    // During host-vs-host PK, PK_GIFT_RECEIVED owns the animation so we don't
+    // double-play when live_stream.gift_sent also arrives for the same gift.
+    if (isInRoomPkActive) return;
+
     Map<String, dynamic>? asMap(dynamic value) {
       if (value is Map) return Map<String, dynamic>.from(value);
       return null;
@@ -6142,6 +6149,24 @@ class LiveBroadcastController extends GetxController {
         'selectionOnly': true,
       },
     );
+  }
+
+  /// If `/gifts/send` returns a nested `pkBattle` score block during PK, apply it.
+  void _applyPkBattleFromEconomyGiftResponse(Map<String, dynamic>? response) {
+    if (response == null || !Get.isRegistered<PkV1Controller>()) return;
+    if (!isInRoomPkActive) return;
+    Map<String, dynamic>? data;
+    final rawData = response['data'];
+    if (rawData is Map) {
+      data = Map<String, dynamic>.from(rawData);
+    } else if (response.containsKey('pkBattle') ||
+        response.containsKey('pk_battle')) {
+      data = response;
+    }
+    if (data == null) return;
+    try {
+      Get.find<PkV1Controller>().applyEconomyGiftPkBattle(data);
+    } catch (_) {}
   }
 
   /// True when host-vs-host PK should replace the seat grid in this room.

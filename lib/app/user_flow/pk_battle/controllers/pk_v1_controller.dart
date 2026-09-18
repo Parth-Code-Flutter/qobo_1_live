@@ -81,9 +81,17 @@ class PkV1Controller extends GetxController {
   /// Latest `PK_STATE_TRANSITION` (winner side available during punishment).
   final lastStateTransition = Rxn<PkStateTransition>();
 
-  /// Per-side room audience (self side synced from live room; opponent from API).
+  /// Per-side room audience (from `sideA`/`sideB.audienceList` only).
   final sideAAudience = <PkAudienceMember>[].obs;
   final sideBAudience = <PkAudienceMember>[].obs;
+
+  /// Per-side top gifters (from `side*.topContributors` / score events).
+  final sideATopContributors = <PkAudienceMember>[].obs;
+  final sideBTopContributors = <PkAudienceMember>[].obs;
+
+  /// Host PK-session earnings (diamonds) for the top/host cards.
+  final sideADiamonds = 0.obs;
+  final sideBDiamonds = 0.obs;
 
   // Result
   final result = Rxn<PkResult>();
@@ -100,6 +108,10 @@ class PkV1Controller extends GetxController {
   Duration _serverOffset = Duration.zero;
   int _giftSeq = 0;
   bool _resultHandled = false;
+
+  /// Dedupes gift celebration when both PK_GIFT_RECEIVED and score.lastGift fire.
+  final Set<String> _presentedGiftKeys = <String>{};
+  DateTime _presentedGiftPrunedAt = DateTime.fromMillisecondsSinceEpoch(0);
 
   UserRealtimeSocketService? get _socket =>
       Get.isRegistered<UserRealtimeSocketService>()
@@ -202,6 +214,11 @@ class PkV1Controller extends GetxController {
     connectionNote.value = '';
     sideAAudience.clear();
     sideBAudience.clear();
+    sideATopContributors.clear();
+    sideBTopContributors.clear();
+    sideADiamonds.value = 0;
+    sideBDiamonds.value = 0;
+    _presentedGiftKeys.clear();
     embeddedInLiveRoom.value = false;
     PkLiveRoomBridge.setActive(false);
     stage.value = PkArenaStage.selecting;
@@ -262,38 +279,57 @@ class PkV1Controller extends GetxController {
     );
     scoreA.value = 215000;
     scoreB.value = 238000;
+    sideADiamonds.value = 1200;
+    sideBDiamonds.value = 980;
     remainingSeconds.value = 165;
-    sideAAudience.assignAll(const [
+    sideATopContributors.assignAll(const [
       PkAudienceMember(
         userId: 'g1',
         displayName: 'Alex',
         avatarUrl: '',
+        points: 900,
+        rank: 1,
       ),
       PkAudienceMember(
         userId: 'g2',
         displayName: 'Sam',
         avatarUrl: '',
-      ),
-      PkAudienceMember(
-        userId: 'g3',
-        displayName: 'Rio',
-        avatarUrl: '',
+        points: 700,
+        rank: 2,
       ),
     ]);
-    sideBAudience.assignAll(const [
+    sideBTopContributors.assignAll(const [
       PkAudienceMember(
         userId: 'g4',
         displayName: 'Mia',
         avatarUrl: '',
+        points: 1100,
+        rank: 1,
       ),
       PkAudienceMember(
         userId: 'g5',
         displayName: 'Lee',
         avatarUrl: '',
+        points: 500,
+        rank: 2,
+      ),
+    ]);
+    sideAAudience.assignAll(const [
+      PkAudienceMember(
+        userId: 'a1',
+        displayName: 'ViewerA1',
+        avatarUrl: '',
       ),
       PkAudienceMember(
-        userId: 'g6',
-        displayName: 'Kai',
+        userId: 'a2',
+        displayName: 'ViewerA2',
+        avatarUrl: '',
+      ),
+    ]);
+    sideBAudience.assignAll(const [
+      PkAudienceMember(
+        userId: 'b1',
+        displayName: 'ViewerB1',
         avatarUrl: '',
       ),
     ]);
@@ -637,6 +673,10 @@ class PkV1Controller extends GetxController {
     session.value = s;
     scoreA.value = s.sideA.score;
     scoreB.value = s.sideB.score;
+    sideADiamonds.value =
+        s.sideA.diamonds > 0 ? s.sideA.diamonds : s.sideA.earnings;
+    sideBDiamonds.value =
+        s.sideB.diamonds > 0 ? s.sideB.diamonds : s.sideB.earnings;
     machineState.value = s.status.name;
     outgoingInvitation.value = null;
     _applyAudiencesFromSession(s);
@@ -718,9 +758,13 @@ class PkV1Controller extends GetxController {
   }
 
   void _applyAudiencesFromSession(PkSession s) {
-    // Always sync (including empty) so stale Top Gifters don't linger.
+    // Always sync (including empty) so stale avatars don't linger.
     sideAAudience.assignAll(_filterAudienceMembers(s.sideA.audience));
     sideBAudience.assignAll(_filterAudienceMembers(s.sideB.audience));
+    sideATopContributors
+        .assignAll(_filterAudienceMembers(s.sideA.topContributors));
+    sideBTopContributors
+        .assignAll(_filterAudienceMembers(s.sideB.topContributors));
   }
 
   /// Push the current live room's audience onto the local host's PK side.
@@ -871,11 +915,15 @@ class PkV1Controller extends GetxController {
       scoreA.value = res.scoreA;
       scoreB.value = res.scoreB;
     }
+    if (res.hostADiamonds > 0) sideADiamonds.value = res.hostADiamonds;
+    if (res.hostBDiamonds > 0) sideBDiamonds.value = res.hostBDiamonds;
     if (res.topContributorsA.isNotEmpty) {
-      sideAAudience.assignAll(_filterAudienceMembers(res.topContributorsA));
+      sideATopContributors
+          .assignAll(_filterAudienceMembers(res.topContributorsA));
     }
     if (res.topContributorsB.isNotEmpty) {
-      sideBAudience.assignAll(_filterAudienceMembers(res.topContributorsB));
+      sideBTopContributors
+          .assignAll(_filterAudienceMembers(res.topContributorsB));
     }
 
     final localEvent = PkGiftEvent(
@@ -895,8 +943,28 @@ class PkV1Controller extends GetxController {
     _presentPkGift(localEvent);
   }
 
+  /// Apply optional `pkBattle` block from `POST /gifts/send` without changing
+  /// the live economy gift path — scores update when backend includes it.
+  void applyEconomyGiftPkBattle(Map<String, dynamic>? responseData) {
+    if (responseData == null || responseData.isEmpty) return;
+    final raw = responseData['pkBattle'] ??
+        responseData['pk_battle'] ??
+        responseData['pk'];
+    if (raw is! Map) return;
+    final map = raw.map((k, v) => MapEntry(k.toString(), v));
+    final pkId = (map['pkId'] ?? map['pk_id'] ?? '').toString().trim();
+    final current = session.value?.pkId ?? '';
+    if (pkId.isNotEmpty &&
+        current.isNotEmpty &&
+        !_idsMatch(pkId, current)) {
+      return;
+    }
+    _handleScoreUpdate(Map<String, dynamic>.from(map));
+  }
+
   /// Celebrate gift + push sender into Top Gifters for the supported side.
   void _presentPkGift(PkGiftEvent event) {
+    if (!_claimGiftPresentation(event)) return;
     lastGift.value = event;
     _bumpTopGifter(
       side: event.targetSide,
@@ -920,6 +988,18 @@ class PkV1Controller extends GetxController {
     });
   }
 
+  bool _claimGiftPresentation(PkGiftEvent event) {
+    final now = DateTime.now();
+    if (now.difference(_presentedGiftPrunedAt) > const Duration(seconds: 20)) {
+      _presentedGiftKeys.clear();
+      _presentedGiftPrunedAt = now;
+    }
+    final key =
+        '${event.giftId}|${event.senderId}|${event.quantity}|${pkSideToApi(event.targetSide)}';
+    if (key.replaceAll('|', '').isEmpty) return true;
+    return _presentedGiftKeys.add(key);
+  }
+
   void _bumpTopGifter({
     required PkBattleSide side,
     required String userId,
@@ -934,7 +1014,8 @@ class PkV1Controller extends GetxController {
       displayName: name.trim().isEmpty ? 'Viewer' : name.trim(),
       avatarUrl: avatar.trim(),
     );
-    final list = side == PkBattleSide.b ? sideBAudience : sideAAudience;
+    final list =
+        side == PkBattleSide.b ? sideBTopContributors : sideATopContributors;
     list.removeWhere((m) => _idsMatch(m.userId, id));
     list.insert(0, member);
     while (list.length > 5) {
@@ -1314,7 +1395,26 @@ class PkV1Controller extends GetxController {
       scoreB.value = _toInt(data['scoreB'] ?? data['score_b']);
     }
 
-    final rem = data['remainingSec'] ?? data['remaining_sec'];
+    final diamondsA = _toInt(
+      data['hostA_diamonds'] ??
+          data['hostADiamonds'] ??
+          data['host_a_diamonds'] ??
+          data['hostA_earnings'] ??
+          (sideA is Map ? (sideA['diamonds'] ?? sideA['earnings']) : null),
+    );
+    final diamondsB = _toInt(
+      data['hostB_diamonds'] ??
+          data['hostBDiamonds'] ??
+          data['host_b_diamonds'] ??
+          data['hostB_earnings'] ??
+          (sideB is Map ? (sideB['diamonds'] ?? sideB['earnings']) : null),
+    );
+    if (diamondsA > 0) sideADiamonds.value = diamondsA;
+    if (diamondsB > 0) sideBDiamonds.value = diamondsB;
+
+    final rem = data['remainingSec'] ??
+        data['remaining_sec'] ??
+        data['remainingSeconds'];
     if (rem != null) {
       remainingSeconds.value = _toInt(rem);
     }
@@ -1323,54 +1423,51 @@ class PkV1Controller extends GetxController {
       machineState.value = state;
     }
 
-    // Top contributors + room audienceList (updated PK session payload).
+    // Top contributors stay separate from room audience.
     final contribA = PkAudienceMember.listFrom(
       data['topContributorsA'] ??
           data['top_contributors_a'] ??
           (sideA is Map
-              ? (sideA['audienceList'] ??
-                  sideA['audience_list'] ??
-                  sideA['topContributors'] ??
-                  sideA['audience'] ??
-                  sideA['viewers'] ??
-                  sideA['topViewers'])
+              ? (sideA['topContributors'] ?? sideA['top_contributors'])
               : null),
     );
     final contribB = PkAudienceMember.listFrom(
       data['topContributorsB'] ??
           data['top_contributors_b'] ??
           (sideB is Map
-              ? (sideB['audienceList'] ??
-                  sideB['audience_list'] ??
-                  sideB['topContributors'] ??
-                  sideB['audience'] ??
-                  sideB['viewers'] ??
-                  sideB['topViewers'])
+              ? (sideB['topContributors'] ?? sideB['top_contributors'])
               : null),
     );
-    // Fill from me/opponent mirrors when nested side lists are empty.
-    final me = data['me'];
-    final opponent = data['opponent'];
-    final filledA = contribA.isNotEmpty
-        ? contribA
-        : _audienceFromMeOpponentMirror(
-            sideHostId: (sideA is Map ? sideA['hostId'] ?? sideA['host_id'] : null)
-                ?.toString(),
-            me: me,
-            opponent: opponent,
-          );
-    final filledB = contribB.isNotEmpty
-        ? contribB
-        : _audienceFromMeOpponentMirror(
-            sideHostId: (sideB is Map ? sideB['hostId'] ?? sideB['host_id'] : null)
-                ?.toString(),
-            me: me,
-            opponent: opponent,
-          );
-    sideAAudience.assignAll(_filterAudienceMembers(filledA));
-    sideBAudience.assignAll(_filterAudienceMembers(filledB));
+    if (contribA.isNotEmpty) {
+      sideATopContributors.assignAll(_filterAudienceMembers(contribA));
+    }
+    if (contribB.isNotEmpty) {
+      sideBTopContributors.assignAll(_filterAudienceMembers(contribB));
+    }
 
-    // Some backends nest the gift on score updates instead of PK_GIFT_RECEIVED.
+    final audienceA = PkAudienceMember.listFrom(
+      sideA is Map
+          ? (sideA['audienceList'] ?? sideA['audience_list'])
+          : null,
+    );
+    final audienceB = PkAudienceMember.listFrom(
+      sideB is Map
+          ? (sideB['audienceList'] ?? sideB['audience_list'])
+          : null,
+    );
+    // Only overwrite when the score payload includes side audience lists.
+    if (sideA is Map &&
+        (sideA.containsKey('audienceList') ||
+            sideA.containsKey('audience_list'))) {
+      sideAAudience.assignAll(_filterAudienceMembers(audienceA));
+    }
+    if (sideB is Map &&
+        (sideB.containsKey('audienceList') ||
+            sideB.containsKey('audience_list'))) {
+      sideBAudience.assignAll(_filterAudienceMembers(audienceB));
+    }
+
+    // Prefer PK_GIFT_RECEIVED for animation; lastGift is a fallback only.
     final giftRaw = data['lastGift'] ?? data['last_gift'] ?? data['gift'];
     if (giftRaw is Map) {
       try {
@@ -1382,29 +1479,6 @@ class PkV1Controller extends GetxController {
         }
       } catch (_) {}
     }
-  }
-
-  List<PkAudienceMember> _audienceFromMeOpponentMirror({
-    required String? sideHostId,
-    required dynamic me,
-    required dynamic opponent,
-  }) {
-    final host = (sideHostId ?? '').trim();
-    if (host.isEmpty) return const [];
-    for (final block in [me, opponent]) {
-      if (block is! Map) continue;
-      final map = block.map((k, v) => MapEntry(k.toString(), v));
-      final blockHost =
-          (map['hostId'] ?? map['host_id'] ?? '').toString().trim();
-      if (blockHost.isEmpty || blockHost != host) continue;
-      return PkAudienceMember.listFrom(
-        map['audienceList'] ??
-            map['audience_list'] ??
-            map['audience'] ??
-            map['topContributors'],
-      );
-    }
-    return const [];
   }
 
   int _toInt(dynamic v) {
