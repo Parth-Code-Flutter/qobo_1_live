@@ -32,16 +32,23 @@ class PkWinnerCelebrationOverlay {
     dismiss();
     _showing = true;
 
-    final winnerSide = result.winnerSide;
-    final winnerInfo = _winnerInfo(result: result, session: session);
+    final winnerSide = _effectiveWinnerSide(result);
+    final winnerInfo = _winnerInfo(result: result, session: session, side: winnerSide);
     final title = winnerSide == PkBattleSide.tie
         ? "IT'S A TIE!"
         : winnerSide == PkBattleSide.none
             ? 'PK ENDED'
             : 'VICTORY';
+    final winnerScore = winnerSide == PkBattleSide.a
+        ? result.scoreA
+        : winnerSide == PkBattleSide.b
+            ? result.scoreB
+            : math.max(result.scoreA, result.scoreB);
     final subtitle = winnerSide == PkBattleSide.tie
         ? '${result.scoreA} — ${result.scoreB}'
-        : '${winnerInfo.name} · ${winnerSide == PkBattleSide.a ? result.scoreA : result.scoreB} pts';
+        : winnerSide == PkBattleSide.none
+            ? 'Great battle · ${result.scoreA} vs ${result.scoreB}'
+            : '${winnerInfo.name} · $winnerScore pts';
 
     void finish() {
       _dismissTimer?.cancel();
@@ -82,6 +89,7 @@ class PkWinnerCelebrationOverlay {
             subtitle: subtitle,
             winnerName: winnerInfo.name,
             winnerAvatar: winnerInfo.avatarUrl,
+            winnerFrameUrl: winnerInfo.frameUrl,
             scoreA: result.scoreA,
             scoreB: result.scoreB,
             winnerSide: winnerSide,
@@ -90,6 +98,22 @@ class PkWinnerCelebrationOverlay {
         },
       ),
     );
+  }
+
+  /// Prefer server winner; if missing, decide from final scores.
+  static PkBattleSide _effectiveWinnerSide(PkResult result) {
+    final side = result.winnerSide;
+    if (side == PkBattleSide.a ||
+        side == PkBattleSide.b ||
+        side == PkBattleSide.tie) {
+      return side;
+    }
+    if (result.scoreA > result.scoreB) return PkBattleSide.a;
+    if (result.scoreB > result.scoreA) return PkBattleSide.b;
+    if (result.scoreA == result.scoreB && (result.scoreA > 0 || result.scoreB > 0)) {
+      return PkBattleSide.tie;
+    }
+    return PkBattleSide.none;
   }
 
   static void dismiss() {
@@ -104,20 +128,22 @@ class PkWinnerCelebrationOverlay {
     _showing = false;
   }
 
-  static ({String name, String avatarUrl}) _winnerInfo({
+  static ({String name, String avatarUrl, String frameUrl}) _winnerInfo({
     required PkResult result,
     PkSession? session,
+    required PkBattleSide side,
   }) {
     if (session == null) {
-      return (name: 'Champion', avatarUrl: '');
+      return (name: 'Champion', avatarUrl: '', frameUrl: '');
     }
-    switch (result.winnerSide) {
+    switch (side) {
       case PkBattleSide.a:
         return (
           name: session.sideA.displayName.isEmpty
               ? 'Side A'
               : session.sideA.displayName,
           avatarUrl: session.sideA.avatarUrl,
+          frameUrl: session.sideA.frameUrl,
         );
       case PkBattleSide.b:
         return (
@@ -125,9 +151,10 @@ class PkWinnerCelebrationOverlay {
               ? 'Side B'
               : session.sideB.displayName,
           avatarUrl: session.sideB.avatarUrl,
+          frameUrl: session.sideB.frameUrl,
         );
       default:
-        return (name: 'Great battle', avatarUrl: '');
+        return (name: 'Great battle', avatarUrl: '', frameUrl: '');
     }
   }
 }
@@ -138,6 +165,7 @@ class _PkWinnerCelebrationView extends StatefulWidget {
     required this.subtitle,
     required this.winnerName,
     required this.winnerAvatar,
+    required this.winnerFrameUrl,
     required this.scoreA,
     required this.scoreB,
     required this.winnerSide,
@@ -148,6 +176,7 @@ class _PkWinnerCelebrationView extends StatefulWidget {
   final String subtitle;
   final String winnerName;
   final String winnerAvatar;
+  final String winnerFrameUrl;
   final int scoreA;
   final int scoreB;
   final PkBattleSide winnerSide;
@@ -414,13 +443,14 @@ class _PkWinnerCelebrationViewState extends State<_PkWinnerCelebrationView>
   }
 
   Widget _buildHeroCard(Size size) {
-    final showWinner = widget.winnerSide != PkBattleSide.tie &&
-        widget.winnerSide != PkBattleSide.none;
+    final showWinner = widget.winnerSide == PkBattleSide.a ||
+        widget.winnerSide == PkBattleSide.b;
+    final isTie = widget.winnerSide == PkBattleSide.tie;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 28),
       child: Container(
-        width: math.min(size.width - 56, 340),
+        width: math.min(size.width - 56, 360),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(30),
           gradient: const LinearGradient(
@@ -461,7 +491,7 @@ class _PkWinnerCelebrationViewState extends State<_PkWinnerCelebrationView>
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
             child: Container(
-              padding: const EdgeInsets.fromLTRB(22, 26, 22, 22),
+              padding: const EdgeInsets.fromLTRB(22, 22, 22, 22),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(28),
                 gradient: LinearGradient(
@@ -477,52 +507,13 @@ class _PkWinnerCelebrationViewState extends State<_PkWinnerCelebrationView>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  ScaleTransition(
-                    scale: Tween<double>(begin: 0.94, end: 1.08).animate(
-                      CurvedAnimation(parent: _pulse, curve: Curves.easeInOut),
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.all(13),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: const SweepGradient(
-                          colors: [
-                            _gold,
-                            _orange,
-                            _pink,
-                            _violet,
-                            _cyan,
-                            _blue,
-                            _gold,
-                          ],
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _gold.withValues(alpha: 0.65),
-                            blurRadius: 26,
-                            spreadRadius: 2,
-                          ),
-                          BoxShadow(
-                            color: _pink.withValues(alpha: 0.40),
-                            blurRadius: 18,
-                          ),
-                        ],
-                      ),
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Color(0xFF140A28),
-                        ),
-                        child: const Icon(
-                          Icons.emoji_events_rounded,
-                          color: Colors.white,
-                          size: 36,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+                  if (showWinner)
+                    _winnerHeroPortrait()
+                  else if (isTie)
+                    _tieHeroMark()
+                  else
+                    _endedHeroMark(),
+                  const SizedBox(height: 10),
                   AnimatedBuilder(
                     animation: _shimmer,
                     builder: (_, __) {
@@ -546,64 +537,36 @@ class _PkWinnerCelebrationViewState extends State<_PkWinnerCelebrationView>
                         },
                         child: BoldText(
                           text: widget.title,
-                          fontSize: 32,
+                          fontSize: showWinner ? 30 : 32,
                           color: Colors.white,
                         ),
                       );
                     },
                   ),
-                  const SizedBox(height: 10),
                   if (showWinner) ...[
-                    Container(
-                      padding: const EdgeInsets.all(3.5),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: const SweepGradient(
-                          colors: [
-                            _gold,
-                            _pink,
-                            _violet,
-                            _cyan,
-                            _blue,
-                            _orange,
-                            _gold,
-                          ],
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _accent.withValues(alpha: 0.55),
-                            blurRadius: 20,
-                          ),
-                        ],
-                      ),
-                      child: Container(
-                        padding: const EdgeInsets.all(2.5),
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Color(0xFF12081F),
-                        ),
-                        child: AppUserAvatar(
-                          name: widget.winnerName,
-                          imageUrl: widget.winnerAvatar,
-                          frameSeed: widget.winnerName,
-                          size: 76,
-                          showFrame: true,
-                        ),
-                      ),
+                    const SizedBox(height: 6),
+                    SemiBoldText(
+                      text: widget.winnerName,
+                      fontSize: TextStyles.k18FontSize,
+                      color: kColorWhite,
+                      maxLines: 1,
+                      align: TextAlign.center,
                     ),
-                    const SizedBox(height: 12),
                   ],
+                  const SizedBox(height: 8),
                   SemiBoldText(
                     text: widget.subtitle,
-                    fontSize: TextStyles.k16FontSize,
-                    color: kColorWhite.withValues(alpha: 0.95),
+                    fontSize: TextStyles.k14FontSize,
+                    color: kColorWhite.withValues(alpha: 0.92),
                     maxLines: 2,
                     align: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
                       gradient: LinearGradient(
@@ -646,6 +609,220 @@ class _PkWinnerCelebrationViewState extends State<_PkWinnerCelebrationView>
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Framed winner avatar with crown — the hero of the end card.
+  Widget _winnerHeroPortrait() {
+    return ScaleTransition(
+      scale: Tween<double>(begin: 0.94, end: 1.06).animate(
+        CurvedAnimation(parent: _pulse, curve: Curves.easeInOut),
+      ),
+      child: SizedBox(
+        width: 148,
+        height: 168,
+        child: Stack(
+          alignment: Alignment.center,
+          clipBehavior: Clip.none,
+          children: [
+            // Soft glow behind frame.
+            Positioned(
+              top: 28,
+              child: Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: _accent.withValues(alpha: 0.55),
+                      blurRadius: 36,
+                      spreadRadius: 4,
+                    ),
+                    BoxShadow(
+                      color: _gold.withValues(alpha: 0.40),
+                      blurRadius: 28,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Sweep ring behind framed avatar.
+            Positioned(
+              top: 22,
+              child: Container(
+                width: 128,
+                height: 128,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: SweepGradient(
+                    colors: [
+                      _gold,
+                      _orange,
+                      _pink,
+                      _violet,
+                      _cyan,
+                      _blue,
+                      _gold,
+                    ],
+                  ),
+                ),
+                padding: const EdgeInsets.all(3),
+                child: const DecoratedBox(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0xFF140A28),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 18,
+              child: FramedUserAvatar(
+                name: widget.winnerName,
+                imageUrl: widget.winnerAvatar,
+                frameUrl: widget.winnerFrameUrl.isEmpty
+                    ? null
+                    : widget.winnerFrameUrl,
+                frameSeed: widget.winnerName,
+                size: 108,
+                fontSize: TextStyles.k20FontSize,
+              ),
+            ),
+            // Crown badge.
+            Positioned(
+              top: -2,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [_gold, _orange, _pink],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _gold.withValues(alpha: 0.7),
+                      blurRadius: 16,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                  border: Border.all(color: Colors.white, width: 1.6),
+                ),
+                child: const Icon(
+                  Icons.workspace_premium_rounded,
+                  color: Color(0xFF2A1248),
+                  size: 22,
+                ),
+              ),
+            ),
+            // WINNER chip under frame.
+            Positioned(
+              bottom: 0,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: const LinearGradient(
+                    colors: [_gold, _orange],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _gold.withValues(alpha: 0.55),
+                      blurRadius: 12,
+                    ),
+                  ],
+                ),
+                child: const BoldText(
+                  text: 'WINNER',
+                  fontSize: 11,
+                  color: Color(0xFF2A1248),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _tieHeroMark() {
+    return ScaleTransition(
+      scale: Tween<double>(begin: 0.94, end: 1.06).animate(
+        CurvedAnimation(parent: _pulse, curve: Curves.easeInOut),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: const SweepGradient(
+            colors: [_gold, _pink, _cyan, _blue, _gold],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: _gold.withValues(alpha: 0.55),
+              blurRadius: 22,
+            ),
+          ],
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            color: Color(0xFF140A28),
+          ),
+          child: const Icon(
+            Icons.handshake_rounded,
+            color: Colors.white,
+            size: 34,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _endedHeroMark() {
+    return ScaleTransition(
+      scale: Tween<double>(begin: 0.94, end: 1.06).animate(
+        CurvedAnimation(parent: _pulse, curve: Curves.easeInOut),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(13),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: const SweepGradient(
+            colors: [
+              _gold,
+              _orange,
+              _pink,
+              _violet,
+              _cyan,
+              _blue,
+              _gold,
+            ],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: _gold.withValues(alpha: 0.55),
+              blurRadius: 22,
+            ),
+          ],
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            color: Color(0xFF140A28),
+          ),
+          child: const Icon(
+            Icons.sports_esports_rounded,
+            color: Colors.white,
+            size: 34,
           ),
         ),
       ),

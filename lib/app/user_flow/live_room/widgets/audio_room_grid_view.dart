@@ -4,6 +4,7 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/app_widgets/rooms_empty_state.dart';
 import 'package:qobo_one_live/utils/app_widgets/dating_empty_hero.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -17,6 +18,7 @@ typedef _AudioRoomTileData = ({
   int speakerCount,
   int maxSeats,
   String avatar,
+  String? frameUrl,
   Map<String, dynamic> room,
 });
 
@@ -97,6 +99,8 @@ class AudioRoomGridView extends StatelessWidget {
     const fallbackImages = [kImgTemp2, kImgTemp3, kImgTemp4, kImgTemp5];
     final host = room['host'];
     final hostMap = host is Map ? host : const <String, dynamic>{};
+    final nested = room['room'];
+    final nestedMap = nested is Map ? nested : const <String, dynamic>{};
     final title = _text(room['name']) ?? _text(room['title']) ?? 'Audio Room';
     final hostName =
         _text(room['hostName']) ?? _text(hostMap['name']) ?? 'Host';
@@ -116,9 +120,33 @@ class AudioRoomGridView extends StatelessWidget {
           _text(room['hostAvatar']) ??
               _text(room['hostDisplayPicture']) ??
               _text(hostMap['displayPicture']) ??
+              _text(hostMap['avatar']) ??
               _text(room['coverImage']),
         ) ??
         fallbackImages[index % fallbackImages.length];
+    final frameUrl = ApiImageUtils.normalize(
+      _readFrameUrl(room['avatarFrame']) ??
+          _firstNonEmpty([
+            room['avatarFrameUrl'],
+            room['hostAvatarFrame'],
+            room['hostAvatarFrameUrl'],
+            room['profileFrameUrl'],
+            room['frameUrl'],
+          ]) ??
+          _readFrameUrl(hostMap['avatarFrame']) ??
+          _firstNonEmpty([
+            hostMap['avatarFrameUrl'],
+            hostMap['profileFrameUrl'],
+            hostMap['frameUrl'],
+          ]) ??
+          _readFrameUrl(nestedMap['avatarFrame']) ??
+          _firstNonEmpty([
+            nestedMap['avatarFrameUrl'],
+            nestedMap['hostAvatarFrameUrl'],
+            nestedMap['profileFrameUrl'],
+            nestedMap['frameUrl'],
+          ]),
+    );
 
     return (
       title: title,
@@ -128,8 +156,32 @@ class AudioRoomGridView extends StatelessWidget {
       speakerCount: speakerCount,
       maxSeats: maxSeats,
       avatar: avatar,
+      frameUrl: frameUrl,
       room: room,
     );
+  }
+
+  String? _firstNonEmpty(List<dynamic> values) {
+    for (final value in values) {
+      final text = _text(value);
+      if (text != null) return text;
+    }
+    return null;
+  }
+
+  String? _readFrameUrl(dynamic frame) {
+    if (frame == null) return null;
+    if (frame is String) return _text(frame);
+    if (frame is Map) {
+      return _firstNonEmpty([
+        frame['image'],
+        frame['imageUrl'],
+        frame['url'],
+        frame['frameUrl'],
+        frame['svga'],
+      ]);
+    }
+    return _text(frame);
   }
 
   String? _text(dynamic value) {
@@ -152,6 +204,8 @@ class _AudioRoomGridTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final roomTitle = data.title.isNotEmpty ? data.title : 'Audio Room';
     final hostName = data.hostName.isNotEmpty ? data.hostName : 'Host';
+    // FramedUserAvatar lays out at size * 1.34 (~88dp with size 66).
+    const avatarSize = 66.0;
 
     return GestureDetector(
       onTap: onTap,
@@ -163,22 +217,17 @@ class _AudioRoomGridTile extends StatelessWidget {
             clipBehavior: Clip.none,
             alignment: Alignment.center,
             children: [
-              Container(
-                width: 74,
-                height: 74,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: AppLightUi.pinkSoft.withValues(alpha: 0.55),
-                    width: 2,
-                  ),
-                  boxShadow: AppLightUi.cardShadow,
-                ),
-                child: ClipOval(child: _RoomImage(path: data.avatar)),
+              FramedUserAvatar(
+                name: hostName,
+                imageUrl: data.avatar,
+                frameUrl: data.frameUrl,
+                frameSeed: hostName,
+                size: avatarSize,
+                fontSize: TextStyles.k14FontSize,
               ),
               Positioned(
-                right: 2,
-                bottom: -2,
+                right: -2,
+                bottom: 2,
                 child: Container(
                   width: 26,
                   height: 26,
@@ -191,6 +240,13 @@ class _AudioRoomGridTile extends StatelessWidget {
                       color: AppLightUi.card,
                       width: 2,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppLightUi.pink.withValues(alpha: 0.28),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: const Icon(
                     Icons.mic_rounded,
@@ -268,44 +324,6 @@ class _AudioRoomCreateTile extends StatelessWidget {
             align: TextAlign.center,
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _RoomImage extends StatelessWidget {
-  const _RoomImage({required this.path});
-
-  final String path;
-
-  @override
-  Widget build(BuildContext context) {
-    if (path.startsWith('http')) {
-      return Image.network(
-        path,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _fallback(),
-      );
-    }
-    return Image.asset(
-      path,
-      fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => _fallback(),
-    );
-  }
-
-  Widget _fallback() {
-    return const DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppLightUi.violet,
-            AppLightUi.pink,
-          ],
-        ),
-      ),
-      child: Center(
-        child: Icon(Icons.graphic_eq_rounded, color: kColorWhite, size: 24),
       ),
     );
   }

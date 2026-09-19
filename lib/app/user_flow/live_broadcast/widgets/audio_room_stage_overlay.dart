@@ -205,12 +205,16 @@ class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
                                 Obx(() {
                                   if (controller.isInRoomPkActive &&
                                       Get.isRegistered<PkV1Controller>()) {
+                                    // Give Host A/B panes a bit more vertical room
+                                    // than the seat grid (audio PK is voice-only).
+                                    final pkH =
+                                        (middleH * 1.08).clamp(280.0, 440.0);
                                     return SizedBox(
-                                      height: middleH.clamp(220.0, 360.0),
+                                      height: pkH,
                                       child: InRoomPkStageOverlay(
                                         controller: Get.find<PkV1Controller>(),
                                         compact: compact,
-                                        maxHeight: middleH.clamp(220.0, 360.0),
+                                        maxHeight: pkH,
                                       ),
                                     );
                                   }

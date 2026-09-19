@@ -215,12 +215,27 @@ class _VideoRoomListViewState extends State<VideoRoomListView> {
 
     final frameUrl = ApiImageUtils.normalize(
       _readFrameUrl(room['avatarFrame']) ??
-          _readFrameUrl(room['avatarFrameUrl']) ??
+          _firstNonEmpty([
+            room['avatarFrameUrl'],
+            room['hostAvatarFrame'],
+            room['hostAvatarFrameUrl'],
+            room['profileFrameUrl'],
+            room['frameUrl'],
+          ]) ??
           _readFrameUrl(hostMap['avatarFrame']) ??
-          _readFrameUrl(hostMap['avatarFrameUrl']) ??
+          _firstNonEmpty([
+            hostMap['avatarFrameUrl'],
+            hostMap['profileFrameUrl'],
+            hostMap['frameUrl'],
+          ]) ??
           _readFrameUrl(nestedMap['avatarFrame']) ??
           _readFrameUrl(nestedMap['hostAvatarFrame']) ??
-          _readFrameUrl(nestedMap['hostAvatarFrameUrl']),
+          _firstNonEmpty([
+            nestedMap['avatarFrameUrl'],
+            nestedMap['hostAvatarFrameUrl'],
+            nestedMap['profileFrameUrl'],
+            nestedMap['frameUrl'],
+          ]),
     );
 
     final countryRaw = _firstNonEmpty([
@@ -598,13 +613,13 @@ class _HostFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // FramedUserAvatar adds its own frame padding (~1.34×); keep visual ~40dp.
+    // FramedUserAvatar adds its own frame padding (~1.34×); keep visual ~48dp.
     return FramedUserAvatar(
       name: name,
       imageUrl: avatar,
       frameUrl: frameUrl,
       frameSeed: name,
-      size: 34,
+      size: 40,
       fontSize: TextStyles.k10FontSize,
     );
   }

@@ -531,6 +531,12 @@ class _PkHostLiveVideoFillState extends State<PkHostLiveVideoFill> {
       // Rebuild when camera / zego connection changes so PK panes refresh.
       final _ = controller.isCameraOff.value;
       final connected = controller.isZegoConnected.value;
+
+      // Audio-room PK stays voice-only — never mount live camera tiles.
+      if (controller.isAudioRoom) {
+        return _fallbackAvatar();
+      }
+
       if (!connected || !_screenUtilReady) {
         return _fallbackAvatar();
       }

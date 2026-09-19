@@ -692,31 +692,50 @@ class LiveBroadcastController extends GetxController {
     pk.syncLocalRoomAudience(members);
   }
 
-  /// Ensures the host camera/mic publish when PK battle starts.
+  /// Ensures host media is ready when PK battle starts.
   ///
-  /// Audio rooms join without camera — PK needs video panes, so we force the
-  /// local camera on for the host (group-call or live-stream engine).
+  /// Video rooms: force camera + mic on for live PK panes.
+  /// Audio rooms: voice-only — keep camera off (avatar/cover panes only).
   void ensurePkHostVideoReady() {
     if (!isHost.value) return;
+    if (isAudioRoom) {
+      _ensurePkHostMicOnly();
+      Future.delayed(const Duration(milliseconds: 400), _ensurePkHostMicOnly);
+      Future.delayed(const Duration(milliseconds: 1000), _ensurePkHostMicOnly);
+      return;
+    }
     _turnOnPkHostMedia();
     Future.delayed(const Duration(milliseconds: 400), _turnOnPkHostMedia);
     Future.delayed(const Duration(milliseconds: 1000), _turnOnPkHostMedia);
     Future.delayed(const Duration(milliseconds: 2000), _turnOnPkHostMedia);
   }
 
+  /// Audio-room PK: mic on, camera stays off.
+  void _ensurePkHostMicOnly() {
+    if (!isHost.value || !isAudioRoom) return;
+    try {
+      ZegoUIKit().turnMicrophoneOn(true);
+      ZegoUIKit().turnCameraOn(false);
+      isMicMuted.value = false;
+      isCameraOff.value = true;
+      _pkForcedCameraOn = false;
+    } catch (_) {}
+  }
+
   void _turnOnPkHostMedia() {
     if (!isHost.value) return;
+    // Never force camera in audio rooms (voice-only PK).
+    if (isAudioRoom) {
+      _ensurePkHostMicOnly();
+      return;
+    }
     try {
       if (isAudioVideoRoom) {
-        // Party rooms use the group-call Zego engine (not live-streaming).
+        // Party video rooms use the group-call Zego engine (not live-streaming).
         ZegoUIKit().turnCameraOn(true);
         ZegoUIKit().turnMicrophoneOn(true);
         isCameraOff.value = false;
         isMicMuted.value = false;
-        // Audio rooms normally keep camera off — remember so we can restore.
-        if (!isVideoRoom) {
-          _pkForcedCameraOn = true;
-        }
         return;
       }
       // Live-stream host path.

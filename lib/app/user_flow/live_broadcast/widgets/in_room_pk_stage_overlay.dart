@@ -134,8 +134,8 @@ class InRoomPkStageOverlay extends StatelessWidget {
 
       // Always bound height so Expanded host panes can shrink to fit.
       final height = maxHeight ??
-          (MediaQuery.sizeOf(context).height * (compact ? 0.52 : 0.58))
-              .clamp(320.0, 560.0);
+          (MediaQuery.sizeOf(context).height * (compact ? 0.56 : 0.64))
+              .clamp(340.0, 600.0);
       body = SizedBox(height: height, width: double.infinity, child: body);
 
       return body;
