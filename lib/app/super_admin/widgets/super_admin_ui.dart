@@ -7,6 +7,7 @@ import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_shell_background.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/app_widgets/safe_network_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -45,15 +46,15 @@ abstract final class SuperAdminUi {
   static const textFaint = AppLightUi.muted;
 
   // —— Layout ——
-  static const double pagePad = 20;
-  static const double sectionGap = 16;
-  static const double cardPad = 16;
-  static const double cardRadius = 22;
+  static const double pagePad = 16;
+  static const double sectionGap = 12;
+  static const double cardPad = 14;
+  static const double cardRadius = 18;
   static const EdgeInsets pageInsets = EdgeInsets.fromLTRB(
     pagePad,
-    4,
+    10,
     pagePad,
-    110,
+    100,
   );
   static const EdgeInsets detailInsets = EdgeInsets.fromLTRB(
     pagePad,
@@ -123,27 +124,46 @@ class SuperAdminPageBackdrop extends StatelessWidget {
   }
 }
 
-/// Tab body shell: shared backdrop + safe area.
+/// Tab body shell: shared backdrop + [CommonAppBarWidget] + safe body.
 class SuperAdminPageScaffold extends StatelessWidget {
   const SuperAdminPageScaffold({
     super.key,
     required this.child,
+    this.title,
+    this.subtitle,
+    this.appBarActions,
     this.primary = SuperAdminUi.violet,
     this.secondary = SuperAdminUi.pink,
     this.bottom = false,
   });
 
   final Widget child;
+  final String? title;
+  final String? subtitle;
+  final List<Widget>? appBarActions;
   final Color primary;
   final Color secondary;
   final bool bottom;
 
   @override
   Widget build(BuildContext context) {
+    final hasAppBar = title != null && title!.trim().isNotEmpty;
     return SuperAdminPageBackdrop(
       primary: primary,
       secondary: secondary,
-      child: SafeArea(bottom: bottom, child: child),
+      child: hasAppBar
+          ? Scaffold(
+              backgroundColor: Colors.transparent,
+              appBar: CommonAppBarWidget(
+                title: title!,
+                subtitle: subtitle,
+                toolbarHeight: 56,
+                showBackButton: Navigator.of(context).canPop(),
+                actions: appBarActions,
+              ),
+              body: SafeArea(top: false, bottom: bottom, child: child),
+            )
+          : SafeArea(top: false, bottom: bottom, child: child),
     );
   }
 }
@@ -216,11 +236,11 @@ class SuperAdminFilterPill extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        height: 34,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(18),
           gradient: isSelected ? SuperAdminUi.headerGradient : null,
           color: isSelected ? null : AppLightUi.card,
           border: Border.all(
@@ -231,9 +251,9 @@ class SuperAdminFilterPill extends StatelessWidget {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: SuperAdminUi.pink.withValues(alpha: 0.28),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+                    color: SuperAdminUi.pink.withValues(alpha: 0.24),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
                   ),
                 ]
               : AppLightUi.cardShadow,
@@ -243,13 +263,13 @@ class SuperAdminFilterPill extends StatelessWidget {
           children: [
             Icon(
               icon,
-              size: 15,
+              size: 14,
               color: isSelected ? kColorWhite : SuperAdminUi.textMuted,
             ),
             Spacing.h6,
             SemiBoldText(
               text: label,
-              fontSize: TextStyles.k12FontSize,
+              fontSize: TextStyles.k10FontSize,
               color: isSelected ? kColorWhite : SuperAdminUi.textSecondary,
             ),
           ],
@@ -546,10 +566,10 @@ class SuperAdminAvatarRing extends StatelessWidget {
         fallbackLetter.isNotEmpty
             ? fallbackLetter.characters.first.toUpperCase()
             : '?',
-        style: const TextStyle(
+        style: TextStyle(
           color: kColorWhite,
           fontWeight: FontWeight.w700,
-          fontSize: 22,
+          fontSize: size >= 64 ? 22 : (size >= 48 ? 18 : 16),
           fontFamily: Font.Poppins,
         ),
       ),
@@ -575,18 +595,18 @@ class SuperAdminMetricChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: accent.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: accent.withValues(alpha: 0.28)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           coinIcon
-              ? AppCoinIcon(size: 14, color: accent)
-              : Icon(icon!, size: 14, color: accent),
+              ? AppCoinIcon(size: 12, color: accent)
+              : Icon(icon!, size: 12, color: accent),
           Spacing.h4,
           SemiBoldText(
             text: label,
@@ -599,7 +619,7 @@ class SuperAdminMetricChip extends StatelessWidget {
   }
 }
 
-/// Colorful 2-column stat tile for detail screens.
+/// Colorful stat tile for detail screens — compact + readable labels.
 class SuperAdminStatTile extends StatelessWidget {
   const SuperAdminStatTile({
     super.key,
@@ -608,6 +628,7 @@ class SuperAdminStatTile extends StatelessWidget {
     required this.accent,
     this.icon,
     this.coinIcon = false,
+    this.compact = false,
   }) : assert(icon != null || coinIcon);
 
   final IconData? icon;
@@ -615,13 +636,67 @@ class SuperAdminStatTile extends StatelessWidget {
   final String value;
   final Color accent;
   final bool coinIcon;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    if (compact) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          color: accent.withValues(alpha: 0.10),
+          border: Border.all(color: accent.withValues(alpha: 0.32)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            coinIcon
+                ? SuperAdminUi.glowCoinIcon(
+                    accent: accent,
+                    size: 26,
+                    iconSize: 12,
+                  )
+                : Container(
+                    width: 26,
+                    height: 26,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      gradient: LinearGradient(
+                        colors: [
+                          accent,
+                          accent.withValues(alpha: 0.65),
+                        ],
+                      ),
+                    ),
+                    child: Icon(icon, size: 13, color: kColorWhite),
+                  ),
+            Spacing.v6,
+            BoldText(
+              text: value,
+              fontSize: TextStyles.k14FontSize,
+              color: SuperAdminUi.textPrimary,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Spacing.v2,
+            AppText(
+              text: label,
+              fontSize: TextStyles.k8FontSize,
+              color: SuperAdminUi.textSecondary,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              align: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         color: accent.withValues(alpha: 0.10),
         border: Border.all(color: accent.withValues(alpha: 0.28)),
       ),
@@ -631,19 +706,19 @@ class SuperAdminStatTile extends StatelessWidget {
           coinIcon
               ? SuperAdminUi.glowCoinIcon(
                   accent: accent,
-                  size: 34,
-                  iconSize: 16,
+                  size: 30,
+                  iconSize: 14,
                 )
               : SuperAdminUi.glowIcon(
                   icon: icon!,
                   accent: accent,
-                  size: 34,
-                  iconSize: 16,
+                  size: 30,
+                  iconSize: 14,
                 ),
-          Spacing.v10,
+          Spacing.v8,
           BoldText(
             text: value,
-            fontSize: TextStyles.k18FontSize,
+            fontSize: TextStyles.k16FontSize,
             color: SuperAdminUi.textPrimary,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -652,7 +727,7 @@ class SuperAdminStatTile extends StatelessWidget {
           AppText(
             text: label,
             fontSize: TextStyles.k10FontSize,
-            color: SuperAdminUi.textMuted,
+            color: SuperAdminUi.textSecondary,
           ),
         ],
       ),

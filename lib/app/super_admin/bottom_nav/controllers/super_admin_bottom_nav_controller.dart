@@ -47,6 +47,21 @@ class SuperAdminBottomNavController extends GetxController {
     _userSession.loadFromStorage();
   }
 
+  /// Compact titles for the shared [CommonAppBarWidget] on the shell.
+  (String title, String subtitle) get appBarMeta {
+    switch (selectedIndex.value) {
+      case agencyTabIndex:
+        return ('Agency', 'Review applications');
+      case hostTabIndex:
+        return ('Hosts', 'Track activity');
+      case settingsTabIndex:
+        return ('Settings', 'Account & session');
+      case dashboardTabIndex:
+      default:
+        return ('Dashboard', 'Agencies · hosts · commissions');
+    }
+  }
+
   void onNavBarTabSelected(int index) {
     selectedIndex.value = index;
     if (!Get.isRegistered<SuperAdminHomeController>()) return;

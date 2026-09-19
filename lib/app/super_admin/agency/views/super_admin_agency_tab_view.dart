@@ -30,11 +30,7 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SuperAdminTabHeader(
-            title: 'Agency',
-            subtitle: 'Review and process agency applications',
-            accent: SuperAdminUi.pink,
-          ),
+          Spacing.v6,
           _filterChips(),
           Expanded(
             child: Obx(() {
@@ -90,7 +86,7 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
 
   Widget _filterChips() {
     return SizedBox(
-      height: 48,
+      height: 36,
       child: Obx(() {
         final selected = controller.agencyStatusFilter.value;
         return ListView.separated(
@@ -133,7 +129,7 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
           Transform.scale(scale: scale, child: child),
       child: SuperAdminGlassCard(
         glow: glow,
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         onTap: () => controller.openAgencyDetail(agency),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -146,32 +142,32 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
                   fallbackLetter: agency.name.isNotEmpty
                       ? agency.name
                       : agency.ownerName,
-                  size: 74,
+                  size: 56,
                   accent: glow,
                 ),
-                Spacing.h12,
+                Spacing.h10,
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       BoldText(
                         text: agency.name,
-                        fontSize: TextStyles.k16FontSize,
+                        fontSize: TextStyles.k14FontSize,
                         color: SuperAdminUi.textPrimary,
-                        maxLines: 2,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      Spacing.v4,
+                      Spacing.v2,
                       AppText(
                         text: agency.ownerName.isEmpty
                             ? agency.code
                             : '${agency.ownerName} · ${agency.code}',
-                        fontSize: TextStyles.k12FontSize,
+                        fontSize: TextStyles.k10FontSize,
                         color: SuperAdminUi.textSecondary,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      Spacing.v8,
+                      Spacing.v6,
                       SuperAdminStatusPill(status: agency.status),
                     ],
                   ),
@@ -179,7 +175,7 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
                 _manageButton(context, agency, processing),
               ],
             ),
-            Spacing.v12,
+            Spacing.v10,
             Wrap(
               spacing: 8,
               runSpacing: 8,

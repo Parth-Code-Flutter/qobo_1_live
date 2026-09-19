@@ -19,7 +19,7 @@ class EarningsChartPoint {
   final Color color;
 }
 
-/// Light glossy earnings card — AppLightUi dating chrome (not dark navy).
+/// Compact light earnings card — dense bars, readable contrast.
 class EarningsChartCard extends StatelessWidget {
   const EarningsChartCard({
     super.key,
@@ -28,6 +28,7 @@ class EarningsChartCard extends StatelessWidget {
     required this.totalLabel,
     required this.points,
     this.icon = Icons.analytics_rounded,
+    this.compact = false,
   });
 
   final String title;
@@ -35,6 +36,7 @@ class EarningsChartCard extends StatelessWidget {
   final String totalLabel;
   final List<EarningsChartPoint> points;
   final IconData icon;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -49,20 +51,22 @@ class EarningsChartCard extends StatelessWidget {
       0,
       (sum, point) => sum + point.value.toDouble(),
     );
+    final pad = compact ? 12.0 : 16.0;
+    final iconSize = compact ? 34.0 : 42.0;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: AppLightUi.cardDecoration(radius: 24),
+      padding: EdgeInsets.all(pad),
+      decoration: AppLightUi.cardDecoration(radius: compact ? 18 : 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                width: 42,
-                height: 42,
+                width: iconSize,
+                height: iconSize,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(compact ? 11 : 14),
                   gradient: AppLightUi.familyCtaGradient,
                   boxShadow: [
                     BoxShadow(
@@ -72,9 +76,9 @@ class EarningsChartCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: Icon(icon, color: kColorWhite, size: 22),
+                child: Icon(icon, color: kColorWhite, size: compact ? 18 : 22),
               ),
-              Spacing.h12,
+              Spacing.h10,
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,7 +94,7 @@ class EarningsChartCard extends StatelessWidget {
                     AppText(
                       text: subtitle,
                       fontSize: TextStyles.k10FontSize,
-                      color: AppLightUi.subtitle,
+                      color: AppLightUi.body,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -98,33 +102,45 @@ class EarningsChartCard extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
+                padding: EdgeInsets.symmetric(
+                  horizontal: compact ? 10 : 12,
+                  vertical: compact ? 6 : 8,
                 ),
                 decoration: BoxDecoration(
-                  color: AppLightUi.gold.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(16),
+                  color: AppLightUi.gold.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: AppLightUi.gold.withValues(alpha: 0.45),
+                    color: AppLightUi.gold.withValues(alpha: 0.5),
                   ),
                 ),
                 child: SemiBoldText(
                   text: totalLabel,
-                  fontSize: TextStyles.k16FontSize,
-                  color: const Color(0xFFB8860B),
+                  fontSize: compact
+                      ? TextStyles.k14FontSize
+                      : TextStyles.k16FontSize,
+                  color: const Color(0xFF9A6B00),
                 ),
               ),
             ],
           ),
-          Spacing.v(14),
+          Spacing.v(compact ? 10 : 14),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(14),
+            padding: EdgeInsets.symmetric(
+              horizontal: compact ? 10 : 14,
+              vertical: compact ? 8 : 14,
+            ),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              color: AppLightUi.cardSoft,
-              border: Border.all(color: AppLightUi.border),
+              borderRadius: BorderRadius.circular(compact ? 14 : 20),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppLightUi.cardSoft,
+                  AppLightUi.violet.withValues(alpha: 0.05),
+                ],
+              ),
+              border: Border.all(color: AppLightUi.borderStrong),
             ),
             child: Column(
               children: [
@@ -133,8 +149,10 @@ class EarningsChartCard extends StatelessWidget {
                     point: sanitized[i],
                     maxValue: maxValue,
                     total: total,
+                    compact: compact,
                   ),
-                  if (i != sanitized.length - 1) Spacing.v12,
+                  if (i != sanitized.length - 1)
+                    Spacing.v(compact ? 8 : 12),
                 ],
                 if (sanitized.isEmpty) const _EmptyChartState(),
               ],
@@ -151,17 +169,82 @@ class _ChartBarRow extends StatelessWidget {
     required this.point,
     required this.maxValue,
     required this.total,
+    this.compact = false,
   });
 
   final EarningsChartPoint point;
   final double maxValue;
   final double total;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final value = point.value.toDouble();
     final fraction = (value / maxValue).clamp(0.0, 1.0);
     final percent = total <= 0 ? 0 : ((value / total) * 100).round();
+    final barH = compact ? 6.0 : 10.0;
+
+    if (compact) {
+      // Single dense row: label · bar · value%
+      return Row(
+        children: [
+          SizedBox(
+            width: 52,
+            child: SemiBoldText(
+              text: point.label,
+              fontSize: TextStyles.k12FontSize,
+              color: AppLightUi.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Spacing.h8,
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: Stack(
+                children: [
+                  Container(height: barH, color: AppLightUi.borderStrong),
+                  FractionallySizedBox(
+                    widthFactor: math.max(fraction, value > 0 ? 0.06 : 0),
+                    child: Container(
+                      height: barH,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            point.color.withValues(alpha: 0.75),
+                            point.color,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Spacing.h8,
+          SizedBox(
+            width: 56,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                SemiBoldText(
+                  text: _formatValue(point.value),
+                  fontSize: TextStyles.k12FontSize,
+                  color: AppLightUi.title,
+                ),
+                AppText(
+                  text: '$percent%',
+                  fontSize: TextStyles.k8FontSize,
+                  color: point.color,
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -212,13 +295,13 @@ class _ChartBarRow extends StatelessWidget {
           child: Stack(
             children: [
               Container(
-                height: 10,
+                height: barH,
                 color: AppLightUi.border.withValues(alpha: 0.85),
               ),
               FractionallySizedBox(
                 widthFactor: math.max(fraction, value > 0 ? 0.08 : 0),
                 child: Container(
-                  height: 10,
+                  height: barH,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
@@ -226,12 +309,6 @@ class _ChartBarRow extends StatelessWidget {
                         point.color,
                       ],
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: point.color.withValues(alpha: 0.28),
-                        blurRadius: 8,
-                      ),
-                    ],
                   ),
                 ),
               ),
@@ -261,29 +338,20 @@ class _EmptyChartState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 26),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
       child: Column(
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppLightUi.violet.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.bar_chart_rounded,
-              color: AppLightUi.violet,
-              size: 22,
-            ),
+          Icon(
+            Icons.bar_chart_rounded,
+            color: AppLightUi.violet.withValues(alpha: 0.7),
+            size: 28,
           ),
-          Spacing.v10,
+          Spacing.v8,
           const AppText(
             text: 'No earnings data yet',
             fontSize: TextStyles.k12FontSize,
-            color: AppLightUi.subtitle,
+            color: AppLightUi.body,
             align: TextAlign.center,
           ),
         ],

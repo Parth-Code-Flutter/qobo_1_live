@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/app/super_admin/bottom_nav/controllers/super_admin_bottom_nav_controller.dart';
 import 'package:qobo_one_live/app/super_admin/home/controllers/super_admin_home_controller.dart';
 import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui.dart';
-import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui_kit.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
@@ -22,23 +21,14 @@ class SuperAdminSettingsTabView extends StatelessWidget {
     return SuperAdminPageScaffold(
       primary: SuperAdminUi.gold,
       secondary: SuperAdminUi.violet,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SuperAdminTabHeader(
-            title: 'Settings',
-            subtitle: 'Account and session controls',
-            accent: SuperAdminUi.gold,
-          ),
-          Expanded(
-            child: ListView(
+      child: ListView(
               padding: SuperAdminUi.pageInsets,
               children: [
                 GetBuilder<UserSessionController>(
                   builder: (session) {
                     return SuperAdminGlassCard(
                       glow: SuperAdminUi.gold,
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(12),
                       child: Row(
                         children: [
                           Stack(
@@ -49,14 +39,14 @@ class SuperAdminSettingsTabView extends StatelessWidget {
                                 imageUrl: session.displayPictureUrl,
                                 frameUrl: session.profileFrameUrl,
                                 frameSeed: session.userId,
-                                size: 64,
-                                fontSize: TextStyles.k16FontSize,
+                                size: 52,
+                                fontSize: TextStyles.k14FontSize,
                               ),
                               Positioned(
                                 right: -4,
                                 bottom: -2,
                                 child: Container(
-                                  padding: const EdgeInsets.all(4),
+                                  padding: const EdgeInsets.all(3),
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     gradient: SuperAdminUi.goldButtonGradient,
@@ -71,39 +61,39 @@ class SuperAdminSettingsTabView extends StatelessWidget {
                                   ),
                                   child: const Icon(
                                     Icons.workspace_premium_rounded,
-                                    size: 14,
+                                    size: 12,
                                     color: Color(0xFF1A1200),
                                   ),
                                 ),
                               ),
                             ],
                           ),
-                          Spacing.h12,
+                          Spacing.h10,
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 SemiBoldText(
                                   text: session.displayName,
-                                  fontSize: TextStyles.k16FontSize,
+                                  fontSize: TextStyles.k14FontSize,
                                   color: SuperAdminUi.textPrimary,
                                 ),
-                                Spacing.v4,
+                                Spacing.v2,
                                 AppText(
                                   text: session.email.isNotEmpty
                                       ? session.email
                                       : session.phone,
-                                  fontSize: TextStyles.k12FontSize,
+                                  fontSize: TextStyles.k10FontSize,
                                   color: SuperAdminUi.textMuted,
                                 ),
-                                Spacing.v8,
+                                Spacing.v6,
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 5,
+                                    horizontal: 8,
+                                    vertical: 4,
                                   ),
                                   decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(20),
+                                    borderRadius: BorderRadius.circular(16),
                                     color: SuperAdminUi.gold.withValues(
                                       alpha: 0.14,
                                     ),
@@ -190,9 +180,6 @@ class SuperAdminSettingsTabView extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-        ],
-      ),
     );
   }
 

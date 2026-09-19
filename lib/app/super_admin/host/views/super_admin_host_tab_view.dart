@@ -33,11 +33,7 @@ class SuperAdminHostTabView extends GetView<SuperAdminHomeController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SuperAdminTabHeader(
-            title: 'Host',
-            subtitle: 'Track host activity across all agencies',
-            accent: SuperAdminUi.teal,
-          ),
+          Spacing.v6,
           _filterChips(),
           Expanded(
             child: Obx(() {
@@ -103,7 +99,7 @@ class SuperAdminHostTabView extends GetView<SuperAdminHomeController> {
           Transform.scale(scale: scale, child: child),
       child: SuperAdminGlassCard(
         glow: glow,
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         onTap: () => controller.openHostDetail(host),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -114,29 +110,29 @@ class SuperAdminHostTabView extends GetView<SuperAdminHomeController> {
                 SuperAdminAvatarRing(
                   url: host.avatarUrl,
                   fallbackLetter: host.name,
-                  size: 74,
+                  size: 56,
                   accent: glow,
                 ),
-                Spacing.h12,
+                Spacing.h10,
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       BoldText(
                         text: host.name,
-                        fontSize: TextStyles.k16FontSize,
+                        fontSize: TextStyles.k14FontSize,
                         color: SuperAdminUi.textPrimary,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      Spacing.v4,
+                      Spacing.v2,
                       AppText(
                         text:
                             'Agency ${host.agencyCode.isEmpty ? '—' : host.agencyCode}',
-                        fontSize: TextStyles.k12FontSize,
+                        fontSize: TextStyles.k10FontSize,
                         color: SuperAdminUi.textSecondary,
                       ),
-                      Spacing.v8,
+                      Spacing.v6,
                       SuperAdminStatusPill(status: host.status),
                     ],
                   ),
@@ -145,8 +141,8 @@ class SuperAdminHostTabView extends GetView<SuperAdminHomeController> {
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
+                        horizontal: 8,
+                        vertical: 4,
                       ),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -155,24 +151,24 @@ class SuperAdminHostTabView extends GetView<SuperAdminHomeController> {
                             SuperAdminUi.gold.withValues(alpha: 0.08),
                           ],
                         ),
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: SuperAdminUi.gold.withValues(alpha: 0.45),
                         ),
                       ),
                       child: SemiBoldText(
                         text: host.totalCommissionEarned.toStringAsFixed(1),
-                        fontSize: TextStyles.k12FontSize,
+                        fontSize: TextStyles.k10FontSize,
                         color: SuperAdminUi.gold,
                       ),
                     ),
-                    Spacing.v8,
+                    Spacing.v6,
                     _manageButton(context, host),
                   ],
                 ),
               ],
             ),
-            Spacing.v12,
+            Spacing.v10,
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -202,7 +198,7 @@ class SuperAdminHostTabView extends GetView<SuperAdminHomeController> {
 
   Widget _filterChips() {
     return SizedBox(
-      height: 48,
+      height: 36,
       child: Obx(() {
         final selected = controller.hostStatusFilter.value;
         return ListView.separated(

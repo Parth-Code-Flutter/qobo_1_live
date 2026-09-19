@@ -232,7 +232,7 @@ class SuperAdminHostDetailView extends GetView<SuperAdminHostDetailController> {
             title: 'Earnings',
             accent: SuperAdminUi.gold,
           ),
-          Spacing.v(14),
+          Spacing.v10,
           Row(
             children: [
               Expanded(
@@ -241,37 +241,37 @@ class SuperAdminHostDetailView extends GetView<SuperAdminHostDetailController> {
                   label: 'Diamonds',
                   value: e.diamonds.toStringAsFixed(0),
                   accent: SuperAdminUi.sky,
+                  compact: true,
                 ),
               ),
-              Spacing.h10,
+              Spacing.h6,
               Expanded(
                 child: SuperAdminStatTile(
                   coinIcon: true,
                   label: 'Coins',
                   value: e.coins.toStringAsFixed(0),
                   accent: SuperAdminUi.gold,
+                  compact: true,
                 ),
               ),
-            ],
-          ),
-          Spacing.v10,
-          Row(
-            children: [
+              Spacing.h6,
               Expanded(
                 child: SuperAdminStatTile(
                   icon: Icons.payments_rounded,
                   label: 'Commission',
                   value: e.totalCommissionEarned.toStringAsFixed(1),
                   accent: SuperAdminUi.pink,
+                  compact: true,
                 ),
               ),
-              Spacing.h10,
+              Spacing.h6,
               Expanded(
                 child: SuperAdminStatTile(
                   icon: Icons.timer_outlined,
-                  label: 'Stream time',
+                  label: 'Stream',
                   value: _formatSeconds(e.totalStreamSeconds),
                   accent: SuperAdminUi.mint,
+                  compact: true,
                 ),
               ),
             ],

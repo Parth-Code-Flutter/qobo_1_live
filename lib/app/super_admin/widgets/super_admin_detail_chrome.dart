@@ -83,20 +83,20 @@ class SuperAdminCleanInfoRow extends StatelessWidget {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 34,
-                height: 34,
+                width: 30,
+                height: 30,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: accent.withValues(alpha: 0.14),
                 ),
-                child: Icon(icon, size: 16, color: accent),
+                child: Icon(icon, size: 14, color: accent),
               ),
-              Spacing.h12,
+              Spacing.h10,
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -104,12 +104,12 @@ class SuperAdminCleanInfoRow extends StatelessWidget {
                     AppText(
                       text: label,
                       fontSize: TextStyles.k10FontSize,
-                      color: SuperAdminUi.textMuted,
+                      color: SuperAdminUi.textSecondary,
                     ),
-                    Spacing.v4,
+                    Spacing.v2,
                     SemiBoldText(
                       text: value,
-                      fontSize: TextStyles.k14FontSize,
+                      fontSize: TextStyles.k12FontSize,
                       color: SuperAdminUi.textPrimary,
                     ),
                   ],

@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui.dart';
-import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
-/// Shared header for Super Admin tabs.
-class SuperAdminTabHeader extends StatelessWidget {
+/// Shared header for Super Admin tabs — delegates to [CommonAppBarWidget].
+///
+/// Prefer passing [title]/[subtitle] into [SuperAdminPageScaffold] instead.
+class SuperAdminTabHeader extends StatelessWidget
+    implements PreferredSizeWidget {
   const SuperAdminTabHeader({
     super.key,
     required this.title,
@@ -22,90 +24,16 @@ class SuperAdminTabHeader extends StatelessWidget {
   final Color accent;
 
   @override
-  Widget build(BuildContext context) {
-    final canPop = Navigator.of(context).canPop();
-    return Container(
-      padding: const EdgeInsets.fromLTRB(
-        SuperAdminUi.pagePad,
-        14,
-        SuperAdminUi.pagePad,
-        14,
-      ),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: accent.withValues(alpha: 0.18)),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          if (canPop) ...[_SuperAdminBackButton(accent: accent), Spacing.h12],
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                BoldText(
-                  text: title,
-                  fontSize: TextStyles.k22FontSize,
-                  color: SuperAdminUi.textPrimary,
-                ),
-                Spacing.v4,
-                AppText(
-                  text: subtitle,
-                  fontSize: TextStyles.k12FontSize,
-                  color: SuperAdminUi.textMuted,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Spacing.v8,
-                Container(
-                  width: 34,
-                  height: 3,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(2),
-                    gradient: LinearGradient(
-                      colors: [accent, SuperAdminUi.pink],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (trailing != null) ...[Spacing.h12, trailing!],
-        ],
-      ),
-    );
-  }
-}
-
-class _SuperAdminBackButton extends StatelessWidget {
-  const _SuperAdminBackButton({required this.accent});
-
-  final Color accent;
+  Size get preferredSize =>
+      CommonAppBarWidget(title: title, subtitle: subtitle).preferredSize;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: Get.back,
-        borderRadius: BorderRadius.circular(14),
-        child: Ink(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: AppLightUi.card,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: accent.withValues(alpha: 0.42)),
-            boxShadow: AppLightUi.cardShadow,
-          ),
-          child: Icon(
-            Icons.arrow_back_ios_new_rounded,
-            size: 18,
-            color: accent,
-          ),
-        ),
-      ),
+    return CommonAppBarWidget(
+      title: title,
+      subtitle: subtitle,
+      showBackButton: Navigator.of(context).canPop(),
+      actions: trailing == null ? null : [trailing!],
     );
   }
 }
@@ -132,20 +60,20 @@ class SuperAdminEmptyState extends StatelessWidget {
           SuperAdminUi.glowIcon(
             icon: icon,
             accent: SuperAdminUi.sky,
-            size: 72,
-            iconSize: 32,
+            size: 52,
+            iconSize: 24,
           ),
-          Spacing.v16,
+          Spacing.v12,
           SemiBoldText(
             text: title,
             fontSize: TextStyles.k14FontSize,
             color: SuperAdminUi.textPrimary,
           ),
-          Spacing.v6,
+          Spacing.v4,
           AppText(
             text: subtitle,
             fontSize: TextStyles.k12FontSize,
-            color: SuperAdminUi.textMuted,
+            color: SuperAdminUi.textSecondary,
             align: TextAlign.center,
           ),
         ],
@@ -171,10 +99,10 @@ class SuperAdminStatusPill extends StatelessWidget {
         ? SuperAdminUi.warning
         : SuperAdminUi.danger;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withValues(alpha: 0.38)),
       ),
       child: SemiBoldText(
@@ -202,13 +130,13 @@ class SuperAdminDocThumb extends StatelessWidget {
           AppText(
             text: label,
             fontSize: TextStyles.k10FontSize,
-            color: SuperAdminUi.textMuted,
+            color: SuperAdminUi.textSecondary,
           ),
-          Spacing.v6,
+          Spacing.v4,
           ClipRRect(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(12),
             child: AspectRatio(
-              aspectRatio: 1.4,
+              aspectRatio: 1.55,
               child: url.isEmpty
                   ? Container(
                       color: SuperAdminUi.panel.withValues(alpha: 0.7),
