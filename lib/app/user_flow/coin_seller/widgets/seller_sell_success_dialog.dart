@@ -1,10 +1,9 @@
-import 'dart:ui';
-import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/coin_seller/widgets/coin_seller_ui_kit.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 
@@ -37,7 +36,7 @@ class SellerSellSuccessDialog extends StatefulWidget {
         currency: currency,
       ),
       barrierDismissible: true,
-      barrierColor: Colors.black.withValues(alpha: 0.72),
+      barrierColor: Colors.black.withValues(alpha: 0.45),
     );
   }
 
@@ -71,97 +70,74 @@ class _SellerSellSuccessDialogState extends State<SellerSellSuccessDialog>
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
       child: TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0.86, end: 1),
-        duration: const Duration(milliseconds: 420),
+        tween: Tween(begin: 0.9, end: 1),
+        duration: const Duration(milliseconds: 360),
         curve: Curves.easeOutBack,
         builder: (context, scale, child) {
-          return Transform.scale(
-            scale: scale,
-            child: Opacity(
-              opacity: ((scale - 0.86) / 0.14).clamp(0.0, 1.0),
-              child: child,
-            ),
-          );
+          return Transform.scale(scale: scale, child: child);
         },
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(28),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(28),
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xF02A1638),
-                    Color(0xF0140C22),
-                    Color(0xF00C0814),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            color: kColorWhite,
+            border: Border.all(color: CoinSellerUi.borderStrong),
+            boxShadow: [
+              ...AppLightUi.cardShadow,
+              BoxShadow(
+                color: CoinSellerUi.mint.withValues(alpha: 0.18),
+                blurRadius: 24,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                height: 4,
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Color(0xFF25D98F),
+                      CoinSellerUi.gold,
+                      CoinSellerUi.pink,
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 22, 18, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _successBadge(),
+                    Spacing.v16,
+                    const SemiBoldText(
+                      text: 'Transfer successful',
+                      fontSize: 18,
+                      color: CoinSellerUi.title,
+                    ),
+                    Spacing.v4,
+                    AppText(
+                      text: 'Coins delivered to ${widget.recipient}',
+                      fontSize: 12,
+                      color: CoinSellerUi.body,
+                      align: TextAlign.center,
+                    ),
+                    Spacing.v16,
+                    _amountHero(),
+                    Spacing.v12,
+                    _detailChips(),
+                    Spacing.v12,
+                    _ledgerNote(),
+                    Spacing.v16,
+                    _doneButton(),
                   ],
                 ),
-                border: Border.all(
-                  color: CoinSellerUi.mint.withValues(alpha: 0.32),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: CoinSellerUi.mint.withValues(alpha: 0.18),
-                    blurRadius: 36,
-                    spreadRadius: 2,
-                  ),
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.45),
-                    blurRadius: 28,
-                    offset: const Offset(0, 16),
-                  ),
-                ],
               ),
-              child: Stack(
-                children: [
-                  _glowBlob(
-                    top: -36,
-                    right: -24,
-                    color: CoinSellerUi.mint.withValues(alpha: 0.18),
-                    size: 130,
-                  ),
-                  _glowBlob(
-                    bottom: -48,
-                    left: -20,
-                    color: CoinSellerUi.gold.withValues(alpha: 0.14),
-                    size: 140,
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 26, 20, 18),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _successBadge(),
-                        Spacing.v16,
-                        const SemiBoldText(
-                          text: 'Transfer successful',
-                          fontSize: 18,
-                          color: kColorWhite,
-                        ),
-                        Spacing.v4,
-                        AppText(
-                          text: 'Coins delivered to ${widget.recipient}',
-                          fontSize: 12,
-                          color: Colors.white54,
-                          align: TextAlign.center,
-                        ),
-                        Spacing.v16,
-                        _amountHero(),
-                        Spacing.v12,
-                        _detailChips(),
-                        Spacing.v12,
-                        _ledgerNote(),
-                        Spacing.v16,
-                        _doneButton(),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            ],
           ),
         ),
       ),
@@ -172,37 +148,33 @@ class _SellerSellSuccessDialogState extends State<SellerSellSuccessDialog>
     return AnimatedBuilder(
       animation: _pulse,
       builder: (context, _) {
-        final glow = 0.28 + (_pulse.value * 0.32);
+        final glow = 0.18 + (_pulse.value * 0.22);
         return Container(
-          width: 76,
-          height: 76,
+          width: 72,
+          height: 72,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            gradient: const RadialGradient(
-              colors: [
-                Color(0xFF86EFAC),
-                Color(0xFF22C55E),
-                Color(0xFF15803D),
-              ],
+            gradient: const LinearGradient(
+              colors: [Color(0xFF86EFAC), Color(0xFF25D98F)],
             ),
             boxShadow: [
               BoxShadow(
                 color: CoinSellerUi.mint.withValues(alpha: glow),
-                blurRadius: 24,
+                blurRadius: 18,
                 spreadRadius: 1,
               ),
             ],
           ),
-          child: Container(
-            margin: const EdgeInsets.all(3),
-            decoration: const BoxDecoration(
+          padding: const EdgeInsets.all(3),
+          child: const DecoratedBox(
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Color(0xFF102018),
+              color: kColorWhite,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.check_rounded,
               color: CoinSellerUi.mint,
-              size: 36,
+              size: 34,
             ),
           ),
         );
@@ -213,45 +185,43 @@ class _SellerSellSuccessDialogState extends State<SellerSellSuccessDialog>
   Widget _amountHero() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
           colors: [
-            CoinSellerUi.gold.withValues(alpha: 0.22),
-            const Color(0xFFFF4081).withValues(alpha: 0.12),
-            Colors.white.withValues(alpha: 0.03),
+            CoinSellerUi.gold.withValues(alpha: 0.14),
+            CoinSellerUi.pink.withValues(alpha: 0.08),
           ],
         ),
-        border: Border.all(color: CoinSellerUi.gold.withValues(alpha: 0.28)),
+        border: Border.all(color: CoinSellerUi.gold.withValues(alpha: 0.32)),
       ),
       child: Column(
         children: [
-          Row(
+          const Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              AppCoinIcon(
-                size: 14,
-                color: CoinSellerUi.gold.withValues(alpha: 0.9),
-              ),
-              const SizedBox(width: 6),
-              const AppText(
+              AppCoinIcon(size: 14, color: CoinSellerUi.gold),
+              SizedBox(width: 6),
+              AppText(
                 text: 'COINS SENT',
-                fontSize: 10,
-                color: Colors.white54,
+                fontSize: 11,
+                color: CoinSellerUi.body,
               ),
             ],
           ),
-          Spacing.v8,
+          Spacing.v6,
           ShaderMask(
             shaderCallback: (bounds) => const LinearGradient(
-              colors: [Color(0xFFFFF8E1), Color(0xFFFFC107), Color(0xFFFF8F00)],
+              colors: [
+                Color(0xFFFFE082),
+                CoinSellerUi.gold,
+                CoinSellerUi.goldDeep,
+              ],
             ).createShader(bounds),
             child: SemiBoldText(
               text: CoinSellerUi.formatCoins(widget.amount),
-              fontSize: 34,
+              fontSize: 32,
               color: kColorWhite,
             ),
           ),
@@ -268,15 +238,16 @@ class _SellerSellSuccessDialogState extends State<SellerSellSuccessDialog>
             icon: Icons.person_rounded,
             label: 'Buyer',
             value: widget.recipient,
-            accent: const Color(0xFFFF4081),
+            accent: CoinSellerUi.pink,
           ),
         ),
-        const SizedBox(width: 10),
+        Spacing.h10,
         Expanded(
           child: _infoChip(
             icon: Icons.payments_rounded,
             label: 'Received',
-            value: '${widget.currency} ${CoinSellerUi.formatMoney(widget.price)}',
+            value:
+                '${widget.currency} ${CoinSellerUi.formatMoney(widget.price)}',
             accent: CoinSellerUi.mint,
           ),
         ),
@@ -293,29 +264,25 @@ class _SellerSellSuccessDialogState extends State<SellerSellSuccessDialog>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
+        color: AppLightUi.cardSoft,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: accent.withValues(alpha: 0.28)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, size: 13, color: accent),
+              Icon(icon, size: 14, color: accent),
               const SizedBox(width: 5),
-              AppText(
-                text: label,
-                fontSize: 10,
-                color: Colors.white54,
-              ),
+              AppText(text: label, fontSize: 11, color: CoinSellerUi.body),
             ],
           ),
           Spacing.v6,
           SemiBoldText(
             text: value,
             fontSize: 13,
-            color: kColorWhite,
+            color: CoinSellerUi.title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -329,19 +296,19 @@ class _SellerSellSuccessDialogState extends State<SellerSellSuccessDialog>
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: CoinSellerUi.mint.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: CoinSellerUi.mint.withValues(alpha: 0.22)),
+        borderRadius: BorderRadius.circular(14),
+        color: CoinSellerUi.violet.withValues(alpha: 0.08),
+        border: Border.all(color: CoinSellerUi.violet.withValues(alpha: 0.22)),
       ),
       child: const Row(
         children: [
-          Icon(Icons.verified_rounded, color: CoinSellerUi.mint, size: 16),
+          Icon(Icons.receipt_long_rounded, size: 16, color: CoinSellerUi.violet),
           SizedBox(width: 8),
           Expanded(
             child: AppText(
-              text: 'Stock and sales ledger updated instantly.',
-              fontSize: 11,
-              color: Colors.white60,
+              text: 'Sale saved to your Transactions ledger.',
+              fontSize: 12,
+              color: CoinSellerUi.body,
             ),
           ),
         ],
@@ -359,57 +326,24 @@ class _SellerSellSuccessDialogState extends State<SellerSellSuccessDialog>
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: CoinSellerUi.goldDeep.withValues(alpha: 0.4),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
+              color: CoinSellerUi.pink.withValues(alpha: 0.28),
+              blurRadius: 14,
+              offset: const Offset(0, 5),
             ),
           ],
         ),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: () => Get.back(),
+            onTap: () => Get.back<void>(),
             borderRadius: BorderRadius.circular(14),
             child: const Center(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.done_all_rounded, color: kColorWhite, size: 18),
-                  SizedBox(width: 6),
-                  SemiBoldText(
-                    text: 'Done',
-                    fontSize: 14,
-                    color: kColorWhite,
-                  ),
-                ],
+              child: SemiBoldText(
+                text: 'Done',
+                fontSize: 14,
+                color: kColorWhite,
               ),
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _glowBlob({
-    double? top,
-    double? bottom,
-    double? left,
-    double? right,
-    required Color color,
-    required double size,
-  }) {
-    return Positioned(
-      top: top,
-      bottom: bottom,
-      left: left,
-      right: right,
-      child: IgnorePointer(
-        child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: color,
           ),
         ),
       ),

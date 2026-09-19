@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/coin_seller/widgets/coin_seller_ui_kit.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/repo/user/user_repo.dart';
@@ -133,16 +134,7 @@ class _CoinSellerBuyerPickerSheetState
     final height = MediaQuery.sizeOf(context).height * 0.78;
     return Container(
       height: height,
-      margin: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF2A1638), Color(0xFF120A1E)],
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-      ),
+      decoration: AppLightUi.bottomSheetDecoration(topRadius: 28),
       child: SafeArea(
         top: false,
         child: Column(
@@ -152,7 +144,7 @@ class _CoinSellerBuyerPickerSheetState
               width: 42,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.white24,
+                color: CoinSellerUi.borderStrong,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -164,7 +156,7 @@ class _CoinSellerBuyerPickerSheetState
                 child: SemiBoldText(
                   text: 'Select buyer',
                   fontSize: 17,
-                  color: kColorWhite,
+                  color: CoinSellerUi.title,
                 ),
               ),
             ),
@@ -175,8 +167,8 @@ class _CoinSellerBuyerPickerSheetState
                 alignment: Alignment.centerLeft,
                 child: AppText(
                   text: 'Search by name, or pick from friends / followers',
-                  fontSize: 11,
-                  color: Colors.white54,
+                  fontSize: 12,
+                  color: CoinSellerUi.body,
                 ),
               ),
             ),
@@ -185,18 +177,18 @@ class _CoinSellerBuyerPickerSheetState
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: TextField(
                 controller: _searchController,
-                style: const TextStyle(color: kColorWhite, fontSize: 14),
+                style: const TextStyle(color: CoinSellerUi.title, fontSize: 14),
                 onChanged: _onSearchChanged,
                 onSubmitted: (v) => unawaited(_runSearch(v.trim())),
                 decoration: InputDecoration(
                   hintText: 'Search users…',
-                  hintStyle: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.4),
+                  hintStyle: const TextStyle(
+                    color: CoinSellerUi.body,
                     fontSize: 13,
                   ),
-                  prefixIcon: Icon(
+                  prefixIcon: const Icon(
                     Icons.search_rounded,
-                    color: Colors.white.withValues(alpha: 0.7),
+                    color: CoinSellerUi.violet,
                   ),
                   suffixIcon: Obx(
                     () => _isSearching.value
@@ -214,10 +206,23 @@ class _CoinSellerBuyerPickerSheetState
                         : const SizedBox.shrink(),
                   ),
                   filled: true,
-                  fillColor: Colors.white.withValues(alpha: 0.07),
+                  fillColor: kColorWhite,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide.none,
+                    borderSide:
+                        const BorderSide(color: CoinSellerUi.borderStrong),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide:
+                        const BorderSide(color: CoinSellerUi.borderStrong),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(
+                      color: CoinSellerUi.violet,
+                      width: 1.4,
+                    ),
                   ),
                 ),
               ),
@@ -238,7 +243,7 @@ class _CoinSellerBuyerPickerSheetState
                         text:
                             'No users found. Try searching by name or phone.',
                         fontSize: 12,
-                        color: Colors.white54,
+                        color: CoinSellerUi.body,
                         align: TextAlign.center,
                       ),
                     ),
@@ -289,13 +294,13 @@ class _BuyerTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
             color: selected
-                ? CoinSellerUi.gold.withValues(alpha: 0.14)
-                : Colors.white.withValues(alpha: 0.05),
+                ? CoinSellerUi.violet.withValues(alpha: 0.10)
+                : kColorWhite,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: selected
-                  ? CoinSellerUi.gold.withValues(alpha: 0.45)
-                  : Colors.white.withValues(alpha: 0.08),
+                  ? CoinSellerUi.violet.withValues(alpha: 0.40)
+                  : CoinSellerUi.borderStrong,
             ),
           ),
           child: Row(
@@ -313,15 +318,15 @@ class _BuyerTile extends StatelessWidget {
                     SemiBoldText(
                       text: user.name,
                       fontSize: 13,
-                      color: kColorWhite,
+                      color: CoinSellerUi.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     Spacing.v2,
                     AppText(
                       text: user.id,
-                      fontSize: 10,
-                      color: Colors.white38,
+                      fontSize: 11,
+                      color: CoinSellerUi.body,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -331,13 +336,13 @@ class _BuyerTile extends StatelessWidget {
               if (selected)
                 const Icon(
                   Icons.check_circle_rounded,
-                  color: CoinSellerUi.gold,
+                  color: CoinSellerUi.violet,
                   size: 22,
                 )
               else
-                Icon(
+                const Icon(
                   Icons.chevron_right_rounded,
-                  color: Colors.white.withValues(alpha: 0.35),
+                  color: CoinSellerUi.body,
                 ),
             ],
           ),

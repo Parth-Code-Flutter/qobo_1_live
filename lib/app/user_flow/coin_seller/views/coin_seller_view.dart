@@ -4,6 +4,7 @@ import 'package:qobo_one_live/app/user_flow/coin_seller/controllers/coin_seller_
 import 'package:qobo_one_live/app/user_flow/coin_seller/models/seller_sale.dart';
 import 'package:qobo_one_live/app/user_flow/coin_seller/widgets/coin_seller_transaction_actions_sheet.dart';
 import 'package:qobo_one_live/app/user_flow/coin_seller/widgets/coin_seller_ui_kit.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
@@ -52,15 +53,17 @@ class CoinSellerView extends GetView<CoinSellerController> {
       body: GestureDetector(
         onTap: _dismissKeyboard,
         behavior: HitTestBehavior.deferToChild,
-        child: Obx(() {
-          if (controller.isBootstrapping.value ||
-              controller.screenState.value == CoinSellerScreenState.checking) {
-            return const Center(
-              child: CircularProgressIndicator(color: CoinSellerUi.gold),
-            );
-          }
-          return _bodyForState(context, controller.screenState.value);
-        }),
+        child: CoinSellerUi.pageBackground(
+          child: Obx(() {
+            if (controller.isBootstrapping.value ||
+                controller.screenState.value == CoinSellerScreenState.checking) {
+              return const Center(
+                child: CircularProgressIndicator(color: CoinSellerUi.gold),
+              );
+            }
+            return _bodyForState(context, controller.screenState.value);
+          }),
+        ),
       ),
     );
   }
@@ -109,7 +112,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
                   'Apply with your logged-in account. Once approved, transfer '
                   'coins to buyers and manage your sales ledger from here.',
               fontSize: 12,
-              color: CoinSellerUi.muted,
+              color: CoinSellerUi.body,
             ),
             Spacing.v20,
             AppTextField(
@@ -117,10 +120,14 @@ class CoinSellerView extends GetView<CoinSellerController> {
               hintText: 'Payment methods & region (JazzCash, bank, etc.)',
               maxLines: 4,
               textInputType: TextInputType.multiline,
-              fillColor: CoinSellerUi.cardSoft,
-              borderColor: CoinSellerUi.border,
+              fillColor: kColorWhite,
+              borderColor: CoinSellerUi.borderStrong,
               textStyle: TextStyles.kRegularPoppins(
                 colors: CoinSellerUi.title,
+                fontSize: 13,
+              ),
+              hintStyle: TextStyles.kRegularPoppins(
+                colors: CoinSellerUi.body,
                 fontSize: 13,
               ),
             ),
@@ -200,7 +207,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
                     'Your request was submitted. An admin will review it soon. '
                     'Tap below once you are approved.',
                 fontSize: 12,
-                color: CoinSellerUi.muted,
+                color: CoinSellerUi.body,
                 align: TextAlign.center,
               ),
               Spacing.v20,
@@ -231,13 +238,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: Column(
-              children: [
-                _stockHero(),
-                Spacing.v12,
-                _metricsStrip(),
-              ],
-            ),
+            child: _stockHero(),
           ),
           Spacing.v12,
           Padding(
@@ -261,117 +262,170 @@ class CoinSellerView extends GetView<CoinSellerController> {
   Widget _stockHero() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: CoinSellerUi.glassCard(
-        borderColor: CoinSellerUi.gold.withValues(alpha: 0.35),
-        gradient: CoinSellerUi.heroGradient,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: kColorWhite,
+        border: Border.all(color: CoinSellerUi.borderStrong),
+        boxShadow: AppLightUi.cardShadow,
       ),
-      child: Stack(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Positioned(
-            right: -20,
-            top: -20,
-            child: Opacity(
-              opacity: 0.08,
-              child: AppCoinIcon(size: 120, color: CoinSellerUi.gold),
+          Container(
+            height: 4,
+            decoration: const BoxDecoration(
+              gradient: CoinSellerUi.sellButtonGradient,
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const AppText(
-                    text: 'Available stock',
-                    fontSize: 12,
-                    color: CoinSellerUi.body,
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: CoinSellerUi.gold.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: CoinSellerUi.gold.withValues(alpha: 0.4),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 34,
+                            height: 34,
+                            decoration: AppLightUi.iconTileDecoration(
+                              CoinSellerUi.violet,
+                              radius: 11,
+                            ),
+                            child: const Icon(
+                              Icons.account_balance_wallet_rounded,
+                              size: 17,
+                              color: CoinSellerUi.violet,
+                            ),
+                          ),
+                          Spacing.h8,
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                SemiBoldText(
+                                  text: 'Merchant wallet',
+                                  fontSize: 13,
+                                  color: CoinSellerUi.title,
+                                ),
+                                AppText(
+                                  text: 'Available stock',
+                                  fontSize: 11,
+                                  color: CoinSellerUi.body,
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            height: 28,
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(999),
+                              gradient: AppLightUi.familyCtaGradient,
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.verified_rounded,
+                                  color: kColorWhite,
+                                  size: 13,
+                                ),
+                                SizedBox(width: 4),
+                                SemiBoldText(
+                                  text: 'Verified',
+                                  fontSize: 10,
+                                  color: kColorWhite,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(
-                          Icons.verified_rounded,
-                          color: CoinSellerUi.gold,
-                          size: 13,
+                      Spacing.v12,
+                      Obx(
+                        () => Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Flexible(
+                              child: ShaderMask(
+                                shaderCallback: (bounds) =>
+                                    const LinearGradient(
+                                  colors: [
+                                    Color(0xFFFFD54F),
+                                    CoinSellerUi.gold,
+                                    CoinSellerUi.goldDeep,
+                                  ],
+                                ).createShader(bounds),
+                                child: BoldText(
+                                  text: CoinSellerUi.formatCoins(
+                                    controller.availableCoins.value,
+                                  ),
+                                  fontSize: 34,
+                                  color: kColorWhite,
+                                ),
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(left: 6, bottom: 6),
+                              child: AppText(
+                                text: 'coins',
+                                fontSize: 13,
+                                color: CoinSellerUi.body,
+                              ),
+                            ),
+                          ],
                         ),
-                        SizedBox(width: 4),
-                        SemiBoldText(
-                          text: 'Verified',
-                          fontSize: 10,
-                          color: CoinSellerUi.gold,
-                        ),
-                      ],
+                      ),
+                      Spacing.v6,
+                      const AppText(
+                        text: 'Ready to transfer to buyers instantly',
+                        fontSize: 12,
+                        color: CoinSellerUi.body,
+                      ),
+                    ],
+                  ),
+                ),
+                Spacing.h10,
+                _stockCoinBadge(),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: Obx(
+              () => Row(
+                children: [
+                  _heroMiniStat(
+                    icon: Icons.payments_rounded,
+                    label: 'Revenue',
+                    value:
+                        '₹${CoinSellerUi.formatMoney(controller.totalRevenue.value)}',
+                    color: CoinSellerUi.mint,
+                  ),
+                  Spacing.h8,
+                  _heroMiniStat(
+                    icon: Icons.toll_rounded,
+                    label: 'Sold',
+                    value: CoinSellerUi.formatCoins(
+                      controller.totalCoinsSold.value,
                     ),
+                    color: CoinSellerUi.gold,
+                  ),
+                  Spacing.h8,
+                  _heroMiniStat(
+                    icon: Icons.receipt_long_rounded,
+                    label: 'Sales',
+                    value: '${controller.totalTransactions.value}',
+                    color: CoinSellerUi.sky,
                   ),
                 ],
               ),
-              Spacing.v10,
-              Obx(
-                () => ShaderMask(
-                  shaderCallback: (bounds) => const LinearGradient(
-                    colors: [Color(0xFFFFF8E1), CoinSellerUi.gold, CoinSellerUi.goldDeep],
-                  ).createShader(bounds),
-                  child: BoldText(
-                    text: CoinSellerUi.formatCoins(
-                      controller.availableCoins.value,
-                    ),
-                    fontSize: 40,
-                    color: kColorWhite,
-                  ),
-                ),
-              ),
-              const AppText(
-                text: 'coins ready to sell',
-                fontSize: 12,
-                color: CoinSellerUi.muted,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _metricsStrip() {
-    return Obx(
-      () => Row(
-        children: [
-          Expanded(
-            child: _metricTile(
-              Icons.payments_rounded,
-              'Revenue',
-              'INR ${CoinSellerUi.formatMoney(controller.totalRevenue.value)}',
-              CoinSellerUi.mint,
-            ),
-          ),
-          Spacing.h8,
-          Expanded(
-            child: _metricTile(
-              Icons.toll_rounded,
-              'Sold',
-              CoinSellerUi.formatCoins(controller.totalCoinsSold.value),
-              CoinSellerUi.gold,
-            ),
-          ),
-          Spacing.h8,
-          Expanded(
-            child: _metricTile(
-              Icons.receipt_long_rounded,
-              'Sales',
-              '${controller.totalTransactions.value}',
-              CoinSellerUi.sky,
             ),
           ),
         ],
@@ -379,42 +433,82 @@ class CoinSellerView extends GetView<CoinSellerController> {
     );
   }
 
-  Widget _metricTile(
-    IconData icon,
-    String label,
-    String value,
-    Color color,
-  ) {
+  Widget _stockCoinBadge() {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-      decoration: CoinSellerUi.glassCard(
-        borderColor: color.withValues(alpha: 0.25),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, size: 16, color: color),
-          Spacing.v4,
-          AppText(text: label, fontSize: 10, color: CoinSellerUi.muted),
-          Spacing.v2,
-          SemiBoldText(
-            text: value,
-            fontSize: 12,
-            color: color,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+      width: 76,
+      height: 76,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: AppLightUi.glossRingGradient,
+        boxShadow: [
+          BoxShadow(
+            color: CoinSellerUi.pink.withValues(alpha: 0.18),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
           ),
         ],
+      ),
+      padding: const EdgeInsets.all(2.5),
+      child: const DecoratedBox(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Color(0xFFFFFBF5),
+        ),
+        child: Center(
+          child: AppCoinIcon(size: 36, color: CoinSellerUi.gold),
+        ),
+      ),
+    );
+  }
+
+  Widget _heroMiniStat({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          color: color.withValues(alpha: 0.08),
+          border: Border.all(color: color.withValues(alpha: 0.28)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 15, color: color),
+            Spacing.v4,
+            SemiBoldText(
+              text: value,
+              fontSize: 12,
+              color: CoinSellerUi.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Spacing.v2,
+            AppText(
+              text: label,
+              fontSize: 10,
+              color: CoinSellerUi.body,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _tabBar(BuildContext context) {
     return Container(
-      height: 44,
+      height: 48,
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: CoinSellerUi.cardSoft,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: CoinSellerUi.border),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: CoinSellerUi.borderStrong),
+        boxShadow: AppLightUi.cardShadow,
       ),
       child: TabBar(
         onTap: (_) => _dismissKeyboard(),
@@ -423,9 +517,16 @@ class CoinSellerView extends GetView<CoinSellerController> {
         indicator: BoxDecoration(
           gradient: CoinSellerUi.sellButtonGradient,
           borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: CoinSellerUi.pink.withValues(alpha: 0.28),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         labelColor: kColorWhite,
-        unselectedLabelColor: CoinSellerUi.muted,
+        unselectedLabelColor: CoinSellerUi.body,
         labelStyle: TextStyles.kSemiBoldPoppins(fontSize: 12),
         unselectedLabelStyle: TextStyles.kSemiBoldPoppins(fontSize: 12),
         tabs: const [
@@ -444,55 +545,99 @@ class CoinSellerView extends GetView<CoinSellerController> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SemiBoldText(
-              text: 'Quick transfer',
-              fontSize: 15,
-              color: CoinSellerUi.title,
-            ),
-            Spacing.v6,
-            const AppText(
-              text: 'Pick a buyer from the list, then enter coins and price.',
-              fontSize: 11,
-              color: CoinSellerUi.muted,
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: AppLightUi.iconTileDecoration(
+                    CoinSellerUi.pink,
+                    radius: 12,
+                  ),
+                  child: const Icon(
+                    Icons.bolt_rounded,
+                    size: 20,
+                    color: CoinSellerUi.pink,
+                  ),
+                ),
+                Spacing.h10,
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SemiBoldText(
+                        text: 'Quick transfer',
+                        fontSize: 15,
+                        color: CoinSellerUi.title,
+                      ),
+                      AppText(
+                        text: 'Pick a buyer, then enter coins and price.',
+                        fontSize: 11,
+                        color: CoinSellerUi.body,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
             Spacing.v16,
             _buyerSelector(context),
             Spacing.v12,
-            _field(
-              AppCoinIcon(size: 20, color: CoinSellerUi.gold),
-              controller.coinsController,
-              'Coins',
-              number: true,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _field(
+                    AppCoinIcon(size: 18, color: CoinSellerUi.gold),
+                    controller.coinsController,
+                    'Coins',
+                    number: true,
+                  ),
+                ),
+                Spacing.h10,
+                Expanded(
+                  child: _field(
+                    Icon(
+                      Icons.currency_rupee_rounded,
+                      size: 18,
+                      color: CoinSellerUi.mint,
+                    ),
+                    controller.priceController,
+                    'Price (INR)',
+                    decimal: true,
+                  ),
+                ),
+              ],
             ),
-            Spacing.v12,
-            _field(
-              Icon(Icons.currency_rupee_rounded,
-                  size: 20, color: CoinSellerUi.gold),
-              controller.priceController,
-              'Price (INR)',
-              decimal: true,
-            ),
-            Spacing.v16,
+            const SizedBox(height: 14),
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
               decoration: BoxDecoration(
-                color: Colors.amber.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(14),
+                gradient: LinearGradient(
+                  colors: [
+                    CoinSellerUi.violet.withValues(alpha: 0.08),
+                    CoinSellerUi.pink.withValues(alpha: 0.06),
+                  ],
+                ),
                 border: Border.all(
-                  color: Colors.amber.withValues(alpha: 0.2),
+                  color: CoinSellerUi.violet.withValues(alpha: 0.22),
                 ),
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.info_outline_rounded,
-                      size: 16, color: Colors.amber),
+                  Icon(
+                    Icons.shield_moon_rounded,
+                    size: 16,
+                    color: CoinSellerUi.violet,
+                  ),
                   SizedBox(width: 8),
                   Expanded(
                     child: AppText(
                       text:
                           'You will confirm the transfer before coins are sent.',
-                      fontSize: 10,
-                      color: CoinSellerUi.muted,
+                      fontSize: 12,
+                      color: CoinSellerUi.title,
                     ),
                   ),
                 ],
@@ -506,10 +651,10 @@ class CoinSellerView extends GetView<CoinSellerController> {
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: CoinSellerUi.sellButtonGradient,
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: CoinSellerUi.goldDeep.withValues(alpha: 0.35),
+                        color: CoinSellerUi.pink.withValues(alpha: 0.32),
                         blurRadius: 16,
                         offset: const Offset(0, 6),
                       ),
@@ -524,14 +669,27 @@ class CoinSellerView extends GetView<CoinSellerController> {
                                 context,
                                 controller.transferCoins,
                               ),
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(16),
                       child: Center(
-                        child: SemiBoldText(
-                          text: controller.isTransferring.value
-                              ? 'Transferring…'
-                              : 'Transfer now',
-                          fontSize: 14,
-                          color: kColorWhite,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            if (!controller.isTransferring.value) ...[
+                              const Icon(
+                                Icons.send_rounded,
+                                size: 18,
+                                color: kColorWhite,
+                              ),
+                              Spacing.h8,
+                            ],
+                            SemiBoldText(
+                              text: controller.isTransferring.value
+                                  ? 'Transferring…'
+                                  : 'Transfer now',
+                              fontSize: 14,
+                              color: kColorWhite,
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -556,12 +714,12 @@ class CoinSellerView extends GetView<CoinSellerController> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: CoinSellerUi.cardSoft,
-              borderRadius: BorderRadius.circular(14),
+              color: kColorWhite,
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: buyer != null
-                    ? CoinSellerUi.gold.withValues(alpha: 0.4)
-                    : CoinSellerUi.border,
+                    ? CoinSellerUi.gold.withValues(alpha: 0.45)
+                    : CoinSellerUi.borderStrong,
               ),
             ),
             child: Row(
@@ -600,8 +758,8 @@ class CoinSellerView extends GetView<CoinSellerController> {
                             ),
                             AppText(
                               text: 'Friends, followers, or search',
-                              fontSize: 10,
-                              color: CoinSellerUi.faint,
+                              fontSize: 11,
+                              color: CoinSellerUi.body,
                             ),
                           ],
                         )
@@ -617,8 +775,8 @@ class CoinSellerView extends GetView<CoinSellerController> {
                             ),
                             AppText(
                               text: buyer.id,
-                              fontSize: 10,
-                              color: CoinSellerUi.faint,
+                              fontSize: 11,
+                              color: CoinSellerUi.body,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -668,10 +826,14 @@ class CoinSellerView extends GetView<CoinSellerController> {
               : TextInputType.text,
       textInputAction: TextInputAction.done,
       onSubmitted: (_) => _dismissKeyboard(),
-      fillColor: CoinSellerUi.cardSoft,
-      borderColor: CoinSellerUi.border,
+      fillColor: kColorWhite,
+      borderColor: CoinSellerUi.borderStrong,
       textStyle: TextStyles.kRegularPoppins(
         colors: CoinSellerUi.title,
+        fontSize: 13,
+      ),
+      hintStyle: TextStyles.kRegularPoppins(
+        colors: CoinSellerUi.body,
         fontSize: 13,
       ),
       prefix: Padding(
@@ -767,28 +929,27 @@ class CoinSellerView extends GetView<CoinSellerController> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
           gradient: selected ? CoinSellerUi.sellButtonGradient : null,
-          color: selected ? null : CoinSellerUi.cardSoft,
+          color: selected ? null : kColorWhite,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: selected
                 ? Colors.transparent
-                : CoinSellerUi.border,
+                : CoinSellerUi.borderStrong,
           ),
         ),
         child: SemiBoldText(
           text: label,
           fontSize: 11,
-          color: selected ? kColorWhite : CoinSellerUi.muted,
+          color: selected ? kColorWhite : CoinSellerUi.body,
         ),
       ),
     );
   }
 
   Widget _transactionTile(BuildContext context, SellerSale sale) {
-    final accent = sale.isReversed
-        ? const Color(0xFFFF6B6B)
-        : CoinSellerUi.gold;
-    final coinLabel = sale.isReversed
+    final isReversed = sale.isReversed;
+    final coinAccent = isReversed ? CoinSellerUi.body : CoinSellerUi.gold;
+    final coinLabel = isReversed
         ? CoinSellerUi.formatCoins(sale.amount)
         : '+${CoinSellerUi.formatCoins(sale.amount)}';
     final priceLabel =
@@ -803,119 +964,137 @@ class CoinSellerView extends GetView<CoinSellerController> {
         ),
         borderRadius: BorderRadius.circular(20),
         child: Ink(
-          padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                accent.withValues(alpha: 0.12),
-                CoinSellerUi.card,
-                CoinSellerUi.cardSoft,
-              ],
-            ),
-            border: Border.all(color: accent.withValues(alpha: 0.28)),
-            boxShadow: [
-              BoxShadow(
-                color: accent.withValues(alpha: 0.08),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
+            color: kColorWhite,
+            border: Border.all(color: CoinSellerUi.borderStrong),
+            boxShadow: AppLightUi.cardShadow,
           ),
-          child: Column(
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(2),
+                    width: 4,
                     decoration: BoxDecoration(
-                      shape: BoxShape.circle,
                       gradient: LinearGradient(
-                        colors: [
-                          accent.withValues(alpha: 0.85),
-                          const Color(0xFFFF4081).withValues(alpha: 0.55),
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: isReversed
+                            ? const [
+                                Color(0xFFE84B6A),
+                                Color(0xFFFF8A9A),
+                              ]
+                            : const [
+                                CoinSellerUi.violet,
+                                CoinSellerUi.pink,
+                              ],
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                      child: Column(
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(2),
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: AppLightUi.glossRingGradient,
+                                ),
+                                child: Container(
+                                  padding: const EdgeInsets.all(1.5),
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: kColorWhite,
+                                  ),
+                                  child: AppUserAvatar(
+                                    name: sale.displayName,
+                                    imageUrl: sale.avatarUrl,
+                                    size: 42,
+                                  ),
+                                ),
+                              ),
+                              Spacing.h10,
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    SemiBoldText(
+                                      text: sale.displayName,
+                                      fontSize: 14,
+                                      color: CoinSellerUi.title,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Spacing.v6,
+                                    Wrap(
+                                      spacing: 6,
+                                      runSpacing: 6,
+                                      crossAxisAlignment:
+                                          WrapCrossAlignment.center,
+                                      children: [
+                                        _statusPill(sale),
+                                        AppText(
+                                          text: sale.formattedDate,
+                                          fontSize: 11,
+                                          color: CoinSellerUi.body,
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Spacing.h8,
+                              _manageActionButton(context, sale),
+                            ],
+                          ),
+                          Spacing.v12,
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _metricBlock(
+                                  icon: AppCoinIcon(
+                                    size: 14,
+                                    color: coinAccent,
+                                  ),
+                                  label: 'Coins',
+                                  value: coinLabel,
+                                  accent: coinAccent,
+                                ),
+                              ),
+                              Spacing.h8,
+                              Expanded(
+                                child: _metricBlock(
+                                  icon: Icon(
+                                    Icons.payments_rounded,
+                                    size: 14,
+                                    color: isReversed
+                                        ? CoinSellerUi.body
+                                        : CoinSellerUi.mint,
+                                  ),
+                                  label: 'Received',
+                                  value: priceLabel,
+                                  accent: isReversed
+                                      ? CoinSellerUi.body
+                                      : CoinSellerUi.mint,
+                                ),
+                              ),
+                            ],
+                          ),
                         ],
                       ),
                     ),
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: CoinSellerUi.card,
-                      ),
-                      child: AppUserAvatar(
-                        name: sale.displayName,
-                        imageUrl: sale.avatarUrl,
-                        size: 42,
-                      ),
-                    ),
-                  ),
-                  Spacing.h10,
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SemiBoldText(
-                          text: sale.displayName,
-                          fontSize: 14,
-                          color: CoinSellerUi.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Spacing.v6,
-                        Row(
-                          children: [
-                            _statusPill(sale),
-                            Spacing.h8,
-                            Flexible(
-                              child: AppText(
-                                text: sale.formattedDate,
-                                fontSize: 10,
-                                color: CoinSellerUi.faint,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  Spacing.h8,
-                  _manageActionButton(context, sale),
-                ],
-              ),
-              Spacing.v12,
-              Row(
-                children: [
-                  Expanded(
-                    child: _metricBlock(
-                      icon: AppCoinIcon(
-                        size: 13,
-                        color: sale.isReversed
-                            ? CoinSellerUi.muted
-                            : CoinSellerUi.gold,
-                      ),
-                      label: 'Coins',
-                      value: coinLabel,
-                      accent: sale.isReversed ? CoinSellerUi.muted : CoinSellerUi.gold,
-                    ),
-                  ),
-                  Spacing.h8,
-                  Expanded(
-                    child: _metricBlock(
-                      icon: Icon(Icons.payments_rounded, size: 13, color: CoinSellerUi.mint),
-                      label: 'Received',
-                      value: priceLabel,
-                      accent: CoinSellerUi.mint,
-                    ),
                   ),
                 ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -931,9 +1110,9 @@ class CoinSellerView extends GetView<CoinSellerController> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.08),
+        color: AppLightUi.cardSoft,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: accent.withValues(alpha: 0.22)),
+        border: Border.all(color: accent.withValues(alpha: 0.30)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -944,8 +1123,8 @@ class CoinSellerView extends GetView<CoinSellerController> {
               const SizedBox(width: 5),
               AppText(
                 text: label,
-                fontSize: 10,
-                color: CoinSellerUi.muted,
+                fontSize: 11,
+                color: CoinSellerUi.body,
               ),
             ],
           ),
@@ -953,7 +1132,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
           SemiBoldText(
             text: value,
             fontSize: 14,
-            color: accent,
+            color: CoinSellerUi.title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -967,36 +1146,30 @@ class CoinSellerView extends GetView<CoinSellerController> {
       color: Colors.transparent,
       child: InkWell(
         onTap: () => _openTransactionActions(context, sale),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(999),
         child: Ink(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          height: 32,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                CoinSellerUi.gold.withValues(alpha: 0.22),
-                const Color(0xFFFF4081).withValues(alpha: 0.16),
-              ],
-            ),
+            borderRadius: BorderRadius.circular(999),
+            color: CoinSellerUi.violet.withValues(alpha: 0.10),
             border: Border.all(
-              color: CoinSellerUi.gold.withValues(alpha: 0.45),
+              color: CoinSellerUi.violet.withValues(alpha: 0.32),
             ),
           ),
           child: const Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                Icons.auto_awesome_rounded,
-                color: CoinSellerUi.gold,
-                size: 13,
+                Icons.more_horiz_rounded,
+                color: CoinSellerUi.violet,
+                size: 16,
               ),
               SizedBox(width: 4),
               SemiBoldText(
                 text: 'Manage',
                 fontSize: 11,
-                color: kColorWhite,
+                color: CoinSellerUi.violet,
               ),
             ],
           ),
@@ -1039,11 +1212,17 @@ class CoinSellerView extends GetView<CoinSellerController> {
   }
 
   Widget _glassPanel({required Widget child}) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: CoinSellerUi.glassCard(),
-      child: child,
+    return CoinSellerUi.glossFrame(
+      radius: 22,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20.6),
+          gradient: CoinSellerUi.cardGradient,
+        ),
+        child: child,
+      ),
     );
   }
 
@@ -1057,16 +1236,8 @@ class CoinSellerView extends GetView<CoinSellerController> {
         Container(
           width: 48,
           height: 48,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                CoinSellerUi.gold.withValues(alpha: 0.3),
-                CoinSellerUi.goldDeep.withValues(alpha: 0.1),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Icon(icon, color: CoinSellerUi.gold, size: 24),
+          decoration: AppLightUi.iconTileDecoration(CoinSellerUi.gold, radius: 14),
+          child: Icon(icon, color: CoinSellerUi.goldDeep, size: 24),
         ),
         Spacing.h12,
         Expanded(
@@ -1088,7 +1259,15 @@ class CoinSellerView extends GetView<CoinSellerController> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 52, color: CoinSellerUi.faint),
+          Container(
+            width: 72,
+            height: 72,
+            decoration: AppLightUi.iconTileDecoration(
+              CoinSellerUi.violet,
+              radius: 22,
+            ),
+            child: Icon(icon, size: 32, color: CoinSellerUi.violet),
+          ),
           Spacing.v12,
           SemiBoldText(text: title, fontSize: 14, color: CoinSellerUi.title),
           Spacing.v4,
@@ -1097,7 +1276,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
             child: AppText(
               text: subtitle,
               fontSize: 11,
-              color: CoinSellerUi.faint,
+              color: CoinSellerUi.muted,
               align: TextAlign.center,
             ),
           ),

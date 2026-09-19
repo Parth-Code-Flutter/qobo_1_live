@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:qobo_one_live/constants/app_light_theme.dart';
+import 'package:qobo_one_live/constants/color_constants.dart';
 
 /// Shared palette + helpers for the coins-seller merchant UI (lavender canvas).
 abstract final class CoinSellerUi {
   CoinSellerUi._();
 
-  static const gold = Color(0xFFFFC107);
+  static const gold = AppLightUi.gold;
   static const goldDeep = Color(0xFFFF8F00);
-  static const mint = Color(0xFF4ADE80);
-  static const sky = Color(0xFF60A5FA);
+  static const mint = Color(0xFF25D98F);
+  static const sky = AppLightUi.cyan;
+  static const pink = AppLightUi.pink;
+  static const violet = AppLightUi.violet;
 
   /// Soft plum wash for accent tiles (not a dark page fill).
   static const plum = Color(0xFFF3E4F5);
@@ -21,14 +24,15 @@ abstract final class CoinSellerUi {
   static const card = AppLightUi.card;
   static const cardSoft = AppLightUi.cardSoft;
   static const border = AppLightUi.border;
+  static const borderStrong = AppLightUi.borderStrong;
 
   static const heroGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
-      Color(0xFFFFF8E7),
+      Color(0xFFFFFBF5),
       Color(0xFFFFFBFE),
-      Color(0xFFFDF4FA),
+      Color(0xFFF8F2FF),
     ],
   );
 
@@ -41,9 +45,21 @@ abstract final class CoinSellerUi {
     ],
   );
 
+  /// Merchant CTA — warm gold into brand pink/violet.
   static const sellButtonGradient = LinearGradient(
-    colors: [Color(0xFFFF8F00), Color(0xFFFF4081)],
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [
+      Color(0xFFFFB020),
+      Color(0xFFFF4F98),
+      Color(0xFFB14DFF),
+    ],
   );
+
+  static const sellButtonColors = [
+    Color(0xFFFFB020),
+    Color(0xFFFF4F98),
+  ];
 
   static String formatCoins(int value) {
     if (value >= 1000000) {
@@ -71,13 +87,47 @@ abstract final class CoinSellerUi {
     return value.toStringAsFixed(2);
   }
 
-  static BoxDecoration glassCard({Color? borderColor, Gradient? gradient}) {
+  static BoxDecoration glassCard({
+    Color? borderColor,
+    Gradient? gradient,
+    double radius = 22,
+  }) {
     return BoxDecoration(
       color: gradient == null ? card : null,
       gradient: gradient ?? cardGradient,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(radius),
       border: Border.all(color: borderColor ?? border),
       boxShadow: AppLightUi.cardShadow,
+    );
+  }
+
+  /// Glossy ring wrapper used for hero / premium panels.
+  static Widget glossFrame({
+    required Widget child,
+    double radius = 24,
+    EdgeInsetsGeometry padding = const EdgeInsets.all(1.4),
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(radius),
+        gradient: AppLightUi.glossRingGradient,
+        boxShadow: [
+          BoxShadow(
+            color: pink.withValues(alpha: 0.16),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      padding: padding,
+      child: child,
+    );
+  }
+
+  static Widget pageBackground({required Widget child}) {
+    return ColoredBox(
+      color: kColorLavenderBg,
+      child: child,
     );
   }
 }

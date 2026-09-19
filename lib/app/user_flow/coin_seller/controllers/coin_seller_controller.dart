@@ -10,6 +10,7 @@ import 'package:qobo_one_live/app/user_flow/coin_seller/models/seller_sale.dart'
 import 'package:qobo_one_live/app/user_flow/coin_seller/models/seller_transactions_page.dart';
 import 'package:qobo_one_live/app/user_flow/coin_seller/widgets/coin_seller_buyer_picker_sheet.dart';
 import 'package:qobo_one_live/app/user_flow/coin_seller/widgets/coin_seller_confirm_transfer_dialog.dart';
+import 'package:qobo_one_live/app/user_flow/coin_seller/widgets/coin_seller_light_dialog.dart';
 import 'package:qobo_one_live/app/user_flow/coin_seller/widgets/coin_seller_transaction_detail_sheet.dart';
 import 'package:qobo_one_live/app/user_flow/coin_seller/widgets/seller_sell_success_dialog.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
@@ -282,65 +283,9 @@ class CoinSellerController extends GetxController {
     final priceCtrl = TextEditingController(text: sale.price.toString());
     final noteCtrl = TextEditingController(text: sale.note ?? '');
 
-    final confirmed = await Get.dialog<bool>(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        backgroundColor: const Color(0xFF1E1E2D),
-        child: Padding(
-          padding: const EdgeInsets.all(22),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'Edit transaction',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: kColorWhite,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: priceCtrl,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                style: const TextStyle(color: kColorWhite),
-                decoration: _inputDecoration('Price (INR)'),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: noteCtrl,
-                maxLines: 2,
-                style: const TextStyle(color: kColorWhite),
-                decoration: _inputDecoration('Note (optional)'),
-              ),
-              const SizedBox(height: 18),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Get.back(result: false),
-                      child: const Text('Cancel'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => Get.back(result: true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: kColorPrimary,
-                      ),
-                      child: const Text('Save'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+    final confirmed = await CoinSellerLightDialog.editTransaction(
+      priceController: priceCtrl,
+      noteController: noteCtrl,
     );
 
     if (confirmed != true) {
@@ -390,23 +335,6 @@ class CoinSellerController extends GetxController {
     }
     _showSuccess('Transaction updated.');
     await loadDashboard(isShowLoader: false);
-  }
-
-  InputDecoration _inputDecoration(String hint) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
-      filled: true,
-      fillColor: Colors.white10,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.white12),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.white12),
-      ),
-    );
   }
 
   Future<void> openBuyerPicker() async {
@@ -508,56 +436,14 @@ class CoinSellerController extends GetxController {
   Future<void> reverseSale(SellerSale sale) async {
     if (isReversing.value || !sale.canReverse) return;
 
-    final confirmed = await Get.dialog<bool>(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        backgroundColor: const Color(0xFF1E1E2D),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Reverse this sale?',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: kColorWhite,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Reverse ${sale.amount} coins sold to ${sale.displayName}?\n\n'
-                'This fails if the buyer already spent those coins.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white70, fontSize: 13),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Get.back(result: false),
-                      child: const Text('Cancel'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.redAccent,
-                      ),
-                      onPressed: () => Get.back(result: true),
-                      child: const Text('Reverse'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+    final confirmed = await CoinSellerLightDialog.confirm(
+      title: 'Reverse this sale?',
+      message:
+          'Reverse ${sale.amount} coins sold to ${sale.displayName}?',
+      footnote: 'This fails if the buyer already spent those coins.',
+      icon: Icons.undo_rounded,
+      confirmLabel: 'Reverse',
+      destructive: true,
       barrierDismissible: false,
     );
     if (confirmed != true) return;
