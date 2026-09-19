@@ -15,14 +15,28 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
   const SuperAdminAgencyTabView({super.key});
 
-  static const _filters = ['pending', 'approved', 'suspended', 'all'];
-
-  static const _filterIcons = <String, IconData>{
-    'pending': Icons.hourglass_top_rounded,
-    'approved': Icons.verified_rounded,
-    'suspended': Icons.pause_circle_filled_rounded,
-    'all': Icons.grid_view_rounded,
-  };
+  static const _filters = <SuperAdminSegmentTab>[
+    SuperAdminSegmentTab(
+      value: 'all',
+      label: 'All',
+      icon: Icons.grid_view_rounded,
+    ),
+    SuperAdminSegmentTab(
+      value: 'pending',
+      label: 'Pending',
+      icon: Icons.hourglass_top_rounded,
+    ),
+    SuperAdminSegmentTab(
+      value: 'approved',
+      label: 'Approved',
+      icon: Icons.verified_rounded,
+    ),
+    SuperAdminSegmentTab(
+      value: 'suspended',
+      label: 'Hold',
+      icon: Icons.pause_circle_filled_rounded,
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -32,8 +46,9 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Spacing.v6,
+          Spacing.v8,
           _filterChips(),
+          Spacing.v8,
           Expanded(
             child: Obx(() {
               if (controller.isLoadingAgencies.value &&
@@ -102,29 +117,13 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
   }
 
   Widget _filterChips() {
-    return SizedBox(
-      height: 36,
-      child: Obx(() {
-        final selected = controller.agencyStatusFilter.value;
-        return ListView.separated(
-          scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: SuperAdminUi.pagePad),
-          itemCount: _filters.length,
-          separatorBuilder: (_, __) => Spacing.h8,
-          itemBuilder: (_, index) {
-            final filter = _filters[index];
-            final label = filter[0].toUpperCase() + filter.substring(1);
-            return SuperAdminFilterPill(
-              label: label,
-              icon: _filterIcons[filter] ?? Icons.circle,
-              isSelected: selected == filter,
-              onTap: () => controller.changeAgencyFilter(filter),
-            );
-          },
-        );
-      }),
-    );
+    return Obx(() {
+      return SuperAdminSegmentedTabs(
+        tabs: _filters,
+        selectedValue: controller.agencyStatusFilter.value,
+        onSelected: controller.changeAgencyFilter,
+      );
+    });
   }
 
   Widget _agencyCard(

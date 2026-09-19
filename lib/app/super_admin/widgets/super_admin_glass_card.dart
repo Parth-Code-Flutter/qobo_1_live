@@ -5,6 +5,8 @@ export 'super_admin_ui.dart'
         SuperAdminPageScaffold,
         SuperAdminGlassCard,
         SuperAdminFilterPill,
+        SuperAdminSegmentTab,
+        SuperAdminSegmentedTabs,
         SuperAdminSheetScaffold,
         SuperAdminSheetAction,
         SuperAdminActionButton,

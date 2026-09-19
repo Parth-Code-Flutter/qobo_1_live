@@ -279,6 +279,120 @@ class SuperAdminFilterPill extends StatelessWidget {
   }
 }
 
+/// Full-width segmented filter tabs — equal cells, no clipped scroll pills.
+class SuperAdminSegmentTab {
+  const SuperAdminSegmentTab({
+    required this.value,
+    required this.label,
+    required this.icon,
+  });
+
+  final String value;
+  final String label;
+  final IconData icon;
+}
+
+class SuperAdminSegmentedTabs extends StatelessWidget {
+  const SuperAdminSegmentedTabs({
+    super.key,
+    required this.tabs,
+    required this.selectedValue,
+    required this.onSelected,
+  });
+
+  final List<SuperAdminSegmentTab> tabs;
+  final String selectedValue;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: SuperAdminUi.pagePad),
+      child: Container(
+        height: 44,
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: AppLightUi.card,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppLightUi.borderStrong),
+          boxShadow: AppLightUi.cardShadow,
+        ),
+        child: Row(
+          children: [
+            for (final tab in tabs)
+              Expanded(
+                child: _SegmentCell(
+                  tab: tab,
+                  selected: selectedValue == tab.value,
+                  onTap: () => onSelected(tab.value),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SegmentCell extends StatelessWidget {
+  const _SegmentCell({
+    required this.tab,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final SuperAdminSegmentTab tab;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(13),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 240),
+          curve: Curves.easeOutCubic,
+          margin: const EdgeInsets.symmetric(horizontal: 1),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(13),
+            gradient: selected ? SuperAdminUi.headerGradient : null,
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: SuperAdminUi.pink.withValues(alpha: 0.28),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                tab.icon,
+                size: 15,
+                color: selected ? kColorWhite : SuperAdminUi.textMuted,
+              ),
+              const SizedBox(height: 2),
+              SemiBoldText(
+                text: tab.label,
+                fontSize: TextStyles.k8FontSize,
+                color: selected ? kColorWhite : SuperAdminUi.textSecondary,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Frosted bottom sheet chrome with drag handle.
 class SuperAdminSheetScaffold extends StatelessWidget {
   const SuperAdminSheetScaffold({

@@ -16,15 +16,27 @@ class SuperAdminHostTabView extends GetView<SuperAdminHomeController> {
   const SuperAdminHostTabView({super.key});
 
   /// Empty string = no status filter (all hosts).
-  static const _filters = <({String value, String label, IconData icon})>[
-    (value: '', label: 'All', icon: Icons.grid_view_rounded),
-    (value: 'active', label: 'Active', icon: Icons.verified_rounded),
-    (
+  static const _filters = <SuperAdminSegmentTab>[
+    SuperAdminSegmentTab(
+      value: '',
+      label: 'All',
+      icon: Icons.grid_view_rounded,
+    ),
+    SuperAdminSegmentTab(
+      value: 'active',
+      label: 'Active',
+      icon: Icons.verified_rounded,
+    ),
+    SuperAdminSegmentTab(
       value: 'suspended',
-      label: 'Suspended',
+      label: 'Hold',
       icon: Icons.pause_circle_filled_rounded,
     ),
-    (value: 'inactive', label: 'Inactive', icon: Icons.person_off_rounded),
+    SuperAdminSegmentTab(
+      value: 'inactive',
+      label: 'Idle',
+      icon: Icons.person_off_rounded,
+    ),
   ];
 
   @override
@@ -35,8 +47,9 @@ class SuperAdminHostTabView extends GetView<SuperAdminHomeController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Spacing.v6,
+          Spacing.v8,
           _filterChips(),
+          Spacing.v8,
           Expanded(
             child: Obx(() {
               if (controller.isLoadingHosts.value &&
@@ -214,28 +227,13 @@ class SuperAdminHostTabView extends GetView<SuperAdminHomeController> {
   }
 
   Widget _filterChips() {
-    return SizedBox(
-      height: 36,
-      child: Obx(() {
-        final selected = controller.hostStatusFilter.value;
-        return ListView.separated(
-          scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: SuperAdminUi.pagePad),
-          itemCount: _filters.length,
-          separatorBuilder: (_, __) => Spacing.h8,
-          itemBuilder: (_, index) {
-            final filter = _filters[index];
-            return SuperAdminFilterPill(
-              label: filter.label,
-              icon: filter.icon,
-              isSelected: selected == filter.value,
-              onTap: () => controller.changeHostFilter(filter.value),
-            );
-          },
-        );
-      }),
-    );
+    return Obx(() {
+      return SuperAdminSegmentedTabs(
+        tabs: _filters,
+        selectedValue: controller.hostStatusFilter.value,
+        onSelected: controller.changeHostFilter,
+      );
+    });
   }
 
   Widget _manageButton(BuildContext context, SuperAdminTrackedHost host) {
