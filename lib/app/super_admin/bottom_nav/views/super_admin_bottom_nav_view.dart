@@ -4,7 +4,7 @@ import 'package:qobo_one_live/app/super_admin/agency/views/super_admin_agency_ta
 import 'package:qobo_one_live/app/super_admin/bottom_nav/controllers/super_admin_bottom_nav_controller.dart';
 import 'package:qobo_one_live/app/super_admin/dashboard/views/super_admin_dashboard_tab_view.dart';
 import 'package:qobo_one_live/app/super_admin/host/views/super_admin_host_tab_view.dart';
-import 'package:qobo_one_live/app/super_admin/settings/views/super_admin_settings_tab_view.dart';
+// import 'package:qobo_one_live/app/super_admin/settings/views/super_admin_settings_tab_view.dart';
 import 'package:qobo_one_live/app/super_admin/widgets/super_admin_fresh_nav_bar.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
@@ -36,10 +36,11 @@ class SuperAdminBottomNavView extends GetView<SuperAdminBottomNavController> {
               const SuperAdminAgencyTabView(),
             SuperAdminBottomNavController.hostTabIndex =>
               const SuperAdminHostTabView(),
-            SuperAdminBottomNavController.settingsTabIndex =>
-              SuperAdminSettingsTabView(
-                onLogoutPressed: controller.onLogoutPressed,
-              ),
+            // Temporarily hidden — Settings tab.
+            // SuperAdminBottomNavController.settingsTabIndex =>
+            //   SuperAdminSettingsTabView(
+            //     onLogoutPressed: controller.onLogoutPressed,
+            //   ),
             _ => Spacing.shrink,
           },
           bottomNavigationBar: SuperAdminFreshNavBar(

@@ -6,6 +6,8 @@ import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui.dart';
 import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui_kit.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/dating_empty_hero.dart';
+import 'package:qobo_one_live/utils/app_widgets/rooms_empty_state.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -49,16 +51,31 @@ class SuperAdminHostTabView extends GetView<SuperAdminHomeController> {
                   color: kColorPrimary,
                   onRefresh: () =>
                       controller.loadTrackedHosts(showLoader: false),
-                  child: ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    children: const [
-                      SizedBox(height: 120),
-                      SuperAdminEmptyState(
-                        icon: Icons.podcasts_rounded,
-                        title: 'No host activity found',
-                        subtitle: 'Pull down to refresh host tracking data',
-                      ),
-                    ],
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(
+                          parent: BouncingScrollPhysics(),
+                        ),
+                        padding: SuperAdminUi.pageInsets,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minHeight: constraints.maxHeight - 24,
+                          ),
+                          child: const RoomsEmptyState(
+                            title: 'No hosts found',
+                            subtitle:
+                                'Pull down to refresh or try another filter',
+                            accentColors: [
+                              SuperAdminUi.teal,
+                              SuperAdminUi.mint,
+                            ],
+                            heroStyle: DatingEmptyHeroStyle.host,
+                            hint: 'Pull down to refresh',
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 );
               }

@@ -156,27 +156,39 @@ class _ProfileTabViewState extends State<ProfileTabView> {
           child: Column(
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  SizedBox(
-                    width: avatarFrameSize,
-                    height: avatarFrameSize,
-                    child: Center(
-                      child: FramedUserAvatar(
-                        key: ValueKey(
-                          'profile_frame_${session.profileFrameUrl}',
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: avatarFrameSize,
+                        height: avatarFrameSize,
+                        child: Center(
+                          child: FramedUserAvatar(
+                            key: ValueKey(
+                              'profile_frame_${session.profileFrameUrl}',
+                            ),
+                            name: session.displayName,
+                            imageUrl: imageUrl,
+                            size: avatarSize,
+                            frameUrl: session.profileFrameUrl,
+                            frameSeed: session.userId.isNotEmpty
+                                ? session.userId
+                                : session.displayName,
+                            fontSize: isCompact
+                                ? TextStyles.k14FontSize
+                                : TextStyles.k18FontSize,
+                          ),
                         ),
-                        name: session.displayName,
-                        imageUrl: imageUrl,
-                        size: avatarSize,
-                        frameUrl: session.profileFrameUrl,
-                        frameSeed: session.userId.isNotEmpty
-                            ? session.userId
-                            : session.displayName,
-                        fontSize: isCompact
-                            ? TextStyles.k14FontSize
-                            : TextStyles.k18FontSize,
                       ),
-                    ),
+                      Spacing.v6,
+                      _smallChip(
+                        text: session.levelBadge,
+                        start: kColorProfileChipPinkStart,
+                        end: kColorProfileChipPinkEnd,
+                      ),
+                    ],
                   ),
                   Spacing.h12,
                   Expanded(
@@ -204,25 +216,21 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                           ),
                         ),
                         Spacing.v10,
-                        // Wrap prevents chip row overflow on narrow devices.
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
                           children: [
                             _smallChip(
-                              text: session.levelBadge,
-                              start: kColorProfileChipPinkStart,
-                              end: kColorProfileChipPinkEnd,
-                            ),
-                            _smallChip(
                               text: _pattiChipLabel(session.pattiStyle),
                               start: kColorProfileChipOrangeStart,
                               end: kColorProfileChipOrangeEnd,
+                              fontSize: TextStyles.k10FontSize,
                             ),
                             _smallChip(
                               text: '00',
                               start: kColorProfileChipPurpleStart,
                               end: kColorProfileChipPurpleEnd,
+                              fontSize: TextStyles.k10FontSize,
                             ),
                           ],
                         ),
@@ -291,6 +299,7 @@ class _ProfileTabViewState extends State<ProfileTabView> {
     required String text,
     required Color start,
     required Color end,
+    double fontSize = TextStyles.k12FontSize,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
@@ -300,7 +309,7 @@ class _ProfileTabViewState extends State<ProfileTabView> {
       ),
       child: SemiBoldText(
         text: text,
-        fontSize: TextStyles.k12FontSize,
+        fontSize: fontSize,
         color: kColorWhite,
       ),
     );

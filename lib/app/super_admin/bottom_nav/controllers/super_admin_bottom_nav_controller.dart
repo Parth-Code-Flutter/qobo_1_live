@@ -24,7 +24,8 @@ class SuperAdminBottomNavController extends GetxController {
   static const int dashboardTabIndex = 0;
   static const int agencyTabIndex = 1;
   static const int hostTabIndex = 2;
-  static const int settingsTabIndex = 3;
+  // Temporarily hidden — restore when Settings tab returns to the shell.
+  // static const int settingsTabIndex = 3;
 
   /// Figma `nav-bar-fresh-4tab` accents — cyan / magenta / green / orange.
   final freshNavItems = const <SuperAdminFreshNavItem>[
@@ -43,11 +44,11 @@ class SuperAdminBottomNavController extends GetxController {
       accent: Color(0xFF3DFF6E),
       kind: SuperAdminFreshNavIconKind.host,
     ),
-    SuperAdminFreshNavItem(
-      label: 'Settings',
-      accent: Color(0xFFFF9F1A),
-      kind: SuperAdminFreshNavIconKind.settings,
-    ),
+    // SuperAdminFreshNavItem(
+    //   label: 'Settings',
+    //   accent: Color(0xFFFF9F1A),
+    //   kind: SuperAdminFreshNavIconKind.settings,
+    // ),
   ];
 
   @override
@@ -63,8 +64,8 @@ class SuperAdminBottomNavController extends GetxController {
         return ('Agency', 'Review applications');
       case hostTabIndex:
         return ('Hosts', 'Track activity');
-      case settingsTabIndex:
-        return ('Settings', 'Account & session');
+      // case settingsTabIndex:
+      //   return ('Settings', 'Account & session');
       case dashboardTabIndex:
       default:
         return ('Dashboard', 'Agencies · hosts · commissions');

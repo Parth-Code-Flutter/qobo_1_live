@@ -6,6 +6,8 @@ import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui.dart';
 import 'package:qobo_one_live/app/super_admin/widgets/super_admin_ui_kit.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/dating_empty_hero.dart';
+import 'package:qobo_one_live/utils/app_widgets/rooms_empty_state.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -45,16 +47,31 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
                 return RefreshIndicator(
                   color: kColorPrimary,
                   onRefresh: () => controller.loadAgencies(showLoader: false),
-                  child: ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    children: const [
-                      SizedBox(height: 120),
-                      SuperAdminEmptyState(
-                        icon: Icons.storefront_outlined,
-                        title: 'No agencies found',
-                        subtitle: 'Pull down to refresh or try another filter',
-                      ),
-                    ],
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(
+                          parent: BouncingScrollPhysics(),
+                        ),
+                        padding: SuperAdminUi.pageInsets,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minHeight: constraints.maxHeight - 24,
+                          ),
+                          child: const RoomsEmptyState(
+                            title: 'No agencies found',
+                            subtitle:
+                                'Pull down to refresh or try another filter',
+                            accentColors: [
+                              SuperAdminUi.pink,
+                              SuperAdminUi.violet,
+                            ],
+                            heroStyle: DatingEmptyHeroStyle.agency,
+                            hint: 'Pull down to refresh',
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 );
               }
@@ -120,6 +137,12 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
         : agency.isSuspended
         ? SuperAdminUi.warning
         : SuperAdminUi.pink;
+    final filter = controller.agencyStatusFilter.value.toLowerCase();
+    // Status is already clear from the filter chip — skip duplicate pill.
+    final showStatusPill =
+        filter == 'all' || filter != agency.status.toLowerCase();
+    final commissionPct =
+        (agency.commissionRate * 100).toStringAsFixed(0);
 
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.96, end: 1),
@@ -129,20 +152,19 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
           Transform.scale(scale: scale, child: child),
       child: SuperAdminGlassCard(
         glow: glow,
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
         onTap: () => controller.openAgencyDetail(agency),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SuperAdminAvatarRing(
                   url: agency.ownerAvatar,
                   fallbackLetter: agency.name.isNotEmpty
                       ? agency.name
                       : agency.ownerName,
-                  size: 56,
+                  size: 52,
                   accent: glow,
                 ),
                 Spacing.h10,
@@ -150,72 +172,66 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      BoldText(
-                        text: agency.name,
-                        fontSize: TextStyles.k14FontSize,
-                        color: SuperAdminUi.textPrimary,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: BoldText(
+                              text: agency.name,
+                              fontSize: TextStyles.k14FontSize,
+                              color: SuperAdminUi.textPrimary,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (showStatusPill) ...[
+                            Spacing.h6,
+                            SuperAdminStatusPill(status: agency.status),
+                          ],
+                        ],
                       ),
-                      Spacing.v2,
+                      Spacing.v4,
                       AppText(
                         text: agency.ownerName.isEmpty
-                            ? agency.code
+                            ? (agency.code.isEmpty ? '—' : agency.code)
+                            : agency.code.isEmpty
+                            ? agency.ownerName
                             : '${agency.ownerName} · ${agency.code}',
                         fontSize: TextStyles.k10FontSize,
                         color: SuperAdminUi.textSecondary,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      Spacing.v6,
-                      SuperAdminStatusPill(status: agency.status),
                     ],
                   ),
                 ),
+                Spacing.h4,
                 _manageButton(context, agency, processing),
               ],
             ),
             Spacing.v10,
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                SuperAdminMetricChip(
-                  icon: Icons.groups_rounded,
-                  label: '${agency.hostCount} hosts',
-                  accent: SuperAdminUi.sky,
-                ),
-                SuperAdminMetricChip(
-                  icon: Icons.hourglass_top_rounded,
-                  label: '${agency.pendingHostsCount} pending',
-                  accent: SuperAdminUi.gold,
-                ),
-                if (agency.commissionRate > 0)
-                  SuperAdminMetricChip(
-                    icon: Icons.percent_rounded,
-                    label:
-                        '${(agency.commissionRate * 100).toStringAsFixed(0)}%',
-                    accent: SuperAdminUi.mint,
-                  ),
-              ],
+            _metricStrip(
+              hosts: agency.hostCount,
+              pending: agency.pendingHostsCount,
+              commissionPct: commissionPct,
+              showCommission: agency.commissionRate > 0,
             ),
             if (agency.isPending) ...[
-              Spacing.v12,
+              Spacing.v10,
               Row(
                 children: [
                   Expanded(
                     child: SuperAdminActionButton(
                       label: 'Reject',
                       icon: Icons.close_rounded,
-                      background: SuperAdminUi.danger.withValues(alpha: 0.16),
-                      borderColor: SuperAdminUi.danger.withValues(alpha: 0.4),
+                      background: SuperAdminUi.danger.withValues(alpha: 0.12),
+                      borderColor: SuperAdminUi.danger.withValues(alpha: 0.35),
                       foreground: SuperAdminUi.danger,
                       onTap: processing
                           ? null
                           : () => _confirmReject(context, agency),
                     ),
                   ),
-                  Spacing.h10,
+                  Spacing.h8,
                   Expanded(
                     child: SuperAdminActionButton(
                       label: processing ? 'Wait...' : 'Approve',
@@ -236,28 +252,99 @@ class SuperAdminAgencyTabView extends GetView<SuperAdminHomeController> {
     );
   }
 
+  /// Equal-width metric strip — clearer than a wrap of tiny chips.
+  Widget _metricStrip({
+    required int hosts,
+    required int pending,
+    required String commissionPct,
+    required bool showCommission,
+  }) {
+    final cells = <({IconData icon, String value, String label, Color accent})>[
+      (
+        icon: Icons.groups_rounded,
+        value: '$hosts',
+        label: 'Hosts',
+        accent: SuperAdminUi.sky,
+      ),
+      (
+        icon: Icons.hourglass_top_rounded,
+        value: '$pending',
+        label: 'Pending',
+        accent: SuperAdminUi.gold,
+      ),
+      if (showCommission)
+        (
+          icon: Icons.percent_rounded,
+          value: '$commissionPct%',
+          label: 'Rate',
+          accent: SuperAdminUi.mint,
+        ),
+    ];
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        color: SuperAdminUi.pink.withValues(alpha: 0.04),
+        border: Border.all(color: SuperAdminUi.pink.withValues(alpha: 0.12)),
+      ),
+      child: Row(
+        children: [
+          for (var i = 0; i < cells.length; i++) ...[
+            if (i > 0)
+              Container(
+                width: 1,
+                height: 28,
+                color: SuperAdminUi.textPrimary.withValues(alpha: 0.08),
+              ),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(cells[i].icon, size: 14, color: cells[i].accent),
+                  Spacing.v4,
+                  BoldText(
+                    text: cells[i].value,
+                    fontSize: TextStyles.k12FontSize,
+                    color: SuperAdminUi.textPrimary,
+                  ),
+                  Spacing.v2,
+                  AppText(
+                    text: cells[i].label,
+                    fontSize: TextStyles.k8FontSize,
+                    color: SuperAdminUi.textSecondary,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _manageButton(
     BuildContext context,
     SuperAdminAgencyItem agency,
     bool processing,
   ) {
-    return InkWell(
-      onTap: processing ? null : () => _openManageSheet(context, agency),
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: SuperAdminUi.textPrimary.withValues(alpha: 0.10),
-          border: Border.all(
-            color: SuperAdminUi.textPrimary.withValues(alpha: 0.16),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: processing ? null : () => _openManageSheet(context, agency),
+        borderRadius: BorderRadius.circular(18),
+        child: Ink(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: SuperAdminUi.textPrimary.withValues(alpha: 0.06),
           ),
-        ),
-        child: const Icon(
-          Icons.more_vert_rounded,
-          size: 18,
-          color: SuperAdminUi.textSecondary,
+          child: const Icon(
+            Icons.more_horiz_rounded,
+            size: 20,
+            color: SuperAdminUi.textSecondary,
+          ),
         ),
       ),
     );

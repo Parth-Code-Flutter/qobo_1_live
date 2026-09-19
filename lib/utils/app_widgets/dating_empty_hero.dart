@@ -5,7 +5,7 @@ import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 
 /// Trending dating empty-state illustration styles.
-enum DatingEmptyHeroStyle { audio, video, live, messages, sparks }
+enum DatingEmptyHeroStyle { audio, video, live, messages, sparks, agency, host }
 
 /// Soft animated hero graphic — floating orbs, hearts, and a themed center.
 ///
@@ -127,6 +127,16 @@ class _DatingEmptyHeroState extends State<DatingEmptyHero>
       DatingEmptyHeroStyle.messages || DatingEmptyHeroStyle.sparks => const [
         Icons.favorite_rounded,
         Icons.chat_bubble_rounded,
+        Icons.favorite_rounded,
+      ],
+      DatingEmptyHeroStyle.agency => const [
+        Icons.favorite_rounded,
+        Icons.apartment_rounded,
+        Icons.favorite_rounded,
+      ],
+      DatingEmptyHeroStyle.host => const [
+        Icons.favorite_rounded,
+        Icons.mic_rounded,
         Icons.favorite_rounded,
       ],
     };
@@ -255,6 +265,18 @@ class _DatingEmptyHeroState extends State<DatingEmptyHero>
           Icons.favorite_rounded,
           color: kColorWhite,
           size: (core * 0.55).clamp(16.0, 32.0),
+        );
+      case DatingEmptyHeroStyle.agency:
+        return Icon(
+          Icons.apartment_rounded,
+          color: kColorWhite,
+          size: (core * 0.55).clamp(16.0, 34.0),
+        );
+      case DatingEmptyHeroStyle.host:
+        return Icon(
+          Icons.mic_rounded,
+          color: kColorWhite,
+          size: (core * 0.55).clamp(16.0, 34.0),
         );
     }
   }
