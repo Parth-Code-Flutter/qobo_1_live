@@ -19,7 +19,8 @@ class AgencyRevenueView extends GetView<AgencyRevenueController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      // Match canvas under rounded AppBar corners (avoids dark gap strip).
+      backgroundColor: kColorLavenderBg,
       appBar: const CommonAppBarWidget(
         title: 'Agency Revenue',
         trailingIcon: Icons.account_balance_wallet_rounded,

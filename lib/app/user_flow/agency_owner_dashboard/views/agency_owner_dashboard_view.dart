@@ -18,34 +18,21 @@ import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 import '../controllers/agency_owner_dashboard_controller.dart';
 
-/// Local palette for agency dashboard — aligned with [AdminAgencyUi].
+/// Local palette for agency dashboard — light AppLightUi dating canvas.
 abstract final class _DashUi {
-  static const radiusLg = 24.0;
-  static const radiusMd = 18.0;
+  static const radiusLg = 20.0;
+  static const radiusMd = 16.0;
 
   static const accentPink = AdminAgencyUi.pink;
   static const accentViolet = AdminAgencyUi.violet;
   static const accentCyan = AdminAgencyUi.cyan;
-  static const accentGold = AdminAgencyUi.gold;
+  static const accentGold = AdminAgencyUi.goldDeep;
   static const accentSky = AdminAgencyUi.sky;
+  static const accentMint = AdminAgencyUi.mint;
 
   static const textMuted = AppLightUi.subtitle;
   static const textSoft = AppLightUi.muted;
   static const title = AppLightUi.title;
-
-  static const heroGradient = [Color(0xFF9C27B0), Color(0xFFE91E63)];
-  static const earningsGradient = [Color(0xFFFF8F00), Color(0xFFFF5722)];
-  static const payoutGradient = [Color(0xFFE91E8C), Color(0xFFAD1457)];
-  static const hostsGradient = [Color(0xFF5C6BC0), Color(0xFF3949AB)];
-  static const revenueGradient = [Color(0xFF4527A0), Color(0xFF283593)];
-  static const callGradient = [Color(0xFF00838F), Color(0xFF006064)];
-  static const panelGradient = [Color(0xFF3D2068), Color(0xFF25143F)];
-  static const hostCardGradients = [
-    [Color(0xFF7B1FA2), Color(0xFF512DA8)],
-    [Color(0xFF1565C0), Color(0xFF0D47A1)],
-    [Color(0xFFC2185B), Color(0xFF880E4F)],
-    [Color(0xFF00897B), Color(0xFF00695C)],
-  ];
 }
 
 class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
@@ -256,9 +243,9 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
   }
 
   Widget _emptyHostsCard() {
-    return AdminColorPanel(
-      colors: _DashUi.hostsGradient,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+    return AdminSolidPanel(
+      accent: _DashUi.accentCyan,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
       radius: _DashUi.radiusMd,
       child: Row(
         children: [
@@ -273,7 +260,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
             child: AppText(
               text: 'No hosts yet. Share your recruit link to onboard hosts.',
               fontSize: TextStyles.k12FontSize,
-              color: kColorWhite,
+              color: AppLightUi.body,
             ),
           ),
         ],
@@ -288,8 +275,8 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 28),
-        child: AdminColorPanel(
-          colors: const [Color(0xFFFF8F00), Color(0xFFE65100)],
+        child: AdminSolidPanel(
+          accent: _DashUi.accentGold,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
           radius: _DashUi.radiusMd,
           child: Column(
@@ -305,7 +292,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
               const SemiBoldText(
                 text: 'Application Pending',
                 fontSize: TextStyles.k22FontSize,
-                color: kColorWhite,
+                color: AppLightUi.title,
                 align: TextAlign.center,
               ),
               Spacing.v10,
@@ -314,7 +301,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
                     ? 'Your application for "$agencyName" is under super admin review.'
                     : 'Your agency application is under super admin review.',
                 fontSize: TextStyles.k14FontSize,
-                color: kColorWhite.withValues(alpha: 0.92),
+                color: AppLightUi.body,
                 align: TextAlign.center,
               ),
               if (message.isNotEmpty) ...[
@@ -322,16 +309,16 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
                 AppText(
                   text: message,
                   fontSize: TextStyles.k12FontSize,
-                  color: kColorWhite.withValues(alpha: 0.85),
+                  color: AppLightUi.subtitle,
                   align: TextAlign.center,
                 ),
               ],
               Spacing.v8,
-              AppText(
+              const AppText(
                 text:
                     'Once approved, your full agency dashboard with hosts and revenue will appear here.',
                 fontSize: TextStyles.k12FontSize,
-                color: kColorWhite.withValues(alpha: 0.85),
+                color: AppLightUi.subtitle,
                 align: TextAlign.center,
               ),
               Spacing.v24,
@@ -350,9 +337,10 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
   }
 
   Widget _agencyHeroCard(AgencySessionController session) {
-    return AdminColorPanel(
-      colors: _DashUi.heroGradient,
+    return AdminSolidPanel(
+      accent: _DashUi.accentPink,
       radius: _DashUi.radiusLg,
+      padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -373,7 +361,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
                     SemiBoldText(
                       text: controller.displayAgencyName,
                       fontSize: TextStyles.k22FontSize,
-                      color: kColorWhite,
+                      color: AppLightUi.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -419,12 +407,12 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
     IconData? icon,
     Color accent = _DashUi.accentViolet,
   }) {
-    // Solid dark pill so labels stay readable on bright gradient cards.
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: const Color(0xCC1A0B2E),
+        color: accent.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: accent.withValues(alpha: 0.28)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -436,7 +424,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
           SemiBoldText(
             text: text,
             fontSize: TextStyles.k12FontSize,
-            color: kColorWhite,
+            color: AppLightUi.title,
           ),
         ],
       ),
@@ -444,8 +432,8 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
   }
 
   Widget _featuredEarningsCard() {
-    return AdminColorPanel(
-      colors: _DashUi.earningsGradient,
+    return AdminSolidPanel(
+      accent: _DashUi.accentGold,
       radius: _DashUi.radiusLg,
       padding: const EdgeInsets.all(20),
       child: Row(
@@ -454,16 +442,16 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                AppText(
+                const AppText(
                   text: 'Total agency earnings',
                   fontSize: TextStyles.k12FontSize,
-                  color: kColorWhite.withValues(alpha: 0.92),
+                  color: AppLightUi.subtitle,
                 ),
                 Spacing.v6,
                 SemiBoldText(
                   text: _formatCoins(controller.totalAgencyEarnings),
-                  fontSize: 32,
-                  color: kColorWhite,
+                  fontSize: TextStyles.k28FontSize,
+                  color: AppLightUi.title,
                 ),
                 Spacing.v4,
                 AppText(
@@ -471,7 +459,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
                       ? 'coins · ${controller.displayMonth}'
                       : 'coins this month',
                   fontSize: TextStyles.k12FontSize,
-                  color: kColorWhite.withValues(alpha: 0.88),
+                  color: AppLightUi.body,
                 ),
               ],
             ),
@@ -479,8 +467,8 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
           AdminAgencyUi.glowIcon(
             icon: Icons.trending_up_rounded,
             accent: _DashUi.accentCyan,
-            size: 72,
-            iconSize: 32,
+            size: 64,
+            iconSize: 28,
           ),
         ],
       ),
@@ -495,7 +483,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
             label: 'Payout ready',
             value: _formatCoins(controller.availableForPayout),
             icon: Icons.account_balance_wallet_outlined,
-            gradient: _DashUi.payoutGradient,
+            accent: _DashUi.accentGold,
           ),
         ),
         Spacing.h10,
@@ -504,7 +492,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
             label: 'Active hosts',
             value: '${controller.activeHostsCount}',
             icon: Icons.groups_rounded,
-            gradient: _DashUi.hostsGradient,
+            accent: _DashUi.accentCyan,
           ),
         ),
       ],
@@ -512,16 +500,16 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
   }
 
   Widget _hostRecruitmentBonusCard() {
-    return AdminColorPanel(
-      colors: const [Color(0xFF00695C), Color(0xFF00A884)],
+    return AdminSolidPanel(
+      accent: _DashUi.accentMint,
       padding: const EdgeInsets.all(16),
       radius: _DashUi.radiusMd,
       child: Row(
         children: [
           AdminAgencyUi.glowIcon(
             icon: Icons.person_add_alt_1_rounded,
-            accent: _DashUi.accentGold,
-            accentEnd: const Color(0xFFFFE082),
+            accent: _DashUi.accentMint,
+            accentEnd: _DashUi.accentGold,
             size: 48,
             iconSize: 24,
           ),
@@ -533,14 +521,14 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
                 const SemiBoldText(
                   text: 'Host recruitment bonus',
                   fontSize: TextStyles.k14FontSize,
-                  color: kColorWhite,
+                  color: AppLightUi.title,
                 ),
                 Spacing.v4,
                 AppText(
                   text:
                       '${controller.activeHostsCount} active hosts × 10,000 coins',
                   fontSize: TextStyles.k10FontSize,
-                  color: kColorWhite.withValues(alpha: 0.86),
+                  color: AppLightUi.subtitle,
                 ),
               ],
             ),
@@ -559,7 +547,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
                 text:
                     '${_formatCoins(controller.hostRecruitmentEarningsCoins)} coins',
                 fontSize: TextStyles.k10FontSize,
-                color: kColorWhite.withValues(alpha: 0.82),
+                color: AppLightUi.subtitle,
               ),
             ],
           ),
@@ -597,7 +585,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
         EarningsChartPoint(
           label: 'Commission',
           value: ownerCommission,
-          color: Colors.greenAccent,
+          color: const Color(0xFF2E9B6B),
         ),
       ],
     );
@@ -607,17 +595,17 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
     required String label,
     required String value,
     required IconData icon,
-    required List<Color> gradient,
+    required Color accent,
   }) {
-    return AdminColorPanel(
-      colors: gradient,
+    return AdminSolidPanel(
+      accent: accent,
       padding: const EdgeInsets.all(14),
       radius: _DashUi.radiusMd,
       child: Row(
         children: [
           AdminAgencyUi.glowIcon(
             icon: icon,
-            accent: gradient.first,
+            accent: accent,
             size: 40,
             iconSize: 20,
           ),
@@ -629,12 +617,12 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
                 SemiBoldText(
                   text: value,
                   fontSize: TextStyles.k18FontSize,
-                  color: kColorWhite,
+                  color: AppLightUi.title,
                 ),
                 AppText(
                   text: label,
                   fontSize: TextStyles.k10FontSize,
-                  color: kColorWhite.withValues(alpha: 0.9),
+                  color: AppLightUi.subtitle,
                 ),
               ],
             ),
@@ -651,15 +639,16 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
         controller.ownerCommission +
         controller.totalGifts;
 
-    return AdminColorPanel(
-      colors: _DashUi.revenueGradient,
+    return AdminSolidPanel(
+      accent: _DashUi.accentViolet,
+      radius: _DashUi.radiusMd,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AppText(
+          const AppText(
             text: '50% company · 50% host · owner rate applied',
             fontSize: TextStyles.k12FontSize,
-            color: kColorWhite.withValues(alpha: 0.88),
+            color: AppLightUi.subtitle,
           ),
           Spacing.v16,
           _splitBar(
@@ -673,7 +662,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
             'Hosts (calls)',
             controller.hostCallShare,
             total,
-            Colors.greenAccent,
+            const Color(0xFF2E9B6B),
           ),
           Spacing.v16,
           _splitBar(
@@ -705,13 +694,13 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
               child: SemiBoldText(
                 text: label,
                 fontSize: TextStyles.k14FontSize,
-                color: kColorWhite,
+                color: AppLightUi.title,
               ),
             ),
             SemiBoldText(
               text: _formatCoins(value),
               fontSize: TextStyles.k14FontSize,
-              color: kColorWhite,
+              color: AppLightUi.title,
             ),
           ],
         ),
@@ -721,7 +710,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
           child: LinearProgressIndicator(
             value: fraction,
             minHeight: 4,
-            backgroundColor: kColorWhite.withValues(alpha: 0.22),
+            backgroundColor: AppLightUi.borderStrong,
             valueColor: AlwaysStoppedAnimation<Color>(color),
           ),
         ),
@@ -730,8 +719,8 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
   }
 
   Widget _latestCallCard(AgencyCallSample call) {
-    return AdminColorPanel(
-      colors: _DashUi.callGradient,
+    return AdminSolidPanel(
+      accent: _DashUi.accentPink,
       radius: _DashUi.radiusMd,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -743,7 +732,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Icon(
                   Icons.arrow_forward_rounded,
-                  color: kColorWhite.withValues(alpha: 0.4),
+                  color: AppLightUi.muted,
                   size: 18,
                 ),
               ),
@@ -759,25 +748,30 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.2),
+                        color: Colors.red.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.red.withValues(alpha: 0.28),
+                        ),
                       ),
-                      child: Row(
+                      child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Container(
+                          SizedBox(
                             width: 6,
                             height: 6,
-                            decoration: const BoxDecoration(
-                              color: Colors.redAccent,
-                              shape: BoxShape.circle,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: Color(0xFFE53935),
+                                shape: BoxShape.circle,
+                              ),
                             ),
                           ),
-                          const SizedBox(width: 6),
-                          const AppText(
+                          SizedBox(width: 6),
+                          AppText(
                             text: 'LIVE CALL',
                             fontSize: TextStyles.k10FontSize,
-                            color: Colors.redAccent,
+                            color: Color(0xFFE53935),
                           ),
                         ],
                       ),
@@ -786,7 +780,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
                     AppText(
                       text: '${call.durationMinutes} min',
                       fontSize: TextStyles.k12FontSize,
-                      color: kColorWhite.withValues(alpha: 0.88),
+                      color: AppLightUi.subtitle,
                     ),
                   ],
                 ),
@@ -797,21 +791,22 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
           SemiBoldText(
             text: '${call.hostName} with ${call.viewerName}',
             fontSize: TextStyles.k16FontSize,
-            color: kColorWhite,
+            color: AppLightUi.title,
           ),
           Spacing.v4,
           AppText(
             text:
                 '${call.coinsPerSecond} coins/sec · ${call.durationSeconds}s · gifts +${_formatCoins(call.giftsDuringCall)}',
             fontSize: TextStyles.k12FontSize,
-            color: kColorWhite.withValues(alpha: 0.88),
+            color: AppLightUi.body,
           ),
           Spacing.v12,
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: kColorBlack.withValues(alpha: 0.22),
+              color: AppLightUi.cardSoft,
               borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppLightUi.border),
             ),
             child: Column(
               children: [
@@ -837,8 +832,15 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
       height: 44,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: LinearGradient(colors: [color, color.withValues(alpha: 0.5)]),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.3), width: 2),
+        gradient: LinearGradient(colors: [color, color.withValues(alpha: 0.55)]),
+        border: Border.all(color: color.withValues(alpha: 0.35), width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.22),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       alignment: Alignment.center,
       child: SemiBoldText(
@@ -859,12 +861,12 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
               AppText(
                 text: label,
                 fontSize: TextStyles.k12FontSize,
-                color: kColorWhite.withValues(alpha: 0.9),
+                color: AppLightUi.body,
               ),
               AppText(
                 text: formula,
                 fontSize: TextStyles.k10FontSize,
-                color: kColorWhite.withValues(alpha: 0.75),
+                color: AppLightUi.subtitle,
               ),
             ],
           ),
@@ -879,9 +881,9 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
   }
 
   Widget _calcDivider() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Divider(height: 1, color: kColorWhite.withValues(alpha: 0.1)),
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 10),
+      child: Divider(height: 1, color: AppLightUi.border),
     );
   }
 
@@ -894,13 +896,13 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
             child: AppText(
               text: label,
               fontSize: TextStyles.k12FontSize,
-              color: kColorWhite.withValues(alpha: 0.85),
+              color: AppLightUi.body,
             ),
           ),
           SemiBoldText(
             text: _formatCoins(coins),
             fontSize: TextStyles.k14FontSize,
-            color: kColorWhite,
+            color: AppLightUi.title,
           ),
         ],
       ),
@@ -908,12 +910,18 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
   }
 
   Widget _hostSlideCard(AgencyHostRevenueDemo host, int index) {
-    final colors =
-        _DashUi.hostCardGradients[index % _DashUi.hostCardGradients.length];
+    final accents = [
+      _DashUi.accentPink,
+      _DashUi.accentViolet,
+      _DashUi.accentCyan,
+      _DashUi.accentGold,
+      _DashUi.accentSky,
+    ];
+    final accent = accents[index % accents.length];
     return GestureDetector(
       onTap: controller.openHostList,
-      child: AdminColorPanel(
-        colors: colors,
+      child: AdminSolidPanel(
+        accent: accent,
         radius: _DashUi.radiusMd,
         padding: const EdgeInsets.all(16),
         child: SizedBox(
@@ -924,7 +932,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _callAvatar(host.name, _DashUi.accentViolet),
+                  _callAvatar(host.name, accent),
                   Spacing.h10,
                   Expanded(
                     child: Column(
@@ -933,7 +941,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
                         SemiBoldText(
                           text: host.name,
                           fontSize: TextStyles.k16FontSize,
-                          color: kColorWhite,
+                          color: AppLightUi.title,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -941,7 +949,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
                         AppText(
                           text: '${host.coinsPerSecond} coins/sec',
                           fontSize: TextStyles.k12FontSize,
-                          color: kColorWhite.withValues(alpha: 0.88),
+                          color: AppLightUi.subtitle,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -967,7 +975,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
               AppText(
                 text: _hostCallsLine(host),
                 fontSize: TextStyles.k10FontSize,
-                color: kColorWhite.withValues(alpha: 0.85),
+                color: AppLightUi.muted,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -990,17 +998,17 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
     final normalized = status.trim().toLowerCase();
 
     if (isHostStatusActive(status)) {
-      bgColor = Colors.green.withValues(alpha: 0.15);
-      textColor = Colors.greenAccent;
+      bgColor = const Color(0xFF2E9B6B).withValues(alpha: 0.12);
+      textColor = const Color(0xFF1B7A52);
     } else if (isHostStatusPending(status)) {
-      bgColor = Colors.orange.withValues(alpha: 0.15);
-      textColor = Colors.orangeAccent;
+      bgColor = _DashUi.accentGold.withValues(alpha: 0.14);
+      textColor = const Color(0xFFB7791F);
     } else if (isHostStatusRejected(status)) {
-      bgColor = Colors.red.withValues(alpha: 0.15);
-      textColor = Colors.redAccent;
+      bgColor = Colors.red.withValues(alpha: 0.10);
+      textColor = const Color(0xFFC62828);
     } else {
-      bgColor = kColorWhite.withValues(alpha: 0.1);
-      textColor = kColorWhite.withValues(alpha: 0.7);
+      bgColor = AppLightUi.border.withValues(alpha: 0.6);
+      textColor = AppLightUi.subtitle;
     }
 
     final label = normalized.isEmpty
@@ -1012,6 +1020,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: textColor.withValues(alpha: 0.22)),
       ),
       child: AppText(
         text: label,
@@ -1028,9 +1037,9 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         decoration: BoxDecoration(
-          color: _DashUi.accentGold.withValues(alpha: 0.12),
+          color: _DashUi.accentGold.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: _DashUi.accentGold.withValues(alpha: 0.3)),
+          border: Border.all(color: _DashUi.accentGold.withValues(alpha: 0.28)),
         ),
         child: Row(
           children: [
@@ -1040,7 +1049,7 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
               child: SemiBoldText(
                 text: value,
                 fontSize: TextStyles.k12FontSize,
-                color: kColorWhite,
+                color: AppLightUi.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -1091,75 +1100,58 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
     required VoidCallback onTap,
     int badgeCount = 0,
   }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(_DashUi.radiusMd),
-        child: Ink(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(_DashUi.radiusMd),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                color.withValues(alpha: 0.72),
-                color.withValues(alpha: 0.45),
-              ],
-            ),
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-          child: Stack(
-            clipBehavior: Clip.none,
+    return AdminSolidPanel(
+      accent: color,
+      radius: _DashUi.radiusMd,
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      onTap: onTap,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          Column(
             children: [
-              Column(
-                children: [
-                  AdminAgencyUi.glowIcon(
-                    icon: icon,
-                    accent: color,
-                    size: 44,
-                    iconSize: 22,
-                  ),
-                  Spacing.v8,
-                  SemiBoldText(
-                    text: label,
-                    fontSize: TextStyles.k12FontSize,
-                    color: kColorWhite,
-                    align: TextAlign.center,
-                  ),
-                ],
+              AdminAgencyUi.glowIcon(
+                icon: icon,
+                accent: color,
+                size: 44,
+                iconSize: 22,
               ),
-              if (badgeCount > 0)
-                Positioned(
-                  right: -2,
-                  top: -4,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.orangeAccent,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: SemiBoldText(
-                      text: '$badgeCount',
-                      fontSize: TextStyles.k10FontSize,
-                      color: kColorWhite,
-                    ),
-                  ),
-                ),
+              Spacing.v8,
+              SemiBoldText(
+                text: label,
+                fontSize: TextStyles.k12FontSize,
+                color: AppLightUi.title,
+                align: TextAlign.center,
+              ),
             ],
           ),
-        ),
+          if (badgeCount > 0)
+            Positioned(
+              right: -2,
+              top: -4,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: _DashUi.accentGold,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: SemiBoldText(
+                  text: '$badgeCount',
+                  fontSize: TextStyles.k10FontSize,
+                  color: kColorWhite,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
 
   Widget _pendingHostsBanner() {
     final count = controller.pendingHostApplicationsCount;
-    return AdminColorPanel(
-      colors: const [Color(0xFFFF8F00), Color(0xFFE65100)],
+    return AdminSolidPanel(
+      accent: _DashUi.accentGold,
       radius: _DashUi.radiusMd,
       onTap: controller.openPendingHosts,
       child: Row(
@@ -1179,20 +1171,20 @@ class AgencyOwnerDashboardView extends GetView<AgencyOwnerDashboardController> {
                 SemiBoldText(
                   text: '$count host${count == 1 ? '' : 's'} awaiting review',
                   fontSize: TextStyles.k14FontSize,
-                  color: kColorWhite,
+                  color: AppLightUi.title,
                 ),
                 Spacing.v2,
-                AppText(
+                const AppText(
                   text: 'Tap to review pending applications',
                   fontSize: TextStyles.k10FontSize,
-                  color: kColorWhite.withValues(alpha: 0.9),
+                  color: AppLightUi.subtitle,
                 ),
               ],
             ),
           ),
-          Icon(
+          const Icon(
             Icons.chevron_right_rounded,
-            color: kColorWhite.withValues(alpha: 0.9),
+            color: AppLightUi.subtitle,
           ),
         ],
       ),
