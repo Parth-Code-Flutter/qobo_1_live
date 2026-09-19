@@ -45,7 +45,8 @@ class AgencyHostListView extends GetView<AgencyHostListController> {
     final body = _screenBody(context);
     if (embeddedInBottomNav) return body;
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      // Match canvas under rounded AppBar corners (avoids dark gap strip).
+      backgroundColor: kColorLavenderBg,
       appBar: PreferredSize(
         preferredSize:
             const CommonAppBarWidget(title: 'Agency Hosts').preferredSize,
