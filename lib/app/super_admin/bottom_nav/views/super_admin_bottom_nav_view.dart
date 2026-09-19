@@ -5,12 +5,12 @@ import 'package:qobo_one_live/app/super_admin/bottom_nav/controllers/super_admin
 import 'package:qobo_one_live/app/super_admin/dashboard/views/super_admin_dashboard_tab_view.dart';
 import 'package:qobo_one_live/app/super_admin/host/views/super_admin_host_tab_view.dart';
 import 'package:qobo_one_live/app/super_admin/settings/views/super_admin_settings_tab_view.dart';
+import 'package:qobo_one_live/app/super_admin/widgets/super_admin_fresh_nav_bar.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 
-/// Super Admin bottom nav shell — shared [CommonAppBarWidget] + tab body.
+/// Super Admin bottom nav shell — shared [CommonAppBarWidget] + fresh dock.
 class SuperAdminBottomNavView extends GetView<SuperAdminBottomNavController> {
   const SuperAdminBottomNavView({super.key});
 
@@ -42,8 +42,8 @@ class SuperAdminBottomNavView extends GetView<SuperAdminBottomNavController> {
               ),
             _ => Spacing.shrink,
           },
-          bottomNavigationBar: AdminBottomNavBar(
-            items: controller.items,
+          bottomNavigationBar: SuperAdminFreshNavBar(
+            items: controller.freshNavItems,
             selectedIndex: controller.selectedIndex.value,
             onSelected: controller.onNavBarTabSelected,
           ),

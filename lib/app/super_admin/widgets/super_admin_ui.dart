@@ -54,7 +54,7 @@ abstract final class SuperAdminUi {
     pagePad,
     10,
     pagePad,
-    100,
+    108,
   );
   static const EdgeInsets detailInsets = EdgeInsets.fromLTRB(
     pagePad,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/super_admin/home/controllers/super_admin_home_controller.dart';
+import 'package:qobo_one_live/app/super_admin/widgets/super_admin_fresh_nav_bar.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
@@ -25,20 +26,28 @@ class SuperAdminBottomNavController extends GetxController {
   static const int hostTabIndex = 2;
   static const int settingsTabIndex = 3;
 
-  /// Four modules — bright per-tab accents (shared with Agency chrome).
-  final items = const <({String label, IconData icon, Color accent})>[
-    (
+  /// Figma `nav-bar-fresh-4tab` accents — cyan / magenta / green / orange.
+  final freshNavItems = const <SuperAdminFreshNavItem>[
+    SuperAdminFreshNavItem(
       label: 'Dashboard',
-      icon: Icons.dashboard_customize_rounded,
-      accent: Color(0xFF7C9CFF),
+      accent: Color(0xFF00E8FF),
+      kind: SuperAdminFreshNavIconKind.dashboard,
     ),
-    (label: 'Agency', icon: Icons.apartment_rounded, accent: Color(0xFFFF5CAB)),
-    (
+    SuperAdminFreshNavItem(
+      label: 'Agency',
+      accent: Color(0xFFFF2D9B),
+      kind: SuperAdminFreshNavIconKind.agency,
+    ),
+    SuperAdminFreshNavItem(
       label: 'Host',
-      icon: Icons.mic_external_on_rounded,
-      accent: Color(0xFF5CE1B0),
+      accent: Color(0xFF3DFF6E),
+      kind: SuperAdminFreshNavIconKind.host,
     ),
-    (label: 'Settings', icon: Icons.tune_rounded, accent: Color(0xFFFFD166)),
+    SuperAdminFreshNavItem(
+      label: 'Settings',
+      accent: Color(0xFFFF9F1A),
+      kind: SuperAdminFreshNavIconKind.settings,
+    ),
   ];
 
   @override
