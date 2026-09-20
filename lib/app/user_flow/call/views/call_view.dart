@@ -1,12 +1,15 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:qobo_one_live/app/user_flow/live_room/widgets/common_live_room_widget.dart';
+import 'package:qobo_one_live/app/user_flow/live_room/widgets/audio_room_grid_view.dart';
+import 'package:qobo_one_live/app/user_flow/live_room/widgets/compact_live_room_tile.dart';
+import 'package:qobo_one_live/app/user_flow/live_room/widgets/video_room_list_view.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/services/chat/chat_call_service.dart';
+import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
+import 'package:qobo_one_live/utils/app_widgets/dating_empty_hero.dart';
 import 'package:qobo_one_live/utils/app_widgets/safe_network_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -16,62 +19,37 @@ import '../controllers/call_controller.dart';
 class CallView extends GetView<CallController> {
   const CallView({super.key});
 
-  static const _accent = Color(0xFF9B1F7A);
-  static const _accentSoft = Color(0xFFF8E8F3);
   static const _waGreen = Color(0xFF25D366);
+
+  static const _hubTabs = <({IconData icon, String label})>[
+    (icon: Icons.sensors_rounded, label: 'Live'),
+    (icon: Icons.videocam_rounded, label: 'Video'),
+    (icon: Icons.headphones_rounded, label: 'Audio'),
+    (icon: Icons.call_rounded, label: 'Calls'),
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kColorLavenderBg,
       appBar: _CallAppBar(controller: controller),
-      body: Stack(
+      body: Column(
         children: [
-          Positioned(
-            top: -80,
-            right: -40,
-            child: _glowBlob(const Color(0xFFFF6BB5), 220),
+          Spacing.v10,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _buildHubTabs(),
           ),
-          Positioned(
-            top: 120,
-            left: -60,
-            child: _glowBlob(const Color(0xFF7B61FF), 180),
-          ),
-          Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 2, 14, 10),
-                child: _buildHubTabs(),
-              ),
-              Expanded(
-                child: Obx(() {
-                  if (controller.hubTab.value == 3) {
-                    return _buildCallsTab(context);
-                  }
-                  return _buildRoomsTab();
-                }),
-              ),
-            ],
+          Spacing.v8,
+          Expanded(
+            child: Obx(() {
+              if (controller.hubTab.value == 3) {
+                return _buildCallsTab(context);
+              }
+              return _buildRoomsTab();
+            }),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _glowBlob(Color color, double size) {
-    return IgnorePointer(
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: RadialGradient(
-            colors: [
-              color.withValues(alpha: 0.22),
-              color.withValues(alpha: 0.0),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -79,272 +57,241 @@ class CallView extends GetView<CallController> {
   Widget _buildHubTabs() {
     return Obx(() {
       final active = controller.hubTab.value;
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(22),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-          child: Container(
-            padding: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-              color: kColorWhite.withValues(alpha: 0.78),
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: kColorWhite.withValues(alpha: 0.9)),
-              boxShadow: [
-                BoxShadow(
-                  color: _accent.withValues(alpha: 0.10),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
+      return Container(
+        height: 64,
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: AppLightUi.card,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppLightUi.border),
+          boxShadow: AppLightUi.cardShadow,
+        ),
+        child: Row(
+          children: List.generate(_hubTabs.length, (index) {
+            final tab = _hubTabs[index];
+            final isActive = active == index;
+            return Expanded(
+              child: GestureDetector(
+                onTap: () => controller.selectHubTab(index),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    gradient: isActive ? AppLightUi.familyCtaGradient : null,
+                    boxShadow: isActive
+                        ? [
+                            BoxShadow(
+                              color: AppLightUi.pink.withValues(alpha: 0.30),
+                              blurRadius: 12,
+                              offset: const Offset(0, 5),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        tab.icon,
+                        size: 18,
+                        color: isActive ? kColorWhite : AppLightUi.muted,
+                      ),
+                      const SizedBox(height: 3),
+                      SemiBoldText(
+                        text: tab.label,
+                        fontSize: TextStyles.k10FontSize,
+                        color: isActive ? kColorWhite : AppLightUi.subtitle,
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
-            child: Row(
-              children: [
-                _hubTab(
-                  icon: Icons.sensors_rounded,
-                  label: 'Live',
-                  isActive: active == 0,
-                  onTap: () => controller.selectHubTab(0),
-                ),
-                _hubTab(
-                  icon: Icons.videocam_rounded,
-                  label: 'Video',
-                  isActive: active == 1,
-                  onTap: () => controller.selectHubTab(1),
-                ),
-                _hubTab(
-                  icon: Icons.headphones_rounded,
-                  label: 'Audio',
-                  isActive: active == 2,
-                  onTap: () => controller.selectHubTab(2),
-                ),
-                _hubTab(
-                  icon: Icons.call_rounded,
-                  label: 'Calls',
-                  isActive: active == 3,
-                  onTap: () => controller.selectHubTab(3),
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          }),
         ),
       );
     });
   }
 
-  Widget _hubTab({
-    required IconData icon,
-    required String label,
-    required bool isActive,
-    required VoidCallback onTap,
-  }) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-          height: 54,
-          decoration: BoxDecoration(
-            gradient: isActive
-                ? const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF9B1F7A), Color(0xFF6B1560)],
-                  )
-                : null,
-            color: isActive ? null : Colors.transparent,
-            borderRadius: BorderRadius.circular(17),
-            boxShadow: isActive
-                ? [
-                    BoxShadow(
-                      color: _accent.withValues(alpha: 0.35),
-                      blurRadius: 14,
-                      offset: const Offset(0, 6),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                color: isActive ? kColorWhite : kColorHint,
-                size: 18,
-              ),
-              const SizedBox(height: 3),
-              AppText(
-                text: label,
-                style: TextStyles.kSemiBoldPoppins(
-                  fontSize: 11,
-                  colors: isActive ? kColorWhite : kColorTextGrey,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   // ─── Rooms tabs (Live / Video / Audio) ─────────────────────────────────
 
   Widget _buildRoomsTab() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 10),
-          child: Obx(
-            () => Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return Obx(() {
+      final rooms = controller.rooms.toList();
+      final loading = controller.isRoomsLoading.value;
+      final tab = controller.hubTab.value;
+
+      // Live → same 3-col CompactLiveRoomTile grid as bottom-nav Live hub.
+      if (tab == 0) {
+        return _liveHubListing(rooms: rooms, loading: loading);
+      }
+
+      if (tab == 2) {
+        return AudioRoomGridView(
+          rooms: rooms,
+          isLoading: loading && rooms.isEmpty,
+          showCreatePanel: false,
+          onRefresh: controller.fetchRooms,
+          onJoinRoom: controller.joinRoom,
+        );
+      }
+
+      // Video → Rooms → Video listing.
+      return VideoRoomListView(
+        rooms: rooms,
+        isLoading: loading && rooms.isEmpty,
+        showCreatePanel: false,
+        onRefresh: controller.fetchRooms,
+        onJoinLive: controller.joinRoom,
+      );
+    });
+  }
+
+  Widget _liveHubListing({
+    required List<Map<String, dynamic>> rooms,
+    required bool loading,
+  }) {
+    if (loading && rooms.isEmpty) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppLightUi.pink),
+      );
+    }
+
+    return RefreshIndicator(
+      color: AppLightUi.pink,
+      backgroundColor: AppLightUi.card,
+      onRefresh: controller.fetchRooms,
+      child: rooms.isEmpty
+          ? ListView(
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              padding: const EdgeInsets.fromLTRB(20, 48, 20, 24),
               children: [
-                BoldText(
-                  text: controller.currentRoomTitle,
-                  fontSize: TextStyles.k20FontSize,
-                  color: kColorText,
+                DatingEmptyHero(
+                  style: DatingEmptyHeroStyle.live,
+                  size: 148,
+                  accentColors: const [AppLightUi.pink, AppLightUi.violet],
                 ),
-                Spacing.v4,
-                AppText(
-                  text: controller.currentRoomSubtitle,
-                  style: TextStyles.kRegularPoppins(
-                    fontSize: 13,
-                    colors: kColorTextGrey,
-                  ),
+                Spacing.v16,
+                const SemiBoldText(
+                  text: 'Nothing live yet',
+                  fontSize: TextStyles.k16FontSize,
+                  color: AppLightUi.title,
+                  align: TextAlign.center,
+                ),
+                Spacing.v8,
+                const AppText(
+                  text: 'Pull to refresh — live rooms will appear here.',
+                  fontSize: TextStyles.k12FontSize,
+                  color: AppLightUi.subtitle,
+                  align: TextAlign.center,
                 ),
               ],
-            ),
-          ),
-        ),
-        Expanded(
-          child: Obx(() {
-            if (controller.isRoomsLoading.value && controller.rooms.isEmpty) {
-              return const Center(
-                child: CircularProgressIndicator(color: _accent),
-              );
-            }
-            if (controller.rooms.isEmpty) {
-              return RefreshIndicator(
-                onRefresh: controller.fetchRooms,
-                color: _accent,
-                child: ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  children: [
-                    SizedBox(height: Get.height * 0.16),
-                    Center(
-                      child: Container(
-                        width: 72,
-                        height: 72,
-                        decoration: BoxDecoration(
-                          color: _accentSoft,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.videocam_off_outlined,
-                          color: _accent,
-                          size: 34,
-                        ),
-                      ),
-                    ),
-                    Spacing.v16,
-                    const Center(
-                      child: BoldText(
-                        text: 'Nothing live here yet',
-                        fontSize: 17,
-                        color: kColorText,
-                      ),
-                    ),
-                    Spacing.v6,
-                    Center(
-                      child: AppText(
-                        text: 'Pull to refresh and check again.',
-                        style: TextStyles.kRegularPoppins(
-                          fontSize: 13,
-                          colors: kColorTextGrey,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            return RefreshIndicator(
-              onRefresh: controller.fetchRooms,
-              color: _accent,
-              child: GridView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                physics: const AlwaysScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 14,
-                  crossAxisSpacing: 14,
-                  childAspectRatio: 0.72,
-                ),
-                itemCount: controller.rooms.length,
-                itemBuilder: (context, index) {
-                  final room = controller.rooms[index];
-                  return TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0.92, end: 1),
-                    duration: Duration(milliseconds: 280 + (index % 4) * 40),
-                    curve: Curves.easeOutBack,
-                    builder: (context, scale, child) {
-                      return Transform.scale(scale: scale, child: child);
-                    },
-                    child: GestureDetector(
-                      onTap: () => controller.joinRoom(room),
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          CommonLiveRoomWidget(
-                            imageUrl: room['image']?.toString() ?? '',
-                            userNameAge: room['nameAge']?.toString() ?? 'Room',
-                            badgeText: room['badge']?.toString() ?? '',
-                            locationText: room['location']?.toString() ?? '',
-                            pointsText: room['points']?.toString() ?? '0',
-                            isFavorite: room['favorite'] == true,
-                          ),
-                          Positioned(
-                            left: 10,
-                            bottom: 72,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 9,
-                                vertical: 5,
-                              ),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    Color(0xFF9B1F7A),
-                                    Color(0xFFE6252F),
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(11),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: _accent.withValues(alpha: 0.35),
-                                    blurRadius: 10,
-                                  ),
-                                ],
-                              ),
-                              child: SemiBoldText(
-                                text: room['typeLabel']?.toString() ?? '',
-                                fontSize: TextStyles.k10FontSize,
-                                color: kColorWhite,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
+            )
+          : GridView.builder(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 24),
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
               ),
-            );
-          }),
-        ),
-      ],
+              clipBehavior: Clip.none,
+              itemCount: rooms.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                mainAxisSpacing: 9,
+                crossAxisSpacing: 9,
+                childAspectRatio: 0.88,
+              ),
+              itemBuilder: (context, index) {
+                final room = rooms[index];
+                final name = _liveDisplayName(room);
+                return CompactLiveRoomTile(
+                  displayName: name,
+                  imageUrl: _liveHostAvatarUrl(room),
+                  frameUrl: _liveHostFrameUrl(room),
+                  frameSeed: name,
+                  viewerLabel: room['points']?.toString(),
+                  onTap: () => controller.joinRoom(room),
+                );
+              },
+            ),
     );
+  }
+
+  String _liveDisplayName(Map<String, dynamic> room) {
+    final nameAge = room['nameAge']?.toString().trim() ?? '';
+    if (nameAge.isNotEmpty) {
+      // Hub tiles show host/title only (drop "· seats" suffix).
+      final cut = nameAge.split('·').first.trim();
+      if (cut.isNotEmpty) return cut;
+    }
+    return room['name']?.toString().trim().isNotEmpty == true
+        ? room['name'].toString().trim()
+        : 'Live';
+  }
+
+  String? _liveHostAvatarUrl(Map<String, dynamic> room) {
+    final nested = room['roomData'] is Map
+        ? Map<String, dynamic>.from(room['roomData'] as Map)
+        : const <String, dynamic>{};
+    final host = room['host'] is Map
+        ? Map<String, dynamic>.from(room['host'] as Map)
+        : (nested['host'] is Map
+            ? Map<String, dynamic>.from(nested['host'] as Map)
+            : const <String, dynamic>{});
+
+    return ApiImageUtils.normalize(
+      _firstNonEmpty([
+        room['hostDisplayPicture'],
+        room['hostAvatar'],
+        host['displayPicture'],
+        host['avatar'],
+        host['avatarUrl'],
+        nested['hostDisplayPicture'],
+        nested['hostAvatar'],
+        room['image'],
+        room['coverImage'],
+        nested['coverImage'],
+      ]),
+    );
+  }
+
+  String? _liveHostFrameUrl(Map<String, dynamic> room) {
+    final nested = room['roomData'] is Map
+        ? Map<String, dynamic>.from(room['roomData'] as Map)
+        : const <String, dynamic>{};
+    final host = room['host'] is Map
+        ? Map<String, dynamic>.from(room['host'] as Map)
+        : (nested['host'] is Map
+            ? Map<String, dynamic>.from(nested['host'] as Map)
+            : const <String, dynamic>{});
+
+    return ApiImageUtils.normalize(
+      _firstNonEmpty([
+        room['avatarFrameUrl'],
+        room['hostAvatarFrame'],
+        room['hostAvatarFrameUrl'],
+        room['profileFrameUrl'],
+        room['frameUrl'],
+        host['avatarFrameUrl'],
+        host['profileFrameUrl'],
+        host['frameUrl'],
+        nested['avatarFrameUrl'],
+        nested['hostAvatarFrameUrl'],
+        nested['profileFrameUrl'],
+        nested['frameUrl'],
+      ]),
+    );
+  }
+
+  String? _firstNonEmpty(List<dynamic> values) {
+    for (final value in values) {
+      final text = value?.toString().trim() ?? '';
+      if (text.isNotEmpty && text != 'null') return text;
+    }
+    return null;
   }
 
   // ─── Calls tab (WhatsApp-style history) ────────────────────────────────
@@ -376,30 +323,31 @@ class CallView extends GetView<CallController> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       decoration: BoxDecoration(
-        color: kColorWhite,
+        color: AppLightUi.card,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _accent.withValues(alpha: 0.12)),
-        boxShadow: [
-          BoxShadow(
-            color: _accent.withValues(alpha: 0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        border: Border.all(color: AppLightUi.border),
+        boxShadow: AppLightUi.cardShadow,
       ),
       child: TextField(
         controller: controller.searchFieldController,
         onChanged: controller.onSearchChanged,
         autofocus: true,
         textInputAction: TextInputAction.search,
+        style: TextStyles.kRegularPoppins(
+          fontSize: TextStyles.k14FontSize,
+          colors: AppLightUi.title,
+        ),
         decoration: InputDecoration(
           border: InputBorder.none,
           hintText: 'Search people to call',
           hintStyle: TextStyles.kRegularPoppins(
-            fontSize: 14,
-            colors: kColorHint,
+            fontSize: TextStyles.k12FontSize,
+            colors: AppLightUi.muted,
           ),
-          prefixIcon: const Icon(Icons.search_rounded, color: _accent),
+          prefixIcon: Icon(
+            Icons.search_rounded,
+            color: AppLightUi.pink.withValues(alpha: 0.9),
+          ),
         ),
       ),
     );
@@ -408,7 +356,7 @@ class CallView extends GetView<CallController> {
   Widget _searchResultsList(BuildContext context) {
     return Obx(() {
       if (controller.isSearchLoading.value) {
-        return const Center(child: CircularProgressIndicator(color: _accent));
+        return const Center(child: CircularProgressIndicator(color: AppLightUi.pink));
       }
       if (controller.searchResults.isEmpty) {
         return Center(
@@ -530,13 +478,13 @@ class CallView extends GetView<CallController> {
             if (controller.isHistoryLoading.value &&
                 controller.historyItems.isEmpty) {
               return const Center(
-                child: CircularProgressIndicator(color: _accent),
+                child: CircularProgressIndicator(color: AppLightUi.pink),
               );
             }
             if (controller.historyItems.isEmpty) {
               return RefreshIndicator(
                 onRefresh: () => controller.fetchHistory(refresh: true),
-                color: _accent,
+                color: AppLightUi.pink,
                 child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   children: [
@@ -583,7 +531,7 @@ class CallView extends GetView<CallController> {
 
             return RefreshIndicator(
               onRefresh: () => controller.fetchHistory(refresh: true),
-              color: _accent,
+              color: AppLightUi.pink,
               child: ListView.separated(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -611,11 +559,11 @@ class CallView extends GetView<CallController> {
         duration: const Duration(milliseconds: 160),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isActive ? _accentSoft : kColorWhite,
+          color: isActive ? AppLightUi.cardSoft : kColorWhite,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isActive
-                ? _accent.withValues(alpha: 0.35)
+                ? AppLightUi.pink.withValues(alpha: 0.35)
                 : kColorTextFieldBorder,
           ),
         ),
@@ -623,7 +571,7 @@ class CallView extends GetView<CallController> {
           text: label,
           style: TextStyles.kSemiBoldPoppins(
             fontSize: 12,
-            colors: isActive ? _accent : kColorTextGrey,
+            colors: isActive ? AppLightUi.pink : AppLightUi.subtitle,
           ),
         ),
       ),
@@ -663,7 +611,7 @@ class CallView extends GetView<CallController> {
     }
     if (kind == 'room_join') {
       directionIcon = Icons.meeting_room_rounded;
-      directionColor = _accent;
+      directionColor = AppLightUi.pink;
     }
 
     return Material(
@@ -756,20 +704,20 @@ class CallView extends GetView<CallController> {
                     url: url,
                     size: size,
                     fallback: ColoredBox(
-                      color: _accentSoft,
+                      color: AppLightUi.pinkSoft,
                       child: Icon(
                         Icons.person_rounded,
-                        color: _accent,
+                        color: AppLightUi.pink,
                         size: size * 0.45,
                       ),
                     ),
                     fit: BoxFit.cover,
                   )
                 : ColoredBox(
-                    color: _accentSoft,
+                    color: AppLightUi.pinkSoft,
                     child: Icon(
                       Icons.person_rounded,
-                      color: _accent,
+                      color: AppLightUi.pink,
                       size: size * 0.45,
                     ),
                   ),
@@ -832,11 +780,12 @@ class _CallAppBar extends StatelessWidget implements PreferredSizeWidget {
     return Obx(
       () => CommonAppBarWidget(
         title: 'Qobo Call',
+        subtitle: 'Live, rooms & call history',
         trailingIcon: controller.hubTab.value == 3
             ? (controller.isCallsSearchOpen.value
                   ? Icons.close_rounded
                   : Icons.person_add_alt_1_rounded)
-            : null,
+            : Icons.phone_in_talk_rounded,
         onTrailingTap: controller.hubTab.value == 3
             ? controller.toggleCallsSearch
             : null,

@@ -470,6 +470,8 @@ class CallController extends GetxController {
     return {
       'id': room['_id'] ?? room['id'] ?? '',
       'roomData': Map<String, dynamic>.from(room),
+      'name': title,
+      'title': title,
       'nameAge': seats == 0 ? title : '$title · $seats seats',
       'badge': badge,
       'roomType': isLiveStream ? 'LIVE_STREAM' : type,
@@ -478,9 +480,20 @@ class CallController extends GetxController {
           room['countryCode']?.toString() ??
           room['country']?.toString() ??
           '—',
+      'countryCode': room['countryCode']?.toString() ??
+          room['country']?.toString(),
+      'countryName': room['countryName']?.toString(),
       'points': count.toString(),
+      'viewerCount': count,
+      'heatScore': count,
       'favorite': room['isFavorite'] == true || room['isFollowed'] == true,
       'image': image ?? (type == 'AUDIO' ? kImgTemp2 : kImgTemp3),
+      'coverImage': image,
+      'host': room['host'],
+      'hostName': room['hostName']?.toString() ??
+          (room['host'] is Map
+              ? (room['host'] as Map)['name']?.toString()
+              : null),
       'typeLabel': isLiveStream
           ? 'Live'
           : (type == 'AUDIO' ? 'Audio' : 'Video'),

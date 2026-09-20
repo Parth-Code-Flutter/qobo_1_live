@@ -72,7 +72,7 @@ class AwardController extends GetxController {
     fetchAwards();
   }
 
-  void fetchAwards() async {
+  Future<void> fetchAwards() async {
     isLoading.value = true;
     try {
       final response = await _userRepo.getAchievements(isShowLoader: false);
@@ -83,6 +83,10 @@ class AwardController extends GetxController {
           list
               .whereType<Map>()
               .map((award) {
+                final progress = _toDouble(
+                  award['progress'] ?? award['progressRatio'],
+                );
+                final progressText = _progressText(award, progress);
                 return <String, dynamic>{
                   'id': award['id']?.toString() ?? '',
                   'title': award['title']?.toString() ?? '',
@@ -90,12 +94,14 @@ class AwardController extends GetxController {
                       award['description']?.toString() ??
                       award['desc']?.toString() ??
                       '',
-                  'type': award['type']?.toString() ?? 'Achievement',
+                  'type': award['type']?.toString() ??
+                      award['category']?.toString() ??
+                      'Achievement',
                   'level': _toInt(award['level']),
                   'isUnlocked':
                       award['isUnlocked'] == true || award['unlocked'] == true,
-                  'progress': _toDouble(award['progress']),
-                  'progressText': award['progressText']?.toString() ?? '',
+                  'progress': progress,
+                  'progressText': progressText,
                   'icon': award['icon']?.toString() ?? 'star_rounded',
                   'points': _toInt(award['points'] ?? award['reward']),
                   'isClaimed': award['isClaimed'] == true,
@@ -131,6 +137,33 @@ class AwardController extends GetxController {
     );
   }
 
+  String _progressText(Map award, double progress) {
+    final raw = award['progressText']?.toString().trim() ?? '';
+    if (raw.isNotEmpty) return raw;
+
+    final current = award['current'] ??
+        award['progressValue'] ??
+        award['currentValue'] ??
+        award['value'];
+    final target = award['target'] ??
+        award['targetValue'] ??
+        award['goal'] ??
+        award['required'];
+    if (current != null && target != null) {
+      return '${_formatMetric(current)} / ${_formatMetric(target)}';
+    }
+    return '${(progress * 100).round()}%';
+  }
+
+  String _formatMetric(dynamic value) {
+    if (value is num) {
+      final n = value.toDouble();
+      if (n == n.roundToDouble()) return n.round().toString();
+      return n.toStringAsFixed(1);
+    }
+    return value?.toString() ?? '0';
+  }
+
   int _toInt(dynamic value) {
     if (value is int) return value;
     if (value is num) return value.toInt();
@@ -139,7 +172,12 @@ class AwardController extends GetxController {
 
   double _toDouble(dynamic value) {
     if (value is double) return value.clamp(0.0, 1.0);
-    if (value is num) return value.toDouble().clamp(0.0, 1.0);
+    if (value is num) {
+      final n = value.toDouble();
+      // Some APIs send 0-100 instead of 0-1.
+      if (n > 1 && n <= 100) return (n / 100).clamp(0.0, 1.0);
+      return n.clamp(0.0, 1.0);
+    }
     return double.tryParse(value?.toString() ?? '')?.clamp(0.0, 1.0) ?? 0;
   }
 }
