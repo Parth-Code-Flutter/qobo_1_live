@@ -613,14 +613,26 @@ class _HostFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // FramedUserAvatar adds its own frame padding (~1.34×); keep visual ~48dp.
-    return FramedUserAvatar(
-      name: name,
-      imageUrl: avatar,
-      frameUrl: frameUrl,
-      frameSeed: name,
-      size: 40,
-      fontSize: TextStyles.k10FontSize,
+    // Keep framed host readable on cover cards (~70dp painted frame).
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: AppLightUi.pink.withValues(alpha: 0.35),
+            blurRadius: 14,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: FramedUserAvatar(
+        name: name,
+        imageUrl: avatar,
+        frameUrl: frameUrl,
+        frameSeed: (frameUrl == null || frameUrl!.isEmpty) ? name : null,
+        size: 52,
+        fontSize: TextStyles.k12FontSize,
+      ),
     );
   }
 }

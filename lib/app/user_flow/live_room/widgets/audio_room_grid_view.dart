@@ -68,16 +68,19 @@ class AudioRoomGridView extends StatelessWidget {
               children: [_AudioRoomsEmptyState(onCreate: onCreateAudioRoom)],
             )
           : GridView.builder(
-              padding: const EdgeInsets.fromLTRB(8, 18, 8, 104),
+              padding: const EdgeInsets.fromLTRB(10, 18, 10, 104),
               physics: const AlwaysScrollableScrollPhysics(
                 parent: BouncingScrollPhysics(),
               ),
+              // Let ornate avatar frames paint past cell edges.
+              clipBehavior: Clip.none,
               itemCount: tiles.length + (showCreatePanel ? 1 : 0),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 3,
-                mainAxisSpacing: 22,
-                crossAxisSpacing: 14,
-                childAspectRatio: 0.78,
+                mainAxisSpacing: 20,
+                crossAxisSpacing: 10,
+                // Room for full FramedUserAvatar ring + title + host.
+                childAspectRatio: 0.62,
               ),
               itemBuilder: (context, index) {
                 if (showCreatePanel && index == tiles.length) {
@@ -204,78 +207,112 @@ class _AudioRoomGridTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final roomTitle = data.title.isNotEmpty ? data.title : 'Audio Room';
     final hostName = data.hostName.isNotEmpty ? data.hostName : 'Host';
-    // FramedUserAvatar lays out at size * 1.34 (~88dp with size 66).
-    const avatarSize = 66.0;
 
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.center,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Title + host + gap — keep avatar/frame as the hero.
+          const textBlock = 36.0;
+          final available =
+              (constraints.maxHeight - textBlock).clamp(72.0, 120.0);
+          // FramedUserAvatar paints at size * 1.34; leave a little breathing room.
+          final avatarSize = ((available - 6) / 1.34).clamp(54.0, 78.0);
+          final frameBox = avatarSize * 1.34;
+
+          return Column(
+            mainAxisAlignment: MainAxisAlignment.start,
             children: [
-              FramedUserAvatar(
-                name: hostName,
-                imageUrl: data.avatar,
-                frameUrl: data.frameUrl,
-                frameSeed: hostName,
-                size: avatarSize,
-                fontSize: TextStyles.k14FontSize,
-              ),
-              Positioned(
-                right: -2,
-                bottom: 2,
-                child: Container(
-                  width: 26,
-                  height: 26,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppLightUi.violet, AppLightUi.pink],
-                    ),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppLightUi.card,
-                      width: 2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppLightUi.pink.withValues(alpha: 0.28),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+              SizedBox(
+                width: constraints.maxWidth,
+                height: available,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.center,
+                  children: [
+                    // Soft glow behind the frame so it reads clearly on lavender.
+                    Container(
+                      width: frameBox * 0.92,
+                      height: frameBox * 0.92,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppLightUi.pink.withValues(alpha: 0.22),
+                            blurRadius: 16,
+                            spreadRadius: 1,
+                          ),
+                          BoxShadow(
+                            color: AppLightUi.violet.withValues(alpha: 0.16),
+                            blurRadius: 12,
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.mic_rounded,
-                    color: kColorWhite,
-                    size: 14,
-                  ),
+                    ),
+                    FramedUserAvatar(
+                      name: hostName,
+                      imageUrl: data.avatar,
+                      frameUrl: data.frameUrl,
+                      frameSeed: data.frameUrl?.isNotEmpty == true
+                          ? null
+                          : (data.room['id']?.toString() ?? hostName),
+                      size: avatarSize,
+                      fontSize: TextStyles.k14FontSize,
+                    ),
+                    Positioned(
+                      right: (constraints.maxWidth - frameBox) / 2 - 2,
+                      bottom: (available - frameBox) / 2 - 2,
+                      child: Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [AppLightUi.violet, AppLightUi.pink],
+                          ),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppLightUi.card,
+                            width: 2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppLightUi.pink.withValues(alpha: 0.28),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.mic_rounded,
+                          color: kColorWhite,
+                          size: 12,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              Spacing.v4,
+              SemiBoldText(
+                text: roomTitle,
+                fontSize: TextStyles.k12FontSize,
+                color: AppLightUi.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                align: TextAlign.center,
+              ),
+              AppText(
+                text: hostName,
+                fontSize: TextStyles.k10FontSize,
+                color: AppLightUi.subtitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                align: TextAlign.center,
+              ),
             ],
-          ),
-          Spacing.v8,
-          SemiBoldText(
-            text: roomTitle,
-            fontSize: TextStyles.k12FontSize,
-            color: AppLightUi.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            align: TextAlign.center,
-          ),
-          Spacing.v2,
-          AppText(
-            text: hostName,
-            fontSize: TextStyles.k10FontSize,
-            color: AppLightUi.subtitle,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            align: TextAlign.center,
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -291,39 +328,45 @@ class _AudioRoomCreateTile extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 70,
-            height: 70,
-            decoration: BoxDecoration(
-              color: AppLightUi.card,
-              shape: BoxShape.circle,
-              border: Border.all(color: AppLightUi.border),
-              boxShadow: AppLightUi.cardShadow,
-            ),
-            child: const Icon(
-              Icons.add_rounded,
-              color: AppLightUi.pink,
-              size: 34,
-            ),
-          ),
-          Spacing.v8,
-          const SemiBoldText(
-            text: 'Create',
-            fontSize: TextStyles.k12FontSize,
-            color: AppLightUi.title,
-            align: TextAlign.center,
-          ),
-          Spacing.v2,
-          const AppText(
-            text: 'Audio Room',
-            fontSize: TextStyles.k10FontSize,
-            color: AppLightUi.subtitle,
-            align: TextAlign.center,
-          ),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          const textBlock = 34.0;
+          final circle =
+              (constraints.maxHeight - textBlock).clamp(56.0, 78.0);
+          return Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: circle,
+                height: circle,
+                decoration: BoxDecoration(
+                  color: AppLightUi.card,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppLightUi.border),
+                  boxShadow: AppLightUi.cardShadow,
+                ),
+                child: Icon(
+                  Icons.add_rounded,
+                  color: AppLightUi.pink,
+                  size: (circle * 0.45).clamp(28.0, 36.0),
+                ),
+              ),
+              Spacing.v4,
+              const SemiBoldText(
+                text: 'Create',
+                fontSize: TextStyles.k12FontSize,
+                color: AppLightUi.title,
+                align: TextAlign.center,
+              ),
+              const AppText(
+                text: 'Audio Room',
+                fontSize: TextStyles.k10FontSize,
+                color: AppLightUi.subtitle,
+                align: TextAlign.center,
+              ),
+            ],
+          );
+        },
       ),
     );
   }
