@@ -2,8 +2,10 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -116,7 +118,7 @@ class CommonAppDialog extends StatelessWidget {
         giftIcon: giftIcon,
       ),
       barrierDismissible: true,
-      barrierColor: Colors.black.withValues(alpha: 0.72),
+      barrierColor: Colors.black.withValues(alpha: 0.45),
     );
   }
 
@@ -371,7 +373,7 @@ class CommonAppDialog extends StatelessWidget {
   }
 }
 
-/// Centered gift-combo picker — shows selected gift + 2×2 grid (1 → 3 → 5 → 10).
+/// Centered gift-combo picker — light dating chrome + vivid combo tiles.
 class _GiftComboDialog extends StatelessWidget {
   const _GiftComboDialog({
     required this.giftName,
@@ -383,99 +385,111 @@ class _GiftComboDialog extends StatelessWidget {
   final String? giftPrice;
   final Widget? giftIcon;
 
-  static const _accent = Color(0xFFFF5CAB);
-  static const _accentEnd = Color(0xFF9C6BFF);
-
   static const _options = <_ComboPick>[
     _ComboPick(
       count: 1,
+      caption: 'Solo',
       icon: Icons.card_giftcard_rounded,
-      colors: [Color(0xFF26C6DA), Color(0xFF448AFF)],
+      colors: [Color(0xFF5B8DEF), Color(0xFF7B5CFF)],
     ),
     _ComboPick(
       count: 3,
+      caption: 'Triple',
       icon: Icons.local_fire_department_rounded,
-      colors: [Color(0xFFFF5CAB), Color(0xFFAE4BFF)],
+      colors: [Color(0xFFFF4F98), Color(0xFFB14DFF)],
     ),
     _ComboPick(
       count: 5,
+      caption: 'Burst',
       icon: Icons.bolt_rounded,
-      colors: [Color(0xFFFFAB40), Color(0xFFFF7043)],
+      colors: [Color(0xFFFF8A3D), Color(0xFFFF4F98)],
     ),
     _ComboPick(
       count: 10,
+      caption: 'Mega',
       icon: Icons.auto_awesome_rounded,
-      colors: [Color(0xFFFFD54F), Color(0xFFFF5252)],
+      colors: [Color(0xFFFFB020), Color(0xFFFF5C9A)],
     ),
   ];
+
+  int? get _unitPrice {
+    final raw = giftPrice?.replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+    if (raw.isEmpty) return null;
+    return int.tryParse(raw);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 26, vertical: 28),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 28),
       child: TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0.9, end: 1),
-        duration: const Duration(milliseconds: 340),
+        tween: Tween(begin: 0.88, end: 1),
+        duration: const Duration(milliseconds: 380),
         curve: Curves.easeOutBack,
         builder: (context, scale, child) =>
             Transform.scale(scale: scale, child: child),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(28),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(28),
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xF02A1638),
-                    Color(0xF0140C22),
-                    Color(0xF00C0814),
-                  ],
-                ),
-                border: Border.all(
-                  color: _accent.withValues(alpha: 0.32),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: _accent.withValues(alpha: 0.2),
-                    blurRadius: 32,
-                    offset: const Offset(0, 14),
-                  ),
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.4),
-                    blurRadius: 24,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(28),
+            gradient: AppLightUi.glossRingGradient,
+            boxShadow: [
+              BoxShadow(
+                color: AppLightUi.pink.withValues(alpha: 0.28),
+                blurRadius: 28,
+                offset: const Offset(0, 12),
               ),
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _selectedGiftCard(),
-                    const SizedBox(height: 16),
-                    const SemiBoldText(
-                      text: 'Send as Combo?',
-                      fontSize: TextStyles.k18FontSize,
-                      color: kColorWhite,
-                      align: TextAlign.center,
-                    ),
-                    Spacing.v8,
-                    AppText(
-                      text:
-                          'Pick how many to send — 1, 3, 5 or 10 at once.',
-                      fontSize: TextStyles.k12FontSize,
-                      color: kColorWhite.withValues(alpha: 0.68),
-                      align: TextAlign.center,
-                    ),
-                    const SizedBox(height: 18),
-                    _grid(),
-                  ],
+              BoxShadow(
+                color: AppLightUi.violet.withValues(alpha: 0.18),
+                blurRadius: 18,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(1.6),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(26.4),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0xFFFFFBFE),
+                      Color(0xFFFFF6FA),
+                      Color(0xFFF8F0FF),
+                    ],
+                  ),
+                ),
+                padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _comboBadge(),
+                      Spacing.v12,
+                      _selectedGiftCard(),
+                      Spacing.v16,
+                      const SemiBoldText(
+                        text: 'Send as Combo?',
+                        fontSize: TextStyles.k20FontSize,
+                        color: AppLightUi.title,
+                        align: TextAlign.center,
+                      ),
+                      Spacing.v6,
+                      const AppText(
+                        text:
+                            'Tap a pack to send — 1, 3, 5 or 10 gifts at once.',
+                        fontSize: TextStyles.k12FontSize,
+                        color: AppLightUi.subtitle,
+                        align: TextAlign.center,
+                      ),
+                      Spacing.v16,
+                      _grid(),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -485,78 +499,101 @@ class _GiftComboDialog extends StatelessWidget {
     );
   }
 
+  Widget _comboBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: AppLightUi.ctaGradient,
+        boxShadow: [
+          BoxShadow(
+            color: AppLightUi.pink.withValues(alpha: 0.35),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.auto_awesome_rounded, size: 14, color: kColorWhite),
+          SizedBox(width: 6),
+          SemiBoldText(
+            text: 'COMBO SEND',
+            fontSize: TextStyles.k10FontSize,
+            color: kColorWhite,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _selectedGiftCard() {
     final price = giftPrice?.trim();
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            _accent.withValues(alpha: 0.14),
-            _accentEnd.withValues(alpha: 0.08),
-          ],
-        ),
-        border: Border.all(color: _accent.withValues(alpha: 0.35)),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: AppLightUi.cardDecoration(radius: 18),
       child: Row(
         children: [
           Container(
-            width: 56,
-            height: 56,
+            width: 58,
+            height: 58,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: kColorWhite.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppLightUi.pink.withValues(alpha: 0.14),
+                  AppLightUi.violet.withValues(alpha: 0.10),
+                ],
+              ),
+              border: Border.all(
+                color: AppLightUi.pink.withValues(alpha: 0.28),
+              ),
             ),
             child: giftIcon ??
                 const Icon(
                   Icons.card_giftcard_rounded,
-                  color: kColorWhite,
+                  color: AppLightUi.pink,
                   size: 28,
                 ),
           ),
-          const SizedBox(width: 12),
+          Spacing.h12,
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                AppText(
+                const AppText(
                   text: 'Selected gift',
                   fontSize: TextStyles.k10FontSize,
-                  color: kColorWhite.withValues(alpha: 0.55),
+                  color: AppLightUi.muted,
                 ),
-                const SizedBox(height: 2),
+                Spacing.v2,
                 SemiBoldText(
                   text: giftName,
-                  fontSize: TextStyles.k14FontSize,
-                  color: kColorWhite,
+                  fontSize: TextStyles.k16FontSize,
+                  color: AppLightUi.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 if (price != null && price.isNotEmpty) ...[
-                  const SizedBox(height: 4),
+                  Spacing.v4,
                   Row(
                     children: [
-                      Icon(
-                        Icons.diamond_outlined,
-                        size: 12,
-                        color: Colors.orange.withValues(alpha: 0.9),
-                      ),
+                      const AppCoinIcon(size: 14),
                       const SizedBox(width: 4),
-                      AppText(
+                      SemiBoldText(
                         text: price,
                         fontSize: TextStyles.k12FontSize,
-                        color: kColorWhite.withValues(alpha: 0.75),
+                        color: AppLightUi.gold,
                       ),
-                      AppText(
+                      const AppText(
                         text: ' each',
                         fontSize: TextStyles.k10FontSize,
-                        color: kColorWhite.withValues(alpha: 0.45),
+                        color: AppLightUi.subtitle,
                       ),
                     ],
                   ),
@@ -570,11 +607,11 @@ class _GiftComboDialog extends StatelessWidget {
   }
 
   Widget _grid() {
+    final unit = _unitPrice;
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Wider phones keep ~1.0; narrow / large text get taller cells.
-        final cellW = (constraints.maxWidth - 14) / 2;
-        final ratio = cellW < 150 ? 0.88 : 0.95;
+        final cellW = (constraints.maxWidth - 12) / 2;
+        final ratio = cellW < 150 ? 0.80 : 0.86;
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -587,7 +624,9 @@ class _GiftComboDialog extends StatelessWidget {
           ),
           itemBuilder: (context, i) => _ComboPickTile(
             option: _options[i],
-            delayMs: i * 50,
+            unitPrice: unit,
+            delayMs: i * 55,
+            featured: _options[i].count == 10,
           ),
         );
       },
@@ -598,32 +637,41 @@ class _GiftComboDialog extends StatelessWidget {
 class _ComboPick {
   const _ComboPick({
     required this.count,
+    required this.caption,
     required this.icon,
     required this.colors,
   });
 
   final int count;
+  final String caption;
   final IconData icon;
   final List<Color> colors;
 }
 
 class _ComboPickTile extends StatelessWidget {
-  const _ComboPickTile({required this.option, this.delayMs = 0});
+  const _ComboPickTile({
+    required this.option,
+    this.unitPrice,
+    this.delayMs = 0,
+    this.featured = false,
+  });
 
   final _ComboPick option;
+  final int? unitPrice;
   final int delayMs;
+  final bool featured;
 
   @override
   Widget build(BuildContext context) {
-    final label = option.count == 1 ? '1' : '×${option.count}';
+    final label = option.count == 1 ? '×1' : '×${option.count}';
     final colors = option.colors;
     final accent = colors[0];
     final accentEnd = colors.length > 1 ? colors[1] : colors[0];
-    final textScale = MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 1.3);
+    final total = unitPrice == null ? null : unitPrice! * option.count;
 
     return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.94, end: 1),
-      duration: Duration(milliseconds: 300 + delayMs),
+      tween: Tween(begin: 0.9, end: 1),
+      duration: Duration(milliseconds: 320 + delayMs),
       curve: Curves.easeOutBack,
       builder: (context, scale, child) =>
           Transform.scale(scale: scale, child: child),
@@ -631,83 +679,107 @@ class _ComboPickTile extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: () => Navigator.of(context).pop(option.count),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
           child: Ink(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(18),
+              color: AppLightUi.card,
+              border: Border.all(
+                color: accent.withValues(alpha: featured ? 0.55 : 0.32),
+                width: featured ? 1.6 : 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: accent.withValues(alpha: featured ? 0.28 : 0.16),
+                  blurRadius: featured ? 18 : 12,
+                  offset: const Offset(0, 6),
+                ),
+                BoxShadow(
+                  color: AppLightUi.title.withValues(alpha: 0.04),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  accent.withValues(alpha: 0.22),
+                  accent.withValues(alpha: 0.14),
+                  AppLightUi.card,
                   accentEnd.withValues(alpha: 0.08),
-                  kColorWhite.withValues(alpha: 0.02),
                 ],
               ),
-              border: Border.all(
-                color: accent.withValues(
-                  alpha: option.count == 10 ? 0.65 : 0.42,
-                ),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: accent.withValues(alpha: 0.16),
-                  blurRadius: option.count == 10 ? 16 : 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
             ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Flexible(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: colors,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: accent.withValues(alpha: 0.4),
-                              blurRadius: 10,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: colors,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: accent.withValues(alpha: 0.45),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
                         ),
-                        child: Icon(option.icon, color: kColorWhite, size: 18),
-                      ),
+                      ],
+                    ),
+                    child: Icon(option.icon, color: kColorWhite, size: 22),
+                  ),
+                  Spacing.v8,
+                  SemiBoldText(
+                    text: option.caption,
+                    fontSize: TextStyles.k10FontSize,
+                    color: AppLightUi.subtitle,
+                  ),
+                  Spacing.v4,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      gradient: LinearGradient(colors: colors),
+                      boxShadow: [
+                        BoxShadow(
+                          color: accent.withValues(alpha: 0.35),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: SemiBoldText(
+                      text: label,
+                      fontSize: TextStyles.k16FontSize,
+                      color: kColorWhite,
                     ),
                   ),
-                  SizedBox(height: 6 / textScale),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Container(
-                      constraints: const BoxConstraints(minWidth: 44),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(18),
-                        gradient: LinearGradient(colors: colors),
-                      ),
-                      alignment: Alignment.center,
-                      child: SemiBoldText(
-                        text: label,
-                        fontSize: TextStyles.k14FontSize,
-                        color: kColorWhite,
-                      ),
+                  if (total != null) ...[
+                    Spacing.v6,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const AppCoinIcon(size: 12),
+                        const SizedBox(width: 3),
+                        AppText(
+                          text: '$total',
+                          fontSize: TextStyles.k10FontSize,
+                          color: AppLightUi.body,
+                        ),
+                      ],
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
