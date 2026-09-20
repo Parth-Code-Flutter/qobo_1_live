@@ -15,6 +15,8 @@ const String kGifSplashScreen = '$gifPath/splash_screen_gif.gif';
 const String kGifCongratulation = '$gifPath/congratulation_success.gif';
 /// Optional gift celebration GIF when no API `animationUrl` is available.
 const String kGifLoveGift = '$gifPath/love_gif.gif';
+/// Looping sparkle overlay for LIVE badges (Discover / Rooms cards).
+const String kGifLiveSparkle = '$gifPath/live_sparkle.gif';
 
 /// PNG Icons
 const String kIconApp = '$iconPath/app_icon.png';

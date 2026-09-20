@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/app_widgets/glossy_dating_card.dart';
+import 'package:qobo_one_live/utils/app_widgets/live_session_badge.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -111,10 +111,10 @@ class CompactLiveRoomTile extends StatelessWidget {
               ],
             ),
           ),
-          const Positioned(
-            left: 6,
-            top: 6,
-            child: _PulsingLivePill(),
+          Positioned(
+            left: 4,
+            top: 4,
+            child: LiveSessionBadge.live(compact: true),
           ),
           if (heat != null)
             Positioned(
@@ -137,92 +137,6 @@ class CompactLiveRoomTile extends StatelessWidget {
     if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
     if (n >= 1000) return '${(n / 1000).toStringAsFixed(n >= 10000 ? 0 : 1)}K';
     return '$n';
-  }
-}
-
-class _PulsingLivePill extends StatefulWidget {
-  const _PulsingLivePill();
-
-  @override
-  State<_PulsingLivePill> createState() => _PulsingLivePillState();
-}
-
-class _PulsingLivePillState extends State<_PulsingLivePill>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pulse;
-
-  @override
-  void initState() {
-    super.initState();
-    _pulse = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1100),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _pulse.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _pulse,
-      builder: (context, child) {
-        final t = Curves.easeInOut.transform(_pulse.value);
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-          decoration: BoxDecoration(
-            color: LiveRoomUiColors.liveDot.withValues(alpha: 0.92 + t * 0.06),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: kColorWhite.withValues(alpha: 0.28 + t * 0.18),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppLightUi.title.withValues(alpha: 0.18),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: child,
-        );
-      },
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AnimatedBuilder(
-            animation: _pulse,
-            builder: (context, _) {
-              final t = Curves.easeInOut.transform(_pulse.value);
-              return Container(
-                width: 5,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: kColorWhite.withValues(alpha: 0.75 + t * 0.25),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: kColorWhite.withValues(alpha: 0.35 + t * 0.45),
-                      blurRadius: 3 + t * 2,
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-          Spacing.h4,
-          const SemiBoldText(
-            text: 'LIVE',
-            fontSize: TextStyles.k8FontSize,
-            color: kColorWhite,
-          ),
-        ],
-      ),
-    );
   }
 }
 

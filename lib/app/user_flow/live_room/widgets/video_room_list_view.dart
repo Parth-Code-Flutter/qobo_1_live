@@ -5,6 +5,7 @@ import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/live_session_badge.dart';
 import 'package:qobo_one_live/utils/app_widgets/rooms_empty_state.dart';
 import 'package:qobo_one_live/utils/app_widgets/dating_empty_hero.dart';
 import 'package:qobo_one_live/utils/geo/country_flag_utils.dart';
@@ -440,12 +441,12 @@ class _VideoRoomCard extends StatelessWidget {
                 ),
                 // LIVE — top left, compact. Country flag sits beside it.
                 Positioned(
-                  left: 8,
-                  top: 8,
+                  left: 6,
+                  top: 6,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const _LiveDot(),
+                      LiveSessionBadge.live(compact: true),
                       if (data.countryFlag != null) ...[
                         const SizedBox(width: 6),
                         _CountryFlagChip(
@@ -506,26 +507,6 @@ class _VideoRoomCard extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _LiveDot extends StatelessWidget {
-  const _LiveDot();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE13434),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: const SemiBoldText(
-        text: 'LIVE',
-        fontSize: TextStyles.k10FontSize,
-        color: kColorWhite,
       ),
     );
   }

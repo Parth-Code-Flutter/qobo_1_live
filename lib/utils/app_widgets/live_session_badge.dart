@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/user_active_session.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -61,19 +62,21 @@ class _LiveSessionPalette {
   }
 }
 
-/// Compact pulsing LIVE pill for cards / chip rows.
+/// Compact pulsing LIVE pill with a looping sparkle GIF overlay.
 class LiveSessionBadge extends StatefulWidget {
   const LiveSessionBadge({
     super.key,
     required this.kind,
     this.label,
     this.compact = true,
+    this.sparkle = true,
   });
 
   factory LiveSessionBadge.fromSession(
     UserActiveSession? session, {
     Key? key,
     bool compact = true,
+    bool sparkle = true,
   }) {
     return LiveSessionBadge(
       key: key,
@@ -82,20 +85,39 @@ class LiveSessionBadge extends StatefulWidget {
           ? (session?.liveBadgeLabelCompact ?? 'LIVE')
           : session?.liveBadgeLabel,
       compact: compact,
+      sparkle: sparkle,
+    );
+  }
+
+  /// Shortcut for the shared pink/red “LIVE” chip (Discover / Rooms cards).
+  factory LiveSessionBadge.live({
+    Key? key,
+    String label = 'LIVE',
+    bool compact = true,
+    bool sparkle = true,
+  }) {
+    return LiveSessionBadge(
+      key: key,
+      kind: LiveSessionKind.liveStream,
+      label: label,
+      compact: compact,
+      sparkle: sparkle,
     );
   }
 
   final LiveSessionKind kind;
   final String? label;
   final bool compact;
+  final bool sparkle;
 
   @override
   State<LiveSessionBadge> createState() => _LiveSessionBadgeState();
 }
 
 class _LiveSessionBadgeState extends State<LiveSessionBadge>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _pulse;
+  late final AnimationController _shimmer;
 
   @override
   void initState() {
@@ -104,11 +126,16 @@ class _LiveSessionBadgeState extends State<LiveSessionBadge>
       vsync: this,
       duration: const Duration(milliseconds: 1100),
     )..repeat(reverse: true);
+    _shimmer = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    )..repeat();
   }
 
   @override
   void dispose() {
     _pulse.dispose();
+    _shimmer.dispose();
     super.dispose();
   }
 
@@ -125,10 +152,28 @@ class _LiveSessionBadgeState extends State<LiveSessionBadge>
     final iconSize = widget.compact ? 11.0 : 13.0;
     final dotSize = widget.compact ? 5.0 : 6.5;
 
-    return AnimatedBuilder(
-      animation: _pulse,
+    final content = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _PulseDot(size: dotSize, color: kColorWhite),
+        SizedBox(width: widget.compact ? 4 : 6),
+        Icon(palette.icon, size: iconSize, color: kColorWhite),
+        SizedBox(width: widget.compact ? 3 : 5),
+        SemiBoldText(
+          text: label,
+          fontSize: fontSize,
+          color: kColorWhite,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+
+    final pill = AnimatedBuilder(
+      animation: Listenable.merge([_pulse, _shimmer]),
       builder: (context, child) {
         final t = Curves.easeInOut.transform(_pulse.value);
+        final shimmerX = (_shimmer.value * 2.4) - 0.7;
         return Container(
           padding: EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
           decoration: BoxDecoration(
@@ -139,33 +184,103 @@ class _LiveSessionBadgeState extends State<LiveSessionBadge>
               colors: palette.gradient,
             ),
             border: Border.all(
-              color: kColorWhite.withValues(alpha: 0.28 + t * 0.12),
+              color: kColorWhite.withValues(alpha: 0.30 + t * 0.14),
+              width: 1.1,
             ),
             boxShadow: [
               BoxShadow(
-                color: palette.glow.withValues(alpha: 0.32 + t * 0.22),
-                blurRadius: widget.compact ? 8 + t * 4 : 10 + t * 6,
+                color: palette.glow.withValues(alpha: 0.38 + t * 0.28),
+                blurRadius: widget.compact ? 10 + t * 6 : 14 + t * 8,
                 offset: const Offset(0, 3),
+              ),
+              BoxShadow(
+                color: const Color(0xFFFFE08A).withValues(alpha: 0.12 + t * 0.10),
+                blurRadius: 8 + t * 4,
+                spreadRadius: 0.4,
               ),
             ],
           ),
-          child: child,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(99),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                child!,
+                // Sliding light shimmer across the pill.
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: Transform.translate(
+                      offset: Offset(shimmerX * 56, 0),
+                      child: FractionallySizedBox(
+                        widthFactor: 0.42,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                              colors: [
+                                kColorWhite.withValues(alpha: 0),
+                                kColorWhite.withValues(alpha: 0.34),
+                                kColorWhite.withValues(alpha: 0),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                // Soft GIF wash clipped to the pill.
+                if (widget.sparkle)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: Opacity(
+                        opacity: 0.55,
+                        child: Image.asset(
+                          kGifLiveSparkle,
+                          fit: BoxFit.cover,
+                          gaplessPlayback: true,
+                          filterQuality: FilterQuality.medium,
+                          errorBuilder: (_, __, ___) =>
+                              const SizedBox.shrink(),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         );
       },
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: content,
+    );
+
+    if (!widget.sparkle) return pill;
+
+    final overflow = widget.compact ? 10.0 : 14.0;
+    return Padding(
+      padding: EdgeInsets.all(overflow * 0.35),
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
         children: [
-          _PulseDot(size: dotSize, color: kColorWhite),
-          SizedBox(width: widget.compact ? 4 : 6),
-          Icon(palette.icon, size: iconSize, color: kColorWhite),
-          SizedBox(width: widget.compact ? 3 : 5),
-          SemiBoldText(
-            text: label,
-            fontSize: fontSize,
-            color: kColorWhite,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          // Outer looping sparkle GIF — peeks past the pill edges.
+          Positioned(
+            left: -overflow,
+            right: -overflow,
+            top: -overflow * 0.85,
+            bottom: -overflow * 0.85,
+            child: IgnorePointer(
+              child: Image.asset(
+                kGifLiveSparkle,
+                fit: BoxFit.contain,
+                gaplessPlayback: true,
+                filterQuality: FilterQuality.medium,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
+            ),
           ),
+          pill,
         ],
       ),
     );

@@ -5,6 +5,7 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/constants/live_room_ui_colors.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/live_session_badge.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -100,7 +101,11 @@ class CommonLiveRoomWidget extends StatelessWidget {
                   ),
                 ),
               ),
-              const Positioned(left: 8, top: 8, child: _LiveBadge()),
+              Positioned(
+                left: 6,
+                top: 6,
+                child: LiveSessionBadge.live(compact: true),
+              ),
               if (badgeText.trim().isNotEmpty)
                 Positioned(right: 8, top: 8, child: _topBadge()),
               if (isFavorite)
@@ -220,41 +225,6 @@ class CommonLiveRoomWidget extends StatelessWidget {
             right: 0,
             top: -16,
             child: SvgPicture.asset(kIconBadge, width: 16, height: 16),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LiveBadge extends StatelessWidget {
-  const _LiveBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    const liveGreen = Color(0xFF22C55E);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-      decoration: BoxDecoration(
-        color: liveGreen.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: AppLightUi.title.withValues(alpha: 0.18),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.circle, color: kColorWhite, size: 6),
-          Spacing.h4,
-          SemiBoldText(
-            text: 'LIVE',
-            fontSize: TextStyles.k10FontSize,
-            color: kColorWhite,
           ),
         ],
       ),
