@@ -24,27 +24,11 @@ class VisitorsController extends GetxController {
       final items = data is Map ? data['items'] : data;
       if (items is List) {
         visitors.assignAll(
-          items.whereType<Map>().map((item) {
-            final visitor = Map<String, dynamic>.from(item);
-            final visitedAt = visitor['visitedAt']?.toString() ?? '';
-            return <String, dynamic>{
-              'id':
-                  visitor['userId']?.toString() ??
-                  visitor['id']?.toString() ??
-                  '',
-              'name': visitor['name']?.toString() ?? 'Unknown User',
-              'avatarUrl':
-                  ApiImageUtils.normalize(
-                    visitor['displayPicture']?.toString(),
-                  ) ??
-                  '',
-              'country': visitor['country']?.toString() ?? '',
-              'level': _toInt(visitor['level']),
-              'vip': visitor['vip']?.toString() ?? '',
-              'time': _formatVisitedAt(visitedAt),
-              'isFollowing': visitor['isFollowing'] == true,
-            };
-          }),
+          items.whereType<Map>().map(_mapVisitor).where(
+                (item) =>
+                    item['id'].toString().isNotEmpty ||
+                    item['name'].toString().isNotEmpty,
+              ),
         );
       } else {
         visitors.clear();
@@ -52,6 +36,89 @@ class VisitorsController extends GetxController {
     } finally {
       isLoading.value = false;
     }
+  }
+
+  Map<String, dynamic> _mapVisitor(Map raw) {
+    final nested = raw['visitor'];
+    final profile = nested is Map
+        ? Map<String, dynamic>.from(nested)
+        : <String, dynamic>{};
+    final merged = <String, dynamic>{
+      ...profile,
+      ...Map<String, dynamic>.from(raw),
+    };
+
+    final id = merged['userId']?.toString() ??
+        merged['visitorId']?.toString() ??
+        merged['id']?.toString() ??
+        profile['id']?.toString() ??
+        '';
+
+    final visitedAt = merged['visitedAt']?.toString() ??
+        merged['visited_at']?.toString() ??
+        '';
+
+    return <String, dynamic>{
+      'id': id,
+      'name': merged['name']?.toString() ??
+          merged['userName']?.toString() ??
+          'Unknown User',
+      'avatarUrl': ApiImageUtils.normalize(
+            merged['displayPicture']?.toString() ??
+                merged['avatarUrl']?.toString() ??
+                merged['avatar']?.toString(),
+          ) ??
+          '',
+      'frameUrl': _pickFrameUrl(merged, profile),
+      'country': merged['country']?.toString() ?? '',
+      'level': _toInt(merged['level']),
+      'vip': merged['vip']?.toString() ?? merged['vipBadge']?.toString() ?? '',
+      'time': _formatVisitedAt(visitedAt),
+      'isFollowing':
+          merged['isFollowing'] == true || merged['following'] == true,
+    };
+  }
+
+  /// Prefer real equipped frame URLs from common API field shapes.
+  String? _pickFrameUrl(
+    Map<String, dynamic> merged,
+    Map<String, dynamic> profile,
+  ) {
+    const keys = <String>[
+      'avatarFrameUrl',
+      'frameUrl',
+      'profileFrameUrl',
+      'equippedFrameUrl',
+      'avatarFrame',
+      'frame',
+      'vipFrameUrl',
+    ];
+
+    for (final source in [merged, profile]) {
+      for (final key in keys) {
+        final resolved = _coerceFrameValue(source[key]);
+        if (resolved != null) return resolved;
+      }
+    }
+    return null;
+  }
+
+  String? _coerceFrameValue(dynamic value) {
+    if (value == null) return null;
+    if (value is String) {
+      final trimmed = value.trim();
+      if (trimmed.isEmpty || trimmed.toLowerCase() == 'null') return null;
+      return ApiImageUtils.normalize(trimmed) ?? trimmed;
+    }
+    if (value is Map) {
+      for (final key in ['svgaUrl', 'url', 'imageUrl', 'image', 'frameUrl']) {
+        final nested = value[key]?.toString().trim() ?? '';
+        if (nested.isNotEmpty && nested.toLowerCase() != 'null') {
+          return ApiImageUtils.normalize(nested) ?? nested;
+        }
+      }
+    }
+    return null;
   }
 
   Future<void> toggleFollow(int index) async {

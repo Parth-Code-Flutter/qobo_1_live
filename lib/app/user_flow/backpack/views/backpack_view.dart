@@ -23,7 +23,8 @@ class BackpackView extends GetView<BackpackController> {
       backgroundColor: AppLightUi.bg,
       appBar: const CommonAppBarWidget(
         title: 'My Backpack',
-        useMaterialAppBar: true,
+        subtitle: 'Equip gifts, frames & looks',
+        trailingIcon: Icons.backpack_rounded,
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -47,8 +48,8 @@ class BackpackView extends GetView<BackpackController> {
           Row(
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   gradient: AppLightUi.familyCtaGradient,
@@ -63,7 +64,7 @@ class BackpackView extends GetView<BackpackController> {
                 child: const Icon(
                   Icons.style_rounded,
                   color: kColorWhite,
-                  size: 18,
+                  size: 20,
                 ),
               ),
               Spacing.h10,
@@ -80,7 +81,7 @@ class BackpackView extends GetView<BackpackController> {
                     const AppText(
                       text: 'What’s equipped on your profile right now',
                       fontSize: TextStyles.k10FontSize,
-                      color: AppLightUi.subtitle,
+                      color: AppLightUi.body,
                     ),
                   ],
                 ),
@@ -88,20 +89,22 @@ class BackpackView extends GetView<BackpackController> {
             ],
           ),
           Spacing.v16,
-          // 2×2 grid so long names (e.g. “Royal Emerald”) aren’t clipped.
+          // Equal-height 2×2 slots — fixed layout so active/empty stay aligned.
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _equippedSlot(
-                'Frame',
-                controller.equippedFrame,
+                label: 'Frame',
+                icon: Icons.crop_square_rounded,
+                equippedObs: controller.equippedFrame,
                 displayNameObs: controller.equippedFrameName,
-                accent: AppLightUi.gold,
+                accent: const Color(0xFFB7791F),
               ),
               Spacing.h8,
               _equippedSlot(
-                'Entrance',
-                controller.equippedEffect,
+                label: 'Entrance',
+                icon: Icons.auto_awesome_rounded,
+                equippedObs: controller.equippedEffect,
                 accent: AppLightUi.violet,
               ),
             ],
@@ -111,14 +114,16 @@ class BackpackView extends GetView<BackpackController> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _equippedSlot(
-                'Chat Bubble',
-                controller.equippedBubble,
+                label: 'Chat Bubble',
+                icon: Icons.chat_bubble_outline_rounded,
+                equippedObs: controller.equippedBubble,
                 accent: AppLightUi.cyan,
               ),
               Spacing.h8,
               _equippedSlot(
-                'Background',
-                controller.equippedBackground,
+                label: 'Background',
+                icon: Icons.image_outlined,
+                equippedObs: controller.equippedBackground,
                 displayNameObs: controller.equippedBackgroundName,
                 accent: AppLightUi.pink,
               ),
@@ -129,9 +134,13 @@ class BackpackView extends GetView<BackpackController> {
     );
   }
 
-  Widget _equippedSlot(
-    String label,
-    RxnString equippedObs, {
+  static const double _slotHeight = 94;
+  static const double _slotValueHeight = 34;
+
+  Widget _equippedSlot({
+    required String label,
+    required IconData icon,
+    required RxnString equippedObs,
     RxnString? displayNameObs,
     Color accent = AppLightUi.violet,
   }) {
@@ -149,38 +158,121 @@ class BackpackView extends GetView<BackpackController> {
           displayName = 'None';
         }
 
-        return Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-          decoration: BoxDecoration(
-            color: isActive
-                ? accent.withValues(alpha: 0.08)
-                : AppLightUi.cardSoft,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isActive
-                  ? accent.withValues(alpha: 0.55)
-                  : AppLightUi.border,
-              width: isActive ? 1.4 : 1,
+        return SizedBox(
+          height: _slotHeight,
+          child: Container(
+            width: double.infinity,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: AppLightUi.card,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isActive
+                    ? accent.withValues(alpha: 0.45)
+                    : AppLightUi.borderStrong,
+                width: 1.2,
+              ),
+              boxShadow: isActive
+                  ? [
+                      BoxShadow(
+                        color: accent.withValues(alpha: 0.14),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ]
+                  : null,
             ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AppText(
-                text: label,
-                fontSize: 10,
-                color: AppLightUi.subtitle,
-              ),
-              Spacing.v6,
-              SemiBoldText(
-                text: displayName,
-                fontSize: TextStyles.k12FontSize,
-                color: isActive ? accent : AppLightUi.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  width: 4,
+                  color: isActive ? accent : AppLightUi.borderStrong,
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 10, 8, 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          height: 26,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 26,
+                                height: 26,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: accent.withValues(
+                                    alpha: isActive ? 0.16 : 0.08,
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(icon, size: 14, color: accent),
+                              ),
+                              Spacing.h6,
+                              Expanded(
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: AppText(
+                                    text: label,
+                                    fontSize: TextStyles.k10FontSize,
+                                    color: AppLightUi.body,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ),
+                              Spacing.h4,
+                              // Always reserve chip width so headers stay aligned.
+                              SizedBox(
+                                width: 28,
+                                height: 18,
+                                child: isActive
+                                    ? Container(
+                                        alignment: Alignment.center,
+                                        decoration: BoxDecoration(
+                                          color: accent,
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                        ),
+                                        child: const AppText(
+                                          text: 'On',
+                                          fontSize: TextStyles.k8FontSize,
+                                          color: kColorWhite,
+                                          align: TextAlign.center,
+                                        ),
+                                      )
+                                    : const SizedBox.shrink(),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Spacing.v8,
+                        SizedBox(
+                          height: _slotValueHeight,
+                          width: double.infinity,
+                          child: Align(
+                            alignment: Alignment.topLeft,
+                            child: SemiBoldText(
+                              text: displayName,
+                              fontSize: TextStyles.k12FontSize,
+                              color: isActive
+                                  ? AppLightUi.title
+                                  : AppLightUi.subtitle,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       }),
