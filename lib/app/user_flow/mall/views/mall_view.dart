@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
-import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/app_widgets/network_svga_widget.dart';
@@ -16,43 +15,54 @@ import '../controllers/mall_controller.dart';
 class MallView extends GetView<MallController> {
   const MallView({super.key});
 
+  static const _equipped = Color(0xFF1B8A5A);
+  static const _expired = Color(0xFFC62828);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppLightUi.bg,
+      backgroundColor: kColorLavenderBg,
       appBar: const CommonAppBarWidget(
         title: 'Virtual Mall',
-        useMaterialAppBar: true,
+        subtitle: 'Frames, effects & premium looks',
+        trailingIcon: Icons.storefront_rounded,
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildHeaderBalance(),
-          _buildPreviewSection(),
-          _buildTabs(),
-          Expanded(child: _buildStoreGrid()),
+          _balanceBar(),
+          _previewSection(),
+          _tabs(),
+          Expanded(child: _storeGrid()),
         ],
       ),
     );
   }
 
-  Widget _buildHeaderBalance() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      color: AppLightUi.card,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              AppCoinIcon(size: 28, color: Colors.amber),
-              Spacing.h8,
-              Column(
+  Widget _balanceBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+        decoration: AppLightUi.cardDecoration(radius: 18),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: AppLightUi.iconTileDecoration(AppLightUi.gold),
+              child: const Center(
+                child: AppCoinIcon(size: 24, color: AppLightUi.gold),
+              ),
+            ),
+            Spacing.h10,
+            Expanded(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const AppText(
                     text: 'Your Balance',
-                    fontSize: 10,
+                    fontSize: TextStyles.k10FontSize,
                     color: AppLightUi.subtitle,
                   ),
                   Obx(
@@ -64,117 +74,151 @@ class MallView extends GetView<MallController> {
                   ),
                 ],
               ),
-            ],
-          ),
-          SizedBox(
-            height: 32,
-            width: 90,
-            child: appButton(
-              onPressed: () {
-                Get.snackbar(
-                  'Recharge',
-                  'Redirecting to coin recharge packages...',
-                );
-              },
-              buttonText: 'Recharge',
-              buttonColor: const Color(0xFFFF8A48),
-              borderRadius: 16,
-              textStyle: TextStyles.kSemiBoldPoppins(
-                fontSize: TextStyles.k12FontSize,
-                colors: kColorWhite,
+            ),
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  Get.snackbar(
+                    'Recharge',
+                    'Redirecting to coin recharge packages...',
+                  );
+                },
+                borderRadius: BorderRadius.circular(14),
+                child: Ink(
+                  height: 36,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    gradient: AppLightUi.familyCtaGradient,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppLightUi.pink.withValues(alpha: 0.28),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Center(
+                    child: SemiBoldText(
+                      text: 'Recharge',
+                      fontSize: TextStyles.k12FontSize,
+                      color: kColorWhite,
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildPreviewSection() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      height: 200,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF6A1B9A), Color(0xFFC2185B)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
+  Widget _previewSection() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Container(
+        height: 210,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFFFF8FC),
+              Color(0xFFF5ECFF),
+              Color(0xFFFFE8F4),
+            ],
+          ),
+          border: Border.all(
+            color: AppLightUi.pinkSoft.withValues(alpha: 0.55),
+            width: 1.4,
+          ),
+          boxShadow: AppLightUi.cardShadow,
         ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppLightUi.pinkSoft.withValues(alpha: 0.55), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: kColorBlack.withValues(alpha: 0.15),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Background grid decor
-          Positioned.fill(
-            child: Opacity(
-              opacity: 0.1,
-              child: CustomPaint(painter: _GridPainter()),
+        child: Stack(
+          children: [
+            Positioned(
+              top: -28,
+              right: -18,
+              child: _glowOrb(AppLightUi.pink, 110),
             ),
-          ),
-
-          Obx(() {
-            final item = controller.selectedPreviewItem.value;
-            if (item == null) {
-              return const Center(
-                child: AppText(
-                  text: 'Select an item below to preview',
-                  color: kColorWhite,
-                ),
-              );
-            }
-
-            final tabId = controller.selectedTab.value;
-
-            return Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Expanded(child: Center(child: _buildItemPreview(tabId, item))),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
+            Positioned(
+              bottom: -36,
+              left: -22,
+              child: _glowOrb(AppLightUi.violet, 120),
+            ),
+            Obx(() {
+              final item = controller.selectedPreviewItem.value;
+              if (item == null) {
+                return const Center(
+                  child: AppText(
+                    text: 'Select an item below to preview',
+                    color: AppLightUi.subtitle,
                   ),
-                  decoration: const BoxDecoration(
-                    color: Colors.black26,
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(22),
-                      bottomRight: Radius.circular(22),
+                );
+              }
+
+              final tabId = controller.selectedTab.value;
+
+              return Column(
+                children: [
+                  Expanded(
+                    child: Center(child: _buildItemPreview(tabId, item)),
+                  ),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+                    decoration: BoxDecoration(
+                      color: AppLightUi.card.withValues(alpha: 0.88),
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(22),
+                        bottomRight: Radius.circular(22),
+                      ),
+                      border: const Border(
+                        top: BorderSide(color: AppLightUi.border),
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SemiBoldText(
+                          text: 'Preview: ${item['name']}',
+                          fontSize: TextStyles.k12FontSize,
+                          color: AppLightUi.title,
+                          align: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Spacing.v2,
+                        AppText(
+                          text: item['description'] ?? '',
+                          fontSize: TextStyles.k10FontSize,
+                          color: AppLightUi.body,
+                          align: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
                   ),
-                  width: double.infinity,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SemiBoldText(
-                        text: 'Preview: ${item['name']}',
-                        fontSize: TextStyles.k12FontSize,
-                        color: Colors.amber,
-                      ),
-                      Spacing.v2,
-                      AppText(
-                        text: item['description'] ?? '',
-                        fontSize: 10,
-                        color: kColorWhite.withValues(alpha: 0.8),
-                        align: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            );
-          }),
-        ],
+                ],
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _glowOrb(Color color, double size) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color.withValues(alpha: 0.14),
       ),
     );
   }
@@ -186,12 +230,31 @@ class MallView extends GetView<MallController> {
       return Stack(
         alignment: Alignment.center,
         children: [
-          const CircleAvatar(
-            radius: 40,
-            backgroundColor: kColorAvatarFallbackBg,
-            child: Text(
-              'User',
-              style: TextStyle(color: kColorWhite, fontWeight: FontWeight.bold),
+          Container(
+            width: 84,
+            height: 84,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: AppLightUi.glossRingGradient,
+              boxShadow: [
+                BoxShadow(
+                  color: AppLightUi.pink.withValues(alpha: 0.22),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            padding: const EdgeInsets.all(3),
+            child: const CircleAvatar(
+              backgroundColor: kColorAvatarFallbackBg,
+              child: Text(
+                'User',
+                style: TextStyle(
+                  color: kColorWhite,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
             ),
           ),
           if (frameSource != null && frameSource.isNotEmpty)
@@ -202,14 +265,7 @@ class MallView extends GetView<MallController> {
               height: 100,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.amber, width: 4),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.amber.withValues(alpha: 0.4),
-                    blurRadius: 10,
-                    spreadRadius: 2,
-                  ),
-                ],
+                border: Border.all(color: AppLightUi.gold, width: 3),
               ),
             ),
           if (item['isEquipped'] == true)
@@ -218,23 +274,26 @@ class MallView extends GetView<MallController> {
               right: 2,
               child: Container(
                 padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: Colors.green,
+                decoration: BoxDecoration(
+                  color: _equipped,
                   shape: BoxShape.circle,
+                  border: Border.all(color: kColorWhite, width: 1.5),
                 ),
                 child: const Icon(Icons.check, color: kColorWhite, size: 12),
               ),
             ),
         ],
       );
-    } else if (tabId == 4) {
+    }
+
+    if (tabId == 4) {
       final imageUrl = item['imageUrl']?.toString() ?? '';
       return Container(
         width: 150,
         height: 106,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: kColorWhite.withValues(alpha: 0.55)),
+          border: Border.all(color: AppLightUi.borderStrong),
           image: imageUrl.isNotEmpty
               ? DecorationImage(
                   image: NetworkImage(imageUrl),
@@ -243,26 +302,20 @@ class MallView extends GetView<MallController> {
               : null,
           gradient: imageUrl.isEmpty
               ? const LinearGradient(
-                  colors: [Color(0xFF8922C2), Color(0xFF151C68)],
+                  colors: [Color(0xFFB14DFF), Color(0xFFFF5C9A)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 )
               : null,
-          boxShadow: [
-            BoxShadow(
-              color: kColorPrimary.withValues(alpha: 0.22),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
+          boxShadow: AppLightUi.cardShadow,
         ),
         child: DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
             gradient: LinearGradient(
               colors: [
-                kColorBlack.withValues(alpha: 0.1),
-                kColorBlack.withValues(alpha: 0.42),
+                kColorBlack.withValues(alpha: 0.05),
+                kColorBlack.withValues(alpha: 0.35),
               ],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
@@ -283,133 +336,134 @@ class MallView extends GetView<MallController> {
           ),
         ),
       );
-    } else if (tabId == 2) {
-      // Entrance Effects Preview
+    }
+
+    if (tabId == 2) {
       final isDragon = item['id'] == 'effect_dragon';
+      final accent = isDragon ? const Color(0xFFE85D04) : AppLightUi.cyan;
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: isDragon
-              ? const Color(0xFFFF8A48).withValues(alpha: 0.2)
-              : const Color(0xFF2FA9FF).withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isDragon ? const Color(0xFFFF8A48) : const Color(0xFF2FA9FF),
-            width: 1,
-          ),
+          color: accent.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: accent.withValues(alpha: 0.55)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               isDragon ? Icons.local_fire_department : Icons.stars,
-              color: isDragon
-                  ? const Color(0xFFFF8A48)
-                  : const Color(0xFF2FA9FF),
+              color: accent,
             ),
             Spacing.h8,
-            const Column(
+            Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                BoldText(
+                SemiBoldText(
                   text: 'SuperStar John Doe',
-                  fontSize: 12,
-                  color: kColorWhite,
+                  fontSize: TextStyles.k12FontSize,
+                  color: AppLightUi.title,
                 ),
                 AppText(
                   text: 'Entered the room with a burst of glory!',
-                  fontSize: 10,
-                  color: kColorWhite,
+                  fontSize: TextStyles.k10FontSize,
+                  color: AppLightUi.body,
                 ),
               ],
-            ),
-          ],
-        ),
-      );
-    } else {
-      // Chat Bubbles Preview
-      final isOcean = item['id'] == 'bubble_ocean';
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: isOcean
-              ? const Color(0xFF4DD5FF).withValues(alpha: 0.2)
-              : const Color(0xFFFF5EA7).withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isOcean ? const Color(0xFF4DD5FF) : const Color(0xFFFF5EA7),
-            width: 1.5,
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircleAvatar(
-                  radius: 8,
-                  backgroundColor: isOcean
-                      ? const Color(0xFF4DD5FF)
-                      : const Color(0xFFFF5EA7),
-                  child: const Text(
-                    'J',
-                    style: TextStyle(fontSize: 6, color: kColorWhite),
-                  ),
-                ),
-                Spacing.h6,
-                const SemiBoldText(
-                  text: 'John Doe',
-                  fontSize: 10,
-                  color: Colors.amber,
-                ),
-              ],
-            ),
-            Spacing.v4,
-            const AppText(
-              text: 'This is a premium chat bubble message preview!',
-              fontSize: 11,
-              color: kColorWhite,
             ),
           ],
         ),
       );
     }
+
+    // Chat Bubbles Preview
+    final isOcean = item['id'] == 'bubble_ocean';
+    final accent = isOcean ? const Color(0xFF0EA5C6) : AppLightUi.pink;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accent.withValues(alpha: 0.55), width: 1.4),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircleAvatar(
+                radius: 8,
+                backgroundColor: accent,
+                child: const Text(
+                  'J',
+                  style: TextStyle(fontSize: 6, color: kColorWhite),
+                ),
+              ),
+              Spacing.h6,
+              SemiBoldText(
+                text: 'John Doe',
+                fontSize: TextStyles.k10FontSize,
+                color: AppLightUi.title,
+              ),
+            ],
+          ),
+          Spacing.v4,
+          AppText(
+            text: 'This is a premium chat bubble message preview!',
+            fontSize: TextStyles.k10FontSize,
+            color: AppLightUi.body,
+          ),
+        ],
+      ),
+    );
   }
 
-  Widget _buildTabs() {
-    return Container(
-      color: AppLightUi.card,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+  Widget _tabs() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: Obx(() {
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
             children: controller.tabs.map((tab) {
               final isSelected = controller.selectedTab.value == tab['id'];
-              return GestureDetector(
-                onTap: () => controller.selectTab(tab['id'] as int),
-                child: Container(
-                  margin: const EdgeInsets.only(right: 12),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isSelected ? kColorPrimary : Colors.transparent,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: isSelected
-                          ? kColorPrimary
-                          : AppLightUi.border,
+              return Padding(
+                padding: const EdgeInsets.only(right: 10),
+                child: GestureDetector(
+                  onTap: () => controller.selectTab(tab['id'] as int),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 9,
                     ),
-                  ),
-                  child: AppText(
-                    text: tab['name'] as String,
-                    fontSize: TextStyles.k14FontSize,
-                    color: isSelected ? kColorWhite : AppLightUi.subtitle,
+                    decoration: BoxDecoration(
+                      gradient: isSelected ? AppLightUi.familyCtaGradient : null,
+                      color: isSelected ? null : AppLightUi.card,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: isSelected
+                            ? Colors.transparent
+                            : AppLightUi.borderStrong,
+                      ),
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: AppLightUi.pink.withValues(alpha: 0.28),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: AppText(
+                      text: tab['name'] as String,
+                      fontSize: TextStyles.k12FontSize,
+                      color: isSelected ? kColorWhite : AppLightUi.body,
+                    ),
                   ),
                 ),
               );
@@ -420,7 +474,7 @@ class MallView extends GetView<MallController> {
     );
   }
 
-  Widget _buildStoreGrid() {
+  Widget _storeGrid() {
     return Obx(() {
       final items = controller.storeItems[controller.selectedTab.value] ?? [];
       final activePreview = controller.selectedPreviewItem.value;
@@ -428,11 +482,13 @@ class MallView extends GetView<MallController> {
       final isBackgroundTab = controller.selectedTab.value == 4;
 
       if (controller.isLoading.value && (isFrameTab || isBackgroundTab)) {
-        return const Center(child: CircularProgressIndicator());
+        return const Center(
+          child: CircularProgressIndicator(color: AppLightUi.pink),
+        );
       }
 
       if (items.isEmpty) {
-        return Center(
+        return const Center(
           child: AppText(
             text: 'No items available',
             color: AppLightUi.subtitle,
@@ -442,11 +498,11 @@ class MallView extends GetView<MallController> {
       }
 
       return GridView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         itemCount: items.length,
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: 0.76,
+          childAspectRatio: 0.72,
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
         ),
@@ -469,29 +525,40 @@ class MallView extends GetView<MallController> {
                     : '${item['price']} Coins'
               : '${item['price']} Coins';
 
+          final categoryLabel = item['category']?.toString() ?? 'Premium';
+          final categoryColor = isEquipped
+              ? _equipped
+              : isExpired
+              ? _expired
+              : AppLightUi.violet;
+
           return GestureDetector(
             onTap: isPlaceholder
                 ? null
                 : () => controller.selectedPreviewItem.value = item,
-            child: Container(
-              padding: const EdgeInsets.all(12),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
               decoration: BoxDecoration(
-                color: kColorWhite,
-                borderRadius: BorderRadius.circular(16),
+                color: AppLightUi.card,
+                borderRadius: BorderRadius.circular(18),
                 border: Border.all(
-                  color: isSelected ? kColorPrimary : Colors.transparent,
-                  width: 1.5,
+                  color: isSelected
+                      ? AppLightUi.pink
+                      : AppLightUi.border,
+                  width: isSelected ? 1.8 : 1.1,
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: kColorBlack.withValues(alpha: 0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: AppLightUi.pink.withValues(alpha: 0.22),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ]
+                    : AppLightUi.cardShadow,
               ),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Expanded(
                     child: Center(
@@ -502,55 +569,54 @@ class MallView extends GetView<MallController> {
                       ),
                     ),
                   ),
-                  Spacing.v10,
+                  Spacing.v8,
                   SemiBoldText(
                     text: item['name'] as String,
-                    fontSize: TextStyles.k14FontSize,
+                    fontSize: TextStyles.k12FontSize,
                     color: AppLightUi.title,
                     align: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   if (usesBackpackFlow) ...[
-                    Spacing.v2,
-                    AppText(
-                      text: item['category']?.toString() ?? 'Premium',
-                      fontSize: 10,
-                      color: isEquipped
-                          ? Colors.green
-                          : isExpired
-                          ? const Color(0xFFE57373)
-                          : kColorHint,
+                    Spacing.v6,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: categoryColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: categoryColor.withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: AppText(
+                        text: categoryLabel,
+                        fontSize: TextStyles.k10FontSize,
+                        color: categoryColor,
+                      ),
                     ),
                   ],
-                  Spacing.v2,
+                  Spacing.v4,
                   AppText(
                     text: 'Validity: ${item['duration']}',
-                    fontSize: 10,
-                    color: isExpired ? const Color(0xFFE57373) : kColorHint,
+                    fontSize: TextStyles.k10FontSize,
+                    color: isExpired ? _expired : AppLightUi.subtitle,
                   ),
-                  Spacing.v10,
+                  Spacing.v8,
                   SizedBox(
                     height: 36,
                     width: double.infinity,
-                    child: appButton(
-                      onPressed: isPlaceholder
-                          ? () {}
+                    child: _actionButton(
+                      label: buttonText,
+                      enabled: !isPlaceholder,
+                      emphasis: isEquipped || isSelected || !isOwned,
+                      isEquipped: isEquipped,
+                      onTap: isPlaceholder
+                          ? null
                           : () => controller.buyItem(item),
-                      buttonText: buttonText,
-                      buttonColor: isEquipped
-                          ? Colors.green
-                          : isSelected
-                          ? kColorPrimary
-                          : const Color(0xFFF0E5EE),
-                      textColor: isEquipped || isSelected
-                          ? kColorWhite
-                          : kColorPrimary,
-                      borderRadius: 18,
-                      textStyle: TextStyles.kSemiBoldPoppins(
-                        fontSize: TextStyles.k12FontSize,
-                        colors: isEquipped || isSelected
-                            ? kColorWhite
-                            : kColorPrimary,
-                      ),
                     ),
                   ),
                 ],
@@ -560,6 +626,47 @@ class MallView extends GetView<MallController> {
         },
       );
     });
+  }
+
+  Widget _actionButton({
+    required String label,
+    required bool enabled,
+    required bool emphasis,
+    required bool isEquipped,
+    VoidCallback? onTap,
+  }) {
+    final useGradient = enabled && (isEquipped || emphasis);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Ink(
+          decoration: BoxDecoration(
+            gradient: useGradient && !isEquipped
+                ? AppLightUi.familyCtaGradient
+                : null,
+            color: isEquipped
+                ? _equipped
+                : useGradient
+                ? null
+                : const Color(0xFFF3E8F4),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Center(
+            child: SemiBoldText(
+              text: label,
+              fontSize: TextStyles.k12FontSize,
+              color: (isEquipped || useGradient)
+                  ? kColorWhite
+                  : AppLightUi.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -573,6 +680,8 @@ class _StoreItemVisual extends StatelessWidget {
   final Map<String, dynamic> item;
   final bool isFrame;
   final bool isBackground;
+
+  static const _equipped = Color(0xFF1B8A5A);
 
   @override
   Widget build(BuildContext context) {
@@ -605,8 +714,8 @@ class _StoreItemVisual extends StatelessWidget {
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
                     color: item['isEquipped'] == true
-                        ? Colors.green
-                        : kColorPrimary,
+                        ? _equipped
+                        : AppLightUi.pink,
                     shape: BoxShape.circle,
                     border: Border.all(color: kColorWhite, width: 1.5),
                   ),
@@ -636,8 +745,10 @@ class _StoreItemVisual extends StatelessWidget {
             fit: BoxFit.cover,
           ),
           border: Border.all(
-            color: item['isEquipped'] == true ? Colors.green : kColorWhite,
-            width: item['isEquipped'] == true ? 2 : 1,
+            color: item['isEquipped'] == true
+                ? _equipped
+                : AppLightUi.borderStrong,
+            width: item['isEquipped'] == true ? 2 : 1.2,
           ),
         ),
         child: DecoratedBox(
@@ -671,10 +782,7 @@ class _StoreItemVisual extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: kColorPrimary.withValues(alpha: 0.05),
-        shape: BoxShape.circle,
-      ),
+      decoration: AppLightUi.iconTileDecoration(AppLightUi.violet, radius: 40),
       child: SvgPicture.asset(
         item['icon'] as String,
         width: 44,
@@ -686,9 +794,6 @@ class _StoreItemVisual extends StatelessWidget {
 }
 
 /// Displays frame-shop media, including API-hosted SVGA animations.
-///
-/// Explicit static image extensions bypass SVGA parsing. Extensionless and
-/// `.svga` URLs use the reusable network player, then fall back to image/SVG.
 class _FrameMedia extends StatelessWidget {
   const _FrameMedia({required this.source, required this.size});
 
@@ -748,30 +853,12 @@ class _FrameMedia extends StatelessWidget {
         child: SizedBox(
           width: 22,
           height: 22,
-          child: CircularProgressIndicator(strokeWidth: 1.8),
+          child: CircularProgressIndicator(
+            strokeWidth: 1.8,
+            color: AppLightUi.pink,
+          ),
         ),
       ),
     );
   }
-}
-
-// Background Grid Painter for Preview Panel
-class _GridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.1)
-      ..strokeWidth = 1.0;
-
-    const step = 20.0;
-    for (double i = 0; i < size.width; i += step) {
-      canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
-    }
-    for (double i = 0; i < size.height; i += step) {
-      canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

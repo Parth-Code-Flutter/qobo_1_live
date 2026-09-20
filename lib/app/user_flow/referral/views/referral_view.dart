@@ -8,27 +8,17 @@ import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
-import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
-/// Invite Friends — matches Family / Agency recruit chrome on [kColorLavenderBg].
+/// Invite Friends — light AppLightUi cards with readable contrast.
 abstract final class _ReferralUi {
-  static const pink = AdminAgencyUi.pink;
-  static const violet = AdminAgencyUi.violet;
-  static const gold = AdminAgencyUi.gold;
-  static const cyan = AdminAgencyUi.cyan;
-  static const mint = AdminAgencyUi.mint;
+  static const pink = AppLightUi.pink;
+  static const mint = Color(0xFF25D366);
 
-  static const textMuted = AppLightUi.subtitle;
-  static const textSoft = AppLightUi.muted;
-  static const title = AppLightUi.title;
-
-  static const heroGradient = [Color(0xFF6A1B9A), Color(0xFFE91E63)];
-  static const codeGradient = [Color(0xFF5C6BC0), Color(0xFF3949AB)];
-  static const shareGradient = [Color(0xFF00838F), Color(0xFF006064)];
   static const whatsAppGradient = [Color(0xFF25D366), Color(0xFF128C7E)];
 }
 
@@ -66,6 +56,7 @@ class ReferralView extends GetView<ReferralController> {
   Widget _scrollBody(BuildContext context) {
     return RefreshIndicator(
       color: _ReferralUi.pink,
+      backgroundColor: AppLightUi.card,
       onRefresh: controller.loadDetails,
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -115,7 +106,7 @@ class ReferralView extends GetView<ReferralController> {
                 AppLightUi.cardSoft,
               ],
             ),
-            border: Border(
+            border: const Border(
               top: BorderSide(color: AppLightUi.border),
             ),
           ),
@@ -186,16 +177,34 @@ class ReferralView extends GetView<ReferralController> {
 
   Widget _heroStats() {
     return Obx(
-      () => AdminColorPanel(
-        colors: _ReferralUi.heroGradient,
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+      () => Container(
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          gradient: AppLightUi.familyCtaGradient,
+          boxShadow: [
+            BoxShadow(
+              color: AppLightUi.pink.withValues(alpha: 0.3),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
         child: Column(
           children: [
-            AdminAgencyUi.glowIcon(
-              icon: Icons.people_alt_rounded,
-              accent: _ReferralUi.pink,
-              size: 56,
-              iconSize: 28,
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: kColorWhite.withValues(alpha: 0.22),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: kColorWhite.withValues(alpha: 0.4)),
+              ),
+              child: const Icon(
+                Icons.people_alt_rounded,
+                color: kColorWhite,
+                size: 28,
+              ),
             ),
             Spacing.v12,
             const SemiBoldText(
@@ -205,11 +214,11 @@ class ReferralView extends GetView<ReferralController> {
               align: TextAlign.center,
             ),
             Spacing.v6,
-            const AppText(
+            AppText(
               text:
                   'Your friend gets signup bonus coins. You earn when they join.',
               fontSize: TextStyles.k12FontSize,
-              color: _ReferralUi.textMuted,
+              color: kColorWhite.withValues(alpha: 0.92),
               align: TextAlign.center,
             ),
             Spacing.v16,
@@ -219,8 +228,7 @@ class ReferralView extends GetView<ReferralController> {
                   child: _statTile(
                     label: 'Friends joined',
                     value: '${controller.totalReferralsCompleted.value}',
-                    icon: Icon(Icons.group_rounded, color: _ReferralUi.violet, size: 16),
-                    accent: _ReferralUi.violet,
+                    icon: Icons.group_rounded,
                   ),
                 ),
                 Spacing.h10,
@@ -228,8 +236,10 @@ class ReferralView extends GetView<ReferralController> {
                   child: _statTile(
                     label: 'Coins earned',
                     value: '${controller.totalCoinsEarned.value}',
-                    icon: AppCoinIcon(size: 16, color: _ReferralUi.gold),
-                    accent: _ReferralUi.gold,
+                    iconWidget: const AppCoinIcon(
+                      size: 16,
+                      color: AppLightUi.gold,
+                    ),
                   ),
                 ),
               ],
@@ -243,28 +253,35 @@ class ReferralView extends GetView<ReferralController> {
   Widget _statTile({
     required String label,
     required String value,
-    required Widget icon,
-    required Color accent,
+    IconData? icon,
+    Widget? iconWidget,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
-        color: kColorWhite.withValues(alpha: 0.12),
+        color: kColorWhite,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: kColorWhite.withValues(alpha: 0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: kColorBlack.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              icon,
+              iconWidget ??
+                  Icon(icon, color: AppLightUi.violet, size: 16),
               Spacing.h6,
               Expanded(
                 child: AppText(
                   text: label,
                   fontSize: TextStyles.k10FontSize,
-                  color: _ReferralUi.textMuted,
+                  color: AppLightUi.body,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -275,7 +292,7 @@ class ReferralView extends GetView<ReferralController> {
           SemiBoldText(
             text: value,
             fontSize: TextStyles.k20FontSize,
-            color: kColorWhite,
+            color: AppLightUi.title,
           ),
         ],
       ),
@@ -283,31 +300,44 @@ class ReferralView extends GetView<ReferralController> {
   }
 
   Widget _codeCard(BuildContext context) {
-    return AdminColorPanel(
-      colors: _ReferralUi.codeGradient,
+    return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
+      decoration: AppLightUi.cardDecoration(radius: 22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              AdminAgencyUi.glowIcon(
-                icon: Icons.tag_rounded,
-                accent: _ReferralUi.violet,
-                size: 42,
-                iconSize: 22,
+              Container(
+                width: 42,
+                height: 42,
+                decoration: AppLightUi.iconTileDecoration(AppLightUi.violet),
+                child: const Icon(
+                  Icons.tag_rounded,
+                  color: AppLightUi.violet,
+                  size: 22,
+                ),
               ),
               Spacing.h12,
               const Expanded(
-                child: AppText(
-                  text: 'YOUR REFERRAL CODE',
-                  fontSize: TextStyles.k10FontSize,
-                  color: _ReferralUi.textSoft,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SemiBoldText(
+                      text: 'Your referral code',
+                      fontSize: TextStyles.k14FontSize,
+                      color: AppLightUi.title,
+                    ),
+                    AppText(
+                      text: 'Share this code with friends',
+                      fontSize: TextStyles.k10FontSize,
+                      color: AppLightUi.subtitle,
+                    ),
+                  ],
                 ),
               ),
               Obx(
                 () => _copyChip(
-                  accent: _ReferralUi.violet,
                   enabled: controller.activeCode.value.isNotEmpty,
                   onTap: () => controller.copyCode(context),
                 ),
@@ -323,16 +353,14 @@ class ReferralView extends GetView<ReferralController> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                 decoration: BoxDecoration(
-                  color: kColorWhite.withValues(alpha: 0.1),
+                  color: AppLightUi.cardSoft,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: kColorWhite.withValues(alpha: 0.08),
-                  ),
+                  border: Border.all(color: AppLightUi.border),
                 ),
                 child: const AppText(
                   text: 'Generate a code below to start inviting friends',
                   fontSize: TextStyles.k12FontSize,
-                  color: _ReferralUi.textMuted,
+                  color: AppLightUi.body,
                   align: TextAlign.center,
                 ),
               );
@@ -340,22 +368,29 @@ class ReferralView extends GetView<ReferralController> {
             return Container(
               width: double.infinity,
               padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               decoration: BoxDecoration(
-                color: kColorWhite.withValues(alpha: 0.12),
+                gradient: LinearGradient(
+                  colors: [
+                    AppLightUi.violet.withValues(alpha: 0.12),
+                    AppLightUi.pink.withValues(alpha: 0.1),
+                  ],
+                ),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: kColorWhite.withValues(alpha: 0.14)),
+                border: Border.all(
+                  color: AppLightUi.violet.withValues(alpha: 0.35),
+                ),
               ),
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
-                code,
-                style: TextStyles.kSemiBoldPoppins(
-                  fontSize: TextStyles.k28FontSize,
-                  colors: kColorWhite,
-                ).copyWith(letterSpacing: 2.4),
-                textAlign: TextAlign.center,
-              ),
+                  code,
+                  style: TextStyles.kSemiBoldPoppins(
+                    fontSize: TextStyles.k28FontSize,
+                    colors: AppLightUi.title,
+                  ).copyWith(letterSpacing: 2.4),
+                  textAlign: TextAlign.center,
+                ),
               ),
             );
           }),
@@ -365,31 +400,34 @@ class ReferralView extends GetView<ReferralController> {
   }
 
   Widget _shareCard(BuildContext context) {
-    return AdminColorPanel(
-      colors: _ReferralUi.shareGradient,
+    return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
+      decoration: AppLightUi.cardDecoration(radius: 22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              AdminAgencyUi.glowIcon(
-                icon: Icons.chat_bubble_outline_rounded,
-                accent: _ReferralUi.cyan,
-                size: 42,
-                iconSize: 22,
+              Container(
+                width: 42,
+                height: 42,
+                decoration: AppLightUi.iconTileDecoration(AppLightUi.cyan),
+                child: const Icon(
+                  Icons.chat_bubble_outline_rounded,
+                  color: AppLightUi.cyan,
+                  size: 22,
+                ),
               ),
               Spacing.h12,
               const Expanded(
                 child: SemiBoldText(
                   text: 'Share message',
                   fontSize: TextStyles.k14FontSize,
-                  color: kColorWhite,
+                  color: AppLightUi.title,
                 ),
               ),
               Obx(
                 () => _copyChip(
-                  accent: _ReferralUi.cyan,
                   enabled: controller.shareMessage.value.trim().isNotEmpty ||
                       controller.activeCode.value.isNotEmpty,
                   onTap: () => controller.copyShareMessage(context),
@@ -397,14 +435,23 @@ class ReferralView extends GetView<ReferralController> {
               ),
             ],
           ),
-          Spacing.v10,
+          Spacing.v12,
           Obx(
-            () => AppText(
-              text: controller.shareMessage.value.trim().isNotEmpty
-                  ? controller.shareMessage.value.trim()
-                  : 'Your personal invite text appears here after you generate a code.',
-              fontSize: TextStyles.k12FontSize,
-              color: kColorWhite.withValues(alpha: 0.88),
+            () => Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppLightUi.cardSoft,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppLightUi.border),
+              ),
+              child: AppText(
+                text: controller.shareMessage.value.trim().isNotEmpty
+                    ? controller.shareMessage.value.trim()
+                    : 'Your personal invite text appears here after you generate a code.',
+                fontSize: TextStyles.k12FontSize,
+                color: AppLightUi.body,
+              ),
             ),
           ),
         ],
@@ -443,16 +490,12 @@ class ReferralView extends GetView<ReferralController> {
           padding: const EdgeInsets.symmetric(vertical: 11),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            gradient: selected
-                ? const LinearGradient(
-                    colors: _ReferralUi.heroGradient,
-                  )
-                : null,
+            gradient: selected ? AppLightUi.familyCtaGradient : null,
           ),
           child: SemiBoldText(
             text: label,
             fontSize: TextStyles.k12FontSize,
-            color: selected ? kColorWhite : _ReferralUi.textMuted,
+            color: selected ? kColorWhite : AppLightUi.subtitle,
             align: TextAlign.center,
           ),
         ),
@@ -479,9 +522,9 @@ class ReferralView extends GetView<ReferralController> {
   Widget _friendTile(ReferralCompletedEntry entry) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: AdminSolidPanel(
-        accent: _ReferralUi.violet,
+      child: Container(
         padding: const EdgeInsets.all(14),
+        decoration: AppLightUi.cardDecoration(radius: 18),
         child: Row(
           children: [
             AppUserAvatar(
@@ -497,7 +540,7 @@ class ReferralView extends GetView<ReferralController> {
                   SemiBoldText(
                     text: entry.friendName ?? 'New member',
                     fontSize: TextStyles.k14FontSize,
-                    color: _ReferralUi.title,
+                    color: AppLightUi.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -505,7 +548,7 @@ class ReferralView extends GetView<ReferralController> {
                   AppText(
                     text: 'Code ${entry.code}',
                     fontSize: TextStyles.k10FontSize,
-                    color: _ReferralUi.textMuted,
+                    color: AppLightUi.subtitle,
                   ),
                 ],
               ),
@@ -513,10 +556,10 @@ class ReferralView extends GetView<ReferralController> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: _ReferralUi.gold.withValues(alpha: 0.16),
+                color: AppLightUi.gold.withValues(alpha: 0.14),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: _ReferralUi.gold.withValues(alpha: 0.35),
+                  color: AppLightUi.gold.withValues(alpha: 0.4),
                 ),
               ),
               child: Column(
@@ -524,12 +567,12 @@ class ReferralView extends GetView<ReferralController> {
                   SemiBoldText(
                     text: '+${entry.coinsEarned}',
                     fontSize: TextStyles.k14FontSize,
-                    color: _ReferralUi.gold,
+                    color: const Color(0xFFB7791F),
                   ),
-                  AppText(
+                  const AppText(
                     text: 'coins',
                     fontSize: TextStyles.k10FontSize,
-                    color: _ReferralUi.textMuted,
+                    color: AppLightUi.body,
                   ),
                 ],
               ),
@@ -562,15 +605,18 @@ class ReferralView extends GetView<ReferralController> {
         : _earningTypeLabel(entry.type);
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: AdminSolidPanel(
-        accent: _ReferralUi.gold,
+      child: Container(
         padding: const EdgeInsets.all(14),
+        decoration: AppLightUi.cardDecoration(radius: 18),
         child: Row(
           children: [
-            AdminAgencyUi.glowCoinIcon(
-              accent: _ReferralUi.gold,
-              size: 40,
-              iconSize: 20,
+            Container(
+              width: 40,
+              height: 40,
+              decoration: AppLightUi.iconTileDecoration(AppLightUi.gold),
+              child: const Center(
+                child: AppCoinIcon(size: 20, color: AppLightUi.gold),
+              ),
             ),
             Spacing.h12,
             Expanded(
@@ -580,7 +626,7 @@ class ReferralView extends GetView<ReferralController> {
                   SemiBoldText(
                     text: label,
                     fontSize: TextStyles.k12FontSize,
-                    color: _ReferralUi.title,
+                    color: AppLightUi.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -589,7 +635,7 @@ class ReferralView extends GetView<ReferralController> {
                     AppText(
                       text: entry.referralCode!,
                       fontSize: TextStyles.k10FontSize,
-                      color: _ReferralUi.textMuted,
+                      color: AppLightUi.subtitle,
                     ),
                   ],
                 ],
@@ -598,7 +644,7 @@ class ReferralView extends GetView<ReferralController> {
             SemiBoldText(
               text: '+${entry.amount}',
               fontSize: TextStyles.k14FontSize,
-              color: _ReferralUi.gold,
+              color: const Color(0xFFB7791F),
             ),
           ],
         ),
@@ -623,36 +669,43 @@ class ReferralView extends GetView<ReferralController> {
     required String title,
     required String subtitle,
   }) {
-    return AdminSolidPanel(
-      accent: _ReferralUi.pink,
+    return Container(
       padding: const EdgeInsets.fromLTRB(20, 28, 20, 28),
+      decoration: AppLightUi.cardDecoration(radius: 22),
       child: Column(
         children: [
           if (useCoinIcon)
-            AdminAgencyUi.glowCoinIcon(
-              accent: _ReferralUi.pink,
-              size: 52,
-              iconSize: 26,
+            Container(
+              width: 52,
+              height: 52,
+              decoration: AppLightUi.iconTileDecoration(AppLightUi.pink),
+              child: const Center(
+                child: AppCoinIcon(size: 26, color: AppLightUi.pink),
+              ),
             )
           else
-            AdminAgencyUi.glowIcon(
-              icon: icon ?? Icons.inbox_outlined,
-              accent: _ReferralUi.pink,
-              size: 52,
-              iconSize: 26,
+            Container(
+              width: 52,
+              height: 52,
+              decoration: AppLightUi.iconTileDecoration(AppLightUi.pink),
+              child: Icon(
+                icon ?? Icons.inbox_outlined,
+                color: AppLightUi.pink,
+                size: 26,
+              ),
             ),
           Spacing.v12,
           SemiBoldText(
             text: title,
             fontSize: TextStyles.k14FontSize,
-            color: _ReferralUi.title,
+            color: AppLightUi.title,
             align: TextAlign.center,
           ),
           Spacing.v6,
           AppText(
             text: subtitle,
             fontSize: TextStyles.k12FontSize,
-            color: _ReferralUi.textMuted,
+            color: AppLightUi.subtitle,
             align: TextAlign.center,
           ),
         ],
@@ -661,7 +714,6 @@ class ReferralView extends GetView<ReferralController> {
   }
 
   Widget _copyChip({
-    required Color accent,
     required VoidCallback onTap,
     bool enabled = true,
   }) {
@@ -675,9 +727,15 @@ class ReferralView extends GetView<ReferralController> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: kColorWhite.withValues(alpha: 0.18),
+              gradient: AppLightUi.familyCtaGradient,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: accent.withValues(alpha: 0.35)),
+              boxShadow: [
+                BoxShadow(
+                  color: AppLightUi.pink.withValues(alpha: 0.22),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
             child: const Row(
               mainAxisSize: MainAxisSize.min,
