@@ -3524,65 +3524,48 @@ class _FamilyGiftsPageState extends State<FamilyGiftsPage> {
         title: 'Family Gifts',
         subtitle: name,
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          color: kColorLavenderBg,
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              _FamilyUi.pink.withValues(alpha: 0.22),
-              _FamilyUi.bg,
-              _FamilyUi.ink,
-            ],
-          ),
-        ),
-        child: Obx(() {
-                  if (controller.isLoadingGifts.value) {
-                    return const Center(
-                      child: CircularProgressIndicator(color: _FamilyUi.pink),
-                    );
-                  }
-                  if (controller.giftCatalog.isEmpty) {
-                    return _emptyState();
-                  }
-                  return Column(
-                    children: [
-                      _giftScope(),
-                      Spacing.v10,
-                      _tabBar(),
-                      Spacing.v8,
-                      Expanded(child: _giftGrid()),
-                      _giftDetailsBar(),
-                    ],
-                  );
-                }),
-      ),
+      body: Obx(() {
+        if (controller.isLoadingGifts.value) {
+          return const Center(
+            child: CircularProgressIndicator(color: _FamilyUi.pink),
+          );
+        }
+        if (controller.giftCatalog.isEmpty) {
+          return _emptyState();
+        }
+        return Column(
+          children: [
+            Spacing.v12,
+            _giftScope(),
+            Spacing.v12,
+            _tabBar(),
+            Spacing.v8,
+            Expanded(child: _giftGrid()),
+            _giftDetailsBar(),
+          ],
+        );
+      }),
     );
   }
 
   Widget _giftScope() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Row(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: AppLightUi.cardDecoration(radius: 16),
+      child: const Row(
         children: [
-          const Icon(
+          Icon(
             Icons.admin_panel_settings_rounded,
-            color: Colors.pinkAccent,
-            size: 18,
+            color: _FamilyUi.pink,
+            size: 20,
           ),
-          Spacing.h8,
+          SizedBox(width: 10),
           Expanded(
             child: AppText(
               text: 'Family gifts are credited to the group admin.',
               fontSize: TextStyles.k12FontSize,
-              color: kColorWhite,
+              color: _FamilyUi.body,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -3598,33 +3581,51 @@ class _FamilyGiftsPageState extends State<FamilyGiftsPage> {
       _selectedTabIndex = 0;
     }
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppLightUi.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppLightUi.border),
+        boxShadow: AppLightUi.cardShadow,
+      ),
       child: Row(
         children: List.generate(tabs.length, (index) {
           final selected = _selectedTabIndex == index;
-          return GestureDetector(
-            onTap: () => setState(() {
-              _selectedTabIndex = index;
-              _selectedGiftIndex = -1;
-            }),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              margin: const EdgeInsets.only(right: 8),
-              decoration: BoxDecoration(
-                color: selected
-                    ? Colors.pinkAccent.withValues(alpha: 0.15)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: selected ? Colors.pinkAccent : Colors.transparent,
+          final label = tabs[index];
+          final pretty = label.isEmpty
+              ? 'Gifts'
+              : '${label[0].toUpperCase()}${label.substring(1)}';
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() {
+                _selectedTabIndex = index;
+                _selectedGiftIndex = -1;
+              }),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOutCubic,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  gradient: selected ? AppLightUi.familyCtaGradient : null,
+                  boxShadow: selected
+                      ? [
+                          BoxShadow(
+                            color: AppLightUi.pink.withValues(alpha: 0.28),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ]
+                      : null,
                 ),
-              ),
-              child: SemiBoldText(
-                text: tabs[index],
-                fontSize: TextStyles.k14FontSize,
-                color: selected ? kColorWhite : kColorHint,
+                alignment: Alignment.center,
+                child: SemiBoldText(
+                  text: pretty,
+                  fontSize: TextStyles.k12FontSize,
+                  color: selected ? kColorWhite : _FamilyUi.muted,
+                ),
               ),
             ),
           );
@@ -3636,28 +3637,29 @@ class _FamilyGiftsPageState extends State<FamilyGiftsPage> {
   Widget _giftGrid() {
     final gifts = _visibleGifts();
     if (gifts.isEmpty) {
-      return Center(
+      return const Center(
         child: AppText(
           text: 'No gifts in this category.',
           fontSize: TextStyles.k14FontSize,
-          color: kColorHint,
+          color: _FamilyUi.muted,
           align: TextAlign.center,
         ),
       );
     }
     return RefreshIndicator(
       color: _FamilyUi.pink,
+      backgroundColor: AppLightUi.card,
       onRefresh: _refreshGifts,
       child: GridView.builder(
         physics: const AlwaysScrollableScrollPhysics(
           parent: BouncingScrollPhysics(),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 4,
-          mainAxisSpacing: 10,
-          crossAxisSpacing: 10,
-          childAspectRatio: 0.72,
+          crossAxisCount: 3,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 0.78,
         ),
         itemCount: gifts.length,
         itemBuilder: (context, index) {
@@ -3667,46 +3669,82 @@ class _FamilyGiftsPageState extends State<FamilyGiftsPage> {
 
           return GestureDetector(
             onTap: () => setState(() => _selectedGiftIndex = index),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.fromLTRB(8, 12, 8, 10),
               decoration: BoxDecoration(
-                color: selected
-                    ? Colors.pinkAccent.withValues(alpha: 0.10)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(12),
+                color: AppLightUi.card,
+                borderRadius: BorderRadius.circular(18),
                 border: Border.all(
-                  color: selected ? Colors.pinkAccent : Colors.transparent,
-                  width: 1.5,
+                  color: selected
+                      ? AppLightUi.pink.withValues(alpha: 0.65)
+                      : AppLightUi.border,
+                  width: selected ? 1.6 : 1,
                 ),
+                boxShadow: selected
+                    ? [
+                        BoxShadow(
+                          color: AppLightUi.pink.withValues(alpha: 0.22),
+                          blurRadius: 14,
+                          offset: const Offset(0, 6),
+                        ),
+                      ]
+                    : AppLightUi.cardShadow,
+                gradient: selected
+                    ? LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          AppLightUi.pink.withValues(alpha: 0.10),
+                          AppLightUi.violet.withValues(alpha: 0.06),
+                          AppLightUi.card,
+                        ],
+                      )
+                    : null,
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  GiftIconWidget(icon: gift['icon']),
-                  const SizedBox(height: 4),
-                  AppText(
+                  Container(
+                    width: 52,
+                    height: 52,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppLightUi.cardSoft,
+                      border: Border.all(
+                        color: selected
+                            ? AppLightUi.pink.withValues(alpha: 0.35)
+                            : AppLightUi.border,
+                      ),
+                    ),
+                    child: GiftIconWidget(
+                      icon: gift['icon'],
+                      size: 40,
+                      emojiSize: 28,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SemiBoldText(
                     text: gift['name'] ?? 'Gift',
-                    fontSize: TextStyles.k10FontSize,
-                    color: kColorWhite,
+                    fontSize: TextStyles.k12FontSize,
+                    color: _FamilyUi.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     align: TextAlign.center,
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 4),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
-                        Icons.diamond_outlined,
-                        color: Colors.orange,
-                        size: 10,
-                      ),
-                      Spacing.h2,
+                      const AppCoinIcon(size: 12),
+                      const SizedBox(width: 3),
                       Flexible(
                         child: AppText(
                           text: price,
-                          fontSize: 10,
-                          color: kColorHint,
+                          fontSize: TextStyles.k10FontSize,
+                          color: _FamilyUi.body,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -3728,81 +3766,127 @@ class _FamilyGiftsPageState extends State<FamilyGiftsPage> {
         _selectedGiftIndex >= 0 && _selectedGiftIndex < gifts.length
         ? gifts[_selectedGiftIndex]
         : null;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-      decoration: const BoxDecoration(
-        color: Color(0xFF1E1E2D),
-        border: Border(top: BorderSide(color: Colors.white12)),
-      ),
-      child: Row(
-        children: [
-          GiftIconWidget(icon: selected?['icon'], size: 42, emojiSize: 32),
-          Spacing.h10,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SemiBoldText(
-                  text: selected?['name'] ?? 'Select a gift',
-                  fontSize: TextStyles.k14FontSize,
-                  color: kColorWhite,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 3),
-                AppText(
-                  text: selected == null
-                      ? 'Gift details will appear here.'
-                      : _giftDetailText(selected),
-                  fontSize: 11,
-                  color: kColorHint,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+    final familyId = controller.familyIdOf(widget.group);
+    final canSend = selected != null && familyId.trim().isNotEmpty;
+
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        decoration: BoxDecoration(
+          color: AppLightUi.card,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+          border: const Border(top: BorderSide(color: AppLightUi.borderStrong)),
+          boxShadow: [
+            BoxShadow(
+              color: AppLightUi.title.withValues(alpha: 0.08),
+              blurRadius: 18,
+              offset: const Offset(0, -4),
             ),
-          ),
-          if (selected != null) ...[
-            Spacing.h8,
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.pinkAccent.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.pinkAccent),
-              ),
-              child: SemiBoldText(
-                text: '${selected['price'] ?? '0'} coins',
-                fontSize: TextStyles.k12FontSize,
-                color: kColorWhite,
-              ),
-            ),
-            // TODO: Re-enable full-screen gift preview once backend media URLs
-            // consistently provide playable animation/image assets.
-            // Spacing.h8,
-            // SizedBox(
-            //   height: 36,
-            //   child: ElevatedButton.icon(
-            //     onPressed: () => _viewGift(selected),
-            //     style: ElevatedButton.styleFrom(
-            //       backgroundColor: Colors.pinkAccent,
-            //       foregroundColor: kColorWhite,
-            //       padding: const EdgeInsets.symmetric(horizontal: 14),
-            //       shape: RoundedRectangleBorder(
-            //         borderRadius: BorderRadius.circular(18),
-            //       ),
-            //     ),
-            //     icon: const Icon(Icons.play_arrow_rounded, size: 18),
-            //     label: const SemiBoldText(
-            //       text: 'View',
-            //       fontSize: TextStyles.k12FontSize,
-            //       color: kColorWhite,
-            //     ),
-            //   ),
-            // ),
           ],
-        ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                gradient: LinearGradient(
+                  colors: [
+                    AppLightUi.pink.withValues(alpha: 0.14),
+                    AppLightUi.violet.withValues(alpha: 0.10),
+                  ],
+                ),
+                border: Border.all(
+                  color: AppLightUi.pink.withValues(alpha: 0.28),
+                ),
+              ),
+              child: GiftIconWidget(
+                icon: selected?['icon'],
+                size: 40,
+                emojiSize: 30,
+              ),
+            ),
+            Spacing.h12,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SemiBoldText(
+                    text: selected?['name'] ?? 'Select a gift',
+                    fontSize: TextStyles.k14FontSize,
+                    color: _FamilyUi.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 3),
+                  AppText(
+                    text: selected == null
+                        ? 'Tap a gift above to send to the admin.'
+                        : _giftDetailText(selected),
+                    fontSize: TextStyles.k12FontSize,
+                    color: _FamilyUi.muted,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            Spacing.h10,
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: !canSend
+                    ? null
+                    : () => controller.sendGift(
+                          familyId: familyId,
+                          gift: selected,
+                        ),
+                borderRadius: BorderRadius.circular(16),
+                child: Ink(
+                  height: 46,
+                  width: 108,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: canSend ? AppLightUi.familyCtaGradient : null,
+                    color: canSend ? null : AppLightUi.border,
+                    boxShadow: canSend
+                        ? [
+                            BoxShadow(
+                              color: AppLightUi.pink.withValues(alpha: 0.32),
+                              blurRadius: 12,
+                              offset: const Offset(0, 5),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Center(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.send_rounded,
+                          size: 16,
+                          color: canSend ? kColorWhite : _FamilyUi.muted,
+                        ),
+                        const SizedBox(width: 6),
+                        SemiBoldText(
+                          text: 'Send',
+                          fontSize: TextStyles.k12FontSize,
+                          color: canSend ? kColorWhite : _FamilyUi.muted,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -3810,6 +3894,7 @@ class _FamilyGiftsPageState extends State<FamilyGiftsPage> {
   Widget _emptyState() {
     return RefreshIndicator(
       color: _FamilyUi.pink,
+      backgroundColor: AppLightUi.card,
       onRefresh: () async {
         controller.giftCatalog.clear();
         await controller.loadGiftCatalog();
@@ -3818,7 +3903,7 @@ class _FamilyGiftsPageState extends State<FamilyGiftsPage> {
         physics: const AlwaysScrollableScrollPhysics(
           parent: BouncingScrollPhysics(),
         ),
-        padding: const EdgeInsets.fromLTRB(24, 120, 24, 24),
+        padding: const EdgeInsets.fromLTRB(28, 100, 28, 24),
         children: [
           AdminAgencyUi.glowIcon(
             icon: Icons.card_giftcard_rounded,
@@ -3831,14 +3916,14 @@ class _FamilyGiftsPageState extends State<FamilyGiftsPage> {
           const SemiBoldText(
             text: 'No gifts available',
             fontSize: TextStyles.k18FontSize,
-            color: kColorWhite,
+            color: _FamilyUi.title,
             align: TextAlign.center,
           ),
-          Spacing.v6,
-          AppText(
+          Spacing.v8,
+          const AppText(
             text: 'Family gifts will appear here once the catalog is loaded.',
             fontSize: TextStyles.k12FontSize,
-            color: kColorWhite.withValues(alpha: 0.68),
+            color: _FamilyUi.muted,
             align: TextAlign.center,
           ),
         ],
@@ -3880,15 +3965,19 @@ class _FamilyGiftsPageState extends State<FamilyGiftsPage> {
   }
 
   String _giftDetailText(Map<String, String> gift) {
+    final price = gift['price']?.trim().isNotEmpty == true
+        ? gift['price']!.trim()
+        : '0';
     final category = gift['category']?.trim();
     final hasGif = gift['animationUrl']?.trim().isNotEmpty == true;
     final hasSound = gift['soundUrl']?.trim().isNotEmpty == true;
     final parts = <String>[
+      '$price coins',
       if (category != null && category.isNotEmpty) category,
       if (hasGif) 'GIF',
       if (hasSound) 'Sound',
     ];
-    return parts.isEmpty ? 'Family gift' : parts.join(' · ');
+    return parts.join(' · ');
   }
 }
 

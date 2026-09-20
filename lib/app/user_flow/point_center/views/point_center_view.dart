@@ -6,6 +6,7 @@ import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
+import 'package:qobo_one_live/utils/app_widgets/dating_empty_hero.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -18,7 +19,7 @@ class PointCenterView extends GetView<PointCenterController> {
     ('DAILY', 'Daily'),
     ('WEEKLY', 'Weekly'),
     ('MONTHLY', 'Monthly'),
-    ('ONE_TIME', 'One-time'),
+    ('ONE_TIME', 'Once'),
   ];
 
   @override
@@ -151,6 +152,7 @@ class PointCenterView extends GetView<PointCenterController> {
       child: TabBar(
         dividerColor: Colors.transparent,
         indicatorSize: TabBarIndicatorSize.tab,
+        labelPadding: EdgeInsets.zero,
         indicator: BoxDecoration(
           borderRadius: BorderRadius.circular(13),
           gradient: const LinearGradient(
@@ -159,8 +161,8 @@ class PointCenterView extends GetView<PointCenterController> {
         ),
         labelColor: kColorWhite,
         unselectedLabelColor: AppLightUi.subtitle,
-        labelStyle: TextStyles.kSemiBoldPoppins(fontSize: 10),
-        unselectedLabelStyle: TextStyles.kSemiBoldPoppins(fontSize: 10),
+        labelStyle: TextStyles.kSemiBoldPoppins(fontSize: 11),
+        unselectedLabelStyle: TextStyles.kSemiBoldPoppins(fontSize: 11),
         tabs: _frequencies.map((item) => Tab(text: item.$2)).toList(),
       ),
     );
@@ -182,28 +184,8 @@ class PointCenterView extends GetView<PointCenterController> {
             physics: const AlwaysScrollableScrollPhysics(
               parent: BouncingScrollPhysics(),
             ),
-            padding: const EdgeInsets.fromLTRB(20, 84, 20, 24),
-            children: [
-              const Icon(
-                Icons.flag_circle_rounded,
-                color: Color(0xFFFFCF5D),
-                size: 58,
-              ),
-              Spacing.v12,
-              const SemiBoldText(
-                text: 'No targets found',
-                fontSize: TextStyles.k16FontSize,
-                color: AppLightUi.title,
-                align: TextAlign.center,
-              ),
-              Spacing.v6,
-              AppText(
-                text: 'Targets assigned by admin will appear here.',
-                fontSize: TextStyles.k12FontSize,
-                color: AppLightUi.subtitle,
-                align: TextAlign.center,
-              ),
-            ],
+            padding: const EdgeInsets.fromLTRB(20, 36, 20, 24),
+            children: [_emptyState(frequency)],
           ),
         );
       }
@@ -358,44 +340,179 @@ class PointCenterView extends GetView<PointCenterController> {
                   ],
                 ),
               ),
-              SizedBox(
-                height: 36,
-                width: 92,
-                child: appButton(
-                  onPressed: completed && !claimed
-                      ? () {
-                          final taskIndex = controller.tasks.indexWhere(
-                            (item) => item['id'] == task['id'],
-                          );
-                          if (taskIndex >= 0) {
-                            controller.claimPoints(taskIndex);
-                          }
-                        }
-                      : () {},
-                  buttonText: claimed
-                      ? 'Claimed'
-                      : completed
-                      ? 'Claim'
-                      : 'Pending',
-                  buttonColor: claimed
-                      ? AppLightUi.cardSoft
-                      : completed
-                      ? const Color(0xFFFF2E83)
-                      : AppLightUi.cardSoft,
-                  borderRadius: 18,
-                  textStyle: TextStyles.kSemiBoldPoppins(
-                    fontSize: 11,
-                    colors: claimed || !completed
-                        ? AppLightUi.muted
-                        : kColorWhite,
-                  ),
-                ),
+              _actionButton(
+                claimed: claimed,
+                completed: completed,
+                onClaim: () {
+                  final taskIndex = controller.tasks.indexWhere(
+                    (item) => item['id'] == task['id'],
+                  );
+                  if (taskIndex >= 0) {
+                    controller.claimPoints(taskIndex);
+                  }
+                },
               ),
             ],
           ),
         ],
       ),
     );
+  }
+
+  Widget _actionButton({
+    required bool claimed,
+    required bool completed,
+    required VoidCallback onClaim,
+  }) {
+    final canClaim = completed && !claimed;
+    final label = claimed
+        ? 'Claimed'
+        : completed
+        ? 'Claim'
+        : 'Pending';
+
+    // Pending / Claimed stay soft solid (readable). Only Claim uses CTA gradient.
+    if (!canClaim) {
+      final isPending = !completed;
+      return Container(
+        height: 36,
+        width: 96,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isPending
+              ? const Color(0xFFFFF6E8)
+              : AppLightUi.cardSoft,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isPending
+                ? const Color(0xFFFFCF5D).withValues(alpha: 0.55)
+                : AppLightUi.border,
+          ),
+        ),
+        child: SemiBoldText(
+          text: label,
+          fontSize: TextStyles.k12FontSize,
+          color: isPending
+              ? const Color(0xFFB86A00)
+              : AppLightUi.muted,
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 36,
+      width: 96,
+      child: appButton(
+        onPressed: onClaim,
+        buttonText: label,
+        buttonHeight: 36,
+        buttonWidth: 96,
+        borderRadius: 18,
+        isGradient: true,
+        textStyle: TextStyles.kSemiBoldPoppins(
+          fontSize: 11,
+          colors: kColorWhite,
+        ),
+      ),
+    );
+  }
+
+  Widget _emptyState(String frequency) {
+    final config = _emptyConfig(frequency);
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.94, end: 1),
+      duration: const Duration(milliseconds: 420),
+      curve: Curves.easeOutBack,
+      builder: (context, scale, child) {
+        return Transform.scale(scale: scale, child: child);
+      },
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(20, 28, 20, 28),
+        decoration: BoxDecoration(
+          color: AppLightUi.card,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: AppLightUi.border),
+          boxShadow: AppLightUi.cardShadow,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppLightUi.card,
+              config.accent.withValues(alpha: 0.08),
+              AppLightUi.card,
+            ],
+          ),
+        ),
+        child: Column(
+          children: [
+            DatingEmptyHero(
+              style: config.heroStyle,
+              size: 156,
+              accentColors: [config.accent, config.accentEnd],
+            ),
+            Spacing.v12,
+            SemiBoldText(
+              text: config.title,
+              fontSize: TextStyles.k16FontSize,
+              color: AppLightUi.title,
+              align: TextAlign.center,
+            ),
+            Spacing.v8,
+            AppText(
+              text: config.subtitle,
+              fontSize: TextStyles.k12FontSize,
+              color: AppLightUi.subtitle,
+              align: TextAlign.center,
+            ),
+            Spacing.v10,
+            AppText(
+              text: 'Pull down to refresh',
+              fontSize: TextStyles.k10FontSize,
+              color: AppLightUi.muted,
+              align: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  _TaskEmptyConfig _emptyConfig(String frequency) {
+    switch (frequency) {
+      case 'WEEKLY':
+        return const _TaskEmptyConfig(
+          title: 'No weekly targets',
+          subtitle: 'Weekly goals from admin will show up here.',
+          accent: Color(0xFF42E8E0),
+          accentEnd: Color(0xFF7C9CFF),
+          heroStyle: DatingEmptyHeroStyle.sparks,
+        );
+      case 'MONTHLY':
+        return const _TaskEmptyConfig(
+          title: 'No monthly targets',
+          subtitle: 'Big monthly challenges will appear in this tab.',
+          accent: Color(0xFF865DFF),
+          accentEnd: Color(0xFFFF2E83),
+          heroStyle: DatingEmptyHeroStyle.agency,
+        );
+      case 'ONE_TIME':
+        return const _TaskEmptyConfig(
+          title: 'No special targets',
+          subtitle: 'Special once-only bonuses will land here.',
+          accent: Color(0xFFFFCF5D),
+          accentEnd: Color(0xFFFF8A48),
+          heroStyle: DatingEmptyHeroStyle.host,
+        );
+      case 'DAILY':
+      default:
+        return const _TaskEmptyConfig(
+          title: 'No daily targets',
+          subtitle: 'Fresh daily targets from admin will appear here.',
+          accent: Color(0xFFFF2E83),
+          accentEnd: Color(0xFFFFCF5D),
+          heroStyle: DatingEmptyHeroStyle.live,
+        );
+    }
   }
 
   Widget _statusBadge({required bool completed, required bool claimed}) {
@@ -488,4 +605,20 @@ class PointCenterView extends GetView<PointCenterController> {
     if (number % 1 == 0) return _formatNumber(number);
     return number.toStringAsFixed(1);
   }
+}
+
+class _TaskEmptyConfig {
+  const _TaskEmptyConfig({
+    required this.title,
+    required this.subtitle,
+    required this.accent,
+    required this.accentEnd,
+    required this.heroStyle,
+  });
+
+  final String title;
+  final String subtitle;
+  final Color accent;
+  final Color accentEnd;
+  final DatingEmptyHeroStyle heroStyle;
 }

@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/gift_transactions/controllers/gift_transactions_controller.dart';
 import 'package:qobo_one_live/app/user_flow/gift_transactions/models/gift_history_models.dart';
+import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/icon_constants.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
+import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
+import 'package:qobo_one_live/utils/app_widgets/dating_empty_hero.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -20,11 +23,13 @@ class GiftTransactionsView extends GetView<GiftTransactionsController> {
       backgroundColor: kColorLavenderBg,
       appBar: const CommonAppBarWidget(
         title: 'Transactions',
-        useMaterialAppBar: true,
+        subtitle: 'Gifts you sent across rooms',
+        trailingIcon: Icons.receipt_long_rounded,
       ),
       body: Column(
         children: [
           _summaryHeader(),
+          Spacing.v12,
           _tabBar(),
           Expanded(child: _historyList()),
         ],
@@ -36,76 +41,133 @@ class GiftTransactionsView extends GetView<GiftTransactionsController> {
     return Obx(() {
       final summary = controller.summary.value;
       final type = controller.selectedType.value;
+      final accent = _accentFor(type);
+      final gifts = summary.countFor(type);
+      final coins = formatLedgerAmount(summary.coinsFor(type));
+
       return Container(
-        margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-        padding: const EdgeInsets.all(20),
+        margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [kColorPrimary, Color(0xFF9F3B8F)],
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(color: AppLightUi.borderStrong),
+          boxShadow: AppLightUi.cardShadow,
+          gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
+            colors: [
+              AppLightUi.card,
+              accent.withValues(alpha: 0.10),
+              AppLightUi.pink.withValues(alpha: 0.06),
+            ],
           ),
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: kColorPrimary.withValues(alpha: 0.2),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: kColorWhite.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(12),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18),
+                      gradient: AppLightUi.familyCtaGradient,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppLightUi.pink.withValues(alpha: 0.30),
+                          blurRadius: 14,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(kGiftIcon, color: kColorWhite, size: 26),
                   ),
-                  child: const Icon(kGiftIcon, color: kColorWhite, size: 22),
-                ),
-                Spacing.h12,
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SemiBoldText(
-                        text: 'Gifts you sent',
-                        fontSize: TextStyles.k16FontSize,
-                        color: kColorWhite,
-                      ),
-                      Spacing.v2,
-                      AppText(
-                        text: '${type.label} history',
-                        fontSize: TextStyles.k12FontSize,
-                        color: kColorWhite.withValues(alpha: 0.78),
-                      ),
-                    ],
+                  Spacing.h12,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SemiBoldText(
+                          text: 'Gifts you sent',
+                          fontSize: TextStyles.k18FontSize,
+                          color: AppLightUi.title,
+                        ),
+                        Spacing.v6,
+                        AppText(
+                          text: _summaryCaption(type),
+                          fontSize: TextStyles.k12FontSize,
+                          color: AppLightUi.body,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                  Spacing.h8,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 11,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(999),
+                      gradient: AppLightUi.familyCtaGradient,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppLightUi.pink.withValues(alpha: 0.22),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: SemiBoldText(
+                      text: type.label,
+                      fontSize: TextStyles.k10FontSize,
+                      color: kColorWhite,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            Spacing.v16,
-            Row(
-              children: [
-                Expanded(
-                  child: _statChip(
-                    label: '${type.label} gifts',
-                    value: '${summary.countFor(type)}',
+            Container(
+              margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                color: AppLightUi.card.withValues(alpha: 0.92),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: AppLightUi.border),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _statCell(
+                      label: 'Gifts',
+                      value: '$gifts',
+                      accent: accent,
+                      leading: Icon(
+                        Icons.card_giftcard_rounded,
+                        size: 16,
+                        color: accent,
+                      ),
+                    ),
                   ),
-                ),
-                Spacing.h10,
-                Expanded(
-                  child: _statChip(
-                    label: 'Coins spent',
-                    value: formatLedgerAmount(summary.coinsFor(type)),
+                  Container(
+                    width: 1,
+                    height: 42,
+                    color: AppLightUi.borderStrong,
                   ),
-                ),
-              ],
+                  Expanded(
+                    child: _statCell(
+                      label: 'Coins spent',
+                      value: coins,
+                      accent: AppLightUi.gold,
+                      leading: const AppCoinIcon(size: 16),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -113,26 +175,61 @@ class GiftTransactionsView extends GetView<GiftTransactionsController> {
     });
   }
 
-  Widget _statChip({required String label, required String value}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: kColorWhite.withValues(alpha: 0.14),
-      ),
+  String _summaryCaption(GiftHistoryType type) {
+    switch (type) {
+      case GiftHistoryType.audioRoom:
+        return 'Totals for audio rooms';
+      case GiftHistoryType.liveStream:
+        return 'Totals for live streams';
+      case GiftHistoryType.pk:
+        return 'Totals for PK battles';
+      case GiftHistoryType.call:
+        return 'Totals for voice & video calls';
+    }
+  }
+
+  Widget _statCell({
+    required String label,
+    required String value,
+    required Color accent,
+    required Widget leading,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AppText(
-            text: label,
-            fontSize: 10,
-            color: kColorWhite.withValues(alpha: 0.75),
+          Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: leading,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: AppText(
+                  text: label,
+                  fontSize: TextStyles.k12FontSize,
+                  color: AppLightUi.subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
-          Spacing.v4,
+          Spacing.v8,
           SemiBoldText(
             text: value,
-            fontSize: TextStyles.k18FontSize,
-            color: kColorWhite,
+            fontSize: TextStyles.k20FontSize,
+            color: AppLightUi.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -141,18 +238,14 @@ class GiftTransactionsView extends GetView<GiftTransactionsController> {
 
   Widget _tabBar() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      height: 48,
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      height: 46,
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: kColorWhite,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: kColorBlack.withValues(alpha: 0.03),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: AppLightUi.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppLightUi.border),
+        boxShadow: AppLightUi.cardShadow,
       ),
       child: Obx(() {
         return Row(
@@ -169,23 +262,27 @@ class GiftTransactionsView extends GetView<GiftTransactionsController> {
     final isSelected = controller.selectedType.value == type;
     return GestureDetector(
       onTap: () => controller.selectType(type),
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
         alignment: Alignment.center,
-        margin: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          gradient: isSelected
-              ? const LinearGradient(
-                  colors: [kColorPrimary, Color(0xFF9F3B8F)],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                )
+          borderRadius: BorderRadius.circular(12),
+          gradient: isSelected ? AppLightUi.familyCtaGradient : null,
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppLightUi.pink.withValues(alpha: 0.28),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
               : null,
         ),
         child: SemiBoldText(
           text: type.label,
           fontSize: TextStyles.k12FontSize,
-          color: isSelected ? kColorWhite : kColorText.withValues(alpha: 0.7),
+          color: isSelected ? kColorWhite : AppLightUi.subtitle,
         ),
       ),
     );
@@ -195,9 +292,7 @@ class GiftTransactionsView extends GetView<GiftTransactionsController> {
     return Obx(() {
       if (controller.isLoading.value && controller.items.isEmpty) {
         return const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(kColorPrimary),
-          ),
+          child: CircularProgressIndicator(color: AppLightUi.pink),
         );
       }
 
@@ -214,7 +309,8 @@ class GiftTransactionsView extends GetView<GiftTransactionsController> {
           return false;
         },
         child: RefreshIndicator(
-          color: kColorPrimary,
+          color: AppLightUi.pink,
+          backgroundColor: AppLightUi.card,
           onRefresh: () async {
             await Future.wait([
               controller.loadSummary(),
@@ -222,8 +318,10 @@ class GiftTransactionsView extends GetView<GiftTransactionsController> {
             ]);
           },
           child: ListView.separated(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(16),
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
             itemCount:
                 controller.items.length +
                 (controller.isLoadingMore.value ? 1 : 0),
@@ -238,7 +336,7 @@ class GiftTransactionsView extends GetView<GiftTransactionsController> {
                       height: 22,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: kColorPrimary,
+                        color: AppLightUi.pink,
                       ),
                     ),
                   ),
@@ -256,52 +354,122 @@ class GiftTransactionsView extends GetView<GiftTransactionsController> {
     return Obx(() {
       final error = controller.loadError.value;
       final type = controller.selectedType.value;
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
+      final accent = _accentFor(type);
+      final heroStyle = _heroStyleFor(type);
+
+      return RefreshIndicator(
+        color: AppLightUi.pink,
+        backgroundColor: AppLightUi.card,
+        onRefresh: () async {
+          await Future.wait([
+            controller.loadSummary(),
+            controller.loadHistory(refresh: true),
+          ]);
+        },
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 36, 20, 24),
+          children: [
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.94, end: 1),
+              duration: const Duration(milliseconds: 420),
+              curve: Curves.easeOutBack,
+              builder: (context, scale, child) {
+                return Transform.scale(scale: scale, child: child);
+              },
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(20, 28, 20, 28),
                 decoration: BoxDecoration(
-                  color: kColorPrimary.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  error.isNotEmpty ? Icons.cloud_off_rounded : kGiftIcon,
-                  color: kColorPrimary,
-                  size: 64,
-                ),
-              ),
-              Spacing.v24,
-              SemiBoldText(
-                text: error.isNotEmpty ? 'Unable to Load' : 'No gifts yet',
-                fontSize: TextStyles.k18FontSize,
-                color: kColorText,
-              ),
-              Spacing.v8,
-              AppText(
-                text: error.isNotEmpty
-                    ? error
-                    : 'Gifts you send in ${type.label.toLowerCase()} will appear here.',
-                fontSize: TextStyles.k14FontSize,
-                color: kColorHint,
-                align: TextAlign.center,
-              ),
-              if (error.isNotEmpty) ...[
-                Spacing.v16,
-                TextButton(
-                  onPressed: () => controller.loadHistory(refresh: true),
-                  child: const SemiBoldText(
-                    text: 'Try Again',
-                    fontSize: TextStyles.k14FontSize,
-                    color: kColorPrimary,
+                  color: AppLightUi.card,
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(color: AppLightUi.border),
+                  boxShadow: AppLightUi.cardShadow,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppLightUi.card,
+                      accent.withValues(alpha: 0.08),
+                      AppLightUi.card,
+                    ],
                   ),
                 ),
-              ],
-            ],
-          ),
+                child: Column(
+                  children: [
+                    DatingEmptyHero(
+                      style: error.isNotEmpty
+                          ? DatingEmptyHeroStyle.messages
+                          : heroStyle,
+                      size: 148,
+                      accentColors: error.isNotEmpty
+                          ? const [AppLightUi.rose, AppLightUi.violet]
+                          : [accent, AppLightUi.violet],
+                    ),
+                    Spacing.v16,
+                    SemiBoldText(
+                      text: error.isNotEmpty
+                          ? 'Unable to load'
+                          : 'No ${type.label.toLowerCase()} gifts',
+                      fontSize: TextStyles.k16FontSize,
+                      color: AppLightUi.title,
+                      align: TextAlign.center,
+                    ),
+                    Spacing.v8,
+                    AppText(
+                      text: error.isNotEmpty
+                          ? error
+                          : 'Gifts you send in ${type.label.toLowerCase()} will appear here.',
+                      fontSize: TextStyles.k12FontSize,
+                      color: AppLightUi.subtitle,
+                      align: TextAlign.center,
+                    ),
+                    if (error.isNotEmpty) ...[
+                      Spacing.v16,
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => controller.loadHistory(refresh: true),
+                          borderRadius: BorderRadius.circular(16),
+                          child: Ink(
+                            height: 44,
+                            width: 140,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              gradient: AppLightUi.familyCtaGradient,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppLightUi.pink.withValues(alpha: 0.28),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 5),
+                                ),
+                              ],
+                            ),
+                            child: const Center(
+                              child: SemiBoldText(
+                                text: 'Try again',
+                                fontSize: TextStyles.k12FontSize,
+                                color: kColorWhite,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ] else ...[
+                      Spacing.v10,
+                      const AppText(
+                        text: 'Pull down to refresh',
+                        fontSize: TextStyles.k10FontSize,
+                        color: AppLightUi.muted,
+                        align: TextAlign.center,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       );
     });
@@ -309,22 +477,12 @@ class GiftTransactionsView extends GetView<GiftTransactionsController> {
 
   Widget _giftCard(GiftHistoryItem item) {
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: kColorWhite,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: kColorBlack.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      padding: const EdgeInsets.all(14),
+      decoration: AppLightUi.cardDecoration(radius: 20),
       child: Row(
         children: [
           _giftThumb(item),
-          Spacing.h16,
+          Spacing.h12,
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -332,25 +490,25 @@ class GiftTransactionsView extends GetView<GiftTransactionsController> {
                 SemiBoldText(
                   text: item.giftName,
                   fontSize: TextStyles.k14FontSize,
-                  color: kColorText,
+                  color: AppLightUi.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 if (item.receiverName.isNotEmpty) ...[
-                  Spacing.v4,
+                  Spacing.v6,
                   Row(
                     children: [
                       AppUserAvatar(
                         name: item.receiverName,
                         imageUrl: item.receiverAvatar,
-                        size: 18,
+                        size: 20,
                       ),
                       Spacing.h6,
                       Expanded(
                         child: AppText(
                           text: item.receiverName,
                           fontSize: TextStyles.k12FontSize,
-                          color: kColorHint,
+                          color: AppLightUi.body,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -358,46 +516,57 @@ class GiftTransactionsView extends GetView<GiftTransactionsController> {
                     ],
                   ),
                 ],
-                Spacing.v4,
-                AppText(
-                  text: item.contextSubtitle,
-                  fontSize: TextStyles.k12FontSize,
-                  color: kColorHint,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                if (_showContextLine(item)) ...[
+                  Spacing.v4,
+                  AppText(
+                    text: item.contextSubtitle,
+                    fontSize: TextStyles.k12FontSize,
+                    color: AppLightUi.subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
                 if (item.createdAtLabel.isNotEmpty) ...[
                   Spacing.v6,
                   AppText(
                     text: item.createdAtLabel,
-                    fontSize: 10,
-                    color: kColorHint,
+                    fontSize: TextStyles.k10FontSize,
+                    color: AppLightUi.muted,
                   ),
                 ],
               ],
             ),
           ),
-          Spacing.h12,
+          Spacing.h10,
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              BoldText(
+              SemiBoldText(
                 text: '-${formatLedgerAmount(item.coinsSpent)}',
-                fontSize: TextStyles.k18FontSize,
-                color: const Color(0xFFD32F2F),
+                fontSize: TextStyles.k16FontSize,
+                color: const Color(0xFFE53935),
               ),
-              Spacing.v4,
+              Spacing.v6,
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: kColorBackground,
-                  borderRadius: BorderRadius.circular(8),
+                  color: const Color(0xFFFFF6E8),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: AppLightUi.gold.withValues(alpha: 0.35),
+                  ),
                 ),
-                child: AppText(
-                  text: item.quantity > 1 ? '×${item.quantity} Coins' : 'Coins',
-                  fontSize: 9,
-                  color: kColorText.withValues(alpha: 0.6),
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const AppCoinIcon(size: 11),
+                    const SizedBox(width: 4),
+                    AppText(
+                      text: item.quantity > 1 ? '×${item.quantity}' : 'Coins',
+                      fontSize: TextStyles.k10FontSize,
+                      color: const Color(0xFFB86A00),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -407,27 +576,66 @@ class GiftTransactionsView extends GetView<GiftTransactionsController> {
     );
   }
 
+  bool _showContextLine(GiftHistoryItem item) {
+    final context = item.contextSubtitle.trim();
+    if (context.isEmpty) return false;
+    final receiver = item.receiverName.trim().toLowerCase();
+    if (receiver.isNotEmpty && context.toLowerCase() == receiver) return false;
+    return true;
+  }
+
   Widget _giftThumb(GiftHistoryItem item) {
     final url = item.giftImage;
     return Container(
-      width: 48,
-      height: 48,
+      width: 52,
+      height: 52,
       decoration: BoxDecoration(
-        color: kColorPrimary.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppLightUi.pink.withValues(alpha: 0.14),
+            AppLightUi.violet.withValues(alpha: 0.12),
+          ],
+        ),
+        border: Border.all(color: AppLightUi.pink.withValues(alpha: 0.22)),
       ),
       clipBehavior: Clip.antiAlias,
       child: url == null
-          ? const Icon(kGiftIcon, color: kColorPrimary, size: 22)
+          ? const Icon(kGiftIcon, color: AppLightUi.pink, size: 24)
           : Image.network(
               url,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const Icon(
-                kGiftIcon,
-                color: kColorPrimary,
-                size: 22,
-              ),
+              errorBuilder: (_, __, ___) =>
+                  const Icon(kGiftIcon, color: AppLightUi.pink, size: 24),
             ),
     );
+  }
+
+  Color _accentFor(GiftHistoryType type) {
+    switch (type) {
+      case GiftHistoryType.audioRoom:
+        return AppLightUi.violet;
+      case GiftHistoryType.liveStream:
+        return AppLightUi.pink;
+      case GiftHistoryType.pk:
+        return AppLightUi.gold;
+      case GiftHistoryType.call:
+        return AppLightUi.cyan;
+    }
+  }
+
+  DatingEmptyHeroStyle _heroStyleFor(GiftHistoryType type) {
+    switch (type) {
+      case GiftHistoryType.audioRoom:
+        return DatingEmptyHeroStyle.audio;
+      case GiftHistoryType.liveStream:
+        return DatingEmptyHeroStyle.live;
+      case GiftHistoryType.pk:
+        return DatingEmptyHeroStyle.sparks;
+      case GiftHistoryType.call:
+        return DatingEmptyHeroStyle.messages;
+    }
   }
 }
