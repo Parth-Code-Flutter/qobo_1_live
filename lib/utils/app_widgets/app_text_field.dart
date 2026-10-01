@@ -170,9 +170,25 @@ class AppTextField extends StatelessWidget {
 
   Widget _buildGlossyField(BuildContext context) {
     return FormField<String>(
-      validator: validator,
+      // Prefer live [controller] text so programmatic updates (pickers) validate
+      // correctly — FormField.initialValue alone stays stale after controller writes.
+      validator: (fieldValue) {
+        final fromController = controller?.text;
+        final effective =
+            (fromController != null && fromController.trim().isNotEmpty)
+                ? fromController
+                : (fieldValue ?? value);
+        return validator?.call(effective);
+      },
       initialValue: controller?.text ?? value,
       builder: (FormFieldState<String> field) {
+        void syncFromController() {
+          final text = controller?.text ?? '';
+          if (field.value != text) {
+            field.didChange(text);
+          }
+        }
+
         final input = TextField(
           autofocus: autoFocus ?? false,
           controller: controller,
@@ -192,7 +208,14 @@ class AppTextField extends StatelessWidget {
           maxLines: maxLines ?? 1,
           minLines: minLines ?? 1,
           readOnly: readOnly,
-          onTap: onTap,
+          onTap: () {
+            onTap?.call();
+            // Pickers often update [controller] after this returns; a delayed
+            // sync covers common bottom-sheet Done flows.
+            Future<void>.delayed(const Duration(milliseconds: 350), () {
+              if (field.mounted) syncFromController();
+            });
+          },
           focusNode: focusNode,
           obscureText: obscureText,
           obscuringCharacter: '*',

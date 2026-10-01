@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/live_broadcast/controllers/live_broadcast_controller.dart';
+import 'package:qobo_one_live/app/user_flow/pk_battle/widgets/pk_battle_duration_picker_dialog.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/repo/pk/pk_repo.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
@@ -40,6 +41,8 @@ class PKBattleController extends GetxController {
   final myPoints = 0.obs;
   final opponentPoints = 0.obs;
   final timerSeconds = 300.obs;
+  bool _earlyFinishTriggered = false;
+  static const int earlyFinishBufferSec = 5;
   final battleStatus = ''.obs;
   final isFollowerMode = false.obs;
   final isBusy = false.obs;
@@ -556,6 +559,19 @@ class PKBattleController extends GetxController {
   }
 
   Future<void> sendInvitation(Map<String, dynamic> opponent) async {
+    final previewName =
+        _readText(opponent, ['hostName', 'name', 'title']).trim();
+    final durationSec = await PkBattleDurationPickerDialog.show(
+      opponentName: previewName.isNotEmpty ? previewName : 'PK Opponent',
+    );
+    if (durationSec == null) {
+      // User cancelled picker — keep prior flow idle (or leave search).
+      if (pkState.value == PKState.searching) {
+        pkState.value = PKState.idle;
+      }
+      return;
+    }
+
     setupOpponent(opponent);
     final targetRoomId = currentOpponentRoomId.value.trim();
     if (myRoomId.value.isEmpty || targetRoomId.isEmpty) {
@@ -568,7 +584,7 @@ class PKBattleController extends GetxController {
     final response = await _pkRepo.sendPkRequest(
       roomId: myRoomId.value,
       targetRoomId: targetRoomId,
-      duration: 300,
+      duration: durationSec,
     );
 
     if (!_isSuccess(response)) {
@@ -688,9 +704,11 @@ class PKBattleController extends GetxController {
   }
 
   void endBattle({String? winnerId}) {
+    if (pkState.value == PKState.completed) return;
     _battleTimer?.cancel();
     _statusPollTimer?.cancel();
     _requestExpiryTimer?.cancel();
+    _earlyFinishTriggered = true;
     pkState.value = PKState.completed;
 
     final bool won = winnerId != null
@@ -1016,7 +1034,19 @@ class PKBattleController extends GetxController {
 
   void _startLocalBattleClock() {
     _battleTimer?.cancel();
+    _earlyFinishTriggered = false;
     _battleTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (pkState.value != PKState.inBattle) return;
+
+      // Reveal winner 5s early (e.g. 2 min battle → finish at 115s).
+      if (!_earlyFinishTriggered &&
+          timerSeconds.value <= earlyFinishBufferSec) {
+        _earlyFinishTriggered = true;
+        timer.cancel();
+        endBattle();
+        return;
+      }
+
       if (timerSeconds.value > 0) {
         timerSeconds.value--;
       } else {

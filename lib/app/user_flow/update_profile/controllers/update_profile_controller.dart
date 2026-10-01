@@ -243,7 +243,11 @@ class UpdateProfileController extends GetxController
       maxAge - minAge + 1,
       (index) => minAge + index,
     );
-    const initialAge = 18;
+    final initialAge = (selectedAge.value != null &&
+            selectedAge.value! >= minAge &&
+            selectedAge.value! <= maxAge)
+        ? selectedAge.value!
+        : minAge;
     var temporaryAge = initialAge;
     final scrollController = FixedExtentScrollController(
       initialItem: ageValues.indexOf(initialAge),
@@ -320,14 +324,22 @@ class UpdateProfileController extends GetxController
         );
       },
     );
+
+    // Clear stale "Age is required" after picker closes (glossy FormField sync).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      formKey.currentState?.validate();
+    });
   }
 
   String? validateBirthdate(String? value) {
-    if ((value ?? '').trim().isEmpty) {
+    final raw = (value ?? '').trim().isNotEmpty
+        ? value!.trim()
+        : birthdateController.text.trim();
+    final age = int.tryParse(raw) ?? selectedAge.value;
+    if (age == null) {
       return LocaleKeys.ageRequiredError.tr;
     }
-    final age = int.tryParse(value!.trim());
-    if (age == null || age < 18 || age > 100) {
+    if (age < 18 || age > 100) {
       return 'Age must be between 18 and 100';
     }
     return null;
@@ -618,6 +630,10 @@ class UpdateProfileController extends GetxController
     selectedAge.value = age;
     birthdateController.text = age.toString();
     selectedBirthdate.value = _dobFromAge(age);
+    // Glossy FormField may still hold an empty value until next validate.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      formKey.currentState?.validate();
+    });
   }
 
   DateTime _dobFromAge(int age) {

@@ -74,11 +74,10 @@ class GoogleSocialAuthProvider implements SocialAuthProvider {
         (detail.contains('28444') ||
             lower.contains('developer console') ||
             lower.contains('not set up correctly'))) {
-      return 'Google Sign-In setup error (28444). In Firebase project qobo1live-914ac '
-          '(or the same GCP project as your Web client): register Android app '
-          'package com.qobo1live.live with SHA-1 '
-          '01:EC:6E:88:2F:E0:EC:3A:22:08:2B:8A:D0:22:97:C8:0E:EA:B0:C6, '
-          'then flutter clean, uninstall the app, and reinstall.';
+      return 'Google Sign-In setup error (28444). In Firebase project qobo1live-914ac, '
+          'add the SHA-1 of the key that signed this build (debug keystore, upload '
+          'key, and Play App Signing key) to Android app com.qobo1live.live, then '
+          'download a fresh google-services.json and reinstall the app.';
     }
 
     if (e.code == GoogleSignInExceptionCode.clientConfigurationError) {

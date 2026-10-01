@@ -729,6 +729,17 @@ class LiveBroadcastController extends GetxController {
       _ensurePkHostMicOnly();
       return;
     }
+    if (isLiveStreamingSession) {
+      // Standalone live runs on Zego Express (not the prebuilt controller);
+      // the live view applies isCameraOff through enableCamera.
+      isCameraOff.value = false;
+      try {
+        unawaited(
+          ZegoExpressEngine.instance.enableCamera(true).catchError((_) {}),
+        );
+      } catch (_) {}
+      return;
+    }
     try {
       if (isAudioVideoRoom) {
         // Party video rooms use the group-call Zego engine (not live-streaming).
@@ -2987,6 +2998,20 @@ class LiveBroadcastController extends GetxController {
     final text = chatTextController.text.trim();
     if (text.isEmpty) return;
 
+    // During host-vs-host PK early-finish / reveal, freeze chat only.
+    if (isInRoomPkActive && Get.isRegistered<PkV1Controller>()) {
+      final pk = Get.find<PkV1Controller>();
+      if (pk.interactionsLocked.value ||
+          pk.stage.value == PkArenaStage.finished) {
+        _showRoomToast(
+          'PK Battle',
+          'Chat is paused while the winner is revealed.',
+          isWarning: true,
+        );
+        return;
+      }
+    }
+
     final badWords = ['bad', 'scam', 'spam', 'abuse', 'hate', 'cheat', 'fraud'];
     var moderatedText = text;
     var containsBadWord = false;
@@ -3771,6 +3796,20 @@ class LiveBroadcastController extends GetxController {
         isWarning: true,
       );
       return;
+    }
+
+    // Last 5s / reveal: freeze gifts without leaving the live room.
+    if (isInRoomPkActive && Get.isRegistered<PkV1Controller>()) {
+      final pk = Get.find<PkV1Controller>();
+      if (pk.interactionsLocked.value ||
+          pk.stage.value == PkArenaStage.finished) {
+        _showRoomToast(
+          'PK Battle',
+          'Gifting is paused while the winner is revealed.',
+          isWarning: true,
+        );
+        return;
+      }
     }
 
     // Host-vs-host PK: gift to Side A / Side B instead of room-wide gifts.
@@ -6297,6 +6336,14 @@ class LiveBroadcastController extends GetxController {
   void toggleCamera() {
     if (!isVideoRoom) return;
     if (isLiveStreamingSession) {
+      if (isHost.value && isInRoomPkActive && !isCameraOff.value) {
+        _showRoomToast(
+          'PK Battle',
+          'Camera stays on during a PK battle.',
+          isWarning: true,
+        );
+        return;
+      }
       isCameraOff.toggle();
       return;
     }

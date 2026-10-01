@@ -164,7 +164,9 @@ class PkV1ArenaView extends GetView<PkV1Controller> {
           ),
           const SizedBox(width: 8),
           GestureDetector(
-            onTap: enabled ? () => controller.invite(host) : null,
+            onTap: enabled
+                ? () => controller.inviteAfterPickingDuration(host)
+                : null,
             child: Opacity(
               opacity: enabled ? 1 : 0.5,
               child: Container(

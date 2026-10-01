@@ -7,6 +7,7 @@ import 'package:qobo_one_live/repo/pk/pk_repo.dart';
 import 'package:qobo_one_live/repo/pk/pk_v1_repo.dart';
 import 'package:qobo_one_live/repo/room/room_repo.dart';
 import 'package:qobo_one_live/app/user_flow/live_broadcast/controllers/live_broadcast_controller.dart';
+import 'package:qobo_one_live/app/user_flow/pk_battle/widgets/pk_battle_duration_picker_dialog.dart';
 import 'package:qobo_one_live/app/user_flow/pk_battle/widgets/pk_winner_celebration_overlay.dart';
 import 'package:qobo_one_live/services/pk/pk_live_room_bridge.dart';
 import 'package:qobo_one_live/services/realtime/user_realtime_socket_service.dart';
@@ -108,12 +109,19 @@ class PkV1Controller extends GetxController {
   /// When true, battle UI is rendered inside the live room (not the arena route).
   final embeddedInLiveRoom = false.obs;
 
+  /// When true, gifts + chat are frozen (last 5s / result reveal).
+  final interactionsLocked = false.obs;
+
   Timer? _clockTimer;
   Timer? _resyncTimer;
   Timer? _exitAfterResultTimer;
   Duration _serverOffset = Duration.zero;
   int _giftSeq = 0;
   bool _resultHandled = false;
+  bool _earlyFinishTriggered = false;
+
+  /// Show winner / lock gifts & chat this many seconds before timer hits 0.
+  static const int earlyFinishBufferSec = 5;
 
   /// Dedupes gift celebration when both PK_GIFT_RECEIVED and score.lastGift fire.
   final Set<String> _presentedGiftKeys = <String>{};
@@ -216,6 +224,8 @@ class PkV1Controller extends GetxController {
     scoreB.value = 0;
     remainingSeconds.value = 0;
     countdownRemainingSec.value = 0;
+    interactionsLocked.value = false;
+    _earlyFinishTriggered = false;
     machineState.value = '';
     rtcBridge.value = null;
     lastStateTransition.value = null;
@@ -251,6 +261,8 @@ class PkV1Controller extends GetxController {
     _resyncTimer?.cancel();
     _exitAfterResultTimer?.cancel();
     _resultHandled = false;
+    _earlyFinishTriggered = false;
+    interactionsLocked.value = false;
 
     // selfName kept for call-site API; preview always uses design-ref hosts.
     final avatarA = selfAvatar ?? this.selfAvatar;
@@ -355,6 +367,8 @@ class PkV1Controller extends GetxController {
     incomingInvitation.value = null;
     result.value = null;
     _resultHandled = false;
+    interactionsLocked.value = false;
+    _earlyFinishTriggered = false;
     _startAtSelection();
   }
 
@@ -556,6 +570,19 @@ class PkV1Controller extends GetxController {
     }
   }
 
+  /// Shows duration picker, then sends invite. Cancel leaves stage unchanged.
+  Future<void> inviteAfterPickingDuration(PkEligibleHost host) async {
+    if (!host.canReceivePk) {
+      _toast('Host is currently in another battle');
+      return;
+    }
+    final durationSec = await PkBattleDurationPickerDialog.show(
+      opponentName: host.displayName,
+    );
+    if (durationSec == null) return;
+    await invite(host, durationSec: durationSec);
+  }
+
   Future<void> invite(PkEligibleHost host, {int durationSec = 180}) async {
     if (!host.canReceivePk) {
       _toast('Host is currently in another battle');
@@ -687,6 +714,15 @@ class PkV1Controller extends GetxController {
         s.sideB.earnings > 0 ? s.sideB.earnings : s.sideB.diamonds;
     machineState.value = s.status.name;
     outgoingInvitation.value = null;
+    // Fresh session — allow gifts/chat until early-finish window.
+    if (s.status == PkSessionStatus.battleActive ||
+        s.status == PkSessionStatus.live ||
+        s.status == PkSessionStatus.countdown ||
+        s.status == PkSessionStatus.starting) {
+      interactionsLocked.value = false;
+      _earlyFinishTriggered = false;
+      _resultHandled = false;
+    }
     _applyAudiencesFromSession(s);
 
     // Server-authoritative clock offset.
@@ -844,16 +880,92 @@ class PkV1Controller extends GetxController {
       if (remainingSeconds.value > 0) {
         remainingSeconds.value = remainingSeconds.value - 1;
       }
+    } else {
+      final serverNow = DateTime.now().toUtc().add(_serverOffset);
+      final remaining = endsAt.difference(serverNow).inSeconds;
+      remainingSeconds.value = remaining > 0 ? remaining : 0;
+    }
+
+    if (stage.value != PkArenaStage.battling) return;
+
+    // Last [earlyFinishBufferSec]: freeze gifts/chat and show winner/loser.
+    // Example: 2 min battle → at 115s remaining==5 → reveal result.
+    if (_shouldTriggerEarlyFinish) {
+      _beginEarlyFinish();
       return;
     }
-    final serverNow = DateTime.now().toUtc().add(_serverOffset);
-    final remaining = endsAt.difference(serverNow).inSeconds;
-    remainingSeconds.value = remaining > 0 ? remaining : 0;
-    if (remaining <= 0 && stage.value == PkArenaStage.battling) {
-      // Timer hit zero — server closes scoring; fetch authoritative result.
+
+    if (remainingSeconds.value <= 0) {
       _clockTimer?.cancel();
-      _loadResult(s!.pkId);
+      final pkId = s?.pkId;
+      if (pkId != null && pkId.isNotEmpty) {
+        _loadResult(pkId);
+      }
     }
+  }
+
+  bool get _shouldTriggerEarlyFinish {
+    if (_earlyFinishTriggered || _resultHandled) return false;
+    if (stage.value != PkArenaStage.battling) return false;
+    final duration = session.value?.durationSec ?? 0;
+    // Only apply early finish when battle is longer than the buffer.
+    if (duration > 0 && duration <= earlyFinishBufferSec) return false;
+    return remainingSeconds.value <= earlyFinishBufferSec;
+  }
+
+  /// Client-side early close: lock interactions + show winner without waiting
+  /// for the final 5 seconds of the server timer. Does not leave the live room.
+  void _beginEarlyFinish() {
+    if (_earlyFinishTriggered || _resultHandled) return;
+    _earlyFinishTriggered = true;
+    interactionsLocked.value = true;
+    _clockTimer?.cancel();
+    _resyncTimer?.cancel();
+
+    final pkId = session.value?.pkId ?? '';
+    unawaited(_finishWithServerOrLocalScores(pkId));
+  }
+
+  Future<void> _finishWithServerOrLocalScores(String pkId) async {
+    if (_resultHandled) return;
+    if (pkId.isNotEmpty && !pkId.startsWith('ui_preview_')) {
+      try {
+        final body = await _repo.getResult(pkId: pkId);
+        if (PkV1Repo.isSuccess(body) && !_resultHandled) {
+          _applyResult(PkResult.fromJson(PkV1Repo.dataOf(body)));
+          return;
+        }
+      } catch (e) {
+        LoggerUtils.logWarning('PkV1: early getResult failed — $e');
+      }
+    }
+    if (_resultHandled) return;
+    _applyResult(_localResultFromScores(pkId));
+  }
+
+  PkResult _localResultFromScores(String pkId) {
+    final a = scoreA.value;
+    final b = scoreB.value;
+    final side = a > b
+        ? PkBattleSide.a
+        : b > a
+            ? PkBattleSide.b
+            : PkBattleSide.tie;
+    final s = session.value;
+    final winnerId = side == PkBattleSide.a
+        ? (s?.sideA.hostId ?? '')
+        : side == PkBattleSide.b
+            ? (s?.sideB.hostId ?? '')
+            : '';
+    return PkResult(
+      pkId: pkId.isNotEmpty ? pkId : (s?.pkId ?? ''),
+      status: PkSessionStatus.ended,
+      winnerSide: side,
+      winnerId: winnerId,
+      scoreA: a,
+      scoreB: b,
+      durationSec: s?.durationSec ?? 0,
+    );
   }
 
   String get formattedTime {
@@ -898,6 +1010,10 @@ class PkV1Controller extends GetxController {
     required PkBattleSide side,
     int quantity = 1,
   }) async {
+    if (interactionsLocked.value || stage.value == PkArenaStage.finished) {
+      _toast('PK scoring has ended — winner is being revealed');
+      return;
+    }
     if (isSelfHost) {
       _toast('Hosts can’t send gifts during PK Battle');
       return;
