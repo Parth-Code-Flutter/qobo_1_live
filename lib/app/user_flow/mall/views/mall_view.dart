@@ -78,12 +78,7 @@ class MallView extends GetView<MallController> {
             Material(
               color: Colors.transparent,
               child: InkWell(
-                onTap: () {
-                  Get.snackbar(
-                    'Recharge',
-                    'Redirecting to coin recharge packages...',
-                  );
-                },
+                onTap: controller.openWallet,
                 borderRadius: BorderRadius.circular(14),
                 child: Ink(
                   height: 36,
@@ -125,11 +120,7 @@ class MallView extends GetView<MallController> {
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFFFF8FC),
-              Color(0xFFF5ECFF),
-              Color(0xFFFFE8F4),
-            ],
+            colors: [Color(0xFFFFF8FC), Color(0xFFF5ECFF), Color(0xFFFFE8F4)],
           ),
           border: Border.all(
             color: AppLightUi.pinkSoft.withValues(alpha: 0.55),
@@ -441,7 +432,9 @@ class MallView extends GetView<MallController> {
                       vertical: 9,
                     ),
                     decoration: BoxDecoration(
-                      gradient: isSelected ? AppLightUi.familyCtaGradient : null,
+                      gradient: isSelected
+                          ? AppLightUi.familyCtaGradient
+                          : null,
                       color: isSelected ? null : AppLightUi.card,
                       borderRadius: BorderRadius.circular(22),
                       border: Border.all(
@@ -543,9 +536,7 @@ class MallView extends GetView<MallController> {
                 color: AppLightUi.card,
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
-                  color: isSelected
-                      ? AppLightUi.pink
-                      : AppLightUi.border,
+                  color: isSelected ? AppLightUi.pink : AppLightUi.border,
                   width: isSelected ? 1.8 : 1.1,
                 ),
                 boxShadow: isSelected
@@ -780,15 +771,28 @@ class _StoreItemVisual extends StatelessWidget {
       );
     }
 
+    final iconAsset = SvgPicture.asset(
+      item['icon'] as String,
+      width: 44,
+      height: 44,
+      fit: BoxFit.contain,
+    );
+    final imageUrl = item['imageUrl']?.toString() ?? '';
+    final isSvga = imageUrl.toLowerCase().contains('.svga');
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: AppLightUi.iconTileDecoration(AppLightUi.violet, radius: 40),
-      child: SvgPicture.asset(
-        item['icon'] as String,
-        width: 44,
-        height: 44,
-        fit: BoxFit.contain,
-      ),
+      child: imageUrl.isNotEmpty && !isSvga
+          ? ClipOval(
+              child: Image.network(
+                imageUrl,
+                width: 44,
+                height: 44,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => iconAsset,
+              ),
+            )
+          : iconAsset,
     );
   }
 }

@@ -787,6 +787,21 @@ class ChatFirebaseService {
         messageType: type,
       ),
     );
+    // Receiver's inbox too (calls already update both sides), otherwise the
+    // receiver keeps showing the previous call / message as the last item.
+    if (recipientId != null && recipientId.isNotEmpty) {
+      unawaited(
+        _touchInboxPreview(
+          firestore: firestore,
+          userId: recipientId,
+          roomId: roomId,
+          preview: inboxPreview ?? text,
+          senderId: authUid,
+          peerId: authUid,
+          messageType: type,
+        ),
+      );
+    }
 
     return messageId;
   }
@@ -912,6 +927,11 @@ class ChatFirebaseService {
             'updatedAt': FieldValue.serverTimestamp(),
             'roomId': roomId,
             if (peerId != null && peerId.isNotEmpty) 'peerId': peerId,
+            // A newer non-call message replaces the call preview.
+            if (!ChatInboxPreviewType.isCallType(messageType)) ...{
+              'lastCallStatus': FieldValue.delete(),
+              'lastCallType': FieldValue.delete(),
+            },
           }, SetOptions(merge: true));
     } catch (e) {
       LoggerUtils.logWarning(

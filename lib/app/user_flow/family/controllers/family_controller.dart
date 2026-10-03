@@ -74,6 +74,8 @@ class FamilyController extends GetxController {
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _typingSub;
   Timer? _typingDebounce;
   Timer? _typingClearTimer;
+  bool _chatInitialSnapshotSeen = false;
+  final Set<String> _celebratedGiftMessageIds = <String>{};
 
   Timer? _pickerSearchDebounce;
 
@@ -589,6 +591,7 @@ class FamilyController extends GetxController {
     _activeChatFamilyId = id;
     chatListenError.value = '';
     isLoadingChatMessages.value = true;
+    unawaited(loadGiftCatalog());
 
     final signedIn = await _ensureFirebaseChatSession();
     if (_activeChatFamilyId != id) return;
@@ -617,6 +620,7 @@ class FamilyController extends GetxController {
                 (a, b) => _messageTime(a).compareTo(_messageTime(b)),
               );
               activeChatMessages.assignAll(messages);
+              _celebrateIncomingGifts(snapshot);
               chatListenError.value = '';
               isLoadingChatMessages.value = false;
             },
@@ -658,6 +662,8 @@ class FamilyController extends GetxController {
     typingPeerNames.clear();
     await _chatSub?.cancel();
     _chatSub = null;
+    _chatInitialSnapshotSeen = false;
+    _celebratedGiftMessageIds.clear();
     _activeChatFamilyId = '';
     chatListenError.value = '';
     activeChatMessages.clear();
@@ -1021,6 +1027,56 @@ class FamilyController extends GetxController {
     );
   }
 
+  /// Plays the full-screen celebration for gifts other members send while this
+  /// chat is open. The first snapshot is history, so it is skipped; the sender
+  /// already celebrated locally in [sendGift].
+  void _celebrateIncomingGifts(QuerySnapshot<Map<String, dynamic>> snapshot) {
+    if (!_chatInitialSnapshotSeen) {
+      _chatInitialSnapshotSeen = true;
+      for (final doc in snapshot.docs) {
+        _celebratedGiftMessageIds.add(doc.id);
+      }
+      return;
+    }
+
+    final myId = currentUserId;
+    for (final change in snapshot.docChanges) {
+      if (change.type != DocumentChangeType.added) continue;
+      final doc = change.doc;
+      if (!_celebratedGiftMessageIds.add(doc.id)) continue;
+      final data = doc.data();
+      if (data == null) continue;
+      if ((data['type']?.toString() ?? '').toLowerCase() != 'gift') continue;
+      if ((data['senderId']?.toString() ?? '') == myId) continue;
+
+      final giftId = (data['giftId'] ?? data['gift_id'] ?? '').toString();
+      final fromCatalog = GiftMediaUtils.catalogMediaById(
+        giftId,
+        giftCatalog.toList(),
+      );
+      final animationUrl = fromCatalog.$1.isNotEmpty
+          ? fromCatalog.$1
+          : (data['giftAnimationUrl'] ?? data['animationUrl'] ?? '').toString();
+      final soundUrl = fromCatalog.$2.isNotEmpty
+          ? fromCatalog.$2
+          : (data['giftSoundUrl'] ?? data['soundUrl'] ?? '').toString();
+      final imageUrl =
+          (data['giftThumbnailUrl'] ??
+                  data['giftImage'] ??
+                  data['giftIcon'] ??
+                  '')
+              .toString();
+
+      GiftMediaUtils.showCelebration(
+        giftName: (data['giftName'] ?? data['gift_name'])?.toString(),
+        animationUrl: animationUrl,
+        imageUrl: imageUrl,
+        soundUrl: soundUrl,
+        enqueueIfBusy: true,
+      );
+    }
+  }
+
   final updatedGroupPhotos = <String, String>{}.obs;
   final updatingGroupPhotos = <String>[].obs;
 
@@ -1040,7 +1096,9 @@ class FamilyController extends GetxController {
 
   Future<void> updateGroupPhoto(Map<String, dynamic> group, File file) async {
     final id = familyIdOf(group);
-    if (id.isEmpty || !isFamilyOwner(group) || updatingGroupPhotos.contains(id)) {
+    if (id.isEmpty ||
+        !isFamilyOwner(group) ||
+        updatingGroupPhotos.contains(id)) {
       return;
     }
     updatingGroupPhotos.add(id);

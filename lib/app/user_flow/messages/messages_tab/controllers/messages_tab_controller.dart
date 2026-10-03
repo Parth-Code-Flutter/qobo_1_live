@@ -223,6 +223,10 @@ class MessagesTabController extends GetxController {
     final pickB = bTime != null && (aTime == null || !bTime.isBefore(aTime));
     final newer = pickB ? b : a;
     final older = pickB ? a : b;
+    // Only inherit an older call preview when both sources report the same
+    // moment (one lacks call info); a genuinely newer text must win.
+    final sameMoment =
+        aTime == null || bTime == null || aTime.isAtSameMomentAs(bTime);
 
     return MessageListItemModel(
       targetId: newer.targetId,
@@ -235,7 +239,8 @@ class MessagesTabController extends GetxController {
       roomId: newer.roomId.isNotEmpty ? newer.roomId : older.roomId,
       lastMessageType: newer.lastMessageType != ChatInboxPreviewType.text
           ? newer.lastMessageType
-          : (ChatInboxPreviewType.isCallType(older.lastMessageType)
+          : (sameMoment &&
+                  ChatInboxPreviewType.isCallType(older.lastMessageType)
               ? older.lastMessageType
               : newer.lastMessageType),
       lastCallDirection: newer.lastCallDirection ?? older.lastCallDirection,
@@ -348,8 +353,8 @@ class MessagesTabController extends GetxController {
         ? null
         : SocialUserCard.fromJson(recipientMap).avatarFrameUrl;
 
-    var lastMessageType =
-        json['lastMessageType']?.toString() ?? ChatInboxPreviewType.text;
+    final rawLastMessageType = json['lastMessageType']?.toString();
+    var lastMessageType = rawLastMessageType ?? ChatInboxPreviewType.text;
     final previewRaw =
         json['lastMessage']?.toString() ??
         json['lastMessagePreview']?.toString() ??
@@ -358,7 +363,13 @@ class MessagesTabController extends GetxController {
     final callStatus = json['lastCallStatus']?.toString();
     final callDirection = json['lastCallDirection']?.toString();
     final callMediaType = json['lastCallType']?.toString();
-    if (callStatus != null &&
+    // Call fields linger after a call; only use them when the last item is a
+    // call (or the type is unknown), not when a newer text came after it.
+    final lastItemIsCall =
+        rawLastMessageType == null ||
+        ChatInboxPreviewType.isCallType(rawLastMessageType);
+    if (lastItemIsCall &&
+        callStatus != null &&
         callStatus.isNotEmpty &&
         callMediaType != null &&
         callMediaType.isNotEmpty) {

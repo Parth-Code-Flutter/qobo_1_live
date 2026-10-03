@@ -73,11 +73,7 @@ class SvipView extends GetView<SvipController> {
               shape: BoxShape.circle,
               border: Border.all(color: _gold.withValues(alpha: 0.35)),
             ),
-            child: const Icon(
-              Icons.stars_rounded,
-              color: _goldDeep,
-              size: 56,
-            ),
+            child: const Icon(Icons.stars_rounded, color: _goldDeep, size: 56),
           ),
           Spacing.v12,
           const BoldText(
@@ -90,7 +86,9 @@ class SvipView extends GetView<SvipController> {
           Obx(
             () => AppText(
               text: controller.isSvipActive.value
-                  ? '★ Active Member (Expires in 30 days) ★'
+                  ? controller.svipExpiryLabel.isEmpty
+                        ? '★ Active Member ★'
+                        : '★ Active Member (${controller.svipExpiryLabel}) ★'
                   : 'Unlock elite customizations and absolute immunity.',
               fontSize: TextStyles.k14FontSize,
               color: controller.isSvipActive.value
@@ -290,9 +288,7 @@ class SvipView extends GetView<SvipController> {
         width: 116,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
         decoration: BoxDecoration(
-          color: isSelected
-              ? _gold.withValues(alpha: 0.12)
-              : AppLightUi.card,
+          color: isSelected ? _gold.withValues(alpha: 0.12) : AppLightUi.card,
           border: Border.all(
             color: isSelected ? _gold : AppLightUi.border,
             width: 1.5,
@@ -364,27 +360,91 @@ class SvipView extends GetView<SvipController> {
       ),
       child: SafeArea(
         child: Obx(() {
-          final isAlreadyActive = controller.isSvipActive.value;
+          if (controller.isSvipActive.value) return _activeMemberBar();
           final isBusy = controller.isBuying.value;
           final canBuy = controller.plans.isNotEmpty && !isBusy;
           return appButton(
-            onPressed: isAlreadyActive || !canBuy
-                ? () {}
-                : controller.subscribe,
-            buttonText: isAlreadyActive
-                ? 'Membership Active'
-                : isBusy
-                ? 'Opening SVIP...'
-                : 'Open SVIP Now',
-            isGradient: !isAlreadyActive,
-            gradientColors: isAlreadyActive
-                ? null
-                : const [Color(0xFFFFD700), Color(0xFFFF8A48)],
-            buttonColor: isAlreadyActive ? AppLightUi.cardSoft : null,
-            textColor: isAlreadyActive ? AppLightUi.muted : AppLightUi.title,
+            onPressed: canBuy ? controller.subscribe : () {},
+            buttonText: isBusy ? 'Opening SVIP...' : 'Open SVIP Now',
+            gradientColors: const [Color(0xFFFFD700), Color(0xFFFF8A48)],
+            textColor: AppLightUi.title,
             borderRadius: 24,
           );
         }),
+      ),
+    );
+  }
+
+  Widget _activeMemberBar() {
+    final expiry = controller.svipExpiryLabel;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.92, end: 1),
+      duration: const Duration(milliseconds: 420),
+      curve: Curves.easeOutBack,
+      builder: (context, scale, child) =>
+          Transform.scale(scale: scale, child: child),
+      child: Container(
+        height: 52,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFFFE27A), Color(0xFFFFC233), Color(0xFFD4AF37)],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
+          boxShadow: [
+            BoxShadow(
+              color: _gold.withValues(alpha: 0.45),
+              blurRadius: 18,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.85),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.verified_rounded,
+                color: _goldDeep,
+                size: 18,
+              ),
+            ),
+            Spacing.h10,
+            const Flexible(
+              child: BoldText(
+                text: 'SVIP Member Active',
+                fontSize: TextStyles.k14FontSize,
+                color: Color(0xFF4A3200),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (expiry.isNotEmpty) ...[
+              Spacing.h8,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: AppText(
+                  text: expiry,
+                  fontSize: TextStyles.k10FontSize,
+                  color: const Color(0xFF6B4A00),
+                  maxLines: 1,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

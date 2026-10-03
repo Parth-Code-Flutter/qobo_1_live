@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/app/user_flow/wallet/bindings/wallet_binding.dart';
+import 'package:qobo_one_live/app/user_flow/wallet/views/wallet_view.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/repo/background/background_repo.dart';
 import 'package:qobo_one_live/repo/economy/economy_repo.dart';
@@ -16,10 +18,9 @@ class MallController extends GetxController {
     EconomyRepo? economyRepo,
     FrameRepo? frameRepo,
     BackgroundRepo? backgroundRepo,
-  })
-    : _economyRepo = economyRepo ?? EconomyRepo(),
-      _frameRepo = frameRepo ?? FrameRepo(),
-      _backgroundRepo = backgroundRepo ?? BackgroundRepo();
+  }) : _economyRepo = economyRepo ?? EconomyRepo(),
+       _frameRepo = frameRepo ?? FrameRepo(),
+       _backgroundRepo = backgroundRepo ?? BackgroundRepo();
 
   final EconomyRepo _economyRepo;
   final FrameRepo _frameRepo;
@@ -45,69 +46,51 @@ class MallController extends GetxController {
     fetchMall();
   }
 
-  final RxMap<int, List<Map<String, dynamic>>>
-  storeItems = <int, List<Map<String, dynamic>>>{
-    1: [
-      {
-        'id': 'frame_loading',
-        'name': 'Loading frames',
-        'icon': kIconUserLevel,
-        'price': 0,
-        'duration': 'Please wait',
-        'description': 'Fetching latest avatar frames from the mall.',
-      },
-    ],
-    2: [
-      {
-        'id': 'effect_dragon',
-        'name': 'Dragon Arrival',
-        'icon': kIconActivity,
-        'price': 2000,
-        'duration': '30 days',
-        'description':
-            'A massive fire-breathing dragon flies across the screen when you join.',
-      },
-      {
-        'id': 'effect_star',
-        'name': 'Star Shower',
-        'icon': kIconAward,
-        'price': 800,
-        'duration': '7 days',
-        'description':
-            'A shower of falling stars bursts around you upon entry.',
-      },
-    ],
-    3: [
-      {
-        'id': 'bubble_ocean',
-        'name': 'Ocean Bubble',
-        'icon': kIconPointerCenter,
-        'price': 300,
-        'duration': '7 days',
-        'description':
-            'A cooling light-blue bubble theme for all room text chats.',
-      },
-      {
-        'id': 'bubble_love',
-        'name': 'Love Heart',
-        'icon': kIconHeart,
-        'price': 600,
-        'duration': '7 days',
-        'description':
-            'Express yourself with a beautiful pink heart-adorned bubble.',
-      },
-    ],
-    4: [
-      {
-        'id': 'background_loading',
-        'name': 'Loading backgrounds',
-        'icon': kIconMall,
-        'price': 0,
-        'duration': 'Please wait',
-        'description': 'Fetching latest profile backgrounds from the mall.',
-      },
-    ],
-  }.obs;
+  final RxMap<int, List<Map<String, dynamic>>> storeItems =
+      <int, List<Map<String, dynamic>>>{
+        1: [
+          {
+            'id': 'frame_loading',
+            'name': 'Loading frames',
+            'icon': kIconUserLevel,
+            'price': 0,
+            'duration': 'Please wait',
+            'description': 'Fetching latest avatar frames from the mall.',
+          },
+        ],
+        2: [
+          {
+            'id': 'effect_loading',
+            'name': 'Loading effects',
+            'icon': kIconActivity,
+            'price': 0,
+            'duration': 'Please wait',
+            'description': 'Fetching latest entrance effects from the mall.',
+            'isPlaceholder': true,
+          },
+        ],
+        3: [
+          {
+            'id': 'bubble_loading',
+            'name': 'Loading bubbles',
+            'icon': kIconPointerCenter,
+            'price': 0,
+            'duration': 'Please wait',
+            'description': 'Fetching latest chat bubbles from the mall.',
+            'isPlaceholder': true,
+          },
+        ],
+        4: [
+          {
+            'id': 'background_loading',
+            'name': 'Loading backgrounds',
+            'icon': kIconMall,
+            'price': 0,
+            'duration': 'Please wait',
+            'description': 'Fetching latest profile backgrounds from the mall.',
+          },
+        ],
+      }.obs;
 
   void selectTab(int tabId) {
     selectedTab.value = tabId;
@@ -122,6 +105,7 @@ class MallController extends GetxController {
     try {
       await _fetchWalletBalance();
       await _fetchFrameShop();
+      await _fetchMallShop();
       await _fetchBackgroundShop();
       selectTab(selectedTab.value);
     } finally {
@@ -193,6 +177,121 @@ class MallController extends GetxController {
     merged[1] = frames;
     storeItems.assignAll(merged);
   }
+
+  /// Entrance effects (tab 2) and chat bubbles (tab 3) from
+  /// `GET /api/economy/mall`. Items are bucketed by their type/category.
+  Future<void> _fetchMallShop() async {
+    final response = await _economyRepo.getMallItems(isShowLoader: false);
+    final data = response?['data'];
+    final categoryKeyById = <String, String>{};
+    if (data is Map && data['categories'] is List) {
+      for (final raw in (data['categories'] as List).whereType<Map>()) {
+        categoryKeyById['${raw['id']}'] = '${raw['key'] ?? raw['name'] ?? ''}'
+            .toLowerCase();
+      }
+    }
+
+    final effects = <Map<String, dynamic>>[];
+    final bubbles = <Map<String, dynamic>>[];
+    for (final raw in _extractList(data).whereType<Map>()) {
+      final id = raw['id']?.toString() ?? '';
+      if (id.isEmpty) continue;
+      final status = raw['status']?.toString().toLowerCase() ?? '';
+      if ((status.isNotEmpty && status != 'active') ||
+          raw['isActive'] == false) {
+        continue;
+      }
+
+      final kind = [
+        raw['type'],
+        raw['itemType'],
+        raw['category'],
+        raw['categoryKey'],
+        categoryKeyById['${raw['categoryId']}'],
+      ].map((v) => (v ?? '').toString().toLowerCase()).join(' ');
+      final isEffect =
+          kind.contains('entrance') ||
+          kind.contains('effect') ||
+          kind.contains('vehicle') ||
+          kind.contains('mount');
+      final isBubble = kind.contains('bubble');
+      if (!isEffect && !isBubble) continue;
+
+      final durationDays = _toInt(raw['durationDays'] ?? raw['duration_days']);
+      final duration = raw['duration']?.toString().trim() ?? '';
+      final item = <String, dynamic>{
+        'id': id,
+        'name':
+            raw['name']?.toString() ??
+            (isEffect ? 'Entrance Effect' : 'Chat Bubble'),
+        'icon': isEffect ? kIconActivity : kIconPointerCenter,
+        'imageUrl': ApiImageUtils.normalize(
+          raw['iconUrl']?.toString() ??
+              raw['previewUrl']?.toString() ??
+              raw['imageUrl']?.toString() ??
+              raw['image']?.toString(),
+        ),
+        'svgaUrl': ApiImageUtils.normalize(
+          raw['animationUrl']?.toString() ?? raw['svgaUrl']?.toString(),
+        ),
+        'price': _toInt(raw['price']),
+        'duration': duration.isNotEmpty
+            ? duration
+            : durationDays > 0
+            ? '$durationDays days'
+            : 'Limited time',
+        'durationDays': durationDays,
+        'category': isEffect ? 'Entrance' : 'Bubble',
+        'description':
+            raw['description']?.toString() ??
+            (isEffect
+                ? 'Make a grand entrance when you join a room.'
+                : 'A premium bubble style for your room chats.'),
+        'isOwned': raw['isOwned'] == true,
+      };
+      (isEffect ? effects : bubbles).add(item);
+    }
+
+    final merged = Map<int, List<Map<String, dynamic>>>.from(storeItems);
+    merged[2] = effects.isEmpty
+        ? [
+            _emptyMallItem(
+              id: 'effect_empty',
+              name: 'No entrance effects yet',
+              icon: kIconActivity,
+              description: 'The mall has no entrance effects right now.',
+            ),
+          ]
+        : effects;
+    merged[3] = bubbles.isEmpty
+        ? [
+            _emptyMallItem(
+              id: 'bubble_empty',
+              name: 'No chat bubbles yet',
+              icon: kIconPointerCenter,
+              description: 'The mall has no chat bubbles right now.',
+            ),
+          ]
+        : bubbles;
+    storeItems.assignAll(merged);
+  }
+
+  Map<String, dynamic> _emptyMallItem({
+    required String id,
+    required String name,
+    required String icon,
+    required String description,
+  }) => {
+    'id': id,
+    'name': name,
+    'icon': icon,
+    'price': 0,
+    'duration': 'Check back soon',
+    'description': description,
+    'isOwned': false,
+    'isEquipped': false,
+    'isPlaceholder': true,
+  };
 
   Future<void> _fetchBackgroundShop() async {
     final shopResponse = await _backgroundRepo.getShopBackgrounds(
@@ -421,6 +520,9 @@ class MallController extends GetxController {
     }
 
     coinsBalance.value -= price;
+    final tab = selectedTab.value;
+    await _fetchMallShop();
+    selectTab(tab);
     await _showPurchaseSuccessDialog(name: name, price: price);
   }
 
@@ -460,12 +562,16 @@ class MallController extends GetxController {
         CommonAppDialogAction(
           label: 'Recharge Now',
           isPrimary: true,
-          onPressed: () {
-            Get.snackbar('Redirecting', 'Opening recharge panel...');
-          },
+          onPressed: openWallet,
         ),
       ],
     );
+  }
+
+  /// Opens Wallet to recharge, then refreshes the balance on return.
+  Future<void> openWallet() async {
+    await Get.to(() => const WalletView(), binding: WalletBinding());
+    await _fetchWalletBalance();
   }
 
   Map<String, Map<String, dynamic>> _purchasedFramesByFrameId(List items) {

@@ -4403,7 +4403,14 @@ class LiveBroadcastController extends GetxController {
         readRoomField(gift ?? const {}, const ['name', 'title']) ??
         readRoomField(data, const ['giftName', 'gift_name']) ??
         'Gift';
-    final animationUrl =
+    final giftId =
+        readRoomField(gift ?? const {}, const ['id', 'giftId', 'gift_id']) ??
+        readRoomField(data, const ['giftId', 'gift_id']);
+    final catalogMedia = GiftMediaUtils.catalogMediaById(
+      giftId,
+      giftCatalog.toList(),
+    );
+    final socketAnimationUrl =
         ApiImageUtils.normalize(
           readRoomField(gift ?? const {}, const [
                 'animationUrl',
@@ -4417,7 +4424,7 @@ class LiveBroadcastController extends GetxController {
               ]),
         ) ??
         '';
-    final soundUrl =
+    final socketSoundUrl =
         ApiImageUtils.normalize(
           readRoomField(gift ?? const {}, const [
                 'soundUrl',
@@ -4433,6 +4440,12 @@ class LiveBroadcastController extends GetxController {
               ]),
         ) ??
         '';
+    final animationUrl = catalogMedia.$1.isNotEmpty
+        ? catalogMedia.$1
+        : socketAnimationUrl;
+    final soundUrl = catalogMedia.$2.isNotEmpty
+        ? catalogMedia.$2
+        : socketSoundUrl;
     GiftMediaUtils.showCelebration(
       giftName: giftName,
       animationUrl: animationUrl,

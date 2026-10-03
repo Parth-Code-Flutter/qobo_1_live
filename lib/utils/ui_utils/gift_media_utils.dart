@@ -45,11 +45,18 @@ abstract final class GiftMediaUtils {
     };
   }
 
-  /// Prefers send-gift response media, then falls back to the catalog gift.
+  /// Prefers the catalog (gift-list) URL, then falls back to send-gift media.
+  ///
+  /// send-gift has returned URLs on a different host than gift-list (e.g.
+  /// `dev-api` → 404 on production), so the catalog URL is the reliable one.
   static String animationUrlFromResponse(
     Map<String, dynamic>? response,
     Map<String, String> gift,
   ) {
+    final catalogUrl = gift['animationUrl']?.trim() ?? '';
+    if (catalogUrl.isNotEmpty) {
+      return ApiImageUtils.normalize(catalogUrl) ?? catalogUrl;
+    }
     final data = response?['data'];
     final responseGift = data is Map ? data['gift'] : null;
     final apiAnimationUrl = responseGift is Map
@@ -67,11 +74,15 @@ abstract final class GiftMediaUtils {
         '';
   }
 
-  /// Prefers send-gift response sound, then falls back to the catalog gift.
+  /// Prefers the catalog (gift-list) sound, then falls back to send-gift media.
   static String soundUrlFromResponse(
     Map<String, dynamic>? response,
     Map<String, String> gift,
   ) {
+    final catalogUrl = gift['soundUrl']?.trim() ?? '';
+    if (catalogUrl.isNotEmpty) {
+      return ApiImageUtils.normalize(catalogUrl) ?? catalogUrl;
+    }
     final data = response?['data'];
     final responseGift = data is Map ? data['gift'] : null;
     final soundValue =
@@ -253,6 +264,23 @@ abstract final class GiftMediaUtils {
       soundUrl: soundUrl,
       enqueueIfBusy: enqueueIfBusy,
     );
+  }
+
+  /// `(animationUrl, soundUrl)` from the catalog for a gift id, or empty.
+  static (String, String) catalogMediaById(
+    String? giftId,
+    List<Map<String, String>> giftCatalog,
+  ) {
+    final id = giftId?.trim() ?? '';
+    if (id.isEmpty) return ('', '');
+    for (final gift in giftCatalog) {
+      if ((gift['id'] ?? '').trim() != id) continue;
+      return (
+        gift['animationUrl']?.trim() ?? '',
+        gift['soundUrl']?.trim() ?? '',
+      );
+    }
+    return ('', '');
   }
 
   /// `(animationUrl, soundUrl)` from the in-room catalog for a gift chat line.

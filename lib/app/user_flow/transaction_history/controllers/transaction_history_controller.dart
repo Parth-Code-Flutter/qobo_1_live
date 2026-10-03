@@ -15,6 +15,9 @@ class TransactionHistoryController extends GetxController {
   // Selected tab index: 0 = Coins, 1 = Diamonds
   final selectedTab = 0.obs;
 
+  // List filter: 0 = All, 1 = Received, 2 = Spent
+  final filter = 0.obs;
+
   final coinTransactions = <Map<String, dynamic>>[].obs;
   final diamondTransactions = <Map<String, dynamic>>[].obs;
 
@@ -101,18 +104,14 @@ class TransactionHistoryController extends GetxController {
 
   Map<String, dynamic> _mapTransaction(Map<String, dynamic> raw) {
     final amountValue = _readAmount(raw);
-    final isAddition =
-        raw['isAddition'] == true ||
-        raw['direction']?.toString().toLowerCase() == 'credit' ||
-        raw['transactionType']?.toString().toLowerCase() == 'credit' ||
-        amountValue > 0;
-
-    final absAmount = formatLedgerAmount(amountValue.abs());
     final type =
         raw['type']?.toString() ??
         raw['category']?.toString() ??
         raw['transactionType']?.toString() ??
         'Transaction';
+    final isAddition = _isCredit(raw, type, amountValue);
+
+    final absAmount = formatLedgerAmount(amountValue.abs());
     final metadata = raw['metadata'];
     final metadataMap = metadata is Map
         ? Map<String, dynamic>.from(metadata)
@@ -131,7 +130,7 @@ class TransactionHistoryController extends GetxController {
           _recruitmentBonusTitle(type) ??
           raw['description']?.toString() ??
           raw['message']?.toString() ??
-          type,
+          _readableType(type),
       'subtitle':
           raw['subtitle']?.toString() ??
           raw['note']?.toString() ??
@@ -141,6 +140,7 @@ class TransactionHistoryController extends GetxController {
           raw['hostName']?.toString() ??
           '',
       'amount': absAmount,
+      'amountValue': amountValue.abs(),
       'amountUsd': usdLabel,
       'isAddition': isAddition,
       'date': _formatDate(
@@ -149,8 +149,65 @@ class TransactionHistoryController extends GetxController {
             raw['date'] ??
             raw['timestamp'],
       ),
+      'dateTime': DateTime.tryParse(
+        '${raw['createdAt'] ?? raw['created_at'] ?? raw['date'] ?? raw['timestamp'] ?? ''}',
+      )?.toLocal(),
       'type': type,
     };
+  }
+
+  /// The ledger API sends positive amounts for spends too, so the type decides
+  /// when no explicit direction / negative amount is present.
+  bool _isCredit(Map<String, dynamic> raw, String type, num amount) {
+    if (raw['isAddition'] is bool) return raw['isAddition'] as bool;
+    final direction =
+        '${raw['direction'] ?? raw['transactionType'] ?? raw['flow'] ?? ''}'
+            .toLowerCase();
+    if (direction == 'credit' || direction == 'in') return true;
+    if (direction == 'debit' || direction == 'out') return false;
+    if (amount < 0) return false;
+
+    final t = type.toUpperCase();
+    const creditHints = [
+      'EARNING',
+      'RECEIVED',
+      'RECEIVE',
+      'BONUS',
+      'RECHARGE',
+      'TOPUP',
+      'TOP_UP',
+      'REFUND',
+      'REWARD',
+      'INCOME',
+      'CREDIT',
+      'COIN_SELLER',
+    ];
+    if (creditHints.any(t.contains)) return true;
+    const debitHints = [
+      'PURCHASE',
+      'BUY',
+      'GIFT',
+      'SEND',
+      'SENT',
+      'WITHDRAW',
+      'CHARGE',
+      'SPEND',
+      'DEDUCT',
+      'FEE',
+      'DEBIT',
+      'CALL',
+      'EXCHANGE',
+    ];
+    if (debitHints.any(t.contains)) return false;
+    return amount > 0;
+  }
+
+  /// `FAMILY_GIFT_EARNING` → `Family Gift Earning`.
+  String _readableType(String type) {
+    if (!type.contains('_') && type != type.toUpperCase()) return type;
+    return _ledgerLabel(
+      type,
+    ).replaceAll('Vip', 'VIP').replaceAll('Svip', 'SVIP');
   }
 
   bool _isRecruitmentBonus(String type) {

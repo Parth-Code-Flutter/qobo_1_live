@@ -117,10 +117,7 @@ class ChatVoiceCallView extends GetView<ChatVoiceCallController> {
             ]
           : const [ZegoCallMenuBarButtonName.hangUpButton],
       extendButtons: isVideo
-          ? const [
-              ChatCallSpeakerButton(size: 60),
-              _ChatCallFilterButton(),
-            ]
+          ? const [ChatCallSpeakerButton(size: 60), _ChatCallFilterButton()]
           : const [ChatCallMicButton(), ChatCallSpeakerButton()],
     );
 
@@ -949,9 +946,7 @@ class _CallTopOverlay extends GetView<ChatVoiceCallController> {
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.56),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: kColorWhite.withValues(alpha: 0.12),
-                ),
+                border: Border.all(color: kColorWhite.withValues(alpha: 0.12)),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.25),
@@ -983,83 +978,88 @@ class _CallTopOverlay extends GetView<ChatVoiceCallController> {
                     ),
                   ),
                   Spacing.h8,
-                  GestureDetector(
-                    onTap: () => _showProfileSheet(context),
-                    behavior: HitTestBehavior.opaque,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        AppUserAvatar(
-                          name: controller.isVideo.value
-                              ? controller.peerName.value
-                              : controller.currentUserName,
-                          imageUrl: controller.isVideo.value
-                              ? controller.peerAvatar.value
-                              : controller.currentUserAvatar,
-                          frameUrl: controller.isVideo.value
-                              ? controller.peerFrameUrl.value
-                              : controller.currentUserFrameUrl,
-                          frameSeed: controller.isVideo.value
-                              ? (controller.hostId.value.isNotEmpty
-                                    ? controller.hostId.value
-                                    : controller.peerName.value)
-                              : controller.currentUserFrameSeed,
-                          size: 44,
-                          fontSize: TextStyles.k14FontSize,
-                        ),
-                        Spacing.h8,
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 110),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SemiBoldText(
-                                text: controller.isVideo.value
-                                    ? controller.peerName.value
-                                    : controller.currentUserName,
-                                fontSize: TextStyles.k14FontSize,
-                                color: kColorWhite,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              Spacing.v2,
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 7,
-                                    height: 7,
-                                    decoration: BoxDecoration(
-                                      color: controller.hasPeerJoined.value
-                                          ? const Color(0xFF24C08A)
-                                          : Colors.amber,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  Spacing.h6,
-                                  AppText(
-                                    text: controller.formattedDuration,
-                                    fontSize: TextStyles.k10FontSize,
-                                    color: kColorWhite.withValues(alpha: 0.78),
-                                  ),
-                                ],
-                              ),
-                            ],
+                  // Expanded so the name area shrinks (ellipsis) instead of
+                  // pushing the billing pill off-screen.
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => _showProfileSheet(context),
+                      behavior: HitTestBehavior.opaque,
+                      child: Row(
+                        children: [
+                          AppUserAvatar(
+                            name: controller.isVideo.value
+                                ? controller.peerName.value
+                                : controller.currentUserName,
+                            imageUrl: controller.isVideo.value
+                                ? controller.peerAvatar.value
+                                : controller.currentUserAvatar,
+                            frameUrl: controller.isVideo.value
+                                ? controller.peerFrameUrl.value
+                                : controller.currentUserFrameUrl,
+                            frameSeed: controller.isVideo.value
+                                ? (controller.hostId.value.isNotEmpty
+                                      ? controller.hostId.value
+                                      : controller.peerName.value)
+                                : controller.currentUserFrameSeed,
+                            size: 44,
+                            fontSize: TextStyles.k14FontSize,
                           ),
-                        ),
-                      ],
+                          Spacing.h8,
+                          Flexible(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SemiBoldText(
+                                  text: controller.isVideo.value
+                                      ? controller.peerName.value
+                                      : controller.currentUserName,
+                                  fontSize: TextStyles.k14FontSize,
+                                  color: kColorWhite,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Spacing.v2,
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 7,
+                                      height: 7,
+                                      decoration: BoxDecoration(
+                                        color: controller.hasPeerJoined.value
+                                            ? const Color(0xFF24C08A)
+                                            : Colors.amber,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    Spacing.h6,
+                                    Flexible(
+                                      child: AppText(
+                                        text: controller.formattedDuration,
+                                        fontSize: TextStyles.k10FontSize,
+                                        color: kColorWhite.withValues(
+                                          alpha: 0.78,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  const Spacer(),
-                  Flexible(
-                    flex: 0,
-                    child: GestureDetector(
-                      onTap: controller.isSpendingSide
-                          ? null
-                          : controller.openCallCoinsDialog,
-                      behavior: HitTestBehavior.opaque,
-                      child: _CoinsPanel(controller: controller),
-                    ),
+                  Spacing.h8,
+                  GestureDetector(
+                    onTap: controller.isSpendingSide
+                        ? null
+                        : controller.openCallCoinsDialog,
+                    behavior: HitTestBehavior.opaque,
+                    child: _CoinsPanel(controller: controller),
                   ),
                 ],
               ),
@@ -1161,10 +1161,15 @@ class _CoinsPanel extends StatelessWidget {
                     ],
                   ),
                 )
-              : const SemiBoldText(
-                  text: 'No charge',
-                  fontSize: TextStyles.k12FontSize,
-                  color: kColorWhite,
+              : const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: SemiBoldText(
+                    text: 'No charge',
+                    fontSize: TextStyles.k12FontSize,
+                    color: kColorWhite,
+                    maxLines: 1,
+                  ),
                 ),
           if (connected) ...[
             Spacing.v2,
@@ -1270,7 +1275,9 @@ class _CallProfileSheet extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _ProfileMetric(
-                      label: controller.isSpendingSide ? 'Wallet left' : 'Wallet',
+                      label: controller.isSpendingSide
+                          ? 'Wallet left'
+                          : 'Wallet',
                       value: controller.billingAmountLabel,
                     ),
                   ),
