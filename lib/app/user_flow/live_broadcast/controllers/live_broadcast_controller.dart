@@ -17,6 +17,7 @@ import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/app/user_flow/pk_battle/controllers/pk_v1_controller.dart';
 import 'package:qobo_one_live/app/user_flow/pk_battle/models/v1/pk_v1_models.dart';
 import 'package:qobo_one_live/app/user_flow/pk_battle/widgets/pk_v1_battle_widgets.dart';
+import 'package:qobo_one_live/services/gifts/gift_catalog_store.dart';
 import 'package:qobo_one_live/services/pk/pk_live_room_bridge.dart';
 import 'package:qobo_one_live/services/pk/pk_v1_coordinator.dart';
 import 'package:qobo_one_live/services/realtime/user_realtime_socket_service.dart';
@@ -3304,27 +3305,11 @@ class LiveBroadcastController extends GetxController {
     );
   }
 
-  Future<void> loadGiftCatalog() async {
-    isLoadingGifts.value = true;
-    try {
-      final response = await _economyRepo.getGiftList(isShowLoader: false);
-      final data = response?['data'];
-      if (isEconomyApiSuccess(response) && data is List) {
-        giftCatalog.assignAll(
-          data
-              .whereType<Map>()
-              .map(
-                (raw) => GiftMediaUtils.mapGiftFromApi(
-                  Map<String, dynamic>.from(raw),
-                ),
-              )
-              .where((gift) => (gift['id'] ?? '').isNotEmpty)
-              .toList(),
-        );
-      }
-    } finally {
-      isLoadingGifts.value = false;
-    }
+  Future<void> loadGiftCatalog() {
+    return GiftCatalogStore.ensureRegistered().applyTo(
+      target: giftCatalog,
+      isLoading: isLoadingGifts,
+    );
   }
 
   Future<void> sendGift(Map<String, String> gift, {int comboCount = 1}) async {

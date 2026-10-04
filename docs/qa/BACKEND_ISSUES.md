@@ -80,4 +80,5 @@ Only confirmed issues are listed. Priority: **HIGH** = broken / very slow · **M
 | FE-05 | Family chat | Gift animation played only for the sender, not other members | Every member with the chat open now sees the gift animation |
 | FE-06 | SVIP Center | Reopening the screen showed "Open SVIP Now" again after buying | Screen now remembers SVIP and shows a gold "SVIP Member Active" bar with real days left |
 | FE-07 | Mall | Entrance Effects and Chat Bubbles showed fake demo items (Dragon Arrival, Star Shower) and never called the API | Tabs now load real items from `GET /api/economy/mall`, with an empty state if none |
+| FE-09 | Gifts | Gift list was fetched on every panel, and each tile tried to play a multi-MB SVGA (blank tile or broken X while waiting) | List is fetched once after login. Each tile shows a small saved picture. The full animation plays only when a gift is sent |
 | FE-08 | Transaction History | Old UI; spends like VIP purchase / family gift showed as green "+"; raw titles like `VIP_PURCHASE` | New UI (summary, day groups, colored icons); spends show red "−"; readable titles |

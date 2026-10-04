@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/icon_constants.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/utils/svga_network_loader.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_sound_player.dart';
 import 'package:flutter_svga/flutter_svga.dart';
 
@@ -334,10 +335,8 @@ class _GiftCelebrationViewState extends State<_GiftCelebrationView>
 
     try {
       final videoItem = _hasNetworkSvga
-          // Gift-list API `animationUrl` (Cloudinary / CDN SVGA bytes).
-          ? await SVGAParser.shared
-                .decodeFromURL(widget.svgaUrl!)
-                .timeout(const Duration(seconds: 5))
+          // Uses the file saved after login when preload has finished.
+          ? await SvgaNetworkLoader.decode(widget.svgaUrl!)
           // Local asset fallback (optional; callers may pass svgaAsset).
           : await SVGAParser.shared.decodeFromAssets(widget.svgaAsset!);
 

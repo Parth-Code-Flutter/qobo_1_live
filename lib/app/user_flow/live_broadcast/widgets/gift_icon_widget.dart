@@ -1,7 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:qobo_one_live/app/user_flow/live_broadcast/utils/live_room_profile_utils.dart';
+import 'package:qobo_one_live/services/gifts/gift_icon_preview_store.dart';
 import 'package:qobo_one_live/utils/app_widgets/safe_network_avatar.dart';
-import 'package:flutter_svga/flutter_svga.dart';
 
 /// Renders a gift icon from:
 /// - network SVGA / animated clip URL (`icon` from gift-list API)
@@ -31,11 +33,7 @@ class GiftIconWidget extends StatelessWidget {
       return SizedBox(
         width: size,
         height: size,
-        child: _NetworkGiftIcon(
-          url: raw,
-          size: size,
-          emojiSize: emojiSize,
-        ),
+        child: _NetworkGiftIcon(url: raw, size: size, emojiSize: emojiSize),
       );
     }
 
@@ -43,7 +41,7 @@ class GiftIconWidget extends StatelessWidget {
   }
 }
 
-/// Loads and loops a remote gift SVGA; falls back to image / emoji if needed.
+/// Shows the small saved gift picture. The full animation plays only on send.
 class _NetworkGiftIcon extends StatefulWidget {
   const _NetworkGiftIcon({
     required this.url,
@@ -59,69 +57,49 @@ class _NetworkGiftIcon extends StatefulWidget {
   State<_NetworkGiftIcon> createState() => _NetworkGiftIconState();
 }
 
-class _NetworkGiftIconState extends State<_NetworkGiftIcon>
-    with SingleTickerProviderStateMixin {
-  SVGAAnimationController? _svgaController;
-  bool _isLoading = true;
-  bool _svgaFailed = false;
+class _NetworkGiftIconState extends State<_NetworkGiftIcon> {
+  String? _path;
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadSvga();
+    _load();
   }
 
   @override
   void didUpdateWidget(covariant _NetworkGiftIcon oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.url != widget.url) {
-      _svgaController?.dispose();
-      _svgaController = null;
-      _isLoading = true;
-      _svgaFailed = false;
-      _loadSvga();
+      _path = null;
+      _loading = true;
+      _load();
     }
   }
 
-  @override
-  void dispose() {
-    _svgaController?.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadSvga() async {
-    final controller = SVGAAnimationController(vsync: this);
-    _svgaController = controller;
-
-    try {
-      final videoItem = await SVGAParser.shared.decodeFromURL(widget.url);
-      if (!mounted || _svgaController != controller) {
-        videoItem.dispose();
-        return;
-      }
-      controller.videoItem = videoItem;
-      // Catalog icons are decorative — never play embedded gift SFX here.
-      controller.muted = true;
-      controller
-        ..reset()
-        ..repeat();
-      setState(() {
-        _isLoading = false;
-        _svgaFailed = false;
-      });
-    } catch (_) {
-      // Not a valid SVGA (e.g. legacy PNG icon) — fall back to image.
-      if (!mounted || _svgaController != controller) return;
-      setState(() {
-        _isLoading = false;
-        _svgaFailed = true;
-      });
-    }
+  Future<void> _load() async {
+    final path = await GiftIconPreviewStore.ensure(widget.url);
+    if (!mounted) return;
+    setState(() {
+      _path = path;
+      _loading = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
+    final path = _path;
+    if (path != null && path.isNotEmpty) {
+      return Image.file(
+        File(path),
+        width: widget.size,
+        height: widget.size,
+        fit: BoxFit.contain,
+        gaplessPlayback: true,
+        errorBuilder: (_, __, ___) => _emoji(),
+      );
+    }
+    if (_loading) {
       return Center(
         child: SizedBox(
           width: widget.size * 0.35,
@@ -133,28 +111,27 @@ class _NetworkGiftIconState extends State<_NetworkGiftIcon>
         ),
       );
     }
-
-    if (!_svgaFailed && _svgaController != null) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: SVGAImage(
-          _svgaController!,
-          fit: BoxFit.contain,
-          preferredSize: Size.square(widget.size),
-          clearsAfterStop: false,
-        ),
-      );
-    }
-
-    // Fallback for static image icons still returned by older gifts.
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: SafeNetworkAvatar(
+    if (_isStaticImage(widget.url)) {
+      return SafeNetworkAvatar(
         url: widget.url,
         size: widget.size,
         fit: BoxFit.contain,
-        fallback: Text('🎁', style: TextStyle(fontSize: widget.emojiSize)),
-      ),
-    );
+        fallback: _emoji(),
+      );
+    }
+    return _emoji();
+  }
+
+  Widget _emoji() {
+    return Text('🎁', style: TextStyle(fontSize: widget.emojiSize));
+  }
+
+  bool _isStaticImage(String url) {
+    final path = url.toLowerCase().split('?').first;
+    return path.endsWith('.png') ||
+        path.endsWith('.jpg') ||
+        path.endsWith('.jpeg') ||
+        path.endsWith('.webp') ||
+        path.endsWith('.gif');
   }
 }

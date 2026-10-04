@@ -6,9 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
-import 'package:qobo_one_live/repo/economy/economy_repo.dart';
 import 'package:qobo_one_live/repo/emoji/emoji_repo.dart';
 import 'package:qobo_one_live/repo/family/family_repo.dart';
+import 'package:qobo_one_live/services/gifts/gift_catalog_store.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/firebase/firebase_bootstrap.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
@@ -18,16 +18,11 @@ import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_media_utils.dart';
 
 class FamilyController extends GetxController {
-  FamilyController({
-    FamilyRepo? familyRepo,
-    EconomyRepo? economyRepo,
-    EmojiRepo? emojiRepo,
-  }) : _familyRepo = familyRepo ?? FamilyRepo(),
-       _economyRepo = economyRepo ?? EconomyRepo(),
-       _emojiRepo = emojiRepo ?? EmojiRepo();
+  FamilyController({FamilyRepo? familyRepo, EmojiRepo? emojiRepo})
+    : _familyRepo = familyRepo ?? FamilyRepo(),
+      _emojiRepo = emojiRepo ?? EmojiRepo();
 
   final FamilyRepo _familyRepo;
-  final EconomyRepo _economyRepo;
   final EmojiRepo _emojiRepo;
 
   final isLoading = true.obs;
@@ -983,19 +978,11 @@ class FamilyController extends GetxController {
     });
   }
 
-  Future<void> loadGiftCatalog({bool force = false}) async {
-    if ((!force && giftCatalog.isNotEmpty) || isLoadingGifts.value) return;
-    isLoadingGifts.value = true;
-    try {
-      final response = await _economyRepo.getGiftList(isShowLoader: false);
-      final gifts = _extractItems(response)
-          .map((raw) => GiftMediaUtils.mapGiftFromApi(raw))
-          .where((gift) => (gift['id'] ?? '').isNotEmpty)
-          .toList();
-      giftCatalog.assignAll(gifts);
-    } finally {
-      isLoadingGifts.value = false;
-    }
+  Future<void> loadGiftCatalog({bool force = false}) {
+    return GiftCatalogStore.ensureRegistered().applyTo(
+      target: giftCatalog,
+      isLoading: isLoadingGifts,
+    );
   }
 
   Future<void> sendGift({

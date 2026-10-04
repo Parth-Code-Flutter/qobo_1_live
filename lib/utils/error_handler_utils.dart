@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/firebase/fcm_token_sync_service.dart';
+import 'package:qobo_one_live/services/gifts/gift_catalog_store.dart';
 import 'package:qobo_one_live/services/realtime/user_realtime_socket_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
@@ -98,6 +99,9 @@ class ErrorHandlerUtils {
         await Get.find<UserSessionController>().clearSession();
       }
       await LocalStorage.shared.clearAllData();
+      if (Get.isRegistered<GiftCatalogStore>()) {
+        Get.find<GiftCatalogStore>().endSession();
+      }
       LoggerUtils.logger.i('✅ Local storage cleared');
     } catch (e) {
       LoggerUtils.logException('Error clearing local storage', e);

@@ -13,6 +13,7 @@ import 'package:qobo_one_live/repo/chat/chat_local_store.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/repo/economy/economy_repo.dart';
 import 'package:qobo_one_live/repo/room/room_repo.dart';
+import 'package:qobo_one_live/services/gifts/gift_catalog_store.dart';
 import 'package:qobo_one_live/services/chat/chat_call_service.dart';
 import 'package:qobo_one_live/services/session/session_earnings_tracker.dart';
 import 'package:qobo_one_live/services/chat/chat_inbox_preview.dart';
@@ -861,26 +862,11 @@ class ChatVoiceCallController extends GetxController
     );
   }
 
-  Future<void> loadGiftCatalog() async {
-    isLoadingGifts.value = true;
-    try {
-      final response = await _economyRepo.getGiftList(isShowLoader: false);
-      final data = response?['data'];
-      if (isEconomyApiSuccess(response) && data is List) {
-        giftCatalog.assignAll(
-          data
-              .whereType<Map>()
-              .map(
-                (raw) =>
-                    GiftMediaUtils.mapGiftFromApi(Map<String, dynamic>.from(raw)),
-              )
-              .where((gift) => (gift['id'] ?? '').isNotEmpty)
-              .toList(),
-        );
-      }
-    } finally {
-      isLoadingGifts.value = false;
-    }
+  Future<void> loadGiftCatalog() {
+    return GiftCatalogStore.ensureRegistered().applyTo(
+      target: giftCatalog,
+      isLoading: isLoadingGifts,
+    );
   }
 
   Future<void> sendGift(Map<String, String> gift) async {

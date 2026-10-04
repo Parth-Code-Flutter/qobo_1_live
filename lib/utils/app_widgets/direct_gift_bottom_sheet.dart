@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/live_broadcast/widgets/gift_icon_widget.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/repo/economy/economy_repo.dart';
+import 'package:qobo_one_live/services/gifts/gift_catalog_store.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -77,36 +80,24 @@ class _DirectGiftBottomSheetState extends State<DirectGiftBottomSheet> {
   }
 
   Future<void> _load() async {
-    _loading.value = true;
-    try {
-      final wallet = await _economyRepo.getWalletBalances(isShowLoader: false);
-      final walletData = wallet?['data'];
-      if (isEconomyApiSuccess(wallet) && walletData is Map) {
-        _coins.value = parseWalletAmount(
-          walletData['coins'] ??
-              walletData['coin'] ??
-              walletData['balance'] ??
-              walletData['coinBalance'],
-        );
-      }
+    unawaited(_loadWallet());
+    await GiftCatalogStore.ensureRegistered().applyTo(
+      target: _gifts,
+      isLoading: _loading,
+    );
+  }
 
-      final response = await _economyRepo.getGiftList(isShowLoader: false);
-      final data = response?['data'];
-      if (isEconomyApiSuccess(response) && data is List) {
-        _gifts.assignAll(
-          data
-              .whereType<Map>()
-              .map(
-                (raw) => GiftMediaUtils.mapGiftFromApi(
-                  Map<String, dynamic>.from(raw),
-                ),
-              )
-              .where((gift) => (gift['id'] ?? '').isNotEmpty)
-              .toList(),
-        );
-      }
-    } finally {
-      _loading.value = false;
+  Future<void> _loadWallet() async {
+    final wallet = await _economyRepo.getWalletBalances(isShowLoader: false);
+    final walletData = wallet?['data'];
+    if (!mounted) return;
+    if (isEconomyApiSuccess(wallet) && walletData is Map) {
+      _coins.value = parseWalletAmount(
+        walletData['coins'] ??
+            walletData['coin'] ??
+            walletData['balance'] ??
+            walletData['coinBalance'],
+      );
     }
   }
 

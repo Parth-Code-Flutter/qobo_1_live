@@ -8,6 +8,7 @@ import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/agency_session_controller.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/firebase/fcm_token_sync_service.dart';
+import 'package:qobo_one_live/services/gifts/gift_catalog_store.dart';
 import 'package:qobo_one_live/services/realtime/user_realtime_socket_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/auth/role_home_route.dart';
@@ -249,6 +250,9 @@ class AgencyOwnerDashboardController extends GetxController {
       }
       await _userSession.clearSession();
       await storage.clearAllData();
+      if (Get.isRegistered<GiftCatalogStore>()) {
+        Get.find<GiftCatalogStore>().endSession();
+      }
       Get.offAllNamed(Routes.AUTH_LOGIN);
     } finally {
       isLoggingOut.value = false;

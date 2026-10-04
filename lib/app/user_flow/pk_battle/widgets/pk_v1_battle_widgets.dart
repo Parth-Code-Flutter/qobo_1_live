@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/live_broadcast/controllers/live_broadcast_controller.dart';
+import 'package:qobo_one_live/app/user_flow/live_broadcast/widgets/gift_icon_widget.dart';
 import 'package:qobo_one_live/app/user_flow/pk_battle/controllers/pk_v1_controller.dart';
 import 'package:qobo_one_live/app/user_flow/pk_battle/models/v1/pk_v1_models.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
@@ -432,13 +433,13 @@ class _PkGiftPickerSheetState extends State<PkGiftPickerSheet> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Expanded(
-              child: gift.iconUrl.isNotEmpty
-                  ? Image.network(gift.iconUrl, fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => const Icon(
-                          Icons.card_giftcard_rounded,
-                          color: Colors.white54))
-                  : const Icon(Icons.card_giftcard_rounded,
-                      color: Colors.white54),
+              child: Center(
+                child: GiftIconWidget(
+                  icon: gift.iconUrl.isNotEmpty ? gift.iconUrl : '🎁',
+                  size: 48,
+                  emojiSize: 32,
+                ),
+              ),
             ),
             const SizedBox(height: 4),
             AppText(

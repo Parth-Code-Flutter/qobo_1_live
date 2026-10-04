@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/local_storage_constants.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/services/gifts/gift_catalog_store.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/firebase/fcm_token_sync_service.dart';
 import 'package:qobo_one_live/services/realtime/user_realtime_socket_service.dart';
@@ -152,6 +153,9 @@ abstract final class AuthSessionHelper {
       unawaited(FcmTokenSyncService.ensureSynced());
       unawaited(UserRealtimeSocketService.ensureConnected());
       unawaited(PkV1Coordinator.ensureStarted());
+      // Gift list is heavy. Fetch it once now, with no loader, so gift
+      // panels can open from the saved copy.
+      GiftCatalogStore.ensureRegistered().warmUp();
 
       if (!context.mounted) return;
       AppToast.showSuccess(

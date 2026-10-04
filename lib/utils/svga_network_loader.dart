@@ -70,8 +70,7 @@ class SvgaNetworkLoader {
     if (sourceUrl.isEmpty) {
       throw ArgumentError('SVGA url is empty');
     }
-    if (!sourceUrl.startsWith('http://') &&
-        !sourceUrl.startsWith('https://')) {
+    if (!sourceUrl.startsWith('http://') && !sourceUrl.startsWith('https://')) {
       throw ArgumentError('SVGA url must be http(s): $sourceUrl');
     }
 
@@ -152,6 +151,61 @@ class SvgaNetworkLoader {
     } catch (_) {}
   }
 
+  /// Downloads the file. SVGA bytes are also kept in the durable cache.
+  static Future<Uint8List?> downloadBytes(String url) async {
+    final candidates = _candidateUrls(url);
+    for (final candidate in candidates) {
+      final cached = await _readDiskCache(candidate);
+      if (cached != null) return cached;
+    }
+    for (final candidate in candidates) {
+      try {
+        final bytes = await _downloadBytes(candidate);
+        if (_looksLikeSvga(bytes)) {
+          await _writeDiskCache(candidate, bytes);
+          final primary = candidates.first;
+          if (candidate != primary) await _writeDiskCache(primary, bytes);
+          return bytes;
+        }
+        if (_looksLikeImage(bytes)) return bytes;
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  static bool _looksLikeImage(Uint8List bytes) {
+    if (bytes.length < 12) return false;
+    if (bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E) return true;
+    if (bytes[0] == 0xFF && bytes[1] == 0xD8) return true;
+    if (bytes[0] == 0x47 && bytes[1] == 0x49 && bytes[2] == 0x46) return true;
+    final head = String.fromCharCodes(bytes.take(4));
+    return head == 'RIFF';
+  }
+
+  /// Saves the SVGA file only. Does not decode it into memory.
+  ///
+  /// Gift icons are large, so the catalog preload uses this instead of
+  /// [prefetch]. [decode] then plays from disk.
+  static Future<bool> prefetchFile(String url) async {
+    final candidates = _candidateUrls(url);
+    if (candidates.isEmpty) return false;
+    for (final candidate in candidates) {
+      if (await _readDiskCache(candidate) != null) return true;
+    }
+
+    for (final candidate in candidates) {
+      try {
+        final bytes = await _downloadBytes(candidate);
+        if (!_looksLikeSvga(bytes)) continue;
+        await _writeDiskCache(candidate, bytes);
+        final primary = candidates.first;
+        if (candidate != primary) await _writeDiskCache(primary, bytes);
+        return true;
+      } catch (_) {}
+    }
+    return false;
+  }
+
   static Future<void> prefetchAsset(String assetPath) async {
     final path = assetPath.trim();
     if (path.isEmpty) return;
@@ -191,13 +245,7 @@ class SvgaNetworkLoader {
     return dir;
   }
 
-  static String _cacheKey(String sourceUrl) {
-    final digest = base64Url
-        .encode(utf8.encode(sourceUrl))
-        .replaceAll('=', '');
-    // Keep filename length reasonable for mobile FS.
-    return digest.length <= 80 ? digest : digest.substring(0, 80);
-  }
+  static String _cacheKey(String sourceUrl) => stableDiskKey(sourceUrl);
 
   static Future<File> _cacheFile(String sourceUrl) async {
     final dir = await _ensureDiskCacheDir();
@@ -233,4 +281,15 @@ class SvgaNetworkLoader {
       if (await file.exists()) await file.delete();
     } catch (_) {}
   }
+}
+
+/// File name for a URL. Gift links share a long prefix, so cutting the
+/// URL itself saves two gifts into one file.
+String stableDiskKey(String value) {
+  var hash = 0xcbf29ce484222325;
+  for (final unit in utf8.encode(value)) {
+    hash ^= unit;
+    hash = (hash * 0x100000001b3) & 0xFFFFFFFFFFFFFFFF;
+  }
+  return hash.toRadixString(16).padLeft(16, '0');
 }
