@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:get/get.dart';
+import 'package:qobo_one_live/constants/local_storage_constants.dart';
 import 'package:qobo_one_live/repo/auth/models/request/social_login_request_model.dart';
 import 'package:qobo_one_live/app/auth/verifyAccount/models/request/login_with_otp_request_model.dart';
 import 'package:qobo_one_live/app/auth/verifyAccount/models/response/forgot_password_send_result.dart';
@@ -15,6 +17,8 @@ import 'package:qobo_one_live/services/api_constants.dart';
 import 'package:qobo_one_live/services/device_id_service.dart';
 import 'package:qobo_one_live/services/firebase/fcm_token_service.dart';
 import 'package:qobo_one_live/utils/api_response_utils.dart';
+import 'package:qobo_one_live/utils/auth/auth_session_helper.dart';
+import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 
 /// Auth repository contains API calls for authentication flows.
 class AuthRepo {
@@ -357,6 +361,54 @@ class AuthRepo {
     );
     if (response == null) return null;
     return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
+  /// Calls `POST /api/auth/profile-setup` for a fresh user after OTP.
+  ///
+  /// Sends only the fields shown on the Additional Information screen.
+  Future<UpdateProfileResponseModel?> setupFreshProfile({
+    required Map<String, String> fields,
+    File? displayPicture,
+    bool isShowLoader = false,
+  }) async {
+    final cleaned = Map<String, String>.from(fields)
+      ..removeWhere((_, value) => value.trim().isEmpty);
+    if (cleaned.isEmpty && displayPicture == null) return null;
+
+    final response = await _apiService.multipartFormRequest(
+      endPoint: AuthEndpoints.profileSetup,
+      fields: cleaned,
+      files: displayPicture == null ? null : <File>[displayPicture],
+      fileFieldName: 'displayPicture',
+      method: 'POST',
+      isShowLoader: isShowLoader,
+    );
+    if (response == null) return null;
+
+    final jsonMap = ApiResponseUtils.tryDecodeMap(response.body);
+    if (jsonMap == null) return null;
+
+    final data = jsonMap['data'];
+    Map<String, dynamic>? userMap;
+    if (data is Map) {
+      final nested = data['user'];
+      userMap = Map<String, dynamic>.from(nested is Map ? nested : data);
+      final token = AuthSessionHelper.extractToken(
+        Map<String, dynamic>.from(data),
+      );
+      if (token.isNotEmpty) {
+        final storage = Get.isRegistered<LocalStorage>()
+            ? Get.find<LocalStorage>()
+            : Get.put(LocalStorage(), permanent: true);
+        await storage.writeStringStorage(kStorageToken, token);
+      }
+    }
+
+    return UpdateProfileResponseModel.fromJson({
+      'statusCode': jsonMap['statusCode'],
+      'message': jsonMap['message'],
+      'data': userMap,
+    });
   }
 
   /// Calls `PUT /api/user/update` to update profile details.

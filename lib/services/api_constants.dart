@@ -58,6 +58,9 @@ class AuthEndpoints {
   /// POST /api/auth/verify-otp
   static const String verifyOtp = '/api/auth/verify-otp';
 
+  /// POST /api/auth/profile-setup — first profile after OTP only.
+  static const String profileSetup = '/api/auth/profile-setup';
+
   /// GET /api/auth/countries — public country list
   static const String countries = '/api/auth/countries';
 

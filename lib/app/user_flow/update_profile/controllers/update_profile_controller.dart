@@ -12,6 +12,7 @@ import 'package:qobo_one_live/generated/locales.g.dart';
 import 'package:qobo_one_live/constants/local_storage_constants.dart';
 import 'package:qobo_one_live/app/user_flow/update_profile/models/ad_banner_item.dart';
 import 'package:qobo_one_live/app/user_flow/update_profile/models/request/update_profile_request_model.dart';
+import 'package:qobo_one_live/app/user_flow/update_profile/models/response/update_profile_response_model.dart';
 import 'package:qobo_one_live/app/auth/signUp/widgets/email_otp_dialog.dart';
 import 'package:qobo_one_live/repo/ads/ads_repo.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
@@ -393,27 +394,49 @@ class UpdateProfileController extends GetxController
       isSubmitLoading.value = true;
       final country = selectedCountry.value;
       final state = selectedState.value;
-      final request = UpdateProfileApiHelper.buildRequest(
-        name: userNameController.text.trim(),
-        // email: isComeFromOtpScreen.value ? emailController.text.trim() : null,
-        email: null,
-        genderLabel: selectedGender.value,
-        dob: selectedBirthdate.value,
-        displayPicture: selectedProfileMedia.value,
-        poster: selectedPosterUrl.value,
-        country: country?.name,
-        countryId: country?.id,
-        state: state?.name,
-        stateId: state?.id,
-        city: cityController.text.trim(),
-        currentLocation: country != null && state != null
-            ? '${country.name}, ${state.name}, ${cityController.text.trim()}'
-            : null,
-      );
-      final response = await _authRepo.updateProfile(
-        request: request,
-        isShowLoader: false,
-      );
+      final UpdateProfileResponseModel? response;
+      if (isComeFromOtpScreen.value) {
+        // Fresh user only. Existing profile edits stay on PUT /api/user/update.
+        final gender = UpdateProfileApiHelper.genderForApi(selectedGender.value);
+        final dob = selectedBirthdate.value;
+        response = await _authRepo.setupFreshProfile(
+          fields: {
+            'password': passwordController.text.trim(),
+            'name': userNameController.text.trim(),
+            if (gender != null) 'gender': gender,
+            if (dob != null) 'dob': UpdateProfileApiHelper.formatDobForApi(dob),
+            if ((country?.name ?? '').trim().isNotEmpty)
+              'country': country!.name.trim(),
+            if ((state?.name ?? '').trim().isNotEmpty)
+              'state': state!.name.trim(),
+            if (cityController.text.trim().isNotEmpty)
+              'city': cityController.text.trim(),
+          },
+          displayPicture: selectedProfileMedia.value,
+          isShowLoader: false,
+        );
+      } else {
+        final request = UpdateProfileApiHelper.buildRequest(
+          name: userNameController.text.trim(),
+          email: null,
+          genderLabel: selectedGender.value,
+          dob: selectedBirthdate.value,
+          displayPicture: selectedProfileMedia.value,
+          poster: selectedPosterUrl.value,
+          country: country?.name,
+          countryId: country?.id,
+          state: state?.name,
+          stateId: state?.id,
+          city: cityController.text.trim(),
+          currentLocation: country != null && state != null
+              ? '${country.name}, ${state.name}, ${cityController.text.trim()}'
+              : null,
+        );
+        response = await _authRepo.updateProfile(
+          request: request,
+          isShowLoader: false,
+        );
+      }
       if (!context.mounted) return;
 
       if (response == null) {
@@ -610,6 +633,9 @@ class UpdateProfileController extends GetxController
 
   String? validatePassword(BuildContext context, String? value) {
     final trimmed = value?.trim() ?? '';
+    if (isComeFromOtpScreen.value && trimmed.isEmpty) {
+      return 'Please enter password';
+    }
     if (trimmed.isEmpty) return null;
     return Validate.passwordValidation(context, trimmed);
   }

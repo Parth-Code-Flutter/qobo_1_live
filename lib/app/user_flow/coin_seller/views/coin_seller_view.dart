@@ -117,7 +117,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
             Spacing.v20,
             AppTextField(
               controller: controller.detailsController,
-              hintText: 'Payment methods & region (JazzCash, bank, etc.)',
+              hintText: 'Payment method and region',
               maxLines: 4,
               textInputType: TextInputType.multiline,
               fillColor: kColorWhite,
@@ -127,7 +127,7 @@ class CoinSellerView extends GetView<CoinSellerController> {
                 fontSize: 13,
               ),
               hintStyle: TextStyles.kRegularPoppins(
-                colors: CoinSellerUi.body,
+                colors: AppLightUi.hint,
                 fontSize: 13,
               ),
             ),
