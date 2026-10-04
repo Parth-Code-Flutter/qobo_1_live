@@ -171,10 +171,11 @@ class AuthLoginController extends GetxController {
       isGoogleLoginLoading.value = true;
       final socialUser = await _googleSocialAuth.signIn();
       if (!context.mounted) return;
+      // Google closed before an account came back. The server is not called.
       if (socialUser == null) {
         AppToast.showError(
           context,
-          'Google sign-in was cancelled or failed before account details were returned.',
+          'Google closed before an account was chosen. Login was not sent.',
         );
         return;
       }
