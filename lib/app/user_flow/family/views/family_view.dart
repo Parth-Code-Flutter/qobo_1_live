@@ -22,6 +22,7 @@ import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/phone_mask_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/profanity_mask_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/utils/ui_utils/emoji_celebration_overlay.dart';
 
 import '../controllers/family_controller.dart';
 import '../widgets/family_member_tree.dart';
@@ -3128,13 +3129,13 @@ class _FamilyGroupChatPageState extends State<FamilyGroupChatPage> {
                   else
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: _FamilyNetworkImage(
-                        url: media,
+                      child: SizedBox(
                         width: 92,
                         height: 92,
-                        fit: BoxFit.cover,
-                        fallback: const _FamilyImagePlaceholder(
-                          icon: Icons.emoji_emotions_rounded,
+                        child: EmojiMediaView(
+                          image: media,
+                          fit: BoxFit.contain,
+                          emojiFontSize: 48,
                         ),
                       ),
                     ),
@@ -5328,7 +5329,6 @@ class _CatalogSheet extends StatelessWidget {
                             Expanded(
                               child: _CatalogMedia(
                                 item: item,
-                                accent: accent,
                                 isGift: _isGiftSheet,
                               ),
                             ),
@@ -5375,14 +5375,9 @@ class _CatalogSheet extends StatelessWidget {
 }
 
 class _CatalogMedia extends StatelessWidget {
-  const _CatalogMedia({
-    required this.item,
-    required this.accent,
-    required this.isGift,
-  });
+  const _CatalogMedia({required this.item, required this.isGift});
 
   final Map<String, String> item;
-  final Color accent;
   final bool isGift;
 
   @override
@@ -5394,14 +5389,10 @@ class _CatalogMedia extends StatelessWidget {
             : item['image'],
       );
     }
-    return _FamilyNetworkImage(
-      url: item['image']?.toString() ?? '',
+    return EmojiMediaView(
+      image: item['image']?.toString() ?? '',
       fit: BoxFit.contain,
-      loaderColor: accent,
-      fallback: _FamilyImagePlaceholder(
-        icon: Icons.image_not_supported_rounded,
-        iconColor: accent,
-      ),
+      emojiFontSize: 36,
     );
   }
 }
@@ -5566,7 +5557,6 @@ class _FamilyNetworkImage extends StatelessWidget {
     this.width,
     this.height,
     this.fit = BoxFit.cover,
-    this.loaderColor = _FamilyUi.pink,
   });
 
   final String url;
@@ -5574,7 +5564,6 @@ class _FamilyNetworkImage extends StatelessWidget {
   final double? width;
   final double? height;
   final BoxFit fit;
-  final Color loaderColor;
 
   @override
   Widget build(BuildContext context) {
@@ -5598,7 +5587,7 @@ class _FamilyNetworkImage extends StatelessWidget {
               height: 22,
               child: CircularProgressIndicator(
                 strokeWidth: 2.2,
-                color: loaderColor,
+                color: _FamilyUi.pink,
                 value: progress.expectedTotalBytes != null
                     ? progress.cumulativeBytesLoaded /
                           progress.expectedTotalBytes!
@@ -5620,13 +5609,11 @@ class _FamilyImagePlaceholder extends StatelessWidget {
     this.icon = Icons.groups_2_rounded,
     this.label,
     this.gradient,
-    this.iconColor = kColorWhite,
   });
 
   final IconData icon;
   final String? label;
   final Gradient? gradient;
-  final Color iconColor;
 
   @override
   Widget build(BuildContext context) {
@@ -5650,7 +5637,7 @@ class _FamilyImagePlaceholder extends StatelessWidget {
                 fontSize: TextStyles.k20FontSize,
                 color: kColorWhite,
               )
-            : Icon(icon, color: iconColor.withValues(alpha: 0.88), size: 30),
+            : Icon(icon, color: kColorWhite.withValues(alpha: 0.88), size: 30),
       ),
     );
   }

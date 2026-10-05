@@ -10,8 +10,8 @@ import 'package:qobo_one_live/repo/chat/chat_local_store.dart';
 import 'package:qobo_one_live/repo/chat/chat_repo.dart';
 import 'package:qobo_one_live/repo/user/user_repo.dart';
 import 'package:qobo_one_live/repo/chat/models/chat_room_model.dart';
-import 'package:qobo_one_live/repo/emoji/emoji_repo.dart';
 import 'package:qobo_one_live/services/chat/chat_firebase_service.dart';
+import 'package:qobo_one_live/services/emojis/emoji_catalog_store.dart';
 import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
 import 'package:qobo_one_live/services/chat/chat_call_launcher.dart';
 import 'package:qobo_one_live/services/chat/chat_inbox_preview.dart';
@@ -91,16 +91,13 @@ class ChatDetailController extends GetxController {
     ChatRepo? chatRepo,
     ChatLocalStore? localStore,
     ChatFirebaseService? firebaseService,
-    EmojiRepo? emojiRepo,
   }) : _chatRepo = chatRepo ?? ChatRepo(),
        _localStore = localStore ?? ChatLocalStore(),
-       _firebaseService = firebaseService ?? ChatFirebaseService(),
-       _emojiRepo = emojiRepo ?? EmojiRepo();
+       _firebaseService = firebaseService ?? ChatFirebaseService();
 
   final ChatRepo _chatRepo;
   final ChatLocalStore _localStore;
   final ChatFirebaseService _firebaseService;
-  final EmojiRepo _emojiRepo;
 
   final chatName = 'Chat'.obs;
   final chatImageUrl = RxnString();
@@ -700,61 +697,11 @@ class ChatDetailController extends GetxController {
     });
   }
 
-  Future<void> loadEmojiCatalog() async {
-    if (isLoadingEmojis.value) return;
-    isLoadingEmojis.value = true;
-    try {
-      final response = await _emojiRepo.getEmojiCatalog(isShowLoader: false);
-      final raw = response?['data'];
-      final list = raw is List
-          ? raw
-          : raw is Map
-          ? raw['emojis'] ?? raw['items'] ?? raw['list']
-          : null;
-      final parsed = list is List
-          ? list
-                .whereType<Map>()
-                .map((item) {
-                  final data = Map<String, dynamic>.from(item);
-                  final id = _firstValue(data, const ['id', '_id', 'emojiId']);
-                  final image = _firstValue(data, const [
-                    'animationUrl',
-                    'imageUrl',
-                    'image',
-                    'url',
-                    'code',
-                    'emoji',
-                  ]);
-                  return <String, String>{
-                    'id': id,
-                    'name': _firstValue(data, const [
-                      'name',
-                      'title',
-                      'label',
-                    ], 'Emoji'),
-                    'image': image.isNotEmpty ? image : '😊',
-                    'animationUrl': image,
-                    'code': _firstValue(data, const [
-                      'code',
-                      'unicode',
-                      'emoji',
-                    ]),
-                    'packVersion': _firstValue(
-                      data,
-                      const ['packVersion', 'pack_version'],
-                      raw is Map ? raw['packVersion']?.toString() ?? '1' : '1',
-                    ),
-                  };
-                })
-                .where((item) => item['id']!.isNotEmpty)
-                .toList()
-          : <Map<String, String>>[];
-      emojiCatalog.assignAll(parsed);
-    } catch (_) {
-      emojiCatalog.clear();
-    } finally {
-      isLoadingEmojis.value = false;
-    }
+  Future<void> loadEmojiCatalog() {
+    return EmojiCatalogStore.ensureRegistered().applyTo(
+      target: emojiCatalog,
+      isLoading: isLoadingEmojis,
+    );
   }
 
   Future<void> sendEmoji(Map<String, String> emoji) async {

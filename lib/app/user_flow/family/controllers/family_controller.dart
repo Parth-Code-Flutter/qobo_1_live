@@ -6,8 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
-import 'package:qobo_one_live/repo/emoji/emoji_repo.dart';
 import 'package:qobo_one_live/repo/family/family_repo.dart';
+import 'package:qobo_one_live/services/emojis/emoji_catalog_store.dart';
 import 'package:qobo_one_live/services/gifts/gift_catalog_store.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
 import 'package:qobo_one_live/services/firebase/firebase_bootstrap.dart';
@@ -18,12 +18,10 @@ import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_media_utils.dart';
 
 class FamilyController extends GetxController {
-  FamilyController({FamilyRepo? familyRepo, EmojiRepo? emojiRepo})
-    : _familyRepo = familyRepo ?? FamilyRepo(),
-      _emojiRepo = emojiRepo ?? EmojiRepo();
+  FamilyController({FamilyRepo? familyRepo})
+    : _familyRepo = familyRepo ?? FamilyRepo();
 
   final FamilyRepo _familyRepo;
-  final EmojiRepo _emojiRepo;
 
   final isLoading = true.obs;
   final selectedTab = 0.obs;
@@ -932,15 +930,11 @@ class FamilyController extends GetxController {
     );
   }
 
-  Future<void> loadEmojiCatalog() async {
-    if (emojiCatalog.isNotEmpty || isLoadingEmojis.value) return;
-    isLoadingEmojis.value = true;
-    try {
-      final response = await _emojiRepo.getEmojiCatalog(isShowLoader: false);
-      emojiCatalog.assignAll(_extractItems(response).map(_mapEmoji));
-    } finally {
-      isLoadingEmojis.value = false;
-    }
+  Future<void> loadEmojiCatalog() {
+    return EmojiCatalogStore.ensureRegistered().applyTo(
+      target: emojiCatalog,
+      isLoading: isLoadingEmojis,
+    );
   }
 
   Future<void> sendEmoji({
@@ -1358,21 +1352,6 @@ class FamilyController extends GetxController {
       }
     }
     return raw;
-  }
-
-  Map<String, String> _mapEmoji(Map<String, dynamic> raw) {
-    final id = _pickText(raw, const ['id', 'emojiId', 'emoji_id']);
-    final name = _pickText(raw, const ['name', 'title']);
-    final image = _pickText(raw, const [
-      'animationUrl',
-      'animation_url',
-      'gifUrl',
-      'gif_url',
-      'image',
-      'imageUrl',
-      'thumbnailUrl',
-    ]);
-    return {'id': id, 'name': name.isEmpty ? 'Emoji' : name, 'image': image};
   }
 
   DateTime _messageTime(Map<String, dynamic> raw) {

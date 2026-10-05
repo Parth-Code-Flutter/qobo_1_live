@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/services/emojis/emoji_file_store.dart';
 
 /// Short full-screen emoji pop used for direct room emojis.
 ///
@@ -178,19 +180,7 @@ class EmojiMediaView extends StatelessWidget {
     }
 
     if (source.startsWith('http://') || source.startsWith('https://')) {
-      final path = Uri.tryParse(source)?.path.toLowerCase() ?? '';
-      if (path.endsWith('.svg') || source.contains('/svg')) {
-        return SvgPicture.network(
-          source,
-          fit: fit,
-          placeholderBuilder: (_) => const _EmojiFallback(),
-        );
-      }
-      return Image.network(
-        source,
-        fit: fit,
-        errorBuilder: (_, __, ___) => const _EmojiFallback(),
-      );
+      return _CachedEmojiImage(source: source, fit: fit);
     }
 
     if (source.length <= 8) {
@@ -215,6 +205,92 @@ class EmojiMediaView extends StatelessWidget {
       return utf8.decode(base64Decode(payload));
     }
     return Uri.decodeFull(payload);
+  }
+}
+
+/// Shows the GIF saved at login. If it is not on disk yet, downloads it
+/// once, and only then falls back to the network image.
+class _CachedEmojiImage extends StatefulWidget {
+  const _CachedEmojiImage({required this.source, required this.fit});
+
+  final String source;
+  final BoxFit fit;
+
+  @override
+  State<_CachedEmojiImage> createState() => _CachedEmojiImageState();
+}
+
+class _CachedEmojiImageState extends State<_CachedEmojiImage> {
+  String? _path;
+  var _useNetwork = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant _CachedEmojiImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (EmojiFileStore.cacheKey(oldWidget.source) !=
+        EmojiFileStore.cacheKey(widget.source)) {
+      _path = null;
+      _useNetwork = false;
+      _load();
+    }
+  }
+
+  Future<void> _load() async {
+    final path = await EmojiFileStore.ensure(widget.source);
+    if (!mounted) return;
+    if (path != null) {
+      // Seat reactions add emoji_playback so the same GIF can play again.
+      // Drop the decoded copy first, otherwise Flutter keeps the old frame.
+      if (widget.source.contains('emoji_playback=')) {
+        await FileImage(File(path)).evict();
+      }
+      if (!mounted) return;
+      setState(() => _path = path);
+      return;
+    }
+    setState(() => _useNetwork = true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final path = _path;
+    if (path != null) {
+      if (path.toLowerCase().endsWith('.svg')) {
+        return SvgPicture.file(
+          File(path),
+          fit: widget.fit,
+          placeholderBuilder: (_) => const _EmojiFallback(),
+        );
+      }
+      return Image.file(
+        File(path),
+        fit: widget.fit,
+        gaplessPlayback: true,
+        errorBuilder: (_, __, ___) => const _EmojiFallback(),
+      );
+    }
+    if (!_useNetwork) return const _EmojiFallback();
+
+    final source = widget.source;
+    final urlPath = Uri.tryParse(source)?.path.toLowerCase() ?? '';
+    if (urlPath.endsWith('.svg') || source.contains('/svg')) {
+      return SvgPicture.network(
+        source,
+        fit: widget.fit,
+        placeholderBuilder: (_) => const _EmojiFallback(),
+      );
+    }
+    return Image.network(
+      source,
+      fit: widget.fit,
+      errorBuilder: (_, __, ___) => const _EmojiFallback(),
+    );
   }
 }
 

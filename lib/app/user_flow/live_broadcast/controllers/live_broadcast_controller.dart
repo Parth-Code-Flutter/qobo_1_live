@@ -17,6 +17,7 @@ import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/app/user_flow/pk_battle/controllers/pk_v1_controller.dart';
 import 'package:qobo_one_live/app/user_flow/pk_battle/models/v1/pk_v1_models.dart';
 import 'package:qobo_one_live/app/user_flow/pk_battle/widgets/pk_v1_battle_widgets.dart';
+import 'package:qobo_one_live/services/emojis/emoji_catalog_store.dart';
 import 'package:qobo_one_live/services/gifts/gift_catalog_store.dart';
 import 'package:qobo_one_live/services/pk/pk_live_room_bridge.dart';
 import 'package:qobo_one_live/services/pk/pk_v1_coordinator.dart';
@@ -1443,63 +1444,20 @@ class LiveBroadcastController extends GetxController {
   }
 
   Future<void> loadEmojiCatalog() async {
-    isLoadingEmojis.value = true;
+    final store = EmojiCatalogStore.ensureRegistered();
     try {
-      final response = await _emojiRepo.getEmojiCatalog(isShowLoader: false);
-      final data = response?['data'];
-      if (data is Map) {
-        final version = int.tryParse(data['packVersion']?.toString() ?? '');
-        if (version != null && version > 0) {
-          emojiPackVersion.value = version;
-        }
+      await store.applyTo(target: emojiCatalog, isLoading: isLoadingEmojis);
+      if (store.packVersion > 0) {
+        emojiPackVersion.value = store.packVersion;
       }
-      final parsed = _parseEmojiList(response?['data']);
-      emojiCatalog.assignAll(parsed.isEmpty ? _fallbackEmojiCatalog() : parsed);
     } catch (_) {
-      if (emojiCatalog.isEmpty) {
-        emojiCatalog.assignAll(_fallbackEmojiCatalog());
-      }
-    } finally {
       isLoadingEmojis.value = false;
     }
-  }
-
-  List<Map<String, String>> _parseEmojiList(dynamic raw) {
-    final list = raw is List
-        ? raw
-        : raw is Map
-        ? (raw['emojis'] ?? raw['items'] ?? raw['list'])
-        : null;
-    if (list is! List) return const [];
-
-    return list
-        .whereType<Map>()
-        .map((item) => Map<String, dynamic>.from(item))
-        .map((item) {
-          final id = _readEmojiField(item, const ['id', '_id', 'emojiId']);
-          final image = _readEmojiMediaField(item);
-          final code = _readEmojiField(item, const [
-            'code',
-            'unicode',
-            'emoji',
-          ]);
-          return <String, String>{
-            'id': id ?? '',
-            'name':
-                _readEmojiField(item, const ['name', 'title', 'label']) ??
-                'Emoji',
-            'image': image ?? code ?? '😊',
-            'animationUrl': image ?? code ?? '😊',
-            'code': code ?? '',
-            'packVersion':
-                _readEmojiField(item, const ['packVersion', 'pack_version']) ??
-                emojiPackVersion.value.toString(),
-            'category':
-                _readEmojiField(item, const ['category', 'type']) ?? 'emoji',
-          };
-        })
-        .where((emoji) => (emoji['id'] ?? '').isNotEmpty)
-        .toList();
+    // Unicode stand-ins only when the shared list never arrived.
+    // A saved catalog is left as-is so a later open is not replaced.
+    if (emojiCatalog.isEmpty) {
+      emojiCatalog.assignAll(_fallbackEmojiCatalog());
+    }
   }
 
   List<Map<String, String>> _fallbackEmojiCatalog() {
