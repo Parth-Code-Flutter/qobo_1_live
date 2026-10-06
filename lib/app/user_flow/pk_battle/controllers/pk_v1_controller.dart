@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/pk_battle/models/v1/pk_v1_models.dart';
+import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
+import 'package:qobo_one_live/repo/economy/economy_repo.dart';
 import 'package:qobo_one_live/repo/pk/pk_repo.dart';
 import 'package:qobo_one_live/repo/pk/pk_v1_repo.dart';
 import 'package:qobo_one_live/repo/room/room_repo.dart';
@@ -1020,6 +1022,20 @@ class PkV1Controller extends GetxController {
     }
     final s = session.value;
     if (s == null || side == PkBattleSide.none) return;
+    final price = gift.coinCost < 0 ? 0 : gift.coinCost;
+    final count = quantity < 1 ? 1 : quantity;
+    final spendableDiamonds = await _giftSpendDiamondsFromWallet();
+    if (!canAffordGift(
+      diamonds: spendableDiamonds,
+      giftPrice: price,
+      count: count,
+    )) {
+      final needed = price * count;
+      _toast(
+        'You need ${needed - spendableDiamonds} more diamonds to send this gift.',
+      );
+      return;
+    }
     final body = await _repo.sendGift(
       pkId: s.pkId,
       giftId: gift.id,
@@ -1664,6 +1680,13 @@ class PkV1Controller extends GetxController {
   int _toInt(dynamic v) {
     if (v is num) return v.toInt();
     return int.tryParse(v?.toString() ?? '') ?? 0;
+  }
+
+  Future<int> _giftSpendDiamondsFromWallet() async {
+    final response = await EconomyRepo().getWalletBalances(isShowLoader: false);
+    final data = response?['data'];
+    if (!isEconomyApiSuccess(response) || data is! Map) return 0;
+    return giftSpendDiamonds(data);
   }
 
   void _toast(String message) {

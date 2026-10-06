@@ -73,6 +73,9 @@ class ChatVoiceCallController extends GetxController
   final elapsedSeconds = 0.obs;
   final billableSeconds = 0.obs;
   final coinsBalance = 0.obs;
+
+  /// Wallet `diamonds` used only for the gift-send check and gift sheet.
+  final giftWalletDiamonds = 0.obs;
   final diamondsBalance = 0.obs;
   /// Caller spend rate (doc: 2 coins/sec). Keep separate from host earn rate.
   final coinsPerSecond = 2.0.obs;
@@ -857,9 +860,20 @@ class ChatVoiceCallController extends GetxController
     coinsBalance.value = parseWalletAmount(
       data['coins'] ?? data['coin'] ?? data['balance'] ?? data['coinBalance'],
     );
-    diamondsBalance.value = parseWalletAmount(
-      data['diamonds'] ?? data['diamond'] ?? data['diamondBalance'],
-    );
+    diamondsBalance.value = giftSpendDiamonds(data);
+    giftWalletDiamonds.value = diamondsBalance.value;
+  }
+
+  /// Reads wallet `diamonds` at gift-send time. Does not touch call earnings.
+  Future<int> _giftSpendDiamondsFromWallet() async {
+    final response = await _economyRepo.getWalletBalances(isShowLoader: false);
+    final data = response?['data'];
+    if (!isEconomyApiSuccess(response) || data is! Map) {
+      return giftWalletDiamonds.value;
+    }
+    final diamonds = giftSpendDiamonds(data);
+    giftWalletDiamonds.value = diamonds;
+    return diamonds;
   }
 
   Future<void> loadGiftCatalog() {
@@ -883,10 +897,11 @@ class ChatVoiceCallController extends GetxController
     }
 
     final price = int.tryParse(gift['price'] ?? '0') ?? 0;
-    if (coinsBalance.value < price) {
+    final spendableDiamonds = await _giftSpendDiamondsFromWallet();
+    if (!canAffordGift(diamonds: spendableDiamonds, giftPrice: price)) {
       Get.snackbar(
         'Insufficient Coins',
-        'You need ${formatLedgerAmount(price - coinsBalance.value)} more coins.',
+        'You need ${formatLedgerAmount(price - spendableDiamonds)} more diamonds.',
         snackPosition: SnackPosition.BOTTOM,
       );
       return;

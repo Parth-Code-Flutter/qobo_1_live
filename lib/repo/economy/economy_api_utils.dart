@@ -14,6 +14,26 @@ int parseWalletAmount(dynamic value) {
   return int.tryParse(value?.toString().replaceAll(',', '') ?? '') ?? 0;
 }
 
+/// Diamonds used only when deciding if a gift can be sent.
+///
+/// Wallet "My Coins" stays on `coins`. Send-gift compares `diamonds`.
+int giftSpendDiamonds(Map data) {
+  return parseWalletAmount(
+    data['diamonds'] ?? data['diamond'] ?? data['diamondBalance'],
+  );
+}
+
+/// True when wallet diamonds cover [giftPrice] × [count].
+bool canAffordGift({
+  required int diamonds,
+  required int giftPrice,
+  int count = 1,
+}) {
+  final qty = count < 1 ? 1 : count;
+  final price = giftPrice < 0 ? 0 : giftPrice;
+  return diamonds >= price * qty;
+}
+
 double parseWalletAmountDouble(dynamic value) {
   if (value is num) return value.toDouble();
   return double.tryParse(value?.toString().replaceAll(',', '') ?? '') ?? 0;

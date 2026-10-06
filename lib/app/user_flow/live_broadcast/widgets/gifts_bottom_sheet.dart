@@ -262,7 +262,7 @@ class _GiftsBottomSheetState extends State<GiftsBottomSheet> {
           const Icon(Icons.diamond_outlined, color: Colors.orange, size: 16),
           Spacing.h6,
           SemiBoldText(
-            text: formatLedgerAmount(controller.coinsBalance.value),
+            text: formatLedgerAmount(controller.diamondsBalance.value),
             fontSize: TextStyles.k14FontSize,
             color: kColorWhite,
           ),

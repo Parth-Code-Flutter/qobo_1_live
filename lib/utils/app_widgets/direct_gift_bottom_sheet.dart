@@ -92,12 +92,7 @@ class _DirectGiftBottomSheetState extends State<DirectGiftBottomSheet> {
     final walletData = wallet?['data'];
     if (!mounted) return;
     if (isEconomyApiSuccess(wallet) && walletData is Map) {
-      _coins.value = parseWalletAmount(
-        walletData['coins'] ??
-            walletData['coin'] ??
-            walletData['balance'] ??
-            walletData['coinBalance'],
-      );
+      _coins.value = giftSpendDiamonds(walletData);
     }
   }
 
@@ -115,10 +110,11 @@ class _DirectGiftBottomSheetState extends State<DirectGiftBottomSheet> {
     }
 
     final price = int.tryParse(gift['price'] ?? '0') ?? 0;
-    if (_coins.value < price) {
+    await _loadWallet();
+    if (!canAffordGift(diamonds: _coins.value, giftPrice: price)) {
       Get.snackbar(
         'Insufficient Coins',
-        'You need ${formatLedgerAmount(price - _coins.value)} more coins.',
+        'You need ${formatLedgerAmount(price - _coins.value)} more diamonds.',
         snackPosition: SnackPosition.BOTTOM,
       );
       return;
@@ -145,8 +141,11 @@ class _DirectGiftBottomSheetState extends State<DirectGiftBottomSheet> {
         return;
       }
       final data = response?['data'];
-      if (data is Map && data['coinsBalance'] != null) {
-        _coins.value = parseWalletAmount(data['coinsBalance']);
+      if (data is Map &&
+          (data['diamonds'] != null ||
+              data['diamond'] != null ||
+              data['diamondBalance'] != null)) {
+        _coins.value = giftSpendDiamonds(data);
       } else {
         _coins.value = (_coins.value - price).clamp(0, 1 << 30);
       }

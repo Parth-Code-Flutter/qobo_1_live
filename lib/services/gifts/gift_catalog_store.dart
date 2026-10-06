@@ -190,8 +190,8 @@ class GiftCatalogStore extends GetxService {
     return File('${dir.path}/gift_catalog.json');
   }
 
-  /// Builds a small picture for each gift icon. The panel shows that picture
-  /// instead of playing the full animation file.
+  /// Downloads each gift file after login so the panel can play it from disk.
+  /// A small picture is saved only as a stand-in until that clip starts.
   void _preloadGiftFiles(List<Map<String, String>> items) {
     final urls = <String>[];
     for (final gift in items) {

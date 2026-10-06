@@ -7,11 +7,10 @@ import 'package:flutter_svga/flutter_svga.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:qobo_one_live/utils/svga_network_loader.dart';
 
-/// Small picture for each gift, used by every gift panel.
+/// Small picture for each gift, shown only until the clip starts playing.
 ///
-/// The gift list stores full SVGA animations (often several MB). Playing
-/// those just to draw a tile is what makes the panel slow. This saves one
-/// embedded picture per gift and the tiles show that file instead.
+/// The gift list stores full SVGA animations (often several MB). This saves
+/// one embedded picture so a tile is not blank while that file is decoded.
 class GiftIconPreviewStore {
   GiftIconPreviewStore._();
 

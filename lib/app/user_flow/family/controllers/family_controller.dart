@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
+import 'package:qobo_one_live/repo/economy/economy_repo.dart';
 import 'package:qobo_one_live/repo/family/family_repo.dart';
 import 'package:qobo_one_live/services/emojis/emoji_catalog_store.dart';
 import 'package:qobo_one_live/services/gifts/gift_catalog_store.dart';
@@ -986,6 +987,15 @@ class FamilyController extends GetxController {
     final giftId = gift['id']?.trim() ?? '';
     if (giftId.isEmpty) return;
 
+    final price = int.tryParse(gift['price'] ?? '0') ?? 0;
+    final spendableDiamonds = await _giftSpendDiamondsFromWallet();
+    if (!canAffordGift(diamonds: spendableDiamonds, giftPrice: price)) {
+      _showError(
+        'You need ${price - spendableDiamonds} more diamonds to send this gift.',
+      );
+      return;
+    }
+
     final response = await _familyRepo.sendGroupGift(
       familyId: familyId,
       giftId: giftId,
@@ -1380,6 +1390,13 @@ class FamilyController extends GetxController {
     if (value is int) return value;
     if (value is num) return value.toInt();
     return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  Future<int> _giftSpendDiamondsFromWallet() async {
+    final response = await EconomyRepo().getWalletBalances(isShowLoader: false);
+    final data = response?['data'];
+    if (!isEconomyApiSuccess(response) || data is! Map) return 0;
+    return giftSpendDiamonds(data);
   }
 
   bool _isSuccess(Map<String, dynamic>? response) {

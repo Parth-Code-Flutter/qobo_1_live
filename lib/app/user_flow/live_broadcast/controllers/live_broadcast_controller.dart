@@ -977,10 +977,20 @@ class LiveBroadcastController extends GetxController {
       coinsBalance.value = parseWalletAmount(
         data['coins'] ?? data['coin'] ?? data['balance'] ?? data['coinBalance'],
       );
-      diamondsBalance.value = parseWalletAmount(
-        data['diamonds'] ?? data['diamond'] ?? data['diamondBalance'],
-      );
+      diamondsBalance.value = giftSpendDiamonds(data);
     }
+  }
+
+  /// Fresh wallet `diamonds` for the gift-send check. Coins are left as-is.
+  Future<int> _giftSpendDiamondsFromWallet() async {
+    final response = await _economyRepo.getWalletBalances(isShowLoader: false);
+    final data = response?['data'];
+    if (isEconomyApiSuccess(response) && data is Map) {
+      final diamonds = giftSpendDiamonds(data);
+      diamondsBalance.value = diamonds;
+      return diamonds;
+    }
+    return diamondsBalance.value;
   }
 
   void _seedSessionEarningsFromRoom() {
@@ -3286,10 +3296,15 @@ class LiveBroadcastController extends GetxController {
     final count = comboCount < 1 ? 1 : comboCount;
     final int price = int.tryParse(gift['price'] ?? '0') ?? 0;
     final totalCost = price * count;
-    if (coinsBalance.value < totalCost) {
+    final spendableDiamonds = await _giftSpendDiamondsFromWallet();
+    if (!canAffordGift(
+      diamonds: spendableDiamonds,
+      giftPrice: price,
+      count: count,
+    )) {
       _showRoomToast(
         'Insufficient Coins',
-        'You need ${totalCost - coinsBalance.value} more coins to send this gift.',
+        'You need ${totalCost - spendableDiamonds} more diamonds to send this gift.',
         isError: true,
       );
       return;

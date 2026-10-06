@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svga/flutter_svga.dart';
 import 'package:qobo_one_live/app/user_flow/live_broadcast/utils/live_room_profile_utils.dart';
 import 'package:qobo_one_live/services/gifts/gift_icon_preview_store.dart';
 import 'package:qobo_one_live/utils/app_widgets/safe_network_avatar.dart';
+import 'package:qobo_one_live/utils/svga_network_loader.dart';
 
 /// Renders a gift icon from:
 /// - network SVGA / animated clip URL (`icon` from gift-list API)
@@ -41,7 +44,8 @@ class GiftIconWidget extends StatelessWidget {
   }
 }
 
-/// Shows the small saved gift picture. The full animation plays only on send.
+/// Plays the gift clip from the file saved at login. A still is only shown
+/// until that clip is ready.
 class _NetworkGiftIcon extends StatefulWidget {
   const _NetworkGiftIcon({
     required this.url,
@@ -57,9 +61,13 @@ class _NetworkGiftIcon extends StatefulWidget {
   State<_NetworkGiftIcon> createState() => _NetworkGiftIconState();
 }
 
-class _NetworkGiftIconState extends State<_NetworkGiftIcon> {
-  String? _path;
-  bool _loading = true;
+class _NetworkGiftIconState extends State<_NetworkGiftIcon>
+    with SingleTickerProviderStateMixin {
+  SVGAAnimationController? _svgaController;
+  String? _previewPath;
+  bool _isLoading = true;
+  bool _svgaFailed = false;
+  int _loadToken = 0;
 
   @override
   void initState() {
@@ -71,27 +79,95 @@ class _NetworkGiftIconState extends State<_NetworkGiftIcon> {
   void didUpdateWidget(covariant _NetworkGiftIcon oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.url != widget.url) {
-      _path = null;
-      _loading = true;
+      _previewPath = null;
+      _isLoading = true;
+      _svgaFailed = false;
       _load();
     }
   }
 
+  @override
+  void dispose() {
+    _loadToken++;
+    _svgaController?.dispose();
+    _svgaController = null;
+    super.dispose();
+  }
+
   Future<void> _load() async {
-    final path = await GiftIconPreviewStore.ensure(widget.url);
-    if (!mounted) return;
-    setState(() {
-      _path = path;
-      _loading = false;
-    });
+    final token = ++_loadToken;
+    _svgaController?.dispose();
+    _svgaController = null;
+
+    final previewFuture = GiftIconPreviewStore.ensure(widget.url);
+    unawaited(previewFuture.then((path) {
+      if (!mounted || token != _loadToken) return;
+      if (_svgaController?.videoItem != null) return;
+      if (path == null || path.isEmpty) return;
+      setState(() => _previewPath = path);
+    }));
+
+    if (_isStaticImage(widget.url)) {
+      if (!mounted || token != _loadToken) return;
+      setState(() {
+        _isLoading = false;
+        _svgaFailed = true;
+      });
+      return;
+    }
+
+    final controller = SVGAAnimationController(vsync: this);
+    _svgaController = controller;
+
+    try {
+      final videoItem = await SvgaNetworkLoader.decode(widget.url);
+      if (!mounted || token != _loadToken || _svgaController != controller) {
+        videoItem.dispose();
+        return;
+      }
+      controller.videoItem = videoItem;
+      // Catalog icons are decorative — never play embedded gift SFX here.
+      controller.muted = true;
+      controller
+        ..reset()
+        ..repeat();
+      if (!mounted || token != _loadToken) return;
+      setState(() {
+        _isLoading = false;
+        _svgaFailed = false;
+      });
+    } catch (_) {
+      if (!mounted || token != _loadToken) return;
+      if (_svgaController == controller) {
+        controller.dispose();
+        _svgaController = null;
+      }
+      setState(() {
+        _isLoading = false;
+        _svgaFailed = true;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final path = _path;
-    if (path != null && path.isNotEmpty) {
+    final controller = _svgaController;
+    if (!_svgaFailed && controller?.videoItem != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: SVGAImage(
+          controller!,
+          fit: BoxFit.contain,
+          preferredSize: Size.square(widget.size),
+          clearsAfterStop: false,
+        ),
+      );
+    }
+
+    final preview = _previewPath;
+    if (preview != null && preview.isNotEmpty) {
       return Image.file(
-        File(path),
+        File(preview),
         width: widget.size,
         height: widget.size,
         fit: BoxFit.contain,
@@ -99,7 +175,8 @@ class _NetworkGiftIconState extends State<_NetworkGiftIcon> {
         errorBuilder: (_, __, ___) => _emoji(),
       );
     }
-    if (_loading) {
+
+    if (_isLoading) {
       return Center(
         child: SizedBox(
           width: widget.size * 0.35,
@@ -111,15 +188,16 @@ class _NetworkGiftIconState extends State<_NetworkGiftIcon> {
         ),
       );
     }
-    if (_isStaticImage(widget.url)) {
-      return SafeNetworkAvatar(
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: SafeNetworkAvatar(
         url: widget.url,
         size: widget.size,
         fit: BoxFit.contain,
         fallback: _emoji(),
-      );
-    }
-    return _emoji();
+      ),
+    );
   }
 
   Widget _emoji() {

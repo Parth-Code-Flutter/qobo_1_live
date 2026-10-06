@@ -1476,7 +1476,7 @@ class _CallGiftsBottomSheetState extends State<_CallGiftsBottomSheet> {
                     Spacing.h6,
                     SemiBoldText(
                       text: formatLedgerAmount(
-                        widget.controller.coinsBalance.value,
+                        widget.controller.giftWalletDiamonds.value,
                       ),
                       fontSize: TextStyles.k14FontSize,
                       color: kColorWhite,
