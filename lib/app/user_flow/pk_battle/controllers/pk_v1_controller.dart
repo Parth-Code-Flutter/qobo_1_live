@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/app/user_flow/pk_battle/models/v1/pk_clock_finish.dart';
 import 'package:qobo_one_live/app/user_flow/pk_battle/models/v1/pk_v1_models.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/repo/economy/economy_repo.dart';
@@ -11,6 +12,7 @@ import 'package:qobo_one_live/repo/room/room_repo.dart';
 import 'package:qobo_one_live/app/user_flow/live_broadcast/controllers/live_broadcast_controller.dart';
 import 'package:qobo_one_live/app/user_flow/pk_battle/widgets/pk_battle_duration_picker_dialog.dart';
 import 'package:qobo_one_live/app/user_flow/pk_battle/widgets/pk_winner_celebration_overlay.dart';
+import 'package:qobo_one_live/services/pk/pk_invitation_inbox.dart';
 import 'package:qobo_one_live/services/pk/pk_live_room_bridge.dart';
 import 'package:qobo_one_live/services/realtime/user_realtime_socket_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
@@ -117,10 +119,17 @@ class PkV1Controller extends GetxController {
   Timer? _clockTimer;
   Timer? _resyncTimer;
   Timer? _exitAfterResultTimer;
+  Timer? _outgoingWaitTimer;
+  int _outgoingWaitGeneration = 0;
+  bool _outgoingWaitInFlight = false;
   Duration _serverOffset = Duration.zero;
   int _giftSeq = 0;
   bool _resultHandled = false;
   bool _earlyFinishTriggered = false;
+
+  /// True after the battle clock has shown time above the finish window.
+  /// Stops a brand-new session with remaining 0 from ending immediately.
+  bool _clockHasRun = false;
 
   /// Show winner / lock gifts & chat this many seconds before timer hits 0.
   static const int earlyFinishBufferSec = 5;
@@ -149,6 +158,7 @@ class PkV1Controller extends GetxController {
     _clockTimer?.cancel();
     _resyncTimer?.cancel();
     _exitAfterResultTimer?.cancel();
+    _stopOutgoingWait();
     PkWinnerCelebrationOverlay.dismiss();
     _socket?.removePkBattleV1Listener(_onSocketEvent);
     final pkId = session.value?.pkId;
@@ -212,6 +222,7 @@ class PkV1Controller extends GetxController {
     _clockTimer?.cancel();
     _resyncTimer?.cancel();
     _exitAfterResultTimer?.cancel();
+    _stopOutgoingWait();
     _exitAfterResultTimer = null;
     PkWinnerCelebrationOverlay.dismiss();
     _resultHandled = false;
@@ -228,6 +239,7 @@ class PkV1Controller extends GetxController {
     countdownRemainingSec.value = 0;
     interactionsLocked.value = false;
     _earlyFinishTriggered = false;
+    _clockHasRun = false;
     machineState.value = '';
     rtcBridge.value = null;
     lastStateTransition.value = null;
@@ -245,6 +257,7 @@ class PkV1Controller extends GetxController {
   }
 
   void _startAtSelection() {
+    _stopOutgoingWait();
     stage.value = PkArenaStage.selecting;
     loadEligibleHosts();
     loadGiftCatalog();
@@ -264,6 +277,7 @@ class PkV1Controller extends GetxController {
     _exitAfterResultTimer?.cancel();
     _resultHandled = false;
     _earlyFinishTriggered = false;
+    _clockHasRun = false;
     interactionsLocked.value = false;
 
     // selfName kept for call-site API; preview always uses design-ref hosts.
@@ -371,6 +385,7 @@ class PkV1Controller extends GetxController {
     _resultHandled = false;
     interactionsLocked.value = false;
     _earlyFinishTriggered = false;
+    _clockHasRun = false;
     _startAtSelection();
   }
 
@@ -598,14 +613,16 @@ class PkV1Controller extends GetxController {
         durationSec: durationSec,
       );
       if (PkV1Repo.isSuccess(body)) {
-        final data = PkV1Repo.dataOf(body);
+        final data = pkInvitationFields(PkV1Repo.dataOf(body));
         outgoingInvitation.value = PkInvitation.fromJson({
           ...data,
+          'toUserId': data['toUserId'] ?? host.userId,
           'toUserName': host.displayName,
           'toUserAvatar': host.avatarUrl,
           'toRoomId': host.roomId,
         });
         stage.value = PkArenaStage.waiting;
+        _watchOutgoingAcceptance();
         return;
       }
       // If v1 is not deployed yet, fall through to legacy room challenge.
@@ -638,7 +655,7 @@ class PkV1Controller extends GetxController {
         ? (legacy['data'] as Map).map((k, v) => MapEntry(k.toString(), v))
         : <String, dynamic>{};
     outgoingInvitation.value = PkInvitation.fromJson({
-      ...data,
+      ...pkInvitationFields(data),
       'invitationId': data['invitationId'] ??
           data['invitation_id'] ??
           data['request_id'] ??
@@ -653,6 +670,145 @@ class PkV1Controller extends GetxController {
       'status': data['status'] ?? 'PENDING',
     });
     stage.value = PkArenaStage.waiting;
+    _watchOutgoingAcceptance();
+  }
+
+  /// The waiting screen used to move on only when a socket accept arrived.
+  /// That event is missed when the socket is down, so poll the invitation.
+  void _watchOutgoingAcceptance() {
+    final generation = ++_outgoingWaitGeneration;
+    _outgoingWaitTimer?.cancel();
+    _outgoingWaitTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      unawaited(_pollOutgoingAcceptance(generation));
+    });
+    unawaited(_pollOutgoingAcceptance(generation));
+  }
+
+  void _stopOutgoingWait() {
+    _outgoingWaitGeneration++;
+    _outgoingWaitTimer?.cancel();
+    _outgoingWaitTimer = null;
+  }
+
+  Future<void> _pollOutgoingAcceptance(int generation) async {
+    if (generation != _outgoingWaitGeneration) return;
+    if (stage.value != PkArenaStage.waiting || _outgoingWaitInFlight) return;
+    final invitation = outgoingInvitation.value;
+    final invitationId = invitation?.invitationId.trim() ?? '';
+
+    _outgoingWaitInFlight = true;
+    try {
+      if (invitationId.isNotEmpty) {
+        final body = await _repo.getInvitations(
+          type: 'outgoing',
+          isShowLoader: false,
+        );
+        if (generation != _outgoingWaitGeneration ||
+            stage.value != PkArenaStage.waiting) {
+          return;
+        }
+        final decision = outgoingInvitationWaitDecision(
+          invitationId: invitationId,
+          body: body,
+        );
+        LoggerUtils.logInfo(
+          'PkV1: waiting invite=$invitationId '
+          'decision=${decision.action.name} pk=${decision.pkId}',
+        );
+        switch (decision.action) {
+          case PkOutgoingWaitAction.keepWaiting:
+            break;
+          case PkOutgoingWaitAction.declined:
+            _toast('Host declined the PK');
+            outgoingInvitation.value = null;
+            _startAtSelection();
+            return;
+          case PkOutgoingWaitAction.timedOut:
+            _toast('PK invitation timed out');
+            outgoingInvitation.value = null;
+            _startAtSelection();
+            return;
+          case PkOutgoingWaitAction.startBattle:
+            if (await _enterLiveSession(
+              decision.pkId,
+              generation: generation,
+            )) {
+              return;
+            }
+            break;
+        }
+      }
+
+      await _enterActiveRoomBattle(generation);
+    } catch (e) {
+      LoggerUtils.logWarning('PkV1: outgoing accept poll failed — $e');
+    } finally {
+      _outgoingWaitInFlight = false;
+    }
+  }
+
+  /// Opens the battle when [pkId] is a live v1 session. A miss stays on waiting.
+  Future<bool> _enterLiveSession(
+    String pkId, {
+    required int generation,
+  }) async {
+    final id = pkId.trim();
+    if (id.isEmpty) return false;
+    final body = await _repo.getSession(pkId: id);
+    if (generation != _outgoingWaitGeneration ||
+        stage.value != PkArenaStage.waiting) {
+      return false;
+    }
+    if (!PkV1Repo.isSuccess(body)) return false;
+    final session = PkSession.fromJson(PkV1Repo.dataOf(body));
+    if (session.pkId.isEmpty) return false;
+    if (session.status == PkSessionStatus.ended ||
+        session.status == PkSessionStatus.cancelled ||
+        session.status == PkSessionStatus.expired ||
+        session.status == PkSessionStatus.idle) {
+      return false;
+    }
+    _stopOutgoingWait();
+    LoggerUtils.logInfo('PkV1: opponent accepted, opening session $id');
+    _applySession(session);
+    return true;
+  }
+
+  /// `GET /api/pk/active` is the fallback when the socket accept never arrives.
+  Future<bool> _enterActiveRoomBattle(int generation) async {
+    final roomId = selfRoomId.trim();
+    if (roomId.isEmpty) return false;
+    final body = await _legacyPkRepo.getActivePk(
+      roomId: roomId,
+      isShowLoader: false,
+    );
+    if (generation != _outgoingWaitGeneration ||
+        stage.value != PkArenaStage.waiting) {
+      return false;
+    }
+    final battleId = activeBattleIdFromRoomPk(body);
+    if (battleId.isEmpty || body == null) return false;
+    if (await _enterLiveSession(battleId, generation: generation)) return true;
+    if (generation != _outgoingWaitGeneration ||
+        stage.value != PkArenaStage.waiting) {
+      return false;
+    }
+    final invite = outgoingInvitation.value;
+    final session = PkSession.fromJson(
+      legacyBattleAsSession(
+        body: body,
+        selfRoomId: roomId,
+        selfName: selfName,
+        selfAvatar: selfAvatar,
+        opponentName: invite?.toUserName ?? '',
+        opponentAvatar: invite?.toUserAvatar ?? '',
+      ),
+    );
+    if (session.pkId.isEmpty) return false;
+    _stopOutgoingWait();
+    LoggerUtils.logInfo('PkV1: opponent accepted, opening battle ${session.pkId}');
+    _applySession(session);
+    return true;
   }
 
   Future<void> cancelOutgoing() async {
@@ -707,6 +863,7 @@ class PkV1Controller extends GetxController {
   }
 
   void _applySession(PkSession s) {
+    if (_resultHandled || _earlyFinishTriggered) return;
     session.value = s;
     scoreA.value = s.sideA.score;
     scoreB.value = s.sideB.score;
@@ -734,6 +891,10 @@ class PkV1Controller extends GetxController {
     }
 
     _socket?.joinPkChannel(s.pkId);
+
+    if (s.endsAt == null && s.remainingSec > 0) {
+      remainingSeconds.value = s.remainingSec;
+    }
 
     if (s.status == PkSessionStatus.ended ||
         s.status == PkSessionStatus.cancelled ||
@@ -888,31 +1049,21 @@ class PkV1Controller extends GetxController {
       remainingSeconds.value = remaining > 0 ? remaining : 0;
     }
 
-    if (stage.value != PkArenaStage.battling) return;
+    if (remainingSeconds.value > 0) {
+      _clockHasRun = true;
+    }
 
-    // Last [earlyFinishBufferSec]: freeze gifts/chat and show winner/loser.
-    // Example: 2 min battle → at 115s remaining==5 → reveal result.
-    if (_shouldTriggerEarlyFinish) {
+    final battleOnScreen = stage.value == PkArenaStage.battling ||
+        stage.value == PkArenaStage.starting;
+    if (pkBattleClockShouldFinish(
+      battleOnScreen: battleOnScreen,
+      remainingSeconds: remainingSeconds.value,
+      clockHasRun: _clockHasRun,
+      alreadyHandled: _earlyFinishTriggered || _resultHandled,
+      earlyFinishBufferSec: 0,
+    )) {
       _beginEarlyFinish();
-      return;
     }
-
-    if (remainingSeconds.value <= 0) {
-      _clockTimer?.cancel();
-      final pkId = s?.pkId;
-      if (pkId != null && pkId.isNotEmpty) {
-        _loadResult(pkId);
-      }
-    }
-  }
-
-  bool get _shouldTriggerEarlyFinish {
-    if (_earlyFinishTriggered || _resultHandled) return false;
-    if (stage.value != PkArenaStage.battling) return false;
-    final duration = session.value?.durationSec ?? 0;
-    // Only apply early finish when battle is longer than the buffer.
-    if (duration > 0 && duration <= earlyFinishBufferSec) return false;
-    return remainingSeconds.value <= earlyFinishBufferSec;
   }
 
   /// Client-side early close: lock interactions + show winner without waiting
@@ -932,9 +1083,15 @@ class PkV1Controller extends GetxController {
     if (_resultHandled) return;
     if (pkId.isNotEmpty && !pkId.startsWith('ui_preview_')) {
       try {
-        final body = await _repo.getResult(pkId: pkId);
-        if (PkV1Repo.isSuccess(body) && !_resultHandled) {
-          _applyResult(PkResult.fromJson(PkV1Repo.dataOf(body)));
+        final body = await _repo.getResult(pkId: pkId).timeout(
+          const Duration(seconds: 4),
+          onTimeout: () => null,
+        );
+        final data = PkV1Repo.dataOf(body);
+        if (PkV1Repo.isSuccess(body) &&
+            !_resultHandled &&
+            _serverResultDeclaresOutcome(data)) {
+          _applyResult(PkResult.fromJson(data));
           return;
         }
       } catch (e) {
@@ -943,6 +1100,27 @@ class PkV1Controller extends GetxController {
     }
     if (_resultHandled) return;
     _applyResult(_localResultFromScores(pkId));
+  }
+
+  bool _serverResultDeclaresOutcome(Map<String, dynamic> data) {
+    if (data.isEmpty) return false;
+    const keys = [
+      'winnerSide',
+      'winner_side',
+      'winnerId',
+      'winner_id',
+      'scoreA',
+      'score_a',
+      'scoreB',
+      'score_b',
+    ];
+    for (final key in keys) {
+      final value = data[key];
+      if (value == null) continue;
+      if (value.toString().trim().isEmpty) continue;
+      return true;
+    }
+    return false;
   }
 
   PkResult _localResultFromScores(String pkId) {
@@ -1353,9 +1531,15 @@ class PkV1Controller extends GetxController {
     switch (event) {
       case 'PK_INVITATION_ACCEPTED':
       case 'PK_STARTED':
-        final id = pkId.isNotEmpty ? pkId : currentPk;
-        if (id != null && id.isNotEmpty) {
+        final nestedPkId = pkIdFromPkPayload(data);
+        final id = pkId.isNotEmpty
+            ? pkId
+            : (nestedPkId.isNotEmpty ? nestedPkId : (currentPk ?? ''));
+        if (id.isNotEmpty) {
+          _stopOutgoingWait();
           refreshSession(id);
+        } else if (stage.value == PkArenaStage.waiting) {
+          unawaited(_pollOutgoingAcceptance(_outgoingWaitGeneration));
         }
         break;
       case 'PK_INVITATION_REJECTED':

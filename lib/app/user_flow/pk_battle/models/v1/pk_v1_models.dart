@@ -458,7 +458,12 @@ class PkSession {
       status: pkStatusFromRaw(j['status']),
       mode: _str(j, const ['mode'], 'ONE_VS_ONE'),
       durationSec: _int(j, const ['durationSec', 'duration_sec', 'duration'], 180),
-      remainingSec: _int(j, const ['remainingSec', 'remaining_sec']),
+      remainingSec: _int(j, const [
+        'remainingSec',
+        'remaining_sec',
+        'remainingSeconds',
+        'remaining_seconds',
+      ]),
       startsAt: _date(j, const ['startsAt', 'starts_at', 'startAt']),
       endsAt: _date(j, const ['endsAt', 'ends_at', 'endAt']),
       serverTime: _date(j, const ['serverTime', 'server_time']),

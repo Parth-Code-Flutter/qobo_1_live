@@ -130,6 +130,9 @@ class PkBattlePushHandler {
             type == PushNotificationTypes.pkAccepted) {
           await _ensureEmbeddedPkV1(data);
         }
+        if (type == PushNotificationTypes.pkRequest) {
+          _presentInRoomInvitation(data);
+        }
         _dismissLegacyPkArenaIfOpen();
         return;
       }
@@ -179,11 +182,13 @@ class PkBattlePushHandler {
 
   Future<void> _openIncomingChallenge(Map<String, dynamic> data) async {
     // Live streaming / in-room PK must never leave the live screen.
-    // V1 invitations are shown via [PkV1Coordinator] dialog instead.
+    // Show the Accept dialog here. The socket event alone was not enough
+    // while the host was already in a room.
     if (_isInActiveLiveRoom()) {
       LoggerUtils.logInfo(
-        'PkBattlePush: skip legacy PK arena for incoming challenge (stay in live)',
+        'PkBattlePush: show PK accept dialog in the live room',
       );
+      _presentInRoomInvitation(data);
       return;
     }
 
@@ -356,6 +361,13 @@ class PkBattlePushHandler {
 
     // For recipient of pk_request, room_id is their own room.
     return _text(data['room_id']) ?? _text(data['target_room_id']) ?? '';
+  }
+
+  void _presentInRoomInvitation(Map<String, dynamic> data) {
+    final coordinator = Get.isRegistered<PkV1Coordinator>()
+        ? Get.find<PkV1Coordinator>()
+        : Get.put(PkV1Coordinator(), permanent: true);
+    coordinator.presentIncoming(data);
   }
 
   /// True when the user is already inside a live / audio / video room screen.

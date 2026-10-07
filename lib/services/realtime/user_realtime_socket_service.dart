@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' as dart_io;
 
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
@@ -12,6 +13,59 @@ import 'package:qobo_one_live/utils/app_widgets/room_invite_in_app_banner.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
+// socket_io_client already depends on this. The connector has to return its type.
+// ignore: depend_on_referenced_packages
+import 'package:web_socket/io_web_socket.dart';
+// ignore: depend_on_referenced_packages
+import 'package:web_socket/web_socket.dart' as ws;
+
+/// Socket origin for [ApiConstants.baseUrl].
+///
+/// Https drops an explicit `:443` from the string, and the socket client then
+/// builds a portless `wss://` URL. [realtimeSocketDialUri] puts the port back
+/// before the websocket dial, so the phone does not request `:0`.
+String realtimeSocketOrigin(String baseUrl) {
+  final uri = Uri.parse(baseUrl.trim());
+  final isSecure = uri.scheme == 'https' || uri.scheme == 'wss';
+  final defaultPort = isSecure ? 443 : 80;
+  if (!uri.hasPort || uri.port == 0) {
+    return uri.replace(port: defaultPort).toString();
+  }
+  return uri.toString();
+}
+
+/// Websocket URL passed to `WebSocket.connect`.
+///
+/// A portless `wss://` URI is port 0 in Dart, and the handshake is sent to
+/// `https://host:0/...`, which never connects. An explicit port stays on 443.
+String realtimeSocketDialUri(Uri uri) {
+  final secure = uri.scheme == 'https' || uri.scheme == 'wss';
+  final port = uri.hasPort && uri.port != 0 ? uri.port : (secure ? 443 : 80);
+  final scheme = secure ? 'wss' : 'ws';
+  return uri.replace(scheme: scheme, port: port).toString();
+}
+
+/// Dials [uri] on an explicit port. Used by the socket client connector.
+Future<ws.WebSocket> connectRealtimeWebSocket(
+  Uri uri, {
+  Iterable<String>? protocols,
+  Map<String, String>? headers,
+}) async {
+  final dial = realtimeSocketDialUri(uri);
+  LoggerUtils.logInfo('RealtimeSocket: dial $dial');
+  try {
+    // Handed to IOWebSocket and closed by the socket transport.
+    // ignore: close_sinks
+    final socket = await dart_io.WebSocket.connect(
+      dial,
+      protocols: protocols,
+      headers: headers,
+    );
+    return IOWebSocket.fromWebSocket(socket);
+  } on dart_io.WebSocketException catch (error) {
+    throw ws.WebSocketException(error.message);
+  }
+}
 
 /// Socket.IO connection for authenticated users.
 ///
@@ -122,9 +176,10 @@ class UserRealtimeSocketService extends GetxController {
       await disconnect();
 
       final socket = io.io(
-        ApiConstants.baseUrl,
+        realtimeSocketOrigin(ApiConstants.baseUrl),
         io.OptionBuilder()
             .setTransports(['websocket'])
+            .setWebSocketConnector(connectRealtimeWebSocket)
             .enableAutoConnect()
             .enableReconnection()
             .setReconnectionAttempts(8)
