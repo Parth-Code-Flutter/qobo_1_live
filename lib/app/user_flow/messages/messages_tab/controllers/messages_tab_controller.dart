@@ -64,11 +64,14 @@ class MessagesTabController extends GetxController {
   List<MessageListItemModel> _firestoreRoomThreads = const [];
   final Map<String, MessageListItemModel> _roomsById = {};
   final Map<String, _LiveHit> _liveHits = {};
-  final Set<String> _countedMessageIds = {};
-  final Set<String> _seededRooms = {};
 
   /// Partner id → latest activity the user has already opened.
   final Map<String, DateTime> _readThrough = {};
+
+  /// Distinct incoming messages seen since the chat was last opened.
+  final Map<String, Set<String>> _incomingKeys = {};
+
+  Timer? _inboxPoll;
 
   StreamSubscription<List<Map<String, dynamic>>>? _inboxRoomsSub;
   final Map<String, StreamSubscription<Map<String, dynamic>?>>
@@ -152,10 +155,11 @@ class MessagesTabController extends GetxController {
   }
 
   /// `GET /api/chat/list` for Message section (+ local cache until send API live).
-  Future<void> fetchInbox() async {
+  Future<void> fetchInbox({bool silent = false}) async {
     final gen = ++_fetchGen;
+    final showLoading = !silent || inboxThreads.isEmpty;
     try {
-      isInboxLoading.value = true;
+      if (showLoading) isInboxLoading.value = true;
       ChatLogger.inbox('fetch start');
       final apiThreads = <MessageListItemModel>[];
       final response = await _chatRepo.getInbox(isShowLoader: false);
@@ -210,6 +214,7 @@ class MessagesTabController extends GetxController {
         );
       }
       _publishInbox();
+      _startInboxPoll();
       unawaited(_ensureInboxWatch());
       ChatLogger.inbox(
         'fetch merged',
@@ -224,8 +229,16 @@ class MessagesTabController extends GetxController {
       ChatLogger.inboxWarn('fetch failed', {'error': e});
       if (gen == _fetchGen) inboxThreads.clear();
     } finally {
-      if (gen == _fetchGen) isInboxLoading.value = false;
+      if (gen == _fetchGen && showLoading) isInboxLoading.value = false;
     }
+  }
+
+  void _startInboxPoll() {
+    if (_inboxPoll != null) return;
+    _inboxPoll = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (isInboxLoading.value) return;
+      unawaited(fetchInbox(silent: true));
+    });
   }
 
   void _rememberRooms(Iterable<MessageListItemModel> threads) {
@@ -384,28 +397,40 @@ class MessagesTabController extends GetxController {
         ? preview
         : ChatInboxPreviewType.displayLabel(type);
     final fromMe = (raw['senderId']?.toString() ?? '') == (_myUserId ?? '');
-    final already = _countedMessageIds.contains(messageId);
-    // The first snapshot is the message already in the room, not a new one.
-    final firstSnapshot = _seededRooms.add(roomId);
+    final messageAt = ChatFirebaseService.messageActivityAt(raw);
+    if (!fromMe &&
+        !_isViewingChat(current.targetId) &&
+        _activityIsUnread(current.targetId, messageAt)) {
+      final key = incomingMessageKey(
+        preview: text,
+        activityAt: messageAt,
+        messageId: messageId,
+      );
+      if (key.isNotEmpty) {
+        _incomingKeys.putIfAbsent(current.targetId, () => <String>{}).add(key);
+      }
+    }
     final update = InboxLiveUpdate.resolve(
       currentActivityAt: current.lastActivityAt,
       currentPreview: current.message,
       messageAt: ChatFirebaseService.messageActivityAt(raw),
       preview: text,
       messageType: type,
-      shownUnread: _shownUnread(roomId, current),
+      shownUnread: unreadBadgeCount(
+        reportedCount: _readThrough.containsKey(current.targetId)
+            ? 0
+            : _shownUnread(roomId, current),
+        seenIncomingCount: _incomingKeys[current.targetId]?.length ?? 0,
+        alreadyRead: fromMe || !_activityIsUnread(current.targetId, messageAt),
+        sinceRead: _readThrough.containsKey(current.targetId),
+      ),
       fromMe: fromMe,
       chatOpen: _isViewingChat(current.targetId),
-      alreadyCounted: already || firstSnapshot,
+      // The badge count already includes this message. Do not add it again.
+      alreadyCounted: true,
     );
-    if (update == null) {
-      _countedMessageIds.add(messageId);
-      return;
-    }
+    if (update == null) return;
 
-    if (!fromMe && !_isViewingChat(current.targetId)) {
-      _countedMessageIds.add(messageId);
-    }
     _liveHits[roomId] = _LiveHit(
       messageId: messageId,
       roomId: roomId,
@@ -515,7 +540,9 @@ class MessagesTabController extends GetxController {
       time: newer.time.isNotEmpty ? newer.time : older.time,
       imageUrl: _resolveInboxImageUrl(newer, older),
       avatarFrameUrl: _resolveInboxFrameUrl(newer, older),
-      unreadCount: newer.unreadCount > 0 ? newer.unreadCount : older.unreadCount,
+      unreadCount: newer.unreadCount > older.unreadCount
+          ? newer.unreadCount
+          : older.unreadCount,
       roomId: newer.roomId.isNotEmpty ? newer.roomId : older.roomId,
       lastMessageType: newer.lastMessageType != ChatInboxPreviewType.text
           ? newer.lastMessageType
@@ -603,13 +630,26 @@ class MessagesTabController extends GetxController {
   }
 
   void _rememberRead(MessageListItemModel thread) {
-    if (thread.targetId.isEmpty) return;
-    final at = thread.lastActivityAt ?? DateTime.now();
-    final previous = _readThrough[thread.targetId];
-    final mark = previous == null || at.isAfter(previous) ? at : previous;
-    _readThrough[thread.targetId] = mark;
-    unawaited(_localStore.writeInboxReadMark(thread.targetId, mark));
+    _stampRead(thread.targetId, _readCutoff(thread.lastActivityAt));
+  }
+
+  /// Everything up to this moment has been seen. The old API total is dropped.
+  void _stampRead(String targetId, DateTime cutoff) {
+    if (targetId.isEmpty) return;
+    final previous = _readThrough[targetId];
+    final mark = previous == null || cutoff.isAfter(previous) ? cutoff : previous;
+    _readThrough[targetId] = mark;
+    _incomingKeys.remove(targetId);
+    unawaited(_localStore.writeInboxReadMark(targetId, mark));
     _publishInbox();
+  }
+
+  /// Covers the open message plus a little clock difference, so it is not
+  /// counted again when the list refreshes.
+  DateTime _readCutoff(DateTime? activityAt) {
+    final now = DateTime.now();
+    final base = activityAt != null && activityAt.isAfter(now) ? activityAt : now;
+    return base.add(const Duration(seconds: 2));
   }
 
   MessageListItemModel _applyReadMark(MessageListItemModel thread) {
@@ -698,6 +738,7 @@ class MessagesTabController extends GetxController {
     final activityRaw =
         json['lastMessageTime']?.toString() ??
         json['lastMessageAt']?.toString();
+    final activityAt = _parseThreadDateTime(activityRaw);
 
     return MessageListItemModel(
       targetId: targetId,
@@ -706,15 +747,69 @@ class MessagesTabController extends GetxController {
       time: _formatThreadTime(activityRaw),
       imageUrl: ApiImageUtils.normalize(picture),
       avatarFrameUrl: avatarFrameUrl,
-      unreadCount: inboxUnreadCount(
+      unreadCount: _noteIncomingUnread(
         json: json,
-        myUserId: _myUserId ?? '',
+        targetId: targetId,
+        preview: preview,
+        activityRaw: activityRaw,
+        activityAt: activityAt,
       ),
       roomId: json['roomId']?.toString() ?? '',
       lastMessageType: lastMessageType,
       lastCallDirection: json['lastCallDirection']?.toString(),
-      lastActivityAt: _parseThreadDateTime(activityRaw),
+      lastActivityAt: activityAt,
     );
+  }
+
+  int _noteIncomingUnread({
+    required Map<String, dynamic> json,
+    required String targetId,
+    required String preview,
+    required String? activityRaw,
+    required DateTime? activityAt,
+  }) {
+    final myId = _myUserId ?? '';
+    final reported = reportedInboxUnread(json);
+    final sender = inboxLastSenderId(json);
+    final fromMe =
+        json['localOnly'] == true ||
+        json['lastMessageFromMe'] == true ||
+        json['sentByMe'] == true ||
+        (sender.isNotEmpty && myId.isNotEmpty && sender == myId);
+    if (fromMe) {
+      _incomingKeys.remove(targetId);
+      return 0;
+    }
+
+    final alreadyRead = !_activityIsUnread(targetId, activityAt);
+    if (alreadyRead) return 0;
+
+    if (inboxPayloadIsIncoming(json: json, myUserId: myId)) {
+      final key = incomingMessageKey(
+        preview: preview,
+        activityAt: activityAt,
+        activityRaw: activityRaw,
+        messageId: json['lastMessageId']?.toString(),
+      );
+      if (key.isNotEmpty && targetId.isNotEmpty) {
+        _incomingKeys.putIfAbsent(targetId, () => <String>{}).add(key);
+      }
+    }
+
+    final sinceRead = _readThrough.containsKey(targetId);
+    return unreadBadgeCount(
+      reportedCount: sinceRead ? 0 : reported,
+      seenIncomingCount: _incomingKeys[targetId]?.length ?? 0,
+      alreadyRead: false,
+      sinceRead: sinceRead,
+    );
+  }
+
+  bool _activityIsUnread(String targetId, DateTime? activityAt) {
+    final seen = _readThrough[targetId];
+    if (seen == null) return true;
+    if (activityAt == null) return false;
+    return activityAt.isAfter(seen);
   }
 
   Future<void> toggleFollow(
@@ -835,6 +930,7 @@ class MessagesTabController extends GetxController {
       imageUrl: user.displayPicture,
       avatarFrameUrl: user.avatarFrameUrl,
     );
+    _stampRead(user.id, _readCutoff(null));
     fetchInbox();
   }
 
@@ -864,6 +960,15 @@ class MessagesTabController extends GetxController {
       imageUrl: thread.imageUrl,
       avatarFrameUrl: thread.avatarFrameUrl,
       roomId: thread.roomId.isNotEmpty ? thread.roomId : null,
+    );
+    // Messages seen inside the chat are read, including ones that arrived
+    // while it was open. The old server total is not added back.
+    _stampRead(thread.targetId, _readCutoff(null));
+    unawaited(
+      _chatRepo.markThreadRead(
+        targetId: thread.targetId,
+        roomId: thread.roomId.isNotEmpty ? thread.roomId : null,
+      ),
     );
     fetchInbox();
   }
@@ -936,6 +1041,7 @@ class MessagesTabController extends GetxController {
 
   @override
   void onClose() {
+    _inboxPoll?.cancel();
     unawaited(_inboxRoomsSub?.cancel());
     for (final sub in _latestMessageSubs.values) {
       unawaited(sub.cancel());

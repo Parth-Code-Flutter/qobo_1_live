@@ -2,70 +2,109 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:qobo_one_live/services/chat/inbox_unread.dart';
 
 void main() {
-  test('a positive unread count is kept', () {
+  test('the API count is kept before the chat has been opened', () {
     expect(
-      inboxUnreadCount(
-        json: {'unreadCount': 3, 'lastMessage': 'Hii'},
-        myUserId: 'me',
+      unreadBadgeCount(
+        reportedCount: 4,
+        seenIncomingCount: 1,
+        alreadyRead: false,
       ),
-      3,
+      4,
     );
   });
 
-  test('a message from the other person is unread even when the count is 0', () {
+  test('after the chat is read, an old API total is ignored', () {
     expect(
-      inboxUnreadCount(
+      unreadBadgeCount(
+        reportedCount: 4,
+        seenIncomingCount: 2,
+        alreadyRead: false,
+        sinceRead: true,
+      ),
+      2,
+    );
+  });
+
+  test('after the chat is read, no new messages means a clear badge', () {
+    expect(
+      unreadBadgeCount(
+        reportedCount: 4,
+        seenIncomingCount: 0,
+        alreadyRead: false,
+        sinceRead: true,
+      ),
+      0,
+    );
+  });
+
+  test('two incoming messages count as two when the API count is missing', () {
+    expect(
+      unreadBadgeCount(
+        reportedCount: 0,
+        seenIncomingCount: 2,
+        alreadyRead: false,
+      ),
+      2,
+    );
+  });
+
+  test('an opened chat shows no unread count', () {
+    expect(
+      unreadBadgeCount(
+        reportedCount: 3,
+        seenIncomingCount: 3,
+        alreadyRead: true,
+      ),
+      0,
+    );
+  });
+
+  test('the same message fetched twice shares one key', () {
+    final first = incomingMessageKey(
+      preview: 'Hii',
+      activityRaw: '2026-10-13T04:11:00.100Z',
+    );
+    final again = incomingMessageKey(
+      preview: 'Hii',
+      activityAt: DateTime.parse('2026-10-13T04:11:00.800Z'),
+    );
+    final next = incomingMessageKey(
+      preview: 'Hello',
+      activityRaw: '2026-10-13T04:11:05.000Z',
+    );
+
+    expect(first, again);
+    expect(next, isNot(first));
+  });
+
+  test('a message from the other person is incoming', () {
+    expect(
+      inboxPayloadIsIncoming(
         json: {
-          'unreadCount': 0,
           'lastMessage': 'Hii',
           'lastMessageSenderId': 'mic-king',
         },
         myUserId: 'me',
       ),
-      1,
+      isTrue,
     );
   });
 
-  test('my own last message is not marked unread', () {
+  test('my own last message is not incoming', () {
     expect(
-      inboxUnreadCount(
+      inboxPayloadIsIncoming(
         json: {
-          'unreadCount': 0,
           'lastMessage': 'Hii',
           'lastMessageSenderId': 'me',
         },
         myUserId: 'me',
       ),
-      0,
+      isFalse,
     );
   });
 
-  test('an empty thread is not marked unread', () {
-    expect(
-      inboxUnreadCount(
-        json: {
-          'unreadCount': 0,
-          'lastMessage': '',
-          'lastMessageSenderId': 'mic-king',
-        },
-        myUserId: 'me',
-      ),
-      0,
-    );
-  });
-
-  test('a read flag stays clear', () {
-    expect(
-      inboxUnreadCount(
-        json: {
-          'unreadCount': 0,
-          'isRead': true,
-          'lastMessage': 'Hii',
-          'lastMessageSenderId': 'mic-king',
-        },
-        myUserId: 'me',
-      ),
-      0,
-    );
+  test('reported unread reads the API field', () {
+    expect(reportedInboxUnread({'unreadCount': 3}), 3);
+    expect(reportedInboxUnread({'unread_count': '2'}), 2);
   });
 }

@@ -1,30 +1,66 @@
-/// Unread count for one inbox row.
+/// How many unread messages the badge should show.
 ///
-/// A positive `unreadCount` wins. When that count is 0 but the last message
-/// was sent by the other person, the row still counts as one unread. Opening
-/// the chat clears it separately.
-int inboxUnreadCount({
+/// Before the chat is opened, a higher API count is kept. After it is read,
+/// [sinceRead] ignores that old total and counts only messages seen since.
+int unreadBadgeCount({
+  required int reportedCount,
+  required int seenIncomingCount,
+  required bool alreadyRead,
+  bool sinceRead = false,
+}) {
+  if (alreadyRead) return 0;
+  final seen = seenIncomingCount < 0 ? 0 : seenIncomingCount;
+  if (sinceRead) return seen;
+  if (reportedCount > seen) return reportedCount;
+  return seen;
+}
+
+/// Server-reported unread count. This does not guess from the last line.
+int reportedInboxUnread(Map<String, dynamic> json) {
+  return _asInt(json['unreadCount'] ?? json['unread_count'] ?? json['unread']);
+}
+
+/// True when this payload is a message from the other person.
+bool inboxPayloadIsIncoming({
   required Map<String, dynamic> json,
   required String myUserId,
 }) {
-  final parsed = _asInt(
-    json['unreadCount'] ?? json['unread_count'] ?? json['unread'],
-  );
-  if (parsed > 0) return parsed;
-
-  if (json['isRead'] == true || json['read'] == true) return 0;
-  if (json['lastMessageFromMe'] == true || json['sentByMe'] == true) {
-    return 0;
+  if (json['isRead'] == true || json['read'] == true) return false;
+  if (json['localOnly'] == true ||
+      json['lastMessageFromMe'] == true ||
+      json['sentByMe'] == true) {
+    return false;
   }
 
   final preview = _previewText(json);
   final type = json['lastMessageType']?.toString() ?? '';
   final hasBody = preview.isNotEmpty || type.contains('call');
-  if (!hasBody) return 0;
+  if (!hasBody) return false;
 
   final sender = inboxLastSenderId(json);
-  if (sender.isEmpty || myUserId.isEmpty || sender == myUserId) return 0;
-  return 1;
+  if (sender.isEmpty || myUserId.isEmpty || sender == myUserId) return false;
+  return true;
+}
+
+/// Stable id for one incoming line, so a repeat fetch is not counted twice.
+///
+/// The same message from the list and from Firestore can differ by a few
+/// milliseconds, so the time is kept only to the second.
+String incomingMessageKey({
+  required String preview,
+  DateTime? activityAt,
+  String? activityRaw,
+  String? messageId,
+}) {
+  final parsed = activityAt ?? DateTime.tryParse(activityRaw ?? '');
+  final text = preview.trim();
+  if (parsed != null) {
+    final second = parsed.toUtc().millisecondsSinceEpoch ~/ 1000;
+    return '$second|$text';
+  }
+  final id = messageId?.trim() ?? '';
+  if (id.isNotEmpty) return id;
+  return text;
 }
 
 /// Who sent the last inbox line, when the payload includes it.
