@@ -76,10 +76,19 @@ class BottomNavController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _userSession.loadFromStorage();
+    // Create the inbox before the first frame so the tab badge can listen.
+    Get.find<MessagesTabController>();
+    unawaited(_startSession());
+  }
+
+  Future<void> _startSession() async {
+    await _userSession.loadFromStorage();
     _fetchProfileOnInit();
     _prefetchAgencySession();
     _syncIncomingCallWatchers();
+    // Keep the messages list listening while any tab is open, not only
+    // after the user lands on Messages.
+    Get.find<MessagesTabController>();
   }
 
   @override

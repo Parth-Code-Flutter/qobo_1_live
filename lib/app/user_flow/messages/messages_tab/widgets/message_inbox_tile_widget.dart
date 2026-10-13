@@ -59,12 +59,19 @@ class MessageInboxTextPreviewWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppText(
-      text: theme.primaryText,
-      color: hasUnread ? AppLightUi.body : AppLightUi.muted,
-      fontSize: TextStyles.k12FontSize,
+    return Text(
+      theme.primaryText,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
+      style: hasUnread
+          ? TextStyles.kBoldPoppins(
+              fontSize: TextStyles.k12FontSize,
+              colors: AppLightUi.title,
+            )
+          : TextStyles.kRegularPoppins(
+              fontSize: TextStyles.k12FontSize,
+              colors: AppLightUi.muted,
+            ),
     );
   }
 }
@@ -94,14 +101,27 @@ class MessageInboxTileWidget extends StatelessWidget {
     return GlossyDatingCard(
       onTap: onTap,
       radius: 16,
-      borderWidth: hasUnread ? 1.3 : 1.0,
+      borderWidth: hasUnread ? 1.6 : 1.0,
       emphasized: hasUnread,
-      // Compact padding keeps rows scannable (Material list ~64–72dp).
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      fill: hasUnread ? AppLightUi.cardSoft : AppLightUi.card,
+      padding: const EdgeInsets.fromLTRB(0, 8, 10, 8),
+      fill: hasUnread ? const Color(0xFFFFE8F3) : AppLightUi.card,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          if (hasUnread)
+            Container(
+              width: 4,
+              height: 46,
+              margin: const EdgeInsets.only(right: 8),
+              decoration: BoxDecoration(
+                color: AppLightUi.pink,
+                borderRadius: const BorderRadius.horizontal(
+                  right: Radius.circular(4),
+                ),
+              ),
+            )
+          else
+            const SizedBox(width: 12),
           _InboxAvatar(item: item),
           Spacing.h10,
           Expanded(
@@ -116,13 +136,16 @@ class MessageInboxTileWidget extends StatelessWidget {
                         item.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: AppLightUi.title,
-                          fontSize: TextStyles.k14FontSize,
-                          fontWeight:
-                              hasUnread ? FontWeight.w700 : FontWeight.w600,
-                          height: 1.15,
-                        ),
+                        style: hasUnread
+                            ? TextStyles.kBoldPoppins(
+                                fontSize: TextStyles.k14FontSize,
+                                colors: AppLightUi.title,
+                                fontWeight: FontWeight.w800,
+                              )
+                            : TextStyles.kSemiBoldPoppins(
+                                fontSize: TextStyles.k14FontSize,
+                                colors: AppLightUi.title,
+                              ),
                       ),
                     ),
                     Spacing.h8,
@@ -135,7 +158,7 @@ class MessageInboxTileWidget extends StatelessWidget {
                         color: hasUnread ? AppLightUi.pink : AppLightUi.muted,
                         fontSize: 11,
                         fontWeight:
-                            hasUnread ? FontWeight.w600 : FontWeight.w400,
+                            hasUnread ? FontWeight.w800 : FontWeight.w400,
                         height: 1.15,
                       ),
                     ),
@@ -234,11 +257,18 @@ class _UnreadBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final label = count > 9 ? '9+' : '$count';
     return Container(
-      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-      padding: EdgeInsets.symmetric(horizontal: label.length > 1 ? 5 : 0),
+      constraints: const BoxConstraints(minWidth: 22, minHeight: 22),
+      padding: EdgeInsets.symmetric(horizontal: label.length > 1 ? 6 : 0),
       decoration: const BoxDecoration(
-        gradient: AppLightUi.familyCtaGradient,
+        color: AppLightUi.pink,
         borderRadius: BorderRadius.all(Radius.circular(999)),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x55FF4F98),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       alignment: Alignment.center,
       child: Text(

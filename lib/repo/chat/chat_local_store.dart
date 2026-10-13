@@ -318,4 +318,25 @@ class ChatLocalStore {
     if (list is! List) return {};
     return list.map((e) => e.toString()).where((id) => id.isNotEmpty).toSet();
   }
+
+  /// Partner id → last activity time the user already opened.
+  Future<Map<String, DateTime>> readInboxReadMarks() async {
+    final map = await _storage.getJsonFromStorage(kStorageChatReadMarks);
+    if (map == null) return {};
+    final marks = <String, DateTime>{};
+    for (final entry in map.entries) {
+      final at = DateTime.tryParse(entry.value?.toString() ?? '');
+      if (entry.key.isEmpty || at == null) continue;
+      marks[entry.key] = at.toLocal();
+    }
+    return marks;
+  }
+
+  Future<void> writeInboxReadMark(String targetId, DateTime activityAt) async {
+    if (targetId.isEmpty) return;
+    final map = await _storage.getJsonFromStorage(kStorageChatReadMarks) ??
+        <String, dynamic>{};
+    map[targetId] = activityAt.toUtc().toIso8601String();
+    await _storage.writeJsonStorage(kStorageChatReadMarks, map);
+  }
 }

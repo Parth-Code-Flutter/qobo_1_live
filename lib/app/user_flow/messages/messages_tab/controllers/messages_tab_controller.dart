@@ -7,11 +7,15 @@ import 'package:qobo_one_live/repo/chat/chat_local_store.dart';
 import 'package:qobo_one_live/repo/chat/chat_navigation_helper.dart';
 import 'package:qobo_one_live/repo/chat/chat_repo.dart';
 import 'package:qobo_one_live/repo/user/user_repo.dart';
+import 'package:qobo_one_live/app/user_flow/messages/chat_detail/controllers/chat_detail_controller.dart';
+import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/chat/chat_firebase_service.dart';
 import 'package:qobo_one_live/services/chat/chat_inbox_preview.dart';
 import 'package:qobo_one_live/services/chat/chat_incoming_call_coordinator.dart';
 import 'package:qobo_one_live/services/chat/chat_logger.dart';
 import 'package:qobo_one_live/services/chat/chat_session_service.dart';
+import 'package:qobo_one_live/services/chat/inbox_live_patch.dart';
+import 'package:qobo_one_live/services/chat/inbox_unread.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
@@ -53,11 +57,35 @@ class MessagesTabController extends GetxController {
   final searchQuery = ''.obs;
   final processingFollowId = ''.obs;
 
+  /// Latest API / local / Firestore rows, kept so a live message can be
+  /// merged again after the next list refresh.
+  List<MessageListItemModel> _apiThreads = const [];
+  List<MessageListItemModel> _localThreads = const [];
+  List<MessageListItemModel> _firestoreRoomThreads = const [];
+  final Map<String, MessageListItemModel> _roomsById = {};
+  final Map<String, _LiveHit> _liveHits = {};
+  final Set<String> _countedMessageIds = {};
+  final Set<String> _seededRooms = {};
+
+  /// Partner id → latest activity the user has already opened.
+  final Map<String, DateTime> _readThrough = {};
+
+  StreamSubscription<List<Map<String, dynamic>>>? _inboxRoomsSub;
+  final Map<String, StreamSubscription<Map<String, dynamic>?>>
+  _latestMessageSubs = {};
+  int _fetchGen = 0;
+  bool _inboxWatchStarted = false;
+
   @override
   void onInit() {
     super.onInit();
     searchController.addListener(_onSearchChanged);
-    refreshAll();
+    unawaited(_loadReadMarksThenRefresh());
+  }
+
+  Future<void> _loadReadMarksThenRefresh() async {
+    _readThrough.addAll(await _localStore.readInboxReadMarks());
+    await refreshAll();
   }
 
   Future<void> refreshAll() async {
@@ -125,6 +153,7 @@ class MessagesTabController extends GetxController {
 
   /// `GET /api/chat/list` for Message section (+ local cache until send API live).
   Future<void> fetchInbox() async {
+    final gen = ++_fetchGen;
     try {
       isInboxLoading.value = true;
       ChatLogger.inbox('fetch start');
@@ -166,13 +195,22 @@ class MessagesTabController extends GetxController {
         firestoreThreads = await _fetchInboxFromFirestore();
       }
 
-      inboxThreads.assignAll(
-        _mergeAllInboxSources(
-          apiThreads,
+      if (gen != _fetchGen) return;
+
+      _apiThreads = apiThreads;
+      _localThreads = localThreads;
+      _rememberRooms(apiThreads);
+      _rememberRooms(localThreads);
+      _rememberRooms(firestoreThreads);
+      if (firestoreThreads.isNotEmpty) {
+        _firestoreRoomThreads = _mergeAllInboxSources(
+          _firestoreRoomThreads,
           firestoreThreads,
-          localThreads,
-        ),
-      );
+          const [],
+        );
+      }
+      _publishInbox();
+      unawaited(_ensureInboxWatch());
       ChatLogger.inbox(
         'fetch merged',
         {
@@ -182,13 +220,255 @@ class MessagesTabController extends GetxController {
           'total': inboxThreads.length,
         },
       );
-      _syncIncomingCallWatchers();
     } catch (e) {
       ChatLogger.inboxWarn('fetch failed', {'error': e});
-      inboxThreads.clear();
+      if (gen == _fetchGen) inboxThreads.clear();
     } finally {
-      isInboxLoading.value = false;
+      if (gen == _fetchGen) isInboxLoading.value = false;
     }
+  }
+
+  void _rememberRooms(Iterable<MessageListItemModel> threads) {
+    for (final thread in threads) {
+      if (thread.roomId.isEmpty || thread.targetId.isEmpty) continue;
+      final existing = _roomsById[thread.roomId];
+      _roomsById[thread.roomId] = existing == null
+          ? thread
+          : _mergeTwoInboxThreads(existing, thread);
+    }
+  }
+
+  void _publishInbox() {
+    final merged = _mergeAllInboxSources(
+      _apiThreads,
+      _firestoreRoomThreads,
+      _localThreads,
+    );
+    final next = <MessageListItemModel>[];
+    final usedRooms = <String>{};
+
+    for (final thread in merged) {
+      final hit = thread.roomId.isEmpty ? null : _liveHits[thread.roomId];
+      if (hit == null) {
+        next.add(_applyReadMark(thread));
+        continue;
+      }
+      usedRooms.add(thread.roomId);
+      next.add(_applyReadMark(_applyHit(thread, hit)));
+    }
+
+    for (final hit in _liveHits.values) {
+      if (usedRooms.contains(hit.roomId)) continue;
+      final known = _roomsById[hit.roomId];
+      if (known == null || known.targetId.isEmpty) continue;
+      final patched = _applyReadMark(_applyHit(known, hit));
+      if (!_hasInboxPreview(patched)) continue;
+      next.add(patched);
+    }
+
+    next.sort((a, b) {
+      final ad = a.lastActivityAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final bd = b.lastActivityAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      return bd.compareTo(ad);
+    });
+    inboxThreads.assignAll(next);
+    _syncLatestMessageWatchers();
+    _syncIncomingCallWatchers();
+  }
+
+  MessageListItemModel _applyHit(MessageListItemModel thread, _LiveHit hit) {
+    final update = InboxLiveUpdate.resolve(
+      currentActivityAt: thread.lastActivityAt,
+      currentPreview: thread.message,
+      messageAt: hit.activityAt,
+      preview: hit.preview,
+      messageType: hit.messageType,
+      shownUnread: thread.unreadCount > hit.unreadCount
+          ? thread.unreadCount
+          : hit.unreadCount,
+      fromMe: true,
+      chatOpen: _isViewingChat(thread.targetId),
+      alreadyCounted: true,
+    );
+    if (update == null) return thread;
+    return MessageListItemModel(
+      targetId: thread.targetId,
+      name: thread.name,
+      message: update.preview,
+      time: _formatThreadTime(update.activityAt.toUtc().toIso8601String()),
+      imageUrl: thread.imageUrl,
+      avatarFrameUrl: thread.avatarFrameUrl,
+      unreadCount: update.unreadCount,
+      roomId: thread.roomId.isNotEmpty ? thread.roomId : hit.roomId,
+      lastMessageType: update.messageType,
+      lastCallDirection: hit.callDirection ?? thread.lastCallDirection,
+      lastActivityAt: update.activityAt,
+    );
+  }
+
+  Future<void> _ensureInboxWatch() async {
+    if (_inboxWatchStarted || !_firebaseService.isAvailable) return;
+    final myId = _myUserId;
+    if (myId == null || myId.isEmpty) return;
+
+    if (!Get.isRegistered<ChatSessionService>()) {
+      Get.put(ChatSessionService(), permanent: true);
+    }
+    final signedIn = await Get.find<ChatSessionService>().ensureSignedIn(
+      isShowLoader: false,
+    );
+    if (!signedIn || _inboxWatchStarted) return;
+
+    _inboxWatchStarted = true;
+    _inboxRoomsSub = _firebaseService.watchUserChatRooms(myId).listen(
+      _onUserChatRooms,
+      onError: (Object e) {
+        ChatLogger.inboxWarn('inbox watch failed', {'error': e});
+      },
+    );
+  }
+
+  void _onUserChatRooms(List<Map<String, dynamic>> rows) {
+    final threads = rows
+        .map((raw) => _mapInboxThread(Map<String, dynamic>.from(raw), 0))
+        .toList();
+    _rememberRooms(threads);
+    final withPreview = threads.where(_hasInboxPreview).toList();
+    if (withPreview.isNotEmpty) {
+      _firestoreRoomThreads = _mergeAllInboxSources(
+        _firestoreRoomThreads,
+        withPreview,
+        const [],
+      );
+    }
+    _publishInbox();
+  }
+
+  void _syncLatestMessageWatchers() {
+    final roomIds = _roomsById.keys.toSet();
+    final stale = _latestMessageSubs.keys
+        .where((roomId) => !roomIds.contains(roomId))
+        .toList();
+    for (final roomId in stale) {
+      unawaited(_latestMessageSubs.remove(roomId)?.cancel());
+    }
+
+    for (final roomId in roomIds) {
+      if (_latestMessageSubs.containsKey(roomId)) continue;
+      _latestMessageSubs[roomId] = _firebaseService
+          .watchLatestMessage(roomId)
+          .listen(
+            (raw) => _onLatestMessage(roomId, raw),
+            onError: (Object e) {
+              ChatLogger.inboxWarn('latest message watch failed', {
+                'roomId': roomId,
+                'error': e,
+              });
+            },
+          );
+    }
+  }
+
+  void _onLatestMessage(String roomId, Map<String, dynamic>? raw) {
+    if (raw == null) return;
+    final messageId =
+        raw['id']?.toString() ?? raw['messageId']?.toString() ?? '';
+    if (messageId.isEmpty) return;
+
+    final current = _threadForRoom(roomId) ?? _roomsById[roomId];
+    if (current == null || current.targetId.isEmpty) return;
+
+    final type = _inboxTypeForMessage(raw);
+    final preview = ChatFirebaseService.messagePreview(raw);
+    final text = preview.isNotEmpty
+        ? preview
+        : ChatInboxPreviewType.displayLabel(type);
+    final fromMe = (raw['senderId']?.toString() ?? '') == (_myUserId ?? '');
+    final already = _countedMessageIds.contains(messageId);
+    // The first snapshot is the message already in the room, not a new one.
+    final firstSnapshot = _seededRooms.add(roomId);
+    final update = InboxLiveUpdate.resolve(
+      currentActivityAt: current.lastActivityAt,
+      currentPreview: current.message,
+      messageAt: ChatFirebaseService.messageActivityAt(raw),
+      preview: text,
+      messageType: type,
+      shownUnread: _shownUnread(roomId, current),
+      fromMe: fromMe,
+      chatOpen: _isViewingChat(current.targetId),
+      alreadyCounted: already || firstSnapshot,
+    );
+    if (update == null) {
+      _countedMessageIds.add(messageId);
+      return;
+    }
+
+    if (!fromMe && !_isViewingChat(current.targetId)) {
+      _countedMessageIds.add(messageId);
+    }
+    _liveHits[roomId] = _LiveHit(
+      messageId: messageId,
+      roomId: roomId,
+      preview: update.preview,
+      messageType: update.messageType,
+      activityAt: update.activityAt,
+      unreadCount: update.unreadCount,
+      callDirection: _callDirection(raw),
+    );
+    _roomsById[roomId] = _applyHit(_roomsById[roomId] ?? current, _liveHits[roomId]!);
+    _publishInbox();
+    ChatLogger.inbox('live row', {
+      'roomId': roomId,
+      'messageId': messageId,
+      'fromMe': fromMe,
+    });
+  }
+
+  int _shownUnread(String roomId, MessageListItemModel fallback) {
+    final shown = _threadForRoom(roomId)?.unreadCount ?? fallback.unreadCount;
+    final live = _liveHits[roomId]?.unreadCount ?? 0;
+    return shown > live ? shown : live;
+  }
+
+  MessageListItemModel? _threadForRoom(String roomId) {
+    for (final thread in inboxThreads) {
+      if (thread.roomId == roomId) return thread;
+    }
+    return null;
+  }
+
+  bool _isViewingChat(String targetId) {
+    if (targetId.isEmpty || Get.currentRoute != Routes.CHAT_DETAIL) {
+      return false;
+    }
+    if (!Get.isRegistered<ChatDetailController>()) return false;
+    return Get.find<ChatDetailController>().targetId.value == targetId;
+  }
+
+  String _inboxTypeForMessage(Map<String, dynamic> raw) {
+    final type = raw['type']?.toString() ?? ChatInboxPreviewType.text;
+    if (type != 'voice_call' && type != 'video_call') return type;
+    final content = raw['content'];
+    if (content is! Map) {
+      return type == 'video_call'
+          ? ChatInboxPreviewType.videoCall
+          : ChatInboxPreviewType.voiceCall;
+    }
+    return ChatInboxPreviewType.inboxTypeForUser(
+      isVideo: type == 'video_call',
+      outcome: content['status']?.toString() ?? 'completed',
+      isCallee: content['calleeId']?.toString() == (_myUserId ?? ''),
+    );
+  }
+
+  String? _callDirection(Map<String, dynamic> raw) {
+    final type = raw['type']?.toString() ?? '';
+    if (type != 'voice_call' && type != 'video_call') return null;
+    final content = raw['content'];
+    if (content is! Map) return null;
+    return content['calleeId']?.toString() == (_myUserId ?? '')
+        ? 'incoming'
+        : 'outgoing';
   }
 
   List<MessageListItemModel> _mergeAllInboxSources(
@@ -322,6 +602,37 @@ class MessagesTabController extends GetxController {
         .toList();
   }
 
+  void _rememberRead(MessageListItemModel thread) {
+    if (thread.targetId.isEmpty) return;
+    final at = thread.lastActivityAt ?? DateTime.now();
+    final previous = _readThrough[thread.targetId];
+    final mark = previous == null || at.isAfter(previous) ? at : previous;
+    _readThrough[thread.targetId] = mark;
+    unawaited(_localStore.writeInboxReadMark(thread.targetId, mark));
+    _publishInbox();
+  }
+
+  MessageListItemModel _applyReadMark(MessageListItemModel thread) {
+    if (thread.unreadCount == 0) return thread;
+    final seen = _readThrough[thread.targetId];
+    if (seen == null) return thread;
+    final activity = thread.lastActivityAt;
+    if (activity != null && activity.isAfter(seen)) return thread;
+    return MessageListItemModel(
+      targetId: thread.targetId,
+      name: thread.name,
+      message: thread.message,
+      time: thread.time,
+      imageUrl: thread.imageUrl,
+      avatarFrameUrl: thread.avatarFrameUrl,
+      unreadCount: 0,
+      roomId: thread.roomId,
+      lastMessageType: thread.lastMessageType,
+      lastCallDirection: thread.lastCallDirection,
+      lastActivityAt: thread.lastActivityAt,
+    );
+  }
+
   bool _hasInboxPreview(MessageListItemModel thread) {
     if (thread.targetId.isEmpty) return false;
     if (thread.message.trim().isNotEmpty) return true;
@@ -395,7 +706,10 @@ class MessagesTabController extends GetxController {
       time: _formatThreadTime(activityRaw),
       imageUrl: ApiImageUtils.normalize(picture),
       avatarFrameUrl: avatarFrameUrl,
-      unreadCount: _toInt(json['unreadCount']),
+      unreadCount: inboxUnreadCount(
+        json: json,
+        myUserId: _myUserId ?? '',
+      ),
       roomId: json['roomId']?.toString() ?? '',
       lastMessageType: lastMessageType,
       lastCallDirection: json['lastCallDirection']?.toString(),
@@ -533,6 +847,7 @@ class MessagesTabController extends GetxController {
       return;
     }
 
+    _rememberRead(thread);
     if (thread.unreadCount > 0) {
       unawaited(
         _chatRepo.markThreadRead(
@@ -621,7 +936,32 @@ class MessagesTabController extends GetxController {
 
   @override
   void onClose() {
+    unawaited(_inboxRoomsSub?.cancel());
+    for (final sub in _latestMessageSubs.values) {
+      unawaited(sub.cancel());
+    }
+    _latestMessageSubs.clear();
     searchController.dispose();
     super.onClose();
   }
+}
+
+class _LiveHit {
+  const _LiveHit({
+    required this.messageId,
+    required this.roomId,
+    required this.preview,
+    required this.messageType,
+    required this.activityAt,
+    required this.unreadCount,
+    this.callDirection,
+  });
+
+  final String messageId;
+  final String roomId;
+  final String preview;
+  final String messageType;
+  final DateTime activityAt;
+  final int unreadCount;
+  final String? callDirection;
 }

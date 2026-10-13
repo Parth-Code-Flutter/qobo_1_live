@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/discover/discover_tab/views/discover_tab_view.dart';
 import 'package:qobo_one_live/app/user_flow/live_room/views/live_room_view.dart';
 import 'package:qobo_one_live/app/user_flow/live_room/views/rooms_tab_view.dart';
+import 'package:qobo_one_live/app/user_flow/messages/messages_tab/controllers/messages_tab_controller.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/views/messages_tab_view.dart';
 import 'package:qobo_one_live/app/user_flow/profile_tab/views/profile_tab_view.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
@@ -304,6 +305,15 @@ class _SparkBottomNavBar extends StatelessWidget {
   }
 }
 
+int _messagesUnreadCount() {
+  if (!Get.isRegistered<MessagesTabController>()) return 0;
+  var total = 0;
+  for (final thread in Get.find<MessagesTabController>().inboxThreads) {
+    total += thread.unreadCount;
+  }
+  return total;
+}
+
 class _SideTab extends StatelessWidget {
   const _SideTab({
     required this.label,
@@ -365,30 +375,35 @@ class _SideTab extends StatelessWidget {
                     Positioned(
                       right: -2,
                       top: -4,
-                      child: Container(
-                        constraints: const BoxConstraints(minWidth: 15),
-                        height: 15,
-                        padding: const EdgeInsets.symmetric(horizontal: 3),
-                        decoration: BoxDecoration(
-                          color: BottomNavView._livePink,
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(
-                            color: const Color(0xFF150F2F),
-                            width: 1,
-                          ),
-                        ),
-                        child: const Center(
-                          child: Text(
-                            '3',
-                            style: TextStyle(
-                              color: kColorWhite,
-                              fontSize: 8,
-                              fontWeight: FontWeight.w800,
-                              height: 1,
+                      child: Obx(() {
+                        final count = _messagesUnreadCount();
+                        if (count <= 0) return const SizedBox.shrink();
+                        final label = count > 9 ? '9+' : '$count';
+                        return Container(
+                          constraints: const BoxConstraints(minWidth: 15),
+                          height: 15,
+                          padding: const EdgeInsets.symmetric(horizontal: 3),
+                          decoration: BoxDecoration(
+                            color: BottomNavView._livePink,
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: const Color(0xFF150F2F),
+                              width: 1,
                             ),
                           ),
-                        ),
-                      ),
+                          child: Center(
+                            child: Text(
+                              label,
+                              style: const TextStyle(
+                                color: kColorWhite,
+                                fontSize: 8,
+                                fontWeight: FontWeight.w800,
+                                height: 1,
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
                     ),
                 ],
               ),

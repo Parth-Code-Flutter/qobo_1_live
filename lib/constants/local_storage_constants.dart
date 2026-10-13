@@ -35,6 +35,9 @@ const String kStorageChatMessages = 'chat_messages_cache';
 /// Local inbox thread previews from unsynced sends.
 const String kStorageChatInboxThreads = 'chat_inbox_threads_cache';
 
+/// Last inbox activity the user has already opened, per partner id.
+const String kStorageChatReadMarks = 'chat_inbox_read_marks';
+
 /// Local call log cache per room (shows in chat thread immediately).
 const String kStorageChatCallHistory = 'chat_call_history_cache';
 

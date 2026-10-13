@@ -57,6 +57,65 @@ class ChatFirebaseService {
         });
   }
 
+  /// Newest message in a room. One document, so the inbox can follow new
+  /// chats without downloading the whole thread.
+  Stream<Map<String, dynamic>?> watchLatestMessage(String roomId) {
+    final firestore = _firestore;
+    if (roomId.isEmpty || firestore == null) {
+      return const Stream.empty();
+    }
+
+    return firestore
+        .collection('chatRooms')
+        .doc(roomId)
+        .collection('messages')
+        .orderBy('createdAt', descending: true)
+        .limit(1)
+        .snapshots()
+        .map((snapshot) {
+          if (snapshot.docs.isEmpty) return null;
+          final doc = snapshot.docs.first;
+          return {
+            ...Map<String, dynamic>.from(doc.data()),
+            'id': doc.id,
+          };
+        });
+  }
+
+  /// Receiver inbox rows. A new room shows up here when chat is created,
+  /// even before its first message preview is filled in.
+  Stream<List<Map<String, dynamic>>> watchUserChatRooms(String userId) {
+    final firestore = _firestore;
+    if (userId.isEmpty || firestore == null) {
+      return const Stream.empty();
+    }
+
+    return firestore
+        .collection('userChats')
+        .doc(userId)
+        .collection('rooms')
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map(_userChatRoomRow)
+              .whereType<Map<String, dynamic>>()
+              .toList(),
+        );
+  }
+
+  static DateTime? messageActivityAt(Map<String, dynamic> raw) {
+    return _toDateTime(raw['createdAt']) ??
+        _toDateTime(raw['clientCreatedAt']);
+  }
+
+  /// Short line for the messages tab. Gifts and emojis use a fixed label.
+  static String messagePreview(Map<String, dynamic> raw) {
+    final type = raw['type']?.toString() ?? '';
+    if (type == 'emoji') return 'Sent an emoji';
+    if (type == 'gift') return 'Sent a gift';
+    return _extractMessagePreview(raw);
+  }
+
   static DateTime _messageSortTime(Map<String, dynamic> raw) {
     return _toDateTime(raw['createdAt']) ??
         _toDateTime(raw['clientCreatedAt']) ??
@@ -389,11 +448,11 @@ class ChatFirebaseService {
 
     final rows = <Map<String, dynamic>>[];
     for (final doc in roomsSnap.docs) {
+      final base = _userChatRoomRow(doc);
+      if (base == null) continue;
       final data = Map<String, dynamic>.from(doc.data());
-      final peerId = data['peerId']?.toString() ?? '';
-      if (peerId.isEmpty) continue;
-
-      final roomId = data['roomId']?.toString() ?? doc.id;
+      final peerId = base['id']?.toString() ?? '';
+      final roomId = base['roomId']?.toString() ?? doc.id;
       var type = data['lastMessageType']?.toString();
       var previewRaw = data['lastMessagePreview']?.toString() ?? '';
       var activityAt = _toDateTime(data['lastMessageAt']);
@@ -437,6 +496,7 @@ class ChatFirebaseService {
         'lastCallType': data['lastCallType'] ?? latestCall?['type'],
         'lastCallStatus': data['lastCallStatus'] ?? latestCall?['status'],
         'lastCallDirection': lastCallDirection,
+        'lastMessageSenderId': data['lastMessageSenderId'],
         'unreadCount': data['unreadCount'] ?? 0,
         'recipient': {
           'id': peerId,
@@ -454,6 +514,46 @@ class ChatFirebaseService {
       return bt.compareTo(at);
     });
     return rows;
+  }
+
+  /// Inbox fields from `userChats/{uid}/rooms/{roomId}`. Empty previews stay
+  /// so a brand-new room can still be watched for its first message.
+  static Map<String, dynamic>? _userChatRoomRow(
+    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
+    final data = Map<String, dynamic>.from(doc.data());
+    final peerId = data['peerId']?.toString() ?? '';
+    if (peerId.isEmpty) return null;
+
+    final roomId = data['roomId']?.toString() ?? doc.id;
+    final type = data['lastMessageType']?.toString();
+    final preview = ChatInboxPreviewType.displayLabel(
+      type,
+      fallbackPreview: data['lastMessagePreview']?.toString() ?? '',
+    );
+    final activityAt = _toDateTime(data['lastMessageAt']);
+
+    return {
+      'id': peerId,
+      'roomId': roomId,
+      'lastMessage': preview,
+      'lastMessageTime': activityAt == null
+          ? ''
+          : _formatFirestoreTime(activityAt),
+      'lastMessageType': type ?? ChatInboxPreviewType.text,
+      'lastCallType': data['lastCallType'],
+      'lastCallStatus': data['lastCallStatus'],
+      'lastCallDirection': data['lastCallDirection'],
+      'lastMessageSenderId': data['lastMessageSenderId'],
+      'unreadCount': data['unreadCount'] ?? 0,
+      'recipient': {
+        'id': peerId,
+        if (data['title']?.toString().trim().isNotEmpty == true)
+          'name': data['title']?.toString().trim(),
+        if (data['photoUrl']?.toString().trim().isNotEmpty == true)
+          'displayPicture': data['photoUrl']?.toString().trim(),
+      },
+    };
   }
 
   Future<List<Map<String, dynamic>>> _fetchInboxFromChatRooms(
@@ -540,6 +640,7 @@ class ChatFirebaseService {
         'lastCallType': null,
         'lastCallStatus': null,
         'lastCallDirection': null,
+        'lastMessageSenderId': latestMessage['senderId'],
         'unreadCount': 0,
         'recipient': {'id': peerId},
       });
