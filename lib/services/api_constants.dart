@@ -1,10 +1,10 @@
 class ApiConstants {
   ApiConstants._();
 
-  static const String appVersionLabel = '1.0.0+1';
+  static const String appVersionLabel = '1.0.0+3';
 
   /// Backend base URL for API calls.
-  static const String baseUrl = 'https://qa-api.qobo1live.in';
+  static const String baseUrl = 'https://api.qobo1live.in';
 
 
   /*
@@ -15,16 +15,16 @@ class ApiConstants {
   https://api.qobo1live.in
 
   Render :
-  dev-admin.qobo1live.in
-  dev-api.qobo1live.in
+  https://dev-admin.qobo1live.in
+  https://dev-api.qobo1live.in
 
   Prod:
-  api.qobo1live.in
-  admin.qobo1live.in
+  https://api.qobo1live.in
+  https://admin.qobo1live.in
 
   Staging:
-  staging-api.qobo1live.in
-  staging-admin.qobo1live.in*/
+  https://staging-api.qobo1live.in
+  https://staging-admin.qobo1live.in*/
 }
 
 /// Central place for auth related API endpoints.
