@@ -5,11 +5,10 @@
 abstract final class FacebookLoginConfig {
   FacebookLoginConfig._();
 
-  /// When `false` (default), only runs the Facebook login UI and shows a toast.
-  /// When implementing `/api/auth/social` for Facebook, set compile-time flag
-  /// FACEBOOK_SUBMIT_TO_BACKEND to true (see project README or CI scripts).
+  /// Complete the backend session exchange by default, including release builds.
+  /// Set FACEBOOK_SUBMIT_TO_BACKEND=false only for explicit SDK-only diagnostics.
   static const bool submitFacebookLoginToBackend = bool.fromEnvironment(
     'FACEBOOK_SUBMIT_TO_BACKEND',
-    defaultValue: false,
+    defaultValue: true,
   );
 }

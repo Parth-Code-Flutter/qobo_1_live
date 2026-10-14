@@ -39,8 +39,19 @@ class FacebookSocialAuthProvider implements SocialAuthProvider {
       throw Exception(result.message ?? 'Facebook login failed');
     }
 
-    final Map<String, dynamic> userData = await FacebookAuth.instance
-        .getUserData(fields: 'name,email,picture.width(200)');
+    final token = result.accessToken;
+    if (token == null) {
+      throw StateError(
+        'Facebook login did not return an authentication token.',
+      );
+    }
+    // Limited Login on iOS returns profile claims in the SDK token. That token
+    // cannot be used for a Graph API /me request.
+    final Map<String, dynamic> userData = token is LimitedToken
+        ? {'id': token.userId, 'name': token.userName, 'email': token.userEmail}
+        : await FacebookAuth.instance.getUserData(
+            fields: 'id,name,email,picture.width(200)',
+          );
 
     final id = userData['id'] as String?;
     if (id == null || id.trim().isEmpty) {
@@ -49,15 +60,14 @@ class FacebookSocialAuthProvider implements SocialAuthProvider {
 
     final trimmedId = id.trim();
     final rawEmail = (userData['email'] as String?)?.trim() ?? '';
-    // Some accounts do not expose email; backend usually needs one — placeholder for demos only.
-    final email = rawEmail.isNotEmpty
-        ? rawEmail
-        : 'facebook_$trimmedId@placeholder.invalid';
+    // Email is optional in the social-login request. Never invent an address
+    // for an account that declined email permission or has no email.
+    final email = rawEmail;
 
     final name = (userData['name'] as String?)?.trim();
     final displayName = (name != null && name.isNotEmpty)
         ? name
-        : email.split('@').first;
+        : (email.isNotEmpty ? email.split('@').first : 'Facebook User');
 
     String? photoUrl;
     final picture = userData['picture'];
