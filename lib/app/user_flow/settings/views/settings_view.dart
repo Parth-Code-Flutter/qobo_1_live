@@ -75,7 +75,7 @@ class SettingsView extends GetView<SettingsController> {
                             _buildListTile(
                               icon: Icons.privacy_tip_rounded,
                               accent: AppLightUi.pink,
-                              title: 'Privacy & Terms',
+                              title: 'Privacy Policy',
                               onTap: controller.onPrivacyTermsTap,
                             ),
                             _divider(),

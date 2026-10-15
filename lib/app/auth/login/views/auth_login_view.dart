@@ -318,17 +318,17 @@ class _AuthLoginViewState extends State<AuthLoginView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Obx(
-          () => _socialOutlinedButton(
-            iconPath: kIconFB,
-            onTap: () => controller.onFacebookLoginPressed(context),
-            iconHeight: 24,
-            iconWidth: 24,
-            title: LocaleKeys.loginWithFacebookFull.tr,
-            isLoading: controller.isFacebookLoginLoading.value,
-          ),
-        ),
-        Spacing.v8,
+        // Obx(
+        //   () => _socialOutlinedButton(
+        //     iconPath: kIconFB,
+        //     onTap: () => controller.onFacebookLoginPressed(context),
+        //     iconHeight: 24,
+        //     iconWidth: 24,
+        //     title: LocaleKeys.loginWithFacebookFull.tr,
+        //     isLoading: controller.isFacebookLoginLoading.value,
+        //   ),
+        // ),
+        // Spacing.v8,
         Obx(
           () => _socialOutlinedButton(
             iconPath: kIconGoogle,

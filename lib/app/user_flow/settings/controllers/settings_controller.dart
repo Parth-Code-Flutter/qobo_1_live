@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/repo/user/user_repo.dart';
@@ -6,6 +8,7 @@ import 'package:qobo_one_live/services/firebase/fcm_token_sync_service.dart';
 import 'package:qobo_one_live/services/realtime/user_realtime_socket_service.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
+import 'package:qobo_one_live/utils/files_utils/file_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 
 class SettingsController extends GetxController {
@@ -62,7 +65,7 @@ class SettingsController extends GetxController {
   }
 
   void onPrivacyTermsTap() {
-    Get.snackbar('Privacy & Terms', 'Opening privacy policy');
+    unawaited(FileUtils.openFileOrLink('https://admin.qobo1live.in/privacy'));
   }
 
   void onBlockListTap() {
