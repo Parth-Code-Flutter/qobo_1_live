@@ -631,17 +631,20 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                 Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    FramedUserAvatar(
-                      name: controller.hostName.value,
-                      imageUrl: controller.hostAvatarUrl.value,
-                      frameUrl: controller.hostAvatarFrameUrl.value,
-                      frameSeed: controller.receiverId.value.isNotEmpty
-                          ? controller.receiverId.value
-                          : controller.hostName.value,
-                      size: compact ? 36 : 40,
-                      fontSize: compact
-                          ? TextStyles.k10FontSize
-                          : TextStyles.k12FontSize,
+                    KeyedSubtree(
+                      key: controller.hostGiftFlyKey,
+                      child: FramedUserAvatar(
+                        name: controller.hostName.value,
+                        imageUrl: controller.hostAvatarUrl.value,
+                        frameUrl: controller.hostAvatarFrameUrl.value,
+                        frameSeed: controller.receiverId.value.isNotEmpty
+                            ? controller.receiverId.value
+                            : controller.hostName.value,
+                        size: compact ? 36 : 40,
+                        fontSize: compact
+                            ? TextStyles.k10FontSize
+                            : TextStyles.k12FontSize,
+                      ),
                     ),
                     Positioned(
                       right: compact ? -1 : -2,

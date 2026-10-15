@@ -5,6 +5,20 @@ import 'package:qobo_one_live/utils/ui_utils/gift_sound_player.dart';
 
 void main() {
   group('GiftMediaUtils', () {
+    test('lucky gifts use the API type as their category', () {
+      final gift = GiftMediaUtils.mapGiftFromApi({
+        'id': 'g-lucky',
+        'name': '1',
+        'price': 100,
+        'type': 'lucky',
+      });
+      expect(gift['category'], 'lucky');
+      expect(GiftMediaUtils.isLuckyCategory(gift['category']), isTrue);
+      expect(GiftMediaUtils.isLuckyCategory('Lucky Gifts'), isTrue);
+      expect(GiftMediaUtils.isLuckyCategory('luxury'), isFalse);
+      expect(GiftMediaUtils.isLuckyCategory('unlucky'), isFalse);
+    });
+
     test('mapGiftFromApi keeps animation and sound urls', () {
       final gift = GiftMediaUtils.mapGiftFromApi({
         'id': 'g1',

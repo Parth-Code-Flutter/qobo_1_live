@@ -54,6 +54,7 @@ import '../models/audio_room_models.dart';
 import '../models/room_background_theme.dart';
 import '../utils/live_room_profile_utils.dart';
 import '../widgets/emoji_picker_bottom_sheet.dart';
+import '../widgets/gift_icon_widget.dart';
 import '../widgets/gifts_bottom_sheet.dart';
 import '../widgets/follower_pk_gift_target_sheet.dart';
 import '../widgets/live_filters_sheet.dart';
@@ -140,6 +141,9 @@ class LiveBroadcastController extends GetxController {
   /// Target for gullak-style coin fly animation into the host earnings pill.
   final sessionEarningsBadgeKey = GlobalKey(debugLabel: 'sessionEarningsBadge');
 
+  /// Host card avatar. Lucky gift images land here when no seat tile is on screen.
+  final hostGiftFlyKey = GlobalKey(debugLabel: 'hostGiftFly');
+
   /// Landing spots for audience coin-fly (one GlobalKey per seated user id).
   final Map<String, GlobalKey> _seatCoinFlyKeys = {};
 
@@ -212,6 +216,9 @@ class LiveBroadcastController extends GetxController {
   var _exitReported = false;
   var _hostEndConfirmed = false;
   var _giftSendInFlight = false;
+
+  /// Lucky taps that arrived while a send was still running.
+  final List<Map<String, String>> _luckyGiftQueue = [];
   var _emojiSendInFlight = false;
   final Set<String> _playedEmojiEventKeys = <String>{};
   final Map<String, Timer> _seatEmojiTimers = <String, Timer>{};
@@ -1304,6 +1311,54 @@ class LiveBroadcastController extends GetxController {
       id,
       () => GlobalKey(debugLabel: 'seatCoinFly_$id'),
     );
+  }
+
+  /// Lucky gift images use the same flight as coins, aimed at this person.
+  void _playLuckyGiftImageFly({
+    required Map<String, String> gift,
+    required String receiverId,
+  }) {
+    final icon = (gift['icon'] ?? '').trim();
+    if (icon.isEmpty) return;
+
+    BuildContext? context;
+    try {
+      context = Get.context ?? Get.key.currentContext;
+    } catch (_) {
+      context = null;
+    }
+    Offset? startFrom;
+    if (context != null) {
+      final size = MediaQuery.sizeOf(context);
+      startFrom = Offset(size.width * 0.5, size.height * 0.62);
+    }
+
+    unawaited(
+      CoinFlyOverlay.show(
+        targetKey: _luckyGiftFlyTarget(receiverId),
+        coinCount: 8,
+        delay: const Duration(milliseconds: 40),
+        enqueueIfBusy: true,
+        fallbackIfMissing: true,
+        startFrom: startFrom,
+        flyVisual: (size) => GiftIconWidget(
+          icon: icon,
+          size: size,
+          emojiSize: size * 0.75,
+          animate: false,
+        ),
+      ),
+    );
+  }
+
+  GlobalKey _luckyGiftFlyTarget(String receiverId) {
+    final id = receiverId.trim();
+    if (id.isNotEmpty) {
+      final seatKey = _seatCoinFlyKeys[id];
+      final seatContext = seatKey?.currentContext;
+      if (seatContext != null && seatContext.mounted) return seatKey!;
+    }
+    return hostGiftFlyKey;
   }
 
   /// Optimistic in-visit seat coins for gift recipients (not lifetime diamonds).
@@ -3280,11 +3335,26 @@ class LiveBroadcastController extends GetxController {
     );
   }
 
-  Future<void> sendGift(Map<String, String> gift, {int comboCount = 1}) async {
-    if (_giftSendInFlight) return;
+  /// Drops lucky taps that have not been sent yet. The sheet calls this on close.
+  void cancelPendingLuckyGifts() {
+    _luckyGiftQueue.clear();
+  }
+
+  Future<void> sendGift(
+    Map<String, String> gift, {
+    int comboCount = 1,
+    bool keepSheetOpen = false,
+  }) async {
+    if (_giftSendInFlight) {
+      if (keepSheetOpen) {
+        _luckyGiftQueue.add(Map<String, String>.from(gift));
+      }
+      return;
+    }
 
     // Live hosts cannot send gifts (self or room share) per product rule.
     if (isLiveStreamingSession && isHost.value) {
+      if (keepSheetOpen) _luckyGiftQueue.clear();
       _showRoomToast(
         'Gift disabled',
         'Hosts cannot send gifts during their own live stream.',
@@ -3302,6 +3372,7 @@ class LiveBroadcastController extends GetxController {
       giftPrice: price,
       count: count,
     )) {
+      if (keepSheetOpen) _luckyGiftQueue.clear();
       _showRoomToast(
         'Insufficient Coins',
         'You need ${totalCost - spendableDiamonds} more diamonds to send this gift.',
@@ -3331,6 +3402,7 @@ class LiveBroadcastController extends GetxController {
     if (scope == 'user' &&
         currentReceiverId.isNotEmpty &&
         _userIdsMatch(currentReceiverId, myId)) {
+      if (keepSheetOpen) _luckyGiftQueue.clear();
       _showRoomToast(
         'Gift not sent',
         'You cannot send a gift to yourself.',
@@ -3346,6 +3418,7 @@ class LiveBroadcastController extends GetxController {
     // Share-to-all: sender pays the catalog price once; 80% is split among others.
     if (scope == 'room') {
       if (seatedRecipients.isEmpty) {
+        if (keepSheetOpen) _luckyGiftQueue.clear();
         _showRoomToast(
           'No audience',
           isAudioVideoRoom
@@ -3365,6 +3438,7 @@ class LiveBroadcastController extends GetxController {
         if (currentRoomId.isEmpty) 'room id',
         if (scope == 'user' && currentReceiverId.isEmpty) 'receiver id',
       ].join(', ');
+      if (keepSheetOpen) _luckyGiftQueue.clear();
       _showRoomToast(
         'Gift not sent',
         'Missing $missing from live room data.',
@@ -3379,6 +3453,7 @@ class LiveBroadcastController extends GetxController {
 
     _giftSendInFlight = true;
     var sent = 0;
+    var dropLuckyQueue = false;
     try {
       for (var i = 0; i < count; i++) {
         Future<Map<String, dynamic>?> postGift({
@@ -3394,7 +3469,7 @@ class LiveBroadcastController extends GetxController {
             scope: giftScope,
             seatedUserIds: giftScope == 'room' ? seated : null,
             sessionType: sessionType,
-            isShowLoader: i == 0,
+            isShowLoader: !keepSheetOpen && i == 0,
           );
         }
 
@@ -3457,6 +3532,7 @@ class LiveBroadcastController extends GetxController {
         }
 
         if (!isEconomyApiSuccess(response)) {
+          dropLuckyQueue = keepSheetOpen;
           _showRoomToast(
             sent == 0 ? 'Gift not sent' : 'Combo stopped',
             sent == 0
@@ -3478,27 +3554,45 @@ class LiveBroadcastController extends GetxController {
           response: response,
           creditedFallbackIds: seatedRecipients,
           playCelebration: false,
+          playCoinFly: !keepSheetOpen,
           comboIndex: sent,
           comboTotal: count,
         );
+        if (keepSheetOpen) {
+          _playLuckyGiftImageFly(
+            gift: gift,
+            receiverId: currentReceiverId,
+          );
+        }
 
-        // Sender overlay: close the sheet on the first hit, then queue N SVGA
-        // plays so they stay in sync with the peer broadcasts above.
-        if (sent == 1) {
+        // Lucky gifts stay in the open sheet so the next tap can send again.
+        // Other gifts close the sheet, then play the full-screen clip.
+        if (!keepSheetOpen && sent == 1) {
           if (Get.isBottomSheetOpen == true) {
             Get.back<void>();
           }
           await Future<void>.delayed(const Duration(milliseconds: 300));
         }
-        GiftMediaUtils.showCelebration(
-          giftName: gift['name'],
-          animationUrl: GiftMediaUtils.animationUrlFromResponse(response, gift),
-          soundUrl: GiftMediaUtils.soundUrlFromResponse(response, gift),
-          enqueueIfBusy: sent > 1,
-        );
+        if (!keepSheetOpen) {
+          GiftMediaUtils.showCelebration(
+            giftName: gift['name'],
+            animationUrl: GiftMediaUtils.animationUrlFromResponse(
+              response,
+              gift,
+            ),
+            soundUrl: GiftMediaUtils.soundUrlFromResponse(response, gift),
+            enqueueIfBusy: sent > 1,
+          );
+        }
       }
     } finally {
       _giftSendInFlight = false;
+      if (dropLuckyQueue) {
+        _luckyGiftQueue.clear();
+      } else if (keepSheetOpen && _luckyGiftQueue.isNotEmpty) {
+        final next = _luckyGiftQueue.removeAt(0);
+        unawaited(sendGift(next, keepSheetOpen: true));
+      }
     }
   }
 
@@ -3534,6 +3628,7 @@ class LiveBroadcastController extends GetxController {
     required Map<String, dynamic>? response,
     List<String> creditedFallbackIds = const [],
     bool playCelebration = true,
+    bool playCoinFly = true,
     int comboIndex = 1,
     int comboTotal = 1,
   }) async {
@@ -3601,18 +3696,21 @@ class LiveBroadcastController extends GetxController {
     }
 
     // Host AppBar fly stays the same. Audience credits land on their seats.
-    unawaited(
-      _playGiftCoinFliesAfterCelebration(
-        hostEarnedCoins: playCelebration ? earnedDelta : 0,
-        audienceUserIds: _creditedAudienceSeatUserIds(
-          scope: scope,
-          receiverId: currentReceiverId.isEmpty ? null : currentReceiverId,
-          excludeUserId: myId,
-          creditedUserIds: creditedIds,
+    // Lucky sends skip this and fly the gift image instead.
+    if (playCoinFly) {
+      unawaited(
+        _playGiftCoinFliesAfterCelebration(
+          hostEarnedCoins: playCelebration ? earnedDelta : 0,
+          audienceUserIds: _creditedAudienceSeatUserIds(
+            scope: scope,
+            receiverId: currentReceiverId.isEmpty ? null : currentReceiverId,
+            excludeUserId: myId,
+            creditedUserIds: creditedIds,
+          ),
+          amountEach: amountEach,
         ),
-        amountEach: amountEach,
-      ),
-    );
+      );
+    }
 
     unawaited(loadWalletBalance());
 

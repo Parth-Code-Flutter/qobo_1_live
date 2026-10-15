@@ -9,6 +9,15 @@ import 'package:qobo_one_live/utils/ui_utils/gift_celebration_overlay.dart';
 abstract final class GiftMediaUtils {
   GiftMediaUtils._();
 
+  /// Gift-list uses `type: lucky` (there is no separate category field).
+  static bool isLuckyCategory(String? category) {
+    final parts = (category ?? '')
+        .toLowerCase()
+        .split(RegExp(r'[^a-z0-9]+'))
+        .where((part) => part.isNotEmpty);
+    return parts.contains('lucky');
+  }
+
   /// Maps a gift-list API row into the sheet/catalog shape used by send-gift.
   static Map<String, String> mapGiftFromApi(Map<String, dynamic> raw) {
     final name = raw['name']?.toString() ?? raw['title']?.toString() ?? 'Gift';

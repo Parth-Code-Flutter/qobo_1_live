@@ -18,11 +18,15 @@ class GiftIconWidget extends StatelessWidget {
     required this.icon,
     this.size = 36,
     this.emojiSize = 28,
+    this.animate = true,
   });
 
   final String? icon;
   final double size;
   final double emojiSize;
+
+  /// False shows the still image only. Flying copies must not start SVGA.
+  final bool animate;
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +40,12 @@ class GiftIconWidget extends StatelessWidget {
       return SizedBox(
         width: size,
         height: size,
-        child: _NetworkGiftIcon(url: raw, size: size, emojiSize: emojiSize),
+        child: _NetworkGiftIcon(
+          url: raw,
+          size: size,
+          emojiSize: emojiSize,
+          animate: animate,
+        ),
       );
     }
 
@@ -51,11 +60,13 @@ class _NetworkGiftIcon extends StatefulWidget {
     required this.url,
     required this.size,
     required this.emojiSize,
+    required this.animate,
   });
 
   final String url;
   final double size;
   final double emojiSize;
+  final bool animate;
 
   @override
   State<_NetworkGiftIcon> createState() => _NetworkGiftIconState();
@@ -78,7 +89,7 @@ class _NetworkGiftIconState extends State<_NetworkGiftIcon>
   @override
   void didUpdateWidget(covariant _NetworkGiftIcon oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.url != widget.url) {
+    if (oldWidget.url != widget.url || oldWidget.animate != widget.animate) {
       _previewPath = null;
       _isLoading = true;
       _svgaFailed = false;
@@ -100,6 +111,16 @@ class _NetworkGiftIconState extends State<_NetworkGiftIcon>
     _svgaController = null;
 
     final previewFuture = GiftIconPreviewStore.ensure(widget.url);
+    if (!widget.animate) {
+      final path = await previewFuture;
+      if (!mounted || token != _loadToken) return;
+      setState(() {
+        _previewPath = path;
+        _isLoading = false;
+        _svgaFailed = true;
+      });
+      return;
+    }
     unawaited(previewFuture.then((path) {
       if (!mounted || token != _loadToken) return;
       if (_svgaController?.videoItem != null) return;

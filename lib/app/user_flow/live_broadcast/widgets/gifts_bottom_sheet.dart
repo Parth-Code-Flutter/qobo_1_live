@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
@@ -7,6 +9,7 @@ import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
+import 'package:qobo_one_live/utils/ui_utils/gift_media_utils.dart';
 
 import '../controllers/live_broadcast_controller.dart';
 import 'gift_icon_widget.dart';
@@ -28,6 +31,21 @@ class _GiftsBottomSheetState extends State<GiftsBottomSheet> {
     final controller = Get.find<LiveBroadcastController>();
     controller.loadGiftCatalog();
     controller.loadWalletBalance();
+  }
+
+  @override
+  void dispose() {
+    if (Get.isRegistered<LiveBroadcastController>()) {
+      Get.find<LiveBroadcastController>().cancelPendingLuckyGifts();
+    }
+    super.dispose();
+  }
+
+  bool _isLuckyTab(LiveBroadcastController controller) {
+    final tabs = _tabs(controller);
+    if (tabs.isEmpty) return false;
+    final index = _selectedTabIndex.clamp(0, tabs.length - 1);
+    return GiftMediaUtils.isLuckyCategory(tabs[index]);
   }
 
   List<String> _tabs(LiveBroadcastController controller) {
@@ -190,8 +208,13 @@ class _GiftsBottomSheetState extends State<GiftsBottomSheet> {
         final isSelected = _selectedGiftIndex == index;
         final price = gift['price'] ?? '0';
 
+        final lucky = _isLuckyTab(controller);
         return GestureDetector(
-          onTap: () => setState(() => _selectedGiftIndex = index),
+          onTap: () {
+            setState(() => _selectedGiftIndex = index);
+            if (!lucky) return;
+            unawaited(controller.sendGift(gift, keepSheetOpen: true));
+          },
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
             decoration: BoxDecoration(
@@ -268,10 +291,22 @@ class _GiftsBottomSheetState extends State<GiftsBottomSheet> {
           ),
           const Icon(Icons.chevron_right_rounded, color: kColorHint, size: 16),
           const Spacer(),
-          SizedBox(
-            width: 100,
-            height: 38,
-            child: appButton(
+          if (_isLuckyTab(controller))
+            Flexible(
+              child: AppText(
+                text: 'Tap to send to ${controller.giftTargetLabel}',
+                fontSize: TextStyles.k12FontSize,
+                color: Colors.amber,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                align: TextAlign.right,
+              ),
+            )
+          else
+            SizedBox(
+              width: 100,
+              height: 38,
+              child: appButton(
               onPressed: () async {
                 if (!canSend) return;
                 final gift = gifts[_selectedGiftIndex];

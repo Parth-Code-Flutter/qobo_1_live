@@ -40,6 +40,7 @@ class CoinFlyOverlay {
     Duration delay = const Duration(milliseconds: 650),
     bool enqueueIfBusy = false,
     bool fallbackIfMissing = true,
+    Widget Function(double size)? flyVisual,
   }) async {
     if (enqueueIfBusy && _isBusy) {
       _queue.add(
@@ -52,6 +53,7 @@ class CoinFlyOverlay {
           isDeduction: isDeduction,
           delay: delay,
           fallbackIfMissing: fallbackIfMissing,
+          flyVisual: flyVisual,
         ),
       );
       return;
@@ -108,6 +110,7 @@ class CoinFlyOverlay {
       coinCount: coinCount,
       earnedAmount: earnedAmount,
       isDeduction: isDeduction,
+      flyVisual: flyVisual,
     );
   }
 
@@ -140,6 +143,7 @@ class CoinFlyOverlay {
     required int coinCount,
     required int earnedAmount,
     required bool isDeduction,
+    Widget Function(double size)? flyVisual,
   }) {
     if (!navigatorContext.mounted) {
       _reserved = false;
@@ -169,6 +173,7 @@ class CoinFlyOverlay {
           coinCount: coinCount.clamp(6, 18),
           earnedAmount: earnedAmount,
           isDeduction: isDeduction,
+          flyVisual: flyVisual,
           onCompleted: () {
             entry.remove();
             if (_entry == entry) _entry = null;
@@ -212,6 +217,7 @@ class CoinFlyOverlay {
         delay: next.delay,
         enqueueIfBusy: true,
         fallbackIfMissing: next.fallbackIfMissing,
+        flyVisual: next.flyVisual,
       ),
     );
   }
@@ -227,6 +233,7 @@ class _QueuedCoinFly {
     required this.isDeduction,
     required this.delay,
     required this.fallbackIfMissing,
+    required this.flyVisual,
   });
 
   final GlobalKey targetKey;
@@ -237,6 +244,7 @@ class _QueuedCoinFly {
   final bool isDeduction;
   final Duration delay;
   final bool fallbackIfMissing;
+  final Widget Function(double size)? flyVisual;
 }
 
 class _CoinFlyLayer extends StatefulWidget {
@@ -248,6 +256,7 @@ class _CoinFlyLayer extends StatefulWidget {
     required this.earnedAmount,
     required this.isDeduction,
     required this.onCompleted,
+    this.flyVisual,
   });
 
   final Offset origin;
@@ -257,6 +266,7 @@ class _CoinFlyLayer extends StatefulWidget {
   final int earnedAmount;
   final bool isDeduction;
   final VoidCallback onCompleted;
+  final Widget Function(double size)? flyVisual;
 
   @override
   State<_CoinFlyLayer> createState() => _CoinFlyLayerState();
@@ -397,7 +407,9 @@ class _CoinFlyLayerState extends State<_CoinFlyLayer>
           angle: flight.spin * t * math.pi,
           child: Transform.scale(
             scale: scale,
-            child: _CoinVisual(size: flight.size),
+            child:
+                widget.flyVisual?.call(flight.size) ??
+                _CoinVisual(size: flight.size),
           ),
         ),
       ),
