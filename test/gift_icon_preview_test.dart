@@ -3,6 +3,8 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:qobo_one_live/app/user_flow/live_broadcast/widgets/gift_icon_widget.dart';
 import 'package:flutter_svga/flutter_svga.dart';
 import 'package:flutter_test/flutter_test.dart';
 // Test-only stand-in for the app support folder. Already in the app via path_provider.
@@ -42,6 +44,40 @@ void main() {
     codec.dispose();
   }
 
+  testWidgets('gift tiles show a cached still without animation players', (
+    tester,
+  ) async {
+    final support = (await tester.runAsync(
+      () => Directory.systemTemp.createTemp('gift_tile_test'),
+    ))!;
+    final original = PathProviderPlatform.instance;
+    PathProviderPlatform.instance = _FakePath(support.path);
+    GiftIconPreviewStore.debugReset();
+    const url = 'https://example.com/cached.svga';
+    final file = File(
+      '${support.path}/gift_icon_previews/${stableDiskKey(url)}.bin',
+    );
+    await tester.runAsync(() async {
+      await file.parent.create(recursive: true);
+      await file.writeAsBytes(
+        extractSvgaPreviewBytes(readFixture('rose.svga'))!,
+      );
+      expect(await GiftIconPreviewStore.ensure(url), file.path);
+      GiftIconPreviewStore.release(url);
+    });
+    await tester.pumpWidget(const MaterialApp(home: GiftIconWidget(icon: url)));
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pump();
+    expect(find.byType(SVGAImage), findsNothing);
+    expect(find.byType(Image), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+    GiftIconPreviewStore.debugReset();
+    PathProviderPlatform.instance = original;
+    await tester.runAsync(() => support.delete(recursive: true));
+  });
+
   test('EmptyState either has a picture or is vector-only', () {
     final bytes = readFixture('empty_state.svga');
     final inflated = ZLibCodec().decode(bytes);
@@ -50,8 +86,7 @@ void main() {
     expect(
       movie.images.length,
       0,
-      reason:
-          'images=${movie.images.length} previewBytes=${preview?.length}',
+      reason: 'images=${movie.images.length} previewBytes=${preview?.length}',
     );
     expect(preview, isNull);
   });
@@ -70,7 +105,10 @@ void main() {
   });
 
   test('returns null for a broken file instead of throwing', () {
-    expect(extractSvgaPreviewBytes(Uint8List.fromList([0x78, 0x9c, 1, 2, 3])), isNull);
+    expect(
+      extractSvgaPreviewBytes(Uint8List.fromList([0x78, 0x9c, 1, 2, 3])),
+      isNull,
+    );
   });
 
   test('long gift urls do not share one preview file', () {
@@ -87,33 +125,38 @@ void main() {
     expect(stableDiskKey(rose), isNot(stableDiskKey(dragon)));
   });
 
-  test('a saved preview is reused and the animation is not downloaded', () async {
-    final support = await Directory.systemTemp.createTemp('gift_preview_test');
-    PathProviderPlatform.instance = _FakePath(support.path);
-    GiftIconPreviewStore.debugReset();
+  test(
+    'a saved preview is reused and the animation is not downloaded',
+    () async {
+      final support = await Directory.systemTemp.createTemp(
+        'gift_preview_test',
+      );
+      PathProviderPlatform.instance = _FakePath(support.path);
+      GiftIconPreviewStore.debugReset();
 
-    const url =
-        'https://cdn.qobo1live.com/gifts/icons/rose-animation-file.svga';
-    final preview = extractSvgaPreviewBytes(readFixture('rose.svga'));
-    final file = File(
-      '${support.path}/gift_icon_previews/${stableDiskKey(url)}.bin',
-    );
-    await file.parent.create(recursive: true);
-    await file.writeAsBytes(preview!);
+      const url =
+          'https://cdn.qobo1live.com/gifts/icons/rose-animation-file.svga';
+      final preview = extractSvgaPreviewBytes(readFixture('rose.svga'));
+      final file = File(
+        '${support.path}/gift_icon_previews/${stableDiskKey(url)}.bin',
+      );
+      await file.parent.create(recursive: true);
+      await file.writeAsBytes(preview!);
 
-    final path = await GiftIconPreviewStore.ensure(url).timeout(
-      const Duration(seconds: 5),
-    );
-    expect(path, file.path);
+      final path = await GiftIconPreviewStore.ensure(
+        url,
+      ).timeout(const Duration(seconds: 5));
+      expect(path, file.path);
 
-    final again = await GiftIconPreviewStore.ensure(url).timeout(
-      const Duration(seconds: 5),
-    );
-    expect(again, file.path);
+      final again = await GiftIconPreviewStore.ensure(
+        url,
+      ).timeout(const Duration(seconds: 5));
+      expect(again, file.path);
 
-    GiftIconPreviewStore.debugReset();
-    await support.delete(recursive: true);
-  });
+      GiftIconPreviewStore.debugReset();
+      await support.delete(recursive: true);
+    },
+  );
 }
 
 class _FakePath extends PathProviderPlatform {

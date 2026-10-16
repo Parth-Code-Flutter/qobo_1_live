@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 
@@ -21,6 +23,27 @@ class SvgaNetworkLoader {
   const SvgaNetworkLoader._();
 
   static Directory? _diskCacheDir;
+  static final _downloads = <String, Future<Uint8List>>{};
+  static final _slots = Queue<Completer<void>>();
+  static int _activeDownloads = 0;
+
+  static Future<void> _acquireDownload() async {
+    if (_activeDownloads < 2) {
+      _activeDownloads++;
+      return;
+    }
+    final slot = Completer<void>();
+    _slots.add(slot);
+    await slot.future;
+  }
+
+  static void _releaseDownload() {
+    if (_slots.isNotEmpty) {
+      _slots.removeFirst().complete();
+    } else {
+      _activeDownloads--;
+    }
+  }
 
   /// Downloads + decodes [url], only caching successful SVGA payloads.
   static Future<MovieEntity> decode(String url) async {
@@ -114,7 +137,24 @@ class SvgaNetworkLoader {
     return item;
   }
 
-  static Future<Uint8List> _downloadBytes(String sourceUrl) async {
+  /// Share bytes, never decoded MovieEntity objects (controllers dispose them).
+  static Future<Uint8List> _downloadBytes(String sourceUrl) {
+    return _downloads.putIfAbsent(sourceUrl, () async {
+      await _acquireDownload();
+      try {
+        final cached = await _readDiskCache(sourceUrl);
+        if (cached != null) return cached;
+        final bytes = await _fetchBytes(sourceUrl);
+        await _writeDiskCache(sourceUrl, bytes);
+        return bytes;
+      } finally {
+        _downloads.remove(sourceUrl);
+        _releaseDownload();
+      }
+    });
+  }
+
+  static Future<Uint8List> _fetchBytes(String sourceUrl) async {
     final headers = <String, String>{
       'Accept': '*/*',
       'User-Agent': 'qobo_one_live/1.0 (Flutter)',
@@ -271,7 +311,16 @@ class SvgaNetworkLoader {
     try {
       if (!_looksLikeSvga(bytes)) return;
       final file = await _cacheFile(sourceUrl);
-      await file.writeAsBytes(bytes, flush: true);
+      // Readers see either a complete old file or a complete new file.
+      final temporary = File(
+        '${file.path}.${DateTime.now().microsecondsSinceEpoch}.tmp',
+      );
+      try {
+        await temporary.writeAsBytes(bytes, flush: true);
+        await temporary.rename(file.path);
+      } finally {
+        if (await temporary.exists()) await temporary.delete();
+      }
     } catch (_) {}
   }
 

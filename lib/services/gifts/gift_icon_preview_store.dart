@@ -1,19 +1,21 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_svga/flutter_svga.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:qobo_one_live/utils/svga_network_loader.dart';
 
-/// Small picture for each gift, shown only until the clip starts playing.
+/// Small cached still for gift grids; full SVGA playback is reserved for celebrations.
 ///
 /// The gift list stores full SVGA animations (often several MB). This saves
-/// one embedded picture so a tile is not blank while that file is decoded.
+/// one embedded picture without retaining an animation player for each tile.
 class GiftIconPreviewStore {
   GiftIconPreviewStore._();
 
+  static final _listeners = <String, int>{};
   static final _paths = <String, String>{};
   static final _noPreview = <String>{};
   static final _waiters = <String, Completer<String?>>{};
@@ -25,6 +27,7 @@ class GiftIconPreviewStore {
 
   @visibleForTesting
   static void debugReset() {
+    _listeners.clear();
     _paths.clear();
     _noPreview.clear();
     _waiters.clear();
@@ -37,6 +40,7 @@ class GiftIconPreviewStore {
 
   /// Tiles that are on screen. These are built before the background list.
   static Future<String?> ensure(String url) {
+    _listeners[url] = (_listeners[url] ?? 0) + 1;
     if (_noPreview.contains(url)) return Future.value(null);
     final known = _paths[url];
     if (known != null) return Future.value(known);
@@ -46,17 +50,21 @@ class GiftIconPreviewStore {
     return waiter.future;
   }
 
-  /// Background pass after the gift list is saved.
-  static void warm(Iterable<String> urls) {
-    for (final url in urls) {
-      final value = url.trim();
-      if (!value.startsWith('http://') && !value.startsWith('https://')) {
-        continue;
-      }
-      if (_paths.containsKey(value) || _noPreview.contains(value)) continue;
-      _enqueue(value, high: false);
+  /// Drop queued work when a tile scrolls away. An active download may finish
+  /// and remain cached, but never starts playback or updates a disposed tile.
+  static void release(String url) {
+    final count = (_listeners[url] ?? 0) - 1;
+    if (count > 0) {
+      _listeners[url] = count;
+      return;
     }
-    unawaited(_pump());
+    _listeners.remove(url);
+    final removed = _high.remove(url) || _low.remove(url);
+    if (removed) {
+      _queued.remove(url);
+      final waiter = _waiters.remove(url);
+      if (waiter != null && !waiter.isCompleted) waiter.complete(null);
+    }
   }
 
   static void _enqueue(String url, {required bool high}) {
@@ -122,8 +130,31 @@ class GiftIconPreviewStore {
         imageBytes = bytes;
       }
 
+      // Store a small decoded thumbnail, not a potentially huge embedded image.
+      final codec = await ui.instantiateImageCodec(
+        imageBytes,
+        targetWidth: 192,
+      );
+      Uint8List thumbnail;
+      try {
+        final frame = await codec.getNextFrame();
+        try {
+          final png = await frame.image.toByteData(
+            format: ui.ImageByteFormat.png,
+          );
+          if (png == null) return null;
+          thumbnail = png.buffer.asUint8List(
+            png.offsetInBytes,
+            png.lengthInBytes,
+          );
+        } finally {
+          frame.image.dispose();
+        }
+      } finally {
+        codec.dispose();
+      }
       await file.parent.create(recursive: true);
-      await file.writeAsBytes(imageBytes, flush: true);
+      await file.writeAsBytes(thumbnail, flush: true);
       return file.path;
     } catch (_) {
       return null;

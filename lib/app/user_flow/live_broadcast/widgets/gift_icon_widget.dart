@@ -18,14 +18,14 @@ class GiftIconWidget extends StatelessWidget {
     required this.icon,
     this.size = 36,
     this.emojiSize = 28,
-    this.animate = true,
+    this.animate = false,
   });
 
   final String? icon;
   final double size;
   final double emojiSize;
 
-  /// False shows the still image only. Flying copies must not start SVGA.
+  /// Catalogs use cached stills. Full animations belong in celebrations.
   final bool animate;
 
   @override
@@ -53,8 +53,7 @@ class GiftIconWidget extends StatelessWidget {
   }
 }
 
-/// Plays the gift clip from the file saved at login. A still is only shown
-/// until that clip is ready.
+/// Uses a cached still by default. Animation is an explicit opt-in.
 class _NetworkGiftIcon extends StatefulWidget {
   const _NetworkGiftIcon({
     required this.url,
@@ -90,6 +89,7 @@ class _NetworkGiftIconState extends State<_NetworkGiftIcon>
   void didUpdateWidget(covariant _NetworkGiftIcon oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.url != widget.url || oldWidget.animate != widget.animate) {
+      GiftIconPreviewStore.release(oldWidget.url);
       _previewPath = null;
       _isLoading = true;
       _svgaFailed = false;
@@ -100,6 +100,7 @@ class _NetworkGiftIconState extends State<_NetworkGiftIcon>
   @override
   void dispose() {
     _loadToken++;
+    GiftIconPreviewStore.release(widget.url);
     _svgaController?.dispose();
     _svgaController = null;
     super.dispose();
@@ -121,12 +122,14 @@ class _NetworkGiftIconState extends State<_NetworkGiftIcon>
       });
       return;
     }
-    unawaited(previewFuture.then((path) {
-      if (!mounted || token != _loadToken) return;
-      if (_svgaController?.videoItem != null) return;
-      if (path == null || path.isEmpty) return;
-      setState(() => _previewPath = path);
-    }));
+    unawaited(
+      previewFuture.then((path) {
+        if (!mounted || token != _loadToken) return;
+        if (_svgaController?.videoItem != null) return;
+        if (path == null || path.isEmpty) return;
+        setState(() => _previewPath = path);
+      }),
+    );
 
     if (_isStaticImage(widget.url)) {
       if (!mounted || token != _loadToken) return;
@@ -193,6 +196,7 @@ class _NetworkGiftIconState extends State<_NetworkGiftIcon>
         height: widget.size,
         fit: BoxFit.contain,
         gaplessPlayback: true,
+        cacheWidth: 192,
         errorBuilder: (_, __, ___) => _emoji(),
       );
     }
@@ -209,6 +213,8 @@ class _NetworkGiftIconState extends State<_NetworkGiftIcon>
         ),
       );
     }
+
+    if (!_isStaticImage(widget.url)) return _emoji();
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),

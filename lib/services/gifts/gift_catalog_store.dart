@@ -6,7 +6,6 @@ import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/repo/economy/economy_repo.dart';
-import 'package:qobo_one_live/services/gifts/gift_icon_preview_store.dart';
 import 'package:qobo_one_live/utils/logger_utils/logger_utils.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_media_utils.dart';
 
@@ -37,16 +36,9 @@ class GiftCatalogStore extends GetxService {
 
   bool get hasGifts => gifts.isNotEmpty;
 
-  /// Starts the single background fetch for this login / app session,
-  /// then builds a small picture for every gift icon.
+  /// Fetch metadata only. Media is requested by visible gift tiles on demand.
   void warmUp() {
-    unawaited(
-      _hydrate().then((_) {
-        if (gifts.isNotEmpty) _preloadGiftFiles(gifts.toList());
-      }),
-    );
-    // Start the request now. Waiting until after disk read left a gap where
-    // a gift sheet could miss the in-flight future and stay empty.
+    unawaited(_hydrate());
     _startFetch();
   }
 
@@ -74,7 +66,6 @@ class GiftCatalogStore extends GetxService {
     if (gifts.isNotEmpty) {
       _assign(target, gifts);
       _setLoading(isLoading, false);
-      _preloadGiftFiles(gifts.toList());
       if (!_fetchedThisSession) {
         final pending = _startFetch();
         unawaited(
@@ -112,7 +103,6 @@ class GiftCatalogStore extends GetxService {
       gifts.assignAll(parsed);
       _fetchedThisSession = true;
       await _persist(parsed);
-      _preloadGiftFiles(parsed);
     } catch (e) {
       LoggerUtils.logWarning('GiftCatalogStore: gift-list fetch failed — $e');
     } finally {
@@ -188,19 +178,6 @@ class GiftCatalogStore extends GetxService {
   Future<File> _cacheFile() async {
     final dir = await getApplicationSupportDirectory();
     return File('${dir.path}/gift_catalog.json');
-  }
-
-  /// Downloads each gift file after login so the panel can play it from disk.
-  /// A small picture is saved only as a stand-in until that clip starts.
-  void _preloadGiftFiles(List<Map<String, String>> items) {
-    final urls = <String>[];
-    for (final gift in items) {
-      final url = gift['icon']?.trim() ?? '';
-      if (!url.startsWith('http://') && !url.startsWith('https://')) continue;
-      if (!urls.contains(url)) urls.add(url);
-    }
-    if (urls.isEmpty) return;
-    GiftIconPreviewStore.warm(urls);
   }
 
   Map<String, String> _stringMap(Map raw) {
