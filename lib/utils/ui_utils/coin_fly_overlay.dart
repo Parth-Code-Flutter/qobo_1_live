@@ -41,6 +41,7 @@ class CoinFlyOverlay {
     bool enqueueIfBusy = false,
     bool fallbackIfMissing = true,
     Widget Function(double size)? flyVisual,
+    bool centerGiftFlight = false,
   }) async {
     if (enqueueIfBusy && _isBusy) {
       _queue.add(
@@ -54,6 +55,7 @@ class CoinFlyOverlay {
           delay: delay,
           fallbackIfMissing: fallbackIfMissing,
           flyVisual: flyVisual,
+          centerGiftFlight: centerGiftFlight,
         ),
       );
       return;
@@ -111,6 +113,7 @@ class CoinFlyOverlay {
       earnedAmount: earnedAmount,
       isDeduction: isDeduction,
       flyVisual: flyVisual,
+      centerGiftFlight: centerGiftFlight,
     );
   }
 
@@ -144,6 +147,7 @@ class CoinFlyOverlay {
     required int earnedAmount,
     required bool isDeduction,
     Widget Function(double size)? flyVisual,
+    bool centerGiftFlight = false,
   }) {
     if (!navigatorContext.mounted) {
       _reserved = false;
@@ -170,10 +174,11 @@ class CoinFlyOverlay {
           origin: origin,
           target: target,
           endAt: endAt,
-          coinCount: coinCount.clamp(6, 18),
+          coinCount: centerGiftFlight ? 1 : coinCount.clamp(6, 18),
           earnedAmount: earnedAmount,
           isDeduction: isDeduction,
           flyVisual: flyVisual,
+          centerGiftFlight: centerGiftFlight,
           onCompleted: () {
             entry.remove();
             if (_entry == entry) _entry = null;
@@ -218,6 +223,7 @@ class CoinFlyOverlay {
         enqueueIfBusy: true,
         fallbackIfMissing: next.fallbackIfMissing,
         flyVisual: next.flyVisual,
+        centerGiftFlight: next.centerGiftFlight,
       ),
     );
   }
@@ -234,6 +240,7 @@ class _QueuedCoinFly {
     required this.delay,
     required this.fallbackIfMissing,
     required this.flyVisual,
+    required this.centerGiftFlight,
   });
 
   final GlobalKey targetKey;
@@ -245,6 +252,9 @@ class _QueuedCoinFly {
   final Duration delay;
   final bool fallbackIfMissing;
   final Widget Function(double size)? flyVisual;
+
+  /// Lucky gifts only: one centered gift, then a shrinking flight to the seat.
+  final bool centerGiftFlight;
 }
 
 class _CoinFlyLayer extends StatefulWidget {
@@ -257,6 +267,7 @@ class _CoinFlyLayer extends StatefulWidget {
     required this.isDeduction,
     required this.onCompleted,
     this.flyVisual,
+    this.centerGiftFlight = false,
   });
 
   final Offset origin;
@@ -267,6 +278,9 @@ class _CoinFlyLayer extends StatefulWidget {
   final bool isDeduction;
   final VoidCallback onCompleted;
   final Widget Function(double size)? flyVisual;
+
+  /// Lucky gifts only: one centered gift, then a shrinking flight to the seat.
+  final bool centerGiftFlight;
 
   @override
   State<_CoinFlyLayer> createState() => _CoinFlyLayerState();
@@ -286,7 +300,7 @@ class _CoinFlyLayerState extends State<_CoinFlyLayer>
     _flights = List.generate(widget.coinCount, _buildFlight);
     _burst = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
+      duration: Duration(milliseconds: widget.centerGiftFlight ? 1900 : 1400),
     )..forward();
     _flash = AnimationController(
       vsync: this,
@@ -310,6 +324,19 @@ class _CoinFlyLayerState extends State<_CoinFlyLayer>
   }
 
   _CoinFlight _buildFlight(int index) {
+    if (widget.centerGiftFlight) {
+      return _CoinFlight(
+        start: widget.origin,
+        mid: Offset(
+          (widget.origin.dx + widget.target.dx) / 2 + 32,
+          math.min(widget.origin.dy, widget.target.dy) - 24,
+        ),
+        end: widget.target,
+        delay: 0,
+        size: 180,
+        spin: 0,
+      );
+    }
     final spread = 110.0 + _random.nextDouble() * 40;
     final flyOrigin = widget.isDeduction ? widget.target : widget.origin;
     final flyTarget = widget.isDeduction
@@ -393,9 +420,15 @@ class _CoinFlyLayerState extends State<_CoinFlyLayer>
     final raw = ((_burst.value - flight.delay) / denom).clamp(0.0, 1.0);
     if (raw <= 0) return const SizedBox.shrink();
 
-    final t = Curves.easeInOutCubic.transform(raw);
+    // Hold the full image in the center for 475 ms before moving to the seat.
+    final travel = widget.centerGiftFlight
+        ? ((raw - 0.25) / 0.75).clamp(0.0, 1.0)
+        : raw;
+    final t = Curves.easeInOutCubic.transform(travel);
     final pos = _quad(flight.start, flight.mid, flight.end, t);
-    final scale = 1.35 - (0.75 * t);
+    final scale = widget.centerGiftFlight
+        ? 1.0 - (0.82 * t)
+        : 1.35 - (0.75 * t);
     final opacity = t < 0.88 ? 1.0 : (1 - ((t - 0.88) / 0.12));
 
     return Positioned(

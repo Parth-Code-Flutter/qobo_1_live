@@ -1330,13 +1330,14 @@ class LiveBroadcastController extends GetxController {
     Offset? startFrom;
     if (context != null) {
       final size = MediaQuery.sizeOf(context);
-      startFrom = Offset(size.width * 0.5, size.height * 0.62);
+      startFrom = Offset(size.width * 0.5, size.height * 0.5);
     }
 
     unawaited(
       CoinFlyOverlay.show(
         targetKey: _luckyGiftFlyTarget(receiverId),
-        coinCount: 8,
+        coinCount: 1,
+        centerGiftFlight: true,
         delay: const Duration(milliseconds: 40),
         enqueueIfBusy: true,
         fallbackIfMissing: true,
@@ -1345,7 +1346,7 @@ class LiveBroadcastController extends GetxController {
           icon: icon,
           size: size,
           emojiSize: size * 0.75,
-          animate: false,
+          animate: true,
         ),
       ),
     );
