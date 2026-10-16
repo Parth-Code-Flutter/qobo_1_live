@@ -1,0 +1,244 @@
+[
+  {
+    "myUserId": "receiver-a",
+    "messages": [
+      {
+        "deliveryState": "sent",
+        "status": {
+          "receiver-a": {}
+        },
+        "content": {
+          "text": "[Qobo QA] repeated unread test"
+        },
+        "messageId": "message-0",
+        "clientMessageId": "message-0",
+        "type": "text",
+        "createdAt": "2026-10-16T07:20:14.295071Z",
+        "clientCreatedAt": "2026-10-16T07:20:14.295071Z",
+        "roomId": "test-room",
+        "senderId": "receiver-b",
+        "id": "message-0"
+      },
+      {
+        "senderId": "receiver-b",
+        "clientCreatedAt": "2026-10-16T07:20:14.725236Z",
+        "roomId": "test-room",
+        "createdAt": "2026-10-16T07:20:14.725236Z",
+        "status": {
+          "receiver-a": {}
+        },
+        "clientMessageId": "message-1",
+        "deliveryState": "sent",
+        "type": "text",
+        "messageId": "message-1",
+        "content": {
+          "text": "[Qobo QA] repeated unread test"
+        },
+        "id": "message-1"
+      },
+      {
+        "senderId": "receiver-b",
+        "messageId": "message-2",
+        "clientCreatedAt": "2026-10-16T07:20:14.998298Z",
+        "roomId": "test-room",
+        "type": "text",
+        "status": {
+          "receiver-a": {}
+        },
+        "deliveryState": "sent",
+        "clientMessageId": "message-2",
+        "createdAt": "2026-10-16T07:20:14.998298Z",
+        "content": {
+          "text": "[Qobo QA] repeated unread test"
+        },
+        "id": "message-2"
+      }
+    ]
+  },
+  {
+    "myUserId": "receiver-a",
+    "messages": [
+      {
+        "senderId": "receiver-b",
+        "deliveryState": "sent",
+        "messageId": "message-0",
+        "type": "text",
+        "createdAt": "2026-10-16T07:20:14.295071Z",
+        "clientCreatedAt": "2026-10-16T07:20:14.295071Z",
+        "status": {
+          "receiver-a": {
+            "readAt": "2026-10-16T07:20:15.690431Z",
+            "deliveredAt": "2026-10-16T07:20:15.690431Z"
+          }
+        },
+        "roomId": "test-room",
+        "content": {
+          "text": "[Qobo QA] repeated unread test"
+        },
+        "clientMessageId": "message-0",
+        "id": "message-0"
+      },
+      {
+        "type": "text",
+        "clientCreatedAt": "2026-10-16T07:20:14.725236Z",
+        "senderId": "receiver-b",
+        "content": {
+          "text": "[Qobo QA] repeated unread test"
+        },
+        "status": {
+          "receiver-a": {
+            "readAt": "2026-10-16T07:20:15.847549Z",
+            "deliveredAt": "2026-10-16T07:20:15.847549Z"
+          }
+        },
+        "messageId": "message-1",
+        "clientMessageId": "message-1",
+        "deliveryState": "sent",
+        "createdAt": "2026-10-16T07:20:14.725236Z",
+        "roomId": "test-room",
+        "id": "message-1"
+      },
+      {
+        "status": {
+          "receiver-a": {
+            "readAt": "2026-10-16T07:20:16.038523Z",
+            "deliveredAt": "2026-10-16T07:20:16.038523Z"
+          }
+        },
+        "clientCreatedAt": "2026-10-16T07:20:14.998298Z",
+        "senderId": "receiver-b",
+        "roomId": "test-room",
+        "deliveryState": "sent",
+        "clientMessageId": "message-2",
+        "content": {
+          "text": "[Qobo QA] repeated unread test"
+        },
+        "type": "text",
+        "messageId": "message-2",
+        "createdAt": "2026-10-16T07:20:14.998298Z",
+        "id": "message-2"
+      }
+    ]
+  },
+  {
+    "myUserId": "receiver-b",
+    "messages": [
+      {
+        "type": "text",
+        "roomId": "test-room",
+        "clientCreatedAt": "2026-10-16T07:20:18.507305Z",
+        "deliveryState": "sent",
+        "content": {
+          "text": "[Qobo QA] repeated unread test"
+        },
+        "senderId": "receiver-a",
+        "clientMessageId": "message-0",
+        "createdAt": "2026-10-16T07:20:18.507305Z",
+        "status": {
+          "receiver-b": {}
+        },
+        "messageId": "message-0",
+        "id": "message-0"
+      },
+      {
+        "senderId": "receiver-a",
+        "deliveryState": "sent",
+        "roomId": "test-room",
+        "type": "text",
+        "clientCreatedAt": "2026-10-16T07:20:18.653109Z",
+        "content": {
+          "text": "[Qobo QA] repeated unread test"
+        },
+        "clientMessageId": "message-1",
+        "createdAt": "2026-10-16T07:20:18.653109Z",
+        "messageId": "message-1",
+        "status": {
+          "receiver-b": {}
+        },
+        "id": "message-1"
+      },
+      {
+        "senderId": "receiver-a",
+        "clientMessageId": "message-2",
+        "type": "text",
+        "deliveryState": "sent",
+        "status": {
+          "receiver-b": {}
+        },
+        "clientCreatedAt": "2026-10-16T07:20:18.361484Z",
+        "createdAt": "2026-10-16T07:20:18.361484Z",
+        "roomId": "test-room",
+        "messageId": "message-2",
+        "content": {
+          "text": "[Qobo QA] repeated unread test"
+        },
+        "id": "message-2"
+      }
+    ]
+  },
+  {
+    "myUserId": "receiver-b",
+    "messages": [
+      {
+        "type": "text",
+        "roomId": "test-room",
+        "content": {
+          "text": "[Qobo QA] repeated unread test"
+        },
+        "clientMessageId": "message-0",
+        "createdAt": "2026-10-16T07:20:18.507305Z",
+        "deliveryState": "sent",
+        "clientCreatedAt": "2026-10-16T07:20:18.507305Z",
+        "senderId": "receiver-a",
+        "messageId": "message-0",
+        "status": {
+          "receiver-b": {
+            "deliveredAt": "2026-10-16T07:20:18.945239Z",
+            "readAt": "2026-10-16T07:20:18.945239Z"
+          }
+        },
+        "id": "message-0"
+      },
+      {
+        "content": {
+          "text": "[Qobo QA] repeated unread test"
+        },
+        "createdAt": "2026-10-16T07:20:18.653109Z",
+        "clientMessageId": "message-1",
+        "status": {
+          "receiver-b": {
+            "readAt": "2026-10-16T07:20:19.102913Z",
+            "deliveredAt": "2026-10-16T07:20:19.102913Z"
+          }
+        },
+        "senderId": "receiver-a",
+        "roomId": "test-room",
+        "messageId": "message-1",
+        "clientCreatedAt": "2026-10-16T07:20:18.653109Z",
+        "type": "text",
+        "deliveryState": "sent",
+        "id": "message-1"
+      },
+      {
+        "clientMessageId": "message-2",
+        "deliveryState": "sent",
+        "type": "text",
+        "status": {
+          "receiver-b": {
+            "readAt": "2026-10-16T07:20:19.262682Z",
+            "deliveredAt": "2026-10-16T07:20:19.262682Z"
+          }
+        },
+        "createdAt": "2026-10-16T07:20:18.361484Z",
+        "roomId": "test-room",
+        "content": {
+          "text": "[Qobo QA] repeated unread test"
+        },
+        "senderId": "receiver-a",
+        "messageId": "message-2",
+        "clientCreatedAt": "2026-10-16T07:20:18.361484Z",
+        "id": "message-2"
+      }
+    ]
+  }
+]

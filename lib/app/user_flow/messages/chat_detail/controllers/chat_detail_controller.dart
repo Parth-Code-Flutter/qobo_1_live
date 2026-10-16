@@ -24,6 +24,7 @@ import 'package:qobo_one_live/utils/text_utils/phone_mask_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/profanity_mask_utils.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_media_utils.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
+import 'package:qobo_one_live/app/user_flow/messages/messages_tab/controllers/messages_tab_controller.dart';
 import 'package:intl/intl.dart';
 
 /// WhatsApp-style delivery state for outgoing messages.
@@ -86,7 +87,7 @@ class ChatMessageModel {
   bool get isGift => type == 'gift';
 }
 
-class ChatDetailController extends GetxController {
+class ChatDetailController extends GetxController with WidgetsBindingObserver {
   ChatDetailController({
     ChatRepo? chatRepo,
     ChatLocalStore? localStore,
@@ -168,6 +169,7 @@ class ChatDetailController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    WidgetsBinding.instance.addObserver(this);
     ever(messages, (_) => _refreshTimeline());
     final args = Get.arguments;
     if (args is Map) {
@@ -380,6 +382,12 @@ class ChatDetailController extends GetxController {
       }
     } finally {
       isLoading.value = false;
+      if (!isFirebaseLive.value) {
+        _scheduleAck(_effectiveRoomId, _myUserId ?? '', [
+          for (final message in messages)
+            {'createdAt': message.createdAt?.toIso8601String()},
+        ]);
+      }
       await _loadCallHistoryWithRetry();
       if (messages.isNotEmpty) {
         _scrollToBottom(jump: true);
@@ -522,18 +530,81 @@ class ChatDetailController extends GetxController {
     messages.assignAll(_mergeMessages(textBase, _callBootstrap));
   }
 
+  List<Map<String, dynamic>> _latestReadCandidates = const [];
+  List<Map<String, dynamic>> _displayedReadCandidates = const [];
+  DateTime? _lastReadActivity;
+  bool _readAckRunning = false;
+  bool _readAckAgain = false;
+
+  bool get _chatVisible =>
+      !isClosed &&
+      Get.currentRoute == Routes.CHAT_DETAIL &&
+      (WidgetsBinding.instance.lifecycleState == null ||
+          WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed);
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _chatVisible) {
+      _scheduleAck(_effectiveRoomId, _myUserId ?? '', _latestReadCandidates);
+    }
+  }
+
+  Future<void> _syncServerRead() async {
+    _readAckAgain = true;
+    if (_readAckRunning) return;
+    _readAckRunning = true;
+    try {
+      while (_readAckAgain && !isClosed) {
+        _readAckAgain = false;
+        await _chatRepo.markThreadRead(
+          targetId: targetId.value,
+          roomId: _effectiveRoomId.isEmpty ? null : _effectiveRoomId,
+        );
+      }
+    } catch (e) {
+      ChatLogger.loadWarn('read sync failed', {'error': e});
+    } finally {
+      _readAckRunning = false;
+    }
+  }
+
   void _scheduleAck(
     String roomId,
     String myId,
     List<Map<String, dynamic>> rawMessages,
   ) {
-    _ackDebounce?.cancel();
-    _ackDebounce = Timer(const Duration(milliseconds: 800), () {
+    _latestReadCandidates = rawMessages;
+    if (!_chatVisible) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_chatVisible) return;
+      _displayedReadCandidates = List.of(rawMessages);
+      DateTime? latest;
+      for (final raw in rawMessages) {
+        final at = ChatFirebaseService.messageActivityAt(raw);
+        if (at != null && (latest == null || at.isAfter(latest))) latest = at;
+      }
+      if (latest != null &&
+          (_lastReadActivity == null || latest.isAfter(_lastReadActivity!))) {
+        _lastReadActivity = latest;
+        if (Get.isRegistered<MessagesTabController>()) {
+          Get.find<MessagesTabController>().markConversationRead(
+            targetId.value,
+            latest,
+          );
+        }
+        unawaited(_syncServerRead());
+      }
+    });
+    // Do not restart the timer on every snapshot: a fast conversation must
+    // still send read receipts rather than postponing them indefinitely.
+    _ackDebounce ??= Timer(const Duration(milliseconds: 800), () {
+      _ackDebounce = null;
+      if (!_chatVisible) return;
       unawaited(
         _firebaseService.ackIncomingMessages(
           roomId: roomId,
           myUserId: myId,
-          rawMessages: rawMessages,
+          rawMessages: _displayedReadCandidates,
           markRead: true,
         ),
       );
@@ -563,6 +634,7 @@ class ChatDetailController extends GetxController {
       );
     } finally {
       _isOnVoiceCallScreen = false;
+      _scheduleAck(_effectiveRoomId, _myUserId ?? '', _latestReadCandidates);
       await _loadCallHistoryWithRetry();
       _scrollToBottom();
     }
@@ -586,6 +658,7 @@ class ChatDetailController extends GetxController {
       );
     } finally {
       _isOnVoiceCallScreen = false;
+      _scheduleAck(_effectiveRoomId, _myUserId ?? '', _latestReadCandidates);
       await _loadCallHistoryWithRetry();
       _scrollToBottom();
     }
@@ -1267,7 +1340,9 @@ class ChatDetailController extends GetxController {
       final fallback = json['clientCreatedAt'];
       createdAt = _parseTimestamp(fallback);
     }
-    final authUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final authUid = _firebaseService.isAvailable
+        ? FirebaseAuth.instance.currentUser?.uid ?? ''
+        : '';
     final isMe =
         myId.isNotEmpty &&
         (senderId == myId || (authUid.isNotEmpty && senderId == authUid));
@@ -1387,7 +1462,8 @@ class ChatDetailController extends GetxController {
   static bool _shouldKeepMessage(ChatMessageModel msg) {
     if (msg.isCallEntry) return true;
     if (msg.isGift || msg.isEmoji) {
-      final hasMedia = (msg.mediaUrl?.trim().isNotEmpty ?? false) ||
+      final hasMedia =
+          (msg.mediaUrl?.trim().isNotEmpty ?? false) ||
           (msg.animationUrl?.trim().isNotEmpty ?? false);
       return hasMedia || msg.text.trim().isNotEmpty;
     }
@@ -1514,6 +1590,7 @@ class ChatDetailController extends GetxController {
 
   @override
   void onClose() {
+    WidgetsBinding.instance.removeObserver(this);
     final myId = _myUserId ?? '';
     final effectiveRoomId = _effectiveRoomId;
     if (myId.isNotEmpty && effectiveRoomId.isNotEmpty && isFirebaseLive.value) {
@@ -1535,6 +1612,17 @@ class ChatDetailController extends GetxController {
     _typingDebounce?.cancel();
     _typingClearTimer?.cancel();
     _ackDebounce?.cancel();
+    // Flush only messages actually displayed, even when leaving before debounce.
+    if (_displayedReadCandidates.isNotEmpty) {
+      unawaited(
+        _firebaseService.ackIncomingMessages(
+          roomId: effectiveRoomId,
+          myUserId: myId,
+          rawMessages: _displayedReadCandidates,
+          markRead: true,
+        ),
+      );
+    }
     messageController.removeListener(_onMessageTextChanged);
     messageController.dispose();
     scrollController.dispose();

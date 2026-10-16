@@ -25,18 +25,18 @@ import '../widgets/match_user_sheet.dart';
 import '../widgets/messages_common_widgets.dart';
 
 /// Messages tab: New Match discover feed + chat inbox.
-class MessagesTabController extends GetxController {
+class MessagesTabController extends GetxController with WidgetsBindingObserver {
   MessagesTabController({
     AuthRepo? authRepo,
     UserRepo? userRepo,
     ChatRepo? chatRepo,
     ChatLocalStore? localStore,
     ChatFirebaseService? firebaseService,
-  })  : _authRepo = authRepo ?? AuthRepo(),
-        _userRepo = userRepo ?? UserRepo(),
-        _chatRepo = chatRepo ?? ChatRepo(),
-        _localStore = localStore ?? ChatLocalStore(),
-        _firebaseService = firebaseService ?? ChatFirebaseService();
+  }) : _authRepo = authRepo ?? AuthRepo(),
+       _userRepo = userRepo ?? UserRepo(),
+       _chatRepo = chatRepo ?? ChatRepo(),
+       _localStore = localStore ?? ChatLocalStore(),
+       _firebaseService = firebaseService ?? ChatFirebaseService();
 
   final AuthRepo _authRepo;
   final UserRepo _userRepo;
@@ -74,14 +74,17 @@ class MessagesTabController extends GetxController {
   Timer? _inboxPoll;
 
   StreamSubscription<List<Map<String, dynamic>>>? _inboxRoomsSub;
-  final Map<String, StreamSubscription<Map<String, dynamic>?>>
+  final Map<String, StreamSubscription<List<Map<String, dynamic>>>>
   _latestMessageSubs = {};
+  final _roomMessages = <String, List<Map<String, dynamic>>>{};
+  Future<void>? _inboxFetch;
   int _fetchGen = 0;
   bool _inboxWatchStarted = false;
 
   @override
   void onInit() {
     super.onInit();
+    WidgetsBinding.instance.addObserver(this);
     searchController.addListener(_onSearchChanged);
     unawaited(_loadReadMarksThenRefresh());
   }
@@ -92,10 +95,7 @@ class MessagesTabController extends GetxController {
   }
 
   Future<void> refreshAll() async {
-    await Future.wait([
-      fetchNewMatches(),
-      fetchInbox(),
-    ]);
+    await Future.wait([fetchNewMatches(), fetchInbox()]);
   }
 
   void _onSearchChanged() {
@@ -155,7 +155,13 @@ class MessagesTabController extends GetxController {
   }
 
   /// `GET /api/chat/list` for Message section (+ local cache until send API live).
-  Future<void> fetchInbox({bool silent = false}) async {
+  Future<void> fetchInbox({bool silent = false}) {
+    return _inboxFetch ??= _fetchInbox(silent: silent).whenComplete(() {
+      _inboxFetch = null;
+    });
+  }
+
+  Future<void> _fetchInbox({bool silent = false}) async {
     final gen = ++_fetchGen;
     final showLoading = !silent || inboxThreads.isEmpty;
     try {
@@ -176,11 +182,9 @@ class MessagesTabController extends GetxController {
           );
         }
       } else {
-        ChatLogger.apiWarn(
-          'GET /api/chat/list',
-          'failed',
-          {'message': response?['message']?.toString() ?? 'unknown'},
-        );
+        ChatLogger.apiWarn('GET /api/chat/list', 'failed', {
+          'message': response?['message']?.toString() ?? 'unknown',
+        });
       }
 
       final localRaw = await _localStore.readInboxThreads();
@@ -188,8 +192,7 @@ class MessagesTabController extends GetxController {
           .where((t) {
             final message = t['lastMessage']?.toString().trim() ?? '';
             final type = t['lastMessageType']?.toString();
-            return message.isNotEmpty ||
-                ChatInboxPreviewType.isCallType(type);
+            return message.isNotEmpty || ChatInboxPreviewType.isCallType(type);
           })
           .map((json) => _mapInboxThread(json, 0))
           .toList();
@@ -216,18 +219,15 @@ class MessagesTabController extends GetxController {
       _publishInbox();
       _startInboxPoll();
       unawaited(_ensureInboxWatch());
-      ChatLogger.inbox(
-        'fetch merged',
-        {
-          'api': apiThreads.length,
-          'firestore': firestoreThreads.length,
-          'local': localThreads.length,
-          'total': inboxThreads.length,
-        },
-      );
+      ChatLogger.inbox('fetch merged', {
+        'api': apiThreads.length,
+        'firestore': firestoreThreads.length,
+        'local': localThreads.length,
+        'total': inboxThreads.length,
+      });
     } catch (e) {
       ChatLogger.inboxWarn('fetch failed', {'error': e});
-      if (gen == _fetchGen) inboxThreads.clear();
+      // Keep the last known counts during temporary network failures.
     } finally {
       if (gen == _fetchGen && showLoading) isInboxLoading.value = false;
     }
@@ -284,7 +284,25 @@ class MessagesTabController extends GetxController {
       final bd = b.lastActivityAt ?? DateTime.fromMillisecondsSinceEpoch(0);
       return bd.compareTo(ad);
     });
-    inboxThreads.assignAll(next);
+    inboxThreads.assignAll(
+      next.map((thread) {
+        final snapshot = _roomMessages[thread.roomId];
+        if (snapshot == null ||
+            (snapshot.isEmpty && !_readThrough.containsKey(thread.targetId))) {
+          return thread;
+        }
+        return _withUnread(
+          thread,
+          _isViewingChat(thread.targetId)
+              ? 0
+              : countUnreadMessages(
+                  messages: snapshot,
+                  myUserId: _myUserId ?? '',
+                  readThrough: _readThrough[thread.targetId],
+                ),
+        );
+      }),
+    );
     _syncLatestMessageWatchers();
     _syncIncomingCallWatchers();
   }
@@ -333,12 +351,16 @@ class MessagesTabController extends GetxController {
     if (!signedIn || _inboxWatchStarted) return;
 
     _inboxWatchStarted = true;
-    _inboxRoomsSub = _firebaseService.watchUserChatRooms(myId).listen(
-      _onUserChatRooms,
-      onError: (Object e) {
-        ChatLogger.inboxWarn('inbox watch failed', {'error': e});
-      },
-    );
+    _inboxRoomsSub = _firebaseService
+        .watchUserChatRooms(myId)
+        .listen(
+          _onUserChatRooms,
+          onError: (Object e) {
+            _inboxWatchStarted = false;
+            unawaited(_inboxRoomsSub?.cancel());
+            ChatLogger.inboxWarn('inbox watch failed', {'error': e});
+          },
+        );
   }
 
   void _onUserChatRooms(List<Map<String, dynamic>> rows) {
@@ -358,6 +380,7 @@ class MessagesTabController extends GetxController {
   }
 
   void _syncLatestMessageWatchers() {
+    if (!_firebaseService.isAvailable) return;
     final roomIds = _roomsById.keys.toSet();
     final stale = _latestMessageSubs.keys
         .where((roomId) => !roomIds.contains(roomId))
@@ -369,10 +392,18 @@ class MessagesTabController extends GetxController {
     for (final roomId in roomIds) {
       if (_latestMessageSubs.containsKey(roomId)) continue;
       _latestMessageSubs[roomId] = _firebaseService
-          .watchLatestMessage(roomId)
+          .watchInboxMessages(
+            roomId,
+            after: _readThrough[_roomsById[roomId]?.targetId],
+          )
           .listen(
-            (raw) => _onLatestMessage(roomId, raw),
+            (rows) {
+              _roomMessages[roomId] = rows;
+              if (rows.isNotEmpty) _onLatestMessage(roomId, rows.last);
+              _publishInbox();
+            },
             onError: (Object e) {
+              unawaited(_latestMessageSubs.remove(roomId)?.cancel());
               ChatLogger.inboxWarn('latest message watch failed', {
                 'roomId': roomId,
                 'error': e,
@@ -440,7 +471,10 @@ class MessagesTabController extends GetxController {
       unreadCount: update.unreadCount,
       callDirection: _callDirection(raw),
     );
-    _roomsById[roomId] = _applyHit(_roomsById[roomId] ?? current, _liveHits[roomId]!);
+    _roomsById[roomId] = _applyHit(
+      _roomsById[roomId] ?? current,
+      _liveHits[roomId]!,
+    );
     _publishInbox();
     ChatLogger.inbox('live row', {
       'roomId': roomId,
@@ -463,6 +497,10 @@ class MessagesTabController extends GetxController {
   }
 
   bool _isViewingChat(String targetId) {
+    if (WidgetsBinding.instance.lifecycleState != null &&
+        WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+      return false;
+    }
     if (targetId.isEmpty || Get.currentRoute != Routes.CHAT_DETAIL) {
       return false;
     }
@@ -547,9 +585,9 @@ class MessagesTabController extends GetxController {
       lastMessageType: newer.lastMessageType != ChatInboxPreviewType.text
           ? newer.lastMessageType
           : (sameMoment &&
-                  ChatInboxPreviewType.isCallType(older.lastMessageType)
-              ? older.lastMessageType
-              : newer.lastMessageType),
+                    ChatInboxPreviewType.isCallType(older.lastMessageType)
+                ? older.lastMessageType
+                : newer.lastMessageType),
       lastCallDirection: newer.lastCallDirection ?? older.lastCallDirection,
       lastActivityAt: newer.lastActivityAt ?? older.lastActivityAt,
     );
@@ -617,8 +655,9 @@ class MessagesTabController extends GetxController {
     if (!Get.isRegistered<ChatSessionService>()) {
       Get.put(ChatSessionService(), permanent: true);
     }
-    final signedIn =
-        await Get.find<ChatSessionService>().ensureSignedIn(isShowLoader: false);
+    final signedIn = await Get.find<ChatSessionService>().ensureSignedIn(
+      isShowLoader: false,
+    );
     if (!signedIn) return [];
 
     final rows = await _firebaseService.fetchInboxRoomsForUser(myId);
@@ -629,27 +668,43 @@ class MessagesTabController extends GetxController {
         .toList();
   }
 
-  void _rememberRead(MessageListItemModel thread) {
-    _stampRead(thread.targetId, _readCutoff(thread.lastActivityAt));
+  /// Called only after chat content was displayed in the foreground.
+  void markConversationRead(String targetId, DateTime activityAt) {
+    _stampRead(targetId, activityAt);
+  }
+
+  MessageListItemModel _withUnread(MessageListItemModel thread, int count) =>
+      MessageListItemModel(
+        targetId: thread.targetId,
+        name: thread.name,
+        message: thread.message,
+        time: thread.time,
+        imageUrl: thread.imageUrl,
+        avatarFrameUrl: thread.avatarFrameUrl,
+        unreadCount: count,
+        roomId: thread.roomId,
+        lastMessageType: thread.lastMessageType,
+        lastCallDirection: thread.lastCallDirection,
+        lastActivityAt: thread.lastActivityAt,
+      );
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) unawaited(fetchInbox(silent: true));
+    _publishInbox();
   }
 
   /// Everything up to this moment has been seen. The old API total is dropped.
   void _stampRead(String targetId, DateTime cutoff) {
     if (targetId.isEmpty) return;
     final previous = _readThrough[targetId];
-    final mark = previous == null || cutoff.isAfter(previous) ? cutoff : previous;
+    final mark = previous == null || cutoff.isAfter(previous)
+        ? cutoff
+        : previous;
     _readThrough[targetId] = mark;
     _incomingKeys.remove(targetId);
     unawaited(_localStore.writeInboxReadMark(targetId, mark));
     _publishInbox();
-  }
-
-  /// Covers the open message plus a little clock difference, so it is not
-  /// counted again when the list refreshes.
-  DateTime _readCutoff(DateTime? activityAt) {
-    final now = DateTime.now();
-    final base = activityAt != null && activityAt.isAfter(now) ? activityAt : now;
-    return base.add(const Duration(seconds: 2));
   }
 
   MessageListItemModel _applyReadMark(MessageListItemModel thread) {
@@ -690,7 +745,8 @@ class MessagesTabController extends GetxController {
         ? Map<String, dynamic>.from(recipient)
         : null;
 
-    final name = recipientMap?['name']?.toString().trim() ??
+    final name =
+        recipientMap?['name']?.toString().trim() ??
         json['name']?.toString().trim() ??
         'User';
     final targetId =
@@ -777,8 +833,7 @@ class MessagesTabController extends GetxController {
         json['sentByMe'] == true ||
         (sender.isNotEmpty && myId.isNotEmpty && sender == myId);
     if (fromMe) {
-      _incomingKeys.remove(targetId);
-      return 0;
+      return reported;
     }
 
     final alreadyRead = !_activityIsUnread(targetId, activityAt);
@@ -796,12 +851,10 @@ class MessagesTabController extends GetxController {
       }
     }
 
-    final sinceRead = _readThrough.containsKey(targetId);
     return unreadBadgeCount(
-      reportedCount: sinceRead ? 0 : reported,
+      reportedCount: reported,
       seenIncomingCount: _incomingKeys[targetId]?.length ?? 0,
       alreadyRead: false,
-      sinceRead: sinceRead,
     );
   }
 
@@ -812,10 +865,7 @@ class MessagesTabController extends GetxController {
     return activityAt.isAfter(seen);
   }
 
-  Future<void> toggleFollow(
-    BuildContext context,
-    SocialUserCard user,
-  ) async {
+  Future<void> toggleFollow(BuildContext context, SocialUserCard user) async {
     if (user.id.isEmpty) return;
     final action = user.isFollowing ? 'unfollow' : 'follow';
     processingFollowId.value = user.id;
@@ -828,15 +878,17 @@ class MessagesTabController extends GetxController {
       if (!context.mounted) return;
       if (isSocialApiSuccess(response)) {
         final data = response?['data'];
-        final Map<String, dynamic>? dataMap =
-            data is Map ? Map<String, dynamic>.from(data) : null;
-        final isFollowing = dataMap?['isFollowing'] == true ||
+        final Map<String, dynamic>? dataMap = data is Map
+            ? Map<String, dynamic>.from(data)
+            : null;
+        final isFollowing =
+            dataMap?['isFollowing'] == true ||
             (action == 'follow' && dataMap == null);
-        final isFollower = dataMap?['isFollower'] == true ||
-            user.isFollower;
-        final isMutual = dataMap?['isMutual'] == true ||
-            (isFollowing && isFollower);
-        final canMessage = dataMap?['canMessage'] == true ||
+        final isFollower = dataMap?['isFollower'] == true || user.isFollower;
+        final isMutual =
+            dataMap?['isMutual'] == true || (isFollowing && isFollower);
+        final canMessage =
+            dataMap?['canMessage'] == true ||
             isFollowing ||
             isFollower ||
             isMutual;
@@ -883,7 +935,8 @@ class MessagesTabController extends GetxController {
       final nextFollowing = isFollowing;
       final nextMutual =
           isMutual ?? ((nextFollowing && nextFollower) || u.isMutual);
-      final nextCanMessage = canMessage ??
+      final nextCanMessage =
+          canMessage ??
           (nextFollowing || nextFollower || nextMutual || u.canMessage);
       return u.copyWith(
         isFollowing: nextFollowing,
@@ -910,16 +963,10 @@ class MessagesTabController extends GetxController {
   }
 
   /// Opens chat when allowed (`canMessage` = either follows the other).
-  Future<void> openChat(
-    BuildContext context,
-    SocialUserCard user,
-  ) async {
+  Future<void> openChat(BuildContext context, SocialUserCard user) async {
     if (user.id.isEmpty) return;
     if (!user.canMessage) {
-      AppToast.showError(
-        context,
-        'Follow each other to start messaging',
-      );
+      AppToast.showError(context, 'Follow each other to start messaging');
       return;
     }
 
@@ -930,7 +977,6 @@ class MessagesTabController extends GetxController {
       imageUrl: user.displayPicture,
       avatarFrameUrl: user.avatarFrameUrl,
     );
-    _stampRead(user.id, _readCutoff(null));
     fetchInbox();
   }
 
@@ -943,16 +989,6 @@ class MessagesTabController extends GetxController {
       return;
     }
 
-    _rememberRead(thread);
-    if (thread.unreadCount > 0) {
-      unawaited(
-        _chatRepo.markThreadRead(
-          targetId: thread.targetId,
-          roomId: thread.roomId.isNotEmpty ? thread.roomId : null,
-        ),
-      );
-    }
-
     await ChatNavigationHelper.openDirectChat(
       context,
       targetId: thread.targetId,
@@ -960,15 +996,6 @@ class MessagesTabController extends GetxController {
       imageUrl: thread.imageUrl,
       avatarFrameUrl: thread.avatarFrameUrl,
       roomId: thread.roomId.isNotEmpty ? thread.roomId : null,
-    );
-    // Messages seen inside the chat are read, including ones that arrived
-    // while it was open. The old server total is not added back.
-    _stampRead(thread.targetId, _readCutoff(null));
-    unawaited(
-      _chatRepo.markThreadRead(
-        targetId: thread.targetId,
-        roomId: thread.roomId.isNotEmpty ? thread.roomId : null,
-      ),
     );
     fetchInbox();
   }
@@ -1013,9 +1040,7 @@ class MessagesTabController extends GetxController {
     try {
       final dt = DateTime.parse(raw).toLocal();
       final now = DateTime.now();
-      if (dt.year == now.year &&
-          dt.month == now.month &&
-          dt.day == now.day) {
+      if (dt.year == now.year && dt.month == now.month && dt.day == now.day) {
         final h = dt.hour.toString().padLeft(2, '0');
         final m = dt.minute.toString().padLeft(2, '0');
         return '$h:$m';
@@ -1032,15 +1057,16 @@ class MessagesTabController extends GetxController {
   }
 
   MatchUserSheetActions get matchSheetActions => MatchUserSheetActions(
-        processingFollowId: processingFollowId,
-        userById: userById,
-        fetchPublicProfile: fetchPublicProfile,
-        toggleFollow: toggleFollow,
-        openChat: openChat,
-      );
+    processingFollowId: processingFollowId,
+    userById: userById,
+    fetchPublicProfile: fetchPublicProfile,
+    toggleFollow: toggleFollow,
+    openChat: openChat,
+  );
 
   @override
   void onClose() {
+    WidgetsBinding.instance.removeObserver(this);
     _inboxPoll?.cancel();
     unawaited(_inboxRoomsSub?.cancel());
     for (final sub in _latestMessageSubs.values) {

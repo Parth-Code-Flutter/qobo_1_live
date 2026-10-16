@@ -57,6 +57,41 @@ class ChatFirebaseService {
         });
   }
 
+  /// All messages after the local read cursor, not just the newest one.
+  /// With no cursor, include history once so unread bursts survive app restart.
+  /// A single-field query avoids requiring a new Firestore composite index.
+  Stream<List<Map<String, dynamic>>> watchInboxMessages(
+    String roomId, {
+    DateTime? after,
+  }) {
+    final firestore = _firestore;
+    if (roomId.isEmpty || firestore == null) return const Stream.empty();
+    Query<Map<String, dynamic>> query = firestore
+        .collection('chatRooms')
+        .doc(roomId)
+        .collection('messages');
+    if (after != null) {
+      query = query.where(
+        'createdAt',
+        isGreaterThan: Timestamp.fromDate(after),
+      );
+    }
+    return query
+        .orderBy('createdAt')
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map(
+                (doc) => <String, dynamic>{
+                  ...doc.data(),
+                  'id': doc.id,
+                  'activityAt': messageActivityAt(doc.data()),
+                },
+              )
+              .toList(),
+        );
+  }
+
   /// Newest message in a room. One document, so the inbox can follow new
   /// chats without downloading the whole thread.
   Stream<Map<String, dynamic>?> watchLatestMessage(String roomId) {
@@ -75,10 +110,7 @@ class ChatFirebaseService {
         .map((snapshot) {
           if (snapshot.docs.isEmpty) return null;
           final doc = snapshot.docs.first;
-          return {
-            ...Map<String, dynamic>.from(doc.data()),
-            'id': doc.id,
-          };
+          return {...Map<String, dynamic>.from(doc.data()), 'id': doc.id};
         });
   }
 
@@ -104,8 +136,7 @@ class ChatFirebaseService {
   }
 
   static DateTime? messageActivityAt(Map<String, dynamic> raw) {
-    return _toDateTime(raw['createdAt']) ??
-        _toDateTime(raw['clientCreatedAt']);
+    return _toDateTime(raw['createdAt']) ?? _toDateTime(raw['clientCreatedAt']);
   }
 
   /// Short line for the messages tab. Gifts and emojis use a fixed label.
@@ -298,7 +329,7 @@ class ChatFirebaseService {
     for (final entry in pendingUpdates.entries) {
       final messageId = entry.key;
       final updates = entry.value;
-      final key = '$roomId:$messageId:$ackUserId';
+      final key = '$roomId:$messageId:$ackUserId:$markRead';
       if (_ackedMessageKeys.contains(key)) continue;
 
       final ref = firestore

@@ -52,14 +52,14 @@ String incomingMessageKey({
   String? activityRaw,
   String? messageId,
 }) {
+  final stableId = messageId?.trim() ?? '';
+  if (stableId.isNotEmpty) return stableId;
   final parsed = activityAt ?? DateTime.tryParse(activityRaw ?? '');
   final text = preview.trim();
   if (parsed != null) {
     final second = parsed.toUtc().millisecondsSinceEpoch ~/ 1000;
     return '$second|$text';
   }
-  final id = messageId?.trim() ?? '';
-  if (id.isNotEmpty) return id;
   return text;
 }
 
@@ -96,4 +96,31 @@ int _asInt(dynamic raw) {
   if (raw is int) return raw;
   if (raw is double) return raw.round();
   return int.tryParse(raw?.toString() ?? '') ?? 0;
+}
+
+/// Counts actual incoming documents, including bursts missed by a latest-only
+/// listener. Read receipts take precedence over stale inbox summary totals.
+int countUnreadMessages({
+  required Iterable<Map<String, dynamic>> messages,
+  required String myUserId,
+  DateTime? readThrough,
+}) {
+  if (myUserId.isEmpty) return 0;
+  final ids = <String>{};
+  for (final message in messages) {
+    final sender = message['senderId']?.toString() ?? '';
+    if (sender.isEmpty || sender == myUserId) continue;
+    final status = message['status'];
+    final mine = status is Map ? status[myUserId] : null;
+    if (mine is Map && mine['readAt'] != null) continue;
+    final time = message['activityAt'];
+    if (readThrough != null && time is DateTime && !time.isAfter(readThrough)) {
+      continue;
+    }
+    final id = ['clientMessageId', 'id', 'messageId']
+        .map((key) => message[key]?.toString().trim() ?? '')
+        .firstWhere((value) => value.isNotEmpty, orElse: () => '');
+    if (id.isNotEmpty) ids.add(id);
+  }
+  return ids.length;
 }
