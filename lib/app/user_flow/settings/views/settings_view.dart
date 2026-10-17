@@ -83,7 +83,7 @@ class SettingsView extends GetView<SettingsController> {
                               icon: Icons.info_outline_rounded,
                               accent: AppLightUi.violet,
                               title: 'Version',
-                              trailingText: 'v1.0.0',
+                              trailingText: 'v1.0.1',
                               showChevron: false,
                             ),
                           ],
