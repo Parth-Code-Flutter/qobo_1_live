@@ -89,7 +89,7 @@ class SvipView extends GetView<SvipController> {
                   ? controller.svipExpiryLabel.isEmpty
                         ? '★ Active Member ★'
                         : '★ Active Member (${controller.svipExpiryLabel}) ★'
-                  : 'Unlock elite customizations and absolute immunity.',
+                  : 'Not activated',
               fontSize: TextStyles.k14FontSize,
               color: controller.isSvipActive.value
                   ? _goldDeep
@@ -146,59 +146,61 @@ class SvipView extends GetView<SvipController> {
               color: AppLightUi.title,
             ),
           ),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: controller.privileges.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 0.98,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-            ),
-            itemBuilder: (context, index) {
-              final privilege = controller.privileges[index];
-              final Color color = privilege['color'] as Color;
-              return Container(
-                padding: const EdgeInsets.all(14),
-                decoration: AppLightUi.cardDecoration(radius: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.12),
-                        shape: BoxShape.circle,
+          Obx(
+            () => GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: controller.privileges.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 0.92,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+              ),
+              itemBuilder: (context, index) {
+                final privilege = controller.privileges[index];
+                final Color color = privilege['color'] as Color;
+                return Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: AppLightUi.cardDecoration(radius: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          privilege['icon'] as IconData,
+                          color: color,
+                          size: 20,
+                        ),
                       ),
-                      child: Icon(
-                        privilege['icon'] as IconData,
-                        color: color,
-                        size: 20,
-                      ),
-                    ),
-                    Spacing.v10,
-                    SemiBoldText(
-                      text: privilege['title'] as String,
-                      fontSize: TextStyles.k14FontSize,
-                      color: AppLightUi.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Spacing.v4,
-                    Flexible(
-                      child: AppText(
-                        text: privilege['desc'] as String,
-                        fontSize: 11,
-                        color: AppLightUi.subtitle,
-                        maxLines: 3,
+                      Spacing.v10,
+                      SemiBoldText(
+                        text: privilege['title'] as String,
+                        fontSize: TextStyles.k14FontSize,
+                        color: AppLightUi.title,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
-                ),
-              );
-            },
+                      Spacing.v4,
+                      Flexible(
+                        child: AppText(
+                          text: privilege['desc'] as String,
+                          fontSize: 11,
+                          color: AppLightUi.subtitle,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -218,7 +220,7 @@ class SvipView extends GetView<SvipController> {
           ),
         ),
         SizedBox(
-          height: 150,
+          height: 176,
           child: Obx(() {
             if (controller.isLoading.value && controller.plans.isEmpty) {
               return const Center(
@@ -285,8 +287,8 @@ class SvipView extends GetView<SvipController> {
       onTap: () => controller.selectPlan(plan['id']),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
-        width: 116,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+        width: 168,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         decoration: BoxDecoration(
           color: isSelected ? _gold.withValues(alpha: 0.12) : AppLightUi.card,
           border: Border.all(
@@ -311,11 +313,12 @@ class SvipView extends GetView<SvipController> {
                 plan['name']?.toString().isNotEmpty == true
                     ? plan['name'].toString()
                     : badgeLabel,
-                maxLines: 1,
+                maxLines: 2,
+                textAlign: TextAlign.center,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 9,
-                  color: isSelected ? _goldDeep : AppLightUi.muted,
+                  fontSize: 11,
+                  color: isSelected ? _goldDeep : AppLightUi.title,
                   fontWeight: FontWeight.bold,
                 ),
               ),

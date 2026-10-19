@@ -2,8 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/app/user_flow/wallet/bindings/wallet_binding.dart';
+import 'package:qobo_one_live/app/user_flow/wallet/views/wallet_view.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
+import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/repo/economy/economy_repo.dart';
+import 'package:qobo_one_live/repo/user/user_repo.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
 import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
@@ -11,12 +15,17 @@ import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_cont
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 
 class SvipController extends GetxController {
-  SvipController({EconomyRepo? economyRepo, AuthRepo? authRepo})
-    : _economyRepo = economyRepo ?? EconomyRepo(),
-      _authRepo = authRepo ?? AuthRepo();
+  SvipController({
+    EconomyRepo? economyRepo,
+    AuthRepo? authRepo,
+    UserRepo? userRepo,
+  }) : _economyRepo = economyRepo ?? EconomyRepo(),
+       _authRepo = authRepo ?? AuthRepo(),
+       _userRepo = userRepo ?? UserRepo();
 
   final EconomyRepo _economyRepo;
   final AuthRepo _authRepo;
+  final UserRepo _userRepo;
   final isLoading = false.obs;
   final isBuying = false.obs;
   final isSvipActive = false.obs;
@@ -26,16 +35,29 @@ class SvipController extends GetxController {
   String get svipExpiryLabel {
     final expires = svipExpiresAt.value;
     if (expires == null) return '';
-    final days = expires.difference(DateTime.now()).inHours / 24;
-    final left = days.ceil();
-    if (left <= 0) return 'Expires today';
-    return left == 1 ? 'Expires in 1 day' : 'Expires in $left days';
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return 'Expires: ${expires.day} ${months[expires.month - 1]} ${expires.year}';
   }
 
-  final coinsBalance = 12450.obs;
+  final coinsBalance = 0.obs;
   final packageError = ''.obs;
 
-  final List<Map<String, dynamic>> privileges = [
+  final privileges = <Map<String, dynamic>>[].obs;
+
+  static const List<Map<String, dynamic>> _fallbackPrivileges = [
     {
       'title': 'SVIP Badge',
       'desc': 'Gold crown emblem on your profile name.',
@@ -81,6 +103,7 @@ class SvipController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    privileges.assignAll(_fallbackPrivileges);
     fetchPlans();
   }
 
@@ -88,21 +111,16 @@ class SvipController extends GetxController {
     isLoading.value = true;
     packageError.value = '';
     await _restoreCachedSvip();
-    unawaited(_loadSvipFromProfile());
+    await _loadSvipFromProfile();
     try {
-      final wallet = await _economyRepo.getWalletBalances(isShowLoader: false);
-      final walletData = wallet?['data'];
-      if (walletData is Map) {
-        coinsBalance.value = _toInt(walletData['coins']);
-      }
-
+      await _loadPurchasedCoins();
       final response = await _economyRepo.getVipPackages(isShowLoader: false);
       final rawData = response?['data'];
       if (rawData is Map) {
         _applySvipStatus(Map<String, dynamic>.from(rawData));
       }
-      final data = rawData is Map ? rawData['packages'] : rawData;
-      if (response?['statusCode'] == 1 && data is List) {
+      final data = _packageList(rawData);
+      if (isEconomyApiSuccess(response) && data != null) {
         plans.assignAll(
           data
               .whereType<Map>()
@@ -119,7 +137,7 @@ class SvipController extends GetxController {
                   'durationDays': durationDays,
                   'price': _toInt(plan['price']),
                   'saving': _packageBadge(plan),
-                  'benefits': plan['benefits'],
+                  'benefits': _benefitLines(plan['benefits']),
                   'status': status,
                 };
               })
@@ -131,7 +149,13 @@ class SvipController extends GetxController {
               ),
         );
         if (plans.isNotEmpty) {
-          selectedPlan.value = plans.first['id'].toString();
+          final current = selectedPlan.value;
+          final stillThere = plans.any(
+            (plan) => plan['id'].toString() == current,
+          );
+          selectedPlan.value = stillThere
+              ? current
+              : plans.first['id'].toString();
         } else {
           selectedPlan.value = null;
           packageError.value = 'No active SVIP packages are available.';
@@ -142,6 +166,8 @@ class SvipController extends GetxController {
         packageError.value =
             response?['message']?.toString() ?? 'Unable to load SVIP packages.';
       }
+      _syncPrivileges();
+      await _loadBackpackVip();
     } catch (_) {
       packageError.value = 'Unable to load SVIP packages.';
     } finally {
@@ -151,6 +177,7 @@ class SvipController extends GetxController {
 
   void selectPlan(dynamic planId) {
     selectedPlan.value = planId?.toString();
+    _syncPrivileges();
   }
 
   Future<void> subscribe() async {
@@ -171,7 +198,7 @@ class SvipController extends GetxController {
       CommonAppDialog.showGet(
         title: 'Insufficient Coins',
         message:
-            'You need ${price - coinsBalance.value} more Coins to open SVIP. Would you like to recharge now?',
+            'You need ${price - coinsBalance.value} more coins to activate this SVIP plan.',
         icon: Icons.warning_amber_rounded,
         iconAccent: AdminAgencyUi.goldDeep,
         actions: [
@@ -180,7 +207,7 @@ class SvipController extends GetxController {
             label: 'Recharge Now',
             isPrimary: true,
             onPressed: () {
-              _showToast('Redirecting', 'Opening recharge panel...');
+              unawaited(_openWalletToRecharge());
             },
           ),
         ],
@@ -221,6 +248,8 @@ class SvipController extends GetxController {
           );
       _setActive(expires);
       await _cacheSvipExpiry(expires);
+      await _loadPurchasedCoins();
+      await _loadBackpackVip();
       CommonAppDialog.showGet(
         title: 'SVIP Activated!',
         message:
@@ -236,20 +265,179 @@ class SvipController extends GetxController {
     }
   }
 
+  Future<void> _openWalletToRecharge() async {
+    await Get.to(() => const WalletView(), binding: WalletBinding());
+    await _loadPurchasedCoins();
+  }
+
+  Future<void> _loadPurchasedCoins() async {
+    final wallet = await _economyRepo.getWalletBalances(isShowLoader: false);
+    final walletData = wallet?['data'];
+    if (walletData is Map) {
+      coinsBalance.value = _purchasedCoins(
+        Map<String, dynamic>.from(walletData),
+      );
+    }
+  }
+
+  /// SVIP is paid with purchased coins. The wallet API stores those in
+  /// `purchasedCoins` / `diamonds`. `coins` on this payload is earnings.
+  int _purchasedCoins(Map<String, dynamic> data) {
+    for (final key in ['purchasedCoins', 'purchased_coins', 'diamonds']) {
+      if (data.containsKey(key) && data[key] != null) {
+        return _toInt(data[key]);
+      }
+    }
+    return _toInt(data['coins']);
+  }
+
+  List? _packageList(dynamic rawData) {
+    if (rawData is List) return rawData;
+    if (rawData is Map) {
+      final nested = rawData['packages'] ?? rawData['items'] ?? rawData['list'];
+      if (nested is List) return nested;
+    }
+    return null;
+  }
+
+  List<String> _benefitLines(dynamic raw) {
+    if (raw is List) {
+      return raw
+          .map((item) => item.toString().trim())
+          .where((item) => item.isNotEmpty)
+          .toList();
+    }
+    if (raw is String && raw.trim().isNotEmpty) {
+      return raw
+          .split(',')
+          .map((item) => item.trim())
+          .where((item) => item.isNotEmpty)
+          .toList();
+    }
+    return const [];
+  }
+
+  void _syncPrivileges() {
+    final selected = _selectedPlanMap(selectedPlan.value ?? '');
+    final lines = selected == null
+        ? const <String>[]
+        : _benefitLines(selected['benefits']);
+    if (lines.isEmpty) {
+      privileges.assignAll(_fallbackPrivileges);
+      return;
+    }
+    privileges.assignAll(lines.map(_privilegeFromBenefit));
+  }
+
+  Map<String, dynamic> _privilegeFromBenefit(String benefit) {
+    final key = benefit.toLowerCase();
+    IconData icon = Icons.stars_rounded;
+    Color color = const Color(0xFFFFD700);
+    var desc = 'Included with this SVIP plan.';
+    if (key.contains('badge')) {
+      icon = Icons.workspace_premium_rounded;
+      desc = 'Shown on your profile and in live rooms.';
+    } else if (key.contains('entrance')) {
+      icon = Icons.sports_kabaddi_rounded;
+      color = const Color(0xFFFF4500);
+      desc = 'Plays when you join a live room.';
+    } else if (key.contains('kick') ||
+        key.contains('mute') ||
+        key.contains('immunity')) {
+      icon = Icons.security_rounded;
+      color = const Color(0xFF1E90FF);
+      desc = 'Protection from room moderators.';
+    } else if (key.contains('chat')) {
+      icon = Icons.chat_bubble_rounded;
+      color = const Color(0xFFBA55D3);
+      desc = 'A distinct chat style in live rooms.';
+    } else if (key.contains('background') || key.contains('frame')) {
+      icon = Icons.wallpaper_rounded;
+      color = const Color(0xFF3CB371);
+      desc = 'Premium frames and profile backgrounds.';
+    } else if (key.contains('support')) {
+      icon = Icons.support_agent_rounded;
+      color = const Color(0xFFFF8C00);
+      desc = 'Priority help from support.';
+    } else if (key.contains('discount') || key.contains('gift')) {
+      icon = Icons.card_giftcard_rounded;
+      color = const Color(0xFFFF8A48);
+      desc = 'A discount on selected gifts.';
+    }
+    return {'title': benefit, 'desc': desc, 'icon': icon, 'color': color};
+  }
+
+  Future<void> _loadBackpackVip() async {
+    final response = await _userRepo.getBackpack(isShowLoader: false);
+    if (!isEconomyApiSuccess(response)) return;
+    final items = _backpackItems(response?['data']);
+    DateTime? latestFuture;
+    var anyVip = false;
+    var anyOpenEnded = false;
+    for (final item in items) {
+      if (!_isVipBadge(item)) continue;
+      anyVip = true;
+      final expires = _parseDate(item['expiresAt'] ?? item['expires_at']);
+      if (expires == null) {
+        anyOpenEnded = true;
+        continue;
+      }
+      if (!expires.isAfter(DateTime.now())) continue;
+      if (latestFuture == null || expires.isAfter(latestFuture)) {
+        latestFuture = expires;
+      }
+    }
+    if (latestFuture != null) {
+      _setActive(latestFuture);
+      await _cacheSvipExpiry(latestFuture);
+      return;
+    }
+    if (anyOpenEnded) {
+      _setActive(svipExpiresAt.value);
+      return;
+    }
+    if (anyVip) {
+      isSvipActive.value = false;
+      svipExpiresAt.value = null;
+    }
+  }
+
+  List<Map<String, dynamic>> _backpackItems(dynamic data) {
+    dynamic raw = data;
+    if (data is Map) {
+      raw = data['items'] ?? data['inventory'] ?? data['backpack'] ?? data;
+    }
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+  }
+
+  bool _isVipBadge(Map<String, dynamic> item) {
+    final type = (item['itemType'] ?? item['item_type'] ?? item['type'] ?? '')
+        .toString()
+        .toUpperCase();
+    if (type == 'VIP_BADGE' || type.contains('VIP')) return true;
+    final label =
+        '${item['name'] ?? ''} ${item['itemId'] ?? ''} ${item['title'] ?? ''}'
+            .toLowerCase();
+    return label.contains('svip') || label.contains('vip badge');
+  }
+
   void _applyWalletBalanceFromPurchase(
     Map<String, dynamic>? response,
     int fallbackPrice,
   ) {
     final data = response?['data'];
     if (data is Map) {
-      final dynamic balance =
-          data['coinsBalance'] ??
-          data['coins_balance'] ??
-          data['wallet']?['coins'] ??
-          data['walletBalance'];
-      final parsedBalance = _toNullableInt(balance);
-      if (parsedBalance != null) {
-        coinsBalance.value = parsedBalance;
+      final map = Map<String, dynamic>.from(data);
+      final wallet = map['wallet'];
+      final source = wallet is Map ? Map<String, dynamic>.from(wallet) : map;
+      if (source.containsKey('purchasedCoins') ||
+          source.containsKey('purchased_coins') ||
+          source.containsKey('diamonds')) {
+        coinsBalance.value = _purchasedCoins(source);
         return;
       }
     }
@@ -357,12 +545,6 @@ class SvipController extends GetxController {
     } else {
       AppToast.showSuccess(context, message, title: title);
     }
-  }
-
-  int? _toNullableInt(dynamic value) {
-    if (value is int) return value;
-    if (value is num) return value.toInt();
-    return int.tryParse(value?.toString() ?? '');
   }
 
   int _toInt(dynamic value) {
