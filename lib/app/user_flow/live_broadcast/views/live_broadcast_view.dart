@@ -10,6 +10,7 @@ import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/svip_badge_chip.dart';
 import 'package:qobo_one_live/utils/session_earnings_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -1096,14 +1097,21 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                                 : _surfaceSoft,
                             borderRadius: BorderRadius.circular(18),
                             border: Border.all(
-                              color: isSystem
+                              color: msg['isSvip'] == true
+                                  ? const Color(0xFFFFD700)
+                                  : isSystem
                                   ? const Color(0xFF9D71EF)
                                   : Colors.white.withValues(alpha: 0.12),
+                              width: msg['isSvip'] == true ? 1.4 : 1,
                             ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              if (msg['isSvip'] == true) ...[
+                                const SvipBadgeChip(compact: true),
+                                const SizedBox(width: 6),
+                              ],
                               Flexible(
                                 child: RichText(
                                   text: TextSpan(

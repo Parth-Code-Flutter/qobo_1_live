@@ -84,24 +84,42 @@ class SvipView extends GetView<SvipController> {
           ),
           Spacing.v8,
           Obx(
-            () => AppText(
-              text: controller.isSvipActive.value
-                  ? controller.svipExpiryLabel.isEmpty
-                        ? '★ Active Member ★'
-                        : '★ Active Member (${controller.svipExpiryLabel}) ★'
-                  : 'Not activated',
-              fontSize: TextStyles.k14FontSize,
-              color: controller.isSvipActive.value
-                  ? _goldDeep
-                  : AppLightUi.body,
-              align: TextAlign.center,
-              style: controller.isSvipActive.value
-                  ? const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: _goldDeep,
-                      fontSize: TextStyles.k14FontSize,
-                    )
-                  : null,
+            () => Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: controller.isSvipActive.value
+                        ? _gold.withValues(alpha: 0.2)
+                        : AppLightUi.cardSoft,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: controller.isSvipActive.value
+                          ? _goldDeep
+                          : AppLightUi.border,
+                    ),
+                  ),
+                  child: SemiBoldText(
+                    text: controller.statusTitle,
+                    fontSize: TextStyles.k12FontSize,
+                    color: controller.isSvipActive.value
+                        ? _goldDeep
+                        : AppLightUi.subtitle,
+                  ),
+                ),
+                Spacing.v8,
+                AppText(
+                  text: controller.statusSubtitle,
+                  fontSize: TextStyles.k12FontSize,
+                  color: controller.isSvipActive.value
+                      ? _goldDeep
+                      : AppLightUi.body,
+                  align: TextAlign.center,
+                ),
+              ],
             ),
           ),
           Spacing.v16,
@@ -119,7 +137,7 @@ class SvipView extends GetView<SvipController> {
                 Spacing.h6,
                 Obx(
                   () => AppText(
-                    text: 'Balance: ${controller.coinsBalance.value} Coins',
+                    text: 'Balance: ${controller.coinsLabel} Coins',
                     fontSize: TextStyles.k12FontSize,
                     color: AppLightUi.title,
                   ),
@@ -363,12 +381,14 @@ class SvipView extends GetView<SvipController> {
       ),
       child: SafeArea(
         child: Obx(() {
-          if (controller.isSvipActive.value) return _activeMemberBar();
-          final isBusy = controller.isBuying.value;
-          final canBuy = controller.plans.isNotEmpty && !isBusy;
+          final busy = controller.isBuying.value;
+          final canBuy = controller.canPurchaseSelected;
+          if (!canBuy && controller.isSvipActive.value) {
+            return _activeMemberBar();
+          }
           return appButton(
             onPressed: canBuy ? controller.subscribe : () {},
-            buttonText: isBusy ? 'Opening SVIP...' : 'Open SVIP Now',
+            buttonText: busy ? 'Please wait...' : controller.actionButtonLabel,
             gradientColors: const [Color(0xFFFFD700), Color(0xFFFF8A48)],
             textColor: AppLightUi.title,
             borderRadius: 24,

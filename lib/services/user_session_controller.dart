@@ -120,6 +120,30 @@ class UserSessionController extends GetxController {
   bool get isHost => effectiveRole == 'host';
   bool get isCoinSeller => effectiveRole == 'coins_seller';
 
+  /// Real SVIP expiry. `isVip` on the profile is not this membership.
+  DateTime? _svipExpiresAt;
+
+  bool get isSvipMember {
+    final expires = _svipExpiresAt;
+    if (expires != null && expires.isAfter(DateTime.now())) return true;
+    // Profile `isVip` is a frame/seat flag, so it does not unlock SVIP perks.
+    if (_boolValueFromProfile(const [
+      'isSvip',
+      'isSVIP',
+      'is_svip',
+      'svipActive',
+      'isSvipActive',
+    ])) {
+      return true;
+    }
+    final level = int.tryParse(
+      _stringValueFromProfile(const ['vipLevel', 'vip_level']),
+    );
+    return (level ?? 0) >= 5;
+  }
+
+  String get _svipCacheKey => 'svip_expires_at_${userId.trim()}';
+
   /// Server visibility flags control application shortcuts; an approved role
   /// always has exactly its own dashboard shortcut even with stale icon flags.
   bool _showRoleIcon(String icon, String targetRole) {
@@ -198,6 +222,31 @@ class UserSessionController extends GetxController {
   Future<void> loadFromStorage() async {
     final storage = _storage;
     _profileData = await storage.getJsonFromStorage(kStorageUserData);
+    await refreshSvipMembership();
+  }
+
+  /// Reads the expiry saved when SVIP is purchased.
+  Future<void> refreshSvipMembership() async {
+    if (userId.trim().isEmpty) {
+      _svipExpiresAt = null;
+      update();
+      return;
+    }
+    final raw = await _storage.getStringFromStorage(_svipCacheKey);
+    _svipExpiresAt = DateTime.tryParse(raw)?.toLocal();
+    update();
+  }
+
+  /// Keeps profile and live chat in sync with the SVIP screen.
+  Future<void> setSvipExpiry(DateTime? expiresAt) async {
+    final active = expiresAt != null && expiresAt.isAfter(DateTime.now());
+    _svipExpiresAt = active ? expiresAt : null;
+    if (userId.trim().isNotEmpty) {
+      await _storage.writeStringStorage(
+        _svipCacheKey,
+        active ? expiresAt.toUtc().toIso8601String() : '',
+      );
+    }
     update();
   }
 
@@ -234,6 +283,7 @@ class UserSessionController extends GetxController {
     await saveProfile(data);
     // getProfile often omits cover media — merge equipped backpack URL + preview.
     await syncEquippedProfileBackgroundFromBackpack();
+    await refreshSvipMembership();
     return true;
   }
 

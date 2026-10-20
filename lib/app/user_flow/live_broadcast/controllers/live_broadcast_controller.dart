@@ -13,6 +13,7 @@ import 'package:qobo_one_live/repo/economy/economy_repo.dart';
 import 'package:qobo_one_live/repo/emoji/emoji_repo.dart';
 import 'package:qobo_one_live/repo/chat/chat_navigation_helper.dart';
 import 'package:qobo_one_live/repo/room/room_repo.dart';
+import 'package:qobo_one_live/repo/user/user_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/app/user_flow/pk_battle/controllers/pk_v1_controller.dart';
 import 'package:qobo_one_live/app/user_flow/pk_battle/models/v1/pk_v1_models.dart';
@@ -117,6 +118,7 @@ class LiveBroadcastController extends GetxController {
   int? _apiCurrentLiveSeconds;
   int? _apiTotalLiveSeconds;
   DateTime? _apiLiveStartedAtUtc;
+
   /// Distinct audience joins observed this live (for end analytics).
   final Map<String, Map<String, dynamic>> _liveJoinRecords = {};
   var _peakAudienceCount = 0;
@@ -126,6 +128,7 @@ class LiveBroadcastController extends GetxController {
 
   final isMicMuted = false.obs;
   final isCameraOff = false.obs;
+
   /// Host Go Live — front camera by default; flipped via [flipLiveCamera].
   final isFrontCamera = true.obs;
 
@@ -168,6 +171,9 @@ class LiveBroadcastController extends GetxController {
   final Set<String> _knownFloorAudienceIds = <String>{};
   final pendingSeatRequests = <PendingSeatRequest>[].obs;
   final viewerFollowsHost = false.obs;
+
+  /// Current user has active SVIP, so empty seats are taken immediately.
+  final viewerIsSvip = false.obs;
   final myPlacement = 'floor'.obs; // seat | floor
   final audioInviteCandidates = <AudioRoomInviteCandidate>[].obs;
   final isLoadingAudioSeats = false.obs;
@@ -235,9 +241,18 @@ class LiveBroadcastController extends GetxController {
   var _joinedViaInvite = false;
   var _autoSeatAttempted = false;
 
+  /// SVIP viewers are seated once per visit, without a host request.
+  var _svipProfileSynced = false;
+  var _svipSelfSeatAttempted = false;
+  var _svipSelfSeatTries = 0;
+  final Map<String, int> _svipFloorPlaceTries = {};
+  final Map<String, bool> _floorSvipCache = {};
+  var _svipFloorPlaceInFlight = false;
+
   @override
   void onInit() {
     super.onInit();
+    unawaited(_syncViewerSvipFlag());
     final args = Get.arguments;
     if (args != null && args is Map) {
       if (args.containsKey('isHost')) isHost.value = args['isHost'];
@@ -598,6 +613,8 @@ class LiveBroadcastController extends GetxController {
       ..addAll(nextIds);
 
     _syncPkLocalAudience();
+    // isVIP on a floor row is the room's SVIP flag. Seat them if a chair is free.
+    unawaited(_autoPlaceSvipFloorGuests());
 
     if (!_floorAudienceHydrated) {
       _floorAudienceHydrated = true;
@@ -1618,8 +1635,9 @@ class LiveBroadcastController extends GetxController {
             title: 'Comment emoji',
             subtitle: 'Tap to add to your message',
             onTap: (emoji) {
-              final code = (emoji['code'] ?? emoji['char'] ?? emoji['emoji'] ?? '')
-                  .trim();
+              final code =
+                  (emoji['code'] ?? emoji['char'] ?? emoji['emoji'] ?? '')
+                      .trim();
               if (code.isEmpty) return;
               final ctrl = chatTextController;
               final text = ctrl.text;
@@ -2607,6 +2625,178 @@ class LiveBroadcastController extends GetxController {
     return 0;
   }
 
+  bool _currentUserIsSvip() {
+    if (viewerIsSvip.value) return true;
+    if (!Get.isRegistered<UserSessionController>()) return false;
+    return Get.find<UserSessionController>().isSvipMember;
+  }
+
+  /// Followers and the host already sit immediately. SVIP does too.
+  bool get viewerSitsWithoutApproval =>
+      isHost.value || viewerFollowsHost.value || _currentUserIsSvip();
+
+  Future<void> _syncViewerSvipFlag() async {
+    if (!Get.isRegistered<UserSessionController>()) return;
+    final session = Get.find<UserSessionController>();
+    // Local expiry can be empty after a purchase on another install.
+    // Profile vipLevel 5 is what the server sends for Niks.
+    if (!_svipProfileSynced) {
+      _svipProfileSynced = true;
+      final refreshed = await session.refreshProfileFromApi(
+        isShowLoader: false,
+      );
+      if (!refreshed) await session.refreshSvipMembership();
+    } else {
+      await session.refreshSvipMembership();
+    }
+    final active = session.isSvipMember;
+    if (viewerIsSvip.value != active) viewerIsSvip.value = active;
+  }
+
+  AudioRoomSeatModel? _firstEmptyGuestSeat() {
+    for (final seat in audioRoomSeats) {
+      if (seat.seatNo <= 1 || seat.occupied || seat.isLocked) continue;
+      return seat;
+    }
+    return null;
+  }
+
+  /// SVIP joins an empty seat on enter. Followers and other viewers are unchanged.
+  Future<void> _autoSeatSvipIfNeeded() async {
+    if (_exitReported || !isAudioVideoRoom) return;
+    // Host path uses floor_audience.isVIP and must not wait on profile refresh.
+    await _autoPlaceSvipFloorGuests();
+    await _syncViewerSvipFlag();
+    await _autoSeatCurrentSvipViewer();
+  }
+
+  bool _currentUserOnFloorAsVip() {
+    final myId = _currentUserId();
+    if (myId.isEmpty) return false;
+    return floorAudience.any(
+      (user) => _userIdsMatch(user.userId, myId) && (user.isVip || user.isSvip),
+    );
+  }
+
+  Future<void> _autoSeatCurrentSvipViewer() async {
+    if (_svipSelfSeatAttempted || isHost.value) return;
+    if (!_currentUserIsSvip() && !_currentUserOnFloorAsVip()) return;
+    final myId = _currentUserId();
+    if (myId.isEmpty) return;
+    if (audioRoomSeats.any(
+      (s) => s.occupied && _userIdsMatch(s.userId, myId),
+    )) {
+      _svipSelfSeatAttempted = true;
+      return;
+    }
+    final seat = _firstEmptyGuestSeat();
+    if (seat == null) return;
+    _svipSelfSeatTries++;
+    final seated = await requestSeatForSeatNo(seat.seatNo, automatic: true);
+    if (seated || _svipSelfSeatTries >= 3) _svipSelfSeatAttempted = true;
+  }
+
+  /// Floor rows often omit vip level. Confirm SVIP once, then cache it.
+  Future<bool> _isFloorUserSvip(FloorAudienceUser user) async {
+    if (user.isSvip) return true;
+    final id = user.userId.trim();
+    if (id.isEmpty) return false;
+    final cached = _floorSvipCache[id];
+    if (cached != null) return cached;
+    final response = await UserRepo().getPublicProfile(
+      userId: id,
+      isShowLoader: false,
+    );
+    final data = response?['data'];
+    final map = data is Map
+        ? Map<String, dynamic>.from(data)
+        : <String, dynamic>{};
+    final nested = map['user'];
+    final active = readAudioUserIsSvip(
+      map,
+      nested is Map ? Map<String, dynamic>.from(nested) : null,
+    );
+    _floorSvipCache[id] = active;
+    return active;
+  }
+
+  /// Host/admin places a floor guest whose room row has `isVIP: true`.
+  Future<void> _autoPlaceSvipFloorGuests() async {
+    if (_svipFloorPlaceInFlight || _exitReported || !isAudioVideoRoom) return;
+    if (!canManageAudioRoomMembers) return;
+    _svipFloorPlaceInFlight = true;
+    try {
+      final myId = _currentUserId();
+      for (final user in floorAudience.toList()) {
+        // The seats API marks SVIP as isVIP. It does not send vipLevel.
+        final vipOnFloor = user.isVip || user.isSvip;
+        if (!vipOnFloor) continue;
+        final id = user.userId.trim();
+        if (id.isEmpty || _userIdsMatch(id, myId)) continue;
+        _floorSvipCache[id] = true;
+        if ((_svipFloorPlaceTries[id] ?? 0) >= 4) continue;
+        if (audioRoomSeats.any(
+          (s) => s.occupied && _userIdsMatch(s.userId, id),
+        )) {
+          continue;
+        }
+        final seat = _firstEmptyGuestSeat();
+        if (seat == null) return;
+        _svipFloorPlaceTries[id] = (_svipFloorPlaceTries[id] ?? 0) + 1;
+        final seated = await _placeVipFloorUser(user, seat.seatNo);
+        if (seated) _svipFloorPlaceTries[id] = 4;
+      }
+    } finally {
+      _svipFloorPlaceInFlight = false;
+    }
+  }
+
+  /// Host place. `approve_speaker` is preferred; older servers accept aliases.
+  Future<bool> _placeVipFloorUser(FloorAudienceUser user, int seatNo) async {
+    const actions = ['approve_speaker', 'take_seat', 'force_take_seat'];
+    final name = user.name.trim().isEmpty ? 'SVIP' : user.name.trim();
+    for (final action in actions) {
+      final response = await _roomRepo.micAction(
+        roomId: audioRoomApiId,
+        seatId: seatNo,
+        targetUserId: user.userId,
+        action: action,
+        isShowLoader: false,
+      );
+      if (!_isApiSuccess(response)) continue;
+      await _applyMicActionSeatsResponse(response);
+      _showRoomToast('Seated', '$name joined seat $seatNo (SVIP).');
+      return true;
+    }
+    return false;
+  }
+
+  /// Seat payloads often omit SVIP. Cache the public-profile result.
+  bool isKnownSvipUser(String userId) => _floorSvipCache[userId.trim()] == true;
+
+  Future<bool> _targetIsSvip(AudioRoomSeatModel seat) async {
+    // Party-room payloads do not send vipLevel. Niks arrives as isVIP.
+    if (seat.isSvip || seat.isVip) return true;
+    final id = seat.userId.trim();
+    if (id.isEmpty) return false;
+    return _isFloorUserSvip(
+      FloorAudienceUser(userId: id, name: seat.name, isVip: seat.isVip),
+    );
+  }
+
+  Future<bool> _blockSvipModeration(
+    AudioRoomSeatModel seat,
+    String action,
+  ) async {
+    if (!await _targetIsSvip(seat)) return false;
+    _showRoomToast(
+      action,
+      'SVIP members cannot be muted or removed by the host.',
+      isWarning: true,
+    );
+    return true;
+  }
+
   Map<String, dynamic> _mapZegoMessage(
     ZegoInRoomMessage message,
     String myUserId,
@@ -2618,6 +2808,8 @@ class LiveBroadcastController extends GetxController {
     final text = message.message;
     final isGift = text.startsWith('🎁 ');
 
+    final isSvip = isMine && !isGift && _currentUserIsSvip();
+
     return {
       'sender': isMine ? 'You' : senderName,
       // Hide the embedded animation marker from the chat bubble.
@@ -2625,6 +2817,8 @@ class LiveBroadcastController extends GetxController {
       'translation': '',
       'isTranslated': false,
       'isSystem': isGift,
+      // Only this user's own lines. Other viewers need the room payload.
+      'isSvip': isSvip,
     };
   }
 
@@ -3061,6 +3255,7 @@ class LiveBroadcastController extends GetxController {
         'translation': '',
         'isTranslated': false,
         'isSystem': false,
+        'isSvip': _currentUserIsSvip(),
       });
       return;
     }
@@ -3115,6 +3310,7 @@ class LiveBroadcastController extends GetxController {
         'translation': '',
         'isTranslated': false,
         'isSystem': isGift,
+        'isSvip': !isGift && _currentUserIsSvip(),
       });
     }
     return sent;
@@ -3560,10 +3756,7 @@ class LiveBroadcastController extends GetxController {
           comboTotal: count,
         );
         if (keepSheetOpen) {
-          _playLuckyGiftImageFly(
-            gift: gift,
-            receiverId: currentReceiverId,
-          );
+          _playLuckyGiftImageFly(gift: gift, receiverId: currentReceiverId);
         }
 
         // Lucky gifts stay in the open sheet so the next tap can send again.
@@ -4843,6 +5036,7 @@ class LiveBroadcastController extends GetxController {
           seats.isNotEmpty ? seats : audioRoomSeats.toList(),
         );
         _tryAutoSeatForInvitedUser();
+        unawaited(_autoSeatSvipIfNeeded());
         return;
       }
 
@@ -5242,6 +5436,8 @@ class LiveBroadcastController extends GetxController {
     required AudioRoomSeatModel seat,
     required bool mute,
   }) async {
+    // Unmute stays available so a muted SVIP is not stuck without a mic.
+    if (mute && await _blockSvipModeration(seat, 'Mute')) return;
     await _runSeatAction(
       label: mute ? 'Mute' : 'Unmute',
       action: () => _roomRepo.micAction(
@@ -5259,6 +5455,7 @@ class LiveBroadcastController extends GetxController {
     if (!canManageAudioRoomMembers) return;
     final seatNo = seat.seatNo;
     final targetId = seat.userId.trim();
+    if (await _blockSvipModeration(seat, 'Remove from seat')) return;
     if (seatNo <= 1 || targetId.isEmpty) {
       _showRoomToast(
         'Remove from seat',
@@ -5302,6 +5499,7 @@ class LiveBroadcastController extends GetxController {
   Future<void> placeFloorUserOnSeat({
     required FloorAudienceUser user,
     required int seatNo,
+    bool automatic = false,
   }) async {
     if (!canManageAudioRoomMembers) return;
     final targetId = user.userId.trim();
@@ -5331,15 +5529,21 @@ class LiveBroadcastController extends GetxController {
       seatId: seatNo,
       targetUserId: targetId,
       action: 'approve_speaker',
-      isShowLoader: true,
+      isShowLoader: !automatic,
     );
 
     if (_isApiSuccess(response)) {
       await _applyMicActionSeatsResponse(response);
-      _showRoomToast('Seated', '$displayName joined seat $seatNo.');
+      _showRoomToast(
+        'Seated',
+        automatic
+            ? '$displayName joined seat $seatNo (SVIP).'
+            : '$displayName joined seat $seatNo.',
+      );
       return;
     }
 
+    if (automatic) return;
     _showRoomApiError(
       'Put on seat',
       response,
@@ -5381,6 +5585,7 @@ class LiveBroadcastController extends GetxController {
   }
 
   Future<void> kickAudioRoomUser(AudioRoomSeatModel seat) async {
+    if (await _blockSvipModeration(seat, 'Kick off')) return;
     final memberName = seat.name.trim();
     await _runSeatAction(
       label: 'Kick off',
@@ -5454,10 +5659,14 @@ class LiveBroadcastController extends GetxController {
   }
 
   /// Follower take-seat / non-follower seat-request for a specific empty seat.
-  Future<void> requestSeatForSeatNo(int seatNo) async {
-    if (seatNo <= 0) return;
+  /// [automatic] is the SVIP join path: sit without a waiting toast.
+  Future<bool> requestSeatForSeatNo(
+    int seatNo, {
+    bool automatic = false,
+  }) async {
+    if (seatNo <= 0) return false;
     final apiRoomId = audioRoomApiId.trim();
-    if (apiRoomId.isEmpty) return;
+    if (apiRoomId.isEmpty) return false;
 
     // Already seated — nothing to do.
     final myId = _currentUserId();
@@ -5465,24 +5674,49 @@ class LiveBroadcastController extends GetxController {
         audioRoomSeats.any(
           (s) => s.occupied && _userIdsMatch(s.userId, myId),
         )) {
-      _showRoomToast('Seat', 'You are already on a seat.', isWarning: true);
-      return;
+      if (!automatic) {
+        _showRoomToast('Seat', 'You are already on a seat.', isWarning: true);
+      }
+      return true;
     }
 
-    if (viewerFollowsHost.value || isHost.value) {
-      await _runSeatAction(
-        label: 'Take seat',
-        action: () => _roomRepo.micAction(
-          roomId: apiRoomId,
-          seatId: seatNo,
-          action: 'take_seat',
-          isShowLoader: true,
-        ),
-        successMessage: 'You joined seat $seatNo.',
+    // Followers, the host, and SVIP take the empty seat. Others still wait.
+    if (viewerSitsWithoutApproval) {
+      final response = await _roomRepo.micAction(
+        roomId: apiRoomId,
+        seatId: seatNo,
+        action: 'take_seat',
+        isShowLoader: !automatic,
       );
-      // Fallback if backend still expects request_to_speak.
-      return;
+      if (_isApiSuccess(response)) {
+        await _applyMicActionSeatsResponse(response);
+        _showRoomToast(
+          'Take seat',
+          automatic
+              ? 'SVIP seat $seatNo is yours.'
+              : 'You joined seat $seatNo.',
+        );
+        return true;
+      }
+      final code = (response?['code'] ?? response?['errorCode'] ?? '')
+          .toString()
+          .toUpperCase();
+      // Non-followers are blocked by the follow gate. The host places SVIP.
+      final message = response?['message']?.toString().toLowerCase() ?? '';
+      if (automatic &&
+          (code == 'FOLLOW_REQUIRED_FOR_SEAT' || message.contains('follow'))) {
+        return false;
+      }
+      _showRoomApiError(
+        'Take seat',
+        response,
+        'Unable to complete this action.',
+      );
+      return false;
     }
+
+    // Automatic SVIP seating never falls through into a host request.
+    if (automatic) return false;
 
     // Non-follower → seat request for host Allow/Reject.
     final response = await _roomRepo.createSeatRequest(
@@ -5498,7 +5732,7 @@ class LiveBroadcastController extends GetxController {
         'Waiting for the host to allow seat $seatNo.',
       );
       await loadAudioRoomSeats();
-      return;
+      return true;
     }
 
     final code =
@@ -5512,9 +5746,10 @@ class LiveBroadcastController extends GetxController {
             'Follow the host to take a seat, or request one.',
         isError: true,
       );
-      return;
+      return false;
     }
     _showRoomApiError('Seat request', response, 'Unable to request this seat.');
+    return false;
   }
 
   Future<void> respondToPendingSeatRequest(
@@ -6014,6 +6249,7 @@ class LiveBroadcastController extends GetxController {
             : hostAvatarFrameUrl.value,
         role: 'host',
         isAdmin: true,
+        isSvip: session?.isSvipMember ?? false,
       );
     }
 
@@ -6183,6 +6419,13 @@ class LiveBroadcastController extends GetxController {
     }
 
     final message = response?['message']?.toString().trim();
+    if (message != null && message.toLowerCase().contains('immunity')) {
+      final lower = message.toLowerCase();
+      if (lower.contains('mute')) {
+        return 'SVIP members cannot be muted by the host.';
+      }
+      return 'SVIP members cannot be kicked by moderators.';
+    }
     if (message != null && message.isNotEmpty) return message;
     return fallback;
   }
@@ -6557,9 +6800,7 @@ class LiveBroadcastController extends GetxController {
         .where((id) => id.isNotEmpty)
         .toSet()
         .length;
-    final peak = _peakAudienceCount > 0
-        ? _peakAudienceCount
-        : uniqueViewers;
+    final peak = _peakAudienceCount > 0 ? _peakAudienceCount : uniqueViewers;
     final diamonds = sessionEarnings.displayCoins;
 
     // Live streaming and audio/video rooms use different backend resources.

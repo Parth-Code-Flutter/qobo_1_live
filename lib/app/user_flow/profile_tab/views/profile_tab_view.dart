@@ -19,6 +19,7 @@ import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/app_widgets/glossy_dating_card.dart';
 import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
+import 'package:qobo_one_live/utils/app_widgets/svip_badge_chip.dart';
 import 'package:qobo_one_live/app/user_flow/host_dashboard/host_dashboard_view.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -195,12 +196,24 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        BoldText(
-                          text: session.displayName,
-                          fontSize: isCompact
-                              ? TextStyles.k18FontSize
-                              : TextStyles.k20FontSize,
-                          color: titleColor,
+                        Row(
+                          children: [
+                            Flexible(
+                              child: BoldText(
+                                text: session.displayName,
+                                fontSize: isCompact
+                                    ? TextStyles.k18FontSize
+                                    : TextStyles.k20FontSize,
+                                color: titleColor,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (session.isSvipMember) ...[
+                              Spacing.h6,
+                              const SvipBadgeChip(),
+                            ],
+                          ],
                         ),
                         Spacing.v2,
                         AppText(

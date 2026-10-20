@@ -400,6 +400,9 @@ class EconomyEndpoints {
   /// GET /api/economy/vip-packages
   static const String vipPackages = '/api/economy/vip-packages';
 
+  /// GET /api/economy/vip-center — status, balance, privileges, and plans.
+  static const String vipCenter = '/api/economy/vip-center';
+
   /// POST /api/economy/buy-vip
   static const String buyVip = '/api/economy/buy-vip';
 

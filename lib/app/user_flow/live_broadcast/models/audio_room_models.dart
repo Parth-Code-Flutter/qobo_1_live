@@ -13,6 +13,7 @@ class AudioRoomSeatModel {
     this.isLocked = false,
     this.isAdmin = false,
     this.isVip = false,
+    this.isSvip = false,
     this.isCoinsSeller = false,
     this.pkBattle,
   });
@@ -88,6 +89,9 @@ class AudioRoomSeatModel {
         _readBool(raw, const ['isVIP', 'isVip', 'is_vip']) ||
         (occupantMap != null &&
             _readBool(occupantMap, const ['isVIP', 'isVip', 'is_vip']));
+    // Seat VIP frames and SVIP membership are different. Only an explicit
+    // SVIP flag or vip level 5+ skips the seat request and blocks host tools.
+    final isSvip = _readSvip(raw, occupantMap);
     final isCoinsSeller =
         _readBool(raw, const [
           'isCoinsSeller',
@@ -128,6 +132,7 @@ class AudioRoomSeatModel {
       isLocked: _readBool(raw, const ['isLocked', 'locked']),
       isAdmin: _readBool(raw, const ['isAdmin', 'admin']),
       isVip: isVip,
+      isSvip: isSvip,
       isCoinsSeller: isCoinsSeller,
       pkBattle: AudioRoomPkBattleInfo.fromDynamic(
         raw['pkBattle'] ??
@@ -155,6 +160,9 @@ class AudioRoomSeatModel {
   final bool isLocked;
   final bool isAdmin;
   final bool isVip;
+
+  /// Active Supreme VIP. Host cannot mute, remove, or kick this person.
+  final bool isSvip;
 
   /// Verified P2P coins merchant from seats / join payloads.
   final bool isCoinsSeller;
@@ -188,6 +196,7 @@ class AudioRoomSeatModel {
     bool? isLocked,
     bool? isAdmin,
     bool? isVip,
+    bool? isSvip,
     bool? isCoinsSeller,
     AudioRoomPkBattleInfo? pkBattle,
   }) {
@@ -205,6 +214,7 @@ class AudioRoomSeatModel {
       isLocked: isLocked ?? this.isLocked,
       isAdmin: isAdmin ?? this.isAdmin,
       isVip: isVip ?? this.isVip,
+      isSvip: isSvip ?? this.isSvip,
       isCoinsSeller: isCoinsSeller ?? this.isCoinsSeller,
       pkBattle: pkBattle ?? this.pkBattle,
     );
@@ -319,6 +329,38 @@ int? _readInt(Map<String, dynamic> raw, List<String> keys) {
   return null;
 }
 
+/// True when a seat, floor row, or public profile marks active SVIP.
+bool readAudioUserIsSvip(
+  Map<String, dynamic> raw, [
+  Map<String, dynamic>? nested,
+]) => _readSvip(raw, nested);
+
+/// True when the payload marks Supreme VIP, or vip level is 5 or higher.
+bool _readSvip(Map<String, dynamic> raw, [Map<String, dynamic>? nested]) {
+  const flags = ['isSvip', 'isSVIP', 'is_svip', 'svipActive', 'isSvipActive'];
+  if (_readBool(raw, flags)) return true;
+  if (nested != null && _readBool(nested, flags)) return true;
+  final level =
+      _readInt(raw, const ['vipLevel', 'vip_level', 'svipLevel']) ??
+      (nested == null
+          ? null
+          : _readInt(nested, const ['vipLevel', 'vip_level', 'svipLevel']));
+  if ((level ?? 0) >= 5) return true;
+  const expiryKeys = ['svipExpiresAt', 'svip_expires_at'];
+  return _futureExpiry(raw, expiryKeys) ||
+      (nested != null && _futureExpiry(nested, expiryKeys));
+}
+
+bool _futureExpiry(Map<String, dynamic> raw, List<String> keys) {
+  for (final key in keys) {
+    final value = raw[key]?.toString().trim() ?? '';
+    if (value.isEmpty) continue;
+    final parsed = DateTime.tryParse(value);
+    if (parsed != null && parsed.isAfter(DateTime.now())) return true;
+  }
+  return false;
+}
+
 bool _readBool(Map<String, dynamic> raw, List<String> keys) {
   for (final key in keys) {
     final value = raw[key];
@@ -339,6 +381,7 @@ class FloorAudienceUser {
     this.avatarFrameUrl,
     this.vipFrameUrl,
     this.isVip = false,
+    this.isSvip = false,
     this.isCoinsSeller = false,
   });
 
@@ -368,6 +411,7 @@ class FloorAudienceUser {
           ]),
       vipFrameUrl: _readString(raw, const ['vipFrameUrl', 'vip_frame_url']),
       isVip: _readBool(raw, const ['isVIP', 'isVip', 'is_vip']),
+      isSvip: _readSvip(raw),
       isCoinsSeller: _readBool(raw, const [
         'isCoinsSeller',
         'isCoinSeller',
@@ -382,6 +426,9 @@ class FloorAudienceUser {
   final String? avatarFrameUrl;
   final String? vipFrameUrl;
   final bool isVip;
+
+  /// Active Supreme VIP. Host cannot mute, remove, or kick this person.
+  final bool isSvip;
   final bool isCoinsSeller;
 }
 

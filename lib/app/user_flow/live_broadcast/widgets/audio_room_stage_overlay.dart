@@ -10,6 +10,7 @@ import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/svip_badge_chip.dart';
 import 'package:qobo_one_live/utils/app_widgets/session_earnings_badge.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -207,8 +208,10 @@ class AudioRoomStageOverlay extends GetView<LiveBroadcastController> {
                                       Get.isRegistered<PkV1Controller>()) {
                                     // Give Host A/B panes a bit more vertical room
                                     // than the seat grid (audio PK is voice-only).
-                                    final pkH =
-                                        (middleH * 1.08).clamp(280.0, 440.0);
+                                    final pkH = (middleH * 1.08).clamp(
+                                      280.0,
+                                      440.0,
+                                    );
                                     return SizedBox(
                                       height: pkH,
                                       child: InRoomPkStageOverlay(
@@ -452,13 +455,22 @@ class _AudioRoomChatFeed extends GetView<LiveBroadcastController> {
                   decoration: BoxDecoration(
                     color: isSystem ? _giftBubbleColor : _bubbleColor,
                     borderRadius: BorderRadius.circular(18),
-                    border: isSystem
-                        ? Border.all(color: const Color(0xFF7D5BFF))
-                        : null,
+                    border: Border.all(
+                      color: msg['isSvip'] == true
+                          ? const Color(0xFFFFD700)
+                          : isSystem
+                          ? const Color(0xFF7D5BFF)
+                          : Colors.white.withValues(alpha: 0.12),
+                      width: msg['isSvip'] == true ? 1.4 : 1,
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      if (msg['isSvip'] == true) ...[
+                        const SvipBadgeChip(compact: true),
+                        const SizedBox(width: 6),
+                      ],
                       Flexible(
                         child: RichText(
                           text: TextSpan(
@@ -1413,7 +1425,7 @@ class _VideoEmptySeatTile extends GetView<LiveBroadcastController> {
           controller.isHost.value || controller.canManageAudioRoomMembers;
       final actionLabel = isManager
           ? 'Invite'
-          : (controller.viewerFollowsHost.value ? 'Sit' : 'Request');
+          : (controller.viewerSitsWithoutApproval ? 'Sit' : 'Request');
 
       return _VideoSeatShell(
         isHost: false,
@@ -2109,6 +2121,45 @@ class _MemberSeat extends GetView<LiveBroadcastController> {
   }
 }
 
+/// Shown in place of mute / kick when the person has active SVIP.
+class _SvipProtectedNote extends StatelessWidget {
+  const _SvipProtectedNote();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        gradient: const LinearGradient(
+          colors: [Color(0x33FFD56A), Color(0x22FF8F00)],
+        ),
+        border: Border.all(
+          color: const Color(0xFFFFD56A).withValues(alpha: 0.7),
+        ),
+      ),
+      child: const Row(
+        children: [
+          Icon(
+            Icons.workspace_premium_rounded,
+            color: Color(0xFFFFD56A),
+            size: 18,
+          ),
+          SizedBox(width: 8),
+          Expanded(
+            child: SemiBoldText(
+              text: 'SVIP — host cannot mute or remove',
+              fontSize: TextStyles.k12FontSize,
+              color: Color(0xFFFFF3D0),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
   const _AudioSeatActionsSheet({required this.seat, required this.isHostView});
 
@@ -2163,6 +2214,13 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
                         child: _roomStatsRow(),
                       ),
                       Spacing.v16,
+                      if (isHostView &&
+                          (seat.isSvip ||
+                              seat.isVip ||
+                              controller.isKnownSvipUser(seat.userId))) ...[
+                        const _SvipProtectedNote(),
+                        Spacing.v10,
+                      ],
                       _actionsGrid(actions),
                     ],
                   ),
@@ -2539,27 +2597,31 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
           seat.seatNo > 1 &&
           seat.occupied &&
           seat.role.trim().toLowerCase() != 'host';
+      final protected =
+          seat.isSvip || seat.isVip || controller.isKnownSvipUser(seat.userId);
       return [
-        _SeatActionData(
-          icon: seat.isMuted ? Icons.mic_rounded : Icons.mic_off_rounded,
-          label: seat.isMuted ? 'Unmute' : 'Mute',
-          accent: const Color(0xFF7AD7FF),
-          onTap: () =>
-              controller.updateAudioSeatMic(seat: seat, mute: !seat.isMuted),
-        ),
-        if (canClearSeat)
+        if (!protected || seat.isMuted)
+          _SeatActionData(
+            icon: seat.isMuted ? Icons.mic_rounded : Icons.mic_off_rounded,
+            label: seat.isMuted ? 'Unmute' : 'Mute',
+            accent: const Color(0xFF7AD7FF),
+            onTap: () =>
+                controller.updateAudioSeatMic(seat: seat, mute: !seat.isMuted),
+          ),
+        if (canClearSeat && !protected)
           _SeatActionData(
             icon: Icons.event_seat_rounded,
             label: 'Remove from seat',
             accent: const Color(0xFFFFB347),
             onTap: () => controller.removeUserFromAudioSeat(seat),
           ),
-        _SeatActionData(
-          icon: Icons.person_remove_rounded,
-          label: 'Kick off',
-          accent: const Color(0xFFFF6B6B),
-          onTap: () => controller.kickAudioRoomUser(seat),
-        ),
+        if (!protected)
+          _SeatActionData(
+            icon: Icons.person_remove_rounded,
+            label: 'Kick off',
+            accent: const Color(0xFFFF6B6B),
+            onTap: () => controller.kickAudioRoomUser(seat),
+          ),
         _SeatActionData(
           icon: Icons.admin_panel_settings_rounded,
           label: seat.isAdmin ? 'Remove admin' : 'Make admin',
@@ -3600,7 +3662,9 @@ class _GridEmptySeat extends GetView<LiveBroadcastController> {
                     controller.isHost.value ||
                         controller.canManageAudioRoomMembers
                     ? 'Invite'
-                    : (controller.viewerFollowsHost.value ? 'Sit' : 'Request');
+                    : (controller.viewerSitsWithoutApproval
+                          ? 'Sit'
+                          : 'Request');
                 return SemiBoldText(
                   text: label,
                   fontSize: TextStyles.k10FontSize,
@@ -4169,15 +4233,20 @@ class FloorAudienceProfileSheet extends GetView<LiveBroadcastController> {
                   ),
                 ),
                 Spacing.v10,
-                SizedBox(
-                  width: double.infinity,
-                  child: _floorActionButton(
-                    icon: Icons.person_remove_rounded,
-                    label: 'Remove from room',
-                    colors: const [Color(0xFFFF6B6B), Color(0xFFD32F2F)],
-                    onTap: _kick,
+                if (user.isSvip ||
+                    user.isVip ||
+                    controller.isKnownSvipUser(user.userId))
+                  const _SvipProtectedNote()
+                else
+                  SizedBox(
+                    width: double.infinity,
+                    child: _floorActionButton(
+                      icon: Icons.person_remove_rounded,
+                      label: 'Remove from room',
+                      colors: const [Color(0xFFFF6B6B), Color(0xFFD32F2F)],
+                      onTap: _kick,
+                    ),
                   ),
-                ),
               ],
             ] else
               AppText(
@@ -4299,6 +4368,7 @@ class FloorAudienceProfileSheet extends GetView<LiveBroadcastController> {
           name: user.name,
           avatarUrl: user.avatarUrl,
           role: 'audience',
+          isSvip: user.isSvip,
         ),
       ),
     );

@@ -339,6 +339,16 @@ class EconomyRepo {
     return ApiResponseUtils.tryDecodeMap(response.body);
   }
 
+  /// Calls `GET /api/economy/vip-center`. Missing on older servers.
+  Future<Map<String, dynamic>?> getVipCenter({bool isShowLoader = true}) async {
+    final response = await _apiService.getRequest(
+      endPoint: EconomyEndpoints.vipCenter,
+      isShowLoader: isShowLoader,
+    );
+    if (response == null || response.statusCode == 404) return null;
+    return ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
   /// Calls `GET /api/economy/vip-packages`.
   Future<Map<String, dynamic>?> getVipPackages({
     bool isShowLoader = true,

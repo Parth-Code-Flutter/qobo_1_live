@@ -35,24 +35,74 @@ class SvipController extends GetxController {
   String get svipExpiryLabel {
     final expires = svipExpiresAt.value;
     if (expires == null) return '';
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return 'Expires: ${expires.day} ${months[expires.month - 1]} ${expires.year}';
+    return 'Expires on ${expires.day.toString().padLeft(2, '0')}/'
+        '${expires.month.toString().padLeft(2, '0')}/${expires.year}';
+  }
+
+  String get statusTitle => isSvipActive.value ? 'Active Member' : 'Inactive';
+
+  String get statusSubtitle {
+    if (!isSvipActive.value) {
+      return 'Activate Supreme VIP to unlock luxury privileges';
+    }
+    final date = svipExpiryLabel;
+    final left = daysRemaining.value > 0
+        ? daysRemaining.value
+        : _daysUntil(svipExpiresAt.value);
+    if (date.isEmpty) return 'Active Member';
+    final dayLabel = left == 1 ? '1 Day left' : '$left Days left';
+    return '$date ($dayLabel)';
+  }
+
+  String get coinsLabel {
+    final value = coinsBalance.value;
+    final digits = value.abs().toString();
+    final buffer = StringBuffer();
+    for (var i = 0; i < digits.length; i++) {
+      if (i > 0 && (digits.length - i) % 3 == 0) buffer.write(',');
+      buffer.write(digits[i]);
+    }
+    return value < 0 ? '-$buffer' : buffer.toString();
+  }
+
+  String get actionButtonLabel {
+    if (!isSvipActive.value) return 'Open SVIP Now';
+    if (_isSelectedCurrentPlan) return 'SVIP Member Active';
+    final days = _toInt(
+      _selectedPlanMap(selectedPlan.value ?? '')?['durationDays'],
+    );
+    final extra = days > 0 ? days : 30;
+    return 'Extend Membership (+$extra Days)';
+  }
+
+  bool get canPurchaseSelected {
+    if (isBuying.value || plans.isEmpty || selectedPlan.value == null) {
+      return false;
+    }
+    return !(isSvipActive.value && _isSelectedCurrentPlan);
+  }
+
+  bool get _isSelectedCurrentPlan {
+    final plan = _selectedPlanMap(selectedPlan.value ?? '');
+    if (plan == null) return false;
+    if (plan['isCurrentPlan'] == true) return true;
+    final id = activePackageId.value;
+    if (id.isNotEmpty && plan['id'].toString() == id) return true;
+    final name = activePlanName.value.trim();
+    return name.isNotEmpty && plan['name'].toString() == name;
+  }
+
+  int _daysUntil(DateTime? expires) {
+    if (expires == null) return 0;
+    final days = expires.difference(DateTime.now()).inHours / 24;
+    final left = days.ceil();
+    return left < 0 ? 0 : left;
   }
 
   final coinsBalance = 0.obs;
+  final daysRemaining = 0.obs;
+  final activePlanName = ''.obs;
+  final activePackageId = ''.obs;
   final packageError = ''.obs;
 
   final privileges = <Map<String, dynamic>>[].obs;
@@ -113,61 +163,14 @@ class SvipController extends GetxController {
     await _restoreCachedSvip();
     await _loadSvipFromProfile();
     try {
-      await _loadPurchasedCoins();
-      final response = await _economyRepo.getVipPackages(isShowLoader: false);
-      final rawData = response?['data'];
-      if (rawData is Map) {
-        _applySvipStatus(Map<String, dynamic>.from(rawData));
+      // Prefer the combined center payload. Fall back while that route is 404.
+      final center = await _economyRepo.getVipCenter(isShowLoader: false);
+      if (!_applyVipCenter(center)) {
+        await _loadPurchasedCoins();
+        await _loadPackageList();
+        _syncPrivileges();
+        await _loadBackpackVip();
       }
-      final data = _packageList(rawData);
-      if (isEconomyApiSuccess(response) && data != null) {
-        plans.assignAll(
-          data
-              .whereType<Map>()
-              .map((plan) {
-                final id = plan['id']?.toString() ?? '';
-                final durationDays = _toInt(plan['durationDays']);
-                final status = plan['status']?.toString().toLowerCase() ?? '';
-                return <String, dynamic>{
-                  'id': id,
-                  'name': plan['name']?.toString() ?? 'SVIP',
-                  'duration': durationDays > 0
-                      ? '$durationDays Days'
-                      : plan['name']?.toString() ?? 'SVIP',
-                  'durationDays': durationDays,
-                  'price': _toInt(plan['price']),
-                  'saving': _packageBadge(plan),
-                  'benefits': _benefitLines(plan['benefits']),
-                  'status': status,
-                };
-              })
-              .where(
-                (plan) =>
-                    plan['id'].toString().isNotEmpty &&
-                    (plan['status'].toString().isEmpty ||
-                        plan['status'] == 'active'),
-              ),
-        );
-        if (plans.isNotEmpty) {
-          final current = selectedPlan.value;
-          final stillThere = plans.any(
-            (plan) => plan['id'].toString() == current,
-          );
-          selectedPlan.value = stillThere
-              ? current
-              : plans.first['id'].toString();
-        } else {
-          selectedPlan.value = null;
-          packageError.value = 'No active SVIP packages are available.';
-        }
-      } else {
-        plans.clear();
-        selectedPlan.value = null;
-        packageError.value =
-            response?['message']?.toString() ?? 'Unable to load SVIP packages.';
-      }
-      _syncPrivileges();
-      await _loadBackpackVip();
     } catch (_) {
       packageError.value = 'Unable to load SVIP packages.';
     } finally {
@@ -190,28 +193,13 @@ class SvipController extends GetxController {
       return;
     }
 
-    final price = _toInt(activePlan['price']);
+    if (isSvipActive.value && _isSelectedCurrentPlan) return;
 
+    final price = _toInt(activePlan['price']);
     if (coinsBalance.value >= price) {
       await _buySelectedPackage(activePlan, price);
     } else {
-      CommonAppDialog.showGet(
-        title: 'Insufficient Coins',
-        message:
-            'You need ${price - coinsBalance.value} more coins to activate this SVIP plan.',
-        icon: Icons.warning_amber_rounded,
-        iconAccent: AdminAgencyUi.goldDeep,
-        actions: [
-          const CommonAppDialogAction(label: 'Cancel'),
-          CommonAppDialogAction(
-            label: 'Recharge Now',
-            isPrimary: true,
-            onPressed: () {
-              unawaited(_openWalletToRecharge());
-            },
-          ),
-        ],
-      );
+      _showShortfall(price - coinsBalance.value);
     }
   }
 
@@ -226,15 +214,27 @@ class SvipController extends GetxController {
         isShowLoader: true,
       );
       if (response?['statusCode'] != 1 && response?['success'] != true) {
+        final needed = _neededCoins(response);
+        final message = response?['message']?.toString() ?? '';
+        if (needed != null || message.toLowerCase().contains('insufficient')) {
+          _showShortfall(needed ?? (price - coinsBalance.value));
+          return;
+        }
+        if (message.toLowerCase().contains('not found')) {
+          unawaited(fetchPlans());
+        }
         _showToast(
           'SVIP',
-          response?['message']?.toString() ??
-              'Could not activate this SVIP package.',
+          message.isNotEmpty
+              ? message
+              : 'Could not activate this SVIP package.',
           isError: true,
         );
         return;
       }
 
+      activePackageId.value = activePlan['id'].toString();
+      activePlanName.value = activePlan['name']?.toString() ?? '';
       _applyWalletBalanceFromPurchase(response, price);
       final purchaseData = response?['data'];
       final expiresFromApi = purchaseData is Map
@@ -250,10 +250,10 @@ class SvipController extends GetxController {
       await _cacheSvipExpiry(expires);
       await _loadPurchasedCoins();
       await _loadBackpackVip();
+      await fetchPlans();
       CommonAppDialog.showGet(
         title: 'SVIP Activated!',
-        message:
-            'Congratulations! Your ${activePlan['name']} membership is active immediately.',
+        message: 'Congratulations! Your Supreme VIP membership is now active.',
         icon: Icons.stars_rounded,
         iconAccent: AdminAgencyUi.goldDeep,
         actions: const [
@@ -263,6 +263,154 @@ class SvipController extends GetxController {
     } finally {
       isBuying.value = false;
     }
+  }
+
+  bool _applyVipCenter(Map<String, dynamic>? response) {
+    if (!isEconomyApiSuccess(response)) return false;
+    final raw = response?['data'];
+    if (raw is! Map) return false;
+    final data = Map<String, dynamic>.from(raw);
+    if (!data.containsKey('isVipActive') && !data.containsKey('packages')) {
+      return false;
+    }
+
+    if (data.containsKey('coinsBalance') || data.containsKey('userCoins')) {
+      coinsBalance.value = _toInt(data['coinsBalance'] ?? data['userCoins']);
+    }
+    daysRemaining.value = _toInt(data['daysRemaining']);
+    activePlanName.value = data['activePlan']?.toString() ?? '';
+
+    final expires = _parseDate(data['expiresAt']);
+    final activeFlag = data['isVipActive'] == true;
+    if (activeFlag && expires != null && expires.isAfter(DateTime.now())) {
+      _setActive(expires);
+      unawaited(_cacheSvipExpiry(expires));
+    } else if (activeFlag && daysRemaining.value > 0) {
+      _setActive(DateTime.now().add(Duration(days: daysRemaining.value)));
+    } else if (data.containsKey('isVipActive')) {
+      _clearSvip();
+    }
+
+    final packages = data['packages'];
+    if (packages is List) _assignPlans(packages);
+    final perks = data['privileges'];
+    if (perks is List && perks.isNotEmpty) {
+      privileges.assignAll(
+        perks.whereType<Map>().map(
+          (item) => _privilegeFromCenter(Map<String, dynamic>.from(item)),
+        ),
+      );
+    } else {
+      _syncPrivileges();
+    }
+    return true;
+  }
+
+  Future<void> _loadPackageList() async {
+    final response = await _economyRepo.getVipPackages(isShowLoader: false);
+    final rawData = response?['data'];
+    if (rawData is Map) {
+      _applySvipStatus(Map<String, dynamic>.from(rawData));
+    }
+    final data = _packageList(rawData);
+    if (isEconomyApiSuccess(response) && data != null) {
+      _assignPlans(data);
+      return;
+    }
+    plans.clear();
+    selectedPlan.value = null;
+    packageError.value =
+        response?['message']?.toString() ?? 'Unable to load SVIP packages.';
+  }
+
+  void _assignPlans(List data) {
+    plans.assignAll(
+      data
+          .whereType<Map>()
+          .map((plan) {
+            final id = plan['id']?.toString() ?? '';
+            final durationDays = _toInt(plan['durationDays']);
+            final status = plan['status']?.toString().toLowerCase() ?? '';
+            final isCurrent = plan['isCurrentPlan'] == true;
+            if (isCurrent) activePackageId.value = id;
+            return <String, dynamic>{
+              'id': id,
+              'name': plan['name']?.toString() ?? 'SVIP',
+              'duration': durationDays > 0
+                  ? '$durationDays Days'
+                  : plan['name']?.toString() ?? 'SVIP',
+              'durationDays': durationDays,
+              'price': _toInt(plan['price']),
+              'saving': _packageBadge(plan),
+              'benefits': _benefitLines(plan['benefits']),
+              'status': status,
+              'isCurrentPlan': isCurrent,
+            };
+          })
+          .where(
+            (plan) =>
+                plan['id'].toString().isNotEmpty &&
+                (plan['status'].toString().isEmpty ||
+                    plan['status'] == 'active'),
+          ),
+    );
+    if (plans.isEmpty) {
+      selectedPlan.value = null;
+      packageError.value = 'No active SVIP packages are available.';
+      return;
+    }
+    packageError.value = '';
+    final current = selectedPlan.value;
+    final stillThere = plans.any((plan) => plan['id'].toString() == current);
+    if (stillThere) return;
+    final currentPlan = plans.cast<Map<String, dynamic>>().where(
+      (plan) => plan['isCurrentPlan'] == true,
+    );
+    selectedPlan.value = currentPlan.isNotEmpty
+        ? currentPlan.first['id'].toString()
+        : plans.first['id'].toString();
+  }
+
+  Map<String, dynamic> _privilegeFromCenter(Map<String, dynamic> raw) {
+    final title = raw['title']?.toString().trim().isNotEmpty == true
+        ? raw['title'].toString()
+        : 'SVIP';
+    final visual = _privilegeFromBenefit(title);
+    final desc = raw['description']?.toString().trim() ?? '';
+    return {
+      ...visual,
+      'title': title,
+      'desc': desc.isEmpty ? visual['desc'] : desc,
+    };
+  }
+
+  int? _neededCoins(Map<String, dynamic>? response) {
+    final data = response?['data'];
+    if (data is Map) {
+      final value = data['neededCoins'] ?? data['shortfall'];
+      if (value != null) return _toInt(value);
+    }
+    return null;
+  }
+
+  void _showShortfall(int needed) {
+    final amount = needed < 0 ? 0 : needed;
+    CommonAppDialog.showGet(
+      title: 'Insufficient Coins',
+      message: 'You need $amount more coins to activate this SVIP plan.',
+      icon: Icons.warning_amber_rounded,
+      iconAccent: AdminAgencyUi.goldDeep,
+      actions: [
+        const CommonAppDialogAction(label: 'Cancel'),
+        CommonAppDialogAction(
+          label: 'Recharge Now',
+          isPrimary: true,
+          onPressed: () {
+            unawaited(_openWalletToRecharge());
+          },
+        ),
+      ],
+    );
   }
 
   Future<void> _openWalletToRecharge() async {
@@ -392,13 +540,9 @@ class SvipController extends GetxController {
       await _cacheSvipExpiry(latestFuture);
       return;
     }
-    if (anyOpenEnded) {
-      _setActive(svipExpiresAt.value);
-      return;
-    }
-    if (anyVip) {
-      isSvipActive.value = false;
-      svipExpiresAt.value = null;
+    // A badge with no future expiry does not count as an active membership.
+    if (anyVip && !anyOpenEnded) {
+      _clearSvip();
     }
   }
 
@@ -454,9 +598,26 @@ class SvipController extends GetxController {
   }
 
   void _setActive(DateTime? expiresAt) {
-    if (expiresAt != null && !expiresAt.isAfter(DateTime.now())) return;
+    // Membership needs a real future expiry. Profile `isVip` is a separate flag.
+    if (expiresAt == null || !expiresAt.isAfter(DateTime.now())) return;
     isSvipActive.value = true;
-    if (expiresAt != null) svipExpiresAt.value = expiresAt;
+    svipExpiresAt.value = expiresAt;
+    _publishSvipToSession();
+  }
+
+  void _clearSvip() {
+    isSvipActive.value = false;
+    svipExpiresAt.value = null;
+    _publishSvipToSession();
+  }
+
+  void _publishSvipToSession() {
+    if (!Get.isRegistered<UserSessionController>()) return;
+    unawaited(
+      Get.find<UserSessionController>().setSvipExpiry(
+        isSvipActive.value ? svipExpiresAt.value : null,
+      ),
+    );
   }
 
   /// Keeps the purchase visible on revisit even when the API omits SVIP status.
@@ -494,25 +655,18 @@ class SvipController extends GetxController {
           planMap['expiresAt'] ??
           planMap['expires_at'],
     );
-    final flag = [
-      'isSvipActive',
-      'isSvip',
-      'isSVIP',
-      'is_svip',
-      'isVip',
-      'isVIP',
-      'is_vip',
-    ].any((key) => data[key] == true);
-    final level = _toInt(data['vipLevel'] ?? data['vip_level']);
 
     if (expires != null) {
       if (expires.isAfter(DateTime.now())) {
         _setActive(expires);
         unawaited(_cacheSvipExpiry(expires));
+      } else {
+        _clearSvip();
       }
       return;
     }
-    if (flag || level > 0 || planMap.isNotEmpty) _setActive(null);
+    // `isVip` / vipLevel stay on the profile for frames and seats.
+    // They must not hide "Open SVIP Now" when no SVIP expiry exists.
   }
 
   DateTime? _parseDate(dynamic raw) {
