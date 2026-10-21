@@ -713,7 +713,9 @@ class _WalletViewState extends State<WalletView> {
           child: FittedBox(
             fit: BoxFit.scaleDown,
             child: SemiBoldText(
-              text: controller.isBuying.value ? '...' : plan.priceLabel,
+              text: controller.isBuying.value
+                  ? '...'
+                  : controller.purchasePrice(plan),
               fontSize: TextStyles.k12FontSize,
               color: isSelected ? AppLightUi.title : kColorWhite,
             ),
@@ -816,6 +818,59 @@ class _WalletViewState extends State<WalletView> {
   }
 
   void _openCheckoutBottomSheet(CoinPackage plan) {
+    if (controller.usesGooglePlay) {
+      Get.bottomSheet(
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: const BoxDecoration(
+            color: AppLightUi.card,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: SafeArea(
+            child: Obx(() {
+              final billing = controller.billing;
+              final available =
+                  billing != null &&
+                  billing.enabled &&
+                  billing.products.containsKey(plan.googlePlayProductId);
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    plan.coinsLabel,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(controller.purchasePrice(plan)),
+                  const SizedBox(height: 12),
+                  Text(
+                    billing?.message.value ??
+                        'Coin purchases are temporarily unavailable.',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: available && !billing.busy.value
+                        ? () => controller.buyWithGooglePlay(plan)
+                        : null,
+                    child: const Text('Purchase with Google Play'),
+                  ),
+                  TextButton(
+                    onPressed: () => controller.loadCoinPackages(),
+                    child: const Text('Refresh purchases'),
+                  ),
+                ],
+              );
+            }),
+          ),
+        ),
+        isScrollControlled: true,
+      );
+      return;
+    }
     Get.bottomSheet(
       Builder(
         builder: (context) {
@@ -1095,6 +1150,18 @@ class _WalletViewState extends State<WalletView> {
   }
 
   Widget _paymentMethodsStrip() {
+    if (controller.usesGooglePlay) {
+      return _paymentMethodRow(
+        mark: 'G',
+        title: 'Google Play',
+        subtitle: 'Choose a coin pack to view payment options',
+        accent: AppLightUi.violet,
+        onTap: () {
+          final plan = controller.selectedPackage;
+          if (plan != null) _openCheckoutBottomSheet(plan);
+        },
+      );
+    }
     return Container(
       decoration: AppLightUi.cardDecoration(radius: 18),
       child: Column(

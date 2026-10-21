@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:qobo_one_live/services/payment/google_play_billing_service.dart';
 import 'package:qobo_one_live/constants/razorpay_config.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/repo/economy/economy_repo.dart';
@@ -16,6 +17,7 @@ class CoinPackage {
     required this.amount,
     required this.price,
     required this.currency,
+    this.googlePlayProductId = '',
   });
 
   final String id;
@@ -23,6 +25,7 @@ class CoinPackage {
   final int amount;
   final num price;
   final String currency;
+  final String googlePlayProductId;
 
   String get coinsLabel => '$amount Coins';
   String get priceLabel =>
@@ -61,6 +64,10 @@ class CoinPackage {
 
     return CoinPackage(
       id: id,
+      googlePlayProductId:
+          (json['googlePlayProductId'] ?? json['google_play_product_id'] ?? '')
+              .toString()
+              .trim(),
       name:
           json['name']?.toString() ??
           json['title']?.toString() ??
@@ -86,6 +93,18 @@ class WalletController extends GetxController {
 
   final EconomyRepo _economyRepo;
   final RazorpayPaymentService _razorpay;
+  Worker? _billingWorker;
+  bool get usesGooglePlay => GooglePlayBillingService.isAndroid;
+  GooglePlayBillingService? get billing =>
+      Get.isRegistered<GooglePlayBillingService>()
+      ? Get.find<GooglePlayBillingService>()
+      : null;
+  String purchasePrice(CoinPackage plan) => usesGooglePlay
+      ? billing?.products[plan.googlePlayProductId]?.price ?? 'Unavailable'
+      : plan.priceLabel;
+  Future<void> buyWithGooglePlay(CoinPackage plan) async {
+    await billing?.buy(plan.googlePlayProductId);
+  }
 
   final coinBalance = '0'.obs;
   final diamondBalance = '0'.obs;
@@ -121,6 +140,9 @@ class WalletController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    if (usesGooglePlay && billing != null) {
+      _billingWorker = ever(billing!.walletRevision, (_) => loadWallet());
+    }
     loadWallet();
     loadCoinPackages();
     loadWithdrawConfig();
@@ -129,6 +151,7 @@ class WalletController extends GetxController {
 
   @override
   void onClose() {
+    _billingWorker?.dispose();
     _razorpay.dispose();
     super.onClose();
   }
@@ -170,6 +193,14 @@ class WalletController extends GetxController {
             .where((e) => e.id.isNotEmpty && e.amount > 0 && e.price > 0)
             .toList();
         packages.assignAll(parsed);
+        if (usesGooglePlay) {
+          await billing?.loadProducts(
+            parsed
+                .map((p) => p.googlePlayProductId)
+                .where((id) => id.isNotEmpty)
+                .toSet(),
+          );
+        }
         if (selectedPlanIndex.value >= parsed.length) {
           selectedPlanIndex.value = 0;
         }
@@ -315,6 +346,10 @@ class WalletController extends GetxController {
   /// Opens Razorpay Checkout for [package] (or the selected plan), then credits
   /// coins via `POST /api/economy/recharge` with payment references.
   Future<bool> buyPackageWithRazorpay({CoinPackage? package}) async {
+    if (usesGooglePlay) {
+      packageError.value = 'Please use Google Play to purchase coins.';
+      return false;
+    }
     final plan = package ?? selectedPackage;
     if (plan == null) {
       packageError.value = 'No coin package selected.';
@@ -403,6 +438,10 @@ class WalletController extends GetxController {
   /// Legacy non-gateway path (Google Pay / PayPal placeholders). Prefer
   /// [buyPackageWithRazorpay] for real purchases.
   Future<bool> buySelectedPackage(String method) async {
+    if (usesGooglePlay) {
+      packageError.value = 'Please use Google Play to purchase coins.';
+      return false;
+    }
     final normalized = method.trim().toLowerCase();
     if (normalized.contains('razor')) {
       return buyPackageWithRazorpay();

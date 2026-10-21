@@ -1,4 +1,5 @@
 import 'package:audio_session/audio_session.dart';
+import 'package:qobo_one_live/services/payment/google_play_billing_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
@@ -40,6 +41,13 @@ Future<void> main() async {
                 LocalStorage.ensureRegistered();
                 if (!Get.isRegistered<UserSessionController>()) {
                   Get.put(UserSessionController(), permanent: true);
+                }
+                if (GooglePlayBillingService.isAndroid &&
+                    !Get.isRegistered<GooglePlayBillingService>()) {
+                  Get.put(
+                    GooglePlayBillingService.production(),
+                    permanent: true,
+                  );
                 }
               }),
               getPages: AppPages.routes,

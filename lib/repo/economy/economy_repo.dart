@@ -11,6 +11,25 @@ class EconomyRepo {
 
   final ApiService _apiService;
 
+  /// Contract documented in docs/api/GOOGLE_PLAY_BILLING.md.
+  Future<Map<String, dynamic>?> verifyGooglePlayPurchase({
+    required String productId,
+    required String purchaseToken,
+  }) async {
+    final response = await _apiService.postRequest(
+      endPoint: '/api/economy/google-play/verify',
+      requestModel: {
+        'packageName': 'com.qobo1live.live',
+        'productId': productId,
+        'purchaseToken': purchaseToken,
+      },
+      isShowLoader: false,
+    );
+    return response == null
+        ? null
+        : ApiResponseUtils.tryDecodeMap(response.body);
+  }
+
   /// Calls `GET /api/economy/wallet` to retrieve current user wallet balances.
   Future<Map<String, dynamic>?> getWalletBalances({
     bool isShowLoader = true,
