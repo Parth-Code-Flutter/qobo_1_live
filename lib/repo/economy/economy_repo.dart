@@ -12,16 +12,21 @@ class EconomyRepo {
   final ApiService _apiService;
 
   /// Contract documented in docs/api/GOOGLE_PLAY_BILLING.md.
-  Future<Map<String, dynamic>?> verifyGooglePlayPurchase({
+  Future<Map<String, dynamic>?> confirmGooglePlayPurchase({
     required String productId,
     required String purchaseToken,
+    required String bearerToken,
+    String? orderId,
   }) async {
     final response = await _apiService.postRequest(
-      endPoint: '/api/economy/google-play/verify',
+      endPoint: '/api/economy/google-play/confirm',
+      bearerToken: bearerToken,
+      skipUnauthorizedHandling: true,
       requestModel: {
         'packageName': 'com.qobo1live.live',
         'productId': productId,
         'purchaseToken': purchaseToken,
+        if (orderId != null && orderId.isNotEmpty) 'orderId': orderId,
       },
       isShowLoader: false,
     );

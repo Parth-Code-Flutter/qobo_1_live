@@ -820,53 +820,300 @@ class _WalletViewState extends State<WalletView> {
   void _openCheckoutBottomSheet(CoinPackage plan) {
     if (controller.usesGooglePlay) {
       Get.bottomSheet(
-        Container(
-          padding: const EdgeInsets.all(24),
-          decoration: const BoxDecoration(
-            color: AppLightUi.card,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: SafeArea(
-            child: Obx(() {
-              final billing = controller.billing;
-              final available =
-                  billing != null &&
-                  billing.enabled &&
-                  billing.products.containsKey(plan.googlePlayProductId);
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    plan.coinsLabel,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(controller.purchasePrice(plan)),
-                  const SizedBox(height: 12),
-                  Text(
-                    billing?.message.value ??
-                        'Coin purchases are temporarily unavailable.',
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: available && !billing.busy.value
-                        ? () => controller.buyWithGooglePlay(plan)
-                        : null,
-                    child: const Text('Purchase with Google Play'),
-                  ),
-                  TextButton(
-                    onPressed: () => controller.loadCoinPackages(),
-                    child: const Text('Refresh purchases'),
-                  ),
-                ],
-              );
-            }),
-          ),
+        Builder(
+          builder: (context) {
+            return Container(
+              width: double.infinity,
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(context).height * 0.9,
+              ),
+              clipBehavior: Clip.antiAlias,
+              decoration: const BoxDecoration(
+                color: AppLightUi.card,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+              ),
+              child: SafeArea(
+                top: false,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
+                  child: Obx(() {
+                    final billing = controller.billing;
+                    final available =
+                        billing != null &&
+                        billing.enabled &&
+                        billing.products.containsKey(plan.googlePlayProductId);
+                    final busy = billing?.busy.value ?? false;
+                    final message =
+                        billing?.message.value ??
+                        'Coin purchases are temporarily unavailable.';
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: AppLightUi.borderStrong,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                'Top up your coins',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppLightUi.title,
+                                ),
+                              ),
+                            ),
+                            IconButton.filledTonal(
+                              tooltip: 'Close',
+                              onPressed: () => Navigator.of(context).pop(),
+                              style: IconButton.styleFrom(
+                                backgroundColor: const Color(0xFFF5F0FA),
+                                foregroundColor: AppLightUi.subtitle,
+                              ),
+                              icon: const Icon(Icons.close_rounded, size: 20),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 18),
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Color(0xFFF2EBFF), Color(0xFFFFEFF6)],
+                            ),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: const Color(0xFFECE0F5)),
+                          ),
+                          child: Column(
+                            children: [
+                              SizedBox(
+                                height: 76,
+                                width: 136,
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    Positioned(
+                                      left: 6,
+                                      bottom: 5,
+                                      child: Transform.rotate(
+                                        angle: -0.18,
+                                        child: _coinDisc(46),
+                                      ),
+                                    ),
+                                    Positioned(
+                                      right: 6,
+                                      bottom: 5,
+                                      child: Transform.rotate(
+                                        angle: 0.18,
+                                        child: _coinDisc(46),
+                                      ),
+                                    ),
+                                    Positioned(top: 0, child: _coinDisc(62)),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                _formatPlanAmount(plan.amount),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 36,
+                                  height: 1.1,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppLightUi.title,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              const Text(
+                                'Qobo Coins',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppLightUi.body,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'Send gifts. Share a little joy.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: AppLightUi.subtitle,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 22),
+                        Row(
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                'Total',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  color: AppLightUi.subtitle,
+                                ),
+                              ),
+                            ),
+                            Flexible(
+                              child: Text(
+                                controller.purchasePrice(plan),
+                                textAlign: TextAlign.end,
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppLightUi.title,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'One-time purchase · No subscription',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppLightUi.subtitle,
+                          ),
+                        ),
+                        if (message.trim().isNotEmpty) ...[
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF6F2FB),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(
+                                  Icons.info_outline_rounded,
+                                  size: 18,
+                                  color: AppLightUi.violet,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    message,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      height: 1.4,
+                                      color: AppLightUi.body,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 20),
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: available && !busy
+                                ? AppLightUi.familyCtaGradient
+                                : null,
+                            color: const Color(0xFFE5DCEA),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              disabledBackgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              foregroundColor: Colors.white,
+                              disabledForegroundColor: AppLightUi.subtitle,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 18,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                              textStyle: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            onPressed: available && !busy
+                                ? () => controller.buyWithGooglePlay(plan)
+                                : null,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                if (busy)
+                                  const SizedBox(
+                                    width: 19,
+                                    height: 19,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppLightUi.subtitle,
+                                    ),
+                                  )
+                                else
+                                  const Icon(
+                                    Icons.lock_outline_rounded,
+                                    size: 20,
+                                  ),
+                                const SizedBox(width: 10),
+                                Flexible(
+                                  child: Text(
+                                    busy
+                                        ? 'Opening checkout…'
+                                        : 'Continue with Google Play',
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Payment handled by Google Play',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppLightUi.subtitle,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        TextButton.icon(
+                          onPressed: busy
+                              ? null
+                              : () => controller.loadCoinPackages(),
+                          icon: const Icon(Icons.refresh_rounded, size: 17),
+                          label: const Text('Refresh purchases'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppLightUi.subtitle,
+                            textStyle: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }),
+                ),
+              ),
+            );
+          },
         ),
+        backgroundColor: Colors.transparent,
         isScrollControlled: true,
       );
       return;
