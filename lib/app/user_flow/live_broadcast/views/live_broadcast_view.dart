@@ -1180,7 +1180,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                   );
                   // Keep a usable composer on narrow screens and at large text sizes.
                   final inline =
-                      constraints.maxWidth >= 340 &&
+                      constraints.maxWidth >= 120 + actions.length * 48 &&
                       MediaQuery.textScalerOf(context).scale(14) <= 18;
                   if (!inline) {
                     return Column(
@@ -1313,13 +1313,23 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
           compact: compact,
           onTap: controller.openPkV1Arena,
         ),
+      Tooltip(
+        message: 'Lucky',
+        child: _bottomActionIcon(
+          Icons.auto_awesome_rounded,
+          color: const Color(0xFF58D99B),
+          compact: compact,
+          onTap: controller.openLuckyPreviewSheet,
+        ),
+      ),
       // Audience can gift during live + during PK (hosts cannot).
       if (!controller.isHost.value)
         _bottomActionIcon(
           kGiftIcon,
           color: _accent,
           compact: compact,
-          onTap: controller.isLiveStreamingSession || controller.isInRoomPkActive
+          onTap:
+              controller.isLiveStreamingSession || controller.isInRoomPkActive
               ? controller.openLiveStreamGiftSheet
               : controller.openGiftsSheet,
         ),
@@ -1342,6 +1352,14 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
 
   List<Widget> _partyRoomActionButtons(BuildContext context) {
     return [
+      Tooltip(
+        message: 'Lucky',
+        child: _bottomActionIcon(
+          Icons.auto_awesome_rounded,
+          color: const Color(0xFF58D99B),
+          onTap: controller.openLuckyPreviewSheet,
+        ),
+      ),
       Obx(
         () => _bottomActionIcon(
           controller.isMicMuted.value
@@ -2221,8 +2239,7 @@ class _StableZegoExpressLiveStreamingState
     express.ZegoExpressEngine.onRoomStateUpdate =
         (roomID, state, errorCode, extendedData) {
           if (roomID != widget.liveId) return;
-          if (errorCode != 0 ||
-              state == express.ZegoRoomState.Disconnected) {
+          if (errorCode != 0 || state == express.ZegoRoomState.Disconnected) {
             _controller.onExpressLiveRoomDisconnected(
               'Live room connection failed ($errorCode). Reconnecting…',
             );
@@ -2313,15 +2330,10 @@ class _StableZegoExpressLiveStreamingState
               .map((user) => (id: user.userID, name: user.userName))
               .toList(growable: false);
           if (updateType == express.ZegoUpdateType.Delete) {
-            _controller.removeExpressLiveUsers(
-              users.map((user) => user.id),
-            );
+            _controller.removeExpressLiveUsers(users.map((user) => user.id));
             return;
           }
-          _controller.syncExpressLiveUsers(
-            users: users,
-            replaceAll: false,
-          );
+          _controller.syncExpressLiveUsers(users: users, replaceAll: false);
         };
   }
 

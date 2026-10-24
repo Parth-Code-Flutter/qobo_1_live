@@ -1,3 +1,5 @@
+import 'package:qobo_one_live/services/gifts/lucky_gift_session.dart';
+import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -43,6 +45,8 @@ import 'package:qobo_one_live/utils/ui_utils/gift_celebration_overlay.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_chat_celebration_tracker.dart';
 import 'package:qobo_one_live/utils/ui_utils/gift_media_utils.dart';
 import 'package:qobo_one_live/utils/ui_utils/coin_fly_overlay.dart';
+import '../widgets/lucky_gift_trail.dart';
+import '../widgets/lucky_demo_celebration.dart';
 import 'package:qobo_one_live/utils/ui_utils/avatar_fly_overlay.dart';
 import 'package:qobo_one_live/utils/ui_utils/vip_entrance_overlay.dart';
 import 'package:share_plus/share_plus.dart';
@@ -57,6 +61,7 @@ import '../utils/live_room_profile_utils.dart';
 import '../widgets/emoji_picker_bottom_sheet.dart';
 import '../widgets/gift_icon_widget.dart';
 import '../widgets/gifts_bottom_sheet.dart';
+import '../widgets/lucky_preview_sheet.dart';
 import '../widgets/follower_pk_gift_target_sheet.dart';
 import '../widgets/live_filters_sheet.dart';
 import '../widgets/live_stream_end_summary_dialog.dart';
@@ -1330,10 +1335,116 @@ class LiveBroadcastController extends GetxController {
     );
   }
 
+  bool _luckyPreviewOpen = false;
+  LuckyGiftSession? _luckySession;
+  String _luckyOwner = '';
+  final _luckySheetKey = GlobalKey();
+
+  Future<void> openLuckyPreviewSheet() async {
+    if (_luckyPreviewOpen || isClosed) return;
+    _luckyPreviewOpen = true;
+    try {
+      final owner = Get.find<UserSessionController>().userId;
+      final token = await LocalStorage.shared.getToken();
+      if (isClosed ||
+          token.isEmpty ||
+          Get.find<UserSessionController>().userId != owner) {
+        return;
+      }
+      if (_luckySession == null || _luckyOwner != owner) {
+        _luckySession?.dispose();
+        _luckyOwner = owner;
+        _luckySession = LuckyGiftSession(
+          repo: LuckyGiftRepo(),
+          token: token,
+          isOwner: () =>
+              !isClosed && Get.find<UserSessionController>().userId == owner,
+          onSuccess: (gift, data, host) {
+            final reward = data['luckyReward'] is Map
+                ? data['luckyReward'] as Map
+                : {};
+            final balance = data['userCoins'] ?? reward['userCoins'];
+            if (balance != null) {
+              diamondsBalance.value = parseWalletAmount(balance);
+            }
+            if (data['remaining_coins'] != null) {
+              coinsBalance.value = parseWalletAmount(data['remaining_coins']);
+            }
+            if (data['luckyRewardTriggered'] == true ||
+                reward['rewardTriggered'] == true) {
+              GiftCelebrationOverlay.show(
+                giftName:
+                    'Lucky win! +${data['luckyRewardCoins'] ?? reward['rewardCoins']} Coins',
+                imageUrl: gift.icon,
+                soundUrl: gift.sound,
+                enqueueIfBusy: true,
+              );
+            }
+            // Refresh authoritative wallet values; never calculate rewards locally.
+            if (balance == null) {
+              unawaited(
+                loadWalletBalance().then((_) {
+                  if (!isClosed &&
+                      _luckyOwner == owner &&
+                      _luckySession?.busy == false) {
+                    _luckySession?.updateBalance(diamondsBalance.value);
+                  }
+                }),
+              );
+            }
+          },
+        )..balance = diamondsBalance.value;
+      }
+      unawaited(_luckySession!.load());
+      final demoStreak = LuckyDemoStreak();
+      await Get.bottomSheet<void>(
+        LuckyPreviewSheet(
+          key: _luckySheetKey,
+          session: _luckySession!,
+          onSelected: (gift, origin) {
+            final host = selectedGiftReceiverId.value ?? receiverId.value;
+            final demoReward = demoStreak.tap(gift.id);
+            // Visual repetitions never repeat the API request or coin charge.
+            // Get.context belongs to Navigator itself, above its Overlay.
+            // Resolve effects from the mounted sheet inside that Overlay.
+            final context = _luckySheetKey.currentContext;
+            if (context != null && context.mounted) {
+              LuckyDemoCelebration.show(context, reward: demoReward);
+              final size = MediaQuery.sizeOf(context);
+              LuckyGiftTrail.show(
+                context,
+                origin: origin,
+                target: Offset(
+                  size.width / 2,
+                  MediaQuery.paddingOf(context).top + size.height * .19,
+                ),
+                icon: gift.icon,
+              );
+            }
+
+            if (host.isEmpty || host == owner) {
+              _luckySession!.showMessage(
+                'Preview only • No coins charged. Select a recipient to send.',
+              );
+              return;
+            }
+            _luckySession!.tap(gift, host: host, channel: economyGiftRoomId);
+          },
+        ),
+        backgroundColor: Colors.transparent,
+        isScrollControlled: true,
+      );
+    } finally {
+      _luckySession?.cancelQueued();
+      _luckyPreviewOpen = false;
+    }
+  }
+
   /// Lucky gift images use the same flight as coins, aimed at this person.
   void _playLuckyGiftImageFly({
     required Map<String, String> gift,
     required String receiverId,
+    Offset? startFrom,
   }) {
     final icon = (gift['icon'] ?? '').trim();
     if (icon.isEmpty) return;
@@ -1344,8 +1455,7 @@ class LiveBroadcastController extends GetxController {
     } catch (_) {
       context = null;
     }
-    Offset? startFrom;
-    if (context != null) {
+    if (startFrom == null && context != null) {
       final size = MediaQuery.sizeOf(context);
       startFrom = Offset(size.width * 0.5, size.height * 0.5);
     }
@@ -1363,7 +1473,7 @@ class LiveBroadcastController extends GetxController {
           icon: icon,
           size: size,
           emojiSize: size * 0.75,
-          animate: true,
+          animate: false,
         ),
       ),
     );
@@ -7065,8 +7175,11 @@ class LiveBroadcastController extends GetxController {
 
   @override
   void onClose() {
+    _luckySession?.dispose();
     _pkActiveWorker?.dispose();
     _pkActiveWorker = null;
+    LuckyDemoCelebration.dismiss();
+    LuckyGiftTrail.dismiss();
     CoinFlyOverlay.dismiss();
     AvatarFlyOverlay.dismiss();
     _stopSeatRefreshPolling();

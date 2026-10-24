@@ -426,8 +426,12 @@ class _CoinFlyLayerState extends State<_CoinFlyLayer>
         : raw;
     final t = Curves.easeInOutCubic.transform(travel);
     final pos = _quad(flight.start, flight.mid, flight.end, t);
+    final entrance = raw < 0.1
+        ? 0.55 +
+              0.45 * Curves.easeOutBack.transform((raw / 0.1).clamp(0.0, 1.0))
+        : 1.0;
     final scale = widget.centerGiftFlight
-        ? 1.0 - (0.82 * t)
+        ? entrance * (1.0 - (0.82 * t))
         : 1.35 - (0.75 * t);
     final opacity = t < 0.88 ? 1.0 : (1 - ((t - 0.88) / 0.12));
 
@@ -440,9 +444,28 @@ class _CoinFlyLayerState extends State<_CoinFlyLayer>
           angle: flight.spin * t * math.pi,
           child: Transform.scale(
             scale: scale,
-            child:
-                widget.flyVisual?.call(flight.size) ??
-                _CoinVisual(size: flight.size),
+            child: widget.centerGiftFlight
+                ? Container(
+                    width: flight.size,
+                    height: flight.size,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(
+                            0xFFFF58B0,
+                          ).withValues(alpha: 0.26 * (1 - t)),
+                          blurRadius: 36,
+                          spreadRadius: 8,
+                        ),
+                      ],
+                    ),
+                    child:
+                        widget.flyVisual?.call(flight.size) ??
+                        _CoinVisual(size: flight.size),
+                  )
+                : widget.flyVisual?.call(flight.size) ??
+                      _CoinVisual(size: flight.size),
           ),
         ),
       ),
@@ -450,7 +473,11 @@ class _CoinFlyLayerState extends State<_CoinFlyLayer>
   }
 
   Widget _targetGlow() {
-    final pulse = Curves.easeOut.transform(_targetPulse.value.clamp(0.0, 1.0));
+    // Lucky landing glow starts on arrival, rather than during the center hold.
+    final progress = widget.centerGiftFlight
+        ? ((_burst.value - 0.82) / 0.18).clamp(0.0, 1.0)
+        : _targetPulse.value.clamp(0.0, 1.0);
+    final pulse = Curves.easeOut.transform(progress);
     if (pulse <= 0) return const SizedBox.shrink();
     final size = 28 + (36 * pulse);
     return Positioned(

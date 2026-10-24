@@ -319,6 +319,15 @@ class _AudioRoomBottomControls extends GetView<LiveBroadcastController> {
                 onTap: controller.openGiftsSheet,
               );
             }),
+            _ControlButton(
+              icon: Icons.auto_awesome_rounded,
+              label: 'Lucky',
+              compact: compact,
+              accentGradient: const LinearGradient(
+                colors: [Color(0xFF58D99B), Color(0xFF109C70)],
+              ),
+              onTap: controller.openLuckyPreviewSheet,
+            ),
             // Video dock is crowded (Cam/Flip) — tuck these into More.
             // Audio keeps Background / Share / PK Battle on the dock.
             if (controller.isVideoRoom)

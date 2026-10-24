@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_svga/flutter_svga.dart';
 import 'package:qobo_one_live/app/user_flow/live_broadcast/utils/live_room_profile_utils.dart';
 import 'package:qobo_one_live/services/gifts/gift_icon_preview_store.dart';
@@ -33,6 +34,12 @@ class GiftIconWidget extends StatelessWidget {
     final raw = icon?.trim() ?? '';
     if (raw.isEmpty) {
       return Text('🎁', style: TextStyle(fontSize: emojiSize));
+    }
+
+    if (raw.startsWith('assets/')) {
+      return raw.toLowerCase().endsWith('.svg')
+          ? SvgPicture.asset(raw, width: size, height: size)
+          : Image.asset(raw, width: size, height: size, fit: BoxFit.contain);
     }
 
     // Gift-list `icon` is treated as a network SVGA/animated clip.
