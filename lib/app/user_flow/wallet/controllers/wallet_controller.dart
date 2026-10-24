@@ -179,6 +179,13 @@ class WalletController extends GetxController {
     }
   }
 
+  /// Recover unfinished Google purchases before refreshing the displayed wallet.
+  Future<void> refreshPurchases() async {
+    await billing?.recover();
+    await loadWallet();
+    await loadCoinPackages();
+  }
+
   Future<void> loadCoinPackages() async {
     isLoadingPackages.value = true;
     packageError.value = '';

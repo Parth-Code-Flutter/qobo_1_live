@@ -8,6 +8,7 @@ class RecordingApi extends ApiService {
   String? path, token;
   dynamic body;
   bool skip401 = false;
+  int responseStatus = 200;
   @override
   Future<http.Response?> postRequest({
     required String endPoint,
@@ -26,7 +27,7 @@ class RecordingApi extends ApiService {
         'success': true,
         'data': {'credited': true},
       }),
-      200,
+      responseStatus,
     );
   }
 }
@@ -55,6 +56,15 @@ void main() {
       expect(result?['success'], true);
     },
   );
+  test('HTTP failure cannot be treated as successful credit', () async {
+    final api = RecordingApi()..responseStatus = 500;
+    final result = await EconomyRepo(apiService: api).confirmGooglePlayPurchase(
+      productId: 'qobo_coins_4000',
+      purchaseToken: 'test-token',
+      bearerToken: 'owner-session',
+    );
+    expect(result?['success'], false);
+  });
   test('missing order ID is omitted from confirmation', () async {
     final api = RecordingApi();
     await EconomyRepo(apiService: api).confirmGooglePlayPurchase(

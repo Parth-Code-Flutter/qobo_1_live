@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 
 import 'package:qobo_one_live/services/api_service.dart';
 import 'package:qobo_one_live/services/api_constants.dart';
@@ -30,9 +31,13 @@ class EconomyRepo {
       },
       isShowLoader: false,
     );
-    return response == null
-        ? null
-        : ApiResponseUtils.tryDecodeMap(response.body);
+    debugPrint('[QoboBilling] confirmation HTTP=${response?.statusCode ?? 0}');
+    if (response == null) return null;
+    final decoded = ApiResponseUtils.tryDecodeMap(response.body);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      return {...?decoded, 'success': false};
+    }
+    return decoded;
   }
 
   /// Calls `GET /api/economy/wallet` to retrieve current user wallet balances.

@@ -99,7 +99,12 @@ class GooglePlayBillingService extends GetxService with WidgetsBindingObserver {
       // Capture the bearer token, then re-check owner after the storage await.
       // The request cannot accidentally use a newly signed-in user's session.
       final token = await LocalStorage.shared.getToken();
-      if (token.isEmpty || _sessionUserId() != owner) return null;
+      if (token.isEmpty || _sessionUserId() != owner) {
+        debugPrint(
+          '[QoboBilling] confirm skipped: session unavailable or changed',
+        );
+        return null;
+      }
       return EconomyRepo().confirmGooglePlayPurchase(
         productId: receipt.productId,
         purchaseToken: receipt.token,
@@ -236,7 +241,10 @@ class GooglePlayBillingService extends GetxService with WidgetsBindingObserver {
       if (await store.isAvailable().timeout(const Duration(seconds: 20))) {
         await store.recover().timeout(const Duration(seconds: 20));
       }
-    } catch (_) {
+    } catch (error) {
+      debugPrint('[QoboBilling] recovery failed type=${error.runtimeType}');
+      message.value =
+          'Unable to recover purchases. Please retry or contact support.';
       // Keep purchases owned by Play; retry on resume or next foreground tick.
     } finally {
       _recovering = false;
@@ -244,6 +252,7 @@ class GooglePlayBillingService extends GetxService with WidgetsBindingObserver {
   }
 
   Future<void> handlePurchase(PurchaseDetails purchase) async {
+    debugPrint('[QoboBilling] purchase event: ${purchase.status.name}');
     if (!enabled) return;
     switch (purchase.status) {
       case PurchaseStatus.pending:
@@ -262,7 +271,10 @@ class GooglePlayBillingService extends GetxService with WidgetsBindingObserver {
     }
     // Native account binding survives app restarts and account switches. Never
     // assign an unbound/other-account purchase to the currently signed-in user.
-    if (purchase is! GooglePlayPurchaseDetails) return;
+    if (purchase is! GooglePlayPurchaseDetails) {
+      debugPrint('[QoboBilling] unsupported purchase details');
+      return;
+    }
     final native = purchase.billingClientPurchase;
     final owner = native.obfuscatedAccountId?.trim() ?? '';
     final token = purchase.verificationData.serverVerificationData;
@@ -271,6 +283,13 @@ class GooglePlayBillingService extends GetxService with WidgetsBindingObserver {
         token.isEmpty ||
         owner.isEmpty ||
         _finished.contains(token)) {
+      debugPrint(
+        '[QoboBilling] receipt rejected: packageMatch=${native.packageName == 'com.qobo1live.live'} purchased=${native.purchaseState == PurchaseStateWrapper.purchased} tokenPresent=${token.isNotEmpty} ownerPresent=${owner.isNotEmpty} finished=${_finished.contains(token)}',
+      );
+      if (owner.isEmpty) {
+        message.value =
+            'Purchase account information is missing. Contact support before buying again.';
+      }
       return;
     }
     await _processReceipt(
@@ -288,6 +307,7 @@ class GooglePlayBillingService extends GetxService with WidgetsBindingObserver {
     if (_processing.contains(token) || _finished.contains(token)) return;
     _processing.add(token);
     final userId = currentUserId().trim();
+    var stage = 'read_receipt';
     try {
       // Preserve the persisted credit marker if Play redelivers the receipt.
       final saved = (await queue.read()).where((r) => r.token == token);
@@ -299,16 +319,20 @@ class GooglePlayBillingService extends GetxService with WidgetsBindingObserver {
         }
         receipt = previous;
       }
+      stage = 'save_receipt';
       await queue.save(receipt);
       if (userId.isEmpty ||
           accountId(userId) != receipt.accountId ||
           currentUserId().trim() != userId) {
+        debugPrint('[QoboBilling] original purchase account is not signed in');
         message.value =
             'Sign in to the account that started this purchase to finish it.';
         return;
       }
       if (!receipt.credited) {
         message.value = 'Adding your purchased coins…';
+        stage = 'confirm_api';
+        debugPrint('[QoboBilling] calling confirmation API');
         final response = await confirm(
           receipt,
           userId,
@@ -322,6 +346,10 @@ class GooglePlayBillingService extends GetxService with WidgetsBindingObserver {
             data['credited'] == true &&
             data['coinsAdded'] is num &&
             (data['coinsAdded'] as num) > 0;
+        debugPrint(
+          '[QoboBilling] confirmation accepted=$credited success=${response?['success'] == true} dataPresent=${data is Map}'
+          '${data is Map ? ' productMatch=${data['productId'] == receipt.productId} userMatch=${data['userId'] == userId} credited=${data['credited'] == true} positiveCoins=${data['coinsAdded'] is num && (data['coinsAdded'] as num) > 0}' : ''}',
+        );
         if (!credited) {
           if (currentUserId().trim() == userId) {
             message.value = response?['code'] == 'PURCHASE_TOKEN_ALREADY_USED'
@@ -330,6 +358,7 @@ class GooglePlayBillingService extends GetxService with WidgetsBindingObserver {
           }
           return;
         }
+        stage = 'save_credit';
         receipt = receipt.withCredit();
         await queue.save(receipt);
       }
@@ -338,6 +367,7 @@ class GooglePlayBillingService extends GetxService with WidgetsBindingObserver {
       if (currentUserId().trim() != userId) return;
       walletRevision.value++;
       message.value = 'Coins added. Finishing your purchase…';
+      stage = 'consume';
       final consumed = await store
           .consume(receipt)
           .timeout(const Duration(seconds: 20));
@@ -348,12 +378,15 @@ class GooglePlayBillingService extends GetxService with WidgetsBindingObserver {
         }
         return;
       }
+      debugPrint('[QoboBilling] consumption accepted=$consumed');
+      stage = 'remove_receipt';
       await queue.remove(token);
       _finished.add(token);
       if (currentUserId().trim() == userId) {
         message.value = 'Purchase complete. Your coins are ready to use.';
       }
-    } catch (_) {
+    } catch (error) {
+      debugPrint('[QoboBilling] failed stage=$stage type=${error.runtimeType}');
       if (currentUserId().trim() == userId) {
         message.value =
             'Purchase completion is pending. We will retry automatically.';

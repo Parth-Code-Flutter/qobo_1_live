@@ -842,7 +842,7 @@ class _WalletViewState extends State<WalletView> {
                         billing != null &&
                         billing.enabled &&
                         billing.products.containsKey(plan.googlePlayProductId);
-                    final busy = billing?.busy.value ?? false;
+                    final busy = (billing?.busy.value ?? false);
                     final message =
                         billing?.message.value ??
                         'Coin purchases are temporarily unavailable.';
@@ -1094,7 +1094,7 @@ class _WalletViewState extends State<WalletView> {
                         TextButton.icon(
                           onPressed: busy
                               ? null
-                              : () => controller.loadCoinPackages(),
+                              : () => controller.refreshPurchases(),
                           icon: const Icon(Icons.refresh_rounded, size: 17),
                           label: const Text('Refresh purchases'),
                           style: TextButton.styleFrom(

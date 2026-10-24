@@ -393,6 +393,28 @@ void main() {
     await service.buy('qobo_coins_4000');
     expect(service.busy.value, false);
   });
+  test('20 coin package retains backend Google Play product mapping', () async {
+    final pack = CoinPackage.fromJson({
+      'id': 'small-pack',
+      'amount': 20,
+      'price': 1,
+      'googlePlayProductId': 'qobo_coins_20',
+    });
+    expect(pack.amount, 20);
+    expect(pack.googlePlayProductId, 'qobo_coins_20');
+    service.products[pack.googlePlayProductId] = ProductDetails(
+      id: pack.googlePlayProductId,
+      title: '20 coins',
+      description: 'Small pack',
+      price: '₹1.00',
+      rawPrice: 1,
+      currencyCode: 'INR',
+    );
+    await service.buy(pack.googlePlayProductId);
+    expect(store.buys, 1);
+    expect(confirmations, 0); // Checkout alone must never grant coins.
+    expect(store.account, GooglePlayBillingService.accountId(user));
+  });
   test('catalog needs explicit product mapping', () {
     final p = CoinPackage.fromJson({'id': 'a', 'amount': 4000, 'price': 50});
     expect(p.googlePlayProductId, '');
