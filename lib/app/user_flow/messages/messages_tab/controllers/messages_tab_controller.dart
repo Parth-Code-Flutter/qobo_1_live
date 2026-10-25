@@ -19,6 +19,7 @@ import 'package:qobo_one_live/services/chat/inbox_unread.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
+import 'package:qobo_one_live/app/user_flow/discover/discover_tab/models/explore_discover_utils.dart';
 
 import '../models/social_user_card.dart';
 import '../widgets/match_user_sheet.dart';
@@ -50,7 +51,13 @@ class MessagesTabController extends GetxController with WidgetsBindingObserver {
   final searchResults = <SocialUserCard>[].obs;
   final inboxThreads = <MessageListItemModel>[].obs;
 
+  /// `data.total` from `GET /api/user/discover`, not the loaded page size.
+  final newMatchesTotal = 0.obs;
   final isNewMatchesLoading = false.obs;
+  final isNewMatchesLoadingMore = false.obs;
+  int _newMatchesPage = 1;
+  bool _newMatchesHasMore = true;
+  int _newMatchesGen = 0;
   final isInboxLoading = false.obs;
   final isSearchLoading = false.obs;
   final isSearchMode = false.obs;
@@ -109,28 +116,69 @@ class MessagesTabController extends GetxController with WidgetsBindingObserver {
     performSearch(text);
   }
 
-  /// `GET /api/user/discover` for horizontal New Match row.
-  Future<void> fetchNewMatches() async {
+  /// `GET /api/user/discover` for the New sparks row.
+  ///
+  /// [refresh] reloads page 1. Further pages append only for this row.
+  Future<void> fetchNewMatches({bool refresh = true}) async {
+    if (!refresh) {
+      if (!_newMatchesHasMore ||
+          isNewMatchesLoading.value ||
+          isNewMatchesLoadingMore.value) {
+        return;
+      }
+    }
+
+    final page = refresh ? 1 : _newMatchesPage;
+    final gen = refresh ? ++_newMatchesGen : _newMatchesGen;
     try {
-      isNewMatchesLoading.value = true;
+      if (refresh) {
+        _newMatchesHasMore = true;
+        if (newMatches.isEmpty) isNewMatchesLoading.value = true;
+      } else {
+        isNewMatchesLoadingMore.value = true;
+      }
       final response = await _userRepo.discoverUsers(
-        page: 1,
+        page: page,
         limit: 20,
         isShowLoader: false,
       );
-      if (isSocialApiSuccess(response)) {
-        newMatches.assignAll(
-          SocialUserCard.listFromResponseData(response!['data']).take(20),
-        );
-        return;
+      if (gen != _newMatchesGen) return;
+      final parsed = ExploreDiscoverPage.fromApiResponse(response);
+      if (refresh) {
+        newMatches.assignAll(parsed.users);
+      } else {
+        final seen = newMatches.map((user) => user.id).toSet();
+        final added = parsed.users
+            .where((user) => user.id.isEmpty || seen.add(user.id))
+            .toList();
+        if (added.isEmpty) {
+          _newMatchesHasMore = false;
+          return;
+        }
+        newMatches.addAll(added);
       }
-      newMatches.clear();
+      newMatchesTotal.value = parsed.total > 0
+          ? parsed.total
+          : newMatches.length;
+      final loadedAll =
+          parsed.total > 0 && newMatches.length >= parsed.total;
+      _newMatchesHasMore = parsed.hasMore && !loadedAll;
+      if (parsed.users.isNotEmpty) _newMatchesPage = page + 1;
     } catch (_) {
-      newMatches.clear();
+      if (refresh && gen == _newMatchesGen) {
+        newMatches.clear();
+        newMatchesTotal.value = 0;
+      }
     } finally {
-      isNewMatchesLoading.value = false;
+      if (gen == _newMatchesGen) {
+        isNewMatchesLoading.value = false;
+        isNewMatchesLoadingMore.value = false;
+      }
     }
   }
+
+  /// Next New sparks page. Chats stay on their own list.
+  Future<void> loadMoreNewMatches() => fetchNewMatches(refresh: false);
 
   /// `GET /api/user/search` when user types in header search bar.
   Future<void> performSearch(String query) async {

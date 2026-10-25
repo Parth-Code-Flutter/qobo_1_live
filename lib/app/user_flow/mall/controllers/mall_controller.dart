@@ -39,6 +39,10 @@ class MallController extends GetxController {
   final selectedTab = 1.obs;
   final selectedPreviewItem = Rxn<Map<String, dynamic>>();
 
+  /// Entry frames bought from the frame shop. Shown on the Entrance tab
+  /// without replacing economy entrance effects that already live there.
+  List<Map<String, dynamic>> _entryShopItems = const [];
+
   @override
   void onInit() {
     super.onInit();
@@ -121,61 +125,101 @@ class MallController extends GetxController {
     }
   }
 
+  /// Avatar borders (`type=frames`) stay on tab 1.
+  /// Entry animations (`type=entry`) are kept for the Entrance tab.
   Future<void> _fetchFrameShop() async {
-    final shopResponse = await _frameRepo.getShopFrames(isShowLoader: false);
-    final backpackResponse = await _frameRepo.getMyBackpack(
-      isShowLoader: false,
-    );
+    final results = await Future.wait([
+      _frameRepo.getShopFrames(
+        type: FrameCatalogType.avatar,
+        isShowLoader: false,
+      ),
+      _frameRepo.getShopFrames(
+        type: FrameCatalogType.entry,
+        isShowLoader: false,
+      ),
+      _frameRepo.getMyBackpack(isShowLoader: false),
+    ]);
+    final avatarResponse = results[0];
+    final entryResponse = results[1];
+    final backpackResponse = results[2];
     final purchasedByFrameId = _purchasedFramesByFrameId(
       _extractList(backpackResponse?['data']),
     );
-    final frames = <Map<String, dynamic>>[];
 
-    for (final raw in _extractList(shopResponse?['data']).whereType<Map>()) {
-      final frameId = raw['id']?.toString() ?? '';
+    final avatarFrames = _mapShopFrames(
+      shop: avatarResponse,
+      purchasedByFrameId: purchasedByFrameId,
+      entry: false,
+    );
+    final entryFrames = _mapShopFrames(
+      shop: entryResponse,
+      purchasedByFrameId: purchasedByFrameId,
+      entry: true,
+    );
+    if (entryResponse != null) _entryShopItems = entryFrames;
+
+    if (avatarResponse == null && entryResponse == null) return;
+    final merged = Map<int, List<Map<String, dynamic>>>.from(storeItems);
+    if (avatarResponse != null) merged[1] = avatarFrames;
+    storeItems.assignAll(merged);
+  }
+
+  List<Map<String, dynamic>> _mapShopFrames({
+    required Map<String, dynamic>? shop,
+    required Map<String, Map<String, dynamic>> purchasedByFrameId,
+    required bool entry,
+  }) {
+    final frames = <Map<String, dynamic>>[];
+    for (final raw in _extractList(shop?['data']).whereType<Map>()) {
+      final item = Map<String, dynamic>.from(raw);
+      final isEntry = frameCatalogIsEntry(item);
+      // A missing type filter must not mix the two slots.
+      if (entry != isEntry) continue;
+
+      final status = item['status']?.toString().toLowerCase() ?? 'active';
+      if (status.isNotEmpty && status != 'active') continue;
+
+      final frameId = item['id']?.toString() ?? '';
       if (frameId.isEmpty) continue;
 
       final purchased = purchasedByFrameId[frameId];
-      final durationDays = _toInt(raw['durationDays']);
-      final category = raw['category']?.toString() ?? 'Premium';
-      // New frame-shop responses can return a network SVGA URL. Prefer the
-      // explicit animation fields and keep `image` as a legacy fallback.
+      final durationDays = _toInt(item['durationDays'] ?? item['duration_days']);
+      final category = item['category']?.toString() ?? (entry ? 'VIP' : 'Premium');
       final svgaUrl = ApiImageUtils.normalize(
-        raw['animationUrl']?.toString() ??
-            raw['animation_url']?.toString() ??
-            raw['svgaUrl']?.toString() ??
-            raw['svga_url']?.toString(),
+        item['svgaUrl']?.toString() ??
+            item['svga_url']?.toString() ??
+            item['animationUrl']?.toString() ??
+            item['animation_url']?.toString(),
       );
       final imageUrl = ApiImageUtils.normalize(
-        raw['image']?.toString() ??
-            raw['imageUrl']?.toString() ??
-            raw['previewUrl']?.toString() ??
-            raw['iconUrl']?.toString(),
+        item['image']?.toString() ??
+            item['imageUrl']?.toString() ??
+            item['previewUrl']?.toString() ??
+            item['iconUrl']?.toString(),
       );
       frames.add({
         'id': frameId,
-        'name': raw['name']?.toString() ?? 'Avatar Frame',
+        'name': item['name']?.toString() ?? (entry ? 'Entry Frame' : 'Avatar Frame'),
         'icon': kIconUserLevel,
         'svgaUrl': svgaUrl,
         'imageUrl': imageUrl,
-        'price': _toInt(raw['price']),
+        'price': _toInt(item['price']),
         'duration': durationDays > 0 ? '$durationDays days' : 'Limited time',
         'durationDays': durationDays,
         'category': category,
-        'status': raw['status']?.toString() ?? 'active',
-        'description': 'Premium $category frame for your profile and rooms.',
+        'status': item['status']?.toString() ?? 'active',
+        'description': entry
+            ? 'VIP arrival animation when you join a room.'
+            : 'Profile border for your avatar, seats, and chats.',
         'isOwned': purchased != null,
         'isEquipped': purchased?['isEquipped'] == true,
         'backpackItemId': purchased?['id']?.toString(),
         'expiresAt': purchased?['expiresAt']?.toString(),
+        'catalog': 'frame',
+        'frameKind': entry ? 'entry' : 'avatar',
       });
     }
-
-    if (frames.isEmpty) return;
-
-    final merged = Map<int, List<Map<String, dynamic>>>.from(storeItems);
-    merged[1] = frames;
-    storeItems.assignAll(merged);
+    return frames;
   }
 
   /// Entrance effects (tab 2) and chat bubbles (tab 3) from
@@ -252,8 +296,9 @@ class MallController extends GetxController {
       (isEffect ? effects : bubbles).add(item);
     }
 
+    final entrance = <Map<String, dynamic>>[..._entryShopItems, ...effects];
     final merged = Map<int, List<Map<String, dynamic>>>.from(storeItems);
-    merged[2] = effects.isEmpty
+    merged[2] = entrance.isEmpty
         ? [
             _emptyMallItem(
               id: 'effect_empty',
@@ -262,7 +307,7 @@ class MallController extends GetxController {
               description: 'The mall has no entrance effects right now.',
             ),
           ]
-        : effects;
+        : entrance;
     merged[3] = bubbles.isEmpty
         ? [
             _emptyMallItem(
@@ -406,7 +451,8 @@ class MallController extends GetxController {
   Future<void> buyItem(Map<String, dynamic> item) async {
     if (item['isPlaceholder'] == true) return;
 
-    if (selectedTab.value == 1) {
+    final isFrame = selectedTab.value == 1 || item['catalog'] == 'frame';
+    if (isFrame) {
       if (item['isOwned'] == true) {
         // Purchased frames are managed from Backpack so Mall remains focused
         // on discovering and purchasing new customizations.
@@ -460,8 +506,10 @@ class MallController extends GetxController {
         ? coinsBalance.value - price
         : _toInt(remaining);
 
+    final tab = selectedTab.value;
     await _fetchFrameShop();
-    selectTab(1);
+    await _fetchMallShop();
+    selectTab(tab);
     if (Get.isRegistered<UserSessionController>()) {
       // VIP frames auto-equip on buy — refresh so profile avatar updates.
       await Get.find<UserSessionController>().refreshProfileFromApi();

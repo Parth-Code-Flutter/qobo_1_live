@@ -215,6 +215,20 @@ class MallView extends GetView<MallController> {
   }
 
   Widget _buildItemPreview(int tabId, Map<String, dynamic> item) {
+    final isEntryFrame = tabId == 2 && item['catalog'] == 'frame';
+    if (isEntryFrame) {
+      final source =
+          item['svgaUrl']?.toString() ?? item['imageUrl']?.toString() ?? '';
+      if (source.isEmpty) {
+        return const Icon(
+          Icons.auto_awesome_rounded,
+          color: AppLightUi.violet,
+          size: 54,
+        );
+      }
+      return _FrameMedia(source: source, size: 132);
+    }
+
     if (tabId == 1) {
       final frameSource =
           item['svgaUrl']?.toString() ?? item['imageUrl']?.toString();
@@ -507,7 +521,9 @@ class MallView extends GetView<MallController> {
           final isEquipped = item['isEquipped'] == true;
           final isExpired = item['isExpired'] == true;
           final isPlaceholder = item['isPlaceholder'] == true;
-          final usesBackpackFlow = isFrameTab || isBackgroundTab;
+          final isEntryFrame = item['catalog'] == 'frame';
+          final usesBackpackFlow =
+              isFrameTab || isEntryFrame || isBackgroundTab;
           final buttonText = isPlaceholder
               ? 'Unavailable'
               : usesBackpackFlow
@@ -555,7 +571,7 @@ class MallView extends GetView<MallController> {
                     child: Center(
                       child: _StoreItemVisual(
                         item: item,
-                        isFrame: isFrameTab,
+                        isFrame: isFrameTab || isEntryFrame,
                         isBackground: isBackgroundTab,
                       ),
                     ),

@@ -36,6 +36,9 @@ class BackpackController extends GetxController {
   final equippedFrame = RxnString('frame_gold');
   final equippedFrameName = RxnString('Golden Crown');
   final equippedEffect = RxnString();
+
+  /// Name of the equipped VIP entry frame. Independent from [equippedFrame].
+  final equippedEntryName = RxnString();
   final equippedBubble = RxnString();
   final equippedBackground = RxnString();
   final equippedBackgroundName = RxnString();
@@ -183,6 +186,7 @@ class BackpackController extends GetxController {
       }
 
       await _fetchAvatarFrames();
+      await _fetchEntryFrames();
       await _fetchProfileBackgrounds();
     } finally {
       isLoading.value = false;
@@ -190,47 +194,90 @@ class BackpackController extends GetxController {
   }
 
   Future<void> _fetchAvatarFrames() async {
-    final response = await _frameRepo.getMyBackpack(isShowLoader: false);
-    final frames = <Map<String, dynamic>>[];
-    String? activeFrameId;
-    String? activeFrameName;
+    final response = await _frameRepo.getMyBackpack(
+      type: FrameCatalogType.avatar,
+      isShowLoader: false,
+    );
+    if (response == null) return;
+    final frames = _mapOwnedFrames(response, entry: false);
+    final active = _equippedOwnedFrame(frames);
 
-    for (final raw in _extractList(response?['data']).whereType<Map>()) {
+    final merged = Map<int, List<Map<String, dynamic>>>.from(mockItems);
+    merged[2] = frames;
+    mockItems.assignAll(merged);
+    equippedFrame.value = active?['id']?.toString();
+    equippedFrameName.value = active?['name']?.toString();
+  }
+
+  /// Owned VIP arrival frames. Equipping one does not clear the avatar frame.
+  Future<void> _fetchEntryFrames() async {
+    final response = await _frameRepo.getMyBackpack(
+      type: FrameCatalogType.entry,
+      isShowLoader: false,
+    );
+    if (response == null) return;
+    final frames = _mapOwnedFrames(response, entry: true);
+    final active = _equippedOwnedFrame(frames);
+    final entryIds = frames.map((frame) => frame['id']?.toString()).toSet();
+
+    final kept = (mockItems[3] ?? const <Map<String, dynamic>>[]).where((item) {
+      final id = item['id']?.toString() ?? '';
+      if (id == 'effect_dragon' || item['catalog'] == 'frame') return false;
+      return true;
+    }).toList();
+    final merged = Map<int, List<Map<String, dynamic>>>.from(mockItems);
+    merged[3] = [...frames, ...kept];
+    mockItems.assignAll(merged);
+
+    if (active != null) {
+      equippedEffect.value = active['id']?.toString();
+      equippedEntryName.value = active['name']?.toString();
+    } else if (entryIds.contains(equippedEffect.value)) {
+      equippedEffect.value = null;
+      equippedEntryName.value = null;
+    }
+  }
+
+  List<Map<String, dynamic>> _mapOwnedFrames(
+    Map<String, dynamic> response, {
+    required bool entry,
+  }) {
+    final frames = <Map<String, dynamic>>[];
+    for (final raw in _extractList(response['data']).whereType<Map>()) {
       final item = Map<String, dynamic>.from(raw);
-      final frameDetails = item['frameDetails'];
+      final frameDetails = item['frameDetails'] ?? item['frame_details'];
       final frame = frameDetails is Map
           ? Map<String, dynamic>.from(frameDetails)
           : const <String, dynamic>{};
+      final isEntry = frameCatalogIsEntry(item, details: frame);
+      if (entry != isEntry) continue;
+
       final itemId = item['id']?.toString() ?? '';
       if (itemId.isEmpty) continue;
 
-      final name = frame['name']?.toString() ?? 'Avatar Frame';
+      final name = frame['name']?.toString() ??
+          (entry ? 'Entry Frame' : 'Avatar Frame');
       final category = frame['category']?.toString() ?? '';
-      final isVip = category.trim().toLowerCase() == 'vip';
       final isEquipped = item['isEquipped'] == true;
-      if (isEquipped) {
-        activeFrameId = itemId;
-        activeFrameName = name;
-      }
-
       frames.add({
         'id': itemId,
         'frameId': frame['id']?.toString() ?? item['itemId']?.toString() ?? '',
         'name': name,
         'category': category,
-        'isVip': isVip,
+        'isVip': isEntry,
+        'frameKind': entry ? 'entry' : 'avatar',
+        'catalog': 'frame',
         'icon': kIconUserLevel,
-        // `/my-backpack` may return an animated SVGA frame. Keep the static
-        // image fields as fallback for older purchased-frame records.
+        // Backpack rows may be SVGA. Static image fields cover older records.
         'svgaUrl':
             ApiImageUtils.normalize(
               _firstText([
-                frame['animationUrl'],
-                frame['animation_url'],
                 frame['svgaUrl'],
                 frame['svga_url'],
-                item['animationUrl'],
+                frame['animationUrl'],
+                frame['animation_url'],
                 item['svgaUrl'],
+                item['animationUrl'],
               ]),
             ) ??
             '',
@@ -246,19 +293,21 @@ class BackpackController extends GetxController {
             ) ??
             '',
         'quantity': 1,
-        'description': isVip
-            ? 'VIP · auto-equipped'
+        'description': entry
+            ? 'Entry · ${_frameExpiryLabel(item['expiresAt'])}'
             : _frameExpiryLabel(item['expiresAt']),
         'isEquipped': isEquipped,
         'expiresAt': item['expiresAt']?.toString() ?? '',
       });
     }
+    return frames;
+  }
 
-    final merged = Map<int, List<Map<String, dynamic>>>.from(mockItems);
-    merged[2] = frames;
-    mockItems.assignAll(merged);
-    equippedFrame.value = activeFrameId;
-    equippedFrameName.value = activeFrameName;
+  Map<String, dynamic>? _equippedOwnedFrame(List<Map<String, dynamic>> frames) {
+    for (final frame in frames) {
+      if (frame['isEquipped'] == true) return frame;
+    }
+    return null;
   }
 
   Future<void> _fetchProfileBackgrounds() async {
@@ -364,6 +413,9 @@ class BackpackController extends GetxController {
     if (categoryId == 2) {
       await _equipAvatarFrame(item: item);
       return;
+    } else if (categoryId == 3 && item['catalog'] == 'frame') {
+      await _equipEntryFrame(item: item);
+      return;
     } else if (categoryId == 5) {
       await _equipProfileBackground(itemId: itemId, name: name);
       return;
@@ -409,15 +461,7 @@ class BackpackController extends GetxController {
     final name = item['name']?.toString() ?? 'Avatar Frame';
     if (itemId.isEmpty) return;
 
-    // VIP frames are auto-equipped by the backend after purchase.
-    if (item['isVip'] == true ||
-        item['category']?.toString().trim().toLowerCase() == 'vip') {
-      _showBackpackDialog(
-        'VIP frames equip automatically after purchase and cannot be changed here.',
-      );
-      return;
-    }
-
+    // Avatar slot only. An equipped entry frame stays on its own slot.
     final shouldEquip = equippedFrame.value != itemId;
     final response = await _frameRepo.equipFrame(
       backpackItemId: itemId,
@@ -431,6 +475,31 @@ class BackpackController extends GetxController {
 
     // Refresh backpack list + session so Profile tab picks up the new frame URL.
     await _fetchAvatarFrames();
+    await _refreshProfileSession();
+    _showBackpackDialog(
+      shouldEquip ? 'Equipped $name successfully!' : 'Unequipped $name',
+    );
+  }
+
+  Future<void> _equipEntryFrame({
+    required Map<String, dynamic> item,
+  }) async {
+    final itemId = item['id']?.toString() ?? '';
+    final name = item['name']?.toString() ?? 'Entry Frame';
+    if (itemId.isEmpty) return;
+
+    final shouldEquip = equippedEffect.value != itemId;
+    final response = await _frameRepo.equipFrame(
+      backpackItemId: itemId,
+      equip: shouldEquip,
+      isShowLoader: true,
+    );
+    if (!_isSuccess(response)) {
+      _showBackpackDialog('Could not update this entry frame.');
+      return;
+    }
+
+    await _fetchEntryFrames();
     await _refreshProfileSession();
     _showBackpackDialog(
       shouldEquip ? 'Equipped $name successfully!' : 'Unequipped $name',

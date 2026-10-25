@@ -13,8 +13,10 @@ import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 
 /// VIP Frames shop (Profile → VIP Frames).
 ///
-/// Buys via `POST /api/frame/buy`. Backend auto-equips VIP frames —
-/// no manual equip/unequip on mobile.
+/// Buys entry frames via `POST /api/frame/buy`.
+///
+/// Purchase auto-equips the new entry frame and leaves the avatar frame on.
+/// Backpack can switch or remove the entry frame later.
 class VipStoreController extends GetxController {
   VipStoreController({
     FrameRepo? frameRepo,
@@ -77,6 +79,7 @@ class VipStoreController extends GetxController {
 
   Future<void> _fetchVipFrames({bool showLoader = false}) async {
     final shopResponse = await _frameRepo.getShopFrames(
+      type: FrameCatalogType.entry,
       isShowLoader: showLoader,
     );
     if (shopResponse == null) {
@@ -90,6 +93,7 @@ class VipStoreController extends GetxController {
     }
 
     final backpackResponse = await _frameRepo.getMyBackpack(
+      type: FrameCatalogType.entry,
       isShowLoader: false,
     );
     final ownedByFrameId = _ownedByFrameId(
@@ -98,8 +102,9 @@ class VipStoreController extends GetxController {
     final frames = <Map<String, dynamic>>[];
 
     for (final raw in _extractList(shopResponse['data']).whereType<Map>()) {
-      final category = raw['category']?.toString().trim() ?? '';
-      if (!_isVipCategory(category)) continue;
+      final item = Map<String, dynamic>.from(raw);
+      if (!frameCatalogIsEntry(item)) continue;
+      final category = item['category']?.toString().trim() ?? '';
 
       final status = raw['status']?.toString().toLowerCase() ?? 'active';
       if (status.isNotEmpty && status != 'active') continue;
@@ -136,7 +141,7 @@ class VipStoreController extends GetxController {
             : 'VIP Frame',
         'desc': descRaw.isNotEmpty
             ? descRaw
-            : 'Auto-equipped VIP frame for your profile and room entrance.',
+            : 'VIP arrival animation when you join a room. Your avatar frame stays on.',
         'price': _toInt(raw['price']),
         'duration': durationDays > 0 ? '$durationDays Days' : 'Limited time',
         'category': category,
@@ -162,7 +167,7 @@ class VipStoreController extends GetxController {
     if (item['isOwned'] == true) {
       Get.snackbar(
         'VIP Frames',
-        'You already own "${item['name']}". VIP frames equip automatically.',
+        'You already own "${item['name']}". Change it from Backpack.',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.black87,
         colorText: kColorWhite,
@@ -261,9 +266,6 @@ class VipStoreController extends GetxController {
     }
     return const [];
   }
-
-  static bool _isVipCategory(String category) =>
-      category.trim().toLowerCase() == 'vip';
 
   bool _isSuccess(Map<String, dynamic>? response) {
     if (response == null) return false;

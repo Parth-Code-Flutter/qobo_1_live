@@ -80,7 +80,9 @@ class MessagesTabView extends GetView<MessagesTabController> {
                               icon: Icons.favorite_rounded,
                               title: 'New sparks',
                               subtitle: 'People waiting for your hello',
-                              count: controller.newMatches.length,
+                              count: controller.newMatchesTotal.value > 0
+                                  ? controller.newMatchesTotal.value
+                                  : controller.newMatches.length,
                               accent: _MessagesUi.pink,
                             ),
                             Spacing.v12,
@@ -355,21 +357,46 @@ class MessagesTabView extends GetView<MessagesTabController> {
       );
     }
 
+    final loadingMore = controller.isNewMatchesLoadingMore.value;
     return SizedBox(
       height: 176,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        itemCount: matches.length,
-        separatorBuilder: (_, __) => Spacing.h12,
-        itemBuilder: (_, index) {
-          final user = matches[index];
-          return MessageMatchAvatarItem(
-            user: user,
-            onTap: () =>
-                showMatchUserSheet(context, controller.matchSheetActions, user),
-          );
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          if (notification.metrics.axis != Axis.horizontal) return false;
+          final nearEnd =
+              notification.metrics.pixels >=
+              notification.metrics.maxScrollExtent - 220;
+          if (nearEnd) controller.loadMoreNewMatches();
+          return false;
         },
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          itemCount: matches.length + (loadingMore ? 1 : 0),
+          separatorBuilder: (_, __) => Spacing.h12,
+          itemBuilder: (_, index) {
+            if (index >= matches.length) {
+              return const SizedBox(
+                width: 72,
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: AppLightUi.pink,
+                    strokeWidth: 2,
+                  ),
+                ),
+              );
+            }
+            final user = matches[index];
+            return MessageMatchAvatarItem(
+              user: user,
+              onTap: () => showMatchUserSheet(
+                context,
+                controller.matchSheetActions,
+                user,
+              ),
+            );
+          },
+        ),
       ),
     );
   }

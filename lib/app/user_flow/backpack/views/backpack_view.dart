@@ -105,6 +105,7 @@ class BackpackView extends GetView<BackpackController> {
                 label: 'Entrance',
                 icon: Icons.auto_awesome_rounded,
                 equippedObs: controller.equippedEffect,
+                displayNameObs: controller.equippedEntryName,
                 accent: AppLightUi.violet,
               ),
             ],
@@ -455,6 +456,12 @@ class BackpackView extends GetView<BackpackController> {
         return _buildPurchasedFramesGrid(items);
       }
 
+      if (categoryId == 3 &&
+          items.isNotEmpty &&
+          items.every((item) => item['catalog'] == 'frame')) {
+        return _buildPurchasedFramesGrid(items, categoryId: 3);
+      }
+
       if (categoryId == 5) {
         return _buildPurchasedBackgroundsGrid(items);
       }
@@ -625,7 +632,10 @@ class BackpackView extends GetView<BackpackController> {
   }
 
   /// Modern purchased-frame collection backed by `/api/frame/my-backpack`.
-  Widget _buildPurchasedFramesGrid(List<Map<String, dynamic>> frames) {
+  Widget _buildPurchasedFramesGrid(
+    List<Map<String, dynamic>> frames, {
+    int categoryId = 2,
+  }) {
     return RefreshIndicator(
       color: kColorPrimary,
       onRefresh: controller.fetchBackpack,
@@ -650,7 +660,7 @@ class BackpackView extends GetView<BackpackController> {
               final frame = frames[index];
               return _PurchasedFrameCard(
                 frame: frame,
-                onEquip: () => controller.equipItem(2, frame),
+                onEquip: () => controller.equipItem(categoryId, frame),
               );
             },
           );
@@ -783,22 +793,20 @@ class _PurchasedFrameCard extends StatelessWidget {
             width: double.infinity,
             height: 34,
             child: appButton(
-              onPressed: isVip ? () {} : onEquip,
-              buttonText: isVip
-                  ? 'Auto VIP'
-                  : isEquipped
+              onPressed: onEquip,
+              buttonText: isEquipped
                   ? 'Unequip'
+                  : isVip
+                  ? 'Equip Entry'
                   : 'Equip Frame',
-              buttonColor: isVip
-                  ? const Color(0xFFFFF1C1)
-                  : isEquipped
+              buttonColor: isEquipped
                   ? const Color(0xFFF1E6B8)
                   : kColorPrimary,
-              textColor: isVip || isEquipped ? kColorText : kColorWhite,
+              textColor: isEquipped ? kColorText : kColorWhite,
               borderRadius: 17,
               textStyle: TextStyles.kSemiBoldPoppins(
                 fontSize: TextStyles.k12FontSize,
-                colors: isVip || isEquipped ? kColorText : kColorWhite,
+                colors: isEquipped ? kColorText : kColorWhite,
               ),
             ),
           ),
