@@ -61,6 +61,7 @@ abstract class Routes {
   static const SUPER_ADMIN_BOTTOM_NAV = _Paths.SUPER_ADMIN_BOTTOM_NAV;
   static const SUPER_ADMIN_AGENCY_DETAIL = _Paths.SUPER_ADMIN_AGENCY_DETAIL;
   static const SUPER_ADMIN_HOST_DETAIL = _Paths.SUPER_ADMIN_HOST_DETAIL;
+  static const FOOD_WHEEL = _Paths.FOOD_WHEEL;
 }
 
 abstract class _Paths {
@@ -123,4 +124,5 @@ abstract class _Paths {
   static const SUPER_ADMIN_BOTTOM_NAV = '/super-admin-bottom-nav';
   static const SUPER_ADMIN_AGENCY_DETAIL = '/super-admin-agency-detail';
   static const SUPER_ADMIN_HOST_DETAIL = '/super-admin-host-detail';
+  static const FOOD_WHEEL = '/food-wheel';
 }

@@ -114,6 +114,8 @@ import '../app/super_admin/agency_detail/bindings/super_admin_agency_detail_bind
 import '../app/super_admin/agency_detail/views/super_admin_agency_detail_view.dart';
 import '../app/super_admin/host_detail/bindings/super_admin_host_detail_binding.dart';
 import '../app/super_admin/host_detail/views/super_admin_host_detail_view.dart';
+import '../app/user_flow/food_wheel/bindings/food_wheel_binding.dart';
+import '../app/user_flow/food_wheel/views/food_wheel_view.dart';
 
 part 'app_routes.dart';
 
@@ -407,6 +409,11 @@ class AppPages {
       name: _Paths.SUPER_ADMIN_HOST_DETAIL,
       page: () => const SuperAdminHostDetailView(),
       binding: SuperAdminHostDetailBinding(),
+    ),
+    GetPage(
+      name: _Paths.FOOD_WHEEL,
+      page: () => const FoodWheelView(),
+      binding: FoodWheelBinding(),
     ),
   ];
 }
