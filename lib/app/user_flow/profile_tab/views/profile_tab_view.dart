@@ -228,6 +228,8 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                             colors: bodyColor,
                           ),
                         ),
+                        Spacing.v6,
+                        _loginRoleMark(session.effectiveRole),
                         Spacing.v10,
                         Wrap(
                           spacing: 8,
@@ -312,18 +314,112 @@ class _ProfileTabViewState extends State<ProfileTabView> {
     required String text,
     required Color start,
     required Color end,
+    IconData? icon,
     double fontSize = TextStyles.k12FontSize,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+    return DecoratedBox(
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [start, end]),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [start, end],
+        ),
+        border: Border.all(color: kColorWhite.withValues(alpha: 0.62)),
+        boxShadow: [
+          BoxShadow(
+            color: end.withValues(alpha: 0.42),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
-      child: SemiBoldText(
-        text: text,
-        fontSize: fontSize,
-        color: kColorWhite,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Stack(
+          children: [
+            const Positioned(
+              left: 0,
+              right: 0,
+              top: 0,
+              height: 13,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0x66FFFFFF), Color(0x00FFFFFF)],
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(icon == null ? 11 : 7, 4, 11, 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (icon != null) ...[
+                    Icon(icon, size: 13, color: kColorWhite),
+                    const SizedBox(width: 4),
+                  ],
+                  SemiBoldText(
+                    text: text,
+                    fontSize: fontSize,
+                    color: kColorWhite,
+                    style: TextStyles.kSemiBoldPoppins(
+                      fontSize: fontSize,
+                      colors: kColorWhite,
+                    ).copyWith(
+                      letterSpacing: 0.2,
+                      shadows: const [
+                        Shadow(
+                          color: Color(0x40000000),
+                          blurRadius: 2,
+                          offset: Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Small lowercase role under the profile id. Uses the signed-in role only.
+  Widget _loginRoleMark(String role) {
+    final label = switch (role) {
+      'super_admin' => 'super admin',
+      'coins_seller' => 'coin seller',
+      'agency' => 'agency',
+      'host' => 'host',
+      _ => 'user',
+    };
+    final icon = switch (role) {
+      'super_admin' => Icons.workspace_premium_rounded,
+      'coins_seller' => Icons.paid_rounded,
+      'agency' => Icons.apartment_rounded,
+      'host' => Icons.mic_rounded,
+      _ => Icons.person_rounded,
+    };
+    final colors = switch (role) {
+      'super_admin' => (const Color(0xFFFFC94A), const Color(0xFFE85D04)),
+      'coins_seller' => (const Color(0xFFFFD56A), const Color(0xFFD97706)),
+      'agency' => (const Color(0xFF67E8F9), const Color(0xFF2563EB)),
+      'host' => (const Color(0xFFFF7AD9), const Color(0xFFDB2777)),
+      _ => (const Color(0xFFC4B5FD), const Color(0xFF7C3AED)),
+    };
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: _smallChip(
+        text: label,
+        start: colors.$1,
+        end: colors.$2,
+        icon: icon,
+        fontSize: TextStyles.k10FontSize,
       ),
     );
   }
