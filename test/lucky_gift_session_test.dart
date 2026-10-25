@@ -56,6 +56,50 @@ Future<void> settle(LuckyGiftSession s) async {
 }
 
 void main() {
+  test(
+    'preview uses each catalog threshold without changing paid combos or wallet',
+    () {
+      final s = LuckyGiftSession(
+        repo: LuckyGiftRepo(),
+        token: 'test',
+        isOwner: () => true,
+        onSuccess: (_, __, ___) => fail('Preview must not send'),
+      );
+      s.balance = 100;
+      for (final threshold in [3, 6, 7]) {
+        final gift = LuckyGift.fromJson({
+          'id': '$threshold',
+          'price': 10,
+          'luckyThreshold': threshold,
+          'luckyRewardRate': 40,
+        });
+        for (var i = 1; i <= threshold * 3 + 2; i++) {
+          expect(s.previewTap(gift), i % threshold == 0);
+          expect(s.displayedCombo(gift.id), i);
+        }
+      }
+      expect(s.balance, 100);
+      expect(s.combos, isEmpty);
+      s.resetPreview();
+      expect(s.displayedCombo('7'), 0);
+      s.dispose();
+    },
+  );
+
+  test('catalog thresholds drive estimates and remaining confirmed sends', () {
+    for (final threshold in [2, 3, 4, 5, 6, 7]) {
+      final gift = LuckyGift.fromJson({
+        'id': 'a',
+        'price': 10,
+        'luckyThreshold': threshold,
+        'luckyRewardRate': 40,
+      });
+      expect(gift.estimatedReward, threshold * 14);
+      expect(gift.remaining(threshold - 1), 1);
+      expect(gift.remaining(threshold), threshold);
+    }
+  });
+
   test('serial taps advance combos and use server reward/balance', () async {
     final repo = FakeLuckyRepo();
     var successes = 0;

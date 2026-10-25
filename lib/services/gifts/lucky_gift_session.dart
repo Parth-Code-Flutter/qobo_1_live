@@ -24,6 +24,14 @@ class LuckyGift {
   final String id, name, icon, rate;
   final String? sound;
   final int price, threshold;
+  int get estimatedBase => price * threshold;
+  int get estimatedBonus =>
+      (estimatedBase * (double.tryParse(rate) ?? 0) / 100).floor();
+  int get estimatedReward => estimatedBase + estimatedBonus;
+  int remaining(int combo) => threshold > 0 ? threshold - combo % threshold : 0;
+  String guidance(int combo) => threshold > 0
+      ? '${remaining(combo)} more sends • Est. $estimatedReward coins (+$rate%)'
+      : 'Tap to send this gift';
 }
 
 class LuckyGiftRepo {
@@ -82,6 +90,29 @@ class LuckyGiftSession extends ChangeNotifier {
   String message = '';
   int? balance;
   final Map<String, int> combos = {};
+  String? _previewGift;
+  int _previewCount = 0;
+  bool previewing = false;
+  int displayedCombo(String id) =>
+      previewing ? (_previewGift == id ? _previewCount : 0) : (combos[id] ?? 0);
+  bool previewTap(LuckyGift gift) {
+    previewing = true;
+    if (_previewGift != gift.id) {
+      _previewGift = gift.id;
+      _previewCount = 0;
+    }
+    _previewCount++;
+    message = 'Preview only • No coins charged. Select a recipient to send.';
+    _notify();
+    return gift.threshold > 0 && _previewCount % gift.threshold == 0;
+  }
+
+  void resetPreview() {
+    previewing = false;
+    _previewGift = null;
+    _previewCount = 0;
+  }
+
   final List<_LuckyTap> _queue = [];
   _LuckyTap? _pending;
   bool get needsRetry => _pending != null && !busy;
@@ -121,6 +152,7 @@ class LuckyGiftSession extends ChangeNotifier {
       _notify();
       return;
     }
+    resetPreview();
     _queue.add(_LuckyTap(gift, host, channel));
     unawaited(_drain());
   }
@@ -205,8 +237,8 @@ class LuckyGiftSession extends ChangeNotifier {
         message = data['idempotent'] == true
             ? 'Previous send confirmed. Refreshing balance…'
             : won
-            ? 'You won ${data['luckyRewardCoins'] ?? reward['rewardCoins'] ?? 0} Coins (+${data['luckyRewardBonus'] ?? reward['rewardBonus'] ?? 0} Bonus)!'
-            : 'Combo ${combos[tap.gift.id]} • ${reward['comboRemaining'] ?? 0} more for a Lucky win';
+            ? 'You won ${data['luckyRewardCoins'] ?? reward['rewardCoins'] ?? 0} Coins (includes ${data['luckyRewardBonus'] ?? reward['rewardBonus'] ?? 0} bonus)!'
+            : 'Combo ${combos[tap.gift.id]} • ${reward['comboRemaining'] ?? tap.gift.remaining(combos[tap.gift.id] ?? 0)} more for a Lucky win';
         _pending = null;
         onSuccess(tap.gift, data, tap.host);
         _notify();

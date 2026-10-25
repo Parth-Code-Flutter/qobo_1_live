@@ -459,7 +459,7 @@ class LiveRoomCreateView extends GetView<LiveRoomCreateController> {
         SemiBoldText(
           text: text,
           fontSize: TextStyles.k14FontSize,
-          color: AppLightUi.title,
+          color: Colors.white,
         ),
         if (required)
           const AppText(

@@ -1,42 +1,44 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-/// TEMPORARY CLIENT DEMO. Replace with server reward events before launch.
-/// This counter and celebration never modify wallet balances or send requests.
-class LuckyDemoStreak {
-  String? _gift;
-  int count = 0;
-  bool tap(String gift) {
-    if (_gift != gift) {
-      _gift = gift;
-      count = 0;
-    }
-    count++;
-    if (count == 5) {
-      count = 0;
-      return true;
-    }
-    return false;
-  }
-}
-
+/// Floating presentation only; reward amounts come from confirmed send responses.
 class LuckyDemoCelebration extends StatefulWidget {
   const LuckyDemoCelebration({
     super.key,
     required this.reward,
     required this.onComplete,
+    this.preview = false,
+    this.total = 0,
+    this.bonus = 0,
+    this.combo = 0,
   });
+  final bool preview;
   final bool reward;
+  final int total, bonus, combo;
   final VoidCallback onComplete;
   static OverlayEntry? _entry;
   static bool _rewardPlaying = false;
-  static void show(BuildContext context, {required bool reward}) {
+  static void show(
+    BuildContext context, {
+    required bool reward,
+    bool preview = false,
+    int total = 0,
+    int bonus = 0,
+    int combo = 0,
+  }) {
     if (_rewardPlaying && !reward) return;
     dismiss();
     _rewardPlaying = reward;
     _entry = OverlayEntry(
       builder: (_) => IgnorePointer(
-        child: LuckyDemoCelebration(reward: reward, onComplete: dismiss),
+        child: LuckyDemoCelebration(
+          reward: reward,
+          preview: preview,
+          total: total,
+          bonus: bonus,
+          combo: combo,
+          onComplete: dismiss,
+        ),
       ),
     );
     Overlay.of(context, rootOverlay: true).insert(_entry!);
@@ -135,7 +137,12 @@ class _LuckyDemoCelebrationState extends State<LuckyDemoCelebration>
                       child: Column(
                         children: [
                           Image.asset('assets/lucky_demo/coin.png', width: 88),
-                          _glowText(side == -1 ? '50 coins' : '+20 coins', 22),
+                          _glowText(
+                            side == -1
+                                ? '${widget.total - widget.bonus} coins'
+                                : '+${widget.bonus} coins',
+                            22,
+                          ),
                         ],
                       ),
                     ),
@@ -151,7 +158,7 @@ class _LuckyDemoCelebrationState extends State<LuckyDemoCelebration>
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          _glowText('LUCKY COMBO ×5', 16),
+                          _glowText('LUCKY COMBO ×${widget.combo}', 16),
                           const SizedBox(height: 4),
                           ShaderMask(
                             shaderCallback: (bounds) => const LinearGradient(
@@ -163,8 +170,8 @@ class _LuckyDemoCelebrationState extends State<LuckyDemoCelebration>
                                 Color(0xFFFFA82E),
                               ],
                             ).createShader(bounds),
-                            child: const Text(
-                              '70',
+                            child: Text(
+                              '${widget.total}',
                               textScaler: TextScaler.noScaling,
                               style: TextStyle(
                                 fontSize: 100,
@@ -180,12 +187,22 @@ class _LuckyDemoCelebrationState extends State<LuckyDemoCelebration>
                               ),
                             ),
                           ),
-                          _glowText('You get 70 coins!', 24),
+                          _glowText(
+                            widget.preview
+                                ? 'Preview: ${widget.total} coins'
+                                : 'You get ${widget.total} coins!',
+                            24,
+                          ),
                           const SizedBox(height: 6),
-                          _glowText('50 coins  +  20 coins', 16),
+                          _glowText(
+                            '${widget.total - widget.bonus} coins  +  ${widget.bonus} coins',
+                            16,
+                          ),
                           const SizedBox(height: 8),
-                          const Text(
-                            'Demo reward • Wallet unchanged',
+                          Text(
+                            widget.preview
+                                ? 'Preview only • Wallet unchanged'
+                                : 'Reward confirmed',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Colors.white,

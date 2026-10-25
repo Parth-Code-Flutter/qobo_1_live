@@ -109,7 +109,11 @@ class _LuckyPreviewSheetState extends State<LuckyPreviewSheet> {
                     child: Text(
                       s.busy
                           ? 'Sending • ${s.queued} queued'
-                          : 'Tap a gift. Build your Lucky combo.',
+                          : s.gifts.where((gift) => gift.id == selected).isEmpty
+                          ? 'Choose a gift to see its reward target.'
+                          : s.gifts
+                                .firstWhere((gift) => gift.id == selected)
+                                .guidance(s.displayedCombo(selected ?? '')),
                       style: const TextStyle(
                         color: Color(0xFFC6ACD7),
                         fontSize: 12,

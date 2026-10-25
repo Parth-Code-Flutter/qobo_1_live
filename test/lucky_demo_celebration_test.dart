@@ -3,24 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:qobo_one_live/app/user_flow/live_broadcast/widgets/lucky_demo_celebration.dart';
 
 void main() {
-  test(
-    'five consecutive same-gift taps trigger, switching resets, repeats work',
-    () {
-      final streak = LuckyDemoStreak();
-      for (var i = 0; i < 4; i++) {
-        expect(streak.tap('a'), isFalse);
-      }
-      expect(streak.tap('b'), isFalse);
-      for (var i = 0; i < 3; i++) {
-        expect(streak.tap('b'), isFalse);
-      }
-      expect(streak.tap('b'), isTrue);
-      for (var i = 0; i < 4; i++) {
-        expect(streak.tap('b'), isFalse);
-      }
-      expect(streak.tap('b'), isTrue);
-    },
-  );
   for (final reward in [false, true]) {
     testWidgets('celebration renders and completes reward=$reward', (
       tester,
@@ -35,6 +17,9 @@ void main() {
           home: Scaffold(
             body: LuckyDemoCelebration(
               reward: reward,
+              total: 42,
+              bonus: 12,
+              combo: 3,
               onComplete: () => completed++,
             ),
           ),
@@ -43,12 +28,12 @@ void main() {
       await tester.pump(const Duration(milliseconds: 1700));
       expect(
         find.text(
-          reward ? 'You get 70 coins!' : 'A little love, a lot of magic!',
+          reward ? 'You get 42 coins!' : 'A little love, a lot of magic!',
         ),
         findsOneWidget,
       );
       if (reward) {
-        expect(find.text('Demo reward • Wallet unchanged'), findsOneWidget);
+        expect(find.text('Reward confirmed'), findsOneWidget);
       }
       expect(tester.takeException(), isNull);
       await tester.pumpAndSettle();

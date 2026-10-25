@@ -46,6 +46,7 @@ import 'package:qobo_one_live/utils/ui_utils/gift_chat_celebration_tracker.dart'
 import 'package:qobo_one_live/utils/ui_utils/gift_media_utils.dart';
 import 'package:qobo_one_live/utils/ui_utils/coin_fly_overlay.dart';
 import '../widgets/lucky_gift_trail.dart';
+import 'package:qobo_one_live/services/gifts/lucky_tap_sound.dart';
 import '../widgets/lucky_demo_celebration.dart';
 import 'package:qobo_one_live/utils/ui_utils/avatar_fly_overlay.dart';
 import 'package:qobo_one_live/utils/ui_utils/vip_entrance_overlay.dart';
@@ -1339,6 +1340,7 @@ class LiveBroadcastController extends GetxController {
   LuckyGiftSession? _luckySession;
   String _luckyOwner = '';
   final _luckySheetKey = GlobalKey();
+  final _luckyTapSound = LuckyTapSound();
 
   Future<void> openLuckyPreviewSheet() async {
     if (_luckyPreviewOpen || isClosed) return;
@@ -1370,15 +1372,27 @@ class LiveBroadcastController extends GetxController {
             if (data['remaining_coins'] != null) {
               coinsBalance.value = parseWalletAmount(data['remaining_coins']);
             }
-            if (data['luckyRewardTriggered'] == true ||
-                reward['rewardTriggered'] == true) {
-              GiftCelebrationOverlay.show(
-                giftName:
-                    'Lucky win! +${data['luckyRewardCoins'] ?? reward['rewardCoins']} Coins',
-                imageUrl: gift.icon,
-                soundUrl: gift.sound,
-                enqueueIfBusy: true,
-              );
+            final total = data['luckyRewardCoins'] ?? reward['rewardCoins'];
+            if (data['idempotent'] != true &&
+                total != null &&
+                (data['luckyRewardTriggered'] == true ||
+                    reward['rewardTriggered'] == true)) {
+              final context = _luckySheetKey.currentContext;
+              if (context != null && context.mounted) {
+                LuckyDemoCelebration.show(
+                  context,
+                  reward: true,
+                  total: parseWalletAmount(total),
+                  bonus: parseWalletAmount(
+                    data['luckyRewardBonus'] ?? reward['rewardBonus'],
+                  ),
+                  combo: parseWalletAmount(
+                    data['combo'] ??
+                        reward['currentCombo'] ??
+                        _luckySession?.combos[gift.id],
+                  ),
+                );
+              }
             }
             // Refresh authoritative wallet values; never calculate rewards locally.
             if (balance == null) {
@@ -1395,21 +1409,25 @@ class LiveBroadcastController extends GetxController {
           },
         )..balance = diamondsBalance.value;
       }
+      _luckyTapSound.open();
+      _luckySession!.resetPreview();
       unawaited(_luckySession!.load());
-      final demoStreak = LuckyDemoStreak();
       await Get.bottomSheet<void>(
         LuckyPreviewSheet(
           key: _luckySheetKey,
           session: _luckySession!,
           onSelected: (gift, origin) {
+            _luckyTapSound.tap(
+              gift.name,
+              _luckySession!.gifts.indexWhere((g) => g.id == gift.id),
+            );
             final host = selectedGiftReceiverId.value ?? receiverId.value;
-            final demoReward = demoStreak.tap(gift.id);
             // Visual repetitions never repeat the API request or coin charge.
             // Get.context belongs to Navigator itself, above its Overlay.
             // Resolve effects from the mounted sheet inside that Overlay.
             final context = _luckySheetKey.currentContext;
             if (context != null && context.mounted) {
-              LuckyDemoCelebration.show(context, reward: demoReward);
+              LuckyDemoCelebration.show(context, reward: false);
               final size = MediaQuery.sizeOf(context);
               LuckyGiftTrail.show(
                 context,
@@ -1423,9 +1441,17 @@ class LiveBroadcastController extends GetxController {
             }
 
             if (host.isEmpty || host == owner) {
-              _luckySession!.showMessage(
-                'Preview only • No coins charged. Select a recipient to send.',
-              );
+              final reached = _luckySession!.previewTap(gift);
+              if (reached && context != null && context.mounted) {
+                LuckyDemoCelebration.show(
+                  context,
+                  reward: true,
+                  preview: true,
+                  total: gift.estimatedReward,
+                  bonus: gift.estimatedBonus,
+                  combo: _luckySession!.displayedCombo(gift.id),
+                );
+              }
               return;
             }
             _luckySession!.tap(gift, host: host, channel: economyGiftRoomId);
@@ -1435,6 +1461,7 @@ class LiveBroadcastController extends GetxController {
         isScrollControlled: true,
       );
     } finally {
+      _luckyTapSound.close();
       _luckySession?.cancelQueued();
       _luckyPreviewOpen = false;
     }
@@ -6813,6 +6840,7 @@ class LiveBroadcastController extends GetxController {
   }
 
   void leaveRoom() {
+    _luckyTapSound.close();
     if (isHost.value) {
       if (isAudioVideoRoom) {
         confirmEndRoom();
@@ -6869,6 +6897,7 @@ class LiveBroadcastController extends GetxController {
   }
 
   Future<void> endLiveStreamForEveryone() async {
+    _luckyTapSound.close();
     if (_exitReported) return;
     final liveStreamingId = liveStreamingApiId;
     Map<String, dynamic>? response;
@@ -7043,6 +7072,7 @@ class LiveBroadcastController extends GetxController {
   }
 
   Future<void> endRoomForEveryone() async {
+    _luckyTapSound.close();
     if (_exitReported) return;
     final backendRoomId = audioRoomApiId;
     if (backendRoomId.isEmpty) {
@@ -7078,6 +7108,7 @@ class LiveBroadcastController extends GetxController {
   /// This deliberately does not navigate; returning `true` lets the prebuilt
   /// call widget perform its normal, single route exit.
   Future<bool> endRoomAfterConfirmedHangUp() async {
+    _luckyTapSound.close();
     if (!isHost.value || !_isAudioVideoRoomPayload()) return true;
     if (_exitReported) return true;
 
@@ -7175,6 +7206,7 @@ class LiveBroadcastController extends GetxController {
 
   @override
   void onClose() {
+    _luckyTapSound.close();
     _luckySession?.dispose();
     _pkActiveWorker?.dispose();
     _pkActiveWorker = null;
