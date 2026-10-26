@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/repo/agency/agency_api_utils.dart';
 import 'package:qobo_one_live/repo/agency/agency_repo.dart';
+import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 
-enum AgencyStatusLookupType { applicationId, phone }
+enum AgencyStatusLookupType { applicationId, phone, email }
 
 class AgencyHostStatusController extends GetxController {
   final AgencyRepo _agencyRepo = AgencyRepo();
@@ -47,10 +48,14 @@ class AgencyHostStatusController extends GetxController {
 
     applicationId.value = args['application_id']?.toString().trim() ?? '';
     phone.value = args['phone']?.toString().trim() ?? '';
+    final email = args['email']?.toString().trim() ?? '';
 
     if (applicationId.value.isNotEmpty) {
       lookupType.value = AgencyStatusLookupType.applicationId;
       lookupController.text = applicationId.value;
+    } else if (email.isNotEmpty) {
+      lookupType.value = AgencyStatusLookupType.email;
+      lookupController.text = email;
     } else if (phone.value.isNotEmpty) {
       lookupType.value = AgencyStatusLookupType.phone;
       lookupController.text = phone.value;
@@ -75,6 +80,8 @@ class AgencyHostStatusController extends GetxController {
         return 'Application ID';
       case AgencyStatusLookupType.phone:
         return 'Phone number';
+      case AgencyStatusLookupType.email:
+        return 'Email';
     }
   }
 
@@ -84,12 +91,16 @@ class AgencyHostStatusController extends GetxController {
         return 'Enter application ID';
       case AgencyStatusLookupType.phone:
         return 'Enter WhatsApp number';
+      case AgencyStatusLookupType.email:
+        return 'Enter email';
     }
   }
 
   TextInputType get keyboardType {
     return lookupType.value == AgencyStatusLookupType.phone
         ? TextInputType.phone
+        : lookupType.value == AgencyStatusLookupType.email
+        ? TextInputType.emailAddress
         : TextInputType.text;
   }
 
@@ -106,6 +117,7 @@ class AgencyHostStatusController extends GetxController {
             ? lookup
             : null,
         phone: lookupType.value == AgencyStatusLookupType.phone ? lookup : null,
+        email: lookupType.value == AgencyStatusLookupType.email ? lookup : null,
         isShowLoader: false,
       );
 
@@ -153,6 +165,15 @@ class AgencyHostStatusController extends GetxController {
         '';
     createdAt.value = data['createdAt']?.toString() ?? '';
     reason.value = data['reason']?.toString() ?? '';
+
+    if (_isApproved(status.value) &&
+        Get.isRegistered<UserSessionController>()) {
+      // Approved Google hosts are healed on this call. Refresh so the
+      // profile Host shortcut reads roleIcons.showHost.
+      Get.find<UserSessionController>().refreshProfileFromApi(
+        isShowLoader: false,
+      );
+    }
 
     if (!_approvedNotified &&
         !_isApproved(previousStatus) &&

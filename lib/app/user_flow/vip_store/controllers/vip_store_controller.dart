@@ -166,7 +166,7 @@ class VipStoreController extends GetxController {
     if (isPurchasing.value) return;
     if (item['isOwned'] == true) {
       Get.snackbar(
-        'VIP Frames',
+        'Entry Frames',
         'You already own "${item['name']}". Change it from Backpack.',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.black87,
@@ -205,7 +205,7 @@ class VipStoreController extends GetxController {
       );
       if (!_isSuccess(response)) {
         Get.snackbar(
-          'VIP Frames',
+          'Entry Frames',
           response?['message']?.toString() ?? 'Could not purchase "$name".',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.redAccent,

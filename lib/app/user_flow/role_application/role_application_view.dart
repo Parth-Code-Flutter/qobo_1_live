@@ -174,7 +174,13 @@ class _RoleApplicationViewState extends State<RoleApplicationView> {
   Future<void> _checkStatus({bool silent = false}) async {
     if (_busy) return;
     if (_lookup.text.trim().isEmpty) _lookup.text = _phone.text.trim();
-    if (_lookup.text.trim().isEmpty) {
+    if (_lookup.text.trim().isEmpty && widget.role == ApplicationRole.host) {
+      final email = Get.isRegistered<UserSessionController>()
+          ? Get.find<UserSessionController>().email.trim()
+          : '';
+      if (email.isNotEmpty) _lookup.text = email;
+    }
+    if (_lookup.text.trim().isEmpty && widget.role != ApplicationRole.host) {
       if (!silent) {
         setState(
           () => _error =

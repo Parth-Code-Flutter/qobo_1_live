@@ -36,13 +36,30 @@ FrameCatalogType? _frameCatalogType(Map<String, dynamic> raw) {
   if (type == 'entry' || type == 'vip') return FrameCatalogType.entry;
   if (type == 'avatar' || type == 'frames') return FrameCatalogType.avatar;
 
-  final itemType = '${raw['itemType'] ?? ''}'.trim().toUpperCase();
+  // Backpack rows may send `itemType` or the newer `itemTypes` string.
+  final itemType = _frameItemType(raw);
   if (itemType == 'VIP_FRAME') return FrameCatalogType.entry;
   if (itemType == 'AVATAR_FRAME') return FrameCatalogType.avatar;
 
   final category = '${raw['category'] ?? ''}'.trim().toLowerCase();
   if (category == 'vip') return FrameCatalogType.entry;
   return null;
+}
+
+String _frameItemType(Map<String, dynamic> raw) {
+  for (final key in const ['itemType', 'itemTypes', 'item_type', 'item_types']) {
+    final value = raw[key];
+    if (value is List) {
+      for (final part in value) {
+        final token = '$part'.trim().toUpperCase();
+        if (token == 'VIP_FRAME' || token == 'AVATAR_FRAME') return token;
+      }
+      continue;
+    }
+    final token = '${value ?? ''}'.trim().toUpperCase();
+    if (token == 'VIP_FRAME' || token == 'AVATAR_FRAME') return token;
+  }
+  return '';
 }
 
 /// Avatar frame and VIP entry-frame storefront calls.

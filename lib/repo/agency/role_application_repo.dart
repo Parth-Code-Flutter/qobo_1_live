@@ -43,6 +43,7 @@ class RoleApplicationRepo {
     ApplicationRole role,
     String query,
   ) async {
+    if (role == ApplicationRole.host) return _hostStatus(query);
     final params = {
       role == ApplicationRole.agency ? 'query' : 'phone': query.trim(),
     };
@@ -76,10 +77,14 @@ class RoleApplicationRepo {
         if (description.trim().isNotEmpty) 'description': description.trim(),
       },
       ApplicationRole.host => <String, String>{
+        'agency_code': code.trim(),
         'agencyCode': code.trim(),
-        'whatsapp': digits,
+        'name': name.trim(),
         'hostName': name.trim(),
+        'phone': digits,
+        'whatsapp': digits,
         if (description.trim().isNotEmpty) 'description': description.trim(),
+        if (description.trim().isNotEmpty) 'bio': description.trim(),
       },
       ApplicationRole.superAdmin => <String, String>{
         'fullName': name.trim(),
@@ -100,6 +105,42 @@ class RoleApplicationRepo {
     return response == null
         ? null
         : _normalize(response.statusCode, response.body);
+  }
+
+  /// Host status uses the bearer token. Phone, email, or application id
+  /// are optional. An empty query still lets Google sign-in auto-heal.
+  Future<Map<String, dynamic>?> _hostStatus(String query) async {
+    final value = query.trim();
+    final params = <String, String>{};
+    if (value.contains('@')) {
+      params['email'] = value;
+    } else if (RegExp(r'^\d{6,15}$').hasMatch(value)) {
+      params['phone'] = value;
+    } else if (value.isNotEmpty) {
+      params['application_id'] = value;
+    }
+    final queryText = params.isEmpty
+        ? ''
+        : '?${Uri(queryParameters: params).query}';
+    final response = await _api.getRequest(
+      endPoint: '/api/agency/host-verify-status$queryText',
+      isShowLoader: false,
+    );
+    if (response == null) return null;
+    final parsed = _normalize(response.statusCode, response.body);
+    final data = parsed?['data'];
+    final found = data is Map && data['status'] != null;
+    if (found || !params.containsKey('phone')) return parsed;
+
+    // Older host applications are still stored on the phone lookup.
+    final legacy = await _api.getRequest(
+      endPoint:
+          '/api/agency/application-status?${Uri(queryParameters: {'phone': value}).query}',
+      isShowLoader: false,
+    );
+    return legacy == null
+        ? parsed
+        : _normalize(legacy.statusCode, legacy.body);
   }
 
   // The final guide uses bare objects; older deployments use statusCode/data.

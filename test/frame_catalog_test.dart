@@ -28,5 +28,18 @@ void main() {
       isFalse,
     );
     expect(frameCatalogIsEntry({'category': 'Premium'}), isFalse);
+    expect(
+      frameCatalogIsEntry({
+        'itemTypes': 'VIP_FRAME',
+      }),
+      isTrue,
+    );
+    expect(
+      frameCatalogIsEntry(
+        const <String, dynamic>{},
+        details: {'itemTypes': 'AVATAR_FRAME', 'frameType': 'avatar'},
+      ),
+      isFalse,
+    );
   });
 }

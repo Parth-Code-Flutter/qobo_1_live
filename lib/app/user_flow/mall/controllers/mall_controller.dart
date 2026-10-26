@@ -5,6 +5,7 @@ import 'package:qobo_one_live/app/user_flow/wallet/views/wallet_view.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/repo/background/background_repo.dart';
 import 'package:qobo_one_live/repo/economy/economy_repo.dart';
+import 'package:qobo_one_live/repo/economy/mall_catalog.dart';
 import 'package:qobo_one_live/repo/frame/frame_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
@@ -108,13 +109,137 @@ class MallController extends GetxController {
     isLoading.value = true;
     try {
       await _fetchWalletBalance();
-      await _fetchFrameShop();
-      await _fetchMallShop();
-      await _fetchBackgroundShop();
+      // The unified mall catalog is preferred. Empty or failed responses
+      // keep the existing frame, effect, and background shops.
+      final usedCatalog = await _fetchUnifiedMall();
+      if (!usedCatalog) {
+        await _fetchFrameShop();
+        await _fetchMallShop();
+        await _fetchBackgroundShop();
+      }
       selectTab(selectedTab.value);
     } finally {
       isLoading.value = false;
     }
+  }
+
+  /// Loads `GET /api/economy/mall` and splits rows into the four store tabs.
+  ///
+  /// Returns false when the catalog is missing so the older shop endpoints
+  /// stay in place.
+  Future<bool> _fetchUnifiedMall() async {
+    final response = await _economyRepo.getMallItems(isShowLoader: false);
+    final listed = response?['success'] == true || _isSuccess(response);
+    if (!listed) return false;
+    final data = response?['data'];
+    if (data is! List || data.isEmpty) return false;
+
+    final avatar = <Map<String, dynamic>>[];
+    final entry = <Map<String, dynamic>>[];
+    final patti = <Map<String, dynamic>>[];
+    final backgrounds = <Map<String, dynamic>>[];
+    for (final raw in data) {
+      if (raw is! Map) continue;
+      final row = Map<String, dynamic>.from(raw);
+      final status = row['status']?.toString().toLowerCase() ?? 'active';
+      if (status.isNotEmpty && status != 'active') continue;
+      final kind = mallCatalogKind(row);
+      final mapped = _mapMallCatalogItem(row, kind);
+      switch (kind) {
+        case 'avatar':
+          avatar.add(mapped);
+        case 'entry':
+          entry.add(mapped);
+        case 'patti':
+          patti.add(mapped);
+        case 'background':
+          backgrounds.add(mapped);
+      }
+    }
+    if (avatar.isEmpty &&
+        entry.isEmpty &&
+        patti.isEmpty &&
+        backgrounds.isEmpty) {
+      return false;
+    }
+
+    storeItems[1] = avatar;
+    storeItems[2] = entry;
+    storeItems[3] = patti.isEmpty
+        ? [
+            _emptyMallItem(
+              id: 'patti_empty',
+              name: 'No patti styles yet',
+              icon: 'assets/svg/ic_frame_shop.svg',
+              description: 'Patti styles will appear here when the store adds them.',
+            ),
+          ]
+        : patti;
+    storeItems[4] = backgrounds;
+    final tabList = List<Map<String, dynamic>>.from(tabs);
+    if (tabList.length >= 3) {
+      tabList[2] = {'id': 3, 'name': 'Patti'};
+      tabs.assignAll(tabList);
+    }
+    return true;
+  }
+
+  Map<String, dynamic> _mapMallCatalogItem(
+    Map<String, dynamic> row,
+    String kind,
+  ) {
+    final days = int.tryParse('${row['durationDays'] ?? 30}') ?? 30;
+    final image = (row['svgaUrl'] ?? row['imageUrl'] ?? row['image'] ?? '')
+        .toString();
+    final animated =
+        image.toLowerCase().contains('.svga') || image.contains('/raw/upload/');
+    return {
+      'id': row['id']?.toString() ?? '',
+      'name': row['name']?.toString() ?? '',
+      'category': row['category']?.toString() ?? kind,
+      'price': _toInt(row['price'] ?? row['amount']),
+      'duration': '$days days',
+      'icon': 'assets/svg/ic_frame_shop.svg',
+      'imageUrl': image,
+      'svgaUrl': animated ? image : row['svgaUrl']?.toString(),
+      'description': row['description']?.toString() ?? '',
+      'catalog': kind == 'avatar' || kind == 'entry' ? 'frame' : kind,
+      'frameKind': kind == 'entry' ? 'entry' : 'avatar',
+      'purchaseApi': 'mall',
+      'owned': false,
+    };
+  }
+
+  Future<void> _buyFromMallCatalog(Map<String, dynamic> item) async {
+    final price = _toInt(item['price']);
+    final name = item['name']?.toString() ?? 'Item';
+    if (coinsBalance.value < price) {
+      _showInsufficientCoinsDialog(price: price, itemName: name);
+      return;
+    }
+
+    final response = await _economyRepo.buyMallItem(
+      itemId: item['id'].toString(),
+      isShowLoader: true,
+    );
+    if (!_isSuccess(response)) {
+      final message = response?['message']?.toString();
+      Get.snackbar(
+        'Mall',
+        message == null || message.isEmpty
+            ? 'Could not purchase "$name".'
+            : message,
+      );
+      return;
+    }
+
+    final data = response?['data'];
+    final remaining = data is Map ? data['remainingCoins'] : null;
+    if (remaining != null) coinsBalance.value = _toInt(remaining);
+    final tab = selectedTab.value;
+    await _fetchUnifiedMall();
+    selectTab(tab);
+    await _showPurchaseSuccessDialog(name: name, price: price);
   }
 
   Future<void> _fetchWalletBalance() async {
@@ -450,6 +575,11 @@ class MallController extends GetxController {
 
   Future<void> buyItem(Map<String, dynamic> item) async {
     if (item['isPlaceholder'] == true) return;
+
+    if (item['purchaseApi'] == 'mall') {
+      await _buyFromMallCatalog(item);
+      return;
+    }
 
     final isFrame = selectedTab.value == 1 || item['catalog'] == 'frame';
     if (isFrame) {

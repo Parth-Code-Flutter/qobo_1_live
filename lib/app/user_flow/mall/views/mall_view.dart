@@ -291,15 +291,48 @@ class MallView extends GetView<MallController> {
       );
     }
 
+    if (item['catalog'] == 'patti') {
+      return Container(
+        width: 168,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFFFE7A3), Color(0xFFE8A317)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFFFF6D8)),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFE8A317).withValues(alpha: 0.35),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: SemiBoldText(
+          text: item['name']?.toString() ?? 'Patti',
+          fontSize: TextStyles.k14FontSize,
+          color: const Color(0xFF4A2E00),
+          align: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+      );
+    }
+
     if (tabId == 4) {
       final imageUrl = item['imageUrl']?.toString() ?? '';
+      final photo = _mallUrlIsPhoto(imageUrl);
       return Container(
         width: 150,
         height: 106,
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: AppLightUi.borderStrong),
-          image: imageUrl.isNotEmpty
+          image: photo
               ? DecorationImage(
                   image: NetworkImage(imageUrl),
                   fit: BoxFit.cover,
@@ -314,31 +347,38 @@ class MallView extends GetView<MallController> {
               : null,
           boxShadow: AppLightUi.cardShadow,
         ),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            gradient: LinearGradient(
-              colors: [
-                kColorBlack.withValues(alpha: 0.05),
-                kColorBlack.withValues(alpha: 0.35),
-              ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-          ),
-          child: const Center(
-            child: CircleAvatar(
-              radius: 26,
-              backgroundColor: kColorAvatarFallbackBg,
-              child: Text(
-                'U',
-                style: TextStyle(
-                  color: kColorWhite,
-                  fontWeight: FontWeight.w800,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (imageUrl.isNotEmpty && !photo)
+              _FrameMedia(source: imageUrl, size: 150),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                gradient: LinearGradient(
+                  colors: [
+                    kColorBlack.withValues(alpha: 0.05),
+                    kColorBlack.withValues(alpha: 0.35),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+              child: const Center(
+                child: CircleAvatar(
+                  radius: 26,
+                  backgroundColor: kColorAvatarFallbackBg,
+                  child: Text(
+                    'U',
+                    style: TextStyle(
+                      color: kColorWhite,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ),
       );
     }
@@ -742,15 +782,20 @@ class _StoreItemVisual extends StatelessWidget {
 
     final backgroundUrl = item['imageUrl']?.toString() ?? '';
     if (isBackground && backgroundUrl.isNotEmpty) {
+      final photo = _mallUrlIsPhoto(backgroundUrl);
       return Container(
         width: 96,
         height: 86,
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          image: DecorationImage(
-            image: NetworkImage(backgroundUrl),
-            fit: BoxFit.cover,
-          ),
+          image: photo
+              ? DecorationImage(
+                  image: NetworkImage(backgroundUrl),
+                  fit: BoxFit.cover,
+                )
+              : null,
+          color: photo ? null : const Color(0xFF2A2140),
           border: Border.all(
             color: item['isEquipped'] == true
                 ? _equipped
@@ -758,7 +803,11 @@ class _StoreItemVisual extends StatelessWidget {
             width: item['isEquipped'] == true ? 2 : 1.2,
           ),
         ),
-        child: DecoratedBox(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (!photo) _FrameMedia(source: backgroundUrl, size: 96),
+            DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             gradient: LinearGradient(
@@ -783,6 +832,8 @@ class _StoreItemVisual extends StatelessWidget {
               ),
             ),
           ),
+        ),
+          ],
         ),
       );
     }
@@ -811,6 +862,15 @@ class _StoreItemVisual extends StatelessWidget {
           : iconAsset,
     );
   }
+}
+
+bool _mallUrlIsPhoto(String url) {
+  final path = Uri.tryParse(url.trim())?.path.toLowerCase() ?? '';
+  return path.endsWith('.png') ||
+      path.endsWith('.jpg') ||
+      path.endsWith('.jpeg') ||
+      path.endsWith('.webp') ||
+      path.endsWith('.gif');
 }
 
 /// Displays frame-shop media, including API-hosted SVGA animations.

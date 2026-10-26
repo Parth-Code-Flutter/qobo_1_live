@@ -61,6 +61,7 @@ class AgencyRepo {
       'host_name': hostName.trim(),
       'phone': whatsapp.trim(),
       'gmail': gmail.trim(),
+      'email': gmail.trim(),
       'type': type.trim(),
       'category': category.trim(),
       'countryRegion': countryRegion.trim(),
@@ -106,14 +107,18 @@ class AgencyRepo {
   Future<Map<String, dynamic>?> hostVerifyStatus({
     String? applicationId,
     String? phone,
+    String? email,
     bool isShowLoader = true,
   }) async {
     final params = <String, String>{};
     final id = applicationId?.trim();
     final phoneValue = phone?.trim();
+    final emailValue = email?.trim();
 
     if (id != null && id.isNotEmpty) {
       params['application_id'] = id;
+    } else if (emailValue != null && emailValue.isNotEmpty) {
+      params['email'] = emailValue;
     } else if (phoneValue != null && phoneValue.isNotEmpty) {
       params['phone'] = phoneValue;
     }

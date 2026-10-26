@@ -23,7 +23,7 @@ class VipStoreView extends GetView<VipStoreController> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppLightUi.bg,
-      appBar: const CommonAppBarWidget(title: 'VIP Frames'),
+      appBar: const CommonAppBarWidget(title: 'Entry Frames'),
       body: Obx(() {
         if (controller.isLoading.value && controller.vipFrames.isEmpty) {
           return const Center(

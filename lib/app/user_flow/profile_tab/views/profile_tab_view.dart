@@ -528,7 +528,7 @@ class _ProfileTabViewState extends State<ProfileTabView> {
         Color(0xFF15BDE6),
         Color(0xFF17D7C4),
       ], onTapRoute: Routes.SVIP),
-      _ProfileFeatureItem('VIP Frames', kIconSVIP, const [
+      _ProfileFeatureItem('Entry\nFrames', kIconSVIP, const [
         Color(0xFFFFB020),
         Color(0xFFFFD700),
       ], onTapRoute: Routes.VIP_STORE),
