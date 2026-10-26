@@ -22,7 +22,7 @@ class _LuckyPreviewSheetState extends State<LuckyPreviewSheet> {
   @override
   Widget build(BuildContext context) => Container(
     key: const ValueKey('lucky-sheet-panel'),
-    height: MediaQuery.sizeOf(context).height * .48,
+    height: MediaQuery.sizeOf(context).height * .40,
     clipBehavior: Clip.antiAlias,
     decoration: const BoxDecoration(
       gradient: LinearGradient(
@@ -109,11 +109,7 @@ class _LuckyPreviewSheetState extends State<LuckyPreviewSheet> {
                     child: Text(
                       s.busy
                           ? 'Sending • ${s.queued} queued'
-                          : s.gifts.where((gift) => gift.id == selected).isEmpty
-                          ? 'Choose a gift to see its reward target.'
-                          : s.gifts
-                                .firstWhere((gift) => gift.id == selected)
-                                .guidance(s.displayedCombo(selected ?? '')),
+                          : 'Tap a gift to send it.',
                       style: const TextStyle(
                         color: Color(0xFFC6ACD7),
                         fontSize: 12,
@@ -176,7 +172,7 @@ class _LuckyPreviewSheetState extends State<LuckyPreviewSheet> {
                           mainAxisSpacing: 8,
                           crossAxisSpacing: 8,
                           mainAxisExtent:
-                              158 +
+                              116 +
                               (MediaQuery.textScalerOf(context).scale(12) - 12)
                                       .clamp(0, 24) *
                                   3,
@@ -257,31 +253,6 @@ class _LuckyPreviewSheetState extends State<LuckyPreviewSheet> {
                                           fontWeight: FontWeight.w700,
                                         ),
                                       ),
-                                      const Spacer(),
-                                      if (gift.threshold > 0)
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 5,
-                                            vertical: 3,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: const Color(
-                                              0xFF55DCA0,
-                                            ).withValues(alpha: .12),
-                                            borderRadius: BorderRadius.circular(
-                                              7,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            '+${gift.rate}% / ${gift.threshold} sends',
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
-                                              color: Color(0xFF95E8BC),
-                                              fontSize: 10,
-                                            ),
-                                          ),
-                                        ),
                                     ],
                                   ),
                                 ),

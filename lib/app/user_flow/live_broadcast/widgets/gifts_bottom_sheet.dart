@@ -151,10 +151,22 @@ class _GiftsBottomSheetState extends State<GiftsBottomSheet> {
         children: List.generate(tabs.length, (index) {
           final isSelected = _selectedTabIndex == index;
           return GestureDetector(
-            onTap: () => setState(() {
-              _selectedTabIndex = index;
-              _selectedGiftIndex = -1;
-            }),
+            onTap: () {
+              // Lucky uses the same preview sheet in audio, video, and live.
+              if (GiftMediaUtils.isLuckyCategory(tabs[index])) {
+                Get.back();
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!controller.isClosed) {
+                    controller.openLuckyPreviewSheet();
+                  }
+                });
+                return;
+              }
+              setState(() {
+                _selectedTabIndex = index;
+                _selectedGiftIndex = -1;
+              });
+            },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               margin: const EdgeInsets.only(right: 8),

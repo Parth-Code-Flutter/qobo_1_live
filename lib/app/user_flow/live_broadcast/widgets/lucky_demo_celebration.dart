@@ -134,16 +134,9 @@ class _LuckyDemoCelebrationState extends State<LuckyDemoCelebration>
                         48,
                     child: Opacity(
                       opacity: (1 - merge),
-                      child: Column(
-                        children: [
-                          Image.asset('assets/lucky_demo/coin.png', width: 88),
-                          _glowText(
-                            side == -1
-                                ? '${widget.total - widget.bonus} coins'
-                                : '+${widget.bonus} coins',
-                            22,
-                          ),
-                        ],
+                      child: Image.asset(
+                        'assets/lucky_demo/coin.png',
+                        width: 88,
                       ),
                     ),
                   ),
@@ -159,45 +152,6 @@ class _LuckyDemoCelebrationState extends State<LuckyDemoCelebration>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           _glowText('LUCKY COMBO ×${widget.combo}', 16),
-                          const SizedBox(height: 4),
-                          ShaderMask(
-                            shaderCallback: (bounds) => const LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Color(0xFFFFFFDA),
-                                Color(0xFFFFE58B),
-                                Color(0xFFFFA82E),
-                              ],
-                            ).createShader(bounds),
-                            child: Text(
-                              '${widget.total}',
-                              textScaler: TextScaler.noScaling,
-                              style: TextStyle(
-                                fontSize: 100,
-                                height: 1.05,
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white,
-                                shadows: [
-                                  Shadow(
-                                    color: Color(0xFFFFA62B),
-                                    blurRadius: 25,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          _glowText(
-                            widget.preview
-                                ? 'Preview: ${widget.total} coins'
-                                : 'You get ${widget.total} coins!',
-                            24,
-                          ),
-                          const SizedBox(height: 6),
-                          _glowText(
-                            '${widget.total - widget.bonus} coins  +  ${widget.bonus} coins',
-                            16,
-                          ),
                           const SizedBox(height: 8),
                           Text(
                             widget.preview

@@ -46,7 +46,7 @@ void main() {
     }
     expect(
       tester.getSize(find.byKey(const ValueKey('lucky-sheet-panel'))).height,
-      closeTo(640 * .48, .1),
+      closeTo(640 * .40, .1),
     );
     s.showMessage(
       'Preview only • No coins charged. Select a recipient to send.',
@@ -54,11 +54,13 @@ void main() {
     await tester.pump();
     expect(
       tester.getSize(find.byKey(const ValueKey('lucky-sheet-panel'))).height,
-      closeTo(640 * .48, .1),
+      closeTo(640 * .40, .1),
     );
     expect(tester.takeException(), isNull);
     expect(taps, 3);
     expect(find.text('100 Coins'), findsOneWidget);
+    expect(find.textContaining('%'), findsNothing);
+    expect(find.textContaining('sends'), findsNothing);
     expect(find.byType(LuckyPreviewSheet), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
