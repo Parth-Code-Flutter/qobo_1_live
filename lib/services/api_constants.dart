@@ -1,7 +1,7 @@
 class ApiConstants {
   ApiConstants._();
 
-  static const String appVersionLabel = '1.0.1+15';
+  static const String appVersionLabel = '1.0.1+16';
 
   /// Backend base URL for API calls.
   static const String baseUrl = 'https://api.qobo1live.in';
