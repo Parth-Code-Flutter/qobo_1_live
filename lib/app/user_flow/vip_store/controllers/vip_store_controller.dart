@@ -17,7 +17,7 @@ import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 /// Buys entry frames via `POST /api/frame/buy`.
 ///
 /// Purchase auto-equips the new entry frame and leaves the avatar frame on.
-/// Backpack can switch or remove the entry frame later.
+/// Owned frames on this screen can be equipped to switch the entrance.
 class VipStoreController extends GetxController {
   VipStoreController({
     FrameRepo? frameRepo,
@@ -153,6 +153,7 @@ class VipStoreController extends GetxController {
             : (imageUrl ?? ''),
         'isOwned': owned != null,
         'isEquipped': owned?['isEquipped'] == true,
+        'backpackItemId': owned?['id']?.toString() ?? '',
         'expiresAt': owned?['expiresAt']?.toString() ?? '',
       });
     }
@@ -166,13 +167,7 @@ class VipStoreController extends GetxController {
   Future<void> purchaseFrame(Map<String, dynamic> item) async {
     if (isPurchasing.value) return;
     if (item['isOwned'] == true) {
-      Get.snackbar(
-        'Entry Frames',
-        'You already own "${item['name']}". Change it from Backpack.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.black87,
-        colorText: kColorWhite,
-      );
+      await equipOwnedFrame(item);
       return;
     }
 
@@ -228,6 +223,58 @@ class VipStoreController extends GetxController {
         imageUrl: item['imageUrl']?.toString().trim() ?? '',
         svgaUrl: item['svgaUrl']?.toString().trim() ?? '',
         durationLabel: item['duration']?.toString(),
+      );
+    } finally {
+      isPurchasing.value = false;
+    }
+  }
+
+  /// Switch the room entrance to a frame this account already bought.
+  Future<void> equipOwnedFrame(Map<String, dynamic> item) async {
+    if (isPurchasing.value) return;
+    if (item['isEquipped'] == true) return;
+
+    final backpackId = item['backpackItemId']?.toString().trim() ?? '';
+    final name = item['name']?.toString() ?? 'Entry Frame';
+    if (backpackId.isEmpty) {
+      Get.snackbar(
+        'Entry Frames',
+        'Could not equip "$name". Pull to refresh and try again.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.black87,
+        colorText: kColorWhite,
+      );
+      return;
+    }
+
+    isPurchasing.value = true;
+    try {
+      final response = await _frameRepo.equipFrame(
+        backpackItemId: backpackId,
+        equip: true,
+        isShowLoader: true,
+      );
+      if (!_isSuccess(response)) {
+        Get.snackbar(
+          'Entry Frames',
+          response?['message']?.toString() ?? 'Could not equip "$name".',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.redAccent,
+          colorText: kColorWhite,
+        );
+        return;
+      }
+
+      if (Get.isRegistered<UserSessionController>()) {
+        await Get.find<UserSessionController>().refreshProfileFromApi();
+      }
+      await loadStore();
+      Get.snackbar(
+        'Entry Frames',
+        '$name is your entrance now.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.black87,
+        colorText: kColorWhite,
       );
     } finally {
       isPurchasing.value = false;

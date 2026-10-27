@@ -235,6 +235,7 @@ class VipStoreView extends GetView<VipStoreController> {
             (context, index) => _VipFrameCard(
               item: list[index],
               onBuy: () => controller.purchaseFrame(list[index]),
+              onEquip: () => controller.equipOwnedFrame(list[index]),
               isBusy: controller.isPurchasing.value,
             ),
             childCount: list.length,
@@ -341,11 +342,13 @@ class _VipFrameCard extends StatelessWidget {
   const _VipFrameCard({
     required this.item,
     required this.onBuy,
+    required this.onEquip,
     required this.isBusy,
   });
 
   final Map<String, dynamic> item;
   final VoidCallback onBuy;
+  final VoidCallback onEquip;
   final bool isBusy;
 
   @override
@@ -421,7 +424,7 @@ class _VipFrameCard extends StatelessWidget {
                 Spacing.v4,
                 AppText(
                   text: isEquipped
-                      ? 'Auto-equipped'
+                      ? 'Your entrance'
                       : (duration.isEmpty ? 'Limited time' : duration),
                   fontSize: TextStyles.k10FontSize,
                   color: isEquipped ? const Color(0xFF22C55E) : AppLightUi.subtitle,
@@ -433,17 +436,19 @@ class _VipFrameCard extends StatelessWidget {
                   height: 36,
                   width: double.infinity,
                   child: appButton(
-                    onPressed: isBusy || isOwned ? () {} : onBuy,
-                    buttonText: isOwned
-                        ? (isEquipped ? 'Equipped' : 'Owned')
-                        : _formatPrice(price),
+                    onPressed: isBusy || isEquipped
+                        ? () {}
+                        : (isOwned ? onEquip : onBuy),
+                    buttonText: isEquipped
+                        ? 'Equipped'
+                        : (isOwned ? 'Equip' : _formatPrice(price)),
                     buttonHeight: 36,
                     borderRadius: 12,
-                    isGradient: !isOwned,
-                    buttonColor: isOwned
+                    isGradient: !isEquipped,
+                    buttonColor: isEquipped
                         ? AppLightUi.gold.withValues(alpha: 0.25)
                         : null,
-                    textColor: isOwned ? AppLightUi.gold : kColorWhite,
+                    textColor: isEquipped ? AppLightUi.gold : kColorWhite,
                     gradientColors: AppLightUi.familyCtaColors,
                   ),
                 ),
