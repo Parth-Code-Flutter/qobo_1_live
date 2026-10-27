@@ -3859,20 +3859,22 @@ class _FloorAudienceBadge extends GetView<LiveBroadcastController> {
                         ),
                       ],
                     ),
-                    clipBehavior: Clip.antiAlias,
+                    clipBehavior: Clip.none,
                     child: first == null
                         ? Icon(
                             Icons.people_alt_rounded,
                             color: kColorWhite,
                             size: compact ? 16 : 18,
                           )
-                        : AppUserAvatar(
+                        : FramedUserAvatar(
                             name: first.name,
                             imageUrl: first.avatarUrl,
-                            size: size - 3,
+                            frameUrl: first.avatarFrameUrl,
+                            frameSeed: first.userId,
+                            size: (size - 6) / 1.34,
                             fontSize: compact
-                                ? TextStyles.k10FontSize
-                                : TextStyles.k12FontSize,
+                                ? TextStyles.k8FontSize
+                                : TextStyles.k10FontSize,
                           ),
                   ),
                 ),
@@ -4068,20 +4070,13 @@ class _FloorAudienceListSheet extends GetView<LiveBroadcastController> {
                           ),
                           child: Row(
                             children: [
-                              CircleAvatar(
-                                radius: 20,
-                                backgroundColor: Colors.white12,
-                                backgroundImage:
-                                    (user.avatarUrl ?? '').trim().isNotEmpty
-                                    ? NetworkImage(user.avatarUrl!.trim())
-                                    : null,
-                                child: (user.avatarUrl ?? '').trim().isEmpty
-                                    ? const Icon(
-                                        Icons.person,
-                                        color: kColorWhite,
-                                        size: 20,
-                                      )
-                                    : null,
+                              FramedUserAvatar(
+                                name: name,
+                                imageUrl: user.avatarUrl,
+                                frameUrl: user.avatarFrameUrl,
+                                frameSeed: user.userId,
+                                size: 34,
+                                fontSize: TextStyles.k12FontSize,
                               ),
                               Spacing.h12,
                               Expanded(
@@ -4157,15 +4152,13 @@ class FloorAudienceProfileSheet extends GetView<LiveBroadcastController> {
               ),
             ),
             Spacing.v16,
-            CircleAvatar(
-              radius: 36,
-              backgroundColor: Colors.white12,
-              backgroundImage: (user.avatarUrl ?? '').trim().isNotEmpty
-                  ? NetworkImage(user.avatarUrl!.trim())
-                  : null,
-              child: (user.avatarUrl ?? '').trim().isEmpty
-                  ? const Icon(Icons.person, color: kColorWhite, size: 36)
-                  : null,
+            FramedUserAvatar(
+              name: user.name.trim().isEmpty ? 'Guest' : user.name.trim(),
+              imageUrl: user.avatarUrl,
+              frameUrl: user.avatarFrameUrl,
+              frameSeed: user.userId,
+              size: 64,
+              fontSize: TextStyles.k18FontSize,
             ),
             Spacing.v12,
             SemiBoldText(
@@ -4633,20 +4626,13 @@ class _FloorAudienceSeatPickerSheet extends GetView<LiveBroadcastController> {
                           ),
                           child: Row(
                             children: [
-                              CircleAvatar(
-                                radius: 20,
-                                backgroundColor: Colors.white12,
-                                backgroundImage:
-                                    (user.avatarUrl ?? '').trim().isNotEmpty
-                                    ? NetworkImage(user.avatarUrl!.trim())
-                                    : null,
-                                child: (user.avatarUrl ?? '').trim().isEmpty
-                                    ? const Icon(
-                                        Icons.person,
-                                        color: kColorWhite,
-                                        size: 20,
-                                      )
-                                    : null,
+                              FramedUserAvatar(
+                                name: name,
+                                imageUrl: user.avatarUrl,
+                                frameUrl: user.avatarFrameUrl,
+                                frameSeed: user.userId,
+                                size: 34,
+                                fontSize: TextStyles.k12FontSize,
                               ),
                               Spacing.h12,
                               Expanded(

@@ -27,6 +27,25 @@ void main() {
 
     expect(readEntryFrameUrl(profile), entryUrl);
     expect(readAvatarFrameUrl(profile), isNull);
+    expect(
+      readHostAvatarFrameUrl({
+        'host': {
+          'avatarFrame': {
+            'image': avatarUrl,
+            'svgaUrl': avatarUrl,
+            'frameType': 'avatar',
+            'itemType': 'AVATAR_FRAME',
+          },
+          'entryFrame': {
+            'svgaUrl': entryUrl,
+            'frameType': 'entry',
+            'itemType': 'VIP_FRAME',
+          },
+        },
+      }),
+      avatarUrl,
+    );
+    expect(readHostAvatarFrameUrl(profile), isNull);
 
     final seat = AudioRoomSeatModel.fromMap({
       'seatNo': 2,

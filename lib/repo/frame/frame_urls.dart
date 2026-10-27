@@ -61,6 +61,33 @@ String? readAvatarFrameUrl(Map<String, dynamic>? raw) {
   return null;
 }
 
+/// Avatar border for a room-list card. Checks the room, its host, and `roomData`.
+/// Entry animations are ignored.
+String? readHostAvatarFrameUrl(Map<String, dynamic>? room) {
+  if (room == null || room.isEmpty) return null;
+  final candidates = <Map<String, dynamic>>[room];
+  void add(dynamic value) {
+    if (value is Map) candidates.add(Map<String, dynamic>.from(value));
+  }
+
+  for (final map in List<Map<String, dynamic>>.from(candidates)) {
+    add(map['roomData']);
+    add(map['room']);
+    add(map['host']);
+    add(map['owner']);
+    add(map['user']);
+    add(map['hostUser']);
+    add(map['createdByUser']);
+    final host = map['host'];
+    if (host is Map) add(host['user']);
+  }
+  for (final map in candidates) {
+    final url = readAvatarFrameUrl(map);
+    if (url != null && url.isNotEmpty) return url;
+  }
+  return null;
+}
+
 bool _isEntryFrame(dynamic value) {
   if (value is! Map) return false;
   final frameType = '${value['frameType'] ?? ''}'.trim().toLowerCase();

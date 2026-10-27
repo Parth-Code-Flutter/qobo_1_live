@@ -77,6 +77,7 @@ class LiveViewersSheet extends GetView<LiveBroadcastController> {
                   return _ViewerListTile(
                     name: name,
                     avatarUrl: viewer['avatarUrl']?.toString(),
+                    frameUrl: viewer['avatarFrameUrl']?.toString(),
                     isHost: isHost,
                     isCurrentUser: isCurrentUser,
                     onTap: () => controller.openViewerProfile(viewer),
@@ -95,6 +96,7 @@ class _ViewerListTile extends StatelessWidget {
   const _ViewerListTile({
     required this.name,
     required this.avatarUrl,
+    required this.frameUrl,
     required this.isHost,
     required this.isCurrentUser,
     required this.onTap,
@@ -102,6 +104,7 @@ class _ViewerListTile extends StatelessWidget {
 
   final String name;
   final String? avatarUrl;
+  final String? frameUrl;
   final bool isHost;
   final bool isCurrentUser;
   final VoidCallback? onTap;
@@ -116,7 +119,14 @@ class _ViewerListTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          AppUserAvatar(name: name, imageUrl: avatarUrl, size: 40),
+          FramedUserAvatar(
+            name: name,
+            imageUrl: avatarUrl,
+            frameUrl: frameUrl,
+            frameSeed: name,
+            size: 36,
+            fontSize: TextStyles.k12FontSize,
+          ),
           Spacing.h12,
           Expanded(
             child: Column(
@@ -181,6 +191,7 @@ class LiveViewerProfileDialog extends GetView<LiveBroadcastController> {
         ? viewer['name'].toString()
         : 'Viewer';
     final avatarUrl = viewer['avatarUrl']?.toString();
+    final frameUrl = viewer['avatarFrameUrl']?.toString();
     final isHost = viewer['isHost'] == true;
     final isCurrentUser = viewer['isCurrentUser'] == true;
     final role = isHost ? 'Host' : 'Viewer';
@@ -220,7 +231,14 @@ class LiveViewerProfileDialog extends GetView<LiveBroadcastController> {
                 ),
               ),
             ),
-            AppUserAvatar(name: name, imageUrl: avatarUrl, size: 82),
+            FramedUserAvatar(
+              name: name,
+              imageUrl: avatarUrl,
+              frameUrl: frameUrl,
+              frameSeed: name,
+              size: 72,
+              fontSize: TextStyles.k20FontSize,
+            ),
             Spacing.v12,
             SemiBoldText(
               text: isCurrentUser ? '$name (You)' : name,

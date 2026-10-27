@@ -2573,23 +2573,25 @@ class LiveBroadcastController extends GetxController {
     );
 
     zegoMediaUsersTick.value++;
+    final previousById = _viewersById();
     liveViewers.assignAll(
       users.map((user) {
         final normalizedUserId = ZegoLiveIdUtils.sanitizeUserId(user.id);
-        final isHost =
+        final isHostUser =
             normalizedHostId.isNotEmpty && normalizedUserId == normalizedHostId;
         final isCurrentUser =
             mySanitized.isNotEmpty && normalizedUserId == mySanitized;
-        return <String, dynamic>{
-          'id': user.id,
-          'targetId': isHost && hostTargetId.isNotEmpty
+        return _viewerRow(
+          id: user.id,
+          targetId: isHostUser && hostTargetId.isNotEmpty
               ? hostTargetId
               : user.id,
-          'name': user.name.isNotEmpty ? user.name : 'Viewer',
-          'avatarUrl': isHost ? hostAvatarUrl.value : null,
-          'isHost': isHost,
-          'isCurrentUser': isCurrentUser,
-        };
+          name: user.name.isNotEmpty ? user.name : 'Viewer',
+          isHostUser: isHostUser,
+          isCurrentUser: isCurrentUser,
+          avatarUrl: isHostUser ? hostAvatarUrl.value : null,
+          previous: previousById[user.id],
+        );
       }),
     );
     _syncPkLocalAudience();
@@ -3546,6 +3548,7 @@ class LiveBroadcastController extends GetxController {
     final hostTargetId = receiverId.value.trim();
     final mySanitized = ZegoLiveIdUtils.sanitizeUserId(_currentUserId());
 
+    final previousById = _viewersById();
     List<Map<String, dynamic>> mapped() {
       return users.map((user) {
         final normalizedUserId = ZegoLiveIdUtils.sanitizeUserId(user.id);
@@ -3553,16 +3556,17 @@ class LiveBroadcastController extends GetxController {
             normalizedHostId.isNotEmpty && normalizedUserId == normalizedHostId;
         final isCurrentUser =
             mySanitized.isNotEmpty && normalizedUserId == mySanitized;
-        return <String, dynamic>{
-          'id': user.id,
-          'targetId': isHostUser && hostTargetId.isNotEmpty
+        return _viewerRow(
+          id: user.id,
+          targetId: isHostUser && hostTargetId.isNotEmpty
               ? hostTargetId
               : user.id,
-          'name': user.name.trim().isNotEmpty ? user.name.trim() : 'Viewer',
-          'avatarUrl': isHostUser ? hostAvatarUrl.value : null,
-          'isHost': isHostUser,
-          'isCurrentUser': isCurrentUser,
-        };
+          name: user.name.trim().isNotEmpty ? user.name.trim() : 'Viewer',
+          isHostUser: isHostUser,
+          isCurrentUser: isCurrentUser,
+          avatarUrl: isHostUser ? hostAvatarUrl.value : null,
+          previous: previousById[user.id],
+        );
       }).toList();
     }
 
@@ -4936,6 +4940,7 @@ class LiveBroadcastController extends GetxController {
       'viewer_id',
     ]);
     if (id == null || id.isEmpty) return null;
+    final frame = readAvatarFrameUrl(viewer);
     return <String, dynamic>{
       'id': id,
       'targetId': id,
@@ -4951,8 +4956,55 @@ class LiveBroadcastController extends GetxController {
           'display_picture',
         ]),
       ),
+      if (frame != null && frame.isNotEmpty) 'avatarFrameUrl': frame,
       'isHost': false,
       'isCurrentUser': _userIdsMatch(id, _currentUserId()),
+    };
+  }
+
+  Map<String, Map<String, dynamic>> _viewersById() {
+    return {
+      for (final item in liveViewers)
+        if ((item['id']?.toString() ?? '').isNotEmpty)
+          item['id'].toString(): item,
+    };
+  }
+
+  /// Keeps a viewer's photo and avatar frame when Zego replaces the row.
+  Map<String, dynamic> _viewerRow({
+    required String id,
+    required String targetId,
+    required String name,
+    required bool isHostUser,
+    required bool isCurrentUser,
+    String? avatarUrl,
+    Map<String, dynamic>? previous,
+  }) {
+    final session = Get.isRegistered<UserSessionController>()
+        ? Get.find<UserSessionController>()
+        : null;
+    final sessionPhoto = session?.displayPictureUrl?.trim() ?? '';
+    final photo = (avatarUrl?.trim().isNotEmpty == true)
+        ? avatarUrl!.trim()
+        : (isCurrentUser && sessionPhoto.isNotEmpty)
+        ? sessionPhoto
+        : previous?['avatarUrl']?.toString();
+    final hostFrame = hostAvatarFrameUrl.value?.trim() ?? '';
+    final mine = session?.profileFrameUrl.trim() ?? '';
+    final frame = isHostUser && hostFrame.isNotEmpty
+        ? hostFrame
+        : isCurrentUser && mine.isNotEmpty
+        ? mine
+        : previous?['avatarFrameUrl']?.toString();
+    return <String, dynamic>{
+      'id': id,
+      'targetId': targetId,
+      'name': name,
+      if (photo != null && photo.trim().isNotEmpty) 'avatarUrl': photo.trim(),
+      if (frame != null && frame.trim().isNotEmpty)
+        'avatarFrameUrl': frame.trim(),
+      'isHost': isHostUser,
+      'isCurrentUser': isCurrentUser,
     };
   }
 

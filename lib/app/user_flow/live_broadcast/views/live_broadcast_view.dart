@@ -1626,7 +1626,7 @@ class _LiveAudienceAvatarButton extends StatelessWidget {
           imageUrl: avatarUrl,
           frameUrl: frameUrl,
           frameSeed: viewer['targetId']?.toString() ?? name,
-          size: 38,
+          size: 32,
           fontSize: TextStyles.k10FontSize,
         ),
       ),
@@ -1676,15 +1676,13 @@ class _ViewerAvatarButton extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
-      child: AppUserAvatar(
+      child: FramedUserAvatar(
         name: name,
         imageUrl: avatarUrl,
-        size: 32,
+        frameUrl: viewer['avatarFrameUrl']?.toString(),
+        frameSeed: viewer['targetId']?.toString() ?? name,
+        size: 28,
         fontSize: TextStyles.k10FontSize,
-        border: Border.all(
-          color: kColorWhite.withValues(alpha: 0.70),
-          width: 1.5,
-        ),
       ),
     );
   }

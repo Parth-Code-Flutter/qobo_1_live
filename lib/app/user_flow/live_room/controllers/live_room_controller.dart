@@ -15,6 +15,7 @@ import 'package:qobo_one_live/repo/room/room_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/services/room/join_approval_service.dart';
+import 'package:qobo_one_live/repo/frame/frame_urls.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_dialogs/live_stream_access_denied_dialog.dart';
 import 'package:qobo_one_live/utils/live_streaming_permissions.dart';
@@ -401,15 +402,8 @@ class LiveRoomController extends GetxController {
           room['hostAvatar']?.toString() ??
           room['displayPicture']?.toString(),
     );
-    final hostFrame = ApiImageUtils.normalize(
-      _extractFrameUrl(hostMap?['avatarFrame']) ??
-          _extractFrameUrl(hostMap?['avatarFrameUrl']) ??
-          _extractFrameUrl(hostMap?['profileFrameUrl']) ??
-          _extractFrameUrl(room['avatarFrame']) ??
-          _extractFrameUrl(room['hostAvatarFrame']) ??
-          room['avatarFrameUrl']?.toString() ??
-          room['hostAvatarFrameUrl']?.toString() ??
-          room['profileFrameUrl']?.toString(),
+    final hostFrame = readHostAvatarFrameUrl(
+      Map<String, dynamic>.from(room),
     );
     final hostId = hostMap?['_id']?.toString() ??
         hostMap?['id']?.toString() ??
@@ -460,30 +454,6 @@ class LiveRoomController extends GetxController {
       if (hostId != null && hostId.isNotEmpty && hostId != 'null')
         'hostId': hostId,
     };
-  }
-
-  /// Pull equipped frame URL from a string or `{ image / url / frameUrl / svga }`.
-  String? _extractFrameUrl(dynamic frame) {
-    if (frame == null) return null;
-    if (frame is String) {
-      final text = frame.trim();
-      return (text.isEmpty || text == 'null') ? null : text;
-    }
-    if (frame is Map) {
-      for (final key in [
-        'image',
-        'imageUrl',
-        'url',
-        'frameUrl',
-        'svga',
-        'svgaUrl',
-        'animationUrl',
-      ]) {
-        final text = frame[key]?.toString().trim();
-        if (text != null && text.isNotEmpty && text != 'null') return text;
-      }
-    }
-    return null;
   }
 
   bool _hasRoomData(Map<String, dynamic>? response) {

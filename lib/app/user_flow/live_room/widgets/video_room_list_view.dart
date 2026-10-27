@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/repo/frame/frame_urls.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
@@ -214,30 +215,7 @@ class _VideoRoomListViewState extends State<VideoRoomListView> {
         ) ??
         fallbackImages[(index + 1) % fallbackImages.length];
 
-    final frameUrl = ApiImageUtils.normalize(
-      _readFrameUrl(room['avatarFrame']) ??
-          _firstNonEmpty([
-            room['avatarFrameUrl'],
-            room['hostAvatarFrame'],
-            room['hostAvatarFrameUrl'],
-            room['profileFrameUrl'],
-            room['frameUrl'],
-          ]) ??
-          _readFrameUrl(hostMap['avatarFrame']) ??
-          _firstNonEmpty([
-            hostMap['avatarFrameUrl'],
-            hostMap['profileFrameUrl'],
-            hostMap['frameUrl'],
-          ]) ??
-          _readFrameUrl(nestedMap['avatarFrame']) ??
-          _readFrameUrl(nestedMap['hostAvatarFrame']) ??
-          _firstNonEmpty([
-            nestedMap['avatarFrameUrl'],
-            nestedMap['hostAvatarFrameUrl'],
-            nestedMap['profileFrameUrl'],
-            nestedMap['frameUrl'],
-          ]),
-    );
+    final frameUrl = readHostAvatarFrameUrl(room);
 
     final countryRaw = _firstNonEmpty([
       room['countryCode'],
@@ -278,21 +256,6 @@ class _VideoRoomListViewState extends State<VideoRoomListView> {
       if (text != null) return text;
     }
     return null;
-  }
-
-  String? _readFrameUrl(dynamic frame) {
-    if (frame == null) return null;
-    if (frame is String) return _text(frame);
-    if (frame is Map) {
-      return _firstNonEmpty([
-        frame['image'],
-        frame['imageUrl'],
-        frame['url'],
-        frame['frameUrl'],
-        frame['svga'],
-      ]);
-    }
-    return _text(frame);
   }
 
   String? _text(dynamic value) {

@@ -15,6 +15,7 @@ import 'package:qobo_one_live/repo/banner/models/promo_banner.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/pk/pk_v1_coordinator.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
+import 'package:qobo_one_live/repo/frame/frame_urls.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
@@ -1329,33 +1330,7 @@ class LiveRoomView extends StatelessWidget {
   }
 
   String? _roomHostFrameUrl(Map<String, dynamic> room) {
-    final nestedMap = _nestedRoomMap(room);
-    final hostMap = _hostMap(room, nestedMap);
-
-    return ApiImageUtils.normalize(
-      _readFrameUrl(room['avatarFrame']) ??
-          _firstNonEmpty([
-            room['avatarFrameUrl'],
-            room['hostAvatarFrame'],
-            room['hostAvatarFrameUrl'],
-            room['profileFrameUrl'],
-            room['frameUrl'],
-          ]) ??
-          _readFrameUrl(hostMap['avatarFrame']) ??
-          _firstNonEmpty([
-            hostMap['avatarFrameUrl'],
-            hostMap['profileFrameUrl'],
-            hostMap['frameUrl'],
-          ]) ??
-          _readFrameUrl(nestedMap['avatarFrame']) ??
-          _readFrameUrl(nestedMap['hostAvatarFrame']) ??
-          _firstNonEmpty([
-            nestedMap['avatarFrameUrl'],
-            nestedMap['hostAvatarFrameUrl'],
-            nestedMap['profileFrameUrl'],
-            nestedMap['frameUrl'],
-          ]),
-    );
+    return readHostAvatarFrameUrl(room);
   }
 
   /// When listing omits host frame but the room is yours, reuse AppBar frame.
@@ -1424,21 +1399,6 @@ class LiveRoomView extends StatelessWidget {
       if (text != null && text.isNotEmpty && text != 'null') return text;
     }
     return null;
-  }
-
-  String? _readFrameUrl(dynamic frame) {
-    if (frame == null) return null;
-    if (frame is String) return _firstNonEmpty([frame]);
-    if (frame is Map) {
-      return _firstNonEmpty([
-        frame['image'],
-        frame['imageUrl'],
-        frame['url'],
-        frame['frameUrl'],
-        frame['svga'],
-      ]);
-    }
-    return _firstNonEmpty([frame]);
   }
 
   UserSessionController _resolveUserSession() {

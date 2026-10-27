@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
+import 'package:qobo_one_live/repo/frame/frame_urls.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
@@ -102,8 +103,6 @@ class AudioRoomGridView extends StatelessWidget {
     const fallbackImages = [kImgTemp2, kImgTemp3, kImgTemp4, kImgTemp5];
     final host = room['host'];
     final hostMap = host is Map ? host : const <String, dynamic>{};
-    final nested = room['room'];
-    final nestedMap = nested is Map ? nested : const <String, dynamic>{};
     final title = _text(room['name']) ?? _text(room['title']) ?? 'Audio Room';
     final hostName =
         _text(room['hostName']) ?? _text(hostMap['name']) ?? 'Host';
@@ -127,29 +126,7 @@ class AudioRoomGridView extends StatelessWidget {
               _text(room['coverImage']),
         ) ??
         fallbackImages[index % fallbackImages.length];
-    final frameUrl = ApiImageUtils.normalize(
-      _readFrameUrl(room['avatarFrame']) ??
-          _firstNonEmpty([
-            room['avatarFrameUrl'],
-            room['hostAvatarFrame'],
-            room['hostAvatarFrameUrl'],
-            room['profileFrameUrl'],
-            room['frameUrl'],
-          ]) ??
-          _readFrameUrl(hostMap['avatarFrame']) ??
-          _firstNonEmpty([
-            hostMap['avatarFrameUrl'],
-            hostMap['profileFrameUrl'],
-            hostMap['frameUrl'],
-          ]) ??
-          _readFrameUrl(nestedMap['avatarFrame']) ??
-          _firstNonEmpty([
-            nestedMap['avatarFrameUrl'],
-            nestedMap['hostAvatarFrameUrl'],
-            nestedMap['profileFrameUrl'],
-            nestedMap['frameUrl'],
-          ]),
-    );
+    final frameUrl = readHostAvatarFrameUrl(room);
 
     return (
       title: title,
@@ -162,29 +139,6 @@ class AudioRoomGridView extends StatelessWidget {
       frameUrl: frameUrl,
       room: room,
     );
-  }
-
-  String? _firstNonEmpty(List<dynamic> values) {
-    for (final value in values) {
-      final text = _text(value);
-      if (text != null) return text;
-    }
-    return null;
-  }
-
-  String? _readFrameUrl(dynamic frame) {
-    if (frame == null) return null;
-    if (frame is String) return _text(frame);
-    if (frame is Map) {
-      return _firstNonEmpty([
-        frame['image'],
-        frame['imageUrl'],
-        frame['url'],
-        frame['frameUrl'],
-        frame['svga'],
-      ]);
-    }
-    return _text(frame);
   }
 
   String? _text(dynamic value) {
