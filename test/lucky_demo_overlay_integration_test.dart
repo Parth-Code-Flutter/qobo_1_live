@@ -55,6 +55,7 @@ void main() {
       for (var i = 0; i < 5; i++) {
         await tester.tap(find.text('Heart'));
         await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump();
         expect(tester.takeException(), isNull);
         expect(find.byType(LuckyDemoCelebration), findsOneWidget);
       }

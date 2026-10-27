@@ -25,7 +25,11 @@ void main() {
           ),
         ),
       );
-      await tester.pump(const Duration(milliseconds: 1700));
+      for (var ms = 0; ms < 500; ms += 40) {
+        await tester.pump(const Duration(milliseconds: 40));
+        expect(tester.takeException(), isNull);
+      }
+      await tester.pump(const Duration(milliseconds: 1200));
       expect(
         find.text(
           reward ? 'You get 42 coins!' : 'A little love, a lot of magic!',
@@ -41,4 +45,39 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('a finished coin reward releases the next gift animation', (
+    tester,
+  ) async {
+    late BuildContext context;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (c) {
+            context = c;
+            return const SizedBox();
+          },
+        ),
+      ),
+    );
+    LuckyDemoCelebration.show(context, reward: true, total: 12, combo: 1);
+    await tester.pump();
+    expect(LuckyDemoCelebration.rewardVisible, isTrue);
+    LuckyDemoCelebration.show(context, reward: false);
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(find.text('You get 12 coins!'), findsOneWidget);
+
+    await tester.pump(const Duration(milliseconds: 2100));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(LuckyDemoCelebration.rewardVisible, isFalse);
+
+    LuckyDemoCelebration.show(context, reward: false);
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(find.text('A little love, a lot of magic!'), findsOneWidget);
+    LuckyDemoCelebration.dismiss();
+    await tester.pump();
+  });
 }

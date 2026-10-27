@@ -1428,9 +1428,9 @@ class LiveBroadcastController extends GetxController {
             // Resolve effects from the mounted sheet inside that Overlay.
             final continued = _luckySession!.continuesFromLastTap(gift.id);
             final context = _luckySheetKey.currentContext;
-            final rewardOnScreen = LuckyDemoCelebration.rewardVisible;
-            if (context != null && context.mounted && !rewardOnScreen) {
-              if (!continued) {
+            if (context != null && context.mounted) {
+              // Coins stay on their own overlay. They must not block the gift flight.
+              if (!continued && !LuckyDemoCelebration.rewardVisible) {
                 LuckyDemoCelebration.show(context, reward: false);
               }
               final size = MediaQuery.sizeOf(context);

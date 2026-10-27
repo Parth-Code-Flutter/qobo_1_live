@@ -11,6 +11,7 @@ import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
 import '../controllers/mall_controller.dart';
+import '../widgets/mall_spend_burst.dart';
 
 class MallView extends GetView<MallController> {
   const MallView({super.key});
@@ -27,14 +28,40 @@ class MallView extends GetView<MallController> {
         subtitle: 'Frames, effects & premium looks',
         trailingIcon: Icons.storefront_rounded,
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: Stack(
         children: [
-          _balanceBar(),
-          _previewSection(),
-          _tabs(),
-          Expanded(child: _storeGrid()),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _balanceBar(),
+              _previewSection(),
+              _tabs(),
+              Expanded(child: _storeGrid()),
+            ],
+          ),
+          Obx(_spendBurst),
         ],
+      ),
+    );
+  }
+
+  Widget _spendBurst() {
+    final token = controller.spendToken.value;
+    final price = controller.spendAmount.value;
+    if (token == 0 || price <= 0) return const SizedBox.shrink();
+    return Align(
+      alignment: Alignment.topLeft,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 28, top: 8),
+        child: MallSpendBurst(
+          key: ValueKey(token),
+          price: price,
+          onDone: () {
+            if (controller.spendToken.value == token) {
+              controller.clearSpendBurst();
+            }
+          },
+        ),
       ),
     );
   }

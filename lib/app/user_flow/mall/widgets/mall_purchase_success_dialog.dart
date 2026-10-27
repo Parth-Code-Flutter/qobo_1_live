@@ -6,20 +6,16 @@ import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
-/// Premium confirmation after a mall purchase.
+/// Premium confirmation after a mall purchase. The spend itself floats on
+/// the mall balance, not inside this card.
 class MallPurchaseSuccessDialog extends StatefulWidget {
-  const MallPurchaseSuccessDialog({
-    super.key,
-    required this.name,
-    required this.price,
-  });
+  const MallPurchaseSuccessDialog({super.key, required this.name});
 
   final String name;
-  final int price;
 
-  static Future<void> show({required String name, required int price}) {
+  static Future<void> show({required String name}) {
     return Get.dialog<void>(
-      MallPurchaseSuccessDialog(name: name, price: price),
+      MallPurchaseSuccessDialog(name: name),
       barrierDismissible: false,
       barrierColor: Colors.black.withValues(alpha: 0.46),
     );
@@ -81,7 +77,9 @@ class _MallPurchaseSuccessDialogState extends State<MallPurchaseSuccessDialog>
               Container(
                 height: 5,
                 width: double.infinity,
-                decoration: const BoxDecoration(gradient: AppLightUi.familyCtaGradient),
+                decoration: const BoxDecoration(
+                  gradient: AppLightUi.familyCtaGradient,
+                ),
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(22, 22, 22, 20),
@@ -90,30 +88,37 @@ class _MallPurchaseSuccessDialogState extends State<MallPurchaseSuccessDialog>
                   children: [
                     _badge(),
                     Spacing.v16,
-                    const SemiBoldText(
-                      text: 'Purchase complete',
-                      fontSize: TextStyles.k18FontSize,
-                      color: AppLightUi.title,
-                      align: TextAlign.center,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppLightUi.pink.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const SemiBoldText(
+                        text: 'It\'s yours',
+                        fontSize: TextStyles.k12FontSize,
+                        color: AppLightUi.pink,
+                      ),
                     ),
-                    Spacing.v6,
+                    Spacing.v10,
                     SemiBoldText(
                       text: widget.name,
-                      fontSize: TextStyles.k16FontSize,
-                      color: AppLightUi.pink,
+                      fontSize: TextStyles.k18FontSize,
+                      color: AppLightUi.title,
                       align: TextAlign.center,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     Spacing.v6,
                     const AppText(
-                      text: 'Added to your Backpack',
+                      text: 'Saved in your backpack.\nWear it whenever you like.',
                       fontSize: TextStyles.k12FontSize,
                       color: AppLightUi.subtitle,
                       align: TextAlign.center,
                     ),
-                    Spacing.v16,
-                    _priceChip(),
                     Spacing.v16,
                     _doneButton(),
                   ],
@@ -149,37 +154,9 @@ class _MallPurchaseSuccessDialogState extends State<MallPurchaseSuccessDialog>
         );
       },
       child: const Icon(
-        Icons.check_rounded,
+        Icons.favorite_rounded,
         color: kColorWhite,
-        size: 42,
-      ),
-    );
-  }
-
-  Widget _priceChip() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFFFFF6D8),
-            AppLightUi.gold.withValues(alpha: 0.22),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppLightUi.gold.withValues(alpha: 0.55)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.diamond_rounded, color: Color(0xFFD97706), size: 16),
-          Spacing.h6,
-          SemiBoldText(
-            text: '${widget.price} Diamonds paid',
-            fontSize: TextStyles.k12FontSize,
-            color: const Color(0xFF9A5B00),
-          ),
-        ],
+        size: 36,
       ),
     );
   }
@@ -207,7 +184,7 @@ class _MallPurchaseSuccessDialogState extends State<MallPurchaseSuccessDialog>
             onTap: Get.back,
             child: const Center(
               child: SemiBoldText(
-                text: 'Awesome',
+                text: 'Love it',
                 fontSize: TextStyles.k16FontSize,
                 color: kColorWhite,
               ),

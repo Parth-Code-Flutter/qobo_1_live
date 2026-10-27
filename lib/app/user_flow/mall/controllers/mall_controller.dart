@@ -30,6 +30,8 @@ class MallController extends GetxController {
   final isLoading = false.obs;
 
   final coinsBalance = 0.obs;
+  final spendAmount = 0.obs;
+  final spendToken = 0.obs;
 
   final tabs = <Map<String, dynamic>>[
     {'id': 1, 'name': 'Avatar Frames'},
@@ -716,8 +718,19 @@ class MallController extends GetxController {
   Future<void> _showPurchaseSuccessDialog({
     required String name,
     required int price,
-  }) {
-    return MallPurchaseSuccessDialog.show(name: name, price: price);
+  }) async {
+    await MallPurchaseSuccessDialog.show(name: name);
+    _flashSpend(price);
+  }
+
+  void _flashSpend(int price) {
+    if (price <= 0) return;
+    spendAmount.value = price;
+    spendToken.value++;
+  }
+
+  void clearSpendBurst() {
+    spendAmount.value = 0;
   }
 
   void _showInsufficientCoinsDialog({
