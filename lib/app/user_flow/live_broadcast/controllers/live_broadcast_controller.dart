@@ -49,6 +49,7 @@ import '../widgets/lucky_gift_trail.dart';
 import 'package:qobo_one_live/services/gifts/lucky_tap_sound.dart';
 import '../widgets/lucky_demo_celebration.dart';
 import 'package:qobo_one_live/utils/ui_utils/avatar_fly_overlay.dart';
+import 'package:qobo_one_live/repo/frame/frame_repo.dart';
 import 'package:qobo_one_live/repo/frame/frame_urls.dart';
 import 'package:qobo_one_live/utils/ui_utils/vip_entrance_overlay.dart';
 import 'package:share_plus/share_plus.dart';
@@ -4432,21 +4433,25 @@ class LiveBroadcastController extends GetxController {
     Map<String, dynamic> data,
     String apiRoomId,
   ) {
-    final viewer = data['viewer'] is Map
-        ? Map<String, dynamic>.from(data['viewer'] as Map)
+    final nested = data['data'] is Map
+        ? Map<String, dynamic>.from(data['data'] as Map)
         : data;
+    final viewer = nested['viewer'] is Map
+        ? Map<String, dynamic>.from(nested['viewer'] as Map)
+        : nested['user'] is Map
+        ? Map<String, dynamic>.from(nested['user'] as Map)
+        : nested;
     final eventRoomId =
         (data['roomId'] ??
                 data['room_id'] ??
+                nested['roomId'] ??
+                nested['room_id'] ??
                 viewer['roomId'] ??
                 viewer['room_id'])
             ?.toString()
             .trim() ??
         '';
-    final localZegoId = roomId.value.trim();
-    if (eventRoomId.isNotEmpty &&
-        eventRoomId != apiRoomId &&
-        eventRoomId != localZegoId) {
+    if (eventRoomId.isNotEmpty && !_eventMatchesThisRoom(eventRoomId, apiRoomId)) {
       return;
     }
     final userId =
@@ -4477,7 +4482,10 @@ class LiveBroadcastController extends GetxController {
                 data['displayPicture'] ??
                 data['display_picture'])
             ?.toString();
-    final frameUrl = readEntryFrameUrl(viewer) ?? readEntryFrameUrl(data);
+    final frameUrl =
+        readEntryFrameUrl(viewer) ??
+        readEntryFrameUrl(nested) ??
+        readEntryFrameUrl(data);
     final pattiStyle =
         (viewer['patti_style'] ??
                 viewer['pattiStyle'] ??
@@ -4503,14 +4511,123 @@ class LiveBroadcastController extends GetxController {
   }
 
   /// First seats snapshot only seeds dedupe — skip people already in the room.
+  /// The local user is left out so their equipped entry still plays on join.
   void _seedVipEntranceBaselineFromSeats(List<AudioRoomSeatModel> seats) {
+    final myId = _currentUserId();
     for (final seat in seats) {
       final userId = seat.userId.trim();
       if (userId.isEmpty) continue;
+      if (myId.isNotEmpty && _userIdsMatch(userId, myId)) continue;
       if (!_seatHasEntranceEffect(seat)) continue;
       _vipEntrancePlayedUserIds.add(userId);
     }
     _vipSeatEntranceBaselineReady = true;
+  }
+
+  bool _eventMatchesThisRoom(String eventRoomId, String apiRoomId) {
+    final eventId = eventRoomId.trim();
+    if (eventId.isEmpty) return true;
+    final localIds = <String>{
+      apiRoomId,
+      roomId.value,
+      audioRoomApiId,
+      liveStreamingApiId,
+      liveZegoRoomId,
+      _extractBackendRoomId(_roomData) ?? '',
+    };
+    for (final id in localIds) {
+      final local = id.trim();
+      if (local.isEmpty) continue;
+      if (local == eventId) return true;
+      final sanitizedEvent = ZegoLiveIdUtils.sanitize(eventId);
+      final sanitizedLocal = ZegoLiveIdUtils.sanitize(local);
+      if (sanitizedEvent.isNotEmpty && sanitizedEvent == sanitizedLocal) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool _myEntryScheduled = false;
+  bool _lookedUpMyEntry = false;
+  String _cachedMyEntryUrl = '';
+
+  /// Called from the room view once it is on screen. onInit is too early:
+  /// the dialog has no route yet, and marking the entrance played hides it.
+  void scheduleMyEntryPlayback() {
+    if (_myEntryScheduled || isClosed || _exitReported) return;
+    _myEntryScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_playMyEquippedEntryOnce());
+    });
+  }
+
+  /// Play this account's equipped entry when they enter. The join socket often
+  /// fires before this screen is listening, so the buyer would otherwise see nothing.
+  Future<void> _playMyEquippedEntryOnce() async {
+    if (!Get.isRegistered<UserSessionController>()) return;
+    final session = Get.find<UserSessionController>();
+    for (var attempt = 0; attempt < 6; attempt++) {
+      if (_exitReported || isClosed) return;
+      await Future<void>.delayed(
+        Duration(milliseconds: attempt == 0 ? 700 : 500),
+      );
+      if (_exitReported || isClosed) return;
+      final url = await _resolveMyEntryUrl(session);
+      final myId = session.userId.trim();
+      if (url.isEmpty || myId.isEmpty) continue;
+      if (_vipEntrancePlayedUserIds.contains(myId)) return;
+      final patti = session.pattiStyle.trim().toLowerCase();
+      final shown = _playVipEntranceOnce(
+        userId: myId,
+        userName: session.displayName,
+        avatarUrl: session.displayPictureUrl,
+        vipFrameUrl: url,
+        pattiStyle: patti.isEmpty || patti == 'classic' ? null : patti,
+      );
+      if (shown) return;
+    }
+  }
+
+  Future<String> _resolveMyEntryUrl(UserSessionController session) async {
+    if (_cachedMyEntryUrl.isNotEmpty) return _cachedMyEntryUrl;
+    var url = session.entryFrameUrl.trim();
+    if (url.isEmpty && !_lookedUpMyEntry) {
+      _lookedUpMyEntry = true;
+      await session.refreshProfileFromApi();
+      if (_exitReported || isClosed) return '';
+      url = session.entryFrameUrl.trim();
+      if (url.isEmpty) url = await _entryUrlFromBackpack();
+    }
+    if (url.isNotEmpty) _cachedMyEntryUrl = url;
+    return url;
+  }
+
+  Future<String> _entryUrlFromBackpack() async {
+    final response = await FrameRepo().getMyBackpack(
+      type: FrameCatalogType.entry,
+      isShowLoader: false,
+    );
+    final data = response?['data'];
+    final rows = data is List
+        ? data
+        : (data is Map && data['items'] is List)
+        ? data['items'] as List
+        : const [];
+    String fallback = '';
+    for (final raw in rows.whereType<Map>()) {
+      final map = Map<String, dynamic>.from(raw);
+      final details = map['frameDetails'] ?? map['frame_details'];
+      final detailMap = details is Map
+          ? Map<String, dynamic>.from(details)
+          : null;
+      if (!frameCatalogIsEntry(map, details: detailMap)) continue;
+      final url = readEntryFrameUrl(map) ?? readEntryFrameUrl(detailMap);
+      if (url == null || url.isEmpty) continue;
+      if (map['isEquipped'] == true) return url;
+      fallback = url;
+    }
+    return fallback;
   }
 
   /// After baseline, play entrance for VIPs / patti users who newly appear.
@@ -4540,7 +4657,7 @@ class LiveBroadcastController extends GetxController {
     }
   }
 
-  void _playVipEntranceOnce({
+  bool _playVipEntranceOnce({
     required String userId,
     required String userName,
     String? avatarUrl,
@@ -4553,17 +4670,19 @@ class LiveBroadcastController extends GetxController {
         vipFrameUrl?.trim() ??
         '';
     final patti = pattiStyle?.trim() ?? '';
-    if (id.isEmpty) return;
+    if (id.isEmpty) return false;
     // Socket / seats may send VIP frame only, patti only, or both.
-    if (frame.isEmpty && patti.isEmpty) return;
-    if (!_vipEntrancePlayedUserIds.add(id)) return;
+    if (frame.isEmpty && patti.isEmpty) return false;
+    if (_vipEntrancePlayedUserIds.contains(id)) return false;
 
-    VipEntranceOverlay.show(
+    final shown = VipEntranceOverlay.show(
       userName: userName,
       avatarUrl: avatarUrl,
       vipFrameUrl: frame.isEmpty ? null : frame,
       pattiStyle: patti.isEmpty ? null : patti,
     );
+    if (shown) _vipEntrancePlayedUserIds.add(id);
+    return shown;
   }
 
   void _unbindRoomBackgroundSocket() {
@@ -4708,14 +4827,7 @@ class LiveBroadcastController extends GetxController {
           ],
         );
     if (eventId == null || eventId.isEmpty) return true;
-
-    final localIds = <String>{
-      liveStreamingApiId,
-      liveZegoRoomId,
-      roomId.value,
-      _extractBackendRoomId(_roomData) ?? '',
-    }.map((id) => id.trim()).where((id) => id.isNotEmpty).toSet();
-    return localIds.contains(eventId.trim());
+    return _eventMatchesThisRoom(eventId, '');
   }
 
   void _updateLiveViewerCountFromSocket(Map<String, dynamic> data) {

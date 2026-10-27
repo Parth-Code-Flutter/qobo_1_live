@@ -36,6 +36,7 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
 
   @override
   Widget build(BuildContext context) {
+    controller.scheduleMyEntryPlayback();
     _ensureZegoScreenUtil(context);
     if (controller.isAudioVideoRoom) {
       return Scaffold(

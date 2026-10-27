@@ -128,4 +128,19 @@ void main() {
       isNull,
     );
   });
+
+  test('equipped backpack entry row uses frameDetails svga', () {
+    expect(
+      readEntryFrameUrl({
+        'itemType': 'VIP_FRAME',
+        'frameType': 'entry',
+        'isEquipped': true,
+        'frameDetails': {
+          'svgaUrl': entryUrl,
+          'frameType': 'entry',
+        },
+      }),
+      entryUrl,
+    );
+  });
 }

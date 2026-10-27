@@ -15,7 +15,8 @@ class VipEntranceOverlay {
 
   static BuildContext? _dialogContext;
 
-  static void show({
+  /// Returns false when there is nothing to show or the room route is not ready.
+  static bool show({
     required String userName,
     String? avatarUrl,
     String? vipFrameUrl,
@@ -32,15 +33,16 @@ class VipEntranceOverlay {
     final patti = pattiStyle?.trim() ?? '';
 
     // Need at least a VIP frame URL or a patti style label to show.
-    if (frame.isEmpty && patti.isEmpty) return;
+    if (frame.isEmpty && patti.isEmpty) return false;
 
     BuildContext? navigatorContext;
     try {
-      navigatorContext = Get.context ?? Get.key.currentContext;
+      navigatorContext =
+          Get.overlayContext ?? Get.context ?? Get.key.currentContext;
     } catch (_) {
       navigatorContext = null;
     }
-    if (navigatorContext == null) return;
+    if (navigatorContext == null || !navigatorContext.mounted) return false;
 
     // Transparent barrier (same as gifts) so SVGA sits above Zego PlatformViews.
     Get.dialog<void>(
@@ -69,6 +71,7 @@ class VipEntranceOverlay {
         },
       ),
     );
+    return true;
   }
 
   static void dismiss() {

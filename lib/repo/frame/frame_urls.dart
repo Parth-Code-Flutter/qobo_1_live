@@ -19,8 +19,12 @@ String? readEntryFrameUrl(Map<String, dynamic>? raw) {
     'entry_frame',
     'vipFrame',
     'vip_frame',
+    'frameDetails',
+    'frame_details',
   ]) {
-    final text = _urlFromFrameValue(raw[key]);
+    final value = raw[key];
+    if (value is Map && !_isEntryFrame(value) && !_isEntryFrame(raw)) continue;
+    final text = _urlFromFrameValue(value);
     if (text != null) return text;
   }
   final viewer = raw['viewer'];
