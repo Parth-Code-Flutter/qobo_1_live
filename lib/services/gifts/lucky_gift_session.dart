@@ -66,9 +66,11 @@ class LuckyGiftRepo {
 }
 
 class _LuckyTap {
-  _LuckyTap(this.gift, this.host, this.channel);
+  _LuckyTap(this.gift, this.host, this.channel, this.combo, this.continued);
   final LuckyGift gift;
   final String host, channel;
+  final int combo;
+  final bool continued;
   Map<String, dynamic>? body;
 }
 
@@ -80,24 +82,42 @@ class LuckyGiftSession extends ChangeNotifier {
     required this.token,
     required this.isOwner,
     required this.onSuccess,
-  });
+    DateTime Function()? clock,
+  }) : clock = clock ?? DateTime.now;
+
+  /// Taps this close together stay on the same combo. A longer gap starts over.
+  static const continueTapWindow = Duration(seconds: 2);
+
   final LuckyGiftRepo repo;
   final String token;
   final bool Function() isOwner;
   final void Function(LuckyGift gift, Map data, String host) onSuccess;
+  final DateTime Function() clock;
   List<LuckyGift> gifts = [];
   bool loading = false, busy = false, _disposed = false;
   String message = '';
   int? balance;
   final Map<String, int> combos = {};
+  final Map<String, int> _nextCombo = {};
+  final Map<String, DateTime> _lastTapAt = {};
   String? _previewGift;
   int _previewCount = 0;
   bool previewing = false;
+
+  /// True when this gift was tapped inside [continueTapWindow]. Does not record the tap.
+  bool continuesFromLastTap(String giftId) {
+    final last = _lastTapAt[giftId];
+    if (last == null) return false;
+    return clock().difference(last) <= continueTapWindow;
+  }
   int displayedCombo(String id) =>
       previewing ? (_previewGift == id ? _previewCount : 0) : (combos[id] ?? 0);
   bool previewTap(LuckyGift gift) {
     previewing = true;
-    if (_previewGift != gift.id) {
+    final continued =
+        _previewGift == gift.id && continuesFromLastTap(gift.id);
+    _lastTapAt[gift.id] = clock();
+    if (!continued) {
       _previewGift = gift.id;
       _previewCount = 0;
     }
@@ -153,7 +173,11 @@ class LuckyGiftSession extends ChangeNotifier {
       return;
     }
     resetPreview();
-    _queue.add(_LuckyTap(gift, host, channel));
+    final continued = continuesFromLastTap(gift.id);
+    final combo = continued ? (_nextCombo[gift.id] ?? 0) + 1 : 1;
+    _lastTapAt[gift.id] = clock();
+    _nextCombo[gift.id] = combo;
+    _queue.add(_LuckyTap(gift, host, channel, combo, continued));
     unawaited(_drain());
   }
 
@@ -170,6 +194,11 @@ class LuckyGiftSession extends ChangeNotifier {
 
   void cancelQueued() {
     _queue.clear();
+  }
+
+  void _rewindCombo(_LuckyTap tap) {
+    if (_nextCombo[tap.gift.id] != tap.combo) return;
+    _nextCombo[tap.gift.id] = tap.combo - 1;
   }
 
   static String newId() {
@@ -191,12 +220,12 @@ class LuckyGiftSession extends ChangeNotifier {
           (_pending != null || _queue.isNotEmpty)) {
         final tap = _pending ?? _queue.removeAt(0);
         _pending = tap;
-        final combo = (combos[tap.gift.id] ?? 0) + 1;
         tap.body ??= {
           'gift_id': tap.gift.id,
           'quantity': 1,
-          'combo': combo,
-          'comboCount': combo,
+          'combo': tap.combo,
+          'comboCount': tap.combo,
+          'continueTap': tap.continued,
           'clientGiftId': newId(),
           if (tap.host.isNotEmpty) 'host_id': tap.host,
           if (tap.channel.isNotEmpty) 'channel_id': tap.channel,
@@ -218,6 +247,7 @@ class LuckyGiftSession extends ChangeNotifier {
         }
         if (!isEconomyApiSuccess(r) || r['data'] is! Map) {
           message = r['message']?.toString() ?? 'Lucky gift could not be sent.';
+          _rewindCombo(tap);
           _queue.clear();
           _pending = null;
           break;
@@ -229,6 +259,9 @@ class LuckyGiftSession extends ChangeNotifier {
         combos[tap.gift.id] = parseWalletAmount(
           data['combo'] ?? reward['currentCombo'] ?? tap.body!['combo'],
         );
+        if ((_nextCombo[tap.gift.id] ?? 0) <= tap.combo) {
+          _nextCombo[tap.gift.id] = combos[tap.gift.id]!;
+        }
         final coins = data['userCoins'] ?? reward['userCoins'];
         if (coins != null) balance = parseWalletAmount(coins);
         final won =

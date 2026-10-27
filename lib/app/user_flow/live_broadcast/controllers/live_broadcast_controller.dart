@@ -49,6 +49,7 @@ import '../widgets/lucky_gift_trail.dart';
 import 'package:qobo_one_live/services/gifts/lucky_tap_sound.dart';
 import '../widgets/lucky_demo_celebration.dart';
 import 'package:qobo_one_live/utils/ui_utils/avatar_fly_overlay.dart';
+import 'package:qobo_one_live/repo/frame/frame_urls.dart';
 import 'package:qobo_one_live/utils/ui_utils/vip_entrance_overlay.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:zego_express_engine/zego_express_engine.dart';
@@ -1425,9 +1426,13 @@ class LiveBroadcastController extends GetxController {
             // Visual repetitions never repeat the API request or coin charge.
             // Get.context belongs to Navigator itself, above its Overlay.
             // Resolve effects from the mounted sheet inside that Overlay.
+            final continued = _luckySession!.continuesFromLastTap(gift.id);
             final context = _luckySheetKey.currentContext;
-            if (context != null && context.mounted) {
-              LuckyDemoCelebration.show(context, reward: false);
+            final rewardOnScreen = LuckyDemoCelebration.rewardVisible;
+            if (context != null && context.mounted && !rewardOnScreen) {
+              if (!continued) {
+                LuckyDemoCelebration.show(context, reward: false);
+              }
               final size = MediaQuery.sizeOf(context);
               LuckyGiftTrail.show(
                 context,
@@ -4420,52 +4425,81 @@ class LiveBroadcastController extends GetxController {
   void Function(Map<String, dynamic>) _buildVipUserJoinedListener(
     String apiRoomId,
   ) {
-    return (data) {
-      final eventRoomId =
-          (data['roomId'] ?? data['room_id'])?.toString().trim() ?? '';
-      final localZegoId = roomId.value.trim();
-      if (eventRoomId.isNotEmpty &&
-          eventRoomId != apiRoomId &&
-          eventRoomId != localZegoId) {
-        return;
-      }
-      final userId =
-          (data['user_id'] ?? data['userId'] ?? data['id'])
-              ?.toString()
-              .trim() ??
-          '';
-      final userName =
-          (data['user_name'] ?? data['userName'] ?? data['name'])
-              ?.toString()
-              .trim() ??
-          'VIP Member';
-      final avatar =
-          (data['avatar'] ?? data['displayPicture'] ?? data['display_picture'])
-              ?.toString();
-      final frameUrl =
-          (data['vip_frame_url'] ??
-                  data['vipFrameUrl'] ??
-                  data['frame_url'] ??
-                  data['frameUrl'])
-              ?.toString();
-      final pattiStyle =
-          (data['patti_style'] ?? data['pattiStyle'])?.toString().trim() ?? '';
-      _playVipEntranceOnce(
-        userId: userId.isNotEmpty
-            ? userId
-            : '$userName|${frameUrl ?? ''}|$pattiStyle',
-        userName: userName,
-        avatarUrl: avatar,
-        vipFrameUrl: frameUrl,
-        pattiStyle: pattiStyle,
-      );
-    };
+    return (data) => _playEntryEffectFromPayload(data, apiRoomId);
+  }
+
+  void _playEntryEffectFromPayload(
+    Map<String, dynamic> data,
+    String apiRoomId,
+  ) {
+    final viewer = data['viewer'] is Map
+        ? Map<String, dynamic>.from(data['viewer'] as Map)
+        : data;
+    final eventRoomId =
+        (data['roomId'] ??
+                data['room_id'] ??
+                viewer['roomId'] ??
+                viewer['room_id'])
+            ?.toString()
+            .trim() ??
+        '';
+    final localZegoId = roomId.value.trim();
+    if (eventRoomId.isNotEmpty &&
+        eventRoomId != apiRoomId &&
+        eventRoomId != localZegoId) {
+      return;
+    }
+    final userId =
+        (viewer['user_id'] ??
+                viewer['userId'] ??
+                viewer['id'] ??
+                data['user_id'] ??
+                data['userId'] ??
+                data['id'])
+            ?.toString()
+            .trim() ??
+        '';
+    final userName =
+        (viewer['user_name'] ??
+                viewer['userName'] ??
+                viewer['name'] ??
+                data['user_name'] ??
+                data['userName'] ??
+                data['name'])
+            ?.toString()
+            .trim() ??
+        'VIP Member';
+    final avatar =
+        (viewer['avatar'] ??
+                viewer['displayPicture'] ??
+                viewer['display_picture'] ??
+                data['avatar'] ??
+                data['displayPicture'] ??
+                data['display_picture'])
+            ?.toString();
+    final frameUrl = readEntryFrameUrl(viewer) ?? readEntryFrameUrl(data);
+    final pattiStyle =
+        (viewer['patti_style'] ??
+                viewer['pattiStyle'] ??
+                data['patti_style'] ??
+                data['pattiStyle'])
+            ?.toString()
+            .trim() ??
+        '';
+    _playVipEntranceOnce(
+      userId: userId.isNotEmpty
+          ? userId
+          : '$userName|${frameUrl ?? ''}|$pattiStyle',
+      userName: userName,
+      avatarUrl: avatar,
+      vipFrameUrl: frameUrl,
+      pattiStyle: pattiStyle,
+    );
   }
 
   bool _seatHasEntranceEffect(AudioRoomSeatModel seat) {
     final frameUrl = seat.vipFrameUrl?.trim() ?? '';
-    final hasVipFrame = seat.isVip && frameUrl.isNotEmpty;
-    return hasVipFrame || seat.hasCustomPattiStyle;
+    return frameUrl.isNotEmpty || seat.hasCustomPattiStyle;
   }
 
   /// First seats snapshot only seeds dedupe — skip people already in the room.
@@ -4567,6 +4601,10 @@ class LiveBroadcastController extends GetxController {
     if (normalizedEvent.contains('viewer_joined')) {
       _upsertLiveViewerFromSocket(data);
       _updateLiveViewerCountFromSocket(data);
+      final channel = liveStreamingApiId.trim().isNotEmpty
+          ? liveStreamingApiId.trim()
+          : audioRoomApiId;
+      _playEntryEffectFromPayload(data, channel);
       return;
     }
     if (normalizedEvent.contains('viewer_left')) {
@@ -6384,6 +6422,9 @@ class LiveBroadcastController extends GetxController {
         avatarFrameUrl: session?.profileFrameUrl.trim().isNotEmpty == true
             ? session!.profileFrameUrl
             : hostAvatarFrameUrl.value,
+        vipFrameUrl: session?.entryFrameUrl.trim().isNotEmpty == true
+            ? session!.entryFrameUrl
+            : null,
         role: 'host',
         isAdmin: true,
         isSvip: session?.isSvipMember ?? false,
@@ -6428,19 +6469,28 @@ class LiveBroadcastController extends GetxController {
         ? Get.find<UserSessionController>()
         : null;
     final currentUserId = session?.userId.trim() ?? '';
-    final currentFrameUrl = session == null
-        ? ''
-        : session.profileFrameUrl.trim();
-    if (currentUserId.isEmpty || currentFrameUrl.isEmpty) return seats;
+    final currentFrameUrl = session?.profileFrameUrl.trim() ?? '';
+    final entryFrameUrl = session?.entryFrameUrl.trim() ?? '';
+    if (currentUserId.isEmpty ||
+        (currentFrameUrl.isEmpty && entryFrameUrl.isEmpty)) {
+      return seats;
+    }
 
     return seats
-        .map(
-          (seat) =>
-              seat.userId == currentUserId &&
-                  (seat.avatarFrameUrl?.trim().isEmpty ?? true)
-              ? seat.copyWith(avatarFrameUrl: currentFrameUrl)
-              : seat,
-        )
+        .map((seat) {
+          if (seat.userId != currentUserId) return seat;
+          final avatar =
+              (seat.avatarFrameUrl?.trim().isEmpty ?? true) &&
+                  currentFrameUrl.isNotEmpty
+              ? currentFrameUrl
+              : seat.avatarFrameUrl;
+          final entry =
+              (seat.vipFrameUrl?.trim().isEmpty ?? true) &&
+                  entryFrameUrl.isNotEmpty
+              ? entryFrameUrl
+              : seat.vipFrameUrl;
+          return seat.copyWith(avatarFrameUrl: avatar, vipFrameUrl: entry);
+        })
         .toList();
   }
 

@@ -1,4 +1,5 @@
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/user_active_session.dart';
+import 'package:qobo_one_live/repo/frame/frame_urls.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 
 /// Sanitized public user card from discover / search / public profile APIs.
@@ -185,30 +186,7 @@ class SocialUserCard {
   }
 
   static String? _readAvatarFrameUrl(Map<String, dynamic> json) {
-    final direct =
-        json['avatarFrameUrl'] ??
-        json['avatar_frame_url'] ??
-        json['profileFrameUrl'] ??
-        json['profile_frame_url'];
-    final directText = direct?.toString().trim();
-    if (directText != null && directText.isNotEmpty && directText != 'null') {
-      return directText;
-    }
-
-    final avatarFrame = json['avatarFrame'];
-    if (avatarFrame is Map) {
-      final nested =
-          avatarFrame['image'] ??
-          avatarFrame['imageUrl'] ??
-          avatarFrame['url'] ??
-          avatarFrame['frameUrl'];
-      final nestedText = nested?.toString().trim();
-      if (nestedText != null && nestedText.isNotEmpty && nestedText != 'null') {
-        return nestedText;
-      }
-    }
-
-    return null;
+    return readAvatarFrameUrl(json);
   }
 
   /// Equipped theme from `profileBackground` on profile / public profile APIs.

@@ -1,3 +1,5 @@
+import 'package:qobo_one_live/repo/frame/frame_urls.dart';
+
 class AudioRoomSeatModel {
   const AudioRoomSeatModel({
     required this.seatNo,
@@ -54,37 +56,8 @@ class AudioRoomSeatModel {
           'image',
         ]);
     final avatarFrame =
-        _readFrameUrl(raw['avatarFrame']) ??
-        _readFrameUrl(occupantMap?['avatarFrame']) ??
-        _readString(raw, const [
-          'avatarFrameUrl',
-          'avatar_frame_url',
-          'profileFrameUrl',
-          'profile_frame_url',
-          'frameUrl',
-          'frame_url',
-        ]) ??
-        _readString(occupantMap, const [
-          'avatarFrameUrl',
-          'avatar_frame_url',
-          'profileFrameUrl',
-          'profile_frame_url',
-          'frameUrl',
-          'frame_url',
-        ]);
-    final vipFrame =
-        _readString(raw, const [
-          'vipFrameUrl',
-          'vip_frame_url',
-          'vipFrame',
-          'vip_frame',
-        ]) ??
-        _readString(occupantMap, const [
-          'vipFrameUrl',
-          'vip_frame_url',
-          'vipFrame',
-          'vip_frame',
-        ]);
+        readAvatarFrameUrl(raw) ?? readAvatarFrameUrl(occupantMap);
+    final vipFrame = readEntryFrameUrl(raw) ?? readEntryFrameUrl(occupantMap);
     final isVip =
         _readBool(raw, const ['isVIP', 'isVip', 'is_vip']) ||
         (occupantMap != null &&
@@ -299,25 +272,6 @@ String? _readString(Map<String, dynamic>? raw, List<String> keys) {
   return null;
 }
 
-String? _readFrameUrl(dynamic value) {
-  if (value == null) return null;
-  if (value is String) {
-    final text = value.trim();
-    return text.isEmpty || text == 'null' ? null : text;
-  }
-  if (value is Map) {
-    return _readString(Map<String, dynamic>.from(value), const [
-      'image',
-      'url',
-      'frameUrl',
-      'frame_url',
-      'avatarFrameUrl',
-      'avatar_frame_url',
-    ]);
-  }
-  return null;
-}
-
 int? _readInt(Map<String, dynamic> raw, List<String> keys) {
   for (final key in keys) {
     final value = raw[key];
@@ -402,14 +356,8 @@ class FloorAudienceUser {
         'displayPicture',
         'profileImage',
       ]),
-      avatarFrameUrl:
-          _readFrameUrl(raw['avatarFrame']) ??
-          _readString(raw, const [
-            'avatarFrameUrl',
-            'avatar_frame_url',
-            'frameUrl',
-          ]),
-      vipFrameUrl: _readString(raw, const ['vipFrameUrl', 'vip_frame_url']),
+      avatarFrameUrl: readAvatarFrameUrl(raw),
+      vipFrameUrl: readEntryFrameUrl(raw),
       isVip: _readBool(raw, const ['isVIP', 'isVip', 'is_vip']),
       isSvip: _readSvip(raw),
       isCoinsSeller: _readBool(raw, const [

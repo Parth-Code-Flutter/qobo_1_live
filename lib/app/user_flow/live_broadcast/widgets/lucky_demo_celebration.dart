@@ -18,6 +18,7 @@ class LuckyDemoCelebration extends StatefulWidget {
   final VoidCallback onComplete;
   static OverlayEntry? _entry;
   static bool _rewardPlaying = false;
+  static bool get rewardVisible => _rewardPlaying;
   static void show(
     BuildContext context, {
     required bool reward,
@@ -78,7 +79,9 @@ class _LuckyDemoCelebrationState extends State<LuckyDemoCelebration>
       final t = _animation.value;
       final size = MediaQuery.sizeOf(context);
       final fade = ((1 - t) / .15).clamp(0.0, 1.0);
-      final reveal = ((t - .32) / .18).clamp(0.0, 1.0);
+      final reveal = Curves.easeOutBack.transform(
+        ((t + .05) / .14).clamp(0.0, 1.0),
+      );
       final merge = Curves.easeInOutCubic.transform(
         ((t - .16) / .22).clamp(0.0, 1.0),
       );
@@ -94,11 +97,15 @@ class _LuckyDemoCelebrationState extends State<LuckyDemoCelebration>
               // Float over the room: no card, border, modal barrier or dark backdrop.
               for (var i = 0; i < 9; i++)
                 Positioned(
-                  left:
-                      size.width * ((i + .5) / 9) -
-                      24 +
-                      math.sin(t * 8 + i) * 14,
-                  top: size.height * (.55 - t * .8) + (i % 3) * 30,
+                  left: widget.reward
+                      ? (i.isEven ? 6.0 : size.width - 52) +
+                            math.sin(t * 6 + i) * 8
+                      : size.width * ((i + .5) / 9) -
+                            24 +
+                            math.sin(t * 8 + i) * 14,
+                  top: widget.reward
+                      ? size.height * (.18 + (i % 5) * .07) - t * 36
+                      : size.height * (.55 - t * .8) + (i % 3) * 30,
                   child: Transform.rotate(
                     angle: math.sin(t * 6 + i) * .2,
                     child: widget.reward
@@ -141,70 +148,14 @@ class _LuckyDemoCelebrationState extends State<LuckyDemoCelebration>
                     ),
                   ),
                 Positioned(
-                  top: size.height * .16,
-                  left: 20,
-                  right: 20,
+                  top: size.height * .28,
+                  left: 28,
+                  right: 28,
                   child: Opacity(
-                    opacity: reveal,
+                    opacity: reveal < 0 ? 0 : reveal.clamp(0.0, 1.0),
                     child: Transform.scale(
-                      scale: Curves.easeOutBack.transform(reveal),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _glowText('LUCKY COMBO ×${widget.combo}', 16),
-                          if (widget.total > 0) ...[
-                            const SizedBox(height: 4),
-                            ShaderMask(
-                              shaderCallback: (bounds) =>
-                                  const LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [
-                                      Color(0xFFFFFFDA),
-                                      Color(0xFFFFE58B),
-                                      Color(0xFFFFA82E),
-                                    ],
-                                  ).createShader(bounds),
-                              child: Text(
-                                '${widget.total}',
-                                textScaler: TextScaler.noScaling,
-                                style: const TextStyle(
-                                  fontSize: 72,
-                                  height: 1.05,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.white,
-                                  shadows: [
-                                    Shadow(
-                                      color: Color(0xFFFFA62B),
-                                      blurRadius: 25,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            _glowText(
-                              widget.preview
-                                  ? 'Preview: ${widget.total} coins'
-                                  : 'You get ${widget.total} coins!',
-                              22,
-                            ),
-                          ],
-                          const SizedBox(height: 8),
-                          Text(
-                            widget.preview
-                                ? 'Preview only • Wallet unchanged'
-                                : 'Reward confirmed',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              shadows: [
-                                Shadow(color: Colors.black, blurRadius: 8),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+                      scale: reveal.clamp(0.01, 1.08),
+                      child: _rewardPlate(),
                     ),
                   ),
                 ),
@@ -244,6 +195,84 @@ class _LuckyDemoCelebrationState extends State<LuckyDemoCelebration>
       );
     },
   );
+
+  Widget _rewardPlate() {
+    final caption = widget.preview
+        ? 'Preview: ${widget.total} coins'
+        : 'You get ${widget.total} coins!';
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xF2140C1C),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: const Color(0xFFFFD76A), width: 1.4),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0xCC000000),
+            blurRadius: 24,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _glowText('LUCKY COMBO ×${widget.combo}', 16),
+            if (widget.total > 0) ...[
+              const SizedBox(height: 6),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: _prizeAmount('${widget.total}'),
+              ),
+              const SizedBox(height: 4),
+              _glowText(caption, 22),
+            ],
+            const SizedBox(height: 6),
+            Text(
+              widget.preview
+                  ? 'Preview only • Wallet unchanged'
+                  : 'Reward confirmed',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _prizeAmount(String amount) {
+    const fill = TextStyle(
+      fontSize: 68,
+      height: 1,
+      fontWeight: FontWeight.w900,
+      color: Color(0xFFFFE58B),
+    );
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Text(
+          amount,
+          textScaler: TextScaler.noScaling,
+          style: TextStyle(
+            fontSize: 68,
+            height: 1,
+            fontWeight: FontWeight.w900,
+            foreground: Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 7
+              ..color = const Color(0xFF3A1508),
+          ),
+        ),
+        Text(amount, textScaler: TextScaler.noScaling, style: fill),
+      ],
+    );
+  }
 
   Widget _glowText(String text, double size) => Text(
     text,

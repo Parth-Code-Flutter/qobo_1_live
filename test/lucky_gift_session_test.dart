@@ -123,6 +123,31 @@ void main() {
     expect(s.message, contains('700 Coins'));
     s.dispose();
   });
+
+  test('taps within 2 seconds continue the combo and a longer gap restarts it', () async {
+    final repo = FakeLuckyRepo();
+    var now = DateTime(2026, 10, 27, 14);
+    final s = LuckyGiftSession(
+      repo: repo,
+      token: 'test',
+      isOwner: () => true,
+      onSuccess: (_, __, ___) {},
+      clock: () => now,
+    );
+    await s.load();
+    final gift = s.gifts.first;
+    s.tap(gift, host: 'host');
+    now = now.add(const Duration(milliseconds: 1500));
+    expect(s.continuesFromLastTap(gift.id), isTrue);
+    s.tap(gift, host: 'host');
+    now = now.add(const Duration(seconds: 3));
+    expect(s.continuesFromLastTap(gift.id), isFalse);
+    s.tap(gift, host: 'host');
+    await settle(s);
+    expect(repo.calls.map((c) => c['combo']), [1, 2, 1]);
+    expect(repo.calls.map((c) => c['continueTap']), [false, true, false]);
+    s.dispose();
+  });
   test(
     'uncertain send retries same id and combo without dispatching queued sends',
     () async {

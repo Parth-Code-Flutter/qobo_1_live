@@ -3,6 +3,7 @@ import 'package:qobo_one_live/constants/local_storage_constants.dart';
 import 'package:qobo_one_live/constants/status_code_constants.dart';
 import 'package:qobo_one_live/repo/auth/auth_repo.dart';
 import 'package:qobo_one_live/repo/background/background_repo.dart';
+import 'package:qobo_one_live/repo/frame/frame_urls.dart';
 import 'package:qobo_one_live/services/api_constants.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
@@ -31,18 +32,36 @@ class UserSessionController extends GetxController {
   String get agencyCode =>
       _stringValueFromProfile(const ['agencyCode', 'agency_code']);
   String get displayPicturePath => _stringValue('displayPicture');
-  String get profileFrameUrl => _stringValueFromProfile(const [
-    'profileFrameUrl',
-    'profile_frame_url',
-    'profileFrame',
-    'profile_frame',
-    'avatarFrameUrl',
-    'avatar_frame_url',
-    'frameUrl',
-    'frame_url',
-    'frame',
-    'avatarFrame.image',
-  ]);
+
+  /// Entry-frame SVGA played when this user joins a room or live stream.
+  String get entryFrameUrl {
+    final direct = readEntryFrameUrl(_profileData);
+    if (direct != null && direct.isNotEmpty) return direct;
+    final nested = _profileData?['user'];
+    if (nested is Map) {
+      return readEntryFrameUrl(Map<String, dynamic>.from(nested)) ?? '';
+    }
+    return '';
+  }
+
+  /// Avatar border only. An equipped entry frame is not drawn around the photo.
+  String get profileFrameUrl {
+    final entry = entryFrameUrl;
+    final value = _stringValueFromProfile(const [
+      'profileFrameUrl',
+      'profile_frame_url',
+      'profileFrame',
+      'profile_frame',
+      'avatarFrameUrl',
+      'avatar_frame_url',
+      'frameUrl',
+      'frame_url',
+      'frame',
+      'avatarFrame.image',
+    ]);
+    if (value.isEmpty || (entry.isNotEmpty && value == entry)) return '';
+    return value;
+  }
   String get profileBackgroundUrl => _stringValueFromProfile(const [
     'profileBackgroundUrl',
     'profile_background_url',

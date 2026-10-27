@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:qobo_one_live/repo/frame/frame_urls.dart';
 import 'package:qobo_one_live/repo/user/user_repo.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 
@@ -79,46 +80,12 @@ class VisitorsController extends GetxController {
     };
   }
 
-  /// Prefer real equipped frame URLs from common API field shapes.
+  /// Avatar border only. Entry-frame SVGs stay off the profile circle.
   String? _pickFrameUrl(
     Map<String, dynamic> merged,
     Map<String, dynamic> profile,
   ) {
-    const keys = <String>[
-      'avatarFrameUrl',
-      'frameUrl',
-      'profileFrameUrl',
-      'equippedFrameUrl',
-      'avatarFrame',
-      'frame',
-      'vipFrameUrl',
-    ];
-
-    for (final source in [merged, profile]) {
-      for (final key in keys) {
-        final resolved = _coerceFrameValue(source[key]);
-        if (resolved != null) return resolved;
-      }
-    }
-    return null;
-  }
-
-  String? _coerceFrameValue(dynamic value) {
-    if (value == null) return null;
-    if (value is String) {
-      final trimmed = value.trim();
-      if (trimmed.isEmpty || trimmed.toLowerCase() == 'null') return null;
-      return ApiImageUtils.normalize(trimmed) ?? trimmed;
-    }
-    if (value is Map) {
-      for (final key in ['svgaUrl', 'url', 'imageUrl', 'image', 'frameUrl']) {
-        final nested = value[key]?.toString().trim() ?? '';
-        if (nested.isNotEmpty && nested.toLowerCase() != 'null') {
-          return ApiImageUtils.normalize(nested) ?? nested;
-        }
-      }
-    }
-    return null;
+    return readAvatarFrameUrl(merged) ?? readAvatarFrameUrl(profile);
   }
 
   Future<void> toggleFollow(int index) async {
