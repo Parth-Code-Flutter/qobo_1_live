@@ -48,7 +48,7 @@ class AristocracyCenterView extends GetView<AristocracyCenterController> {
               const AppCoinIcon(size: 24, color: Colors.amber),
               Spacing.h8,
               Obx(() => SemiBoldText(
-                    text: '${controller.coinsBalance.value} Coins',
+                    text: '${controller.coinsBalance.value} Diamonds',
                     fontSize: TextStyles.k14FontSize,
                     color: AppLightUi.title,
                   )),

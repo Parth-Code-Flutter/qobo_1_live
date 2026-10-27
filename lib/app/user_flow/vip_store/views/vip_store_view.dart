@@ -113,7 +113,7 @@ class VipStoreView extends GetView<VipStoreController> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         AppText(
-                          text: 'Coins',
+                          text: 'Diamonds',
                           fontSize: TextStyles.k12FontSize,
                           color: kColorWhite.withValues(alpha: 0.85),
                         ),

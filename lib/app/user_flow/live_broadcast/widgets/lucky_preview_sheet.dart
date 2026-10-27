@@ -75,7 +75,7 @@ class _LuckyPreviewSheetState extends State<LuckyPreviewSheet> {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        '${s.balance} Coins',
+                        '${s.balance} Diamonds',
                         style: const TextStyle(
                           color: gold,
                           fontSize: 12,

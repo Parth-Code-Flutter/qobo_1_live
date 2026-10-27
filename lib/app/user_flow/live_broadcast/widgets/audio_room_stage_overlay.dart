@@ -315,7 +315,7 @@ class _AudioRoomBottomControls extends GetView<LiveBroadcastController> {
               }
               return _GiftControlButton(
                 compact: compact,
-                coins: controller.coinsBalance.value,
+                coins: controller.diamondsBalance.value,
                 onTap: controller.openGiftsSheet,
               );
             }),

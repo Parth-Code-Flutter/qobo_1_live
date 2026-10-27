@@ -4,13 +4,14 @@ import 'package:qobo_one_live/app/user_flow/wallet/bindings/wallet_binding.dart'
 import 'package:qobo_one_live/app/user_flow/wallet/views/wallet_view.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/repo/background/background_repo.dart';
+import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/repo/economy/economy_repo.dart';
 import 'package:qobo_one_live/repo/economy/mall_catalog.dart';
 import 'package:qobo_one_live/repo/frame/frame_repo.dart';
 import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
-import 'package:qobo_one_live/utils/app_dialogs/common_giffy_dialog.dart';
+import 'package:qobo_one_live/app/user_flow/mall/widgets/mall_purchase_success_dialog.dart';
 import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
 import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 
@@ -233,9 +234,7 @@ class MallController extends GetxController {
       return;
     }
 
-    final data = response?['data'];
-    final remaining = data is Map ? data['remainingCoins'] : null;
-    if (remaining != null) coinsBalance.value = _toInt(remaining);
+    await _fetchWalletBalance();
     final tab = selectedTab.value;
     await _fetchUnifiedMall();
     selectTab(tab);
@@ -246,7 +245,9 @@ class MallController extends GetxController {
     final wallet = await _economyRepo.getWalletBalances(isShowLoader: false);
     final walletData = wallet?['data'];
     if (walletData is Map) {
-      coinsBalance.value = _toInt(walletData['coins']);
+      coinsBalance.value = giftSpendDiamonds(
+        Map<String, dynamic>.from(walletData),
+      );
     }
   }
 
@@ -630,11 +631,7 @@ class MallController extends GetxController {
       return;
     }
 
-    final data = response?['data'];
-    final remaining = data is Map ? data['remainingCoins'] : null;
-    coinsBalance.value = remaining == null
-        ? coinsBalance.value - price
-        : _toInt(remaining);
+    await _fetchWalletBalance();
 
     final tab = selectedTab.value;
     await _fetchFrameShop();
@@ -665,11 +662,7 @@ class MallController extends GetxController {
       return;
     }
 
-    final data = response?['data'];
-    final remaining = data is Map ? data['remainingCoins'] : null;
-    coinsBalance.value = remaining == null
-        ? coinsBalance.value - price
-        : _toInt(remaining);
+    await _fetchWalletBalance();
 
     await _fetchBackgroundShop();
     selectTab(4);
@@ -697,7 +690,7 @@ class MallController extends GetxController {
       return;
     }
 
-    coinsBalance.value -= price;
+    await _fetchWalletBalance();
     final tab = selectedTab.value;
     await _fetchMallShop();
     selectTab(tab);
@@ -707,22 +700,8 @@ class MallController extends GetxController {
   Future<void> _showPurchaseSuccessDialog({
     required String name,
     required int price,
-  }) async {
-    final context = Get.context;
-    if (context == null) return;
-
-    await CommonGiffyDialog.showSuccess(
-      context,
-      title: 'Purchase Complete!',
-      subtitle:
-          '"$name" is now yours\n'
-          '$price Coins paid • Added to your Backpack',
-      buttonText: 'Awesome!',
-      gifAssetPath: kGifCongratulation,
-      barrierDismissible: false,
-      // The common dialog closes itself before invoking this callback.
-      onPressed: () {},
-    );
+  }) {
+    return MallPurchaseSuccessDialog.show(name: name, price: price);
   }
 
   void _showInsufficientCoinsDialog({

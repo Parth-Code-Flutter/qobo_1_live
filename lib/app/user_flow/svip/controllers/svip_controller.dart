@@ -428,16 +428,8 @@ class SvipController extends GetxController {
     }
   }
 
-  /// SVIP is paid with purchased coins. The wallet API stores those in
-  /// `purchasedCoins` / `diamonds`. `coins` on this payload is earnings.
-  int _purchasedCoins(Map<String, dynamic> data) {
-    for (final key in ['purchasedCoins', 'purchased_coins', 'diamonds']) {
-      if (data.containsKey(key) && data[key] != null) {
-        return _toInt(data[key]);
-      }
-    }
-    return _toInt(data['coins']);
-  }
+  /// SVIP is paid with My Diamonds. `coins` on this payload is earnings.
+  int _purchasedCoins(Map<String, dynamic> data) => giftSpendDiamonds(data);
 
   List? _packageList(dynamic rawData) {
     if (rawData is List) return rawData;

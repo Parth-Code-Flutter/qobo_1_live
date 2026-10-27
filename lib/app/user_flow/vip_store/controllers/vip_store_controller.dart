@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
+import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/repo/economy/economy_repo.dart';
 import 'package:qobo_one_live/repo/frame/frame_repo.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
@@ -73,7 +74,7 @@ class VipStoreController extends GetxController {
     );
     final data = wallet?['data'];
     if (data is Map) {
-      userCoins.value = _toInt(data['coins']);
+      userCoins.value = giftSpendDiamonds(Map<String, dynamic>.from(data));
     }
   }
 
@@ -214,12 +215,7 @@ class VipStoreController extends GetxController {
         return;
       }
 
-      final data = response?['data'];
-      if (data is Map && data['remainingCoins'] != null) {
-        userCoins.value = _toInt(data['remainingCoins']);
-      } else {
-        userCoins.value = (userCoins.value - price).clamp(0, 1 << 30);
-      }
+      await _fetchWalletBalance();
 
       // Backend auto-equips VIP frames — refresh profile so avatar updates.
       if (Get.isRegistered<UserSessionController>()) {

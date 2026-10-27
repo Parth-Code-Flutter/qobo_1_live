@@ -67,7 +67,7 @@ class MallView extends GetView<MallController> {
                   ),
                   Obx(
                     () => SemiBoldText(
-                      text: '${controller.coinsBalance.value} Coins',
+                      text: '${controller.coinsBalance.value} Diamonds',
                       fontSize: TextStyles.k16FontSize,
                       color: AppLightUi.title,
                     ),

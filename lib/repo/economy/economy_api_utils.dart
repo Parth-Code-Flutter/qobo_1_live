@@ -14,13 +14,23 @@ int parseWalletAmount(dynamic value) {
   return int.tryParse(value?.toString().replaceAll(',', '') ?? '') ?? 0;
 }
 
-/// Diamonds used only when deciding if a gift can be sent.
+/// Purchased balance shown as Wallet "My Diamonds".
 ///
-/// Wallet "My Coins" stays on `coins`. Send-gift compares `diamonds`.
+/// Store, gift, and other purchases spend this. `coins` is earnings
+/// (rooms and live) and is not a purchase balance.
 int giftSpendDiamonds(Map data) {
-  return parseWalletAmount(
-    data['diamonds'] ?? data['diamond'] ?? data['diamondBalance'],
-  );
+  for (final key in const [
+    'diamonds',
+    'diamond',
+    'diamondBalance',
+    'purchasedCoins',
+    'purchased_coins',
+  ]) {
+    if (data.containsKey(key) && data[key] != null) {
+      return parseWalletAmount(data[key]);
+    }
+  }
+  return 0;
 }
 
 /// True when wallet diamonds cover [giftPrice] × [count].

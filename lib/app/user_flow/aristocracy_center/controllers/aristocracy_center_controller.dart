@@ -1,11 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
+import 'package:qobo_one_live/repo/economy/economy_repo.dart';
 import 'package:qobo_one_live/utils/app_dialogs/common_app_dialog.dart';
 import 'package:qobo_one_live/utils/app_widgets/admin_agency_chrome.dart';
 
 class AristocracyCenterController extends GetxController {
+  AristocracyCenterController({EconomyRepo? economyRepo})
+    : _economyRepo = economyRepo ?? EconomyRepo();
+
+  final EconomyRepo _economyRepo;
   final selectedRankIndex = 0.obs;
-  final coinsBalance = 12450.obs;
+  final coinsBalance = 0.obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    _loadDiamonds();
+  }
+
+  Future<void> _loadDiamonds() async {
+    final wallet = await _economyRepo.getWalletBalances(isShowLoader: false);
+    final data = wallet?['data'];
+    if (data is Map) {
+      coinsBalance.value = giftSpendDiamonds(Map<String, dynamic>.from(data));
+    }
+  }
   
   // Track currently active rank
   final activeRankName = RxnString();

@@ -152,6 +152,43 @@ class _LuckyDemoCelebrationState extends State<LuckyDemoCelebration>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           _glowText('LUCKY COMBO ×${widget.combo}', 16),
+                          if (widget.total > 0) ...[
+                            const SizedBox(height: 4),
+                            ShaderMask(
+                              shaderCallback: (bounds) =>
+                                  const LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Color(0xFFFFFFDA),
+                                      Color(0xFFFFE58B),
+                                      Color(0xFFFFA82E),
+                                    ],
+                                  ).createShader(bounds),
+                              child: Text(
+                                '${widget.total}',
+                                textScaler: TextScaler.noScaling,
+                                style: const TextStyle(
+                                  fontSize: 72,
+                                  height: 1.05,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                  shadows: [
+                                    Shadow(
+                                      color: Color(0xFFFFA62B),
+                                      blurRadius: 25,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            _glowText(
+                              widget.preview
+                                  ? 'Preview: ${widget.total} coins'
+                                  : 'You get ${widget.total} coins!',
+                              22,
+                            ),
+                          ],
                           const SizedBox(height: 8),
                           Text(
                             widget.preview

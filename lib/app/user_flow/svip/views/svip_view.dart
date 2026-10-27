@@ -137,7 +137,7 @@ class SvipView extends GetView<SvipController> {
                 Spacing.h6,
                 Obx(
                   () => AppText(
-                    text: 'Balance: ${controller.coinsLabel} Coins',
+                    text: 'Balance: ${controller.coinsLabel} Diamonds',
                     fontSize: TextStyles.k12FontSize,
                     color: AppLightUi.title,
                   ),
