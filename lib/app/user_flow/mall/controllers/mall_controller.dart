@@ -190,10 +190,13 @@ class MallController extends GetxController {
     String kind,
   ) {
     final days = int.tryParse('${row['durationDays'] ?? 30}') ?? 30;
-    final image = (row['svgaUrl'] ?? row['imageUrl'] ?? row['image'] ?? '')
-        .toString();
+    final svga = _nonEmptyUrl(row['svgaUrl']);
+    final image = _nonEmptyUrl(row['imageUrl']) ?? _nonEmptyUrl(row['image']);
+    final display = svga ?? image ?? '';
     final animated =
-        image.toLowerCase().contains('.svga') || image.contains('/raw/upload/');
+        svga != null ||
+        display.toLowerCase().contains('.svga') ||
+        display.contains('/raw/upload/');
     return {
       'id': row['id']?.toString() ?? '',
       'name': row['name']?.toString() ?? '',
@@ -201,8 +204,8 @@ class MallController extends GetxController {
       'price': _toInt(row['price'] ?? row['amount']),
       'duration': '$days days',
       'icon': 'assets/svg/ic_frame_shop.svg',
-      'imageUrl': image,
-      'svgaUrl': animated ? image : row['svgaUrl']?.toString(),
+      'imageUrl': image ?? display,
+      'svgaUrl': animated ? (svga ?? display) : null,
       'description': row['description']?.toString() ?? '',
       'catalog': kind == 'avatar' || kind == 'entry' ? 'frame' : kind,
       'frameKind': kind == 'entry' ? 'entry' : 'avatar',
@@ -238,6 +241,7 @@ class MallController extends GetxController {
     final tab = selectedTab.value;
     await _fetchUnifiedMall();
     selectTab(tab);
+    await _refreshProfileAfterFramePurchase();
     await _showPurchaseSuccessDialog(name: name, price: price);
   }
 
@@ -638,7 +642,6 @@ class MallController extends GetxController {
     await _fetchMallShop();
     selectTab(tab);
     if (Get.isRegistered<UserSessionController>()) {
-      // VIP frames auto-equip on buy — refresh so profile avatar updates.
       await Get.find<UserSessionController>().refreshProfileFromApi();
     }
     await _showPurchaseSuccessDialog(name: name, price: price);
@@ -694,7 +697,20 @@ class MallController extends GetxController {
     final tab = selectedTab.value;
     await _fetchMallShop();
     selectTab(tab);
+    await _refreshProfileAfterFramePurchase();
     await _showPurchaseSuccessDialog(name: name, price: price);
+  }
+
+  /// Mall and frame buys auto-equip one slot and leave the other equipped.
+  Future<void> _refreshProfileAfterFramePurchase() async {
+    if (!Get.isRegistered<UserSessionController>()) return;
+    await Get.find<UserSessionController>().refreshProfileFromApi();
+  }
+
+  String? _nonEmptyUrl(dynamic value) {
+    final text = value?.toString().trim() ?? '';
+    if (text.isEmpty || text.toLowerCase() == 'null') return null;
+    return text;
   }
 
   Future<void> _showPurchaseSuccessDialog({

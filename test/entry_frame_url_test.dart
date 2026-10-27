@@ -79,6 +79,30 @@ void main() {
     expect(session.profileFrameUrl, isEmpty);
   });
 
+  test('an equipped avatar border stays when an entry frame is also equipped', () async {
+    const border = 'https://api.qobo1live.in/uploads/frames/thirteen-frame.png';
+    final session = UserSessionController();
+    try {
+      await session.saveProfile({
+        'id': 'idc1057300',
+        'name': 'Niks',
+        'avatarFrame': {
+          'name': 'thirteen frame',
+          'frameType': 'avatar',
+          'itemType': 'AVATAR_FRAME',
+          'image': border,
+          'imageUrl': border,
+          'svgaUrl': null,
+        },
+        'entryFrameUrl': entryUrl,
+        'frameUrl': entryUrl,
+      });
+    } catch (_) {}
+
+    expect(session.profileFrameUrl, border);
+    expect(session.entryFrameUrl, entryUrl);
+  });
+
   test('viewer join payload resolves entryFrameUrl from the nested viewer', () {
     final url = readEntryFrameUrl({
       'event': 'live_stream.viewer_joined',

@@ -46,21 +46,13 @@ class UserSessionController extends GetxController {
 
   /// Avatar border only. An equipped entry frame is not drawn around the photo.
   String get profileFrameUrl {
-    final entry = entryFrameUrl;
-    final value = _stringValueFromProfile(const [
-      'profileFrameUrl',
-      'profile_frame_url',
-      'profileFrame',
-      'profile_frame',
-      'avatarFrameUrl',
-      'avatar_frame_url',
-      'frameUrl',
-      'frame_url',
-      'frame',
-      'avatarFrame.image',
-    ]);
-    if (value.isEmpty || (entry.isNotEmpty && value == entry)) return '';
-    return value;
+    final direct = readAvatarFrameUrl(_profileData);
+    if (direct != null && direct.isNotEmpty) return direct;
+    final nested = _profileData?['user'];
+    if (nested is Map) {
+      return readAvatarFrameUrl(Map<String, dynamic>.from(nested)) ?? '';
+    }
+    return '';
   }
   String get profileBackgroundUrl => _stringValueFromProfile(const [
     'profileBackgroundUrl',
