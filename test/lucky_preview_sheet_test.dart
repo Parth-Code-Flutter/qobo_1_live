@@ -40,8 +40,12 @@ void main() {
         ),
       ),
     );
+    await tester.tap(find.text('Heart'));
+    await tester.pump();
+    expect(taps, 0);
+    expect(find.text('Send'), findsOneWidget);
     for (var i = 0; i < 3; i++) {
-      await tester.tap(find.text('Heart'));
+      await tester.tap(find.text('Send'));
       await tester.pump();
     }
     expect(

@@ -109,7 +109,7 @@ class _LuckyPreviewSheetState extends State<LuckyPreviewSheet> {
                     child: Text(
                       s.busy
                           ? 'Sending • ${s.queued} queued'
-                          : 'Tap a gift to send it.',
+                          : 'Select a gift, then tap Send.',
                       style: const TextStyle(
                         color: Color(0xFFC6ACD7),
                         fontSize: 12,
@@ -216,19 +216,7 @@ class _LuckyPreviewSheetState extends State<LuckyPreviewSheet> {
                                 borderRadius: BorderRadius.circular(16),
                                 onTap: s.needsRetry
                                     ? null
-                                    : () {
-                                        setState(() => selected = gift.id);
-                                        final box =
-                                            tileKey.currentContext!
-                                                    .findRenderObject()
-                                                as RenderBox;
-                                        widget.onSelected(
-                                          gift,
-                                          box.localToGlobal(
-                                            Offset(box.size.width / 2, 37),
-                                          ),
-                                        );
-                                      },
+                                    : () => setState(() => selected = gift.id),
                                 child: Padding(
                                   padding: const EdgeInsets.all(8),
                                   child: Column(
@@ -263,16 +251,90 @@ class _LuckyPreviewSheetState extends State<LuckyPreviewSheet> {
                       ),
                     ),
             ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(12, 2, 12, 10),
-              child: Text(
-                'Each send costs the displayed coins',
-                style: TextStyle(color: Colors.white38, fontSize: 10),
+            if (selected == null)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(12, 2, 12, 10),
+                child: Text(
+                  'Each send costs the displayed coins',
+                  style: TextStyle(color: Colors.white38, fontSize: 10),
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 2, 12, 10),
+                child: _sendButton(s),
               ),
-            ),
           ],
         );
       },
     ),
   );
+
+  Widget _sendButton(LuckyGiftSession session) {
+    final blocked = session.needsRetry;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: blocked ? null : _sendSelected,
+        child: Ink(
+          height: 46,
+          decoration: BoxDecoration(
+            gradient: blocked
+                ? null
+                : const LinearGradient(
+                    colors: [Color(0xFFFFE08A), Color(0xFFFFB703)],
+                  ),
+            color: blocked ? Colors.white12 : null,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: blocked
+                ? null
+                : [
+                    BoxShadow(
+                      color: gold.withValues(alpha: 0.35),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.send_rounded, color: Color(0xFF3A2408), size: 18),
+              SizedBox(width: 8),
+              Text(
+                'Send',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Color(0xFF3A2408),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _sendSelected() {
+    final id = selected;
+    if (id == null || widget.session.needsRetry) return;
+    LuckyGift? gift;
+    for (final item in widget.session.gifts) {
+      if (item.id == id) {
+        gift = item;
+        break;
+      }
+    }
+    if (gift == null) return;
+    final box =
+        _tileKeys[id]?.currentContext?.findRenderObject() as RenderBox?;
+    final origin = box == null
+        ? Offset.zero
+        : box.localToGlobal(Offset(box.size.width / 2, 37));
+    widget.onSelected(gift, origin);
+  }
 }

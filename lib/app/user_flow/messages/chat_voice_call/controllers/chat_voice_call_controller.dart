@@ -69,6 +69,13 @@ class ChatVoiceCallController extends GetxController
   final peerBio = ''.obs;
   final isCaller = true.obs;
   final isVideo = false.obs;
+  final callBeautyOn = true.obs;
+  final callSmooth = 50.obs;
+  final callSkinTone = 40.obs;
+  final callBlush = 22.obs;
+  final callSharpen = 20.obs;
+  bool _callEffectsReady = false;
+  bool _callCameraArmed = false;
   final hasPeerJoined = false.obs;
   final elapsedSeconds = 0.obs;
   final billableSeconds = 0.obs;
@@ -337,6 +344,79 @@ class ChatVoiceCallController extends GetxController
         ? lastChargeHostEarnedDiamonds.value
         : estimatedCoinDelta;
     return 'Earned ${SessionEarningsUtils.formatAmountForPill(earned)} diamonds';
+  }
+
+  /// Video calls: arm free filters before the first camera preview.
+  Future<void> armVideoCallFiltersThenCamera() async {
+    if (!isVideo.value || isClosed) return;
+    await applyCallBeauty();
+    if (_callCameraArmed || isClosed) return;
+    _callCameraArmed = true;
+    try {
+      ZegoUIKit().turnCameraOn(true);
+    } catch (_) {}
+    if (_callEffectsReady) await applyCallBeauty();
+  }
+
+  Future<void> setCallBeautyEnabled(bool value) async {
+    callBeautyOn.value = value;
+    await applyCallBeauty();
+  }
+
+  Future<void> updateCallFilter({
+    int? smooth,
+    int? skinTone,
+    int? blush,
+    int? sharpen,
+  }) async {
+    if (smooth != null) callSmooth.value = smooth;
+    if (skinTone != null) callSkinTone.value = skinTone;
+    if (blush != null) callBlush.value = blush;
+    if (sharpen != null) callSharpen.value = sharpen;
+    if (!callBeautyOn.value) callBeautyOn.value = true;
+    await applyCallBeauty();
+  }
+
+  Future<void> resetCallFilters() async {
+    callBeautyOn.value = false;
+    callSmooth.value = 50;
+    callSkinTone.value = 40;
+    callBlush.value = 22;
+    callSharpen.value = 20;
+    if (!_callEffectsReady) return;
+    try {
+      await ZegoUIKit().enableBeauty(false);
+    } catch (_) {}
+  }
+
+  Future<void> applyCallBeauty() async {
+    if (!isVideo.value) return;
+    try {
+      if (!_callEffectsReady) {
+        await ZegoUIKit().startEffectsEnv();
+        _callEffectsReady = true;
+      }
+      await ZegoUIKit().enableBeauty(callBeautyOn.value);
+      if (!callBeautyOn.value) return;
+      ZegoUIKit().setBeautifyValue(
+        callSkinTone.value.clamp(0, 100),
+        BeautyEffectType.whiten,
+      );
+      ZegoUIKit().setBeautifyValue(
+        callBlush.value.clamp(0, 100),
+        BeautyEffectType.rosy,
+      );
+      ZegoUIKit().setBeautifyValue(
+        callSmooth.value.clamp(0, 100),
+        BeautyEffectType.smooth,
+      );
+      ZegoUIKit().setBeautifyValue(
+        callSharpen.value.clamp(0, 100),
+        BeautyEffectType.sharpen,
+      );
+    } catch (error) {
+      LoggerUtils.logInfo('ChatVoiceCall: beauty apply failed $error');
+    }
   }
 
   void onCallUserEntered(String userId) {

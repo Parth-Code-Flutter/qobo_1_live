@@ -70,7 +70,7 @@ class LiveFiltersSheet extends GetView<LiveBroadcastController> {
                         ),
                         SizedBox(height: 2),
                         AppText(
-                          text: 'Basic camera polish for your live stream.',
+                          text: 'Smooth, skin tone, blush, and sharpen.',
                           fontSize: TextStyles.k10FontSize,
                           color: kColorHint,
                           maxLines: 1,

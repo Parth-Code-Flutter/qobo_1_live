@@ -266,7 +266,9 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
         : fallbackTitle;
 
     config
-      ..turnOnCameraWhenJoining = isVideoRoom
+      // Camera stays off until beauty is armed. Starting preview first makes
+      // the free filters ignore this device.
+      ..turnOnCameraWhenJoining = false
       ..turnOnMicrophoneWhenJoining = true
       ..useSpeakerWhenJoining = true
       ..enableAccidentalTouchPrevention = false
@@ -2198,10 +2200,8 @@ class _StableZegoExpressLiveStreamingState
         ..viewMode = express.ZegoViewMode.AspectFill;
 
       if (widget.isHost) {
-        // Effects env must be started before preview/publish for beauty filters.
-        try {
-          await express.ZegoExpressEngine.instance.startEffectsEnv();
-        } catch (_) {}
+        // Free beauty must be armed before preview, or the camera ignores it.
+        await _controller.applyExpressBeautyAfterEngineReady();
         await express.ZegoExpressEngine.instance.enableCamera(
           widget.cameraEnabled,
         );
@@ -2209,7 +2209,6 @@ class _StableZegoExpressLiveStreamingState
         await express.ZegoExpressEngine.instance.useFrontCamera(
           _controller.isFrontCamera.value,
         );
-        await _controller.applyExpressBeautyAfterEngineReady();
         await express.ZegoExpressEngine.instance.startPreview(canvas: canvas);
         await express.ZegoExpressEngine.instance.startPublishingStream(
           widget.publishStreamId.trim(),
@@ -2266,6 +2265,8 @@ class _StableZegoExpressLiveStreamingState
               _status = 'Live';
             });
             _controller.onExpressLiveRoomLogined();
+            unawaited(_controller.reapplyLiveBeauty());
+            unawaited(_controller.playHostEntryWhenLive());
           } else if (errorCode != 0) {
             _fail('Publishing failed ($errorCode).');
             _scheduleExpressReconnect();

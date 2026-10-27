@@ -187,10 +187,13 @@ class LiveBroadcastController extends GetxController {
   final isLoadingAudioSeats = false.obs;
   final isLoadingInviteCandidates = false.obs;
   final liveBeautyEnabled = false.obs;
-  final liveSmooth = 35.obs;
-  final liveSkinTone = 25.obs;
-  final liveBlush = 12.obs;
-  final liveSharpen = 15.obs;
+  final liveSmooth = 50.obs;
+  final liveSkinTone = 40.obs;
+  final liveBlush = 22.obs;
+  final liveSharpen = 20.obs;
+  bool _liveBeautyPrimed = false;
+  bool _videoRoomEffectsReady = false;
+  bool _videoRoomCameraOpened = false;
 
   /// Active room backdrop (audio rooms); synced via API + Socket.IO.
   final roomBackgroundUrl = RxnString();
@@ -777,9 +780,8 @@ class LiveBroadcastController extends GetxController {
     try {
       if (isAudioVideoRoom) {
         // Party video rooms use the group-call Zego engine (not live-streaming).
-        ZegoUIKit().turnCameraOn(true);
+        unawaited(setPartyCamera(true));
         ZegoUIKit().turnMicrophoneOn(true);
-        isCameraOff.value = false;
         isMicMuted.value = false;
         return;
       }
@@ -2985,6 +2987,9 @@ class LiveBroadcastController extends GetxController {
       _bindGroupCallMessageListener();
     }
     _bindGroupCallUserListener();
+    if (isVideoRoom) {
+      unawaited(_openVideoRoomCameraWithBeauty());
+    }
   }
 
   /// Keep viewer/participant count reactive for gift visibility in video rooms.
@@ -4277,7 +4282,11 @@ class LiveBroadcastController extends GetxController {
   }
 
   void openLiveFiltersSheet() {
-    if (!isHost.value || !isVideoRoom) return;
+    if (isLiveStreamingSession) {
+      if (!isHost.value) return;
+    } else if (!isVideoRoom) {
+      return;
+    }
     Get.bottomSheet(
       const LiveFiltersSheet(),
       isScrollControlled: true,
@@ -4558,13 +4567,45 @@ class LiveBroadcastController extends GetxController {
     if (_myEntryScheduled || isClosed || _exitReported) return;
     _myEntryScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (isLiveStreamingSession && isHost.value) {
+        Future<void>.delayed(const Duration(seconds: 3), () {
+          unawaited(playHostEntryWhenLive());
+        });
+        return;
+      }
       unawaited(_playMyEquippedEntryOnce());
     });
+  }
+
+  bool _hostLiveEntryPlayed = false;
+
+  /// Host Go Live: the camera platform view covers a dialog shown at first
+  /// frame. Play once publishing has started so the entrance sits on the live.
+  Future<void> playHostEntryWhenLive() async {
+    if (_hostLiveEntryPlayed || _exitReported || isClosed) return;
+    if (!isLiveStreamingSession || !isHost.value) return;
+    if (!Get.isRegistered<UserSessionController>()) return;
+    final session = Get.find<UserSessionController>();
+    final url = await _resolveMyEntryUrl(session);
+    final myId = session.userId.trim();
+    if (_exitReported || isClosed || url.isEmpty || myId.isEmpty) return;
+    _vipEntrancePlayedUserIds.remove(myId);
+    final patti = session.pattiStyle.trim().toLowerCase();
+    final shown = _playVipEntranceOnce(
+      userId: myId,
+      userName: session.displayName,
+      avatarUrl: session.displayPictureUrl,
+      vipFrameUrl: url,
+      pattiStyle: patti.isEmpty || patti == 'classic' ? null : patti,
+    );
+    if (shown) _hostLiveEntryPlayed = true;
   }
 
   /// Play this account's equipped entry when they enter. The join socket often
   /// fires before this screen is listening, so the buyer would otherwise see nothing.
   Future<void> _playMyEquippedEntryOnce() async {
+    // Live hosts play after the camera is publishing, not on the first frame.
+    if (isLiveStreamingSession && isHost.value) return;
     if (!Get.isRegistered<UserSessionController>()) return;
     final session = Get.find<UserSessionController>();
     for (var attempt = 0; attempt < 6; attempt++) {
@@ -5043,10 +5084,10 @@ class LiveBroadcastController extends GetxController {
 
   Future<void> resetLiveFilters() async {
     liveBeautyEnabled.value = false;
-    liveSmooth.value = 35;
-    liveSkinTone.value = 25;
-    liveBlush.value = 12;
-    liveSharpen.value = 15;
+    liveSmooth.value = 50;
+    liveSkinTone.value = 40;
+    liveBlush.value = 22;
+    liveSharpen.value = 20;
     if (isLiveStreamingSession) {
       try {
         await ZegoExpressEngine.instance.enableEffectsBeauty(false);
@@ -5059,9 +5100,31 @@ class LiveBroadcastController extends GetxController {
     } catch (_) {}
   }
 
-  /// Call from Express host path after [startEffectsEnv] / before preview.
+  /// Call from the Go Live host path before [startPreview].
+  /// Starts the free effects env, then turns on smooth, skin tone, blush, and sharpen.
   Future<void> applyExpressBeautyAfterEngineReady() async {
     if (!isLiveStreamingSession || !isHost.value) return;
+    try {
+      await ZegoExpressEngine.instance.startEffectsEnv();
+    } catch (_) {
+      _showRoomToast(
+        'Filters',
+        'Beauty environment did not start on this device.',
+        isWarning: true,
+      );
+      return;
+    }
+    if (!_liveBeautyPrimed) {
+      _liveBeautyPrimed = true;
+      liveBeautyEnabled.value = true;
+    }
+    await _applyLiveBeauty();
+  }
+
+  /// Re-apply after the camera is publishing. Does not restart the effects env.
+  Future<void> reapplyLiveBeauty() async {
+    if (!isLiveStreamingSession || !isHost.value) return;
+    if (!liveBeautyEnabled.value) return;
     await _applyLiveBeauty();
   }
 
@@ -5089,14 +5152,72 @@ class LiveBroadcastController extends GetxController {
       }
       return;
     }
+    await _applyUikitBeauty();
+  }
+
+  /// Video party rooms: start the free effects env, then open the camera.
+  /// Preview-first makes smooth / skin / blush / sharpen do nothing.
+  Future<void> _openVideoRoomCameraWithBeauty() async {
+    if (!isVideoRoom || isLiveStreamingSession || isClosed || _exitReported) {
+      return;
+    }
+    if (!_liveBeautyPrimed) {
+      _liveBeautyPrimed = true;
+      liveBeautyEnabled.value = true;
+    }
+    await _applyUikitBeauty();
+    if (isClosed || _exitReported) return;
+    if (_videoRoomCameraOpened) {
+      if (isCameraOff.value) return;
+      try {
+        ZegoUIKit().turnCameraOn(true);
+      } catch (_) {}
+      return;
+    }
+    _videoRoomCameraOpened = true;
     try {
-      await ZegoUIKit().startEffectsEnv();
+      ZegoUIKit().turnCameraOn(true);
+      isCameraOff.value = false;
+    } catch (_) {}
+    if (_videoRoomEffectsReady) await _applyUikitBeauty();
+  }
+
+  /// Local camera for a video party room. Beauty is armed before the first on.
+  Future<void> setPartyCamera(bool on) async {
+    if (!isVideoRoom || isLiveStreamingSession) return;
+    if (on) await _applyUikitBeauty();
+    try {
+      ZegoUIKit().turnCameraOn(on);
+      isCameraOff.value = !on;
+      if (on) _videoRoomCameraOpened = true;
+    } catch (_) {}
+    if (on && _videoRoomEffectsReady) await _applyUikitBeauty();
+  }
+
+  Future<void> _applyUikitBeauty() async {
+    try {
+      if (!_videoRoomEffectsReady) {
+        await ZegoUIKit().startEffectsEnv();
+        _videoRoomEffectsReady = true;
+      }
       await ZegoUIKit().enableBeauty(liveBeautyEnabled.value);
       if (!liveBeautyEnabled.value) return;
-      ZegoUIKit().setBeautifyValue(liveSkinTone.value, BeautyEffectType.whiten);
-      ZegoUIKit().setBeautifyValue(liveBlush.value, BeautyEffectType.rosy);
-      ZegoUIKit().setBeautifyValue(liveSmooth.value, BeautyEffectType.smooth);
-      ZegoUIKit().setBeautifyValue(liveSharpen.value, BeautyEffectType.sharpen);
+      ZegoUIKit().setBeautifyValue(
+        liveSkinTone.value.clamp(0, 100),
+        BeautyEffectType.whiten,
+      );
+      ZegoUIKit().setBeautifyValue(
+        liveBlush.value.clamp(0, 100),
+        BeautyEffectType.rosy,
+      );
+      ZegoUIKit().setBeautifyValue(
+        liveSmooth.value.clamp(0, 100),
+        BeautyEffectType.smooth,
+      );
+      ZegoUIKit().setBeautifyValue(
+        liveSharpen.value.clamp(0, 100),
+        BeautyEffectType.sharpen,
+      );
     } catch (_) {
       _showRoomToast(
         'Filters',
@@ -6964,8 +7085,7 @@ class LiveBroadcastController extends GetxController {
       if (isAudioVideoRoom) {
         final userId = ZegoUIKit().getLocalUser().id;
         final isOn = ZegoUIKit().getCameraStateNotifier(userId).value;
-        ZegoUIKit().turnCameraOn(!isOn);
-        isCameraOff.value = isOn;
+        unawaited(setPartyCamera(!isOn));
         return;
       }
       final camera =

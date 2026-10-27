@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/constants/icon_constants.dart';
@@ -70,6 +72,10 @@ class ChatVoiceCallView extends GetView<ChatVoiceCallController> {
                       'ChatVoiceCallView: room ${state.reason} '
                       'error=${state.errorCode}',
                     );
+                    if (state.reason == ZegoRoomStateChangedReason.Logined &&
+                        state.errorCode == 0) {
+                      unawaited(controller.armVideoCallFiltersThenCamera());
+                    }
                   },
                 ),
                 user: ZegoCallUserEvents(
@@ -126,7 +132,8 @@ class ChatVoiceCallView extends GetView<ChatVoiceCallController> {
     if (isVideo) {
       return ZegoUIKitPrebuiltCallConfig.oneOnOneVideoCall()
         ..avatarBuilder = _buildZegoAvatar
-        ..turnOnCameraWhenJoining = true
+        // Camera opens after the free filters are armed.
+        ..turnOnCameraWhenJoining = false
         ..turnOnMicrophoneWhenJoining = true
         ..useSpeakerWhenJoining = true
         ..enableAccidentalTouchPrevention = false
@@ -406,19 +413,8 @@ class _ChatCallFilterButton extends StatelessWidget {
   }
 }
 
-class _CallFilterBottomSheet extends StatefulWidget {
+class _CallFilterBottomSheet extends GetView<ChatVoiceCallController> {
   const _CallFilterBottomSheet();
-
-  @override
-  State<_CallFilterBottomSheet> createState() => _CallFilterBottomSheetState();
-}
-
-class _CallFilterBottomSheetState extends State<_CallFilterBottomSheet> {
-  final _presets = const ['Natural', 'Bright', 'Warm', 'Soft'];
-  var _selectedPreset = 0;
-  double _smooth = 0.35;
-  double _brightness = 0.45;
-  double _tone = 0.30;
 
   @override
   Widget build(BuildContext context) {
@@ -433,115 +429,127 @@ class _CallFilterBottomSheetState extends State<_CallFilterBottomSheet> {
       ),
       child: SafeArea(
         top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: kColorWhite.withValues(alpha: 0.22),
-                  borderRadius: BorderRadius.circular(2),
+        child: Obx(
+          () => Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: kColorWhite.withValues(alpha: 0.22),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
-            Spacing.v16,
-            const SemiBoldText(
-              text: 'Filters',
-              fontSize: TextStyles.k20FontSize,
-              color: kColorWhite,
-            ),
-            Spacing.v4,
-            AppText(
-              text: 'Choose a camera look for this video call.',
-              fontSize: TextStyles.k12FontSize,
-              color: kColorWhite.withValues(alpha: 0.66),
-            ),
-            Spacing.v16,
-            SizedBox(
-              height: 42,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: _presets.length,
-                separatorBuilder: (_, _) => Spacing.h8,
-                itemBuilder: (context, index) {
-                  final selected = _selectedPreset == index;
-                  return GestureDetector(
-                    onTap: () => setState(() => _selectedPreset = index),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        gradient: selected
-                            ? const LinearGradient(
-                                colors: [
-                                  kColorProfileActionPinkStart,
-                                  kColorProfileChipPurpleEnd,
-                                ],
-                              )
-                            : null,
-                        color: selected
-                            ? null
-                            : kColorWhite.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: selected
-                              ? kColorWhite.withValues(alpha: 0.18)
-                              : kColorWhite.withValues(alpha: 0.10),
+              Spacing.v16,
+              Row(
+                children: [
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SemiBoldText(
+                          text: 'Filters',
+                          fontSize: TextStyles.k20FontSize,
+                          color: kColorWhite,
+                        ),
+                        SizedBox(height: 4),
+                        AppText(
+                          text: 'Smooth, skin tone, blush, and sharpen.',
+                          fontSize: TextStyles.k12FontSize,
+                          color: kColorHint,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Switch(
+                    value: controller.callBeautyOn.value,
+                    activeThumbColor: kColorWhite,
+                    activeTrackColor: kColorPrimary,
+                    inactiveThumbColor: kColorWhite,
+                    inactiveTrackColor: Colors.white24,
+                    onChanged: controller.setCallBeautyEnabled,
+                  ),
+                ],
+              ),
+              Spacing.v16,
+              _FilterSlider(
+                icon: Icons.blur_on_rounded,
+                label: 'Smooth',
+                value: controller.callSmooth.value.toDouble(),
+                onChanged: (value) =>
+                    controller.updateCallFilter(smooth: value.round()),
+              ),
+              _FilterSlider(
+                icon: Icons.wb_sunny_outlined,
+                label: 'Skin tone',
+                value: controller.callSkinTone.value.toDouble(),
+                onChanged: (value) =>
+                    controller.updateCallFilter(skinTone: value.round()),
+              ),
+              _FilterSlider(
+                icon: Icons.favorite_border_rounded,
+                label: 'Blush',
+                value: controller.callBlush.value.toDouble(),
+                onChanged: (value) =>
+                    controller.updateCallFilter(blush: value.round()),
+              ),
+              _FilterSlider(
+                icon: Icons.high_quality_rounded,
+                label: 'Sharpen',
+                value: controller.callSharpen.value.toDouble(),
+                onChanged: (value) =>
+                    controller.updateCallFilter(sharpen: value.round()),
+              ),
+              Spacing.v12,
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: controller.resetCallFilters,
+                      style: TextButton.styleFrom(
+                        backgroundColor: kColorWhite.withValues(alpha: 0.08),
+                        foregroundColor: kColorWhite,
+                        minimumSize: const Size.fromHeight(46),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(22),
                         ),
                       ),
-                      child: SemiBoldText(
-                        text: _presets[index],
-                        fontSize: TextStyles.k12FontSize,
+                      child: const SemiBoldText(
+                        text: 'Reset',
+                        fontSize: TextStyles.k14FontSize,
                         color: kColorWhite,
                       ),
                     ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 18),
-            _FilterSlider(
-              icon: Icons.face_retouching_natural_rounded,
-              label: 'Smooth',
-              value: _smooth,
-              onChanged: (value) => setState(() => _smooth = value),
-            ),
-            _FilterSlider(
-              icon: Icons.wb_sunny_rounded,
-              label: 'Brightness',
-              value: _brightness,
-              onChanged: (value) => setState(() => _brightness = value),
-            ),
-            _FilterSlider(
-              icon: Icons.palette_rounded,
-              label: 'Tone',
-              value: _tone,
-              onChanged: (value) => setState(() => _tone = value),
-            ),
-            Spacing.v12,
-            SizedBox(
-              width: double.infinity,
-              height: 46,
-              child: TextButton(
-                onPressed: Get.back,
-                style: TextButton.styleFrom(
-                  backgroundColor: kColorPrimary,
-                  foregroundColor: kColorWhite,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(22),
                   ),
-                ),
-                child: const SemiBoldText(
-                  text: 'Apply',
-                  fontSize: TextStyles.k14FontSize,
-                  color: kColorWhite,
-                ),
+                  Spacing.h10,
+                  Expanded(
+                    child: TextButton(
+                      onPressed: Get.back,
+                      style: TextButton.styleFrom(
+                        backgroundColor: kColorPrimary,
+                        foregroundColor: kColorWhite,
+                        minimumSize: const Size.fromHeight(46),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(22),
+                        ),
+                      ),
+                      child: const SemiBoldText(
+                        text: 'Done',
+                        fontSize: TextStyles.k14FontSize,
+                        color: kColorWhite,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -596,7 +604,12 @@ class _FilterSlider extends StatelessWidget {
                 thumbColor: kColorWhite,
                 overlayColor: kColorPrimary.withValues(alpha: 0.16),
               ),
-              child: Slider(value: value, onChanged: onChanged),
+              child: Slider(
+                value: value.clamp(0, 100),
+                min: 0,
+                max: 100,
+                onChanged: onChanged,
+              ),
             ),
           ),
         ],

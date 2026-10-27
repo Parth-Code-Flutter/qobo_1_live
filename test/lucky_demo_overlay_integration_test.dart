@@ -52,8 +52,12 @@ void main() {
       );
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
+      await tester.tap(find.text('Heart'));
+      await tester.pump();
+      expect(sends, 0);
+      expect(find.text('Send'), findsOneWidget);
       for (var i = 0; i < 5; i++) {
-        await tester.tap(find.text('Heart'));
+        await tester.tap(find.text('Send'));
         await tester.pump(const Duration(milliseconds: 100));
         await tester.pump();
         expect(tester.takeException(), isNull);

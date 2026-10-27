@@ -674,7 +674,7 @@ class _CameraControl extends StatelessWidget {
             label: isOn ? 'Cam On' : 'Cam Off',
             compact: compact,
             active: isOn,
-            onTap: () => ZegoUIKit().turnCameraOn(!isOn),
+            onTap: () => unawaited(controller.setPartyCamera(!isOn)),
           );
         },
       );

@@ -91,8 +91,16 @@ class RoomOptionsSheet extends StatelessWidget {
       ];
     }
 
-    return const [
-      _RoomOption(
+    return [
+      if (isVideoRoom)
+        const _RoomOption(
+          action: _RoomOptionAction.filters,
+          icon: Icons.auto_fix_high_rounded,
+          label: 'Filters',
+          color: Color(0xFFFF6AD5),
+          gradient: [Color(0xFFE12BC5), Color(0xFF9B1FE8)],
+        ),
+      const _RoomOption(
         action: _RoomOptionAction.share,
         icon: Icons.ios_share_rounded,
         label: 'Share',
