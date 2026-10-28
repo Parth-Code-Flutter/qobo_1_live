@@ -6,9 +6,11 @@ import 'package:qobo_one_live/app/bottom_nav/controllers/bottom_nav_controller.d
 import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
+import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/app_widgets/dating_empty_hero.dart';
+import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -33,38 +35,100 @@ class MessagesTabView extends GetView<MessagesTabController> {
 
   @override
   Widget build(BuildContext context) {
+    final session = Get.isRegistered<UserSessionController>()
+        ? Get.find<UserSessionController>()
+        : Get.put(UserSessionController(), permanent: true);
+    return GetBuilder<UserSessionController>(
+      init: session,
+      builder: (session) {
+        final backgroundUrl =
+            ApiImageUtils.normalize(session.profileBackgroundUrl)?.trim() ??
+            '';
+        final backgroundPreviewUrl =
+            ApiImageUtils.normalize(
+              session.profileBackgroundPreviewUrl,
+            )?.trim() ??
+            '';
+        final onCover = backgroundUrl.isNotEmpty;
+        return _messagesBody(
+          context,
+          session: session,
+          onCover: onCover,
+          backgroundUrl: backgroundUrl,
+          backgroundPreviewUrl: backgroundPreviewUrl,
+        );
+      },
+    );
+  }
+
+  Widget _messagesBody(
+    BuildContext context, {
+    required UserSessionController session,
+    required bool onCover,
+    required String backgroundUrl,
+    required String backgroundPreviewUrl,
+  }) {
     return Container(
-      color: AppLightUi.bg,
+      color: onCover ? kColorBlack : AppLightUi.bg,
       child: Stack(
+        fit: StackFit.expand,
         children: [
-          // Soft romantic ambience — keep orbs subtle on lavender.
-          Positioned(
-            top: -40,
-            right: -30,
-            child: _GlowOrb(
-              size: 180,
-              color: _MessagesUi.pink.withValues(alpha: 0.08),
+          if (onCover)
+            Positioned.fill(
+              child: ProfileBackgroundMedia(
+                key: ValueKey('messages_tab_bg_$backgroundUrl'),
+                url: backgroundUrl,
+                fit: BoxFit.cover,
+                showLoadingIndicator: false,
+                previewImageUrl: backgroundPreviewUrl,
+              ),
+            )
+          else ...[
+            Positioned(
+              top: -40,
+              right: -30,
+              child: _GlowOrb(
+                size: 180,
+                color: _MessagesUi.pink.withValues(alpha: 0.08),
+              ),
             ),
-          ),
-          Positioned(
-            top: 180,
-            left: -60,
-            child: _GlowOrb(
-              size: 160,
-              color: _MessagesUi.violet.withValues(alpha: 0.07),
+            Positioned(
+              top: 180,
+              left: -60,
+              child: _GlowOrb(
+                size: 160,
+                color: _MessagesUi.violet.withValues(alpha: 0.07),
+              ),
             ),
-          ),
+          ],
+          if (onCover)
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      kColorBlack.withValues(alpha: 0.28),
+                      kColorBlack.withValues(alpha: 0.55),
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
+              ),
+            ),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _topHeader(context),
+                  _topHeader(context, session, onCover: onCover),
                   Spacing.v16,
                   Obx(() {
                     if (controller.isSearchMode.value) {
-                      return Expanded(child: _searchResults(context));
+                      return Expanded(
+                        child: _searchResults(context, onCover: onCover),
+                      );
                     }
                     return Expanded(
                       child: RefreshIndicator(
@@ -84,6 +148,7 @@ class MessagesTabView extends GetView<MessagesTabController> {
                                   ? controller.newMatchesTotal.value
                                   : controller.newMatches.length,
                               accent: _MessagesUi.pink,
+                              onCover: onCover,
                             ),
                             Spacing.v12,
                             _newMatchRow(context),
@@ -94,6 +159,7 @@ class MessagesTabView extends GetView<MessagesTabController> {
                               subtitle: 'Keep the vibe going',
                               count: controller.inboxThreads.length,
                               accent: _MessagesUi.cyan,
+                              onCover: onCover,
                             ),
                             Spacing.v12,
                             _inboxSection(context),
@@ -112,30 +178,36 @@ class MessagesTabView extends GetView<MessagesTabController> {
     );
   }
 
-  Widget _topHeader(BuildContext context) {
-    return GetBuilder<UserSessionController>(
-      builder: (session) {
-        final avatarUrl = session.displayPictureUrl;
-        return Column(
+  Widget _topHeader(
+    BuildContext context,
+    UserSessionController session, {
+    required bool onCover,
+  }) {
+    final avatarUrl = session.displayPictureUrl;
+    final titleColor = onCover ? kColorWhite : AppLightUi.title;
+    final subtitleColor = onCover
+        ? kColorWhite.withValues(alpha: 0.78)
+        : AppLightUi.subtitle;
+    return Column(
+      children: [
+        Row(
           children: [
-            Row(
-              children: [
-                if (showBackButton) ...[
-                  IconButton(
-                    onPressed: Get.back,
-                    icon: const Icon(
-                      Icons.arrow_back_ios_new_rounded,
-                      color: AppLightUi.title,
-                      size: 20,
-                    ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                      minWidth: 36,
-                      minHeight: 40,
-                    ),
-                  ),
-                  Spacing.h6,
-                ],
+            if (showBackButton) ...[
+              IconButton(
+                onPressed: Get.back,
+                icon: Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: titleColor,
+                  size: 20,
+                ),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(
+                  minWidth: 36,
+                  minHeight: 40,
+                ),
+              ),
+              Spacing.h6,
+            ],
                 GestureDetector(
                   onTap: () {
                     if (!Get.isRegistered<BottomNavController>()) return;
@@ -173,20 +245,20 @@ class MessagesTabView extends GetView<MessagesTabController> {
                   ),
                 ),
                 Spacing.h12,
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       SemiBoldText(
                         text: 'Messages',
                         fontSize: TextStyles.k20FontSize,
-                        color: AppLightUi.title,
+                        color: titleColor,
                       ),
-                      SizedBox(height: 2),
+                      const SizedBox(height: 2),
                       AppText(
                         text: 'Good connections start with hello.',
                         fontSize: TextStyles.k10FontSize,
-                        color: AppLightUi.subtitle,
+                        color: subtitleColor,
                       ),
                     ],
                   ),
@@ -218,11 +290,9 @@ class MessagesTabView extends GetView<MessagesTabController> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            _searchBar(),
-          ],
-        );
-      },
+        const SizedBox(height: 16),
+        _searchBar(),
+      ],
     );
   }
 
@@ -281,7 +351,12 @@ class MessagesTabView extends GetView<MessagesTabController> {
     required String subtitle,
     required int count,
     required Color accent,
+    required bool onCover,
   }) {
+    final titleColor = onCover ? kColorWhite : AppLightUi.title;
+    final subtitleColor = onCover
+        ? kColorWhite.withValues(alpha: 0.72)
+        : AppLightUi.subtitle;
     return Row(
       children: [
         Container(
@@ -299,12 +374,12 @@ class MessagesTabView extends GetView<MessagesTabController> {
               SemiBoldText(
                 text: title,
                 fontSize: TextStyles.k16FontSize,
-                color: AppLightUi.title,
+                color: titleColor,
               ),
               AppText(
                 text: subtitle,
                 fontSize: TextStyles.k10FontSize,
-                color: AppLightUi.subtitle,
+                color: subtitleColor,
               ),
             ],
           ),
@@ -401,7 +476,7 @@ class MessagesTabView extends GetView<MessagesTabController> {
     );
   }
 
-  Widget _searchResults(BuildContext context) {
+  Widget _searchResults(BuildContext context, {required bool onCover}) {
     if (controller.isSearchLoading.value) {
       return const Center(
         child: CircularProgressIndicator(
@@ -418,7 +493,7 @@ class MessagesTabView extends GetView<MessagesTabController> {
               ? 'Type to search users'
               : 'No users found for "${controller.searchQuery.value}"',
           fontSize: TextStyles.k14FontSize,
-          color: AppLightUi.subtitle,
+          color: onCover ? kColorWhite.withValues(alpha: 0.78) : AppLightUi.subtitle,
           align: TextAlign.center,
         ),
       );

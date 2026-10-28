@@ -94,6 +94,15 @@ class MessagesTabController extends GetxController with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     searchController.addListener(_onSearchChanged);
     unawaited(_loadReadMarksThenRefresh());
+    unawaited(_syncCoverIfMissing());
+  }
+
+  /// Same cover Profile uses, so Messages can paint it on a cold start.
+  Future<void> _syncCoverIfMissing() async {
+    if (!Get.isRegistered<UserSessionController>()) return;
+    final session = Get.find<UserSessionController>();
+    if (session.profileBackgroundUrl.trim().isNotEmpty) return;
+    await session.syncEquippedProfileBackgroundFromBackpack();
   }
 
   Future<void> _loadReadMarksThenRefresh() async {

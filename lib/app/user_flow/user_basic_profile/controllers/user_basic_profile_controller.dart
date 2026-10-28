@@ -25,8 +25,6 @@ import 'package:qobo_one_live/utils/profile/stored_profile_map.dart';
 import 'package:qobo_one_live/utils/profile/update_profile_api_helper.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/utils/validations/text_field_validations.dart';
-import 'package:qobo_one_live/utils/svga_network_loader.dart';
-
 import '../widgets/profile_cover_background_sheet.dart';
 
 /// Basic profile capture (photo + core fields). Wire `/api` here when ready.
@@ -815,8 +813,6 @@ class UserBasicProfileController extends GetxController
       // Keep Profile tab + Basic Profile in sync with the equipped backpack item
       // (API often returns both `.svga` and image URLs in the same `image` field).
       _syncEquippedCoverFromPurchased();
-      _prefetchCoverSvga(purchasedCoverBackgrounds);
-      _prefetchCoverSvga(shopCoverBackgrounds);
     } finally {
       isLoadingCoverBackgrounds.value = false;
     }
@@ -832,17 +828,6 @@ class UserBasicProfileController extends GetxController
         previewImageUrl: item['previewImageUrl']?.toString(),
       );
       return;
-    }
-  }
-
-  /// Warm SVGA disk cache while the picker is open so equip feels instant.
-  void _prefetchCoverSvga(List<Map<String, dynamic>> items) {
-    for (final item in items) {
-      final url =
-          ApiImageUtils.normalize(item['imageUrl']?.toString())?.trim() ?? '';
-      if (!ProfileBackgroundMedia.isSvgaUrl(url)) continue;
-      // Safe prefetch — never caches 404 HTML like decodeFromURL can.
-      unawaited(SvgaNetworkLoader.prefetch(url));
     }
   }
 

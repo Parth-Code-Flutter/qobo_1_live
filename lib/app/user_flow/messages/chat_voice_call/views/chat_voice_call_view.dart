@@ -6,6 +6,7 @@ import 'package:qobo_one_live/constants/icon_constants.dart';
 import 'package:qobo_one_live/app/user_flow/live_broadcast/widgets/gift_icon_widget.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
+import 'package:qobo_one_live/utils/app_widgets/beauty_filter_dock.dart';
 import 'package:qobo_one_live/constants/zego_config.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
@@ -385,6 +386,7 @@ class _ChatCallFilterButton extends StatelessWidget {
           const _CallFilterBottomSheet(),
           isScrollControlled: true,
           backgroundColor: Colors.transparent,
+          barrierColor: Colors.transparent,
         ),
         customBorder: const CircleBorder(),
         child: Ink(
@@ -418,201 +420,16 @@ class _CallFilterBottomSheet extends GetView<ChatVoiceCallController> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 22),
-      decoration: const BoxDecoration(
-        color: Color(0xFF171321),
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
-        ),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Obx(
-          () => Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: kColorWhite.withValues(alpha: 0.22),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Spacing.v16,
-              Row(
-                children: [
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SemiBoldText(
-                          text: 'Filters',
-                          fontSize: TextStyles.k20FontSize,
-                          color: kColorWhite,
-                        ),
-                        SizedBox(height: 4),
-                        AppText(
-                          text: 'Smooth, skin tone, blush, and sharpen.',
-                          fontSize: TextStyles.k12FontSize,
-                          color: kColorHint,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Switch(
-                    value: controller.callBeautyOn.value,
-                    activeThumbColor: kColorWhite,
-                    activeTrackColor: kColorPrimary,
-                    inactiveThumbColor: kColorWhite,
-                    inactiveTrackColor: Colors.white24,
-                    onChanged: controller.setCallBeautyEnabled,
-                  ),
-                ],
-              ),
-              Spacing.v16,
-              _FilterSlider(
-                icon: Icons.blur_on_rounded,
-                label: 'Smooth',
-                value: controller.callSmooth.value.toDouble(),
-                onChanged: (value) =>
-                    controller.updateCallFilter(smooth: value.round()),
-              ),
-              _FilterSlider(
-                icon: Icons.wb_sunny_outlined,
-                label: 'Skin tone',
-                value: controller.callSkinTone.value.toDouble(),
-                onChanged: (value) =>
-                    controller.updateCallFilter(skinTone: value.round()),
-              ),
-              _FilterSlider(
-                icon: Icons.favorite_border_rounded,
-                label: 'Blush',
-                value: controller.callBlush.value.toDouble(),
-                onChanged: (value) =>
-                    controller.updateCallFilter(blush: value.round()),
-              ),
-              _FilterSlider(
-                icon: Icons.high_quality_rounded,
-                label: 'Sharpen',
-                value: controller.callSharpen.value.toDouble(),
-                onChanged: (value) =>
-                    controller.updateCallFilter(sharpen: value.round()),
-              ),
-              Spacing.v12,
-              Row(
-                children: [
-                  Expanded(
-                    child: TextButton(
-                      onPressed: controller.resetCallFilters,
-                      style: TextButton.styleFrom(
-                        backgroundColor: kColorWhite.withValues(alpha: 0.08),
-                        foregroundColor: kColorWhite,
-                        minimumSize: const Size.fromHeight(46),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(22),
-                        ),
-                      ),
-                      child: const SemiBoldText(
-                        text: 'Reset',
-                        fontSize: TextStyles.k14FontSize,
-                        color: kColorWhite,
-                      ),
-                    ),
-                  ),
-                  Spacing.h10,
-                  Expanded(
-                    child: TextButton(
-                      onPressed: Get.back,
-                      style: TextButton.styleFrom(
-                        backgroundColor: kColorPrimary,
-                        foregroundColor: kColorWhite,
-                        minimumSize: const Size.fromHeight(46),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(22),
-                        ),
-                      ),
-                      child: const SemiBoldText(
-                        text: 'Done',
-                        fontSize: TextStyles.k14FontSize,
-                        color: kColorWhite,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _FilterSlider extends StatelessWidget {
-  const _FilterSlider({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final IconData icon;
-  final String label;
-  final double value;
-  final ValueChanged<double> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: kColorWhite.withValues(alpha: 0.08),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: kColorPrimary, size: 20),
-          ),
-          Spacing.h10,
-          SizedBox(
-            width: 86,
-            child: SemiBoldText(
-              text: label,
-              fontSize: TextStyles.k12FontSize,
-              color: kColorWhite,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          Expanded(
-            child: SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                trackHeight: 5,
-                activeTrackColor: kColorPrimary,
-                inactiveTrackColor: kColorWhite.withValues(alpha: 0.12),
-                thumbColor: kColorWhite,
-                overlayColor: kColorPrimary.withValues(alpha: 0.16),
-              ),
-              child: Slider(
-                value: value.clamp(0, 100),
-                min: 0,
-                max: 100,
-                onChanged: onChanged,
-              ),
-            ),
-          ),
-        ],
+    return Obx(
+      () => BeautyFilterDock(
+        enabled: controller.callBeautyOn.value,
+        smooth: controller.callSmooth.value,
+        skinTone: controller.callSkinTone.value,
+        blush: controller.callBlush.value,
+        sharpen: controller.callSharpen.value,
+        onEnabled: controller.setCallBeautyEnabled,
+        onChanged: controller.updateCallFilter,
+        onReset: controller.resetCallFilters,
       ),
     );
   }

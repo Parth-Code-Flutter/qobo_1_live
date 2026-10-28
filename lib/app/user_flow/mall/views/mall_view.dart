@@ -6,6 +6,7 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
+import 'package:qobo_one_live/utils/app_widgets/background_plate_image.dart';
 import 'package:qobo_one_live/utils/app_widgets/network_svga_widget.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -833,7 +834,12 @@ class _StoreItemVisual extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (!photo) _FrameMedia(source: backgroundUrl, size: 96),
+            if (!photo)
+              BackgroundPlateImage(
+                url: backgroundUrl,
+                fit: BoxFit.cover,
+                fallback: _FrameMedia(source: backgroundUrl, size: 96),
+              ),
             DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),

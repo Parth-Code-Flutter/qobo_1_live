@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
+import 'package:qobo_one_live/utils/app_widgets/background_plate_image.dart';
 import 'package:qobo_one_live/utils/app_widgets/network_svga_widget.dart';
 
 /// Profile / cover background that plays SVGA when the URL is animated,
@@ -123,22 +124,30 @@ class ProfileBackgroundMedia extends StatelessWidget {
                 )
               : retryPlaceholder;
 
+          final animation = NetworkSvgaWidget(
+            key: ValueKey('svga_$source'),
+            url: source,
+            width: width,
+            height: height,
+            fit: fit,
+            fallbackAsset: svgaFallbackAsset,
+            fallback: svgaFallback,
+            showLoadingIndicator: showLoadingIndicator,
+            loading: showLoadingIndicator
+                ? null
+                : placeholder(icon: Icons.auto_awesome_outlined),
+          );
           return SizedBox(
             width: width,
             height: height,
             child: ClipRect(
-              child: NetworkSvgaWidget(
-                key: ValueKey('svga_$source'),
+              child: BackgroundPlateImage(
                 url: source,
-                width: width,
-                height: height,
                 fit: fit,
-                fallbackAsset: svgaFallbackAsset,
-                fallback: svgaFallback,
-                showLoadingIndicator: showLoadingIndicator,
                 loading: showLoadingIndicator
                     ? null
                     : placeholder(icon: Icons.auto_awesome_outlined),
+                fallback: animation,
               ),
             ),
           );

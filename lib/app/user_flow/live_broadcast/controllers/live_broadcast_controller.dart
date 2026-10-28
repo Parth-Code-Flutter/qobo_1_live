@@ -4295,6 +4295,7 @@ class LiveBroadcastController extends GetxController {
       const LiveFiltersSheet(),
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      barrierColor: Colors.transparent,
     );
   }
 
