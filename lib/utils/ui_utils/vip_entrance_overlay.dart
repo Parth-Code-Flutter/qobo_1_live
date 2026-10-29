@@ -355,26 +355,37 @@ class _VipEntranceViewState extends State<_VipEntranceView>
   }
 
   Widget _pattiBanner(String label) {
+    final raw = widget.pattiStyle.toLowerCase();
+    final colors = raw.contains('neon')
+        ? const [Color(0xFF7C5CFF), Color(0xFFFF2D95), Color(0xFF5CE1FF)]
+        : raw.contains('diamond') || raw.contains('crown')
+        ? const [Color(0xFFF4FBFF), Color(0xFF8EC9FF), Color(0xFFE7F3FF)]
+        : const [Color(0xFFFFDF00), Color(0xFFD4AF37), Color(0xFFFFF1A8)];
+    final textColor = raw.contains('neon')
+        ? kColorWhite
+        : const Color(0xFF2A1A12);
+    var title = label.trim();
+    if (title.toLowerCase().endsWith(' patti')) {
+      title = title.substring(0, title.length - 6).trim();
+    }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFFDF00), Color(0xFFD4AF37), Color(0xFFFFF1A8)],
-        ),
+        gradient: LinearGradient(colors: colors),
         border: Border.all(color: const Color(0xFFFFF6C8), width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFFFD700).withValues(alpha: 0.35),
+            color: colors[1].withValues(alpha: 0.35),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
         ],
       ),
       child: Text(
-        '$label Patti',
-        style: const TextStyle(
-          color: Color(0xFF2A1A12),
+        '$title Patti',
+        style: TextStyle(
+          color: textColor,
           fontWeight: FontWeight.w800,
           fontSize: 13,
           letterSpacing: 0.4,

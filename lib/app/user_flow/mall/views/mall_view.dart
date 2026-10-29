@@ -320,33 +320,17 @@ class MallView extends GetView<MallController> {
     }
 
     if (item['catalog'] == 'patti') {
-      return Container(
-        width: 168,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFFFFE7A3), Color(0xFFE8A317)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+      final media = item['svgaUrl']?.toString() ?? item['imageUrl']?.toString() ?? '';
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (media.isNotEmpty)
+            _FrameMedia(source: media, size: 92),
+          _PattiPlate(
+            name: item['name']?.toString() ?? 'Patti',
+            animate: true,
           ),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFFFF6D8)),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFE8A317).withValues(alpha: 0.35),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: SemiBoldText(
-          text: item['name']?.toString() ?? 'Patti',
-          fontSize: TextStyles.k14FontSize,
-          color: const Color(0xFF4A2E00),
-          align: TextAlign.center,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
+        ],
       );
     }
 
@@ -760,6 +744,13 @@ class _StoreItemVisual extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (item['catalog'] == 'patti') {
+      return _PattiPlate(
+        name: item['name']?.toString() ?? 'Patti',
+        compact: true,
+      );
+    }
+
     final frameSource =
         item['svgaUrl']?.toString() ?? item['imageUrl']?.toString();
     if (isFrame && frameSource != null && frameSource.isNotEmpty) {
@@ -895,6 +886,140 @@ class _StoreItemVisual extends StatelessWidget {
           : iconAsset,
     );
   }
+}
+
+class _PattiPlate extends StatefulWidget {
+  const _PattiPlate({
+    required this.name,
+    this.compact = false,
+    this.animate = false,
+  });
+
+  final String name;
+  final bool compact;
+  final bool animate;
+
+  @override
+  State<_PattiPlate> createState() => _PattiPlateState();
+}
+
+class _PattiPlateState extends State<_PattiPlate>
+    with SingleTickerProviderStateMixin {
+  AnimationController? _shine;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.animate) {
+      _shine = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 1600),
+      )..repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _shine?.dispose();
+    super.dispose();
+  }
+
+  _PattiColors get _colors {
+    final name = widget.name.toLowerCase();
+    if (name.contains('neon')) {
+      return const _PattiColors(
+        colors: [Color(0xFF7C5CFF), Color(0xFFFF2D95), Color(0xFF5CE1FF)],
+        text: Color(0xFFFFFFFF),
+        glow: Color(0xFFFF2D95),
+      );
+    }
+    if (name.contains('diamond') || name.contains('crown')) {
+      return const _PattiColors(
+        colors: [Color(0xFFF4FBFF), Color(0xFF8EC9FF), Color(0xFFE7F3FF)],
+        text: Color(0xFF14324A),
+        glow: Color(0xFF7EB6FF),
+      );
+    }
+    return const _PattiColors(
+      colors: [Color(0xFFFFF1A8), Color(0xFFE8A317), Color(0xFFFFE08A)],
+      text: Color(0xFF4A2E00),
+      glow: Color(0xFFE8A317),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final look = _colors;
+    final plate = Container(
+      width: widget.compact ? 132 : 196,
+      padding: EdgeInsets.symmetric(
+        horizontal: widget.compact ? 10 : 16,
+        vertical: widget.compact ? 10 : 14,
+      ),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: look.colors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(widget.compact ? 14 : 16),
+        border: Border.all(color: const Color(0xFFFFF6D8)),
+        boxShadow: [
+          BoxShadow(
+            color: look.glow.withValues(alpha: 0.4),
+            blurRadius: widget.compact ? 10 : 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: SemiBoldText(
+        text: widget.name,
+        fontSize: widget.compact ? TextStyles.k10FontSize : TextStyles.k14FontSize,
+        color: look.text,
+        align: TextAlign.center,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+
+    final shine = _shine;
+    if (shine == null) return plate;
+
+    return AnimatedBuilder(
+      animation: shine,
+      builder: (context, child) {
+        final slide = shine.value * 2 - 0.5;
+        return ShaderMask(
+          blendMode: BlendMode.srcATop,
+          shaderCallback: (bounds) {
+            return LinearGradient(
+              begin: Alignment(slide - 1, 0),
+              end: Alignment(slide, 0),
+              colors: const [
+                Color(0x00FFFFFF),
+                Color(0xCCFFFFFF),
+                Color(0x00FFFFFF),
+              ],
+            ).createShader(bounds);
+          },
+          child: child,
+        );
+      },
+      child: plate,
+    );
+  }
+}
+
+class _PattiColors {
+  const _PattiColors({
+    required this.colors,
+    required this.text,
+    required this.glow,
+  });
+
+  final List<Color> colors;
+  final Color text;
+  final Color glow;
 }
 
 bool _mallUrlIsPhoto(String url) {
