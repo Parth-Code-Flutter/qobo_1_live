@@ -51,6 +51,7 @@ import '../widgets/lucky_demo_celebration.dart';
 import 'package:qobo_one_live/utils/ui_utils/avatar_fly_overlay.dart';
 import 'package:qobo_one_live/repo/frame/frame_repo.dart';
 import 'package:qobo_one_live/repo/frame/frame_urls.dart';
+import 'package:qobo_one_live/utils/user_role.dart';
 import 'package:qobo_one_live/utils/ui_utils/vip_entrance_overlay.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:zego_express_engine/zego_express_engine.dart';
@@ -4984,6 +4985,7 @@ class LiveBroadcastController extends GetxController {
         ]),
       ),
       if (frame != null && frame.isNotEmpty) 'avatarFrameUrl': frame,
+      'role': readUserRole(viewer),
       'isHost': false,
       'isCurrentUser': _userIdsMatch(id, _currentUserId()),
     };
@@ -5023,6 +5025,13 @@ class LiveBroadcastController extends GetxController {
         : isCurrentUser && mine.isNotEmpty
         ? mine
         : previous?['avatarFrameUrl']?.toString();
+    final role = isCurrentUser && session != null
+        ? session.effectiveRole
+        : () {
+            final previousRole = readUserRole(previous);
+            if (previousRole != 'user') return previousRole;
+            return isHostUser ? 'host' : 'user';
+          }();
     return <String, dynamic>{
       'id': id,
       'targetId': targetId,
@@ -5032,6 +5041,7 @@ class LiveBroadcastController extends GetxController {
         'avatarFrameUrl': frame.trim(),
       'isHost': isHostUser,
       'isCurrentUser': isCurrentUser,
+      'role': role,
     };
   }
 
@@ -6740,6 +6750,7 @@ class LiveBroadcastController extends GetxController {
         role: 'host',
         isAdmin: true,
         isSvip: session?.isSvipMember ?? false,
+        accountRole: session?.effectiveRole ?? 'user',
       );
     }
 
@@ -6768,6 +6779,10 @@ class LiveBroadcastController extends GetxController {
         avatarUrl: hostAvatarUrl.value,
         avatarFrameUrl: hostAvatarFrameUrl.value,
         role: 'host',
+        accountRole: Get.isRegistered<UserSessionController>() &&
+                _userIdsMatch(hostId, _currentUserId())
+            ? Get.find<UserSessionController>().effectiveRole
+            : 'user',
       );
     }
 
@@ -6853,6 +6868,7 @@ class LiveBroadcastController extends GetxController {
           name: viewer['name']?.toString() ?? 'Member',
           avatarUrl: viewer['avatarUrl']?.toString(),
           diamonds: 0,
+          accountRole: normalizeUserRole(viewer['role']?.toString()),
         ),
       );
       seatNo++;

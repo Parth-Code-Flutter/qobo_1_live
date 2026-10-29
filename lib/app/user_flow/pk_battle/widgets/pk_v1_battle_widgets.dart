@@ -7,6 +7,7 @@ import 'package:qobo_one_live/app/user_flow/pk_battle/controllers/pk_v1_controll
 import 'package:qobo_one_live/app/user_flow/pk_battle/models/v1/pk_v1_models.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/role_badge.dart';
 import 'package:qobo_one_live/utils/app_widgets/safe_network_avatar.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -78,12 +79,20 @@ class PkHostVideoTile extends StatelessWidget {
                   mainAxisAlignment:
                       alignEnd ? MainAxisAlignment.end : MainAxisAlignment.start,
                   children: [
-                    SemiBoldText(
-                      text: name.isEmpty ? 'Host' : name,
-                      fontSize: TextStyles.k12FontSize,
-                      color: kColorWhite,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    Flexible(
+                      child: SemiBoldText(
+                        text: name.isEmpty ? 'Host' : name,
+                        fontSize: TextStyles.k12FontSize,
+                        color: kColorWhite,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    RoleBadge(
+                      role: 'host',
+                      userId: userId,
+                      compact: true,
                     ),
                   ],
                 ),
@@ -139,12 +148,20 @@ class PkHostVideoTile extends StatelessWidget {
                 mainAxisAlignment:
                     alignEnd ? MainAxisAlignment.end : MainAxisAlignment.start,
                 children: [
-                  SemiBoldText(
-                    text: name.isEmpty ? 'Host' : name,
-                    fontSize: TextStyles.k12FontSize,
-                    color: kColorWhite,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  Flexible(
+                    child: SemiBoldText(
+                      text: name.isEmpty ? 'Host' : name,
+                      fontSize: TextStyles.k12FontSize,
+                      color: kColorWhite,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  RoleBadge(
+                    role: 'host',
+                    userId: userId,
+                    compact: true,
                   ),
                 ],
               ),

@@ -1,4 +1,5 @@
 import 'package:qobo_one_live/repo/frame/frame_urls.dart';
+import 'package:qobo_one_live/utils/user_role.dart';
 
 class AudioRoomSeatModel {
   const AudioRoomSeatModel({
@@ -18,6 +19,7 @@ class AudioRoomSeatModel {
     this.isVip = false,
     this.isSvip = false,
     this.isCoinsSeller = false,
+    this.accountRole = 'user',
     this.pkBattle,
   });
 
@@ -111,6 +113,7 @@ class AudioRoomSeatModel {
       isVip: isVip,
       isSvip: isSvip,
       isCoinsSeller: isCoinsSeller,
+      accountRole: _readAccountRole(raw, occupantMap),
       pkBattle: AudioRoomPkBattleInfo.fromDynamic(
         raw['pkBattle'] ??
             raw['pk_battle'] ??
@@ -146,6 +149,18 @@ class AudioRoomSeatModel {
 
   /// Verified P2P coins merchant from seats / join payloads.
   final bool isCoinsSeller;
+
+  /// Account role (user, host, agency, super_admin, coins_seller).
+  /// Seat function words like speaker stay on [role].
+  final String accountRole;
+
+  /// Tag shown on the seat. A plain user on the host seat reads as Host.
+  String get badgeRole {
+    if (accountRole != 'user') return accountRole;
+    if (isHost) return 'host';
+    return 'user';
+  }
+
   final AudioRoomPkBattleInfo? pkBattle;
 
   bool get occupied => userId.trim().isNotEmpty || name.trim().isNotEmpty;
@@ -178,6 +193,7 @@ class AudioRoomSeatModel {
     bool? isVip,
     bool? isSvip,
     bool? isCoinsSeller,
+    String? accountRole,
     AudioRoomPkBattleInfo? pkBattle,
   }) {
     return AudioRoomSeatModel(
@@ -196,6 +212,7 @@ class AudioRoomSeatModel {
       isVip: isVip ?? this.isVip,
       isSvip: isSvip ?? this.isSvip,
       isCoinsSeller: isCoinsSeller ?? this.isCoinsSeller,
+      accountRole: accountRole ?? this.accountRole,
       pkBattle: pkBattle ?? this.pkBattle,
     );
   }
@@ -243,6 +260,7 @@ class AudioRoomInviteCandidate {
     this.isOnline = false,
     this.isFollower = false,
     this.isInRoom = false,
+    this.role = 'user',
   });
 
   factory AudioRoomInviteCandidate.fromMap(Map<String, dynamic> raw) {
@@ -259,6 +277,7 @@ class AudioRoomInviteCandidate {
       isOnline: _readBool(raw, const ['isOnline', 'online']),
       isFollower: _readBool(raw, const ['isFollower', 'follower']),
       isInRoom: _readBool(raw, const ['isInRoom', 'inRoom']),
+      role: readUserRole(raw),
     );
   }
 
@@ -268,6 +287,38 @@ class AudioRoomInviteCandidate {
   final bool isOnline;
   final bool isFollower;
   final bool isInRoom;
+  final String role;
+}
+
+const _seatFunctionRoles = {
+  'speaker',
+  'empty',
+  'audience',
+  'listener',
+  'guest',
+  'host',
+  'member',
+};
+
+/// Account role on a seat row. Seat words (host, speaker) are not account roles.
+String _readAccountRole(
+  Map<String, dynamic> raw,
+  Map<String, dynamic>? occupant,
+) {
+  if (occupant != null) {
+    final role = readUserRole(_withoutSeatFunction(occupant));
+    if (role != 'user') return role;
+  }
+  return readUserRole(_withoutSeatFunction(raw));
+}
+
+Map<String, dynamic> _withoutSeatFunction(Map<String, dynamic> raw) {
+  final copy = Map<String, dynamic>.from(raw);
+  for (final key in const ['role', 'type', 'userRole', 'user_role']) {
+    final value = copy[key]?.toString().trim().toLowerCase() ?? '';
+    if (_seatFunctionRoles.contains(value)) copy.remove(key);
+  }
+  return copy;
 }
 
 String? _readString(Map<String, dynamic>? raw, List<String> keys) {
@@ -344,6 +395,7 @@ class FloorAudienceUser {
     this.isVip = false,
     this.isSvip = false,
     this.isCoinsSeller = false,
+    this.role = 'user',
   });
 
   factory FloorAudienceUser.fromMap(Map<String, dynamic> raw) {
@@ -372,6 +424,7 @@ class FloorAudienceUser {
         'isCoinSeller',
         'is_coins_seller',
       ]),
+      role: readUserRole(raw),
     );
   }
 
@@ -385,6 +438,9 @@ class FloorAudienceUser {
   /// Active Supreme VIP. Host cannot mute, remove, or kick this person.
   final bool isSvip;
   final bool isCoinsSeller;
+
+  /// Account role: user, host, agency, super_admin, coins_seller.
+  final String role;
 }
 
 /// Host inbox row for `pending_seat_requests[]`.

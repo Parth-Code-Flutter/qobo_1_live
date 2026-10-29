@@ -10,6 +10,7 @@ import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/role_badge.dart';
 import 'package:qobo_one_live/utils/app_widgets/svip_badge_chip.dart';
 import 'package:qobo_one_live/utils/app_widgets/session_earnings_badge.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -1282,15 +1283,6 @@ class _VideoOccupiedSeatTile extends GetView<LiveBroadcastController> {
 
   @override
   Widget build(BuildContext context) {
-    final rawRole = seat.role.trim();
-    final roleLabel = seat.isHost
-        ? 'Host'
-        : (seat.isCoinsSeller
-              ? 'Seller'
-              : (rawRole.isEmpty
-                    ? 'Speaker'
-                    : '${rawRole[0].toUpperCase()}${rawRole.substring(1).toLowerCase()}'));
-
     return KeyedSubtree(
       key: controller.seatCoinFlyKeyFor(seat.userId),
       child: _VideoSeatShell(
@@ -1375,10 +1367,17 @@ class _VideoOccupiedSeatTile extends GetView<LiveBroadcastController> {
                             Row(
                               children: [
                                 Flexible(
-                                  child: _VideoRoleChip(
-                                    label: roleLabel,
-                                    highlighted: seat.isHost,
-                                    compact: tiny,
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: RoleBadge(
+                                      role: seat.badgeRole,
+                                      userId: seat.userId,
+                                      useMyRole:
+                                          controller.isHost.value &&
+                                          seat.isHost,
+                                      compact: true,
+                                    ),
                                   ),
                                 ),
                                 _SeatSessionCoinInline(
@@ -1655,42 +1654,6 @@ class _VideoSeatIndexChip extends StatelessWidget {
         text: '#$seatNo',
         fontSize: TextStyles.k10FontSize,
         color: kColorWhite.withValues(alpha: 0.78),
-      ),
-    );
-  }
-}
-
-class _VideoRoleChip extends StatelessWidget {
-  const _VideoRoleChip({
-    required this.label,
-    required this.highlighted,
-    this.compact = false,
-  });
-
-  final String label;
-  final bool highlighted;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: compact ? 5 : 7,
-        vertical: compact ? 1 : 2,
-      ),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        gradient: highlighted
-            ? const LinearGradient(
-                colors: [Color(0xFFFFC857), Color(0xFFE8A317)],
-              )
-            : null,
-        color: highlighted ? null : kColorWhite.withValues(alpha: 0.14),
-      ),
-      child: SemiBoldText(
-        text: label,
-        fontSize: TextStyles.k10FontSize,
-        color: highlighted ? const Color(0xFF2A1A08) : kColorWhite,
       ),
     );
   }
@@ -2082,29 +2045,26 @@ class _MemberSeat extends GetView<LiveBroadcastController> {
                 SizedBox(height: metrics.gapAfterFrame),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (seat.isCoinsSeller) ...[
-                        const Icon(
-                          Icons.verified_rounded,
-                          size: 11,
-                          color: Color(0xFFFFC107),
-                        ),
-                        const SizedBox(width: 2),
-                      ],
-                      Flexible(
-                        child: SemiBoldText(
-                          text: seat.name,
-                          fontSize: TextStyles.k10FontSize,
-                          color: kColorWhite,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          align: TextAlign.center,
-                        ),
-                      ),
-                    ],
+                  child: SemiBoldText(
+                    text: seat.name,
+                    fontSize: TextStyles.k10FontSize,
+                    color: kColorWhite,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    align: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: RoleBadge(
+                      role: seat.badgeRole,
+                      userId: seat.userId,
+                      useMyRole: controller.isHost.value && seat.isHost,
+                      compact: true,
+                    ),
                   ),
                 ),
                 _SeatSessionCoinCount(seat: seat),
@@ -2361,6 +2321,12 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
           align: TextAlign.center,
         ),
         Spacing.v8,
+        RoleBadge(
+          role: seat.badgeRole,
+          userId: seat.userId,
+          useMyRole: controller.isHost.value && seat.isHost,
+        ),
+        Spacing.v8,
         Wrap(
           alignment: WrapAlignment.center,
           crossAxisAlignment: WrapCrossAlignment.center,
@@ -2389,12 +2355,6 @@ class _AudioSeatActionsSheet extends GetView<LiveBroadcastController> {
                 accent: const Color(0xFF2ED3FF),
               );
             }),
-            if (seat.isCoinsSeller)
-              _metaPill(
-                icon: Icons.storefront_rounded,
-                label: 'Seller',
-                accent: const Color(0xFFFF8F00),
-              ),
             if (seat.isVip)
               _metaPill(
                 icon: Icons.workspace_premium_rounded,
@@ -4080,12 +4040,23 @@ class _FloorAudienceListSheet extends GetView<LiveBroadcastController> {
                               ),
                               Spacing.h12,
                               Expanded(
-                                child: SemiBoldText(
-                                  text: name,
-                                  fontSize: TextStyles.k14FontSize,
-                                  color: kColorWhite,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    SemiBoldText(
+                                      text: name,
+                                      fontSize: TextStyles.k14FontSize,
+                                      color: kColorWhite,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Spacing.v2,
+                                    RoleBadge(
+                                      role: user.role,
+                                      userId: user.userId,
+                                      compact: true,
+                                    ),
+                                  ],
                                 ),
                               ),
                               Icon(
@@ -4167,6 +4138,8 @@ class FloorAudienceProfileSheet extends GetView<LiveBroadcastController> {
               color: kColorWhite,
             ),
             Spacing.v6,
+            RoleBadge(role: user.role, userId: user.userId),
+            Spacing.v6,
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
@@ -4182,7 +4155,7 @@ class FloorAudienceProfileSheet extends GetView<LiveBroadcastController> {
                 color: Color(0xFFFF8FB8),
               ),
             ),
-            if (user.isVip || user.isCoinsSeller) ...[
+            if (user.isVip) ...[
               Spacing.v10,
               Wrap(
                 spacing: 8,
@@ -4191,11 +4164,6 @@ class FloorAudienceProfileSheet extends GetView<LiveBroadcastController> {
                     _floorChip(
                       icon: Icons.workspace_premium_rounded,
                       label: 'VIP',
-                    ),
-                  if (user.isCoinsSeller)
-                    _floorChip(
-                      icon: Icons.storefront_rounded,
-                      label: 'Coin Seller',
                     ),
                 ],
               ),
@@ -4636,12 +4604,23 @@ class _FloorAudienceSeatPickerSheet extends GetView<LiveBroadcastController> {
                               ),
                               Spacing.h12,
                               Expanded(
-                                child: SemiBoldText(
-                                  text: name,
-                                  fontSize: TextStyles.k14FontSize,
-                                  color: kColorWhite,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    SemiBoldText(
+                                      text: name,
+                                      fontSize: TextStyles.k14FontSize,
+                                      color: kColorWhite,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Spacing.v2,
+                                    RoleBadge(
+                                      role: user.role,
+                                      userId: user.userId,
+                                      compact: true,
+                                    ),
+                                  ],
                                 ),
                               ),
                               const Icon(
@@ -4804,10 +4783,24 @@ class _InviteCandidatesSheetState extends State<_InviteCandidatesSheet> {
                         imageUrl: user.avatarUrl,
                         size: 42,
                       ),
-                      title: SemiBoldText(
-                        text: user.name,
-                        fontSize: TextStyles.k12FontSize,
-                        color: kColorWhite,
+                      title: Row(
+                        children: [
+                          Flexible(
+                            child: SemiBoldText(
+                              text: user.name,
+                              fontSize: TextStyles.k12FontSize,
+                              color: kColorWhite,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          RoleBadge(
+                            role: user.role,
+                            userId: user.id,
+                            compact: true,
+                          ),
+                        ],
                       ),
                       subtitle: AppText(
                         text: user.isOnline ? 'Online follower' : 'Follower',

@@ -10,6 +10,7 @@ import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/role_badge.dart';
 import 'package:qobo_one_live/utils/app_widgets/svip_badge_chip.dart';
 import 'package:qobo_one_live/utils/session_earnings_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -679,6 +680,15 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                         color: kColorWhite,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
+                      ),
+                      Spacing.v2,
+                      RoleBadge(
+                        role: _liveHostRole(),
+                        userId: controller.isHost.value
+                            ? Get.find<UserSessionController>().userId
+                            : controller.receiverId.value,
+                        useMyRole: controller.isHost.value,
+                        compact: true,
                       ),
                       Spacing.v2,
                       Row(
@@ -1439,6 +1449,20 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
       constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
       onPressed: controller.sendMessage,
     );
+  }
+
+  String _liveHostRole() {
+    if (controller.isHost.value &&
+        Get.isRegistered<UserSessionController>()) {
+      return Get.find<UserSessionController>().effectiveRole;
+    }
+    for (final viewer in controller.liveViewers) {
+      if (viewer['isHost'] == true) {
+        final role = viewer['role']?.toString().trim() ?? '';
+        if (role.isNotEmpty && role != 'null') return role;
+      }
+    }
+    return 'host';
   }
 
   Widget _buildLiveAudienceList(BuildContext context) {

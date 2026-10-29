@@ -11,6 +11,7 @@ import 'package:qobo_one_live/repo/user/user_repo.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/role_badge.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 
 /// Searchable user list for choosing a coins-seller buyer.
@@ -315,12 +316,20 @@ class _BuyerTile extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SemiBoldText(
-                      text: user.name,
-                      fontSize: 13,
-                      color: CoinSellerUi.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    Row(
+                      children: [
+                        Flexible(
+                          child: SemiBoldText(
+                            text: user.name,
+                            fontSize: 13,
+                            color: CoinSellerUi.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Spacing.h6,
+                        RoleBadge(role: user.role, compact: true),
+                      ],
                     ),
                     Spacing.v2,
                     AppText(

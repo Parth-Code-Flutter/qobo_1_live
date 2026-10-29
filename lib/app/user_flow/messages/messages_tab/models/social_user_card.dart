@@ -2,6 +2,7 @@ import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/user_ac
 import 'package:qobo_one_live/repo/frame/frame_urls.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
+import 'package:qobo_one_live/utils/user_role.dart';
 
 /// Sanitized public user card from discover / search / public profile APIs.
 class SocialUserCard {
@@ -22,6 +23,7 @@ class SocialUserCard {
     this.isVip = false,
     this.isFavourite = false,
     this.pattiStyle = 'classic',
+    this.role = 'user',
     this.coins = 0,
     this.coinsPerSecond = 0,
     this.followersCount = 0,
@@ -47,6 +49,9 @@ class SocialUserCard {
 
   /// Entrance nameplate style (`classic` by default).
   final String pattiStyle;
+
+  /// Account role: user, host, agency, super_admin, coins_seller.
+  final String role;
   final double coins;
   final double coinsPerSecond;
   final int followersCount;
@@ -89,6 +94,7 @@ class SocialUserCard {
           ? this.isFavourite
           : isFavourite as bool,
       pattiStyle: pattiStyle,
+      role: role,
       coins: coins,
       coinsPerSecond: coinsPerSecond,
       followersCount: followersCount ?? this.followersCount,
@@ -139,6 +145,7 @@ class SocialUserCard {
       isVip: json['isVip'] == true || json['isVIP'] == true,
       isFavourite: json['isFavourite'] == true || json['isFavorite'] == true,
       pattiStyle: _readPattiStyle(json),
+      role: readUserRole(json),
       coins: _toDouble(json['coins']),
       coinsPerSecond: _toDouble(json['coinsPerSecond']),
       followersCount: _toInt(json['followersCount']),

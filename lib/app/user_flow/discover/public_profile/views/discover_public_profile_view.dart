@@ -9,6 +9,7 @@ import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
+import 'package:qobo_one_live/utils/app_widgets/role_badge.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -355,6 +356,7 @@ class DiscoverPublicProfileView
                         spacing: 8,
                         runSpacing: 8,
                         children: [
+                          RoleBadge(role: user.role),
                           if (user.level > 0)
                             _chip(
                               'Lv ${user.level}',

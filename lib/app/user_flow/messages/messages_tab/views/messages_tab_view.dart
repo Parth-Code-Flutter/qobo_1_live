@@ -425,7 +425,7 @@ class MessagesTabView extends GetView<MessagesTabController> {
     final matches = controller.newMatches;
     if (matches.isEmpty) {
       return const SizedBox(
-        height: 176,
+        height: 198,
         child: _InlineEmptyState(
           text: 'Your next spark could be one hello away.',
         ),
@@ -434,7 +434,7 @@ class MessagesTabView extends GetView<MessagesTabController> {
 
     final loadingMore = controller.isNewMatchesLoadingMore.value;
     return SizedBox(
-      height: 176,
+      height: 198,
       child: NotificationListener<ScrollNotification>(
         onNotification: (notification) {
           if (notification.metrics.axis != Axis.horizontal) return false;

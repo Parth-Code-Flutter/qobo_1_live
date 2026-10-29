@@ -17,6 +17,7 @@ import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_button.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/role_badge.dart';
 import 'package:qobo_one_live/utils/app_widgets/glossy_dating_card.dart';
 import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
 import 'package:qobo_one_live/utils/app_widgets/svip_badge_chip.dart';
@@ -231,7 +232,10 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                           ),
                         ),
                         Spacing.v6,
-                        _loginRoleMark(session.effectiveRole),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: RoleBadge(role: session.effectiveRole),
+                        ),
                         Spacing.v10,
                         Wrap(
                           spacing: 8,
@@ -387,41 +391,6 @@ class _ProfileTabViewState extends State<ProfileTabView> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  /// Small lowercase role under the profile id. Uses the signed-in role only.
-  Widget _loginRoleMark(String role) {
-    final label = switch (role) {
-      'super_admin' => 'super admin',
-      'coins_seller' => 'coin seller',
-      'agency' => 'agency',
-      'host' => 'host',
-      _ => 'user',
-    };
-    final icon = switch (role) {
-      'super_admin' => Icons.workspace_premium_rounded,
-      'coins_seller' => Icons.paid_rounded,
-      'agency' => Icons.apartment_rounded,
-      'host' => Icons.mic_rounded,
-      _ => Icons.person_rounded,
-    };
-    final colors = switch (role) {
-      'super_admin' => (const Color(0xFFFFC94A), const Color(0xFFE85D04)),
-      'coins_seller' => (const Color(0xFFFFD56A), const Color(0xFFD97706)),
-      'agency' => (const Color(0xFF67E8F9), const Color(0xFF2563EB)),
-      'host' => (const Color(0xFFFF7AD9), const Color(0xFFDB2777)),
-      _ => (const Color(0xFFC4B5FD), const Color(0xFF7C3AED)),
-    };
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: _smallChip(
-        text: label,
-        start: colors.$1,
-        end: colors.$2,
-        icon: icon,
-        fontSize: TextStyles.k10FontSize,
       ),
     );
   }

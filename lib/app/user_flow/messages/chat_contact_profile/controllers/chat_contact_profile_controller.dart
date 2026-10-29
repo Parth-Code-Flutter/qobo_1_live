@@ -26,6 +26,7 @@ class ChatContactProfileController extends GetxController {
   final UserRepo _userRepo;
 
   final name = 'User'.obs;
+  final role = 'user'.obs;
   final imageUrl = RxnString();
   final targetId = ''.obs;
   final roomId = ''.obs;
@@ -82,6 +83,7 @@ class ChatContactProfileController extends GetxController {
       final data = Map<String, dynamic>.from(response!['data'] as Map);
       final profile = SocialUserCard.fromJson(data);
       if (profile.name.isNotEmpty) name.value = profile.name;
+      role.value = profile.role;
       if (profile.displayPicture != null &&
           profile.displayPicture!.isNotEmpty) {
         imageUrl.value = profile.displayPicture;

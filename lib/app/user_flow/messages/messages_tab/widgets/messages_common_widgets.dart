@@ -5,6 +5,7 @@ import 'package:qobo_one_live/services/chat/chat_inbox_preview.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/app_widgets/glossy_dating_card.dart';
+import 'package:qobo_one_live/utils/app_widgets/role_badge.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -133,7 +134,7 @@ class MessageMatchAvatarItem extends StatelessWidget {
                 ],
               ),
             ),
-            Spacing.v6,
+            const SizedBox(height: 4),
             SemiBoldText(
               text: user.name,
               color: AppLightUi.title,
@@ -142,7 +143,9 @@ class MessageMatchAvatarItem extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               align: TextAlign.center,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
+            RoleBadge(role: user.role, compact: true),
+            const SizedBox(height: 6),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 6),
@@ -222,10 +225,20 @@ class MessageSearchUserTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SemiBoldText(
-                    text: user.name,
-                    fontSize: TextStyles.k14FontSize,
-                    color: AppLightUi.title,
+                  Row(
+                    children: [
+                      Flexible(
+                        child: SemiBoldText(
+                          text: user.name,
+                          fontSize: TextStyles.k14FontSize,
+                          color: AppLightUi.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Spacing.h6,
+                      RoleBadge(role: user.role, compact: true),
+                    ],
                   ),
                   if (user.level > 0) ...[
                     Spacing.v2,

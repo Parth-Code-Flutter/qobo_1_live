@@ -6,7 +6,9 @@ import 'package:qobo_one_live/repo/frame/frame_urls.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/role_badge.dart';
 import 'package:qobo_one_live/utils/app_widgets/rooms_empty_state.dart';
+import 'package:qobo_one_live/utils/user_role.dart';
 import 'package:qobo_one_live/utils/app_widgets/dating_empty_hero.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
@@ -168,7 +170,7 @@ class _AudioRoomGridTile extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           // Title + host + gap — keep avatar/frame as the hero.
-          const textBlock = 36.0;
+          const textBlock = 48.0;
           final available =
               (constraints.maxHeight - textBlock).clamp(72.0, 120.0);
           // FramedUserAvatar paints at size * 1.34; leave a little breathing room.
@@ -256,13 +258,25 @@ class _AudioRoomGridTile extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 align: TextAlign.center,
               ),
-              AppText(
-                text: hostName,
-                fontSize: TextStyles.k10FontSize,
-                color: AppLightUi.subtitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                align: TextAlign.center,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Flexible(
+                    child: AppText(
+                      text: hostName,
+                      fontSize: TextStyles.k10FontSize,
+                      color: AppLightUi.subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      align: TextAlign.center,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  RoleBadge(
+                    role: listingHostRole(data.room),
+                    compact: true,
+                  ),
+                ],
               ),
             ],
           );

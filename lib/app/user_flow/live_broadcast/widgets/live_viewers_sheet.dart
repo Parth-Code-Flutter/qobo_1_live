@@ -6,6 +6,8 @@ import 'package:qobo_one_live/constants/icon_constants.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/role_badge.dart';
+import 'package:qobo_one_live/utils/user_role.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -78,7 +80,7 @@ class LiveViewersSheet extends GetView<LiveBroadcastController> {
                     name: name,
                     avatarUrl: viewer['avatarUrl']?.toString(),
                     frameUrl: viewer['avatarFrameUrl']?.toString(),
-                    isHost: isHost,
+                    role: _viewerRole(viewer, isHost: isHost),
                     isCurrentUser: isCurrentUser,
                     onTap: () => controller.openViewerProfile(viewer),
                   );
@@ -92,12 +94,18 @@ class LiveViewersSheet extends GetView<LiveBroadcastController> {
   }
 }
 
+String _viewerRole(Map<String, dynamic> viewer, {required bool isHost}) {
+  final role = readUserRole(viewer);
+  if (role == 'user' && isHost) return 'host';
+  return role;
+}
+
 class _ViewerListTile extends StatelessWidget {
   const _ViewerListTile({
     required this.name,
     required this.avatarUrl,
     required this.frameUrl,
-    required this.isHost,
+    required this.role,
     required this.isCurrentUser,
     required this.onTap,
   });
@@ -105,7 +113,7 @@ class _ViewerListTile extends StatelessWidget {
   final String name;
   final String? avatarUrl;
   final String? frameUrl;
-  final bool isHost;
+  final String role;
   final bool isCurrentUser;
   final VoidCallback? onTap;
 
@@ -141,12 +149,12 @@ class _ViewerListTile extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                if (isHost)
-                  const AppText(
-                    text: 'Host',
-                    fontSize: TextStyles.k10FontSize,
-                    color: Color(0xFFFF79B4),
-                  ),
+                Spacing.v2,
+                RoleBadge(
+                  role: role,
+                  useMyRole: isCurrentUser,
+                  compact: true,
+                ),
               ],
             ),
           ),
@@ -194,7 +202,7 @@ class LiveViewerProfileDialog extends GetView<LiveBroadcastController> {
     final frameUrl = viewer['avatarFrameUrl']?.toString();
     final isHost = viewer['isHost'] == true;
     final isCurrentUser = viewer['isCurrentUser'] == true;
-    final role = isHost ? 'Host' : 'Viewer';
+    final role = _viewerRole(viewer, isHost: isHost);
 
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 24),
@@ -254,15 +262,7 @@ class LiveViewerProfileDialog extends GetView<LiveBroadcastController> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _ProfileBadge(
-                  icon: isHost
-                      ? Icons.workspace_premium_rounded
-                      : Icons.remove_red_eye_rounded,
-                  label: role,
-                  color: isHost
-                      ? const Color(0xFFFF79B4)
-                      : const Color(0xFF75C7FF),
-                ),
+                RoleBadge(role: role, useMyRole: isCurrentUser),
                 if (isCurrentUser)
                   const _ProfileBadge(
                     icon: Icons.person_rounded,
@@ -282,7 +282,10 @@ class LiveViewerProfileDialog extends GetView<LiveBroadcastController> {
               ),
               child: Row(
                 children: [
-                  _ProfileMetric(label: 'Room role', value: role),
+                  _ProfileMetric(
+                    label: 'Room role',
+                    value: userRoleLabel(role),
+                  ),
                   Container(
                     width: 1,
                     height: 34,

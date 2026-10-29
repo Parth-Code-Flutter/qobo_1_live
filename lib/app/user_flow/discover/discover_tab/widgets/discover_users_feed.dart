@@ -5,6 +5,7 @@ import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/app_widgets/live_session_badge.dart';
+import 'package:qobo_one_live/utils/app_widgets/role_badge.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -338,18 +339,38 @@ class _CardBottomOverlay extends StatelessWidget {
                       ],
                     ],
                   ),
-                  if (location.isNotEmpty) ...[
-                    const SizedBox(height: 1),
-                    AppText(
-                      text: location,
-                      fontSize: compact
-                          ? TextStyles.k10FontSize
-                          : TextStyles.k12FontSize,
-                      color: kColorWhite.withValues(alpha: 0.78),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      // Long labels (Super Admin, Coin Seller) must shrink
+                      // inside the narrow grid column instead of overflowing.
+                      Flexible(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: RoleBadge(
+                            role: user.role,
+                            userId: user.id,
+                            compact: true,
+                          ),
+                        ),
+                      ),
+                      if (location.isNotEmpty) ...[
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: AppText(
+                            text: location,
+                            fontSize: compact
+                                ? TextStyles.k10FontSize
+                                : TextStyles.k12FontSize,
+                            color: kColorWhite.withValues(alpha: 0.78),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ],
               ),
             ),

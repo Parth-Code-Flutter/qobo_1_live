@@ -6,6 +6,7 @@ import 'package:qobo_one_live/utils/app_widgets/app_shell_background.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
+import 'package:qobo_one_live/utils/app_widgets/role_badge.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -119,6 +120,8 @@ class ChatContactProfileView extends GetView<ChatContactProfileController> {
             color: kColorWhite,
             align: TextAlign.center,
           ),
+          Spacing.v6,
+          RoleBadge(role: controller.role.value),
           Spacing.v6,
           Row(
             mainAxisAlignment: MainAxisAlignment.center,

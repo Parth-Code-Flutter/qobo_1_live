@@ -6,6 +6,7 @@ import 'package:qobo_one_live/routes/app_pages.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/app_widgets/live_session_badge.dart';
+import 'package:qobo_one_live/utils/app_widgets/role_badge.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
@@ -211,6 +212,8 @@ class DiscoverUserPreviewSheet extends StatelessWidget {
                                 ),
                             ],
                           ),
+                          Spacing.v8,
+                          RoleBadge(role: user.role, compact: true),
                           Spacing.v8,
                           _statusRow(excludeLiveBadge: isLive),
                         ],

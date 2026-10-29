@@ -7,7 +7,9 @@ import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/app_widgets/live_session_badge.dart';
+import 'package:qobo_one_live/utils/app_widgets/role_badge.dart';
 import 'package:qobo_one_live/utils/app_widgets/rooms_empty_state.dart';
+import 'package:qobo_one_live/utils/user_role.dart';
 import 'package:qobo_one_live/utils/app_widgets/dating_empty_hero.dart';
 import 'package:qobo_one_live/utils/geo/country_flag_utils.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
@@ -453,12 +455,23 @@ class _VideoRoomCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                             Spacing.v2,
-                            AppText(
-                              text: data.hostName,
-                              fontSize: TextStyles.k10FontSize,
-                              color: kColorWhite.withValues(alpha: 0.72),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: AppText(
+                                    text: data.hostName,
+                                    fontSize: TextStyles.k10FontSize,
+                                    color: kColorWhite.withValues(alpha: 0.72),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                RoleBadge(
+                                  role: listingHostRole(data.room),
+                                  compact: true,
+                                ),
+                              ],
                             ),
                           ],
                         ),

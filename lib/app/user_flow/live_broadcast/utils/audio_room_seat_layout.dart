@@ -48,8 +48,9 @@ class AudioRoomSeatLayoutMetrics {
     final avatarSize = frameSize * (64 / 112);
     final topInset = (frameSize * 0.12).clamp(8.0, 12.0);
     final gapAfterFrame = compact ? 4.0 : 6.0;
-    // Name/Invite line + diamond row + text-metric safety padding.
-    final labelBlock = compact ? 18.0 : 20.0;
+    // Name, role tag, diamond row, and a little text-metric padding.
+    final labelBlock = compact ? 16.0 : 18.0;
+    final roleBlock = compact ? 20.0 : 22.0;
     final diamondBlock = compact ? 18.0 : 20.0;
     const safety = 6.0;
     final mainAxisExtent =
@@ -57,6 +58,7 @@ class AudioRoomSeatLayoutMetrics {
         frameSize +
         gapAfterFrame +
         labelBlock +
+        roleBlock +
         diamondBlock +
         safety;
 
@@ -146,5 +148,5 @@ class AudioRoomSeatLayoutMetrics {
 
   /// Estimated content height for a fully populated seat cell.
   double get estimatedContentHeight =>
-      topInset + frameSize + gapAfterFrame + 20 + 20;
+      topInset + frameSize + gapAfterFrame + 18 + 18 + 20;
 }

@@ -5,6 +5,7 @@ import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/role_badge.dart';
 import 'package:qobo_one_live/utils/app_widgets/common_app_bar_widget.dart';
 import 'package:qobo_one_live/utils/app_widgets/dating_empty_hero.dart';
 import 'package:qobo_one_live/utils/app_widgets/rooms_empty_state.dart';
@@ -163,12 +164,20 @@ class FollowListView extends GetView<FollowListController> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SemiBoldText(
-                        text: user.name,
-                        fontSize: TextStyles.k14FontSize,
-                        color: AppLightUi.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      Row(
+                        children: [
+                          Flexible(
+                            child: SemiBoldText(
+                              text: user.name,
+                              fontSize: TextStyles.k14FontSize,
+                              color: AppLightUi.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Spacing.h6,
+                          RoleBadge(role: user.role, compact: true),
+                        ],
                       ),
                       if (subtitle.isNotEmpty) ...[
                         Spacing.v4,

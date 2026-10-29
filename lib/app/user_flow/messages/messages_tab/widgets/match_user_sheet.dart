@@ -4,6 +4,7 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
+import 'package:qobo_one_live/utils/app_widgets/role_badge.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
@@ -342,12 +343,7 @@ class _OwnUserSheetBody extends StatelessWidget {
               Icons.military_tech_rounded,
               const Color(0xFF9E77FF),
             ),
-            if (data.roleLabel.isNotEmpty)
-              _identityChip(
-                data.roleLabel,
-                Icons.workspace_premium_rounded,
-                const Color(0xFFFFC44D),
-              ),
+            RoleBadge(role: user.role),
             _identityChip(
               'My profile',
               Icons.verified_user_rounded,
