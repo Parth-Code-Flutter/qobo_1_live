@@ -8,6 +8,7 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/svga_network_loader.dart';
+import 'package:qobo_one_live/utils/ui_utils/gift_sound_player.dart';
 
 /// Full-screen VIP / patti entrance (gift-style) when a user joins audio/video/live.
 class VipEntranceOverlay {
@@ -21,6 +22,7 @@ class VipEntranceOverlay {
     String? avatarUrl,
     String? vipFrameUrl,
     String? pattiStyle,
+    String? soundUrl,
     Duration displayFor = const Duration(milliseconds: 5200),
   }) {
     dismiss();
@@ -57,6 +59,7 @@ class VipEntranceOverlay {
             avatarUrl: avatar,
             vipFrameUrl: frame,
             pattiStyle: patti,
+            soundUrl: soundUrl,
             displayFor: displayFor,
             onCompleted: () {
               if (dialogContext.mounted &&
@@ -107,12 +110,14 @@ class _VipEntranceView extends StatefulWidget {
     this.avatarUrl,
     this.vipFrameUrl,
     this.pattiStyle = '',
+    this.soundUrl,
   });
 
   final String userName;
   final String? avatarUrl;
   final String? vipFrameUrl;
   final String pattiStyle;
+  final String? soundUrl;
   final Duration displayFor;
   final VoidCallback onCompleted;
 
@@ -125,6 +130,7 @@ class _VipEntranceViewState extends State<_VipEntranceView>
   late final AnimationController _fade;
   Timer? _timer;
   SVGAAnimationController? _svgaController;
+  GiftSoundPlayer? _sound;
   bool _svgaReady = false;
   bool _isLoading = false;
 
@@ -196,11 +202,28 @@ class _VipEntranceViewState extends State<_VipEntranceView>
         return;
       }
 
+      // Entry files carry their own mp3 (the track the admin panel plays).
+      // Muting it leaves the car animation silent. A separate soundUrl is
+      // only used when the file has no audio of its own.
+      final movie = videoItem;
+      final hasEmbeddedAudio = movie.audios.any((audio) {
+        final bytes = movie.audiosData[audio.audioKey];
+        return bytes != null && bytes.isNotEmpty;
+      });
+      if (hasEmbeddedAudio) {
+        await GiftSoundPlayer.allowMixWithRoomAudio();
+        if (!mounted || _svgaController != controller) {
+          videoItem.dispose();
+          return;
+        }
+      }
       controller.videoItem = videoItem;
-      controller.muted = true;
       controller
+        ..volume = 1
+        ..muted = !hasEmbeddedAudio
         ..reset()
         ..repeat();
+      if (!hasEmbeddedAudio) _startEntranceSound();
       setState(() {
         _svgaReady = true;
         _isLoading = false;
@@ -221,9 +244,19 @@ class _VipEntranceViewState extends State<_VipEntranceView>
     }
   }
 
+  void _startEntranceSound() {
+    final url = widget.soundUrl?.trim() ?? '';
+    if (url.isEmpty) return;
+    final player = GiftSoundPlayer();
+    _sound = player;
+    unawaited(player.play(url));
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
+    unawaited(_sound?.dispose());
+    _sound = null;
     _svgaController?.dispose();
     _fade.dispose();
     super.dispose();

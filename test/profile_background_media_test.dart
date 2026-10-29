@@ -52,6 +52,31 @@ void main() {
       );
     });
 
+    test('cover display uses the still when an animation is also sent', () {
+      const png =
+          'https://api.qobo1live.in/uploads/backgrounds/palace.png';
+      const svga =
+          'https://api.qobo1live.in/uploads/backgrounds/palace.svga';
+      expect(
+        ProfileBackgroundMedia.preferredDisplayUrl([
+          png,
+          svga,
+        ]),
+        png,
+      );
+      expect(
+        ProfileBackgroundMedia.preferredDisplayUrl([svga]),
+        svga,
+      );
+      expect(
+        ProfileBackgroundMedia.preferredDisplayUrl([
+          svga,
+          png,
+        ]),
+        png,
+      );
+    });
+
     test('static preview candidates are never svga', () {
       const svga =
           'https://my-backend-api-960q.onrender.com/uploads/backgrounds/image-1.svga';

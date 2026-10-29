@@ -8,6 +8,7 @@ class AudioRoomSeatModel {
     this.avatarUrl,
     this.avatarFrameUrl,
     this.vipFrameUrl,
+    this.entrySoundUrl,
     this.pattiStyle = 'classic',
     this.role = 'empty',
     this.diamonds = 0,
@@ -58,6 +59,8 @@ class AudioRoomSeatModel {
     final avatarFrame =
         readAvatarFrameUrl(raw) ?? readAvatarFrameUrl(occupantMap);
     final vipFrame = readEntryFrameUrl(raw) ?? readEntryFrameUrl(occupantMap);
+    final entrySound =
+        readEntrySoundUrl(raw) ?? readEntrySoundUrl(occupantMap);
     final isVip =
         _readBool(raw, const ['isVIP', 'isVip', 'is_vip']) ||
         (occupantMap != null &&
@@ -95,6 +98,7 @@ class AudioRoomSeatModel {
       avatarUrl: avatar,
       avatarFrameUrl: avatarFrame,
       vipFrameUrl: vipFrame,
+      entrySoundUrl: entrySound,
       pattiStyle: pattiStyle,
       role:
           _readString(raw, const ['role', 'type']) ??
@@ -124,6 +128,9 @@ class AudioRoomSeatModel {
 
   /// Full-screen entrance SVGA from `GET /api/room/seats` when [isVip] is true.
   final String? vipFrameUrl;
+
+  /// Entrance sound from the same seat payload. Played with [vipFrameUrl].
+  final String? entrySoundUrl;
 
   /// Entrance nameplate style from seats / profile (`classic` by default).
   final String pattiStyle;

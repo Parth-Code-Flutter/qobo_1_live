@@ -4,6 +4,7 @@ import 'package:qobo_one_live/app/user_flow/wallet/bindings/wallet_binding.dart'
 import 'package:qobo_one_live/app/user_flow/wallet/views/wallet_view.dart';
 import 'package:qobo_one_live/constants/image_constants.dart';
 import 'package:qobo_one_live/repo/background/background_repo.dart';
+import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/repo/economy/economy_repo.dart';
 import 'package:qobo_one_live/repo/economy/mall_catalog.dart';
@@ -199,6 +200,19 @@ class MallController extends GetxController {
         svga != null ||
         display.toLowerCase().contains('.svga') ||
         display.contains('/raw/upload/');
+    // Covers now ship a still plus a separate animation. Paint the still.
+    final coverStill = kind == 'background'
+        ? ProfileBackgroundMedia.preferredDisplayUrl([
+            row['previewUrl'],
+            row['thumbnail'],
+            row['thumbnailUrl'],
+            row['coverImage'],
+            row['image'],
+            row['imageUrl'],
+            row['animationUrl'],
+            row['svgaUrl'],
+          ])
+        : '';
     return {
       'id': row['id']?.toString() ?? '',
       'name': row['name']?.toString() ?? '',
@@ -206,8 +220,10 @@ class MallController extends GetxController {
       'price': _toInt(row['price'] ?? row['amount']),
       'duration': '$days days',
       'icon': 'assets/svg/ic_frame_shop.svg',
-      'imageUrl': image ?? display,
-      'svgaUrl': animated ? (svga ?? display) : null,
+      'imageUrl': coverStill.isNotEmpty ? coverStill : (image ?? display),
+      'svgaUrl': kind == 'background'
+          ? null
+          : (animated ? (svga ?? display) : null),
       'description': row['description']?.toString() ?? '',
       'catalog': kind == 'avatar' || kind == 'entry' ? 'frame' : kind,
       'frameKind': kind == 'entry' ? 'entry' : 'avatar',
@@ -493,9 +509,16 @@ class MallController extends GetxController {
       final durationDays = _toInt(raw['durationDays'] ?? raw['duration_days']);
       final category = raw['category']?.toString() ?? 'Premium';
       final imageUrl = ApiImageUtils.normalize(
-        raw['image']?.toString() ??
-            raw['imageUrl']?.toString() ??
-            raw['previewUrl']?.toString(),
+        ProfileBackgroundMedia.preferredDisplayUrl([
+          raw['previewUrl'],
+          raw['thumbnail'],
+          raw['thumbnailUrl'],
+          raw['coverImage'],
+          raw['image'],
+          raw['imageUrl'],
+          raw['animationUrl'],
+          raw['svgaUrl'],
+        ]),
       );
       final expiresAt = purchased?['expiresAt']?.toString() ?? '';
       final isExpired = _isExpired(expiresAt);

@@ -4500,6 +4500,10 @@ class LiveBroadcastController extends GetxController {
         readEntryFrameUrl(viewer) ??
         readEntryFrameUrl(nested) ??
         readEntryFrameUrl(data);
+    final soundUrl =
+        readEntrySoundUrl(viewer) ??
+        readEntrySoundUrl(nested) ??
+        readEntrySoundUrl(data);
     final pattiStyle =
         (viewer['patti_style'] ??
                 viewer['pattiStyle'] ??
@@ -4516,6 +4520,7 @@ class LiveBroadcastController extends GetxController {
       avatarUrl: avatar,
       vipFrameUrl: frameUrl,
       pattiStyle: pattiStyle,
+      soundUrl: soundUrl,
     );
   }
 
@@ -4565,6 +4570,7 @@ class LiveBroadcastController extends GetxController {
   bool _myEntryScheduled = false;
   bool _lookedUpMyEntry = false;
   String _cachedMyEntryUrl = '';
+  String _cachedMyEntrySoundUrl = '';
 
   /// Called from the room view once it is on screen. onInit is too early:
   /// the dialog has no route yet, and marking the entrance played hides it.
@@ -4602,6 +4608,7 @@ class LiveBroadcastController extends GetxController {
       avatarUrl: session.displayPictureUrl,
       vipFrameUrl: url,
       pattiStyle: patti.isEmpty || patti == 'classic' ? null : patti,
+      soundUrl: _cachedMyEntrySoundUrl,
     );
     if (shown) _hostLiveEntryPlayed = true;
   }
@@ -4630,6 +4637,7 @@ class LiveBroadcastController extends GetxController {
         avatarUrl: session.displayPictureUrl,
         vipFrameUrl: url,
         pattiStyle: patti.isEmpty || patti == 'classic' ? null : patti,
+        soundUrl: _cachedMyEntrySoundUrl,
       );
       if (shown) return;
     }
@@ -4638,18 +4646,29 @@ class LiveBroadcastController extends GetxController {
   Future<String> _resolveMyEntryUrl(UserSessionController session) async {
     if (_cachedMyEntryUrl.isNotEmpty) return _cachedMyEntryUrl;
     var url = session.entryFrameUrl.trim();
-    if (url.isEmpty && !_lookedUpMyEntry) {
+    var sound = session.entrySoundUrl.trim();
+    // A cached animation URL must not skip the sound. Profile can have the
+    // SVGA while the mp3 only arrives on refresh or the entry backpack.
+    if ((url.isEmpty || sound.isEmpty) && !_lookedUpMyEntry) {
       _lookedUpMyEntry = true;
       await session.refreshProfileFromApi();
       if (_exitReported || isClosed) return '';
-      url = session.entryFrameUrl.trim();
-      if (url.isEmpty) url = await _entryUrlFromBackpack();
+      if (url.isEmpty) url = session.entryFrameUrl.trim();
+      if (sound.isEmpty) sound = session.entrySoundUrl.trim();
+      if (url.isEmpty || sound.isEmpty) {
+        final fromBackpack = await _entryFromBackpack();
+        if (url.isEmpty) url = fromBackpack.$1;
+        if (sound.isEmpty) sound = fromBackpack.$2;
+      }
     }
-    if (url.isNotEmpty) _cachedMyEntryUrl = url;
+    if (url.isNotEmpty) {
+      _cachedMyEntryUrl = url;
+      _cachedMyEntrySoundUrl = sound;
+    }
     return url;
   }
 
-  Future<String> _entryUrlFromBackpack() async {
+  Future<(String, String)> _entryFromBackpack() async {
     final response = await FrameRepo().getMyBackpack(
       type: FrameCatalogType.entry,
       isShowLoader: false,
@@ -4660,7 +4679,8 @@ class LiveBroadcastController extends GetxController {
         : (data is Map && data['items'] is List)
         ? data['items'] as List
         : const [];
-    String fallback = '';
+    var fallbackUrl = '';
+    var fallbackSound = '';
     for (final raw in rows.whereType<Map>()) {
       final map = Map<String, dynamic>.from(raw);
       final details = map['frameDetails'] ?? map['frame_details'];
@@ -4670,10 +4690,13 @@ class LiveBroadcastController extends GetxController {
       if (!frameCatalogIsEntry(map, details: detailMap)) continue;
       final url = readEntryFrameUrl(map) ?? readEntryFrameUrl(detailMap);
       if (url == null || url.isEmpty) continue;
-      if (map['isEquipped'] == true) return url;
-      fallback = url;
+      final sound =
+          readEntrySoundUrl(map) ?? readEntrySoundUrl(detailMap) ?? '';
+      if (map['isEquipped'] == true) return (url, sound);
+      fallbackUrl = url;
+      fallbackSound = sound;
     }
-    return fallback;
+    return (fallbackUrl, fallbackSound);
   }
 
   /// After baseline, play entrance for VIPs / patti users who newly appear.
@@ -4699,6 +4722,7 @@ class LiveBroadcastController extends GetxController {
         avatarUrl: seat.avatarUrl,
         vipFrameUrl: seat.vipFrameUrl,
         pattiStyle: seat.pattiStyle,
+        soundUrl: seat.entrySoundUrl,
       );
     }
   }
@@ -4709,6 +4733,7 @@ class LiveBroadcastController extends GetxController {
     String? avatarUrl,
     String? vipFrameUrl,
     String? pattiStyle,
+    String? soundUrl,
   }) {
     final id = userId.trim();
     final frame =
@@ -4726,6 +4751,7 @@ class LiveBroadcastController extends GetxController {
       avatarUrl: avatarUrl,
       vipFrameUrl: frame.isEmpty ? null : frame,
       pattiStyle: patti.isEmpty ? null : patti,
+      soundUrl: frame.isEmpty ? null : soundUrl,
     );
     if (shown) _vipEntrancePlayedUserIds.add(id);
     return shown;

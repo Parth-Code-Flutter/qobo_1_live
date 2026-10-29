@@ -353,15 +353,21 @@ class BackpackController extends GetxController {
         'icon': kIconMall,
         'imageUrl':
             ApiImageUtils.normalize(
-              _firstText([
+              ProfileBackgroundMedia.preferredDisplayUrl([
+                background['previewUrl'],
+                background['thumbnail'],
+                background['thumbnailUrl'],
+                background['coverImage'],
+                background['image'],
+                background['imageUrl'],
+                item['previewUrl'],
+                item['thumbnail'],
+                item['thumbnailUrl'],
+                item['image'],
+                item['imageUrl'],
                 background['animationUrl'],
                 background['svgaUrl'],
                 background['svga'],
-                background['image'],
-                background['imageUrl'],
-                background['previewUrl'],
-                item['image'],
-                item['imageUrl'],
               ]),
             ) ??
             '',

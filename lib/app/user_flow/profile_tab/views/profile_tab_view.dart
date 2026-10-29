@@ -41,7 +41,9 @@ class _ProfileTabViewState extends State<ProfileTabView> {
     // Cold start: getProfile may omit cover URL while backpack has isEquipped.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final session = _resolveUserSession();
-      if (session.profileBackgroundUrl.trim().isEmpty) {
+      final cover = session.profileBackgroundUrl.trim();
+      // Replace a cached animation URL once the backpack has a still preview.
+      if (cover.isEmpty || ProfileBackgroundMedia.isSvgaUrl(cover)) {
         session.syncEquippedProfileBackgroundFromBackpack();
       }
     });

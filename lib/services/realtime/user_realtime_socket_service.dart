@@ -75,7 +75,7 @@ Future<ws.WebSocket> connectRealtimeWebSocket(
 /// - `join_*` events → host join-approval realtime
 /// - `live_stream.*` events → standalone live-stream viewer/gift/end updates
 /// - `room_emoji` / `emoji_received` → direct emoji animations in rooms
-/// - `vip_user_joined` / `entry_effect` → entry-frame arrival overlay in rooms
+/// - `vip_user_joined` / `entry_effect` / `user_entry` → entry-frame arrival overlay in rooms
 class UserRealtimeSocketService extends GetxController {
   UserRealtimeSocketService({
     RoomInvitePushHandler? roomInviteHandler,
@@ -311,6 +311,7 @@ class UserRealtimeSocketService extends GetxController {
       );
       socket.on('vip_user_joined', _onVipUserJoined);
       socket.on('entry_effect', _onVipUserJoined);
+      socket.on('user_entry', _onVipUserJoined);
 
       // Host-vs-host PK Battle v1 events.
       for (final event in pkV1Events) {
@@ -556,6 +557,7 @@ class UserRealtimeSocketService extends GetxController {
       socket.off('room_user_kicked');
       socket.off('vip_user_joined');
       socket.off('entry_effect');
+      socket.off('user_entry');
       for (final event in pkV1Events) {
         socket.off(event);
       }

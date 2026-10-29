@@ -12,6 +12,33 @@ class GiftSoundPlayer {
   ZegoAudioEffectPlayer? _zegoEffectPlayer;
   int? _zegoEffectId;
 
+  /// Lets an entrance mp3 share the live room and play from the speaker.
+  /// A room session is play-and-record, which otherwise keeps this on the earpiece.
+  static Future<void> allowMixWithRoomAudio() async {
+    try {
+      final session = await AudioSession.instance;
+      final current = session.configuration;
+      final existing =
+          current?.avAudioSessionCategoryOptions ??
+          AVAudioSessionCategoryOptions.none;
+      await session.configure(
+        (current ?? const AudioSessionConfiguration.music()).copyWith(
+          avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
+          avAudioSessionCategoryOptions:
+              existing |
+              AVAudioSessionCategoryOptions.mixWithOthers |
+              AVAudioSessionCategoryOptions.defaultToSpeaker,
+          androidAudioFocusGainType:
+              AndroidAudioFocusGainType.gainTransientMayDuck,
+          androidAudioAttributes: const AndroidAudioAttributes(
+            contentType: AndroidAudioContentType.music,
+            usage: AndroidAudioUsage.media,
+          ),
+        ),
+      );
+    } catch (_) {}
+  }
+
   /// Normalizes API-relative paths and returns an https URL when playable.
   static String? resolvePlayableUrl(String? raw) {
     final normalized = ApiImageUtils.normalize(raw);

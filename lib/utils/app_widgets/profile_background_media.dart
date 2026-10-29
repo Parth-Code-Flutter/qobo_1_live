@@ -46,6 +46,26 @@ class ProfileBackgroundMedia extends StatelessWidget {
 
   static bool isSvgaUrl(String value) => _pathOf(value).endsWith('.svga');
 
+  /// Cover to paint when the API sends both a still and an `.svga`.
+  ///
+  /// The still (png/webp/jpg) wins so shop cards and profile covers do not
+  /// download the multi‑megabyte animation. The animation is used only when
+  /// no still was sent.
+  static String preferredDisplayUrl(List<dynamic> values) {
+    String? still;
+    String? animated;
+    for (final value in values) {
+      final text = value?.toString().trim() ?? '';
+      if (text.isEmpty || text == 'null') continue;
+      if (isSvgaUrl(text)) {
+        animated ??= text;
+      } else {
+        still ??= text;
+      }
+    }
+    return still ?? animated ?? '';
+  }
+
   static String _pathOf(String value) {
     final uri = Uri.tryParse(value.trim());
     final path = (uri?.path.isNotEmpty == true ? uri!.path : value).trim();

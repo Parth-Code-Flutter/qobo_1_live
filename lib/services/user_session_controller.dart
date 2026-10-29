@@ -44,6 +44,17 @@ class UserSessionController extends GetxController {
     return '';
   }
 
+  /// Entrance sound played with [entryFrameUrl]. Empty when the frame has none.
+  String get entrySoundUrl {
+    final direct = readEntrySoundUrl(_profileData);
+    if (direct != null && direct.isNotEmpty) return direct;
+    final nested = _profileData?['user'];
+    if (nested is Map) {
+      return readEntrySoundUrl(Map<String, dynamic>.from(nested)) ?? '';
+    }
+    return '';
+  }
+
   /// Avatar border only. An equipped entry frame is not drawn around the photo.
   String get profileFrameUrl {
     final direct = readAvatarFrameUrl(_profileData);
@@ -54,20 +65,36 @@ class UserSessionController extends GetxController {
     }
     return '';
   }
-  String get profileBackgroundUrl => _stringValueFromProfile(const [
-    'profileBackgroundUrl',
-    'profile_background_url',
-    'profileBackground.image',
-    'profile_background.image',
-    'profileBackground.animationUrl',
-    'profileBackground.svgaUrl',
-    'profile_background.animationUrl',
-    'backgroundUrl',
-    'background_url',
-    // Map objects last so we extract nested `image` via `_readProfileValue`.
-    'profileBackground',
-    'profile_background',
-  ]);
+  String get profileBackgroundUrl {
+    final saved = _stringValueFromProfile(const [
+      'profileBackgroundUrl',
+      'profile_background_url',
+    ]);
+    final fromProfile = _stringValueFromProfile(const [
+      'profileBackground.previewUrl',
+      'profileBackground.thumbnail',
+      'profileBackground.thumbnailUrl',
+      'profileBackground.coverImage',
+      'profileBackground.image',
+      'profileBackground.imageUrl',
+      'profile_background.previewUrl',
+      'profile_background.image',
+      'profile_background.imageUrl',
+      'profileBackground.animationUrl',
+      'profileBackground.svgaUrl',
+      'profile_background.animationUrl',
+      'backgroundUrl',
+      'background_url',
+      'profileBackground',
+      'profile_background',
+    ]);
+    // A previously saved animation must not hide the new still preview.
+    return ProfileBackgroundMedia.preferredDisplayUrl([
+      if (!ProfileBackgroundMedia.isSvgaUrl(saved)) saved,
+      fromProfile,
+      saved,
+    ]);
+  }
 
   /// Static thumbnail for the equipped cover when the animated `.svga` 404s.
   String get profileBackgroundPreviewUrl => _stringValueFromProfile(const [
@@ -320,15 +347,21 @@ class UserSessionController extends GetxController {
             ? Map<String, dynamic>.from(details)
             : const <String, dynamic>{};
         final url = ApiImageUtils.normalize(
-          _firstNonEmpty([
+          ProfileBackgroundMedia.preferredDisplayUrl([
+            background['previewUrl'],
+            background['thumbnail'],
+            background['thumbnailUrl'],
+            background['coverImage'],
+            background['image'],
+            background['imageUrl'],
+            raw['previewUrl'],
+            raw['thumbnail'],
+            raw['thumbnailUrl'],
+            raw['image'],
+            raw['imageUrl'],
             background['animationUrl'],
             background['svgaUrl'],
             background['svga'],
-            background['image'],
-            background['imageUrl'],
-            background['previewUrl'],
-            raw['image'],
-            raw['imageUrl'],
           ]),
         );
         if (url == null || url.isEmpty) break;
@@ -365,14 +398,6 @@ class UserSessionController extends GetxController {
     } finally {
       _syncingEquippedBackground = false;
     }
-  }
-
-  String? _firstNonEmpty(List<dynamic> values) {
-    for (final value in values) {
-      final text = value?.toString().trim() ?? '';
-      if (text.isNotEmpty && text != 'null') return text;
-    }
-    return null;
   }
 
   String? _firstNonSvga(List<dynamic> values) {

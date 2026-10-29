@@ -1004,16 +1004,22 @@ class UserBasicProfileController extends GetxController
       final isEquipped = item['isEquipped'] == true && !isExpired;
       final imageUrl =
           ApiImageUtils.normalize(
-            _firstText([
+            ProfileBackgroundMedia.preferredDisplayUrl([
+              background['previewUrl'],
+              background['thumbnail'],
+              background['thumbnailUrl'],
+              background['coverImage'],
+              background['image'],
+              background['imageUrl'],
+              item['previewUrl'],
+              item['thumbnail'],
+              item['thumbnailUrl'],
+              item['image'],
+              item['imageUrl'],
               background['animationUrl'],
               background['svgaUrl'],
               background['svga'],
-              background['image'],
-              background['imageUrl'],
-              background['previewUrl'],
               item['animationUrl'],
-              item['image'],
-              item['imageUrl'],
             ]),
           ) ??
           '';
@@ -1065,6 +1071,7 @@ class UserBasicProfileController extends GetxController
     for (final raw in items.whereType<Map>()) {
       final backgroundId = raw['id']?.toString() ?? '';
       if (backgroundId.isEmpty) continue;
+      if (!_isProfileBackgroundRow(raw)) continue;
 
       final status = raw['status']?.toString().toLowerCase() ?? 'active';
       if (status.isNotEmpty && status != 'active') continue;
@@ -1082,13 +1089,16 @@ class UserBasicProfileController extends GetxController
         'name': raw['name']?.toString() ?? 'Profile Background',
         'imageUrl':
             ApiImageUtils.normalize(
-              _firstText([
+              ProfileBackgroundMedia.preferredDisplayUrl([
+                raw['previewUrl'],
+                raw['thumbnail'],
+                raw['thumbnailUrl'],
+                raw['coverImage'],
+                raw['image'],
+                raw['imageUrl'],
                 raw['animationUrl'],
                 raw['svgaUrl'],
                 raw['svga'],
-                raw['image'],
-                raw['imageUrl'],
-                raw['previewUrl'],
               ]),
             ) ??
             '',
@@ -1158,16 +1168,24 @@ class UserBasicProfileController extends GetxController
     return const [];
   }
 
-  String? _firstText(List<dynamic> values) {
-    for (final value in values) {
-      final text = value?.toString().trim();
-      if (text != null && text.isNotEmpty && text != 'null') return text;
+  /// Shop rows with a type must be profile covers. Untyped legacy rows stay.
+  bool _isProfileBackgroundRow(Map<dynamic, dynamic> raw) {
+    final itemType = (raw['itemType'] ?? raw['itemTypes'] ?? '')
+        .toString()
+        .toUpperCase();
+    if (itemType.isNotEmpty &&
+        itemType != 'PROFILE_BACKGROUND' &&
+        itemType != 'BACKGROUND') {
+      return false;
     }
-    return null;
+    final type = raw['type']?.toString().toLowerCase() ?? '';
+    if (type.isNotEmpty && type != 'background') return false;
+    final frameType = raw['frameType']?.toString().toLowerCase() ?? '';
+    if (frameType == 'avatar' || frameType == 'entry') return false;
+    return true;
   }
 
-  /// Same as [_firstText] but skips `.svga` URLs — used to find a real static
-  /// thumbnail distinct from the animated file for SVGA-failure fallback.
+  /// First non-empty value that is not an `.svga` URL.
   String? _firstNonSvgaText(List<dynamic> values) {
     for (final value in values) {
       final text = value?.toString().trim();

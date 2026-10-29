@@ -148,6 +148,65 @@ void main() {
     );
   });
 
+  test('entry sound stays with the entry frame and not an avatar border', () {
+    const sound = 'https://api.qobo1live.in/uploads/sounds/vip_entrance.mp3';
+    final profile = {
+      'soundUrl': sound,
+      'animationUrl': entryUrl,
+      'animationType': 'svga',
+      'entryFrameUrl': entryUrl,
+      'entryFrame': {
+        'frameType': 'entry',
+        'itemType': 'VIP_FRAME',
+        'svgaUrl': entryUrl,
+        'soundUrl': sound,
+      },
+      'avatarFrame': {
+        'frameType': 'avatar',
+        'itemType': 'AVATAR_FRAME',
+        'image': avatarUrl,
+        'soundUrl': 'https://api.qobo1live.in/uploads/sounds/not_entrance.mp3',
+      },
+    };
+
+    expect(readEntryFrameUrl(profile), entryUrl);
+    expect(readEntrySoundUrl(profile), sound);
+    expect(readAvatarFrameUrl(profile), avatarUrl);
+    expect(
+      readEntrySoundUrl({
+        'itemType': 'AVATAR_FRAME',
+        'frameType': 'avatar',
+        'image': avatarUrl,
+        'soundUrl': sound,
+      }),
+      isNull,
+    );
+    expect(
+      readEntrySoundUrl({
+        'event': 'vip_user_joined',
+        'entryFrameUrl': entryUrl,
+        'animationUrl': entryUrl,
+        'sound': sound,
+      }),
+      sound,
+    );
+
+    final seat = AudioRoomSeatModel.fromMap({
+      'seatNo': 1,
+      'userId': 'idc1057300',
+      'entryFrameUrl': entryUrl,
+      'soundUrl': sound,
+      'avatarFrame': {
+        'image': avatarUrl,
+        'frameType': 'avatar',
+        'itemType': 'AVATAR_FRAME',
+      },
+    });
+    expect(seat.vipFrameUrl, entryUrl);
+    expect(seat.entrySoundUrl, sound);
+    expect(seat.avatarFrameUrl, avatarUrl);
+  });
+
   test('equipped backpack entry row uses frameDetails svga', () {
     expect(
       readEntryFrameUrl({

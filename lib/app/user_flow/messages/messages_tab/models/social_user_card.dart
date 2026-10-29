@@ -1,6 +1,7 @@
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/user_active_session.dart';
 import 'package:qobo_one_live/repo/frame/frame_urls.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
+import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
 
 /// Sanitized public user card from discover / search / public profile APIs.
 class SocialUserCard {
@@ -204,18 +205,20 @@ class SocialUserCard {
     final nested =
         json['profileBackground'] ?? json['profile_background'];
     if (nested is Map) {
-      final image =
-          nested['animationUrl'] ??
-          nested['svgaUrl'] ??
-          nested['svga'] ??
-          nested['image'] ??
-          nested['imageUrl'] ??
-          nested['url'] ??
-          nested['backgroundImage'];
-      final imageText = image?.toString().trim();
-      if (imageText != null && imageText.isNotEmpty && imageText != 'null') {
-        return imageText;
-      }
+      final image = ProfileBackgroundMedia.preferredDisplayUrl([
+        nested['previewUrl'],
+        nested['thumbnail'],
+        nested['thumbnailUrl'],
+        nested['coverImage'],
+        nested['image'],
+        nested['imageUrl'],
+        nested['url'],
+        nested['backgroundImage'],
+        nested['animationUrl'],
+        nested['svgaUrl'],
+        nested['svga'],
+      ]);
+      if (image.isNotEmpty) return image;
     }
     if (nested is String) {
       final text = nested.trim();

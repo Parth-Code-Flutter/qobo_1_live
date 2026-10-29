@@ -27,9 +27,52 @@ String? readEntryFrameUrl(Map<String, dynamic>? raw) {
     final text = _urlFromFrameValue(value);
     if (text != null) return text;
   }
+  // Socket payloads put the entrance file on animationUrl when the entry
+  // aliases above are absent. Only accept an SVGA so a photo is not played.
+  final animationType =
+      '${raw['animationType'] ?? raw['animation_type'] ?? ''}'
+          .trim()
+          .toLowerCase();
+  if (animationType == 'svga' ||
+      _isEntryFrame(raw) ||
+      raw.containsKey('entryFrame') ||
+      raw.containsKey('entry_frame')) {
+    for (final key in const ['animationUrl', 'animation_url', 'svgaUrl']) {
+      final text = _cleanUrl(raw[key]);
+      if (text != null && text.toLowerCase().contains('.svga')) return text;
+    }
+  }
   final viewer = raw['viewer'];
   if (viewer is Map) {
     return readEntryFrameUrl(Map<String, dynamic>.from(viewer));
+  }
+  return null;
+}
+
+/// Entrance sound that plays with the entry animation. Avatar frames are ignored.
+String? readEntrySoundUrl(Map<String, dynamic>? raw) {
+  if (raw == null || raw.isEmpty) return null;
+  for (final key in const [
+    'entryFrame',
+    'entry_frame',
+    'vipFrame',
+    'vip_frame',
+    'frameDetails',
+    'frame_details',
+  ]) {
+    final value = raw[key];
+    if (value is! Map) continue;
+    if (!_isEntryFrame(value) && !_isEntryFrame(raw)) continue;
+    final sound = _soundFromMap(Map<String, dynamic>.from(value));
+    if (sound != null) return sound;
+  }
+  if (readEntryFrameUrl(raw) != null || _isEntryFrame(raw)) {
+    final sound = _soundFromMap(raw);
+    if (sound != null) return sound;
+  }
+  final viewer = raw['viewer'];
+  if (viewer is Map) {
+    return readEntrySoundUrl(Map<String, dynamic>.from(viewer));
   }
   return null;
 }
@@ -115,11 +158,38 @@ String? _urlFromFrameValue(dynamic value) {
     'url',
     'frameUrl',
     'animationUrl',
+    'animation_url',
   ]) {
     final text = _cleanUrl(value[key]);
     if (text != null) return text;
   }
   return null;
+}
+
+String? _soundFromMap(Map<String, dynamic> raw) {
+  for (final key in const [
+    'soundUrl',
+    'sound_url',
+    'entrySoundUrl',
+    'entry_sound_url',
+    'sound',
+    'audioUrl',
+    'audio_url',
+  ]) {
+    final text = _cleanUrl(raw[key]);
+    if (text != null && _looksLikeAudio(text)) return text;
+  }
+  return null;
+}
+
+bool _looksLikeAudio(String url) {
+  final path = (Uri.tryParse(url)?.path ?? url).toLowerCase();
+  return !path.endsWith('.svga') &&
+      !path.endsWith('.png') &&
+      !path.endsWith('.jpg') &&
+      !path.endsWith('.jpeg') &&
+      !path.endsWith('.webp') &&
+      !path.endsWith('.gif');
 }
 
 String? _cleanUrl(dynamic value) {

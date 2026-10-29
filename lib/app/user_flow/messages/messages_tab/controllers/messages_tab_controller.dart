@@ -18,6 +18,7 @@ import 'package:qobo_one_live/services/chat/inbox_live_patch.dart';
 import 'package:qobo_one_live/services/chat/inbox_unread.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
+import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/app/user_flow/discover/discover_tab/models/explore_discover_utils.dart';
 
@@ -101,7 +102,11 @@ class MessagesTabController extends GetxController with WidgetsBindingObserver {
   Future<void> _syncCoverIfMissing() async {
     if (!Get.isRegistered<UserSessionController>()) return;
     final session = Get.find<UserSessionController>();
-    if (session.profileBackgroundUrl.trim().isNotEmpty) return;
+    final cover = session.profileBackgroundUrl.trim();
+    if (cover.isNotEmpty &&
+        !ProfileBackgroundMedia.isSvgaUrl(cover)) {
+      return;
+    }
     await session.syncEquippedProfileBackgroundFromBackpack();
   }
 
