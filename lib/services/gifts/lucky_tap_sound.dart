@@ -7,7 +7,9 @@ import 'package:zego_express_engine/zego_express_engine.dart';
 import 'package:zego_uikit/zego_uikit.dart';
 import 'package:just_audio/just_audio.dart';
 
-/// Local, one-shot effects. Never reconfigures the live room's audio session.
+/// Local lucky-gift tunes. Never reconfigures the live room's audio session.
+///
+/// A selected gift loops until that send settles. Other gifts are untouched.
 class LuckyTapSound {
   AudioPlayer? _player;
   ZegoAudioEffectPlayer? _roomPlayer;
@@ -15,52 +17,97 @@ class LuckyTapSound {
   int _generation = 0;
   Future<void> _work = Future.value();
   bool _open = false;
+  String? _armedAsset;
+
+  /// Crown, hookah, blue box, chest. Extra catalog rows reuse these.
   static const files = [
-    'confirmation_001',
-    'confirmation_002',
-    'confirmation_003',
-    'glass_001',
-    'glass_003',
-    'pluck_001',
-    'pluck_002',
+    'magic_spell_02',
+    'magical_whoosh',
+    'bonus_earned',
+    'treasure_success',
   ];
+
   static String assetFor(String name, int index) {
-    final letter = name.trim().toUpperCase();
-    final slot = RegExp(r'^[A-G]$').hasMatch(letter)
-        ? letter.codeUnitAt(0) - 65
-        : (index < 0 ? 0 : index) % files.length;
-    return 'assets/lucky_sounds/${files[slot]}.wav';
+    final text = name.toLowerCase();
+    if (text.contains('chest') || text.contains('treasure')) {
+      return _asset(3);
+    }
+    if (text.contains('hookah') || text.contains('shisha')) return _asset(1);
+    if (text.contains('box') || text.contains('clover')) return _asset(2);
+    if (text.contains('crown') || text.contains('royal')) return _asset(0);
+    // "A" or "Gift C": A–B crown, C hookah, D box, E chest.
+    final letter = RegExp(r'(?:^|\bgift\s+)([a-g])$').firstMatch(text.trim());
+    if (letter != null) {
+      const slots = [0, 0, 1, 2, 3, 2, 3];
+      return _asset(slots[letter.group(1)!.codeUnitAt(0) - 97]);
+    }
+    return _asset((index < 0 ? 0 : index) % files.length);
   }
+
+  static String _asset(int slot) => 'assets/lucky_sounds/${files[slot]}.mp3';
 
   void open() {
     _open = true;
   }
 
-  void tap(String name, int index) {
+  /// Loop this gift's tune. The same tune already playing is left alone.
+  void arm(String name, int index) {
     if (!_open) return;
+    final asset = assetFor(name, index);
+    if (_armedAsset == asset) return;
     final generation = ++_generation;
+    _armedAsset = asset;
     _work = _work
-        .then((_) async {
-          if (!_open || generation != _generation) return;
-          final asset = assetFor(name, index);
-          if (await _playInRoom(asset, generation)) return;
-          if (!_open || generation != _generation) return;
-          final player = _player ??= AudioPlayer(
-            handleAudioSessionActivation: false,
-            handleInterruptions: false,
-            androidApplyAudioAttributes: false,
-          );
-          await player.stop();
-          if (!_open || generation != _generation) return;
-          await player.setAsset(assetFor(name, index));
-          if (!_open || generation != _generation) return;
-          await player.setVolume(.65);
-          if (!_open || generation != _generation) return;
-          unawaited(player.play().catchError((_) {}));
-        })
+        .then((_) => _start(asset, generation))
         .catchError((Object error) {
           debugPrint('Lucky tap sound failed: $error');
         });
+  }
+
+  /// Stop the loop. The player stays ready for the next selection.
+  void release() {
+    final generation = ++_generation;
+    _armedAsset = null;
+    _work = _work
+        .then((_) async {
+          if (generation != _generation) return;
+          await _stopPlayback();
+        })
+        .catchError((Object error) {
+          debugPrint('Lucky sound stop: $error');
+        });
+  }
+
+  Future<void> _start(String asset, int generation) async {
+    if (!_open || generation != _generation) return;
+    if (await _playInRoom(asset, generation)) return;
+    if (!_open || generation != _generation) return;
+    final player = _player ??= AudioPlayer(
+      handleAudioSessionActivation: false,
+      handleInterruptions: false,
+      androidApplyAudioAttributes: false,
+    );
+    await player.stop();
+    if (!_open || generation != _generation) return;
+    await player.setLoopMode(LoopMode.one);
+    await player.setAsset(asset);
+    if (!_open || generation != _generation) return;
+    await player.setVolume(.65);
+    if (!_open || generation != _generation) return;
+    unawaited(player.play().catchError((_) {}));
+  }
+
+  Future<void> _stopPlayback() async {
+    try {
+      await _roomPlayer?.stopAll();
+    } catch (error) {
+      debugPrint('Lucky sound stop: $error');
+    }
+    try {
+      await _player?.stop();
+    } catch (error) {
+      debugPrint('Lucky sound stop: $error');
+    }
   }
 
   Future<bool> _playInRoom(String asset, int generation) async {
@@ -91,11 +138,11 @@ class LuckyTapSound {
       if (!_open || generation != _generation) return true;
       await player.stopAll();
       if (!_open || generation != _generation) return true;
-      // One-shot, local feedback only; do not publish to other room members.
+      // Loop locally until release(). playCount 0 repeats. Do not publish.
       await player.start(
         7101,
         path: path,
-        config: ZegoAudioEffectPlayConfig(1, false),
+        config: ZegoAudioEffectPlayConfig(0, false),
       );
       if (!_open || generation != _generation) await player.stop(7101);
       return true;
@@ -116,6 +163,7 @@ class LuckyTapSound {
 
   void close() {
     _open = false;
+    _armedAsset = null;
     ++_generation; // Invalidate loads waiting on the platform before playback.
     final roomPlayer = _roomPlayer;
     _roomPlayer = null;

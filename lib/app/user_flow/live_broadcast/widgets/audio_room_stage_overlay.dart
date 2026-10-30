@@ -10,6 +10,7 @@ import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
+import 'package:qobo_one_live/utils/app_widgets/dock_gift_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/role_badge.dart';
 import 'package:qobo_one_live/utils/app_widgets/svip_badge_chip.dart';
 import 'package:qobo_one_live/utils/app_widgets/session_earnings_badge.dart';
@@ -286,29 +287,6 @@ class _AudioRoomBottomControls extends GetView<LiveBroadcastController> {
         ),
         child: Row(
           children: [
-            _MicControl(compact: compact),
-            // Video rooms only: camera on/off + flip.
-            if (controller.isVideoRoom) ...[
-              _CameraControl(compact: compact),
-              _ControlButton(
-                icon: Icons.cameraswitch_rounded,
-                label: 'Flip',
-                compact: compact,
-                onTap: controller.flipGroupCallCamera,
-              ),
-            ],
-            _SpeakerControl(compact: compact),
-            _ControlButton(
-              icon: Icons.emoji_emotions_rounded,
-              label: 'Emoji',
-              compact: compact,
-              accentGradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFFFFD84D), Color(0xFFFF8F00)],
-              ),
-              onTap: controller.openEmojiSheet,
-            ),
             // Hide Gift for hosts during PK — only viewers support a side.
             Obx(() {
               if (controller.isInRoomPkActive && controller.isHost.value) {
@@ -329,69 +307,53 @@ class _AudioRoomBottomControls extends GetView<LiveBroadcastController> {
               ),
               onTap: controller.openLuckyPreviewSheet,
             ),
-            // Video dock is crowded (Cam/Flip) — tuck these into More.
-            // Audio keeps Background / Share / PK Battle on the dock.
-            if (controller.isVideoRoom)
-              _ControlButton(
-                icon: Icons.more_horiz_rounded,
-                label: 'More',
-                compact: compact,
-                accentGradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF8E8E9A), Color(0xFF4A4A58)],
-                ),
-                onTap: () {
-                  Get.bottomSheet(
-                    RoomOptionsSheet(
-                      isHost: controller.isHost.value,
-                      isVideoRoom: true,
-                    ),
-                    backgroundColor: Colors.transparent,
-                  );
-                },
-              )
-            else ...[
-              _ControlButton(
-                icon: Icons.image_rounded,
-                label: 'Background',
-                compact: compact,
-                accentGradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF4FC3F7), Color(0xFF2979FF)],
-                ),
-                onTap: controller.openRoomBackgroundSheet,
+            _ControlButton(
+              icon: Icons.emoji_emotions_rounded,
+              label: 'Emoji',
+              compact: compact,
+              accentGradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFFFFD84D), Color(0xFFFF8F00)],
               ),
-              _ControlButton(
-                icon: Icons.ios_share_rounded,
-                label: 'Share',
+              onTap: controller.openEmojiSheet,
+            ),
+            // Hosts start PK from the dock. Hide it once a battle is open.
+            Obx(() {
+              if (!controller.isHost.value || controller.isInRoomPkActive) {
+                return const SizedBox.shrink();
+              }
+              return _ControlButton(
+                icon: Icons.flash_on_rounded,
+                label: 'PK Battle',
                 compact: compact,
                 accentGradient: const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Color(0xFF9B7BFF), Color(0xFF6C4DFF)],
+                  colors: [Color(0xFFFFD54F), Color(0xFFFF8F00)],
                 ),
-                onTap: controller.shareRoom,
+                onTap: controller.openPkV1Arena,
+              );
+            }),
+            _ControlButton(
+              icon: Icons.more_horiz_rounded,
+              label: 'More',
+              compact: compact,
+              accentGradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF8E8E9A), Color(0xFF4A4A58)],
               ),
-              // Only hosts can start PK. Audience can still watch/support PK once active.
-              Obx(() {
-                if (!controller.isHost.value || controller.isInRoomPkActive) {
-                  return const SizedBox.shrink();
-                }
-                return _ControlButton(
-                  icon: Icons.flash_on_rounded,
-                  label: 'PK Battle',
-                  compact: compact,
-                  accentGradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFFFFD54F), Color(0xFFFF8F00)],
+              onTap: () {
+                Get.bottomSheet(
+                  RoomOptionsSheet(
+                    isHost: controller.isHost.value,
+                    isVideoRoom: controller.isVideoRoom,
                   ),
-                  onTap: controller.openPkV1Arena,
+                  backgroundColor: Colors.transparent,
                 );
-              }),
-            ],
+              },
+            ),
           ],
         ),
       ),
@@ -583,166 +545,6 @@ class _AudioRoomChatInput extends GetView<LiveBroadcastController> {
   }
 }
 
-class _MicControl extends StatelessWidget {
-  const _MicControl({required this.compact});
-
-  final bool compact;
-
-  static const _onGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFFFF6AD5), Color(0xFF9B1FE8)],
-  );
-  static const _offGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFF5C4A72), Color(0xFF2E2740)],
-  );
-
-  @override
-  Widget build(BuildContext context) {
-    final controller = Get.find<LiveBroadcastController>();
-    return Obx(() {
-      if (!controller.isZegoConnected.value) {
-        return _ControlButton(
-          icon: Icons.mic_off_rounded,
-          label: 'Muted',
-          compact: compact,
-          accentGradient: _offGradient,
-          onTap: null,
-        );
-      }
-      final userId = ZegoUIKit().getLocalUser().id;
-      if (userId.isEmpty) {
-        return _ControlButton(
-          icon: Icons.mic_off_rounded,
-          label: 'Muted',
-          compact: compact,
-          accentGradient: _offGradient,
-          onTap: null,
-        );
-      }
-      return ValueListenableBuilder<bool>(
-        valueListenable: ZegoUIKit().getMicrophoneStateNotifier(userId),
-        builder: (context, isOn, _) {
-          return _ControlButton(
-            icon: isOn ? Icons.mic_rounded : Icons.mic_off_rounded,
-            label: isOn ? 'Mic On' : 'Muted',
-            compact: compact,
-            accentGradient: isOn ? _onGradient : _offGradient,
-            onTap: () => ZegoUIKit().turnMicrophoneOn(!isOn, muteMode: true),
-          );
-        },
-      );
-    });
-  }
-}
-
-/// Local camera toggle for video party rooms (group-call Zego engine).
-class _CameraControl extends StatelessWidget {
-  const _CameraControl({required this.compact});
-
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    final controller = Get.find<LiveBroadcastController>();
-    return Obx(() {
-      if (!controller.isZegoConnected.value) {
-        return _ControlButton(
-          icon: Icons.videocam_off_rounded,
-          label: 'Cam Off',
-          compact: compact,
-          active: false,
-          onTap: null,
-        );
-      }
-      final userId = ZegoUIKit().getLocalUser().id;
-      if (userId.isEmpty) {
-        return _ControlButton(
-          icon: Icons.videocam_off_rounded,
-          label: 'Cam Off',
-          compact: compact,
-          active: false,
-          onTap: null,
-        );
-      }
-      return ValueListenableBuilder<bool>(
-        valueListenable: ZegoUIKit().getCameraStateNotifier(userId),
-        builder: (context, isOn, _) {
-          return _ControlButton(
-            icon: isOn ? Icons.videocam_rounded : Icons.videocam_off_rounded,
-            label: isOn ? 'Cam On' : 'Cam Off',
-            compact: compact,
-            active: isOn,
-            onTap: () => unawaited(controller.setPartyCamera(!isOn)),
-          );
-        },
-      );
-    });
-  }
-}
-
-class _SpeakerControl extends StatelessWidget {
-  const _SpeakerControl({required this.compact});
-
-  final bool compact;
-
-  static const _speakerGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFF7B5CFF), Color(0xFF2ED3FF)],
-  );
-  static const _earpieceGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFF5C4A72), Color(0xFF2E2740)],
-  );
-
-  @override
-  Widget build(BuildContext context) {
-    final controller = Get.find<LiveBroadcastController>();
-    return Obx(() {
-      if (!controller.isZegoConnected.value) {
-        return _ControlButton(
-          icon: Icons.volume_up_rounded,
-          label: 'Speaker',
-          compact: compact,
-          accentGradient: _speakerGradient,
-          onTap: null,
-        );
-      }
-      final userId = ZegoUIKit().getLocalUser().id;
-      if (userId.isEmpty) {
-        return _ControlButton(
-          icon: Icons.volume_up_rounded,
-          label: 'Speaker',
-          compact: compact,
-          accentGradient: _speakerGradient,
-          onTap: null,
-        );
-      }
-      return ValueListenableBuilder<ZegoUIKitAudioRoute>(
-        valueListenable: ZegoUIKit().getAudioOutputDeviceNotifier(userId),
-        builder: (context, route, _) {
-          final isSpeaker = route == ZegoUIKitAudioRoute.speaker;
-          final isLocked =
-              route == ZegoUIKitAudioRoute.headphone ||
-              route == ZegoUIKitAudioRoute.bluetooth;
-          return _ControlButton(
-            icon: isSpeaker ? Icons.volume_up_rounded : Icons.hearing_rounded,
-            label: isSpeaker ? 'Speaker' : 'Earpiece',
-            compact: compact,
-            accentGradient: isSpeaker ? _speakerGradient : _earpieceGradient,
-            onTap: isLocked
-                ? null
-                : () => ZegoUIKit().setAudioOutputToSpeaker(!isSpeaker),
-          );
-        },
-      );
-    });
-  }
-}
 
 class _ControlButton extends StatelessWidget {
   const _ControlButton({
@@ -750,7 +552,6 @@ class _ControlButton extends StatelessWidget {
     required this.label,
     required this.compact,
     required this.onTap,
-    this.active = false,
     this.accentGradient,
   });
 
@@ -758,7 +559,6 @@ class _ControlButton extends StatelessWidget {
   final String label;
   final bool compact;
   final VoidCallback? onTap;
-  final bool active;
   final Gradient? accentGradient;
 
   @override
@@ -783,8 +583,6 @@ class _ControlButton extends StatelessWidget {
                     gradient: accentGradient,
                     color: accentGradient != null
                         ? null
-                        : active
-                        ? kColorWhite
                         : kColorWhite.withValues(alpha: 0.12),
                     border: Border.all(
                       color: kColorWhite.withValues(alpha: 0.08),
@@ -795,8 +593,6 @@ class _ControlButton extends StatelessWidget {
                     size: compact ? 19 : 22,
                     color: accentGradient != null
                         ? kColorWhite
-                        : active
-                        ? kColorPrimary
                         : kColorWhite.withValues(alpha: 0.88),
                   ),
                 ),
@@ -872,11 +668,7 @@ class _GiftControlButton extends StatelessWidget {
                           ),
                         ],
                       ),
-                      child: Icon(
-                        kGiftIcon,
-                        color: kColorWhite,
-                        size: compact ? 20 : 22,
-                      ),
+                      child: DockGiftIcon(size: compact ? 34 : 40),
                     ),
                     if (!compact)
                       Positioned(

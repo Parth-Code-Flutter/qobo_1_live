@@ -8,9 +8,15 @@ class LuckyPreviewSheet extends StatefulWidget {
     super.key,
     required this.session,
     required this.onSelected,
+    this.onSoundStart,
+    this.onSoundStop,
   });
   final LuckyGiftSession session;
   final void Function(LuckyGift gift, Offset origin) onSelected;
+
+  /// Starts that gift's tune when the gift is chosen. It loops until the send settles.
+  final void Function(LuckyGift gift)? onSoundStart;
+  final VoidCallback? onSoundStop;
   @override
   State<LuckyPreviewSheet> createState() => _LuckyPreviewSheetState();
 }
@@ -19,6 +25,29 @@ class _LuckyPreviewSheetState extends State<LuckyPreviewSheet> {
   String? selected;
   final Map<String, GlobalKey> _tileKeys = {};
   static const gold = Color(0xFFFFD976);
+  bool _soundHeld = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.session.addListener(_onSession);
+  }
+
+  @override
+  void dispose() {
+    widget.session.removeListener(_onSession);
+    super.dispose();
+  }
+
+  /// Stop the tune when the send that started it has settled. Do not restart.
+  void _onSession() {
+    final busy = widget.session.busy;
+    if (_soundHeld && !busy) {
+      _soundHeld = false;
+      widget.onSoundStop?.call();
+    }
+    if (busy) _soundHeld = true;
+  }
   @override
   Widget build(BuildContext context) => Container(
     key: const ValueKey('lucky-sheet-panel'),
@@ -109,7 +138,7 @@ class _LuckyPreviewSheetState extends State<LuckyPreviewSheet> {
                     child: Text(
                       s.busy
                           ? 'Sending • ${s.queued} queued'
-                          : 'Select a gift, then tap Send.',
+                          : 'Tap a gift, then Send.',
                       style: const TextStyle(
                         color: Color(0xFFC6ACD7),
                         fontSize: 12,
@@ -165,120 +194,122 @@ class _LuckyPreviewSheetState extends State<LuckyPreviewSheet> {
                       ),
                     )
                   : LayoutBuilder(
-                      builder: (context, constraints) => GridView.builder(
-                        padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: constraints.maxWidth >= 360 ? 3 : 2,
-                          mainAxisSpacing: 8,
-                          crossAxisSpacing: 8,
-                          mainAxisExtent:
-                              116 +
-                              (MediaQuery.textScalerOf(context).scale(12) - 12)
-                                      .clamp(0, 24) *
-                                  3,
-                        ),
-                        itemCount: s.gifts.length,
-                        itemBuilder: (context, i) {
-                          final gift = s.gifts[i];
-                          final active = selected == gift.id;
-                          final tileKey = _tileKeys.putIfAbsent(
-                            gift.id,
-                            () => GlobalKey(),
-                          );
-                          return AnimatedContainer(
-                            key: tileKey,
-                            duration: const Duration(milliseconds: 180),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: active
-                                    ? [
-                                        const Color(0xFF614067),
-                                        const Color(0xFF382444),
-                                      ]
-                                    : [
-                                        const Color(0xFF342540),
-                                        const Color(0xFF211C2D),
-                                      ],
-                              ),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: active
-                                    ? gold
-                                    : Colors.white.withValues(alpha: .08),
-                                width: active ? 1.5 : 1,
-                              ),
-                            ),
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(16),
-                                onTap: s.needsRetry
-                                    ? null
-                                    : () => setState(() => selected = gift.id),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8),
-                                  child: Column(
-                                    children: [
-                                      GiftIconWidget(icon: gift.icon, size: 58),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        gift.name,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      Text(
-                                        '${gift.price} Coins',
-                                        style: const TextStyle(
-                                          color: gold,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ],
+                      builder: (context, constraints) {
+                        const spacing = 8.0;
+                        final columns = constraints.maxWidth >= 360 ? 3 : 2;
+                        final tileWidth =
+                            (constraints.maxWidth -
+                                24 -
+                                spacing * (columns - 1)) /
+                            columns;
+                        return SingleChildScrollView(
+                          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                          child: Wrap(
+                            spacing: spacing,
+                            runSpacing: spacing,
+                            crossAxisAlignment: WrapCrossAlignment.start,
+                            children: [
+                              for (final gift in s.gifts)
+                                SizedBox(
+                                  width: tileWidth,
+                                  child: _giftTile(
+                                    gift,
+                                    blocked: s.needsRetry,
                                   ),
                                 ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
             ),
-            if (selected == null)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(12, 2, 12, 10),
-                child: Text(
-                  'Each send costs the displayed coins',
-                  style: TextStyle(color: Colors.white38, fontSize: 10),
-                ),
-              )
-            else
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 2, 12, 10),
-                child: _sendButton(s),
-              ),
           ],
         );
       },
     ),
   );
 
-  Widget _sendButton(LuckyGiftSession session) {
-    final blocked = session.needsRetry;
+  Widget _giftTile(LuckyGift gift, {required bool blocked}) {
+    final active = selected == gift.id;
+    final tileKey = _tileKeys.putIfAbsent(gift.id, () => GlobalKey());
+    return AnimatedContainer(
+      key: tileKey,
+      duration: const Duration(milliseconds: 180),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: active
+                ? [const Color(0xFF614067), const Color(0xFF382444)]
+                : [const Color(0xFF342540), const Color(0xFF211C2D)],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: active ? gold : Colors.white.withValues(alpha: .08),
+            width: active ? 1.5 : 1,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: blocked ? null : () => _selectGift(gift),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      GiftIconWidget(icon: gift.icon, size: 52),
+                      const SizedBox(height: 4),
+                      Text(
+                        gift.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        '${gift.price} Coins',
+                        style: const TextStyle(
+                          color: gold,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              if (active) ...[
+                const SizedBox(height: 6),
+                _tileSendButton(
+                  blocked: blocked,
+                  onTap: () => _sendGift(gift),
+                ),
+              ],
+            ],
+          ),
+        ),
+    );
+  }
+
+  Widget _tileSendButton({
+    required bool blocked,
+    required VoidCallback onTap,
+  }) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: blocked ? null : _sendSelected,
+        borderRadius: BorderRadius.circular(12),
+        onTap: blocked ? null : onTap,
         child: Ink(
-          height: 46,
+          height: 30,
           decoration: BoxDecoration(
             gradient: blocked
                 ? null
@@ -286,29 +317,20 @@ class _LuckyPreviewSheetState extends State<LuckyPreviewSheet> {
                     colors: [Color(0xFFFFE08A), Color(0xFFFFB703)],
                   ),
             color: blocked ? Colors.white12 : null,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: blocked
-                ? null
-                : [
-                    BoxShadow(
-                      color: gold.withValues(alpha: 0.35),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+            borderRadius: BorderRadius.circular(12),
           ),
           child: const Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.send_rounded, color: Color(0xFF3A2408), size: 18),
-              SizedBox(width: 8),
+              Icon(Icons.send_rounded, color: Color(0xFF3A2408), size: 14),
+              SizedBox(width: 4),
               Text(
                 'Send',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: Color(0xFF3A2408),
-                  fontSize: 16,
+                  fontSize: 12,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -319,22 +341,22 @@ class _LuckyPreviewSheetState extends State<LuckyPreviewSheet> {
     );
   }
 
-  void _sendSelected() {
-    final id = selected;
-    if (id == null || widget.session.needsRetry) return;
-    LuckyGift? gift;
-    for (final item in widget.session.gifts) {
-      if (item.id == id) {
-        gift = item;
-        break;
-      }
-    }
-    if (gift == null) return;
+  void _selectGift(LuckyGift gift) {
+    setState(() => selected = gift.id);
+    widget.onSoundStart?.call(gift);
+  }
+
+  void _sendGift(LuckyGift gift) {
+    if (widget.session.needsRetry) return;
+    setState(() => selected = gift.id);
     final box =
-        _tileKeys[id]?.currentContext?.findRenderObject() as RenderBox?;
+        _tileKeys[gift.id]?.currentContext?.findRenderObject() as RenderBox?;
     final origin = box == null
         ? Offset.zero
-        : box.localToGlobal(Offset(box.size.width / 2, 37));
+        : box.localToGlobal(Offset(box.size.width / 2, 28));
     widget.onSelected(gift, origin);
+    // A real send sets busy; the tune already playing keeps going until it settles.
+    // A preview send finishes immediately, so stop here without starting a new play.
+    if (!widget.session.busy) widget.onSoundStop?.call();
   }
 }

@@ -1421,11 +1421,14 @@ class LiveBroadcastController extends GetxController {
         LuckyPreviewSheet(
           key: _luckySheetKey,
           session: _luckySession!,
-          onSelected: (gift, origin) {
-            _luckyTapSound.tap(
+          onSoundStart: (gift) {
+            _luckyTapSound.arm(
               gift.name,
               _luckySession!.gifts.indexWhere((g) => g.id == gift.id),
             );
+          },
+          onSoundStop: _luckyTapSound.release,
+          onSelected: (gift, origin) {
             final host = selectedGiftReceiverId.value ?? receiverId.value;
             // Visual repetitions never repeat the API request or coin charge.
             // Get.context belongs to Navigator itself, above its Overlay.
@@ -7190,6 +7193,54 @@ class LiveBroadcastController extends GetxController {
     } catch (_) {
       isCameraOff.value = !isCameraOff.value;
     }
+  }
+
+  /// Same mic toggle the room dock used, for the More sheet.
+  void toggleDockMic() {
+    if (isLiveStreamingSession) {
+      toggleMic();
+      return;
+    }
+    final userId = ZegoUIKit().getLocalUser().id;
+    if (userId.isEmpty || !isZegoConnected.value) return;
+    final isOn = ZegoUIKit().getMicrophoneStateNotifier(userId).value;
+    ZegoUIKit().turnMicrophoneOn(!isOn, muteMode: true);
+  }
+
+  /// Same speaker toggle the audio/video dock used.
+  void toggleDockSpeaker() {
+    if (isLiveStreamingSession) return;
+    final userId = ZegoUIKit().getLocalUser().id;
+    if (userId.isEmpty || !isZegoConnected.value) return;
+    final route = ZegoUIKit().getAudioOutputDeviceNotifier(userId).value;
+    if (route == ZegoUIKitAudioRoute.headphone ||
+        route == ZegoUIKitAudioRoute.bluetooth) {
+      return;
+    }
+    final isSpeaker = route == ZegoUIKitAudioRoute.speaker;
+    ZegoUIKit().setAudioOutputToSpeaker(!isSpeaker);
+  }
+
+  /// Same camera toggle the room dock used.
+  void toggleDockCamera() {
+    if (!isVideoRoom) return;
+    if (isLiveStreamingSession) {
+      toggleCamera();
+      return;
+    }
+    final userId = ZegoUIKit().getLocalUser().id;
+    if (userId.isEmpty || !isZegoConnected.value) return;
+    final isOn = ZegoUIKit().getCameraStateNotifier(userId).value;
+    unawaited(setPartyCamera(!isOn));
+  }
+
+  /// Flip the camera for whichever room engine is open.
+  void flipDockCamera() {
+    if (isLiveStreamingSession) {
+      flipLiveCamera();
+      return;
+    }
+    flipGroupCallCamera();
   }
 
   /// Flip front/back camera for video party rooms.

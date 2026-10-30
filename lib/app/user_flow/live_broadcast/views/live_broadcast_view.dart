@@ -7,6 +7,7 @@ import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/constants/zego_config.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
+import 'package:qobo_one_live/utils/app_widgets/dock_gift_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
@@ -1265,77 +1266,8 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
     BuildContext context, {
     required bool compact,
   }) {
-    final isAudience = !controller.isHost.value;
     return [
-      // Live-stream bottom emoji — temporarily disabled.
-      // _bottomActionIcon(
-      //   Icons.emoji_emotions_rounded,
-      //   compact: compact,
-      //   onTap: controller.openEmojiSheet,
-      // ),
-      Obx(
-        () => _bottomActionIcon(
-          controller.isMicMuted.value
-              ? Icons.mic_off_rounded
-              : Icons.mic_rounded,
-          active: !controller.isMicMuted.value,
-          compact: compact,
-          onTap: controller.toggleMic,
-        ),
-      ),
-      if (isAudience)
-        _bottomActionIcon(
-          Icons.ios_share_rounded,
-          compact: compact,
-          onTap: controller.shareRoom,
-        ),
-      if (isAudience)
-        Obx(
-          () => _bottomActionIcon(
-            controller.isFollowingHost.value
-                ? Icons.check_rounded
-                : Icons.person_add_alt_1_rounded,
-            color: controller.isFollowingHost.value
-                ? LiveHeartReactionLayer.whatsAppHeartGreen
-                : _accent,
-            compact: compact,
-            onTap: controller.toggleFollowHost,
-          ),
-        ),
-      if (controller.isHost.value)
-        Obx(
-          () => _bottomActionIcon(
-            controller.isCameraOff.value
-                ? Icons.videocam_off_rounded
-                : Icons.videocam_rounded,
-            active: !controller.isCameraOff.value,
-            compact: compact,
-            onTap: controller.toggleCamera,
-          ),
-        ),
-      if (controller.isHost.value && controller.isLiveStreamingSession)
-        _bottomActionIcon(
-          Icons.cameraswitch_rounded,
-          compact: compact,
-          onTap: controller.flipLiveCamera,
-        ),
-      if (controller.isHost.value && !controller.isInRoomPkActive)
-        _bottomActionIcon(
-          Icons.flash_on_rounded,
-          color: const Color(0xFFFFC857),
-          compact: compact,
-          onTap: controller.openPkV1Arena,
-        ),
-      Tooltip(
-        message: 'Lucky',
-        child: _bottomActionIcon(
-          Icons.auto_awesome_rounded,
-          color: const Color(0xFF58D99B),
-          compact: compact,
-          onTap: controller.openLuckyPreviewSheet,
-        ),
-      ),
-      // Audience can gift during live + during PK (hosts cannot).
+      // Audience can gift during live and PK. Hosts cannot.
       if (!controller.isHost.value)
         _bottomActionIcon(
           kGiftIcon,
@@ -1346,25 +1278,60 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
               ? controller.openLiveStreamGiftSheet
               : controller.openGiftsSheet,
         ),
-      if (!isAudience)
-        _bottomActionIcon(
-          Icons.more_horiz_rounded,
+      Tooltip(
+        message: 'Lucky',
+        child: _bottomActionIcon(
+          Icons.auto_awesome_rounded,
+          color: const Color(0xFF58D99B),
           compact: compact,
-          onTap: () {
-            Get.bottomSheet(
-              RoomOptionsSheet(
-                isHost: controller.isHost.value,
-                isVideoRoom: controller.isVideoRoom,
-              ),
-              backgroundColor: Colors.transparent,
-            );
-          },
+          onTap: controller.openLuckyPreviewSheet,
         ),
+      ),
+      _bottomActionIcon(
+        Icons.emoji_emotions_rounded,
+        color: const Color(0xFFFFD84D),
+        compact: compact,
+        onTap: controller.openEmojiSheet,
+      ),
+      // PK stays off the bar once a battle is already open.
+      if (controller.isHost.value && !controller.isInRoomPkActive)
+        _bottomActionIcon(
+          Icons.flash_on_rounded,
+          color: const Color(0xFFFFC857),
+          compact: compact,
+          onTap: controller.openPkV1Arena,
+        ),
+      _bottomActionIcon(
+        Icons.more_horiz_rounded,
+        compact: compact,
+        onTap: () {
+          Get.bottomSheet(
+            RoomOptionsSheet(
+              isHost: controller.isHost.value,
+              isVideoRoom: controller.isVideoRoom,
+            ),
+            backgroundColor: Colors.transparent,
+          );
+        },
+      ),
     ];
   }
 
   List<Widget> _partyRoomActionButtons(BuildContext context) {
     return [
+      Obx(() {
+        if (controller.isInRoomPkActive && controller.isHost.value) {
+          return const SizedBox.shrink();
+        }
+        return Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: _bottomActionIcon(
+            kGiftIcon,
+            color: _accent,
+            onTap: controller.openGiftsSheet,
+          ),
+        );
+      }),
       Tooltip(
         message: 'Lucky',
         child: _bottomActionIcon(
@@ -1373,57 +1340,23 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
           onTap: controller.openLuckyPreviewSheet,
         ),
       ),
-      Obx(
-        () => _bottomActionIcon(
-          controller.isMicMuted.value
-              ? Icons.mic_off_rounded
-              : Icons.mic_rounded,
-          active: !controller.isMicMuted.value,
-          onTap: controller.toggleMic,
-        ),
+      Spacing.h8,
+      _bottomActionIcon(
+        Icons.emoji_emotions_rounded,
+        color: const Color(0xFFFFD84D),
+        onTap: controller.openEmojiSheet,
       ),
-      if (controller.isHost.value && controller.isVideoRoom) ...[
-        Spacing.h8,
-        Obx(
-          () => _bottomActionIcon(
-            controller.isCameraOff.value
-                ? Icons.videocam_off_rounded
-                : Icons.videocam_rounded,
-            active: !controller.isCameraOff.value,
-            onTap: controller.toggleCamera,
-          ),
-        ),
-      ],
       Obx(() {
         if (!controller.isHost.value || controller.isInRoomPkActive) {
           return const SizedBox.shrink();
         }
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Spacing.h8,
-            _bottomActionIcon(
-              Icons.flash_on_rounded,
-              color: const Color(0xFFFFC857),
-              onTap: controller.openPkV1Arena,
-            ),
-          ],
-        );
-      }),
-      Obx(() {
-        if (controller.isInRoomPkActive && controller.isHost.value) {
-          return const SizedBox.shrink();
-        }
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Spacing.h8,
-            _bottomActionIcon(
-              kGiftIcon,
-              color: _accent,
-              onTap: controller.openGiftsSheet,
-            ),
-          ],
+        return Padding(
+          padding: const EdgeInsets.only(left: 8),
+          child: _bottomActionIcon(
+            Icons.flash_on_rounded,
+            color: const Color(0xFFFFC857),
+            onTap: controller.openPkV1Arena,
+          ),
         );
       }),
       Spacing.h8,
@@ -1518,11 +1451,13 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
           shape: BoxShape.circle,
           border: Border.all(color: kColorWhite.withValues(alpha: 0.18)),
         ),
-        child: Icon(
-          icon,
-          color: icon == kGiftIcon ? kColorWhite : color ?? kColorWhite,
-          size: compact ? 22 : 24,
-        ),
+        child: icon == kGiftIcon
+            ? DockGiftIcon(size: compact ? 30 : 36)
+            : Icon(
+                icon,
+                color: color ?? kColorWhite,
+                size: compact ? 22 : 24,
+              ),
       ),
     );
   }

@@ -6,11 +6,13 @@ import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 
 enum _RoomOptionAction {
+  mic,
+  speaker,
+  camera,
   filters,
   flipCamera,
   background,
   share,
-  pkBattle,
   follow,
   leave,
 }
@@ -41,86 +43,110 @@ class RoomOptionsSheet extends StatelessWidget {
     this.isVideoRoom = false,
   });
 
-  List<_RoomOption> get _options {
-    final pkActive =
-        Get.isRegistered<LiveBroadcastController>() &&
-        Get.find<LiveBroadcastController>().isInRoomPkActive;
+  static const _mic = _RoomOption(
+    action: _RoomOptionAction.mic,
+    icon: Icons.mic_rounded,
+    label: 'Mic',
+    color: Color(0xFFFF6AD5),
+    gradient: [Color(0xFFFF6AD5), Color(0xFF9B1FE8)],
+  );
+  static const _speaker = _RoomOption(
+    action: _RoomOptionAction.speaker,
+    icon: Icons.volume_up_rounded,
+    label: 'Speaker',
+    color: Color(0xFF7B5CFF),
+    gradient: [Color(0xFF7B5CFF), Color(0xFF2ED3FF)],
+  );
+  static const _camera = _RoomOption(
+    action: _RoomOptionAction.camera,
+    icon: Icons.videocam_rounded,
+    label: 'Camera',
+    color: Color(0xFF7AD7FF),
+    gradient: [Color(0xFF4FC3F7), Color(0xFF2979FF)],
+  );
+  static const _flip = _RoomOption(
+    action: _RoomOptionAction.flipCamera,
+    icon: Icons.cameraswitch_rounded,
+    label: 'Flip',
+    color: Color(0xFF7AD7FF),
+    gradient: [Color(0xFF4FC3F7), Color(0xFF2979FF)],
+  );
+  static const _filters = _RoomOption(
+    action: _RoomOptionAction.filters,
+    icon: Icons.auto_fix_high_rounded,
+    label: 'Filters',
+    color: Color(0xFFFF6AD5),
+    gradient: [Color(0xFFE12BC5), Color(0xFF9B1FE8)],
+  );
+  static const _background = _RoomOption(
+    action: _RoomOptionAction.background,
+    icon: Icons.image_rounded,
+    label: 'Background',
+    color: Color(0xFF7AD7FF),
+    gradient: [Color(0xFF4FC3F7), Color(0xFF2979FF)],
+  );
+  static const _share = _RoomOption(
+    action: _RoomOptionAction.share,
+    icon: Icons.ios_share_rounded,
+    label: 'Share',
+    color: Color(0xFFB8A4FF),
+    gradient: [Color(0xFF9B7BFF), Color(0xFF6C4DFF)],
+  );
+  static const _follow = _RoomOption(
+    action: _RoomOptionAction.follow,
+    icon: Icons.person_add_alt_1_rounded,
+    label: 'Follow',
+    color: Color(0xFFFF8FB8),
+    gradient: [Color(0xFFFF8FB8), Color(0xFFFF4081)],
+  );
+  static const _leave = _RoomOption(
+    action: _RoomOptionAction.leave,
+    icon: Icons.logout_rounded,
+    label: 'Leave',
+    color: Color(0xFFFF3B5C),
+    gradient: [Color(0xFFFF3B5C), Color(0xFFE11D48)],
+  );
 
-    if (isHost) {
+  /// Controls that left the dock. PK stays on the dock, and is omitted in battle.
+  List<_RoomOption> get _options {
+    final live =
+        Get.isRegistered<LiveBroadcastController>() &&
+        Get.find<LiveBroadcastController>().isLiveStreamingSession;
+
+    if (live && isHost) {
       return [
-        if (isVideoRoom)
-          const _RoomOption(
-            action: _RoomOptionAction.filters,
-            icon: Icons.auto_fix_high_rounded,
-            label: 'Filters',
-            color: Color(0xFFFF6AD5),
-            gradient: [Color(0xFFE12BC5), Color(0xFF9B1FE8)],
-          ),
-        if (isVideoRoom &&
-            Get.isRegistered<LiveBroadcastController>() &&
-            Get.find<LiveBroadcastController>().isLiveStreamingSession)
-          const _RoomOption(
-            action: _RoomOptionAction.flipCamera,
-            icon: Icons.cameraswitch_rounded,
-            label: 'Flip',
-            color: Color(0xFF7AD7FF),
-            gradient: [Color(0xFF4FC3F7), Color(0xFF2979FF)],
-          ),
-        const _RoomOption(
-          action: _RoomOptionAction.background,
-          icon: Icons.image_rounded,
-          label: 'Background',
-          color: Color(0xFF7AD7FF),
-          gradient: [Color(0xFF4FC3F7), Color(0xFF2979FF)],
-        ),
-        const _RoomOption(
-          action: _RoomOptionAction.share,
-          icon: Icons.ios_share_rounded,
-          label: 'Share',
-          color: Color(0xFFB8A4FF),
-          gradient: [Color(0xFF9B7BFF), Color(0xFF6C4DFF)],
-        ),
-        if (!pkActive)
-          const _RoomOption(
-            action: _RoomOptionAction.pkBattle,
-            icon: Icons.flash_on_rounded,
-            label: 'PK Battle',
-            color: Color(0xFFFFC857),
-            gradient: [Color(0xFFFFD54F), Color(0xFFFF8F00)],
-          ),
+        _mic,
+        if (isVideoRoom) _camera,
+        if (isVideoRoom) _flip,
+        if (isVideoRoom) _filters,
+        _background,
+        _share,
       ];
     }
-
+    if (live) {
+      return [_mic, _share, _follow];
+    }
+    if (isHost) {
+      return [
+        _mic,
+        _speaker,
+        if (isVideoRoom) _camera,
+        if (isVideoRoom) _flip,
+        if (isVideoRoom) _filters,
+        _background,
+        _share,
+      ];
+    }
     return [
-      if (isVideoRoom)
-        const _RoomOption(
-          action: _RoomOptionAction.filters,
-          icon: Icons.auto_fix_high_rounded,
-          label: 'Filters',
-          color: Color(0xFFFF6AD5),
-          gradient: [Color(0xFFE12BC5), Color(0xFF9B1FE8)],
-        ),
-      const _RoomOption(
-        action: _RoomOptionAction.share,
-        icon: Icons.ios_share_rounded,
-        label: 'Share',
-        color: Color(0xFFB8A4FF),
-        gradient: [Color(0xFF9B7BFF), Color(0xFF6C4DFF)],
-      ),
-      _RoomOption(
-        action: _RoomOptionAction.follow,
-        icon: Icons.person_add_alt_1_rounded,
-        label: 'Follow',
-        color: Color(0xFFFF8FB8),
-        gradient: [Color(0xFFFF8FB8), Color(0xFFFF4081)],
-      ),
-      _RoomOption(
-        action: _RoomOptionAction.leave,
-        icon: Icons.logout_rounded,
-        label: 'Leave',
-        color: Color(0xFFFF3B5C),
-        gradient: [Color(0xFFFF3B5C), Color(0xFFE11D48)],
-      ),
+      _mic,
+      _speaker,
+      if (isVideoRoom) _camera,
+      if (isVideoRoom) _flip,
+      if (isVideoRoom) _filters,
+      _background,
+      _share,
+      if (isVideoRoom) _follow,
+      if (isVideoRoom) _leave,
     ];
   }
 
@@ -155,12 +181,15 @@ class RoomOptionsSheet extends StatelessWidget {
             ),
             Spacing.v20,
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Wrap(
+                alignment: WrapAlignment.spaceEvenly,
+                spacing: 8,
+                runSpacing: 16,
                 children: [
                   for (final opt in options)
-                    Expanded(
+                    SizedBox(
+                      width: 76,
                       child: GestureDetector(
                         onTap: () => _onOptionTap(opt),
                         behavior: HitTestBehavior.opaque,
@@ -217,10 +246,17 @@ class RoomOptionsSheet extends StatelessWidget {
     Get.back();
 
     switch (option.action) {
-      case _RoomOptionAction.pkBattle:
+      case _RoomOptionAction.mic:
         if (Get.isRegistered<LiveBroadcastController>()) {
-          // Host selection opens invite flow and never starts PK automatically.
-          Get.find<LiveBroadcastController>().openPkV1Arena();
+          Get.find<LiveBroadcastController>().toggleDockMic();
+        }
+      case _RoomOptionAction.speaker:
+        if (Get.isRegistered<LiveBroadcastController>()) {
+          Get.find<LiveBroadcastController>().toggleDockSpeaker();
+        }
+      case _RoomOptionAction.camera:
+        if (Get.isRegistered<LiveBroadcastController>()) {
+          Get.find<LiveBroadcastController>().toggleDockCamera();
         }
       case _RoomOptionAction.filters:
         _runAfterClose(
@@ -228,7 +264,7 @@ class RoomOptionsSheet extends StatelessWidget {
         );
       case _RoomOptionAction.flipCamera:
         if (Get.isRegistered<LiveBroadcastController>()) {
-          Get.find<LiveBroadcastController>().flipLiveCamera();
+          Get.find<LiveBroadcastController>().flipDockCamera();
         }
       case _RoomOptionAction.background:
         _runAfterClose(
