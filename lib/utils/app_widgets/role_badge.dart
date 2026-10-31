@@ -11,6 +11,58 @@ import 'package:qobo_one_live/utils/user_role.dart';
 /// account, the tag uses their account role instead of a room seat label.
 /// [useMyRole] does the same when the seat belongs to the current host but
 /// the id on the seat does not match the profile id.
+/// Name and role tag on one line. The name ellipsizes, and the pair scales
+/// down together when a long tag such as Super Admin does not fit the tile.
+class RoleBadgeLine extends StatelessWidget {
+  const RoleBadgeLine({
+    super.key,
+    required this.label,
+    required this.badge,
+    this.centered = false,
+    this.alignEnd = false,
+    this.gap = 4,
+  });
+
+  final Widget label;
+  final Widget badge;
+  final bool centered;
+  final bool alignEnd;
+  final double gap;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth;
+        final bounded = maxWidth.isFinite;
+        final nameCap = bounded
+            ? (maxWidth - 92).clamp(32.0, maxWidth)
+            : double.infinity;
+        final alignment = centered
+            ? Alignment.center
+            : alignEnd
+            ? Alignment.centerRight
+            : Alignment.centerLeft;
+        return FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: alignment,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: nameCap),
+                child: label,
+              ),
+              SizedBox(width: gap),
+              badge,
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
 class RoleBadge extends StatelessWidget {
   const RoleBadge({
     super.key,

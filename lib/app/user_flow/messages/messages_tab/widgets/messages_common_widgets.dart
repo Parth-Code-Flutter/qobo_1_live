@@ -144,7 +144,10 @@ class MessageMatchAvatarItem extends StatelessWidget {
               align: TextAlign.center,
             ),
             const SizedBox(height: 4),
-            RoleBadge(role: user.role, compact: true),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: RoleBadge(role: user.role, compact: true),
+            ),
             const SizedBox(height: 6),
             Container(
               width: double.infinity,
@@ -225,20 +228,16 @@ class MessageSearchUserTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: SemiBoldText(
-                          text: user.name,
-                          fontSize: TextStyles.k14FontSize,
-                          color: AppLightUi.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      Spacing.h6,
-                      RoleBadge(role: user.role, compact: true),
-                    ],
+                  RoleBadgeLine(
+                    gap: 6,
+                    label: SemiBoldText(
+                      text: user.name,
+                      fontSize: TextStyles.k14FontSize,
+                      color: AppLightUi.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    badge: RoleBadge(role: user.role, compact: true),
                   ),
                   if (user.level > 0) ...[
                     Spacing.v2,

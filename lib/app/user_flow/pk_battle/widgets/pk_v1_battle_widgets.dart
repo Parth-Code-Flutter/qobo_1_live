@@ -75,26 +75,20 @@ class PkHostVideoTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   color: Colors.black.withValues(alpha: 0.4),
                 ),
-                child: Row(
-                  mainAxisAlignment:
-                      alignEnd ? MainAxisAlignment.end : MainAxisAlignment.start,
-                  children: [
-                    Flexible(
-                      child: SemiBoldText(
-                        text: name.isEmpty ? 'Host' : name,
-                        fontSize: TextStyles.k12FontSize,
-                        color: kColorWhite,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    RoleBadge(
-                      role: 'host',
-                      userId: userId,
-                      compact: true,
-                    ),
-                  ],
+                child: RoleBadgeLine(
+                  alignEnd: alignEnd,
+                  label: SemiBoldText(
+                    text: name.isEmpty ? 'Host' : name,
+                    fontSize: TextStyles.k12FontSize,
+                    color: kColorWhite,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  badge: RoleBadge(
+                    role: 'host',
+                    userId: userId,
+                    compact: true,
+                  ),
                 ),
               ),
             ),
@@ -144,26 +138,20 @@ class PkHostVideoTile extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 color: Colors.black.withValues(alpha: 0.4),
               ),
-              child: Row(
-                mainAxisAlignment:
-                    alignEnd ? MainAxisAlignment.end : MainAxisAlignment.start,
-                children: [
-                  Flexible(
-                    child: SemiBoldText(
-                      text: name.isEmpty ? 'Host' : name,
-                      fontSize: TextStyles.k12FontSize,
-                      color: kColorWhite,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  RoleBadge(
-                    role: 'host',
-                    userId: userId,
-                    compact: true,
-                  ),
-                ],
+              child: RoleBadgeLine(
+                alignEnd: alignEnd,
+                label: SemiBoldText(
+                  text: name.isEmpty ? 'Host' : name,
+                  fontSize: TextStyles.k12FontSize,
+                  color: kColorWhite,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                badge: RoleBadge(
+                  role: 'host',
+                  userId: userId,
+                  compact: true,
+                ),
               ),
             ),
           ),

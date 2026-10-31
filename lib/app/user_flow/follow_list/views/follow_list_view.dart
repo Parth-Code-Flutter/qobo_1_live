@@ -164,20 +164,16 @@ class FollowListView extends GetView<FollowListController> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: SemiBoldText(
-                              text: user.name,
-                              fontSize: TextStyles.k14FontSize,
-                              color: AppLightUi.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          Spacing.h6,
-                          RoleBadge(role: user.role, compact: true),
-                        ],
+                      RoleBadgeLine(
+                        gap: 6,
+                        label: SemiBoldText(
+                          text: user.name,
+                          fontSize: TextStyles.k14FontSize,
+                          color: AppLightUi.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        badge: RoleBadge(role: user.role, compact: true),
                       ),
                       if (subtitle.isNotEmpty) ...[
                         Spacing.v4,

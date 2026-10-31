@@ -316,20 +316,16 @@ class _BuyerTile extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: SemiBoldText(
-                            text: user.name,
-                            fontSize: 13,
-                            color: CoinSellerUi.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        Spacing.h6,
-                        RoleBadge(role: user.role, compact: true),
-                      ],
+                    RoleBadgeLine(
+                      gap: 6,
+                      label: SemiBoldText(
+                        text: user.name,
+                        fontSize: 13,
+                        color: CoinSellerUi.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      badge: RoleBadge(role: user.role, compact: true),
                     ),
                     Spacing.v2,
                     AppText(

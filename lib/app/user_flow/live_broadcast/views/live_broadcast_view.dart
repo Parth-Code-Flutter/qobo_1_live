@@ -8,6 +8,7 @@ import 'package:qobo_one_live/constants/zego_config.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_coin_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/dock_gift_icon.dart';
+import 'package:qobo_one_live/utils/app_widgets/dock_pk_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
@@ -683,13 +684,17 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       Spacing.v2,
-                      RoleBadge(
-                        role: _liveHostRole(),
-                        userId: controller.isHost.value
-                            ? Get.find<UserSessionController>().userId
-                            : controller.receiverId.value,
-                        useMyRole: controller.isHost.value,
-                        compact: true,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: RoleBadge(
+                          role: _liveHostRole(),
+                          userId: controller.isHost.value
+                              ? Get.find<UserSessionController>().userId
+                              : controller.receiverId.value,
+                          useMyRole: controller.isHost.value,
+                          compact: true,
+                        ),
                       ),
                       Spacing.v2,
                       Row(
@@ -1453,6 +1458,8 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
         ),
         child: icon == kGiftIcon
             ? DockGiftIcon(size: compact ? 30 : 36)
+            : icon == Icons.flash_on_rounded
+            ? Center(child: DockPkIcon(size: compact ? 32 : 38))
             : Icon(
                 icon,
                 color: color ?? kColorWhite,

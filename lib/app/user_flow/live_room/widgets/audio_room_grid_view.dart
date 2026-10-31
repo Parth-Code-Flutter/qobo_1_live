@@ -258,25 +258,20 @@ class _AudioRoomGridTile extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 align: TextAlign.center,
               ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Flexible(
-                    child: AppText(
-                      text: hostName,
-                      fontSize: TextStyles.k10FontSize,
-                      color: AppLightUi.subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      align: TextAlign.center,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  RoleBadge(
-                    role: listingHostRole(data.room),
-                    compact: true,
-                  ),
-                ],
+              RoleBadgeLine(
+                centered: true,
+                label: AppText(
+                  text: hostName,
+                  fontSize: TextStyles.k10FontSize,
+                  color: AppLightUi.subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  align: TextAlign.center,
+                ),
+                badge: RoleBadge(
+                  role: listingHostRole(data.room),
+                  compact: true,
+                ),
               ),
             ],
           );

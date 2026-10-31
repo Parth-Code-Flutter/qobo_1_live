@@ -455,23 +455,18 @@ class _VideoRoomCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                             Spacing.v2,
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: AppText(
-                                    text: data.hostName,
-                                    fontSize: TextStyles.k10FontSize,
-                                    color: kColorWhite.withValues(alpha: 0.72),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                RoleBadge(
-                                  role: listingHostRole(data.room),
-                                  compact: true,
-                                ),
-                              ],
+                            RoleBadgeLine(
+                              label: AppText(
+                                text: data.hostName,
+                                fontSize: TextStyles.k10FontSize,
+                                color: kColorWhite.withValues(alpha: 0.72),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              badge: RoleBadge(
+                                role: listingHostRole(data.room),
+                                compact: true,
+                              ),
                             ),
                           ],
                         ),

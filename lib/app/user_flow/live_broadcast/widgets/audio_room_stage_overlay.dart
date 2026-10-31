@@ -11,6 +11,7 @@ import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_text_field.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/app_widgets/dock_gift_icon.dart';
+import 'package:qobo_one_live/utils/app_widgets/dock_pk_icon.dart';
 import 'package:qobo_one_live/utils/app_widgets/role_badge.dart';
 import 'package:qobo_one_live/utils/app_widgets/svip_badge_chip.dart';
 import 'package:qobo_one_live/utils/app_widgets/session_earnings_badge.dart';
@@ -325,6 +326,7 @@ class _AudioRoomBottomControls extends GetView<LiveBroadcastController> {
               }
               return _ControlButton(
                 icon: Icons.flash_on_rounded,
+                iconChild: DockPkIcon(size: compact ? 30 : 34),
                 label: 'PK Battle',
                 compact: compact,
                 accentGradient: const LinearGradient(
@@ -553,9 +555,11 @@ class _ControlButton extends StatelessWidget {
     required this.compact,
     required this.onTap,
     this.accentGradient,
+    this.iconChild,
   });
 
   final IconData icon;
+  final Widget? iconChild;
   final String label;
   final bool compact;
   final VoidCallback? onTap;
@@ -588,13 +592,15 @@ class _ControlButton extends StatelessWidget {
                       color: kColorWhite.withValues(alpha: 0.08),
                     ),
                   ),
-                  child: Icon(
-                    icon,
-                    size: compact ? 19 : 22,
-                    color: accentGradient != null
-                        ? kColorWhite
-                        : kColorWhite.withValues(alpha: 0.88),
-                  ),
+                  child: iconChild != null
+                      ? Center(child: iconChild)
+                      : Icon(
+                          icon,
+                          size: compact ? 19 : 22,
+                          color: accentGradient != null
+                              ? kColorWhite
+                              : kColorWhite.withValues(alpha: 0.88),
+                        ),
                 ),
                 Spacing.v4,
                 AppText(
@@ -3843,10 +3849,14 @@ class _FloorAudienceListSheet extends GetView<LiveBroadcastController> {
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                     Spacing.v2,
-                                    RoleBadge(
-                                      role: user.role,
-                                      userId: user.userId,
-                                      compact: true,
+                                    FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment: Alignment.centerLeft,
+                                      child: RoleBadge(
+                                        role: user.role,
+                                        userId: user.userId,
+                                        compact: true,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -4407,10 +4417,14 @@ class _FloorAudienceSeatPickerSheet extends GetView<LiveBroadcastController> {
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                     Spacing.v2,
-                                    RoleBadge(
-                                      role: user.role,
-                                      userId: user.userId,
-                                      compact: true,
+                                    FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment: Alignment.centerLeft,
+                                      child: RoleBadge(
+                                        role: user.role,
+                                        userId: user.userId,
+                                        compact: true,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -4575,24 +4589,20 @@ class _InviteCandidatesSheetState extends State<_InviteCandidatesSheet> {
                         imageUrl: user.avatarUrl,
                         size: 42,
                       ),
-                      title: Row(
-                        children: [
-                          Flexible(
-                            child: SemiBoldText(
-                              text: user.name,
-                              fontSize: TextStyles.k12FontSize,
-                              color: kColorWhite,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          RoleBadge(
-                            role: user.role,
-                            userId: user.id,
-                            compact: true,
-                          ),
-                        ],
+                      title: RoleBadgeLine(
+                        gap: 6,
+                        label: SemiBoldText(
+                          text: user.name,
+                          fontSize: TextStyles.k12FontSize,
+                          color: kColorWhite,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        badge: RoleBadge(
+                          role: user.role,
+                          userId: user.id,
+                          compact: true,
+                        ),
                       ),
                       subtitle: AppText(
                         text: user.isOnline ? 'Online follower' : 'Follower',

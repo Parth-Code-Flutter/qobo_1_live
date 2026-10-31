@@ -150,10 +150,14 @@ class _ViewerListTile extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 Spacing.v2,
-                RoleBadge(
-                  role: role,
-                  useMyRole: isCurrentUser,
-                  compact: true,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: RoleBadge(
+                    role: role,
+                    useMyRole: isCurrentUser,
+                    compact: true,
+                  ),
                 ),
               ],
             ),
