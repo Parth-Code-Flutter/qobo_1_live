@@ -13,9 +13,9 @@ class ZegoConfig {
   // APIs so host and audience always open the same Zego project.
   // ---------------------------------------------------------------------------
 
-  static const int liveAppId = 486153055;
+  static const int liveAppId = 178284329;
   static const String liveAppSign =
-      'c73c84c94e2cb2c1cd0676c57427b07b6db1729ce92f00cf461741527525a298';
+      '820e667bf67fc3a9f446bd702919d1630699f55e43a2d6314efe8fecf965b194';
 
   static const bool useSignalingPlugin = false;
 
@@ -23,17 +23,17 @@ class ZegoConfig {
   // Audio/video rooms — room seats, group voice rooms, group video rooms.
   // ---------------------------------------------------------------------------
 
-  static const int roomAppId = 1670093313;
+  static const int roomAppId = 751866448;
   static const String roomAppSign =
-      'd797a07b64bd134e54ec08869810140e4b1c3066f45d25087b404dbb23096fa2';
+      'daab62bdae4f751220197338475f57f643078984ed858a36ca1f58d7db11a325';
 
   // ---------------------------------------------------------------------------
   // One-to-one voice/video calling — chat phone / video call flow.
   // ---------------------------------------------------------------------------
 
-  static const int callAppId = 331480132;
+  static const int callAppId = 594656264;
   static const String callAppSign =
-      'cb5ad945d8dcf6a1fd9e612051335a9ba301d810b8aade58c79448ba44b4e283';
+      'f136312c029fccdaff192dac63d8b5fde2f712fdb924a807b75495e4bf232b0c';
 
   static const bool callEnabled = true;
 

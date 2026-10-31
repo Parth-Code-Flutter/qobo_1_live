@@ -22,6 +22,7 @@ import 'package:zego_uikit_prebuilt_call/zego_uikit_prebuilt_call.dart';
 
 import '../controllers/chat_voice_call_controller.dart';
 import '../widgets/chat_call_control_buttons.dart';
+import '../widgets/chat_call_message_sheet.dart';
 
 /// Zego Call Kit screen — 1:1 voice or video (quick-start pattern).
 class ChatVoiceCallView extends GetView<ChatVoiceCallController> {
@@ -99,7 +100,7 @@ class ChatVoiceCallView extends GetView<ChatVoiceCallController> {
               ),
             ),
             if (isVideo)
-              const _VideoParticipantStrip()
+              const _VideoCallBottomChrome()
             else ...[
               const _VoiceCallPortraitStage(),
               const _VoiceReceiverPreviewCard(),
@@ -150,7 +151,7 @@ class ChatVoiceCallView extends GetView<ChatVoiceCallController> {
             left: 12,
             right: 12,
             top: 96,
-            bottom: 140,
+            bottom: 250,
           ),
         )
         ..bottomMenuBar = bottomBar
@@ -258,6 +259,33 @@ class _VoiceCallPortraitStage extends GetView<ChatVoiceCallController> {
   }
 }
 
+/// You, the other person, and Gift sit directly above the on-call chat.
+class _VideoCallBottomChrome extends StatelessWidget {
+  const _VideoCallBottomChrome();
+
+  @override
+  Widget build(BuildContext context) {
+    final keyboard = MediaQuery.viewInsetsOf(context).bottom;
+    return SafeArea(
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(12, 0, 12, 110 + keyboard),
+          child: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _VideoParticipantStrip(),
+              SizedBox(height: 8),
+              VideoCallChatOverlay(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _VideoParticipantStrip extends GetView<ChatVoiceCallController> {
   const _VideoParticipantStrip();
 
@@ -265,54 +293,46 @@ class _VideoParticipantStrip extends GetView<ChatVoiceCallController> {
   Widget build(BuildContext context) {
     // Only the Gift chip captures taps — pills are visual and must not block
     // Zego camera / hang-up buttons underneath.
-    return SafeArea(
-      child: Align(
-        alignment: Alignment.bottomLeft,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 0, 14, 118),
-          child: Obx(
-            () => Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IgnorePointer(
-                  child: _MiniParticipantPill(
-                    name: controller.currentUserName,
-                    imageUrl: controller.currentUserAvatar,
-                    frameUrl: controller.currentUserFrameUrl,
-                    frameSeed: controller.currentUserFrameSeed,
-                    label: 'You',
-                    dark: true,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                IgnorePointer(
-                  child: _MiniParticipantPill(
-                    name: controller.peerName.value,
-                    imageUrl: controller.peerAvatar.value,
-                    frameUrl: controller.peerFrameUrl.value,
-                    frameSeed: controller.hostId.value.isNotEmpty
-                        ? controller.hostId.value
-                        : controller.peerName.value,
-                    label: controller.hasPeerJoined.value
-                        ? controller.peerName.value
-                        : 'Ringing',
-                    dark: true,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                _CompactCallActionButton(
-                  icon: kGiftIcon,
-                  label: 'Gift',
-                  onTap: () => Get.bottomSheet(
-                    _CallGiftsBottomSheet(controller: controller),
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                  ),
-                ),
-              ],
+    return Obx(
+      () => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IgnorePointer(
+            child: _MiniParticipantPill(
+              name: controller.currentUserName,
+              imageUrl: controller.currentUserAvatar,
+              frameUrl: controller.currentUserFrameUrl,
+              frameSeed: controller.currentUserFrameSeed,
+              label: 'You',
+              dark: true,
             ),
           ),
-        ),
+          const SizedBox(width: 6),
+          IgnorePointer(
+            child: _MiniParticipantPill(
+              name: controller.peerName.value,
+              imageUrl: controller.peerAvatar.value,
+              frameUrl: controller.peerFrameUrl.value,
+              frameSeed: controller.hostId.value.isNotEmpty
+                  ? controller.hostId.value
+                  : controller.peerName.value,
+              label: controller.hasPeerJoined.value
+                  ? controller.peerName.value
+                  : 'Ringing',
+              dark: true,
+            ),
+          ),
+          const SizedBox(width: 6),
+          _CompactCallActionButton(
+            icon: kGiftIcon,
+            label: 'Gift',
+            onTap: () => Get.bottomSheet(
+              _CallGiftsBottomSheet(controller: controller),
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+            ),
+          ),
+        ],
       ),
     );
   }
