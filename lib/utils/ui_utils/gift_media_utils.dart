@@ -141,6 +141,8 @@ abstract final class GiftMediaUtils {
     int? amountEach,
     int? comboIndex,
     int? comboTotal,
+    String? hitId,
+    bool displayOnly = false,
   }) {
     final name = giftName?.trim().isNotEmpty == true
         ? giftName!.trim()
@@ -179,11 +181,21 @@ abstract final class GiftMediaUtils {
       // Unique per combo hit so Zego does not drop identical gift lines.
       if (comboIndex != null && comboTotal != null && comboTotal > 1)
         '[[giftCombo:$comboIndex/$comboTotal]]',
+      if ((hitId ?? '').trim().isNotEmpty) '[[giftHit:${hitId!.trim()}]]',
+      if (displayOnly) '[[giftDisplayOnly:1]]',
     ];
     final withMedia = [...mediaMarkers, ...metaMarkers];
     final full = withMedia.isEmpty ? base : '$base\n${withMedia.join('\n')}';
     if (full.length <= _maxInRoomGiftChars || mediaMarkers.isEmpty) {
       return full;
+    }
+    // A long sound URL must not drop the clip. Peers can still play the SVGA.
+    final animOnly = mediaMarkers
+        .where((marker) => marker.startsWith('[[giftAnim:'))
+        .toList();
+    final animFull = '$base\n${[...animOnly, ...metaMarkers].join('\n')}';
+    if (animOnly.isNotEmpty && animFull.length <= _maxInRoomGiftChars) {
+      return animFull;
     }
     // URLs overflowed IM size — peers resolve SVGA from catalog via giftId.
     return '$base\n${metaMarkers.join('\n')}';

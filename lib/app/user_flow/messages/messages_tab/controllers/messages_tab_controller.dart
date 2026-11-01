@@ -18,7 +18,6 @@ import 'package:qobo_one_live/services/chat/inbox_live_patch.dart';
 import 'package:qobo_one_live/services/chat/inbox_unread.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
-import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
 import 'package:qobo_one_live/utils/toast_utils/app_toast.dart';
 import 'package:qobo_one_live/app/user_flow/discover/discover_tab/models/explore_discover_utils.dart';
 
@@ -95,19 +94,6 @@ class MessagesTabController extends GetxController with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     searchController.addListener(_onSearchChanged);
     unawaited(_loadReadMarksThenRefresh());
-    unawaited(_syncCoverIfMissing());
-  }
-
-  /// Same cover Profile uses, so Messages can paint it on a cold start.
-  Future<void> _syncCoverIfMissing() async {
-    if (!Get.isRegistered<UserSessionController>()) return;
-    final session = Get.find<UserSessionController>();
-    final cover = session.profileBackgroundUrl.trim();
-    if (cover.isNotEmpty &&
-        !ProfileBackgroundMedia.isSvgaUrl(cover)) {
-      return;
-    }
-    await session.syncEquippedProfileBackgroundFromBackpack();
   }
 
   Future<void> _loadReadMarksThenRefresh() async {
@@ -174,8 +160,7 @@ class MessagesTabController extends GetxController with WidgetsBindingObserver {
       newMatchesTotal.value = parsed.total > 0
           ? parsed.total
           : newMatches.length;
-      final loadedAll =
-          parsed.total > 0 && newMatches.length >= parsed.total;
+      final loadedAll = parsed.total > 0 && newMatches.length >= parsed.total;
       _newMatchesHasMore = parsed.hasMore && !loadedAll;
       if (parsed.users.isNotEmpty) _newMatchesPage = page + 1;
     } catch (_) {

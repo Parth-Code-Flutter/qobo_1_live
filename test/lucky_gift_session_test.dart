@@ -56,6 +56,20 @@ Future<void> settle(LuckyGiftSession s) async {
 }
 
 void main() {
+  test('catalog row keeps the clip separate from the icon', () {
+    final gift = LuckyGift.fromJson({
+      'id': 'clover',
+      'name': 'Clover',
+      'price': 10,
+      'iconUrl': 'https://cdn.example.com/clover.png',
+      'animationUrl': 'https://cdn.example.com/clover.svga',
+      'soundUrl': 'https://cdn.example.com/clover.mp3',
+    });
+    expect(gift.icon, 'https://cdn.example.com/clover.png');
+    expect(gift.animation, 'https://cdn.example.com/clover.svga');
+    expect(gift.sound, 'https://cdn.example.com/clover.mp3');
+  });
+
   test(
     'preview uses each catalog threshold without changing paid combos or wallet',
     () {
@@ -124,30 +138,33 @@ void main() {
     s.dispose();
   });
 
-  test('taps within 2 seconds continue the combo and a longer gap restarts it', () async {
-    final repo = FakeLuckyRepo();
-    var now = DateTime(2026, 10, 27, 14);
-    final s = LuckyGiftSession(
-      repo: repo,
-      token: 'test',
-      isOwner: () => true,
-      onSuccess: (_, __, ___) {},
-      clock: () => now,
-    );
-    await s.load();
-    final gift = s.gifts.first;
-    s.tap(gift, host: 'host');
-    now = now.add(const Duration(milliseconds: 1500));
-    expect(s.continuesFromLastTap(gift.id), isTrue);
-    s.tap(gift, host: 'host');
-    now = now.add(const Duration(seconds: 3));
-    expect(s.continuesFromLastTap(gift.id), isFalse);
-    s.tap(gift, host: 'host');
-    await settle(s);
-    expect(repo.calls.map((c) => c['combo']), [1, 2, 1]);
-    expect(repo.calls.map((c) => c['continueTap']), [false, true, false]);
-    s.dispose();
-  });
+  test(
+    'taps within 2 seconds continue the combo and a longer gap restarts it',
+    () async {
+      final repo = FakeLuckyRepo();
+      var now = DateTime(2026, 10, 27, 14);
+      final s = LuckyGiftSession(
+        repo: repo,
+        token: 'test',
+        isOwner: () => true,
+        onSuccess: (_, __, ___) {},
+        clock: () => now,
+      );
+      await s.load();
+      final gift = s.gifts.first;
+      s.tap(gift, host: 'host');
+      now = now.add(const Duration(milliseconds: 1500));
+      expect(s.continuesFromLastTap(gift.id), isTrue);
+      s.tap(gift, host: 'host');
+      now = now.add(const Duration(seconds: 3));
+      expect(s.continuesFromLastTap(gift.id), isFalse);
+      s.tap(gift, host: 'host');
+      await settle(s);
+      expect(repo.calls.map((c) => c['combo']), [1, 2, 1]);
+      expect(repo.calls.map((c) => c['continueTap']), [false, true, false]);
+      s.dispose();
+    },
+  );
   test(
     'uncertain send retries same id and combo without dispatching queued sends',
     () async {

@@ -48,6 +48,7 @@ class _LuckyPreviewSheetState extends State<LuckyPreviewSheet> {
     }
     if (busy) _soundHeld = true;
   }
+
   @override
   Widget build(BuildContext context) => Container(
     key: const ValueKey('lucky-sheet-panel'),
@@ -203,7 +204,7 @@ class _LuckyPreviewSheetState extends State<LuckyPreviewSheet> {
                                 spacing * (columns - 1)) /
                             columns;
                         return SingleChildScrollView(
-                          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                          padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
                           child: Wrap(
                             spacing: spacing,
                             runSpacing: spacing,
@@ -212,10 +213,7 @@ class _LuckyPreviewSheetState extends State<LuckyPreviewSheet> {
                               for (final gift in s.gifts)
                                 SizedBox(
                                   width: tileWidth,
-                                  child: _giftTile(
-                                    gift,
-                                    blocked: s.needsRetry,
-                                  ),
+                                  child: _giftTile(gift, blocked: s.needsRetry),
                                 ),
                             ],
                           ),
@@ -223,6 +221,7 @@ class _LuckyPreviewSheetState extends State<LuckyPreviewSheet> {
                       },
                     ),
             ),
+            _bottomSendBar(s),
           ],
         );
       },
@@ -235,106 +234,116 @@ class _LuckyPreviewSheetState extends State<LuckyPreviewSheet> {
     return AnimatedContainer(
       key: tileKey,
       duration: const Duration(milliseconds: 180),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: active
-                ? [const Color(0xFF614067), const Color(0xFF382444)]
-                : [const Color(0xFF342540), const Color(0xFF211C2D)],
-          ),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: active ? gold : Colors.white.withValues(alpha: .08),
-            width: active ? 1.5 : 1,
-          ),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: active
+              ? [const Color(0xFF614067), const Color(0xFF382444)]
+              : [const Color(0xFF342540), const Color(0xFF211C2D)],
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: blocked ? null : () => _selectGift(gift),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      GiftIconWidget(icon: gift.icon, size: 52),
-                      const SizedBox(height: 4),
-                      Text(
-                        gift.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: active ? gold : Colors.white.withValues(alpha: .08),
+          width: active ? 1.5 : 1,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: blocked ? null : () => _selectGift(gift),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GiftIconWidget(icon: gift.icon, size: 52),
+                    const SizedBox(height: 4),
+                    Text(
+                      gift.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
                       ),
-                      Text(
-                        '${gift.price} Coins',
-                        style: const TextStyle(
-                          color: gold,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
+                    ),
+                    Text(
+                      '${gift.price} Coins',
+                      style: const TextStyle(
+                        color: gold,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-              if (active) ...[
-                const SizedBox(height: 6),
-                _tileSendButton(
-                  blocked: blocked,
-                  onTap: () => _sendGift(gift),
-                ),
-              ],
-            ],
-          ),
+            ),
+          ],
         ),
+      ),
     );
   }
 
-  Widget _tileSendButton({
-    required bool blocked,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: blocked ? null : onTap,
-        child: Ink(
-          height: 30,
-          decoration: BoxDecoration(
-            gradient: blocked
-                ? null
-                : const LinearGradient(
-                    colors: [Color(0xFFFFE08A), Color(0xFFFFB703)],
-                  ),
-            color: blocked ? Colors.white12 : null,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.send_rounded, color: Color(0xFF3A2408), size: 14),
-              SizedBox(width: 4),
-              Text(
-                'Send',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Color(0xFF3A2408),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
+  Widget _bottomSendBar(LuckyGiftSession session) {
+    LuckyGift? chosen;
+    for (final gift in session.gifts) {
+      if (gift.id == selected) {
+        chosen = gift;
+        break;
+      }
+    }
+    final enabled = chosen != null && !session.needsRetry;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: Colors.white.withValues(alpha: .08)),
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(22),
+          onTap: enabled ? () => _sendGift(chosen!) : null,
+          child: Ink(
+            height: 44,
+            decoration: BoxDecoration(
+              gradient: enabled
+                  ? const LinearGradient(
+                      colors: [Color(0xFFFFE08A), Color(0xFFFFB703)],
+                    )
+                  : null,
+              color: enabled ? null : Colors.white12,
+              borderRadius: BorderRadius.circular(22),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.send_rounded,
+                  color: enabled ? const Color(0xFF3A2408) : Colors.white38,
+                  size: 16,
                 ),
-              ),
-            ],
+                const SizedBox(width: 6),
+                Text(
+                  'Send',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: enabled ? const Color(0xFF3A2408) : Colors.white38,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

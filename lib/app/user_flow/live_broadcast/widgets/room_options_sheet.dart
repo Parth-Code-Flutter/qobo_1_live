@@ -33,7 +33,7 @@ class _RoomOption {
   final List<Color> gradient;
 }
 
-class RoomOptionsSheet extends StatelessWidget {
+class RoomOptionsSheet extends StatefulWidget {
   final bool isHost;
   final bool isVideoRoom;
 
@@ -42,6 +42,19 @@ class RoomOptionsSheet extends StatelessWidget {
     required this.isHost,
     this.isVideoRoom = false,
   });
+
+  @override
+  State<RoomOptionsSheet> createState() => _RoomOptionsSheetState();
+}
+
+class _RoomOptionsSheetState extends State<RoomOptionsSheet> {
+  @override
+  void initState() {
+    super.initState();
+    if (Get.isRegistered<LiveBroadcastController>()) {
+      Get.find<LiveBroadcastController>().syncDockAudioState();
+    }
+  }
 
   static const _mic = _RoomOption(
     action: _RoomOptionAction.mic,
@@ -113,26 +126,27 @@ class RoomOptionsSheet extends StatelessWidget {
         Get.isRegistered<LiveBroadcastController>() &&
         Get.find<LiveBroadcastController>().isLiveStreamingSession;
 
-    if (live && isHost) {
+    if (live && widget.isHost) {
       return [
         _mic,
-        if (isVideoRoom) _camera,
-        if (isVideoRoom) _flip,
-        if (isVideoRoom) _filters,
+        _speaker,
+        if (widget.isVideoRoom) _camera,
+        if (widget.isVideoRoom) _flip,
+        if (widget.isVideoRoom) _filters,
         _background,
         _share,
       ];
     }
     if (live) {
-      return [_mic, _share, _follow];
+      return [_mic, _speaker, _share, _follow];
     }
-    if (isHost) {
+    if (widget.isHost) {
       return [
         _mic,
         _speaker,
-        if (isVideoRoom) _camera,
-        if (isVideoRoom) _flip,
-        if (isVideoRoom) _filters,
+        if (widget.isVideoRoom) _camera,
+        if (widget.isVideoRoom) _flip,
+        if (widget.isVideoRoom) _filters,
         _background,
         _share,
       ];
@@ -140,13 +154,13 @@ class RoomOptionsSheet extends StatelessWidget {
     return [
       _mic,
       _speaker,
-      if (isVideoRoom) _camera,
-      if (isVideoRoom) _flip,
-      if (isVideoRoom) _filters,
+      if (widget.isVideoRoom) _camera,
+      if (widget.isVideoRoom) _flip,
+      if (widget.isVideoRoom) _filters,
       _background,
       _share,
-      if (isVideoRoom) _follow,
-      if (isVideoRoom) _leave,
+      if (widget.isVideoRoom) _follow,
+      if (widget.isVideoRoom) _leave,
     ];
   }
 
@@ -181,64 +195,135 @@ class RoomOptionsSheet extends StatelessWidget {
             ),
             Spacing.v20,
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Wrap(
-                alignment: WrapAlignment.spaceEvenly,
-                spacing: 8,
-                runSpacing: 16,
-                children: [
-                  for (final opt in options)
-                    SizedBox(
-                      width: 76,
-                      child: GestureDetector(
-                        onTap: () => _onOptionTap(opt),
-                        behavior: HitTestBehavior.opaque,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 58,
-                              height: 58,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: opt.gradient,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: opt.color.withValues(alpha: 0.35),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final count = options.isEmpty ? 1 : options.length;
+                  final slot = constraints.maxWidth / count;
+                  final circle = (slot - 8).clamp(36.0, 48.0);
+                  return Row(
+                    children: [
+                      for (final opt in options)
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => _onOptionTap(opt),
+                            behavior: HitTestBehavior.opaque,
+                            child: Obx(() {
+                              final shown = _shownOption(opt);
+                              final off = shown.off;
+                              return Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: circle,
+                                    height: circle,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      gradient: off
+                                          ? null
+                                          : LinearGradient(
+                                              begin: Alignment.topLeft,
+                                              end: Alignment.bottomRight,
+                                              colors: shown.gradient,
+                                            ),
+                                      color: off
+                                          ? const Color(0xFF2A2438)
+                                          : null,
+                                      border: off
+                                          ? Border.all(
+                                              color: const Color(0xFFFF6B8A),
+                                            )
+                                          : null,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color:
+                                              (off
+                                                      ? const Color(0xFFFF6B8A)
+                                                      : shown.color)
+                                                  .withValues(
+                                                    alpha: off ? 0.28 : 0.35,
+                                                  ),
+                                          blurRadius: 12,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Icon(
+                                      shown.icon,
+                                      color: off
+                                          ? const Color(0xFFFF8AA0)
+                                          : kColorWhite,
+                                      size: circle * 0.46,
+                                    ),
+                                  ),
+                                  Spacing.v8,
+                                  AppText(
+                                    text: shown.label,
+                                    fontSize: 10,
+                                    color: off
+                                        ? const Color(0xFFFF8AA0)
+                                        : shown.color,
+                                    align: TextAlign.center,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
-                              ),
-                              child: Icon(
-                                opt.icon,
-                                color: kColorWhite,
-                                size: 26,
-                              ),
-                            ),
-                            Spacing.v8,
-                            AppText(
-                              text: opt.label,
-                              fontSize: 11,
-                              color: opt.color,
-                              align: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
+                              );
+                            }),
+                          ),
                         ),
-                      ),
-                    ),
-                ],
+                    ],
+                  );
+                },
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  ({IconData icon, String label, Color color, List<Color> gradient, bool off})
+  _shownOption(_RoomOption option) {
+    final controller = Get.isRegistered<LiveBroadcastController>()
+        ? Get.find<LiveBroadcastController>()
+        : null;
+    final muted = controller?.isMicMuted.value ?? false;
+    final speaker = controller?.dockSpeakerMode.value ?? 'speaker';
+    if (option.action == _RoomOptionAction.mic) {
+      return (
+        icon: muted ? Icons.mic_off_rounded : Icons.mic_rounded,
+        label: muted ? 'Muted' : 'Mic on',
+        color: option.color,
+        gradient: option.gradient,
+        off: muted,
+      );
+    }
+    if (option.action == _RoomOptionAction.speaker) {
+      final headset = speaker == 'headset';
+      final off = speaker == 'off';
+      return (
+        icon: headset
+            ? Icons.headset_rounded
+            : off
+            ? Icons.volume_off_rounded
+            : Icons.volume_up_rounded,
+        label: headset
+            ? 'Headset'
+            : off
+            ? 'Speaker off'
+            : 'Speaker on',
+        color: option.color,
+        gradient: option.gradient,
+        off: off,
+      );
+    }
+    return (
+      icon: option.icon,
+      label: option.label,
+      color: option.color,
+      gradient: option.gradient,
+      off: false,
     );
   }
 

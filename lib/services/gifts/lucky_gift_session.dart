@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:qobo_one_live/services/api_service.dart';
+import 'package:qobo_one_live/services/gifts/lucky_gift_reward.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 
@@ -17,11 +18,23 @@ class LuckyGift {
       rate = (json['luckyRewardRate'] ?? 0).toString(),
       icon =
           ApiImageUtils.normalize(
-            (json['iconUrl'] ?? json['animationUrl'])?.toString(),
+            (json['iconUrl'] ??
+                    json['icon'] ??
+                    json['imageUrl'] ??
+                    json['animationUrl'])
+                ?.toString(),
           ) ??
           '🎁',
-      sound = json['soundUrl']?.toString();
-  final String id, name, icon, rate;
+      animation =
+          ApiImageUtils.normalize(
+            (json['animationUrl'] ?? json['animation_url'] ?? json['svgaUrl'])
+                ?.toString(),
+          ) ??
+          '',
+      sound = ApiImageUtils.normalize(
+        (json['soundUrl'] ?? json['sound_url'] ?? json['audioUrl'])?.toString(),
+      );
+  final String id, name, icon, rate, animation;
   final String? sound;
   final int price, threshold;
   int get estimatedBase => price * threshold;
@@ -110,12 +123,12 @@ class LuckyGiftSession extends ChangeNotifier {
     if (last == null) return false;
     return clock().difference(last) <= continueTapWindow;
   }
+
   int displayedCombo(String id) =>
       previewing ? (_previewGift == id ? _previewCount : 0) : (combos[id] ?? 0);
   bool previewTap(LuckyGift gift) {
     previewing = true;
-    final continued =
-        _previewGift == gift.id && continuesFromLastTap(gift.id);
+    final continued = _previewGift == gift.id && continuesFromLastTap(gift.id);
     _lastTapAt[gift.id] = clock();
     if (!continued) {
       _previewGift = gift.id;
@@ -262,8 +275,8 @@ class LuckyGiftSession extends ChangeNotifier {
         if ((_nextCombo[tap.gift.id] ?? 0) <= tap.combo) {
           _nextCombo[tap.gift.id] = combos[tap.gift.id]!;
         }
-        final coins = data['userCoins'] ?? reward['userCoins'];
-        if (coins != null) balance = parseWalletAmount(coins);
+        final coins = readLuckyDiamondBalance(data);
+        if (coins != null) balance = coins;
         final won =
             data['luckyRewardTriggered'] == true ||
             reward['rewardTriggered'] == true;

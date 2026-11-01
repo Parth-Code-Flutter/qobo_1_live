@@ -6,11 +6,9 @@ import 'package:qobo_one_live/app/bottom_nav/controllers/bottom_nav_controller.d
 import 'package:qobo_one_live/constants/app_light_theme.dart';
 import 'package:qobo_one_live/constants/color_constants.dart';
 import 'package:qobo_one_live/services/user_session_controller.dart';
-import 'package:qobo_one_live/utils/api_image_utils.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_spaces.dart';
 import 'package:qobo_one_live/utils/app_widgets/app_user_avatar.dart';
 import 'package:qobo_one_live/utils/app_widgets/dating_empty_hero.dart';
-import 'package:qobo_one_live/utils/app_widgets/profile_background_media.dart';
 import 'package:qobo_one_live/utils/text_utils/app_text.dart';
 import 'package:qobo_one_live/utils/text_utils/text_styles.dart';
 
@@ -38,97 +36,45 @@ class MessagesTabView extends GetView<MessagesTabController> {
     final session = Get.isRegistered<UserSessionController>()
         ? Get.find<UserSessionController>()
         : Get.put(UserSessionController(), permanent: true);
-    return GetBuilder<UserSessionController>(
-      init: session,
-      builder: (session) {
-        final backgroundUrl =
-            ApiImageUtils.normalize(session.profileBackgroundUrl)?.trim() ??
-            '';
-        final backgroundPreviewUrl =
-            ApiImageUtils.normalize(
-              session.profileBackgroundPreviewUrl,
-            )?.trim() ??
-            '';
-        final onCover = backgroundUrl.isNotEmpty;
-        return _messagesBody(
-          context,
-          session: session,
-          onCover: onCover,
-          backgroundUrl: backgroundUrl,
-          backgroundPreviewUrl: backgroundPreviewUrl,
-        );
-      },
-    );
+    return _messagesBody(context, session: session);
   }
 
   Widget _messagesBody(
     BuildContext context, {
     required UserSessionController session,
-    required bool onCover,
-    required String backgroundUrl,
-    required String backgroundPreviewUrl,
   }) {
     return Container(
-      color: onCover ? kColorBlack : AppLightUi.bg,
+      color: AppLightUi.bg,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          if (onCover)
-            Positioned.fill(
-              child: ProfileBackgroundMedia(
-                key: ValueKey('messages_tab_bg_$backgroundUrl'),
-                url: backgroundUrl,
-                fit: BoxFit.cover,
-                showLoadingIndicator: false,
-                previewImageUrl: backgroundPreviewUrl,
-              ),
-            )
-          else ...[
-            Positioned(
-              top: -40,
-              right: -30,
-              child: _GlowOrb(
-                size: 180,
-                color: _MessagesUi.pink.withValues(alpha: 0.08),
-              ),
+          Positioned(
+            top: -40,
+            right: -30,
+            child: _GlowOrb(
+              size: 180,
+              color: _MessagesUi.pink.withValues(alpha: 0.08),
             ),
-            Positioned(
-              top: 180,
-              left: -60,
-              child: _GlowOrb(
-                size: 160,
-                color: _MessagesUi.violet.withValues(alpha: 0.07),
-              ),
+          ),
+          Positioned(
+            top: 180,
+            left: -60,
+            child: _GlowOrb(
+              size: 160,
+              color: _MessagesUi.violet.withValues(alpha: 0.07),
             ),
-          ],
-          if (onCover)
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      kColorBlack.withValues(alpha: 0.28),
-                      kColorBlack.withValues(alpha: 0.55),
-                    ],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                ),
-              ),
-            ),
+          ),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _topHeader(context, session, onCover: onCover),
+                  _topHeader(context, session),
                   Spacing.v16,
                   Obx(() {
                     if (controller.isSearchMode.value) {
-                      return Expanded(
-                        child: _searchResults(context, onCover: onCover),
-                      );
+                      return Expanded(child: _searchResults(context));
                     }
                     return Expanded(
                       child: RefreshIndicator(
@@ -148,7 +94,6 @@ class MessagesTabView extends GetView<MessagesTabController> {
                                   ? controller.newMatchesTotal.value
                                   : controller.newMatches.length,
                               accent: _MessagesUi.pink,
-                              onCover: onCover,
                             ),
                             Spacing.v12,
                             _newMatchRow(context),
@@ -159,7 +104,6 @@ class MessagesTabView extends GetView<MessagesTabController> {
                               subtitle: 'Keep the vibe going',
                               count: controller.inboxThreads.length,
                               accent: _MessagesUi.cyan,
-                              onCover: onCover,
                             ),
                             Spacing.v12,
                             _inboxSection(context),
@@ -178,16 +122,10 @@ class MessagesTabView extends GetView<MessagesTabController> {
     );
   }
 
-  Widget _topHeader(
-    BuildContext context,
-    UserSessionController session, {
-    required bool onCover,
-  }) {
+  Widget _topHeader(BuildContext context, UserSessionController session) {
     final avatarUrl = session.displayPictureUrl;
-    final titleColor = onCover ? kColorWhite : AppLightUi.title;
-    final subtitleColor = onCover
-        ? kColorWhite.withValues(alpha: 0.78)
-        : AppLightUi.subtitle;
+    final titleColor = AppLightUi.title;
+    final subtitleColor = AppLightUi.subtitle;
     return Column(
       children: [
         Row(
@@ -201,95 +139,90 @@ class MessagesTabView extends GetView<MessagesTabController> {
                   size: 20,
                 ),
                 padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(
-                  minWidth: 36,
-                  minHeight: 40,
-                ),
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 40),
               ),
               Spacing.h6,
             ],
-                GestureDetector(
-                  onTap: () {
-                    if (!Get.isRegistered<BottomNavController>()) return;
-                    Get.find<BottomNavController>().openOwnProfileSheet(
-                      context,
-                    );
-                  },
-                  behavior: HitTestBehavior.opaque,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [
-                          _MessagesUi.pink.withValues(alpha: 0.95),
-                          _MessagesUi.violet.withValues(alpha: 0.9),
-                        ],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: _MessagesUi.pink.withValues(alpha: 0.22),
-                          blurRadius: 14,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: FramedUserAvatar(
-                      name: session.displayName,
-                      imageUrl: avatarUrl,
-                      frameUrl: session.profileFrameUrl,
-                      frameSeed: session.userId,
-                      size: 42,
-                      fontSize: TextStyles.k12FontSize,
-                    ),
-                  ),
-                ),
-                Spacing.h12,
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SemiBoldText(
-                        text: 'Messages',
-                        fontSize: TextStyles.k20FontSize,
-                        color: titleColor,
-                      ),
-                      const SizedBox(height: 2),
-                      AppText(
-                        text: 'Good connections start with hello.',
-                        fontSize: TextStyles.k10FontSize,
-                        color: subtitleColor,
-                      ),
+            GestureDetector(
+              onTap: () {
+                if (!Get.isRegistered<BottomNavController>()) return;
+                Get.find<BottomNavController>().openOwnProfileSheet(context);
+              },
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      _MessagesUi.pink.withValues(alpha: 0.95),
+                      _MessagesUi.violet.withValues(alpha: 0.9),
                     ],
                   ),
-                ),
-                Container(
-                  width: 46,
-                  height: 46,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    gradient: AppLightUi.familyCtaGradient,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: kColorWhite.withValues(alpha: 0.40),
-                      width: 1.2,
+                  boxShadow: [
+                    BoxShadow(
+                      color: _MessagesUi.pink.withValues(alpha: 0.22),
+                      blurRadius: 14,
+                      offset: const Offset(0, 4),
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppLightUi.title.withValues(alpha: 0.08),
-                        blurRadius: 16,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.favorite_rounded,
-                    size: 22,
-                    color: kColorWhite,
-                  ),
+                  ],
                 ),
-              ],
+                child: FramedUserAvatar(
+                  name: session.displayName,
+                  imageUrl: avatarUrl,
+                  frameUrl: session.profileFrameUrl,
+                  frameSeed: session.userId,
+                  size: 42,
+                  fontSize: TextStyles.k12FontSize,
+                ),
+              ),
             ),
+            Spacing.h12,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SemiBoldText(
+                    text: 'Messages',
+                    fontSize: TextStyles.k20FontSize,
+                    color: titleColor,
+                  ),
+                  const SizedBox(height: 2),
+                  AppText(
+                    text: 'Good connections start with hello.',
+                    fontSize: TextStyles.k10FontSize,
+                    color: subtitleColor,
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              width: 46,
+              height: 46,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                gradient: AppLightUi.familyCtaGradient,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: kColorWhite.withValues(alpha: 0.40),
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppLightUi.title.withValues(alpha: 0.08),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.favorite_rounded,
+                size: 22,
+                color: kColorWhite,
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 16),
         _searchBar(),
       ],
@@ -351,12 +284,9 @@ class MessagesTabView extends GetView<MessagesTabController> {
     required String subtitle,
     required int count,
     required Color accent,
-    required bool onCover,
   }) {
-    final titleColor = onCover ? kColorWhite : AppLightUi.title;
-    final subtitleColor = onCover
-        ? kColorWhite.withValues(alpha: 0.72)
-        : AppLightUi.subtitle;
+    final titleColor = AppLightUi.title;
+    final subtitleColor = AppLightUi.subtitle;
     return Row(
       children: [
         Container(
@@ -476,7 +406,7 @@ class MessagesTabView extends GetView<MessagesTabController> {
     );
   }
 
-  Widget _searchResults(BuildContext context, {required bool onCover}) {
+  Widget _searchResults(BuildContext context) {
     if (controller.isSearchLoading.value) {
       return const Center(
         child: CircularProgressIndicator(
@@ -493,7 +423,7 @@ class MessagesTabView extends GetView<MessagesTabController> {
               ? 'Type to search users'
               : 'No users found for "${controller.searchQuery.value}"',
           fontSize: TextStyles.k14FontSize,
-          color: onCover ? kColorWhite.withValues(alpha: 0.78) : AppLightUi.subtitle,
+          color: AppLightUi.subtitle,
           align: TextAlign.center,
         ),
       );

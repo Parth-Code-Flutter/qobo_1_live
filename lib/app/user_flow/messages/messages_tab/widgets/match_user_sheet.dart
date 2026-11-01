@@ -683,6 +683,7 @@ class _MatchUserSheetBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cover = user.profileBackgroundUrl?.trim() ?? '';
     return ConstrainedBox(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.sizeOf(context).height * 0.86,
@@ -703,37 +704,60 @@ class _MatchUserSheetBody extends StatelessWidget {
           child: Stack(
             children: [
               Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        const Color(0xFF2A1248),
-                        const Color(0xFF1A0E32),
-                        const Color(0xFF120822),
-                      ],
+                child: cover.isEmpty
+                    ? const DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Color(0xFF2A1248),
+                              Color(0xFF1A0E32),
+                              Color(0xFF120822),
+                            ],
+                          ),
+                        ),
+                      )
+                    : ProfileBackgroundMedia(
+                        url: cover,
+                        fit: BoxFit.cover,
+                        showLoadingIndicator: false,
+                      ),
+              ),
+              if (cover.isNotEmpty)
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: 0.12),
+                          const Color(0xFF120822).withValues(alpha: 0.42),
+                          const Color(0xFF120822).withValues(alpha: 0.62),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-              Positioned(
-                top: -40,
-                right: -20,
-                child: Container(
-                  width: 140,
-                  height: 140,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        kColorProfileChipPinkStart.withValues(alpha: 0.22),
-                        Colors.transparent,
-                      ],
+              if (cover.isEmpty)
+                Positioned(
+                  top: -40,
+                  right: -20,
+                  child: Container(
+                    width: 140,
+                    height: 140,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          kColorProfileChipPinkStart.withValues(alpha: 0.22),
+                          Colors.transparent,
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(22, 10, 22, 22),
                 child: SingleChildScrollView(

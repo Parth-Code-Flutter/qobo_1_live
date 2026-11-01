@@ -53,11 +53,7 @@ abstract final class SessionEarningsUtils {
       ..._nestedSessionMaps(roomData),
     ]);
     if (coins != null || diamonds != null) {
-      _applyIngestedTotals(
-        tracker,
-        coins: coins,
-        diamonds: diamonds,
-      );
+      _applyIngestedTotals(tracker, coins: coins, diamonds: diamonds);
     }
   }
 
@@ -80,11 +76,7 @@ abstract final class SessionEarningsUtils {
       ..._nestedSessionMaps(data),
     ]);
     if (coins != null || diamonds != null) {
-      _applyIngestedTotals(
-        tracker,
-        coins: coins,
-        diamonds: diamonds,
-      );
+      _applyIngestedTotals(tracker, coins: coins, diamonds: diamonds);
     }
   }
 
@@ -131,7 +123,8 @@ abstract final class SessionEarningsUtils {
 
     final isRoomGiftToParticipant =
         normalizedScope == 'room' && roomParticipantsEarn;
-    final isDirectGiftToEarner = receiver != null &&
+    final isDirectGiftToEarner =
+        receiver != null &&
         receiver.isNotEmpty &&
         _idsMatch(earnerId, receiver);
 
@@ -139,8 +132,7 @@ abstract final class SessionEarningsUtils {
       // Room / split gift: credit when this user is listed in credited_user_ids.
       final credited = _readCreditedUserIds(data);
       final isCredited =
-          credited.isNotEmpty &&
-          credited.any((id) => _idsMatch(earnerId, id));
+          credited.isNotEmpty && credited.any((id) => _idsMatch(earnerId, id));
       if (!isCredited) return;
 
       final amountEach = _readIntFromMaps(
@@ -228,6 +220,7 @@ abstract final class SessionEarningsUtils {
     required bool earnsGift,
   }) {
     if (!earnsGift || !GiftMediaUtils.isGiftChatMessage(chatMessage)) return 0;
+    if (chatMessage.contains('[[giftDisplayOnly:1]]')) return 0;
     final amountEach = parseGiftAmountEach(chatMessage);
     final embedded = parseGiftPrice(chatMessage);
     final catalogPrice = _giftPriceFromCatalog(giftCatalog, chatMessage);
@@ -251,7 +244,9 @@ abstract final class SessionEarningsUtils {
     List<Map<String, String>> catalog,
     String chatMessage,
   ) {
-    final name = GiftMediaUtils.giftNameFromChatLabel(chatMessage).toLowerCase();
+    final name = GiftMediaUtils.giftNameFromChatLabel(
+      chatMessage,
+    ).toLowerCase();
     if (name.isNotEmpty && name != 'gift') {
       for (final gift in catalog) {
         if ((gift['name'] ?? '').trim().toLowerCase() == name) {
@@ -324,9 +319,7 @@ abstract final class SessionEarningsUtils {
   }) {
     final nextCoins = coins ?? tracker.coinsEarned.value;
     final nextDiamonds = diamonds ?? tracker.diamondsEarned.value;
-    if (nextCoins == 0 &&
-        nextDiamonds == 0 &&
-        tracker.displayCoins > 0) {
+    if (nextCoins == 0 && nextDiamonds == 0 && tracker.displayCoins > 0) {
       return;
     }
     tracker.setFromTotals(coins: nextCoins, diamonds: nextDiamonds);

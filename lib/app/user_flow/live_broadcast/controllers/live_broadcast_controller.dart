@@ -1,3 +1,4 @@
+import 'package:qobo_one_live/services/gifts/lucky_gift_reward.dart';
 import 'package:qobo_one_live/services/gifts/lucky_gift_session.dart';
 import 'package:qobo_one_live/utils/local_storage/controllers/local_storage_controller.dart';
 import 'dart:async';
@@ -136,6 +137,9 @@ class LiveBroadcastController extends GetxController {
   final chatTextController = TextEditingController();
 
   final isMicMuted = false.obs;
+
+  /// Loudspeaker vs earpiece for the room More sheet. Headset keeps its own icon.
+  final dockSpeakerMode = 'speaker'.obs;
   final isCameraOff = false.obs;
 
   /// Host Go Live — front camera by default; flipped via [flipLiveCamera].
@@ -215,6 +219,11 @@ class LiveBroadcastController extends GetxController {
   void Function(Map<String, dynamic>)? _vipUserJoinedSocketListener;
   void Function(String event, Map<String, dynamic> data)?
   _liveStreamingSocketListener;
+  void Function(String event, Map<String, dynamic> data)?
+  _luckyRewardSocketListener;
+  final Set<String> _seenLuckyRewardIds = <String>{};
+  String _lastLocalLuckyWinKey = '';
+  DateTime? _lastLocalLuckyWinAt;
 
   /// Dedupes gift celebrations triggered by Zego gift chat events (all room kinds).
   final GiftChatCelebrationTracker _giftCelebrationTracker =
@@ -1342,6 +1351,7 @@ class LiveBroadcastController extends GetxController {
   }
 
   bool _luckyPreviewOpen = false;
+  Future<void> _luckyRoomShare = Future<void>.value();
   LuckyGiftSession? _luckySession;
   String _luckyOwner = '';
   final _luckySheetKey = GlobalKey();
@@ -1370,24 +1380,44 @@ class LiveBroadcastController extends GetxController {
             final reward = data['luckyReward'] is Map
                 ? data['luckyReward'] as Map
                 : {};
-            final balance = data['userCoins'] ?? reward['userCoins'];
+            final balance = readLuckyDiamondBalance(data);
             if (balance != null) {
-              diamondsBalance.value = parseWalletAmount(balance);
+              diamondsBalance.value = balance;
             }
             if (data['remaining_coins'] != null) {
               coinsBalance.value = parseWalletAmount(data['remaining_coins']);
             }
             final total = data['luckyRewardCoins'] ?? reward['rewardCoins'];
-            if (data['idempotent'] != true &&
+            final won =
+                luckySendShouldBroadcast(data) &&
                 total != null &&
                 (data['luckyRewardTriggered'] == true ||
-                    reward['rewardTriggered'] == true)) {
+                    reward['rewardTriggered'] == true);
+            if (won) {
+              final wonTotal = parseWalletAmount(total);
+              final tx =
+                  (data['transaction_id'] ??
+                          data['transactionId'] ??
+                          data['clientGiftId'])
+                      ?.toString()
+                      .trim() ??
+                  '';
+              if (tx.isNotEmpty) _seenLuckyRewardIds.add(tx);
+              _lastLocalLuckyWinKey = '${gift.name}|$wonTotal';
+              _lastLocalLuckyWinAt = DateTime.now();
+              chatMessages.add({
+                'sender': 'You',
+                'message': 'You won $wonTotal coins on ${gift.name}',
+                'translation': '',
+                'isTranslated': false,
+                'isSystem': true,
+              });
               final context = _luckySheetKey.currentContext;
               if (context != null && context.mounted) {
                 LuckyDemoCelebration.show(
                   context,
                   reward: true,
-                  total: parseWalletAmount(total),
+                  total: wonTotal,
                   bonus: parseWalletAmount(
                     data['luckyRewardBonus'] ?? reward['rewardBonus'],
                   ),
@@ -1410,6 +1440,13 @@ class LiveBroadcastController extends GetxController {
                   }
                 }),
               );
+            }
+            // Same room announcement a normal gift uses, so everyone else
+            // sees the clip and the chat line. The sender already played locally.
+            if (luckySendShouldBroadcast(data)) {
+              _luckyRoomShare = _luckyRoomShare
+                  .catchError((_) {})
+                  .then((_) => _shareLuckyGiftWithRoom(gift, data, host));
             }
           },
         )..balance = diamondsBalance.value;
@@ -1476,6 +1513,77 @@ class LiveBroadcastController extends GetxController {
       _luckyTapSound.close();
       _luckySession?.cancelQueued();
       _luckyPreviewOpen = false;
+    }
+  }
+
+  /// Announces a paid lucky send on the same channel a normal gift uses.
+  ///
+  /// Peers already play `🎁` chat lines. This does not charge again and does
+  /// not change the normal gift send path.
+  Future<void> _shareLuckyGiftWithRoom(
+    LuckyGift gift,
+    Map data,
+    String host,
+  ) async {
+    if (isClosed) return;
+    final reward = data['luckyReward'] is Map ? data['luckyReward'] as Map : {};
+    final catalogGift = <String, String>{
+      'id': gift.id,
+      'name': gift.name,
+      'icon': gift.icon,
+      'animationUrl': gift.animation,
+      'soundUrl': gift.sound ?? '',
+    };
+    final response = <String, dynamic>{'data': data};
+    final animationUrl = GiftMediaUtils.animationUrlFromResponse(
+      response,
+      catalogGift,
+    );
+    final soundUrl = GiftMediaUtils.soundUrlFromResponse(response, catalogGift);
+    final combo = parseWalletAmount(
+      data['combo'] ?? reward['currentCombo'] ?? 1,
+    );
+    final hit =
+        (data['transaction_id'] ??
+                data['transactionId'] ??
+                data['clientGiftId'] ??
+                '${gift.id}-$combo-${DateTime.now().microsecondsSinceEpoch}')
+            .toString();
+    final giftLabel = GiftMediaUtils.buildChatLabel(
+      giftName: gift.name,
+      giftIcon: gift.icon,
+      animationUrl: animationUrl,
+      soundUrl: soundUrl,
+      scope: 'user',
+      senderId: _currentUserId(),
+      receiverId: host,
+      giftId: gift.id,
+      comboIndex: combo < 1 ? 1 : combo,
+      comboTotal: 99,
+      hitId: hit,
+      displayOnly: true,
+    );
+    try {
+      final sentOk = isLiveStreamingSession
+          ? await _sendExpressLiveMessage(giftLabel)
+          : await ZegoUIKit().sendInRoomMessage(giftLabel);
+      if (!sentOk && !isLiveStreamingSession) {
+        chatMessages.add({
+          'sender': 'You',
+          'message': stripGiftAnimMarker(giftLabel),
+          'translation': '',
+          'isTranslated': false,
+          'isSystem': true,
+        });
+      }
+    } catch (_) {
+      chatMessages.add({
+        'sender': 'You',
+        'message': stripGiftAnimMarker(giftLabel),
+        'translation': '',
+        'isTranslated': false,
+        'isSystem': true,
+      });
     }
   }
 
@@ -2687,6 +2795,9 @@ class LiveBroadcastController extends GetxController {
     String chatMessage, {
     required String senderId,
   }) async {
+    // Lucky sends are announced for the animation only. They must not
+    // change seat diamonds or host earnings the way a paid room gift does.
+    if (chatMessage.contains('[[giftDisplayOnly:1]]')) return;
     final scope = parseGiftScope(chatMessage);
     final receiverId = parseGiftReceiverId(chatMessage);
     final fromId = parseGiftSenderId(chatMessage) ?? senderId;
@@ -4396,6 +4507,13 @@ class LiveBroadcastController extends GetxController {
     };
 
     _vipUserJoinedSocketListener = _buildVipUserJoinedListener(apiRoomId);
+    _luckyRewardSocketListener = (event, data) {
+      final name = (data['event'] ?? data['type'] ?? event)
+          .toString()
+          .toLowerCase();
+      if (!name.contains('lucky_gift_reward')) return;
+      _showLuckyRewardFromSocket(data);
+    };
 
     unawaited(() async {
       await UserRealtimeSocketService.ensureConnected();
@@ -4408,6 +4526,10 @@ class LiveBroadcastController extends GetxController {
       }
       if (vipListener != null) {
         socket.addVipUserJoinedListener(vipListener);
+      }
+      final luckyListener = _luckyRewardSocketListener;
+      if (luckyListener != null) {
+        socket.addLiveStreamEventListener(luckyListener);
       }
       await socket.joinRoomChannel(apiRoomId);
     }());
@@ -4469,7 +4591,8 @@ class LiveBroadcastController extends GetxController {
             ?.toString()
             .trim() ??
         '';
-    if (eventRoomId.isNotEmpty && !_eventMatchesThisRoom(eventRoomId, apiRoomId)) {
+    if (eventRoomId.isNotEmpty &&
+        !_eventMatchesThisRoom(eventRoomId, apiRoomId)) {
       return;
     }
     final userId =
@@ -4765,9 +4888,11 @@ class LiveBroadcastController extends GetxController {
     final bgListener = _roomBackgroundSocketListener;
     final vipListener = _vipUserJoinedSocketListener;
     final liveListener = _liveStreamingSocketListener;
+    final luckyListener = _luckyRewardSocketListener;
     _roomBackgroundSocketListener = null;
     _vipUserJoinedSocketListener = null;
     _liveStreamingSocketListener = null;
+    _luckyRewardSocketListener = null;
     if (!Get.isRegistered<UserRealtimeSocketService>()) return;
     final socket = Get.find<UserRealtimeSocketService>();
     if (bgListener != null) {
@@ -4775,6 +4900,9 @@ class LiveBroadcastController extends GetxController {
     }
     if (vipListener != null) {
       socket.removeVipUserJoinedListener(vipListener);
+    }
+    if (luckyListener != null) {
+      socket.removeLiveStreamEventListener(luckyListener);
     }
     if (liveListener != null) {
       socket.removeLiveStreamEventListener(liveListener);
@@ -4813,9 +4941,75 @@ class LiveBroadcastController extends GetxController {
       }
       return;
     }
+    if (normalizedEvent.contains('lucky_gift_reward')) {
+      _showLuckyRewardFromSocket(data);
+      return;
+    }
     if (normalizedEvent.contains('gift_sent')) {
+      // Lucky clips already play from the room chat line. A gift_sent for
+      // the same send would play the animation a second time.
+      if (luckySocketPayloadIsLuckyGift(data)) return;
       _celebrateLiveGiftFromSocket(data);
     }
+  }
+
+  /// Winner banner for everyone else in this live or audio/video room.
+  ///
+  /// The sender already saw the celebration from the send response, so their
+  /// own socket event is ignored.
+  void _showLuckyRewardFromSocket(Map<String, dynamic> data) {
+    if (isClosed || !_matchesCurrentLiveStreamEvent(data)) return;
+    final notice = LuckyGiftRewardNotice.tryParse(data);
+    if (notice == null) return;
+    if (notice.roomId.isNotEmpty && !_eventMatchesThisRoom(notice.roomId, '')) {
+      return;
+    }
+    final key = notice.id.isNotEmpty
+        ? notice.id
+        : '${notice.winnerId}|${notice.giftName}|${notice.total}|${notice.combo}';
+    if (!_seenLuckyRewardIds.add(key)) return;
+    if (_isMyFreshLuckyWin(notice)) return;
+
+    chatMessages.add({
+      'sender': notice.winnerName.isEmpty ? 'Lucky' : notice.winnerName,
+      'message': notice.chatLine,
+      'translation': '',
+      'isTranslated': false,
+      'isSystem': true,
+    });
+    final context = Get.overlayContext ?? Get.context;
+    if (context == null || !context.mounted) return;
+    LuckyDemoCelebration.show(
+      context,
+      reward: true,
+      total: notice.total,
+      bonus: notice.bonus,
+      combo: notice.combo,
+      winnerName: notice.winnerName.isEmpty ? 'Someone' : notice.winnerName,
+    );
+  }
+
+  bool _isMyFreshLuckyWin(LuckyGiftRewardNotice notice) {
+    if (notice.winnerId.isNotEmpty &&
+        _userIdsMatch(notice.winnerId, _currentUserId())) {
+      return true;
+    }
+    final at = _lastLocalLuckyWinAt;
+    if (at == null ||
+        DateTime.now().difference(at) > const Duration(seconds: 4)) {
+      return false;
+    }
+    if (_lastLocalLuckyWinKey != '${notice.giftName}|${notice.total}') {
+      return false;
+    }
+    if (notice.winnerId.isEmpty && notice.winnerName.trim().isEmpty) {
+      return true;
+    }
+    final myName = Get.isRegistered<UserSessionController>()
+        ? Get.find<UserSessionController>().displayName.trim().toLowerCase()
+        : '';
+    return myName.isNotEmpty &&
+        notice.winnerName.trim().toLowerCase() == myName;
   }
 
   void _handleEmojiSocketEvent(String event, Map<String, dynamic> data) {
@@ -4884,6 +5078,8 @@ class LiveBroadcastController extends GetxController {
           'live_id',
           'roomId',
           'room_id',
+          'channel_id',
+          'channelId',
           'zegoLiveId',
           'zego_live_id',
         ]) ??
@@ -4898,6 +5094,8 @@ class LiveBroadcastController extends GetxController {
             'live_id',
             'roomId',
             'room_id',
+            'channel_id',
+            'channelId',
             'zegoLiveId',
             'zego_live_id',
           ],
@@ -6782,7 +6980,8 @@ class LiveBroadcastController extends GetxController {
         avatarUrl: hostAvatarUrl.value,
         avatarFrameUrl: hostAvatarFrameUrl.value,
         role: 'host',
-        accountRole: Get.isRegistered<UserSessionController>() &&
+        accountRole:
+            Get.isRegistered<UserSessionController>() &&
                 _userIdsMatch(hostId, _currentUserId())
             ? Get.find<UserSessionController>().effectiveRole
             : 'user',
@@ -6806,22 +7005,19 @@ class LiveBroadcastController extends GetxController {
       return seats;
     }
 
-    return seats
-        .map((seat) {
-          if (seat.userId != currentUserId) return seat;
-          final avatar =
-              (seat.avatarFrameUrl?.trim().isEmpty ?? true) &&
-                  currentFrameUrl.isNotEmpty
-              ? currentFrameUrl
-              : seat.avatarFrameUrl;
-          final entry =
-              (seat.vipFrameUrl?.trim().isEmpty ?? true) &&
-                  entryFrameUrl.isNotEmpty
-              ? entryFrameUrl
-              : seat.vipFrameUrl;
-          return seat.copyWith(avatarFrameUrl: avatar, vipFrameUrl: entry);
-        })
-        .toList();
+    return seats.map((seat) {
+      if (seat.userId != currentUserId) return seat;
+      final avatar =
+          (seat.avatarFrameUrl?.trim().isEmpty ?? true) &&
+              currentFrameUrl.isNotEmpty
+          ? currentFrameUrl
+          : seat.avatarFrameUrl;
+      final entry =
+          (seat.vipFrameUrl?.trim().isEmpty ?? true) && entryFrameUrl.isNotEmpty
+          ? entryFrameUrl
+          : seat.vipFrameUrl;
+      return seat.copyWith(avatarFrameUrl: avatar, vipFrameUrl: entry);
+    }).toList();
   }
 
   int _readSeatConfig(dynamic data) {
@@ -7195,6 +7391,28 @@ class LiveBroadcastController extends GetxController {
     }
   }
 
+  /// Reads the live mic and speaker so the More sheet can show the real state.
+  void syncDockAudioState() {
+    if (isLiveStreamingSession) return;
+    final userId = ZegoUIKit().getLocalUser().id;
+    if (userId.isEmpty || !isZegoConnected.value) return;
+    isMicMuted.value = !ZegoUIKit().getMicrophoneStateNotifier(userId).value;
+    dockSpeakerMode.value = _dockSpeakerModeFor(
+      ZegoUIKit().getAudioOutputDeviceNotifier(userId).value,
+    );
+  }
+
+  String _dockSpeakerModeFor(ZegoUIKitAudioRoute route) {
+    if (route == ZegoUIKitAudioRoute.headphone ||
+        route == ZegoUIKitAudioRoute.bluetooth ||
+        route == ZegoUIKitAudioRoute.airPlay ||
+        route == ZegoUIKitAudioRoute.externalUSB) {
+      return 'headset';
+    }
+    if (route == ZegoUIKitAudioRoute.speaker) return 'speaker';
+    return 'off';
+  }
+
   /// Same mic toggle the room dock used, for the More sheet.
   void toggleDockMic() {
     if (isLiveStreamingSession) {
@@ -7205,20 +7423,30 @@ class LiveBroadcastController extends GetxController {
     if (userId.isEmpty || !isZegoConnected.value) return;
     final isOn = ZegoUIKit().getMicrophoneStateNotifier(userId).value;
     ZegoUIKit().turnMicrophoneOn(!isOn, muteMode: true);
+    isMicMuted.value = isOn;
   }
 
   /// Same speaker toggle the audio/video dock used.
   void toggleDockSpeaker() {
-    if (isLiveStreamingSession) return;
+    if (isLiveStreamingSession) {
+      final nextOn = dockSpeakerMode.value != 'speaker';
+      dockSpeakerMode.value = nextOn ? 'speaker' : 'off';
+      unawaited(ZegoExpressEngine.instance.setAudioRouteToSpeaker(nextOn));
+      return;
+    }
     final userId = ZegoUIKit().getLocalUser().id;
     if (userId.isEmpty || !isZegoConnected.value) return;
     final route = ZegoUIKit().getAudioOutputDeviceNotifier(userId).value;
     if (route == ZegoUIKitAudioRoute.headphone ||
-        route == ZegoUIKitAudioRoute.bluetooth) {
+        route == ZegoUIKitAudioRoute.bluetooth ||
+        route == ZegoUIKitAudioRoute.airPlay ||
+        route == ZegoUIKitAudioRoute.externalUSB) {
+      dockSpeakerMode.value = 'headset';
       return;
     }
     final isSpeaker = route == ZegoUIKitAudioRoute.speaker;
     ZegoUIKit().setAudioOutputToSpeaker(!isSpeaker);
+    dockSpeakerMode.value = isSpeaker ? 'off' : 'speaker';
   }
 
   /// Same camera toggle the room dock used.

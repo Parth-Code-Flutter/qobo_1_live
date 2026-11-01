@@ -221,7 +221,7 @@ String stripGiftAnimMarker(String text) {
   return text
       .replaceAll(
         RegExp(
-          r'\n?\[\[gift(?:Anim|Sound|To|From|Scope|Price|Credited|AmountEach|Combo|Id):.*?\]\]',
+          r'\n?\[\[gift(?:Anim|Sound|To|From|Scope|Price|Credited|AmountEach|Combo|Id|Hit|DisplayOnly):.*?\]\]',
           caseSensitive: false,
         ),
         '',

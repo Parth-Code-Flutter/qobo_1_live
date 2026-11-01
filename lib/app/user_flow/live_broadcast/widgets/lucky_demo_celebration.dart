@@ -11,10 +11,14 @@ class LuckyDemoCelebration extends StatefulWidget {
     this.total = 0,
     this.bonus = 0,
     this.combo = 0,
+    this.winnerName = '',
   });
   final bool preview;
   final bool reward;
   final int total, bonus, combo;
+
+  /// Set for other people in the room. Empty means the current user won.
+  final String winnerName;
   final VoidCallback onComplete;
   static OverlayEntry? _entry;
   static bool _rewardPlaying = false;
@@ -27,6 +31,7 @@ class LuckyDemoCelebration extends StatefulWidget {
     int total = 0,
     int bonus = 0,
     int combo = 0,
+    String winnerName = '',
   }) {
     if (_rewardPlaying && !reward) return;
     final token = ++_token;
@@ -40,6 +45,7 @@ class LuckyDemoCelebration extends StatefulWidget {
           total: total,
           bonus: bonus,
           combo: combo,
+          winnerName: winnerName,
           onComplete: () => _finish(token),
         ),
       ),
@@ -184,16 +190,15 @@ class _LuckyDemoCelebrationState extends State<LuckyDemoCelebration>
                           if (widget.total > 0) ...[
                             const SizedBox(height: 4),
                             ShaderMask(
-                              shaderCallback: (bounds) =>
-                                  const LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [
-                                      Color(0xFFFFFFDA),
-                                      Color(0xFFFFE58B),
-                                      Color(0xFFFFA82E),
-                                    ],
-                                  ).createShader(bounds),
+                              shaderCallback: (bounds) => const LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Color(0xFFFFFFDA),
+                                  Color(0xFFFFE58B),
+                                  Color(0xFFFFA82E),
+                                ],
+                              ).createShader(bounds),
                               child: Text(
                                 '${widget.total}',
                                 textScaler: TextScaler.noScaling,
@@ -214,7 +219,9 @@ class _LuckyDemoCelebrationState extends State<LuckyDemoCelebration>
                             _glowText(
                               widget.preview
                                   ? 'Preview: ${widget.total} coins'
-                                  : 'You get ${widget.total} coins!',
+                                  : widget.winnerName.trim().isEmpty
+                                  ? 'You get ${widget.total} coins!'
+                                  : '${widget.winnerName.trim()} won ${widget.total} coins!',
                               22,
                             ),
                           ],
@@ -277,6 +284,8 @@ class _LuckyDemoCelebrationState extends State<LuckyDemoCelebration>
   Widget _glowText(String text, double size) => Text(
     text,
     textAlign: TextAlign.center,
+    maxLines: 2,
+    overflow: TextOverflow.ellipsis,
     style: TextStyle(
       color: const Color(0xFFFFE9B2),
       fontSize: size,

@@ -127,6 +127,30 @@ void main() {
       expect(parseGiftId(first), 'g-gift');
     });
 
+    test('lucky display marker stays hidden and keeps the clip', () {
+      final label = GiftMediaUtils.buildChatLabel(
+        giftName: 'Clover',
+        giftIcon: '🍀',
+        animationUrl: 'https://cdn.example.com/clover.svga',
+        soundUrl: 'https://cdn.example.com/clover.mp3',
+        giftId: 'lucky-1',
+        receiverId: 'host-1',
+        senderId: 'sender-1',
+        comboIndex: 2,
+        comboTotal: 99,
+        hitId: 'tx-2',
+        displayOnly: true,
+      );
+      expect(
+        label.contains('[[giftAnim:https://cdn.example.com/clover.svga]]'),
+        isTrue,
+      );
+      expect(label.contains('[[giftDisplayOnly:1]]'), isTrue);
+      expect(label.contains('[[giftHit:tx-2]]'), isTrue);
+      expect(stripGiftAnimMarker(label), '🎁 sent Clover 🍀');
+      expect(parseGiftAnimUrl(label), 'https://cdn.example.com/clover.svga');
+    });
+
     test('catalogMediaForChat resolves generic Gift names by id', () {
       const catalog = [
         {

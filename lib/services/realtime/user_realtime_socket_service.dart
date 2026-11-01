@@ -228,6 +228,18 @@ class UserRealtimeSocketService extends GetxController {
         (raw) => _onLiveStreamNamed('live_stream.gift_sent', raw),
       );
       socket.on('gift_sent', (raw) => _onLiveStreamNamed('gift_sent', raw));
+      socket.on(
+        'live_stream.lucky_gift_reward',
+        (raw) => _onLiveStreamNamed('live_stream.lucky_gift_reward', raw),
+      );
+      socket.on(
+        'lucky_gift_reward',
+        (raw) => _onLiveStreamNamed('lucky_gift_reward', raw),
+      );
+      socket.on(
+        'room.lucky_gift_reward',
+        (raw) => _onLiveStreamNamed('room.lucky_gift_reward', raw),
+      );
       socket.on('room_emoji', (raw) => _onEmojiNamed('room_emoji', raw));
       socket.on(
         'room_emoji_sent',
@@ -525,6 +537,9 @@ class UserRealtimeSocketService extends GetxController {
       socket.off('live_stream_ended');
       socket.off('live_stream.gift_sent');
       socket.off('gift_sent');
+      socket.off('live_stream.lucky_gift_reward');
+      socket.off('lucky_gift_reward');
+      socket.off('room.lucky_gift_reward');
       socket.off('room_emoji');
       socket.off('room_emoji_sent');
       socket.off('live_emoji_sent');
