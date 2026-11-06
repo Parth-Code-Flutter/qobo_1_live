@@ -11,7 +11,10 @@ import 'package:zego_uikit/zego_uikit.dart';
 /// Positioning is owned by the call screen so this only draws the bubbles
 /// and the composer.
 class VideoCallChatOverlay extends StatefulWidget {
-  const VideoCallChatOverlay({super.key});
+  const VideoCallChatOverlay({super.key, this.between});
+
+  /// Sits directly above the composer. Used for the You / peer / Gift row.
+  final Widget? between;
 
   @override
   State<VideoCallChatOverlay> createState() => _VideoCallChatOverlayState();
@@ -82,7 +85,11 @@ class _VideoCallChatOverlayState extends State<VideoCallChatOverlay> {
               },
             ),
           ),
-        const SizedBox(height: 8),
+        if (widget.between != null) ...[
+          const SizedBox(height: 4),
+          widget.between!,
+        ],
+        const SizedBox(height: 4),
         Row(
           children: [
             Expanded(

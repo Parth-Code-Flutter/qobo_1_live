@@ -259,9 +259,16 @@ class _VoiceCallPortraitStage extends GetView<ChatVoiceCallController> {
   }
 }
 
-/// You, the other person, and Gift sit directly above the on-call chat.
+/// You, the other person, and Gift sit directly above "Say something".
 class _VideoCallBottomChrome extends StatelessWidget {
   const _VideoCallBottomChrome();
+
+  /// Clearance above Zego's light call bar (design size 750, buttons 96).
+  double _gapAboveCallButtons(BuildContext context) {
+    final scale = MediaQuery.sizeOf(context).width / 750;
+    final bar = (96 * scale) > 60 ? (96 * scale) : 60;
+    return (10 * scale) + bar + 6 + 6;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -270,16 +277,13 @@ class _VideoCallBottomChrome extends StatelessWidget {
       child: Align(
         alignment: Alignment.bottomCenter,
         child: Padding(
-          padding: EdgeInsets.fromLTRB(12, 0, 12, 110 + keyboard),
-          child: const Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _VideoParticipantStrip(),
-              SizedBox(height: 8),
-              VideoCallChatOverlay(),
-            ],
+          padding: EdgeInsets.fromLTRB(
+            12,
+            0,
+            12,
+            _gapAboveCallButtons(context) + keyboard,
           ),
+          child: const VideoCallChatOverlay(between: _VideoParticipantStrip()),
         ),
       ),
     );

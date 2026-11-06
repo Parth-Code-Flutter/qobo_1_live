@@ -1292,12 +1292,6 @@ class LiveBroadcastView extends GetView<LiveBroadcastController> {
           onTap: controller.openLuckyPreviewSheet,
         ),
       ),
-      _bottomActionIcon(
-        Icons.emoji_emotions_rounded,
-        color: const Color(0xFFFFD84D),
-        compact: compact,
-        onTap: controller.openEmojiSheet,
-      ),
       // PK stays off the bar once a battle is already open.
       if (controller.isHost.value && !controller.isInRoomPkActive)
         _bottomActionIcon(

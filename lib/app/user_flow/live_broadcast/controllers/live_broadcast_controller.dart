@@ -1357,107 +1357,120 @@ class LiveBroadcastController extends GetxController {
   final _luckySheetKey = GlobalKey();
   final _luckyTapSound = LuckyTapSound();
 
+  /// One Lucky session for every send surface (Lucky sheet and Lucky gifts).
+  Future<LuckyGiftSession?> _ensureLuckySession() async {
+    final owner = _currentUserId();
+    final token = await LocalStorage.shared.getToken();
+    if (isClosed || token.isEmpty || owner.isEmpty) return null;
+    if (_luckySession != null && _luckyOwner == owner) return _luckySession;
+    _luckySession?.dispose();
+    _luckyOwner = owner;
+    _luckySession = LuckyGiftSession(
+      repo: LuckyGiftRepo(),
+      token: token,
+      isOwner: () => !isClosed && _currentUserId() == owner,
+      onSuccess: (gift, data, host) {
+        final reward = data['luckyReward'] is Map
+            ? data['luckyReward'] as Map
+            : {};
+        final balance = readLuckyDiamondBalance(data);
+        if (balance != null) {
+          diamondsBalance.value = balance;
+        }
+        if (data['remaining_coins'] != null) {
+          coinsBalance.value = parseWalletAmount(data['remaining_coins']);
+        }
+        final total = data['luckyRewardCoins'] ?? reward['rewardCoins'];
+        final won =
+            luckySendShouldBroadcast(data) &&
+            total != null &&
+            (data['luckyRewardTriggered'] == true ||
+                reward['rewardTriggered'] == true);
+        if (won) {
+          final wonTotal = parseWalletAmount(total);
+          final tx =
+              (data['transaction_id'] ??
+                      data['transactionId'] ??
+                      data['clientGiftId'])
+                  ?.toString()
+                  .trim() ??
+              '';
+          if (tx.isNotEmpty) _seenLuckyRewardIds.add(tx);
+          _lastLocalLuckyWinKey = '${gift.name}|$wonTotal';
+          _lastLocalLuckyWinAt = DateTime.now();
+          chatMessages.add({
+            'sender': 'You',
+            'message': 'You won $wonTotal coins on ${gift.name}',
+            'translation': '',
+            'isTranslated': false,
+            'isSystem': true,
+          });
+          final context = _luckySheetKey.currentContext;
+          if (context != null && context.mounted) {
+            LuckyDemoCelebration.show(
+              context,
+              reward: true,
+              total: wonTotal,
+              bonus: parseWalletAmount(
+                data['luckyRewardBonus'] ?? reward['rewardBonus'],
+              ),
+              combo: parseWalletAmount(
+                data['combo'] ??
+                    reward['currentCombo'] ??
+                    _luckySession?.combos[gift.id],
+              ),
+            );
+          }
+        }
+        if (balance == null) {
+          unawaited(
+            loadWalletBalance().then((_) {
+              if (!isClosed &&
+                  _luckyOwner == owner &&
+                  _luckySession?.busy == false) {
+                _luckySession?.updateBalance(diamondsBalance.value);
+              }
+            }),
+          );
+        }
+        if (luckySendShouldBroadcast(data)) {
+          _luckyRoomShare = _luckyRoomShare
+              .catchError((_) {})
+              .then((_) => _shareLuckyGiftWithRoom(gift, data, host));
+        }
+      },
+    )..balance = diamondsBalance.value;
+    return _luckySession;
+  }
+
+  /// Sends a catalog lucky gift through `POST /api/gifts/lucky/send`.
+  Future<void> _sendLuckyFromGiftMap(Map<String, String> gift) async {
+    final session = await _ensureLuckySession();
+    if (session == null || isClosed) return;
+    final owner = _currentUserId();
+    final selected = (selectedGiftReceiverId.value ?? receiverId.value).trim();
+    final receiver = (selected.isEmpty || selected == owner) ? owner : selected;
+    session.tap(
+      LuckyGift.fromJson(gift),
+      host: receiver,
+      channel: economyGiftRoomId,
+    );
+  }
+
   Future<void> openLuckyPreviewSheet() async {
     if (_luckyPreviewOpen || isClosed) return;
     _luckyPreviewOpen = true;
     try {
-      final owner = Get.find<UserSessionController>().userId;
-      final token = await LocalStorage.shared.getToken();
-      if (isClosed ||
-          token.isEmpty ||
-          Get.find<UserSessionController>().userId != owner) {
-        return;
-      }
-      if (_luckySession == null || _luckyOwner != owner) {
-        _luckySession?.dispose();
-        _luckyOwner = owner;
-        _luckySession = LuckyGiftSession(
-          repo: LuckyGiftRepo(),
-          token: token,
-          isOwner: () =>
-              !isClosed && Get.find<UserSessionController>().userId == owner,
-          onSuccess: (gift, data, host) {
-            final reward = data['luckyReward'] is Map
-                ? data['luckyReward'] as Map
-                : {};
-            final balance = readLuckyDiamondBalance(data);
-            if (balance != null) {
-              diamondsBalance.value = balance;
-            }
-            if (data['remaining_coins'] != null) {
-              coinsBalance.value = parseWalletAmount(data['remaining_coins']);
-            }
-            final total = data['luckyRewardCoins'] ?? reward['rewardCoins'];
-            final won =
-                luckySendShouldBroadcast(data) &&
-                total != null &&
-                (data['luckyRewardTriggered'] == true ||
-                    reward['rewardTriggered'] == true);
-            if (won) {
-              final wonTotal = parseWalletAmount(total);
-              final tx =
-                  (data['transaction_id'] ??
-                          data['transactionId'] ??
-                          data['clientGiftId'])
-                      ?.toString()
-                      .trim() ??
-                  '';
-              if (tx.isNotEmpty) _seenLuckyRewardIds.add(tx);
-              _lastLocalLuckyWinKey = '${gift.name}|$wonTotal';
-              _lastLocalLuckyWinAt = DateTime.now();
-              chatMessages.add({
-                'sender': 'You',
-                'message': 'You won $wonTotal coins on ${gift.name}',
-                'translation': '',
-                'isTranslated': false,
-                'isSystem': true,
-              });
-              final context = _luckySheetKey.currentContext;
-              if (context != null && context.mounted) {
-                LuckyDemoCelebration.show(
-                  context,
-                  reward: true,
-                  total: wonTotal,
-                  bonus: parseWalletAmount(
-                    data['luckyRewardBonus'] ?? reward['rewardBonus'],
-                  ),
-                  combo: parseWalletAmount(
-                    data['combo'] ??
-                        reward['currentCombo'] ??
-                        _luckySession?.combos[gift.id],
-                  ),
-                );
-              }
-            }
-            // Refresh authoritative wallet values; never calculate rewards locally.
-            if (balance == null) {
-              unawaited(
-                loadWalletBalance().then((_) {
-                  if (!isClosed &&
-                      _luckyOwner == owner &&
-                      _luckySession?.busy == false) {
-                    _luckySession?.updateBalance(diamondsBalance.value);
-                  }
-                }),
-              );
-            }
-            // Same room announcement a normal gift uses, so everyone else
-            // sees the clip and the chat line. The sender already played locally.
-            if (luckySendShouldBroadcast(data)) {
-              _luckyRoomShare = _luckyRoomShare
-                  .catchError((_) {})
-                  .then((_) => _shareLuckyGiftWithRoom(gift, data, host));
-            }
-          },
-        )..balance = diamondsBalance.value;
-      }
+      final session = await _ensureLuckySession();
+      if (session == null) return;
+      final owner = _currentUserId();
       _luckyTapSound.open();
       _luckySession!.resetPreview();
       unawaited(_luckySession!.load());
       await Get.bottomSheet<void>(
         LuckyPreviewSheet(
           key: _luckySheetKey,
-          session: _luckySession!,
+          session: session,
           onSoundStart: (gift) {
             _luckyTapSound.arm(
               gift.name,
@@ -1489,21 +1502,14 @@ class LiveBroadcastController extends GetxController {
               );
             }
 
-            if (host.isEmpty || host == owner) {
-              final reached = _luckySession!.previewTap(gift);
-              if (reached && context != null && context.mounted) {
-                LuckyDemoCelebration.show(
-                  context,
-                  reward: true,
-                  preview: true,
-                  total: gift.estimatedReward,
-                  bonus: gift.estimatedBonus,
-                  combo: _luckySession!.displayedCombo(gift.id),
-                );
-              }
-              return;
-            }
-            _luckySession!.tap(gift, host: host, channel: economyGiftRoomId);
+            // No other person selected: still call the send API. An empty
+            // host_id makes the server throw, so the signed-in user is sent.
+            final receiver = (host.isEmpty || host == owner) ? owner : host;
+            _luckySession!.tap(
+              gift,
+              host: receiver,
+              channel: economyGiftRoomId,
+            );
           },
         ),
         backgroundColor: Colors.transparent,
@@ -3809,6 +3815,11 @@ class LiveBroadcastController extends GetxController {
     int comboCount = 1,
     bool keepSheetOpen = false,
   }) async {
+    if (GiftMediaUtils.isLuckyCategory(gift['category']) ||
+        gift['isLucky'] == 'true') {
+      await _sendLuckyFromGiftMap(gift);
+      return;
+    }
     if (_giftSendInFlight) {
       if (keepSheetOpen) {
         _luckyGiftQueue.add(Map<String, String>.from(gift));
