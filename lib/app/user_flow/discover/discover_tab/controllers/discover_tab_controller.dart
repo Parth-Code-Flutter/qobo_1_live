@@ -47,6 +47,10 @@ class DiscoverTabController extends GetxController {
   final discoverUsers = <SocialUserCard>[].obs;
   final searchResults = <SocialUserCard>[].obs;
   final isDiscoverUsersLoading = false.obs;
+
+  /// True only while page 2+ of the people feed is loading. Page 1 keeps the
+  /// full-screen spinner so a refresh still replaces the list.
+  final isDiscoverUsersLoadingMore = false.obs;
   final isDiscoverFiltersLoading = false.obs;
   final isSearchLoading = false.obs;
   final followingUserIds = <String>{}.obs;
@@ -88,6 +92,9 @@ class DiscoverTabController extends GetxController {
 
   var _discoverPage = 1;
   var _discoverHasMore = true;
+
+  /// Bumped on every reload so a slow page-2 response cannot append after refresh.
+  var _discoverRequestGen = 0;
 
   Timer? _debounceTimer;
 
@@ -143,43 +150,76 @@ class DiscoverTabController extends GetxController {
     searchFocusNode.unfocus();
   }
 
-  /// Explore grid feed — `GET /api/discover` (separate from Messages New Match).
+  /// People feed — `GET /api/discover` (separate from Messages New Match).
+  ///
+  /// [refresh] reloads page 1 (open, pull-to-refresh, filter change).
+  /// Further pages append and do not replace cards already on screen.
   Future<void> fetchDiscoverUsers({bool refresh = true}) async {
     if (refresh) {
       _discoverPage = 1;
       _discoverHasMore = true;
-    } else if (!_discoverHasMore || isDiscoverUsersLoading.value) {
+    } else if (!_discoverHasMore ||
+        isDiscoverUsersLoading.value ||
+        isDiscoverUsersLoadingMore.value) {
       return;
     }
 
+    final pageNumber = _discoverPage;
+    final gen = refresh ? ++_discoverRequestGen : _discoverRequestGen;
     try {
-      isDiscoverUsersLoading.value = true;
+      if (refresh) {
+        isDiscoverUsersLoading.value = true;
+        isDiscoverUsersLoadingMore.value = false;
+      } else {
+        isDiscoverUsersLoadingMore.value = true;
+      }
       final response = await _userRepo.exploreDiscover(
-        page: _discoverPage,
+        page: pageNumber,
         limit: 30,
         country: filters.value.country,
         gender: filters.value.gender,
         excludeFollowing: filters.value.excludeFollowing,
         isShowLoader: false,
       );
-      final page = ExploreDiscoverPage.fromApiResponse(response);
-      if (page.users.isNotEmpty || refresh) {
-        if (refresh || _discoverPage == 1) {
-          discoverUsers.assignAll(page.users);
-        } else {
-          discoverUsers.addAll(page.users);
-        }
-        _discoverHasMore = page.hasMore;
-        if (page.users.isNotEmpty) _discoverPage++;
+      if (gen != _discoverRequestGen) return;
+      // A failed next page keeps the cards already shown so the user can retry.
+      if (!isSocialApiSuccess(response)) {
+        if (refresh) discoverUsers.clear();
         return;
       }
-      if (refresh) discoverUsers.clear();
+      final page = ExploreDiscoverPage.fromApiResponse(response);
+      if (refresh) {
+        discoverUsers.assignAll(page.users);
+      } else if (page.users.isEmpty) {
+        _discoverHasMore = false;
+        return;
+      } else {
+        final seen = discoverUsers.map((user) => user.id).toSet();
+        final added = page.users
+            .where((user) => user.id.isEmpty || seen.add(user.id))
+            .toList();
+        // The server repeated this page. Stop so scrolling does not loop.
+        if (added.isEmpty) {
+          _discoverHasMore = false;
+          return;
+        }
+        discoverUsers.addAll(added);
+      }
+      final loadedAll = page.total > 0 && discoverUsers.length >= page.total;
+      _discoverHasMore = page.hasMore && !loadedAll;
+      if (page.users.isNotEmpty) _discoverPage = pageNumber + 1;
     } catch (_) {
-      if (refresh) discoverUsers.clear();
+      if (refresh && gen == _discoverRequestGen) discoverUsers.clear();
     } finally {
-      isDiscoverUsersLoading.value = false;
+      if (gen == _discoverRequestGen) {
+        isDiscoverUsersLoading.value = false;
+        isDiscoverUsersLoadingMore.value = false;
+      }
     }
   }
+
+  /// Next page of the people feed. Search and room lists stay on their own calls.
+  Future<void> loadMoreDiscoverUsers() => fetchDiscoverUsers(refresh: false);
 
   Future<void> performSearch(String query) async {
     try {

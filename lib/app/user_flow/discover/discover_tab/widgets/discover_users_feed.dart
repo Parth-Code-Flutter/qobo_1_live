@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:get/get.dart';
 import 'package:qobo_one_live/app/user_flow/messages/messages_tab/models/social_user_card.dart';
 import 'package:qobo_one_live/constants/app_light_theme.dart';
@@ -64,9 +65,35 @@ class DiscoverUsersFeed extends StatelessWidget {
 
       // Read layout inside Obx so grid ↔ single swaps without refetching users.
       final isSingle = controller.feedLayout.value == DiscoverFeedLayout.single;
-      final body = isSingle
+      final list = isSingle
           ? _singleProfileList(context, feedUsers)
           : _gridList(context, feedUsers);
+      // Search uses the same cards. Only the people feed pages GET /api/discover.
+      final body = _SmoothDiscoverScroll(
+        onNearEnd: users == null ? controller.loadMoreDiscoverUsers : null,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            list,
+            if (users == null && controller.isDiscoverUsersLoadingMore.value)
+              const Positioned(
+                left: 0,
+                right: 0,
+                bottom: 72,
+                child: Center(
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: kColorPrimary,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
 
       if (!enablePullToRefresh) return body;
 
@@ -82,6 +109,11 @@ class DiscoverUsersFeed extends StatelessWidget {
   Widget _gridList(BuildContext context, List<SocialUserCard> users) {
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(0, 4, 0, 112),
+      // Keep only a sliver of the next row alive. A deep cache builds
+      // frames and badges before they are visible and makes the drag stick.
+      scrollCacheExtent: const ScrollCacheExtent.pixels(180),
+      addAutomaticKeepAlives: false,
+      addRepaintBoundaries: false,
       physics: const AlwaysScrollableScrollPhysics(
         parent: BouncingScrollPhysics(),
       ),
@@ -105,6 +137,9 @@ class DiscoverUsersFeed extends StatelessWidget {
         final pageHeight = constraints.maxHeight;
         return ListView.builder(
           padding: const EdgeInsets.fromLTRB(0, 4, 0, 112),
+          scrollCacheExtent: const ScrollCacheExtent.pixels(180),
+          addAutomaticKeepAlives: false,
+          addRepaintBoundaries: false,
           physics: const PageScrollPhysics(
             parent: AlwaysScrollableScrollPhysics(
               parent: BouncingScrollPhysics(),
@@ -128,22 +163,45 @@ class DiscoverUsersFeed extends StatelessWidget {
     SocialUserCard user, {
     required bool compact,
   }) {
-    return _DiscoverUserCard(
-      user: user,
-      compact: compact,
-      isFavouriteLoading: controller.processingFavouriteId.value == user.id,
-      isFollowLoading: controller.processingFollowId.value == user.id,
-      onTap: () => showDiscoverUserCallDialog(context, controller, user),
-      onFavouriteTap: () => controller.toggleFavourite(context, user),
-      onFollowTap: () => controller.toggleFollowUser(context, user),
+    // Live dots and frame clips keep painting while the finger moves.
+    // Freeze them for the drag, then let them run again when it stops.
+    final moving = _DiscoverMotion.movingOf(context);
+    return TickerMode(
+      enabled: !moving,
+      child: RepaintBoundary(
+        child: _DiscoverUserCard(
+          key: ValueKey('${user.id}|$compact'),
+          user: user,
+          compact: compact,
+          photoCacheWidth: _photoCacheWidth(context, compact: compact),
+          isFavouriteLoading: controller.processingFavouriteId.value == user.id,
+          isFollowLoading: controller.processingFollowId.value == user.id,
+          onTap: () => showDiscoverUserCallDialog(context, controller, user),
+          onFavouriteTap: () => controller.toggleFavourite(context, user),
+          onFollowTap: () => controller.toggleFollowUser(context, user),
+        ),
+      ),
     );
+  }
+
+  /// Pixel width of the photo actually drawn, so the decoder skips the
+  /// full-size file while the card is only half the screen.
+  int _photoCacheWidth(BuildContext context, {required bool compact}) {
+    final screen = MediaQuery.sizeOf(context).width;
+    final logical = compact ? (screen - 38) / 2 : screen - 28;
+    final px = (logical * MediaQuery.devicePixelRatioOf(context)).round();
+    if (px < 240) return 240;
+    if (px > 1080) return 1080;
+    return px;
   }
 }
 
 class _DiscoverUserCard extends StatelessWidget {
   const _DiscoverUserCard({
+    super.key,
     required this.user,
     required this.compact,
+    required this.photoCacheWidth,
     required this.onTap,
     required this.onFavouriteTap,
     required this.onFollowTap,
@@ -155,6 +213,7 @@ class _DiscoverUserCard extends StatelessWidget {
 
   final SocialUserCard user;
   final bool compact;
+  final int photoCacheWidth;
   final VoidCallback onTap;
   final VoidCallback onFavouriteTap;
   final VoidCallback onFollowTap;
@@ -169,34 +228,34 @@ class _DiscoverUserCard extends StatelessWidget {
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(_radius),
-      clipBehavior: Clip.antiAlias,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(_radius),
-          border: Border.all(color: AppLightUi.borderStrong, width: 1),
-          boxShadow: AppLightUi.cardShadow,
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            child: Stack(
-              fit: StackFit.expand,
-              clipBehavior: Clip.hardEdge,
-              children: [
-                Positioned.fill(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(_radius - 1),
-                    child: avatarUrl != null
-                        ? Image.network(
-                            avatarUrl,
-                            fit: BoxFit.cover,
-                            alignment: Alignment.topCenter,
-                            errorBuilder: (_, __, ___) => _photoFallback(),
-                          )
-                        : _photoFallback(),
-                  ),
-                ),
+      clipBehavior: Clip.hardEdge,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: DecoratedBox(
+          decoration: const BoxDecoration(
+            color: AppLightUi.cardSoft,
+            borderRadius: BorderRadius.all(Radius.circular(_radius)),
+            border: Border.fromBorderSide(
+              BorderSide(color: AppLightUi.borderStrong),
+            ),
+          ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Positioned.fill(
+                child: avatarUrl != null
+                    ? Image.network(
+                        avatarUrl,
+                        fit: BoxFit.cover,
+                        alignment: Alignment.topCenter,
+                        // Store the resized photo, not the full camera file.
+                        cacheWidth: photoCacheWidth,
+                        gaplessPlayback: true,
+                        errorBuilder: (_, __, ___) => _photoFallback(),
+                      )
+                    : _photoFallback(),
+              ),
                 Positioned(
                   left: 0,
                   right: 0,
@@ -256,8 +315,7 @@ class _DiscoverUserCard extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 
   Widget _photoFallback() {
@@ -712,6 +770,77 @@ class _FavouriteButton extends StatelessWidget {
                       ),
                     ),
         ),
+      ),
+    );
+  }
+}
+
+/// Tells each card the finger is moving so live dots and frames can sit still.
+class _DiscoverMotion extends InheritedWidget {
+  const _DiscoverMotion({required this.moving, required super.child});
+
+  final bool moving;
+
+  static bool movingOf(BuildContext context) {
+    return context
+            .dependOnInheritedWidgetOfExactType<_DiscoverMotion>()
+            ?.moving ??
+        false;
+  }
+
+  @override
+  bool updateShouldNotify(_DiscoverMotion oldWidget) =>
+      moving != oldWidget.moving;
+}
+
+/// Pauses card motion while the list is moving, and asks for the next page
+/// once per approach of the bottom instead of on every pixel.
+class _SmoothDiscoverScroll extends StatefulWidget {
+  const _SmoothDiscoverScroll({required this.child, this.onNearEnd});
+
+  final Widget child;
+  final VoidCallback? onNearEnd;
+
+  @override
+  State<_SmoothDiscoverScroll> createState() => _SmoothDiscoverScrollState();
+}
+
+class _SmoothDiscoverScrollState extends State<_SmoothDiscoverScroll> {
+  var _moving = false;
+  var _canLoadMore = true;
+
+  bool _onScroll(ScrollNotification notification) {
+    if (notification.metrics.axis != Axis.vertical) return false;
+    if (notification is ScrollEndNotification) {
+      _canLoadMore = true;
+      if (_moving) setState(() => _moving = false);
+    } else if (!_moving &&
+        (notification is ScrollStartNotification ||
+            notification is ScrollUpdateNotification)) {
+      setState(() => _moving = true);
+    }
+    final onNearEnd = widget.onNearEnd;
+    if (onNearEnd != null &&
+        _canLoadMore &&
+        notification is ScrollUpdateNotification) {
+      final nearEnd =
+          notification.metrics.pixels >=
+          notification.metrics.maxScrollExtent - 480;
+      if (nearEnd) {
+        _canLoadMore = false;
+        onNearEnd();
+      }
+    }
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _DiscoverMotion(
+      moving: _moving,
+      child: NotificationListener<ScrollNotification>(
+        onNotification: _onScroll,
+        child: widget.child,
       ),
     );
   }

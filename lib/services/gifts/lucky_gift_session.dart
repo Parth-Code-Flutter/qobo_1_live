@@ -7,6 +7,14 @@ import 'package:qobo_one_live/services/gifts/lucky_gift_reward.dart';
 import 'package:qobo_one_live/repo/economy/economy_api_utils.dart';
 import 'package:qobo_one_live/utils/api_image_utils.dart';
 
+String? _firstText(Map json, List<String> keys) {
+  for (final key in keys) {
+    final value = json[key]?.toString().trim() ?? '';
+    if (value.isNotEmpty && value.toLowerCase() != 'null') return value;
+  }
+  return null;
+}
+
 class LuckyGift {
   LuckyGift.fromJson(Map json)
     : id = (json['giftId'] ?? json['id'] ?? '').toString(),
@@ -18,11 +26,15 @@ class LuckyGift {
       rate = (json['luckyRewardRate'] ?? 0).toString(),
       icon =
           ApiImageUtils.normalize(
-            (json['iconUrl'] ??
-                    json['icon'] ??
-                    json['imageUrl'] ??
-                    json['animationUrl'])
-                ?.toString(),
+            _firstText(json, const [
+              'thumbnail',
+              'thumbnailUrl',
+              'thumbnail_url',
+              'iconUrl',
+              'icon',
+              'imageUrl',
+              'image',
+            ]),
           ) ??
           '🎁',
       animation =

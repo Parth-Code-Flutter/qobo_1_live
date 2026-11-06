@@ -68,6 +68,23 @@ void main() {
     expect(gift.icon, 'https://cdn.example.com/clover.png');
     expect(gift.animation, 'https://cdn.example.com/clover.svga');
     expect(gift.sound, 'https://cdn.example.com/clover.mp3');
+
+    final thumb = LuckyGift.fromJson({
+      'id': 'clover',
+      'thumbnail': '',
+      'thumbnailUrl': 'https://cdn.example.com/thumb.png',
+      'iconUrl': 'https://cdn.example.com/clover.png',
+      'animationUrl': 'https://cdn.example.com/clover.svga',
+    });
+    expect(thumb.icon, 'https://cdn.example.com/thumb.png');
+    expect(thumb.animation, 'https://cdn.example.com/clover.svga');
+
+    final clipOnly = LuckyGift.fromJson({
+      'id': 'clover',
+      'animationUrl': 'https://cdn.example.com/clover.svga',
+    });
+    expect(clipOnly.icon, '🎁');
+    expect(clipOnly.animation, 'https://cdn.example.com/clover.svga');
   });
 
   test(
